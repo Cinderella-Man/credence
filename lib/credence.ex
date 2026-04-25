@@ -7,6 +7,7 @@ defmodule Credence do
 
   # The default profile of rules to run
   @default_rules [
+    Credence.Rule.NoDoubleSortSameList,
     Credence.Rule.NoGraphemePalindromeCheck,
     Credence.Rule.NoGuardEqualityForPatternMatch,
     Credence.Rule.NoLengthInGuard,
