@@ -18,6 +18,8 @@ defmodule Credence do
     Credence.Rule.NoListAppendInLoop,
     Credence.Rule.NoListFold,
     Credence.Rule.NoListLast,
+    Credence.Rule.NoManualMax,
+    Credence.Rule.NoManualMin,
     Credence.Rule.NoManualStringReverse,
     Credence.Rule.NoMapKeysEnumLookup,
     Credence.Rule.NoMultipleEnumAt,
@@ -29,6 +31,7 @@ defmodule Credence do
     Credence.Rule.NoSortThenAt,
     Credence.Rule.NoSortThenReverse,
     Credence.Rule.NoStringLengthForCharCheck,
+    Credence.Rule.NoUnderscoreFunctionName,
     Credence.Rule.NoUnnecessaryCatchAllRaise,
     Credence.Rule.RedundantListGuard,
     Credence.Rule.UnnecessaryGraphemeChunking
