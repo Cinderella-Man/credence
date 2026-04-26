@@ -34,6 +34,7 @@ defmodule Credence do
     Credence.Rule.NoUnderscoreFunctionName,
     Credence.Rule.NoUnnecessaryCatchAllRaise,
     Credence.Rule.RedundantListGuard,
+    Credence.Rule.PreferEnumSlice,
     Credence.Rule.UnnecessaryGraphemeChunking
   ]
 
