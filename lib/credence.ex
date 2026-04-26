@@ -9,6 +9,7 @@ defmodule Credence do
   @default_rules [
     Credence.Rule.DescriptiveNames,
     Credence.Rule.InconsistentParamNames,
+    Credence.Rule.NoDestructureReconstruct,
     Credence.Rule.NoDoubleSortSameList,
     Credence.Rule.NoEnumAtInLoop,
     Credence.Rule.NoExplicitMaxReduce,
@@ -16,6 +17,7 @@ defmodule Credence do
     Credence.Rule.NoExplicitSumReduce,
     Credence.Rule.NoGraphemePalindromeCheck,
     Credence.Rule.NoGuardEqualityForPatternMatch,
+    Credence.Rule.NoIsPrefixForNonGuard,
     Credence.Rule.NoLengthInGuard,
     Credence.Rule.NoListAppendInLoop,
     Credence.Rule.NoListFold,
