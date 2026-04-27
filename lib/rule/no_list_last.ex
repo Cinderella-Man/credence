@@ -5,23 +5,31 @@ defmodule Credence.Rule.NoListLast do
   Elixir lists are linked lists — accessing the last element requires
   traversing the entire list, making `List.last/1` an O(n) operation.
   This is often a sign that the algorithm should be restructured to
-  build results in reverse (prepend + `Enum.reverse`) or use a different
-  data structure.
+  avoid needing the last element entirely.
+
+  ## Common refactors
+
+  - If building a list with `Enum.reduce`, track the last value in the
+    accumulator instead of extracting it afterward
+  - If splitting a list, destructure the right half instead of taking
+    the last of the left half
+  - If the list was sorted or built in a known order, consider whether
+    `hd/1` on a reversed or desc-sorted list gives you the answer
 
   ## Bad
 
-      {left, right} = Enum.split(combined, mid)
-      (List.last(left) + List.first(right)) / 2
+      Enum.reduce(1..(rows - 1), initial_row, fn _, prev ->
+        Enum.scan(prev, &(&1 + &2))
+      end)
+      |> List.last()
 
-  ## Good
+  ## Good — track the answer in the accumulator
 
-      # Use Enum.at/2 with a known index, or restructure:
-      {left, [right_head | _]} = Enum.split(combined, mid)
-      left_last = Enum.at(left, -1)
-      (left_last + right_head) / 2
-
-      # Even better — avoid needing the last element at all:
-      Enum.at(combined, mid - 1)
+      {_row, last} =
+        Enum.reduce(1..(rows - 1), {initial_row, 1}, fn _, {prev, _} ->
+          row = Enum.scan(prev, &(&1 + &2))
+          {row, List.last(row)}  # or track running total differently
+        end)
   """
   @behaviour Credence.Rule
   alias Credence.Issue
@@ -35,8 +43,11 @@ defmodule Credence.Rule.NoListLast do
             rule: :no_list_last,
             severity: :warning,
             message:
-              "`List.last/1` traverses the entire list (O(n)). Consider restructuring the algorithm " <>
-                "to avoid needing the last element, or use `Enum.at(list, -1)` to make the cost explicit.",
+              "`List.last/1` traverses the entire list (O(n)). " <>
+                "Restructure to avoid needing the last element: " <>
+                "track the value in an accumulator, destructure from the other end, " <>
+                "or reverse before taking the head. " <>
+                "Do NOT reimplement List.last manually — that has the same O(n) cost.",
             meta: %{line: Keyword.get(meta, :line)}
           }
 
