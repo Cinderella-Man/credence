@@ -18,6 +18,7 @@ defmodule Credence do
     Credence.Rule.NoExplicitSumReduce,
     Credence.Rule.NoGraphemePalindromeCheck,
     Credence.Rule.NoGuardEqualityForPatternMatch,
+    Credence.Rule.NoKernelShadowing,
     Credence.Rule.NoLengthInGuard,
     Credence.Rule.NoListAppendInLoop,
     Credence.Rule.NoListFold,
