@@ -33,6 +33,7 @@ defmodule Credence do
     Credence.Rule.NoStringLengthForCharCheck,
     Credence.Rule.NoUnderscoreFunctionName,
     Credence.Rule.NoUnnecessaryCatchAllRaise,
+    Credence.Rule.PreferEnumReverseTwo,
     Credence.Rule.RedundantListGuard,
     Credence.Rule.UnnecessaryGraphemeChunking
   ]
