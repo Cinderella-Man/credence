@@ -13,6 +13,7 @@ defmodule Credence do
     Credence.Rule.NoDoubleSortSameList,
     Credence.Rule.NoEnumAtBinarySearch,
     Credence.Rule.NoEnumAtLoopAccess,
+    Credence.Rule.NoEnumSliceInLoop,
     Credence.Rule.NoExplicitMaxReduce,
     Credence.Rule.NoExplicitMinReduce,
     Credence.Rule.NoExplicitSumReduce,
