@@ -21,7 +21,7 @@ defmodule Credence.Rule.PreferEnumReverseTwoTest do
       assert length(issues) == 1
       issue = hd(issues)
       assert issue.rule == :prefer_enum_reverse_two
-      assert issue.message =~ "Enum.reverse/2"
+      assert issue.message =~ "Enum.reverse(list1, list2)"
     end
 
     test "passes when using the optimized Enum.reverse/2" do

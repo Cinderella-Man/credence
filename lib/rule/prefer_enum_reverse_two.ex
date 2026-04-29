@@ -23,7 +23,8 @@ defmodule Credence.Rule.PreferEnumReverseTwo do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         # Matches: Enum.reverse(acc) ++ tail
-        {:++, meta, [{{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [_acc]}, _tail]} = node, issues ->
+        {:++, meta, [{{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [_acc]}, _tail]} = node,
+        issues ->
           {node, [create_issue(meta) | issues]}
 
         node, issues ->
@@ -38,8 +39,17 @@ defmodule Credence.Rule.PreferEnumReverseTwo do
       rule: :prefer_enum_reverse_two,
       severity: :warning,
       message:
-        "Use `Enum.reverse/2` instead of `Enum.reverse(acc) ++ tail`. " <>
-          "This avoids traversing the list twice and is more memory efficient.",
+        "Pattern to avoid:\n" <>
+          "  Enum.reverse(list1) ++ list2\n\n" <>
+          "Use instead:\n" <>
+          "  Enum.reverse(list1, list2)\n\n" <>
+          "This applies regardless of variable names.\n\n" <>
+          "Reason:\n" <>
+          "- Enum.reverse(list1) creates a new reversed list.\n" <>
+          "- The ++ operator then traverses that entire list again to append list2.\n" <>
+          "- This causes two full traversals.\n\n" <>
+          "Enum.reverse(list1, list2) performs the same operation in a single pass,\n" <>
+          "which is more efficient in both time and memory.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

@@ -110,7 +110,7 @@ defmodule Credence.Rule.NoUnnecessaryCatchAllRaise do
   # the raise are left alone — they may have a legitimate purpose.
   # ------------------------------------------------------------
 
-  defp body_only_raises?([do: {:raise, _, _}]), do: true
+  defp body_only_raises?(do: {:raise, _, _}), do: true
   defp body_only_raises?(_), do: false
 
   # ------------------------------------------------------------
