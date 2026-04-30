@@ -61,44 +61,6 @@ Credence.analyze(code, rules: [
 ])
 ```
 
-## Rules
-
-**Performance** — patterns that are technically correct but algorithmically wasteful on linked lists:
-
-- `NoListAppendInLoop` — `acc ++ [item]` in reduce/recursion (O(n²)); prepend and reverse instead
-- `NoLengthInGuard` — `length(list)` in guards traverses the full list; pattern match instead
-- `NoSortForTopK` — `Enum.sort |> Enum.take(k)`; use `Enum.min`, `Enum.max`, or `Enum.reduce`
-- `NoSortThenReverse` — `Enum.sort |> Enum.reverse`; use `Enum.sort(:desc)`
-- `NoDoubleSortSameList` — sorting the same list twice; sort once and reverse
-- `NoManualStringReverse` — `String.graphemes |> Enum.reverse |> Enum.join`; use `String.reverse`
-- `NoListLast` — `List.last/1` is O(n); restructure or use `Enum.at(list, -1)`
-- `NoRepeatedEnumTraversal` — multiple passes over the same enumerable
-- `NoNestedEnumOnSameEnumerable` — nested Enum calls on the same collection
-- `NoMapKeysEnumLookup` — `Map.keys(m) |> Enum.map(fn k -> m[k] ... end)`; iterate the map directly
-
-**Non-idiomatic** — patterns ported from other languages that don't fit Elixir conventions:
-
-- `NoListFold` — `List.foldl/3` or `List.foldr/3`; use `Enum.reduce/3`
-- `NoUnderscoreFunctionName` — `defp _helper(...)` (Python convention); use `defp do_helper(...)`
-- `NoUnnecessaryCatchAllRaise` — `def foo(_), do: raise(...)` ; let `FunctionClauseError` do its job
-- `RedundantListGuard` — `when is_list(tail)` on a cons-pattern variable; already guaranteed
-- `NoManualMax` — `if a > b, do: a, else: b`; use `max(a, b)`
-- `NoManualMin` — `if a < b, do: a, else: b`; use `min(a, b)`
-- `NoExplicitMaxReduce` / `NoExplicitMinReduce` / `NoExplicitSumReduce` — hand-rolled reduce for built-in operations
-- `NoGuardEqualityForPatternMatch` — `when n == 2`; match the literal in the function head
-
-**Readability** — patterns that obscure intent:
-
-- `InconsistentParamNames` — same parameter named differently across clauses of the same function
-- `DescriptiveNames` — flags single-letter or opaque variable names
-- `NoParamRebinding` — rebinding a function parameter name inside the body
-- `NoMultipleEnumAt` — 3+ `Enum.at` calls on the same variable; pattern match instead
-- `NoStringLengthForCharCheck` — `String.length(x) == 1`; match `<<_::utf8>>`
-- `NoRedundantEnumJoinSeparator` — `Enum.join("")`; empty string is the default
-- `NoGraphemePalindromeCheck` — grapheme decomposition for palindrome checks; use `String.reverse`
-- `UnnecessaryGraphemeChunking` — unnecessary `String.graphemes` usage
-- `NoSortThenAt` — full sort to access a single element
-
 ## Writing custom rules
 
 Every rule implements `Credence.Rule`:

@@ -5,55 +5,12 @@ defmodule Credence do
   """
   alias Credence.Issue
 
-  # The default profile of rules to run
-  @default_rules [
-    Credence.Rule.DescriptiveNames,
-    Credence.Rule.InconsistentParamNames,
-    Credence.Rule.NoDestructureReconstruct,
-    Credence.Rule.NoDoubleSortSameList,
-    Credence.Rule.NoEnumAtInLoop,
-    Credence.Rule.NoEnumCountForLength,
-    Credence.Rule.NoExplicitMaxReduce,
-    Credence.Rule.NoExplicitMinReduce,
-    Credence.Rule.NoExplicitSumReduce,
-    Credence.Rule.NoGraphemePalindromeCheck,
-    Credence.Rule.NoGuardEqualityForPatternMatch,
-    Credence.Rule.NoIsPrefixForNonGuard,
-    Credence.Rule.NoLengthInGuard,
-    Credence.Rule.NoListAppendInLoop,
-    Credence.Rule.NoListFold,
-    Credence.Rule.NoListLast,
-    Credence.Rule.NoManualListLast,
-    Credence.Rule.NoManualMax,
-    Credence.Rule.NoManualMin,
-    Credence.Rule.NoManualStringReverse,
-    Credence.Rule.NoMapKeysEnumLookup,
-    Credence.Rule.NoMapThenAggregate,
-    Credence.Rule.NoMultipleEnumAt,
-    Credence.Rule.NoNestedEnumOnSameEnumerable,
-    Credence.Rule.NoParamRebinding,
-    Credence.Rule.NoRedundantEnumJoinSeparator,
-    Credence.Rule.NoRedundantNegatedGuard,
-    Credence.Rule.NoRepeatedEnumTraversal,
-    Credence.Rule.NoSortForTopK,
-    Credence.Rule.NoSortThenAt,
-    Credence.Rule.NoSortThenReverse,
-    Credence.Rule.NoStringLengthForCharCheck,
-    Credence.Rule.NoTakeWhileLengthCheck,
-    Credence.Rule.NoUnderscoreFunctionName,
-    Credence.Rule.NoUnnecessaryCatchAllRaise,
-    Credence.Rule.RedundantListGuard,
-    Credence.Rule.PreferEnumSlice,
-    Credence.Rule.UnnecessaryGraphemeChunking,
-    Credence.Rule.UseMapJoin
-  ]
-
   @doc """
   Analyzes an Elixir code string and returns a deterministic pass/fail result.
   """
   @spec analyze(String.t(), keyword()) :: %{valid: boolean(), issues: [Issue.t()]}
   def analyze(code_string, opts \\ []) do
-    rules = Keyword.get(opts, :rules, @default_rules)
+    rules = Keyword.get(opts, :rules, default_rules())
 
     case Code.string_to_quoted(code_string) do
       {:ok, ast} ->
@@ -83,6 +40,23 @@ defmodule Credence do
   defp run_rules(ast, rules, opts) do
     Enum.flat_map(rules, fn rule ->
       rule.check(ast, opts)
+    end)
+  end
+
+  defp default_rules do
+    :code.all_loaded()
+    |> Enum.map(fn {module, _} -> module end)
+    |> Enum.filter(fn module ->
+      # 1. Ensure it's an Elixir module (Erlang modules don't have __info__/1)
+      if function_exported?(module, :__info__, 1) do
+        attributes = module.__info__(:attributes)
+        behaviours = Keyword.get(attributes, :behaviour, [])
+
+        # 2. Check if your Rule behaviour is in the list
+        Credence.Rule in behaviours
+      else
+        false
+      end
     end)
   end
 end
