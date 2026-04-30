@@ -83,8 +83,6 @@ defmodule Credence.Rule.NoSortForTopK do
     end
   end
 
-  defp analyze_pipeline(_), do: :error
-
   # ------------------------------------------------------------
   # SORT DETECTION
   # ------------------------------------------------------------
