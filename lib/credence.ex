@@ -44,19 +44,9 @@ defmodule Credence do
   end
 
   defp default_rules do
-    :code.all_loaded()
-    |> Enum.map(fn {module, _} -> module end)
+    Application.spec(:credence, :modules)
     |> Enum.filter(fn module ->
-      # 1. Ensure it's an Elixir module (Erlang modules don't have __info__/1)
-      if function_exported?(module, :__info__, 1) do
-        attributes = module.__info__(:attributes)
-        behaviours = Keyword.get(attributes, :behaviour, [])
-
-        # 2. Check if your Rule behaviour is in the list
-        Credence.Rule in behaviours
-      else
-        false
-      end
+      Credence.Rule in Keyword.get(module.__info__(:attributes), :behaviour, [])
     end)
   end
 end
