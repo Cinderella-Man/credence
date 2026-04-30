@@ -86,7 +86,7 @@ defmodule Credence.Rule.NoKernelShadowing do
 
   defp trigger_issue(meta, name) do
     %Issue{
-      rule: :no_max_min_shadowing,
+      rule: :no_kernel_shadowing,
       severity: :warning,
       message: """
       The variable `#{name}` shadows the built-in `Kernel.#{name}/2` function.

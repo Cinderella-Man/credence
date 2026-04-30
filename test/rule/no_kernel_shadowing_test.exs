@@ -16,7 +16,7 @@ defmodule Credence.Rule.NoKernelShadowingTest do
 
       issues = check(code)
       assert length(issues) == 1
-      assert hd(issues).rule == :no_max_min_shadowing
+      assert hd(issues).rule == :no_kernel_shadowing
       assert String.contains?(hd(issues).message, "variable `max` shadows")
     end
 
