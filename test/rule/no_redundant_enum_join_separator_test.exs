@@ -44,6 +44,30 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
       assert check(code) == []
     end
 
+    test "passes Enum.map_join with no separator" do
+      code = """
+      defmodule GoodMapJoinDefault do
+        def combine(list) do
+          Enum.map_join(list, &to_string/1)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "passes Enum.map_join with a non-empty separator" do
+      code = """
+      defmodule GoodMapJoinSeparator do
+        def combine(list) do
+          list |> Enum.map_join(", ", &to_string/1)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
     test "detects piped Enum.join with empty string" do
       code = """
       defmodule BadPiped do
@@ -60,7 +84,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
       assert %Issue{} = issue
       assert issue.rule == :no_redundant_enum_join_separator
       assert issue.severity == :info
-      assert issue.message =~ "defaults to an empty string"
+      assert issue.message =~ "default to an empty string"
       assert issue.meta.line != nil
     end
 
@@ -79,20 +103,54 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
       assert hd(issues).rule == :no_redundant_enum_join_separator
     end
 
-    test "detects multiple redundant joins" do
+    test "detects piped Enum.map_join with empty string" do
       code = """
-      defmodule MultipleBad do
-        def f(a, b) do
-          x = Enum.join(a, "")
-          y = b |> Enum.join("")
-          {x, y}
+      defmodule BadMapJoinPiped do
+        def process(list) do
+          list |> Enum.map_join("", &to_string/1)
         end
       end
       """
 
       issues = check(code)
 
-      assert length(issues) == 2
+      assert length(issues) == 1
+      issue = hd(issues)
+      assert issue.rule == :no_redundant_enum_join_separator
+      assert issue.message =~ "Enum.map_join/2"
+    end
+
+    test "detects direct Enum.map_join(list, empty_string, mapper) call" do
+      code = """
+      defmodule BadMapJoinDirect do
+        def process(list) do
+          Enum.map_join(list, "", &to_string/1)
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_redundant_enum_join_separator
+    end
+
+    test "detects multiple redundant joins" do
+      code = """
+      defmodule MultipleBad do
+        def f(a, b) do
+          x = Enum.join(a, "")
+          y = b |> Enum.join("")
+          z = Enum.map_join(a, "", &to_string/1)
+          w = b |> Enum.map_join("", &to_string/1)
+          {x, y, z, w}
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 4
     end
   end
 end
