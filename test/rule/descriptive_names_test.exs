@@ -66,5 +66,19 @@ defmodule Credence.Rule.DescriptiveNamesTest do
       # Should find a, b, h, t
       assert length(issues) == 4
     end
+
+    test "detects single letters inside pattern matches inside anonymous functions" do
+      code = """
+      defmodule Transformer do
+        def invert(map) do
+          Enum.into(map, %{}, fn {k, v} -> {v, k} end)
+        end
+      end
+      """
+
+      issues = check(code)
+      # Should find k, v
+      assert length(issues) == 2
+    end
   end
 end

@@ -178,11 +178,11 @@ defmodule CredenceTest do
       assert_clean("""
       defmodule MapChecker do
         def all_positive?(data) do
-          Enum.all?(data, fn {_k, v} -> v > 0 end)
+          Enum.all?(data, fn {_key, value} -> value > 0 end)
         end
 
         def key_strings(entries) do
-          Enum.map(entries, fn {k, _v} -> to_string(k) end)
+          Enum.map(entries, fn {key, _value} -> to_string(key) end)
         end
       end
       """)
@@ -586,9 +586,431 @@ defmodule CredenceTest do
       assert_clean("""
       defmodule CleanReduce do
         def sum_evens(list) do
-          Enum.reduce(list, 0, fn x, acc ->
-            if rem(x, 2) == 0, do: acc + x, else: acc
+          Enum.reduce(list, 0, fn num, acc ->
+            if rem(num, 2) == 0, do: acc + num, else: acc
           end)
+        end
+      end
+      """)
+    end
+
+    test "Enum.reduce_while — early termination in a fold" do
+      assert_clean("""
+      defmodule BudgetPacker do
+        def pack(items, budget) do
+          Enum.reduce_while(items, {budget, []}, fn {name, cost}, {remaining, picked} ->
+            if cost <= remaining do
+              {:cont, {remaining - cost, [name | picked]}}
+            else
+              {:halt, {remaining, picked}}
+            end
+          end)
+          |> elem(1)
+          |> Enum.reverse()
+        end
+      end
+      """)
+    end
+
+    test "Enum.flat_map — map then flatten in one pass" do
+      assert_clean("""
+      defmodule Expander do
+        def expand_ranges(ranges) do
+          Enum.flat_map(ranges, fn {lo, hi} -> Enum.to_list(lo..hi) end)
+        end
+      end
+      """)
+    end
+
+    test "Enum.chunk_every — partition a list into fixed-size windows" do
+      assert_clean("""
+      defmodule Batcher do
+        def batch(items, size), do: Enum.chunk_every(items, size)
+
+        def ngrams(words, window_size), do: Enum.chunk_every(words, window_size, 1, :discard)
+      end
+      """)
+    end
+
+    test "Enum.chunk_by — split when a key function changes" do
+      assert_clean("""
+      defmodule RunLength do
+      def encode(list) do
+      list
+      |> Enum.chunk_by(& &1)
+      |> Enum.map(fn chunk -> {hd(chunk), length(chunk)} end)
+      end
+      end
+      """)
+    end
+
+    test "Enum.zip_with — zip and transform in one step" do
+      assert_clean("""
+      defmodule VectorMath do
+        def dot(left, right), do: Enum.zip_with(left, right, &Kernel.*/2) |> Enum.sum()
+        def add(left, right), do: Enum.zip_with(left, right, &Kernel.+/2)
+      end
+      """)
+    end
+
+    test "Enum.map_reduce — produce a mapped list and an accumulator simultaneously" do
+      assert_clean("""
+      defmodule RunningTotal do
+        def with_running_sum(nums) do
+          {tagged, _total} =
+            Enum.map_reduce(nums, 0, fn num, acc ->
+              new_acc = acc + num
+              {{num, new_acc}, new_acc}
+            end)
+
+          tagged
+        end
+      end
+      """)
+    end
+
+    test "Enum.scan — like reduce but emits every intermediate accumulator" do
+      assert_clean("""
+      defmodule PrefixSum do
+      def prefix_sums(nums), do: Enum.scan(nums, &Kernel.+/2)
+      end
+      """)
+    end
+
+    test "Enum.dedup_by — remove consecutive duplicates by key" do
+      assert_clean("""
+      defmodule EventDedup do
+      def collapse_consecutive(events) do
+      Enum.dedup_by(events, & &1.type)
+      end
+      end
+      """)
+    end
+
+    test "Enum.min_max_by — single-pass extraction of both extremes" do
+      assert_clean("""
+      defmodule TemperatureRange do
+      def range(readings) do
+      {coldest, hottest} = Enum.min_max_by(readings, & &1.temp)
+      {coldest.temp, hottest.temp}
+      end
+      end
+      """)
+    end
+
+    test "Enum.find_value — find + transform in one step" do
+      assert_clean("""
+      defmodule FirstMatch do
+        def first_even_squared(nums) do
+          Enum.find_value(nums, fn num ->
+            if rem(num, 2) == 0, do: num * num
+          end)
+        end
+      end
+      """)
+    end
+
+    test "Enum.split_with — partition into two lists by predicate" do
+      assert_clean("""
+      defmodule Partitioner do
+        def adults_and_minors(people) do
+          {adults, minors} = Enum.split_with(people, fn person -> person.age >= 18 end)
+          %{adults: adults, minors: minors}
+        end
+      end
+      """)
+    end
+
+    test "Enum.unzip — transpose a list of 2-tuples into two lists" do
+      assert_clean("""
+      defmodule Columns do
+        def split_pairs(pairs) do
+          {keys, values} = Enum.unzip(pairs)
+          %{keys: keys, values: values}
+        end
+      end
+      """)
+    end
+
+    test "Enum.into — collect into any collectable" do
+      assert_clean("""
+      defmodule Transformer do
+        def invert(map) do
+          Enum.into(map, %{}, fn {key, value} -> {value, key} end)
+        end
+      end
+      """)
+    end
+
+    test "Enum.reject — remove elements that match a predicate" do
+      assert_clean("""
+      defmodule Cleaner do
+        def remove_blanks(strings) do
+          Enum.reject(strings, &(String.trim(&1) == ""))
+        end
+      end
+      """)
+    end
+
+    test "Enum.map_intersperse — map and intersperse a separator in one pass" do
+      assert_clean("""
+      defmodule CsvRow do
+        def to_iodata(fields) do
+          Enum.map_intersperse(fields, ",", &to_string/1)
+        end
+      end
+      """)
+    end
+
+    test "" do
+      assert_clean("""
+      defmodule VowelCounter do
+        @vowels ~w(a e i o u)
+
+        def count_vowels(text) do
+          text
+          |> String.downcase()
+          |> do_count(0)
+        end
+
+        defp do_count(string, acc) do
+          case String.next_grapheme(string) do
+            {grapheme, rest} ->
+              do_count(rest, if(grapheme in @vowels, do: acc + 1, else: acc))
+
+            nil ->
+              acc
+          end
+        end
+      end
+      """)
+    end
+
+    test "Stream.unfold — generate a (possibly infinite) sequence from a seed" do
+      assert_clean("""
+        defmodule FibStream do
+          def stream do
+            Stream.unfold({current, next}, fn {current, next} ->
+              {current, {next, current + next}}
+            end)
+          end
+
+          def first(count) do
+            stream() |> Enum.take(count)
+          end
+        end
+      """)
+    end
+
+    test "Stream.iterate — simpler unfold when the emitted value *is* the state" do
+      assert_clean("""
+      defmodule Powers do
+        def powers_of_two(count) do
+          Stream.iterate(1, &(&1 * 2)) |> Enum.take(count)
+        end
+      end
+      """)
+    end
+
+    test "Stream.chunk_every + lazy pipeline — process a large file in batches without loading it all" do
+      assert_clean("""
+      defmodule BatchProcessor do
+        def process_in_batches(stream, batch_size) do
+          stream
+          |> Stream.chunk_every(batch_size)
+          |> Stream.map(&process_batch/1)
+          |> Enum.to_list()
+        end
+
+        defp process_batch(batch), do: Enum.sum(batch)
+      end
+      """)
+    end
+
+    test "Stream.take_while — lazily consume while a predicate holds" do
+      assert_clean("""
+      defmodule Threshold do
+        def take_below(sorted_nums, limit) do
+          sorted_nums
+          |> Stream.take_while(&(&1 < limit))
+          |> Enum.to_list()
+        end
+      end
+      """)
+    end
+
+    test "BinaryTree inorder traversal" do
+      assert_clean("""
+        defmodule BinaryTree do
+          defstruct value: nil, left: nil, right: nil
+
+          def inorder(tree), do: do_inorder(tree, [])
+
+          defp do_inorder(nil, acc), do: acc
+          defp do_inorder(%__MODULE__{left: left, value: value, right: right}, acc) do
+            acc
+            |> do_inorder(right)
+            |> then(fn acc -> [value | acc] end)
+            |> do_inorder(left)
+          end
+
+          def depth(nil), do: 0
+          def depth(%__MODULE__{left: left, right: right}) do
+            1 + max(depth(left), depth(right))
+          end
+        end
+      """)
+    end
+
+    test "BFS with a queue (`:queue`)" do
+      assert_clean("""
+      defmodule BFS do
+        def levels(nil), do: []
+
+        def levels(root) do
+          bfs(:queue.in(root, :queue.new()), [])
+        end
+
+        defp bfs(queue, acc) do
+          case :queue.out(queue) do
+          {:empty, _} ->
+            Enum.reverse(acc)
+
+          {{:value, nil}, rest} ->
+            bfs(rest, acc)
+
+          {{:value, %{value: v, left: l, right: r}}, rest} ->
+            rest = :queue.in(l, :queue.in(r, rest))
+            bfs(rest, [v | acc])
+          end
+        end
+      end
+      """)
+    end
+
+    test "Flatten via body-recursion with pattern matching" do
+      assert_clean("""
+        defmodule DeepFlatten do
+          def flatten(list), do: list |> do_flatten([]) |> Enum.reverse()
+
+          defp do_flatten([], acc), do: acc
+          defp do_flatten([head | tail], acc) when is_list(head),
+            do: do_flatten(head, do_flatten(tail, acc))
+          defp do_flatten([head | tail], acc),
+            do: do_flatten(tail, [head | acc])
+        end
+      """)
+    end
+
+    test "Recursive permutations" do
+      assert_clean("""
+      defmodule Permutations do
+        def of([]), do: [[]]
+
+        def of(list) do
+          for elem <- list, rest <- of(list -- [elem]) do
+            [elem | rest]
+          end
+        end
+      end
+      """)
+    end
+
+    test "`for` comprehensions" do
+      assert_clean("""
+        defmodule Comprehensions do
+          # Cartesian product with filter
+          def pythagorean_triples(max_value) do
+            for first_number <- 1..max_value,
+                second_number <- first_number..max_value,
+                hypotenuse = :math.sqrt(first_number * first_number + second_number * second_number),
+                hypotenuse == trunc(hypotenuse) and hypotenuse <= max_value do
+              {first_number, second_number, trunc(hypotenuse)}
+            end
+          end
+
+          # into: to build a map
+          def index_by(records, key_function) do
+            for record <- records, into: %{} do
+              {key_function.(record), record}
+            end
+          end
+
+          # uniq: to deduplicate (Elixir 1.14+)
+          def unique_words(text) do
+            for word <- String.split(text), uniq: true do
+              String.downcase(word)
+            end
+          end
+
+          # reduce: to fold inside a comprehension (Elixir 1.15+)
+          def sum_squares(numbers) do
+            for number <- numbers, reduce: 0 do
+              accumulator -> accumulator + number * number
+            end
+          end
+        end
+      """)
+    end
+
+    test "`Map.new` — build a map from an enumerable with a transform function" do
+      assert_clean("""
+      defmodule Lookup do
+        def by_id(records), do: Map.new(records, fn record -> {record.id, record} end)
+      end
+      """)
+    end
+
+    test "`Map.merge/3` — merge with conflict resolution. Great for combining frequency maps" do
+      assert_clean("""
+      defmodule FreqMerge do
+        def merge_counts(left, right) do
+          Map.merge(left, right, fn _key, existing_count, incoming_count -> existing_count + incoming_count end)
+        end
+      end
+      """)
+    end
+
+    test "`Map.filter` / `Map.reject` (Elixir 1.13+)" do
+      assert_clean("""
+      defmodule MapOps do
+        def high_scores(scores, threshold) do
+          Map.filter(scores, fn {_name, score} -> score >= threshold end)
+        end
+      end
+      """)
+    end
+
+    test "Keyword, Tuple, and Agent patterns 2" do
+      assert_clean("""
+      defmodule TupleSwap do
+        def swap({elem1, elem2}), do: {elem2, elem1}
+
+        def rotate3({elem1, elem2, elem3}), do: {elem2, elem3, elem1}
+      end
+      """)
+    end
+
+    test "String / binary utilities not yet shown" do
+      assert_clean("""
+      defmodule StringUtils do
+        # String.starts_with? / String.ends_with? for validation
+        def email?(str), do: String.contains?(str, "@") and not String.starts_with?(str, "@")
+
+        # String.pad_leading for formatting
+        def zero_pad(num, width), do: num |> Integer.to_string() |> String.pad_leading(width, "0")
+
+        # String.to_integer with safe fallback
+        def safe_int(str) do
+          case Integer.parse(str) do
+            {num, ""} -> {:ok, num}
+            _ -> :error
+          end
+        end
+
+        # String.slice for truncation
+        def truncate(str, max_length) do
+          if String.length(str) > max_length, do: String.slice(str, 0, max_length) <> "…", else: str
         end
       end
       """)

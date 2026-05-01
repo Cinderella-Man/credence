@@ -31,6 +31,23 @@ defmodule Credence.Rule.AvoidGraphemesEnumCountTest do
       assert length(check(code)) == 1
     end
 
+    test "Enum.count with predicate on graphemes" do
+      code = """
+      defmodule VowelCounter do
+        @vowels ~w(a e i o u)
+
+        def count_vowels(text) do
+          text
+          |> String.downcase()
+          |> String.graphemes()
+          |> Enum.count(&(&1 in @vowels))
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
     test "flags with longer pipeline before graphemes" do
       code = """
       defmodule Example do

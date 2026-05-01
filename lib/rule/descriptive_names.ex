@@ -20,10 +20,26 @@ defmodule Credence.Rule.DescriptiveNames do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {kind, meta, [{_name, _, args}, _body]}, issues when kind in [:def, :defp] ->
-          # args can be nil for functions with no arguments like `def start, do: :ok`
+        # Named functions: def / defp
+        {kind, meta, [{_name, _, args}, _body]} = node, issues
+        when kind in [:def, :defp] ->
           found_names = find_short_params(args || [], [])
-          {nil, format_issues(found_names, meta) ++ issues}
+          # Return the original node so prewalk keeps traversing into the body
+          {node, format_issues(found_names, meta) ++ issues}
+
+        # Anonymous functions: fn ... -> ... end
+        {:fn, _fn_meta, clauses} = node, issues when is_list(clauses) ->
+          found =
+            Enum.flat_map(clauses, fn
+              {:->, clause_meta, [args, _body]} ->
+                names = find_short_params(args || [], [])
+                format_issues(names, clause_meta)
+
+              _ ->
+                []
+            end)
+
+          {node, found ++ issues}
 
         node, issues ->
           {node, issues}
