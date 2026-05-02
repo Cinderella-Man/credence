@@ -155,7 +155,9 @@ defmodule Credence.Rule.NoDestructureReconstruct do
     end)
   end
 
-  defp fix_pattern_body(pattern, body, extra_ast \\ nil) when is_list(pattern) do
+  defp fix_pattern_body(pattern, body, extra_ast \\ nil)
+
+  defp fix_pattern_body(pattern, body, extra_ast) when is_list(pattern) do
     case extract_var_names(pattern) do
       {:ok, var_names} when length(var_names) >= 2 ->
         if body_contains_same_list?(body, var_names) do

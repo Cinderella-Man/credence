@@ -126,7 +126,7 @@ defmodule Credence.Rule.InconsistentParamNames do
     stmts
     |> chunk_consecutive_clauses()
     |> Enum.flat_map(fn
-      [_single] -> [_single]
+      [single] -> [single]
       group -> fix_clause_group(group)
     end)
   end
