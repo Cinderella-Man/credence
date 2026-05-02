@@ -110,17 +110,17 @@ defmodule Credence.Rule.NoDestructureReconstruct do
   @impl true
   def fix(source, _opts) do
     source
-    |> Sourceror.parse_string!()
+    |> Code.string_to_quoted!()
     |> Macro.postwalk(fn
       # Case expressions
-      {:case, case_meta, [expr, [{:do, clauses}]]} when is_list(clauses) ->
+      {:case, case_meta, [expr, [do: clauses]]} when is_list(clauses) ->
         fixed_clauses = Enum.map(clauses, &fix_case_clause/1)
-        {:case, case_meta, [expr, [{:do, fixed_clauses}]]}
+        {:case, case_meta, [expr, [do: fixed_clauses]]}
 
       # Function heads with guard
       {def_type, def_meta, [{:when, when_meta, [{fn_name, head_meta, args}, guard]}, body]}
       when def_type in [:def, :defp] and is_list(args) ->
-        {new_args, new_body} = fix_fn_args(args, body)
+        {new_args, new_body} = fix_fn_args(args, body, guard)
 
         {def_type, def_meta,
          [{:when, when_meta, [{fn_name, head_meta, new_args}, guard]}, new_body]}
@@ -128,13 +128,13 @@ defmodule Credence.Rule.NoDestructureReconstruct do
       # Function heads without guard
       {def_type, def_meta, [{fn_name, head_meta, args}, body]}
       when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
-        {new_args, new_body} = fix_fn_args(args, body)
+        {new_args, new_body} = fix_fn_args(args, body, nil)
         {def_type, def_meta, [{fn_name, head_meta, new_args}, new_body]}
 
       node ->
         node
     end)
-    |> Sourceror.to_string()
+    |> Macro.to_string()
   end
 
   defp fix_case_clause({:->, meta, [[pattern], body]}) do
@@ -146,16 +146,16 @@ defmodule Credence.Rule.NoDestructureReconstruct do
 
   defp fix_case_clause(other), do: other
 
-  defp fix_fn_args(args, body) do
+  defp fix_fn_args(args, body, extra_ast) do
     Enum.reduce(args, {[], body}, fn arg, {fixed_args, current_body} ->
-      case fix_pattern_body(arg, current_body) do
+      case fix_pattern_body(arg, current_body, extra_ast) do
         {:fixed, new_arg, new_body} -> {fixed_args ++ [new_arg], new_body}
         :no_fix -> {fixed_args ++ [arg], current_body}
       end
     end)
   end
 
-  defp fix_pattern_body(pattern, body) when is_list(pattern) do
+  defp fix_pattern_body(pattern, body, extra_ast \\ nil) when is_list(pattern) do
     case extract_var_names(pattern) do
       {:ok, var_names} when length(var_names) >= 2 ->
         if body_contains_same_list?(body, var_names) do
@@ -163,7 +163,15 @@ defmodule Credence.Rule.NoDestructureReconstruct do
           new_body = replace_reconstructed_list(body, var_names, binding_var)
 
           # Determine which individual variables are still used in the new body
+          # and in any extra AST (e.g. guard clauses)
           used = collect_variable_names(new_body)
+
+          used =
+            if extra_ast do
+              MapSet.union(used, collect_variable_names(extra_ast))
+            else
+              used
+            end
 
           new_pattern_elements =
             Enum.map(pattern, fn
@@ -184,7 +192,7 @@ defmodule Credence.Rule.NoDestructureReconstruct do
     end
   end
 
-  defp fix_pattern_body(_, _), do: :no_fix
+  defp fix_pattern_body(_, _, _), do: :no_fix
 
   defp replace_reconstructed_list(body, target_var_names, replacement) do
     Macro.postwalk(body, fn

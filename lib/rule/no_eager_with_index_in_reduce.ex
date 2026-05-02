@@ -142,7 +142,7 @@ defmodule Credence.Rule.NoEagerWithIndexInReduce do
       {:ok, new_fn} ->
         reduce_call =
           {{:., dot_meta, [{:__aliases__, [], [:Enum]}, :reduce]}, call_meta,
-           [list, {0, initial_acc}, new_fn]}
+           [list, wrap_two_tuple({0, initial_acc}), new_fn]}
 
         {:elem, [], [reduce_call, 1]}
 
@@ -169,7 +169,7 @@ defmodule Credence.Rule.NoEagerWithIndexInReduce do
 
             new_reduce =
               {{:., rd_meta, [{:__aliases__, [], [:Enum]}, :reduce]}, rc_meta,
-               [{0, initial_acc}, new_fn]}
+               [wrap_two_tuple({0, initial_acc}), new_fn]}
 
             {:|>, [],
              [
@@ -211,7 +211,7 @@ defmodule Credence.Rule.NoEagerWithIndexInReduce do
   defp transform_clause({:->, arrow_meta, [args, body]}) do
     case extract_with_index_params(args) do
       {:ok, val_node, idx_node, acc_node} ->
-        new_args = [val_node, {idx_node, acc_node}]
+        new_args = [val_node, wrap_two_tuple({idx_node, acc_node})]
         new_body = wrap_last_expr(body, idx_node)
         {:ok, {:->, arrow_meta, [new_args, new_body]}}
 
@@ -222,22 +222,37 @@ defmodule Credence.Rule.NoEagerWithIndexInReduce do
 
   defp transform_clause(_), do: :error
 
-  # Match: [{val, idx}, acc] where all three are simple variables
-  defp extract_with_index_params([{val_node, idx_node}, acc_node])
-       when is_tuple(val_node) and tuple_size(val_node) == 3 and
-              is_tuple(idx_node) and tuple_size(idx_node) == 3 and
-              is_tuple(acc_node) and tuple_size(acc_node) == 3 do
-    if variable_node?(val_node) and variable_node?(idx_node) and variable_node?(acc_node) do
+  # Extracts val, idx, acc from fn clause args like [{val, idx}, acc].
+  #
+  # Sourceror wraps literal 2-tuples in {:__block__, meta, [{a, b}]}
+  # to attach position metadata (the standard Elixir AST cannot attach
+  # metadata to bare 2-tuples). We handle both representations so the
+  # code works regardless of how the AST was parsed.
+  defp extract_with_index_params([tuple_pat, acc_node]) do
+    with {:ok, val_node, idx_node} <- unwrap_two_tuple(tuple_pat),
+         true <- variable_node?(val_node),
+         true <- variable_node?(idx_node),
+         true <- variable_node?(acc_node) do
       {:ok, val_node, idx_node, acc_node}
     else
-      :error
+      _ -> :error
     end
   end
 
   defp extract_with_index_params(_), do: :error
 
+  # Sourceror form: 2-tuple wrapped in __block__ for metadata
+  defp unwrap_two_tuple({:__block__, _, [{a, b}]}), do: {:ok, a, b}
+  # Standard Code.string_to_quoted form: bare 2-tuple
+  defp unwrap_two_tuple({a, b}) when is_tuple(a) and tuple_size(a) == 3, do: {:ok, a, b}
+  defp unwrap_two_tuple(_), do: :error
+
   defp variable_node?({name, _meta, ctx}) when is_atom(name) and is_atom(ctx), do: true
   defp variable_node?(_), do: false
+
+  # Wraps a bare {a, b} Elixir term into {:__block__, [], [{a, b}]}
+  # so Sourceror.to_string/1 renders it as a proper two-element tuple.
+  defp wrap_two_tuple({a, b}), do: {:__block__, [], [{a, b}]}
 
   # Wraps the last expression in a block (or a single expression)
   # with {idx + 1, last_expr}
@@ -250,9 +265,9 @@ defmodule Credence.Rule.NoEagerWithIndexInReduce do
     index_bump_tuple(idx_node, single_expr)
   end
 
-  # Builds {idx + 1, expr} as a bare two-tuple in the AST
+  # Builds {idx + 1, expr} as a Sourceror-compatible AST node.
   defp index_bump_tuple({name, _, _}, expr) do
-    {{:+, [], [{name, [], nil}, 1]}, expr}
+    wrap_two_tuple({{:+, [], [{name, [], nil}, 1]}, expr})
   end
 
   # ── Pipe helpers (shared) ──────────────────────────────────────────
