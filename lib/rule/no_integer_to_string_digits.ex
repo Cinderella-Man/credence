@@ -61,7 +61,6 @@ defmodule Credence.Rule.NoIntegerToStringDigits do
   defp build_issue(meta) do
     %Issue{
       rule: :no_integer_to_string_digits,
-      severity: :warning,
       message:
         "Avoid `Integer.to_string/2 |> String.to_charlist/1` to extract digits. " <>
           "Use `Integer.digits/2` instead — it produces the digit list directly without intermediate string allocation.",

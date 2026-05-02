@@ -17,7 +17,7 @@ defmodule Credence.Rule.NoEnumTakeNegative do
 
       top_three = Enum.sort(nums, :desc) |> Enum.take(3)
   """
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
 
   @impl true
@@ -44,7 +44,6 @@ defmodule Credence.Rule.NoEnumTakeNegative do
   defp build_issue(n, meta) do
     %Issue{
       rule: :no_enum_take_negative,
-      severity: :warning,
       message:
         "`Enum.take(list, -#{n})` forces a double traversal of the list to take from the end. " <>
           "Sort in the opposite direction and use `Enum.take(list, #{n})` instead.",

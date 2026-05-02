@@ -61,7 +61,6 @@ defmodule Credence.Rule.NoMapUpdateThenFetch do
   defp build_issue(var, fetch_func, meta) do
     %Issue{
       rule: :no_map_update_then_fetch,
-      severity: :warning,
       message:
         "`Map.#{fetch_func}/2` is called on `#{var}` right after `Map.update/4`. " <>
           "This traverses the map twice. Compute the value first with `Map.get/3`, " <>

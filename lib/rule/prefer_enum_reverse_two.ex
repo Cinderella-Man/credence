@@ -37,7 +37,6 @@ defmodule Credence.Rule.PreferEnumReverseTwo do
   defp create_issue(meta) do
     %Issue{
       rule: :prefer_enum_reverse_two,
-      severity: :warning,
       message:
         "Pattern to avoid:\n" <>
           "  Enum.reverse(list1) ++ list2\n\n" <>

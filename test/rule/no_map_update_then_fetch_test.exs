@@ -51,7 +51,7 @@ defmodule Credence.Rule.NoMapUpdateThenFetchTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_map_update_then_fetch
-      assert issue.severity == :warning
+
       assert issue.message =~ "map"
       assert issue.message =~ "Map.put/3"
       assert issue.meta.line != nil

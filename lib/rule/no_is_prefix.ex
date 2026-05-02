@@ -64,7 +64,6 @@ defmodule Credence.Rule.NoIsPrefix do
 
       issue = %Issue{
         rule: :no_is_prefix,
-        severity: :info,
         message:
           "Function `#{name_str}/` uses an `is_` prefix. In Elixir, predicates use a `?` suffix " <>
             "by convention (e.g. `#{suggested}`). The `is_` prefix is reserved for guard-safe type checks.",

@@ -50,7 +50,7 @@ defmodule Credence.Rule.NoExplicitMaxReduceTest do
 
       assert %Issue{} = issue
       assert issue.rule == :no_explicit_max_reduce
-      assert issue.severity == :warning
+
       assert issue.message =~ "max-reduction"
       assert issue.meta.line != nil
     end

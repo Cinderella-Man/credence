@@ -34,10 +34,6 @@ defmodule Credence.Rule.NoMapKeysEnumLookup do
 
   Patterns where only keys are needed (no value lookup in the callback)
   are **not** flagged.
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -215,7 +211,6 @@ defmodule Credence.Rule.NoMapKeysEnumLookup do
   defp build_issue(fn_name, var_name, meta) do
     %Issue{
       rule: :no_map_keys_enum_lookup,
-      severity: :warning,
       message: build_message(fn_name, var_name),
       meta: %{line: Keyword.get(meta, :line)}
     }

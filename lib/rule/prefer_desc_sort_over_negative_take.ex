@@ -78,7 +78,6 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
   defp build_issue(meta) do
     %Issue{
       rule: :prefer_desc_sort_over_negative_take,
-      severity: :refactor,
       message: """
       Prefer `Enum.sort(nums, :desc) |> Enum.take(3)`
       over `Enum.sort(nums) |> Enum.take(-3)`.

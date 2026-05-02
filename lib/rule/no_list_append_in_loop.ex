@@ -114,7 +114,6 @@ defmodule Credence.Rule.NoListAppendInLoop do
   defp build_issue(meta) do
     %Issue{
       rule: :no_list_append_in_loop,
-      severity: :high,
       message:
         "Avoid using '++' inside loops or recursive functions. Prefer prepending with '[item | acc]' and calling 'Enum.reverse/1' outside the loop.",
       meta: %{line: Keyword.get(meta, :line)}

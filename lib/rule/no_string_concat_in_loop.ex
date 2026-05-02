@@ -121,7 +121,6 @@ defmodule Credence.Rule.NoStringConcatInLoop do
   defp build_issue(meta) do
     %Issue{
       rule: :no_string_concat_in_loop,
-      severity: :warning,
       message:
         "Avoid `<>` string concatenation inside loops — each concatenation copies the " <>
           "entire accumulated binary (O(n²)). Accumulate into an iodata list and call " <>

@@ -48,7 +48,7 @@ defmodule Credence.Rule.NoEnumTakeNegativeTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_enum_take_negative
-      assert issue.severity == :warning
+
       assert issue.message =~ "-3"
       assert issue.meta.line != nil
     end

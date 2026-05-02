@@ -23,10 +23,6 @@ defmodule Credence.Rule.NoRedundantNegatedGuard do
   A function clause whose guard is `when a != b` or `when a !== b`,
   immediately preceded by a clause of the same function/arity with
   `when a == b` or `when a === b` (same variables, same positions).
-
-  ## Severity
-
-  `:info`
   """
 
   @behaviour Credence.Rule
@@ -140,7 +136,6 @@ defmodule Credence.Rule.NoRedundantNegatedGuard do
 
     %Issue{
       rule: :no_redundant_negated_guard,
-      severity: :info,
       message: """
       Redundant `when ... #{neq_str} ...` guard.
 

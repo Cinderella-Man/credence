@@ -23,19 +23,20 @@ defmodule Credence.Rule.NoAnonFnApplicationInPipe do
       # Or with capture syntax:
       |> then(&[1 | &1])
   """
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
+
+  @impl true
+  def fixable?, do: true
 
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         # Match: ... |> (fn ... end).()
-        # The AST shape is: {:|>, meta, [left, {{:., _, [{:fn, _, _}]}, _, args}]}
         {:|>, meta, [_left, {{:., _, [{:fn, _, _}]}, _, _args}]} = node, issues ->
           issue = %Issue{
             rule: :no_anon_fn_application_in_pipe,
-            severity: :warning,
             message:
               "Avoid applying anonymous functions with `.()` inside a pipeline. " <>
                 "Use `then/2` instead: `|> then(fn x -> ... end)`.",
@@ -49,5 +50,20 @@ defmodule Credence.Rule.NoAnonFnApplicationInPipe do
       end)
 
     Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix(source, _opts) do
+    source
+    |> Sourceror.parse_string!()
+    |> Macro.postwalk(fn
+      # |> (fn ... end).() → |> then(fn ... end)
+      {:|>, pipe_meta, [left, {{:., _, [{:fn, _, _} = fn_node]}, _, _args}]} ->
+        {:|>, pipe_meta, [left, {:then, [], [fn_node]}]}
+
+      node ->
+        node
+    end)
+    |> Sourceror.to_string()
   end
 end

@@ -20,7 +20,7 @@ defmodule Credence.Rule.NoUnnecessaryCatchAllRaiseTest do
 
       [issue] = check(code)
       assert issue.rule == :no_unnecessary_catch_all_raise
-      assert issue.severity == :warning
+
       assert issue.message =~ "missing_number/1"
       assert issue.message =~ "FunctionClauseError"
     end

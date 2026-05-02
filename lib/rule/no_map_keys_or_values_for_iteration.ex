@@ -64,7 +64,6 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
   defp build_issue(mfunc, efunc, meta) do
     %Issue{
       rule: :no_map_keys_or_values_for_iteration,
-      severity: :info,
       message:
         "`Map.#{mfunc}/1` creates an intermediate list before passing to `Enum.#{efunc}/2`. " <>
           "Iterate the map directly — `Enum` functions accept maps and yield `{key, value}` pairs.",

@@ -50,7 +50,7 @@ defmodule Credence.Rule.NoListDeleteAtInLoopTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_list_delete_at_in_loop
-      assert issue.severity == :high
+
       assert issue.message =~ "List.delete_at"
       assert issue.meta.line != nil
     end

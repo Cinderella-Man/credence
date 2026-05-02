@@ -62,7 +62,7 @@ defmodule Credence.Rule.NoListToTupleForAccessTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_list_to_tuple_for_access
-      assert issue.severity == :warning
+
       assert issue.message =~ "List.to_tuple"
       assert issue.message =~ "pattern matching"
       assert issue.meta.line != nil

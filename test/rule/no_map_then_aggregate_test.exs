@@ -21,7 +21,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
 
       [issue] = check(code)
       assert issue.rule == :no_map_then_aggregate
-      assert issue.severity == :warning
+
       assert issue.message =~ "Enum.map"
       assert issue.message =~ "Enum.max"
     end

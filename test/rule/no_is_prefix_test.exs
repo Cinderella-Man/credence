@@ -60,7 +60,7 @@ defmodule Credence.Rule.NoIsPrefixTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_is_prefix
-      assert issue.severity == :info
+
       assert issue.message =~ "is_valid_palindrome"
       assert issue.message =~ "?"
       assert issue.meta.line != nil

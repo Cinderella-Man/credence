@@ -62,7 +62,6 @@ defmodule Credence.Rule.PreferEnumSlice do
   defp build_issue(meta) do
     %Issue{
       rule: :prefer_enum_slice,
-      severity: :refactor,
       message:
         "Using `Enum.drop/2` followed by `Enum.take/2` is verbose. " <>
           "Use `Enum.slice/3` instead for clearer intent.",

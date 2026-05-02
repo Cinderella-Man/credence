@@ -35,7 +35,7 @@ defmodule Credence.Rule.NoEnumAtInLoop do
       # Option 3: Use Enum.with_index or Enum.zip to pair values with indices
       Enum.reduce(Enum.with_index(list), 0, fn {val, _idx}, acc -> acc + val end)
   """
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
 
   @enum_loops [:reduce, :reduce_while, :map, :flat_map, :each, :filter]
@@ -130,7 +130,6 @@ defmodule Credence.Rule.NoEnumAtInLoop do
   defp build_issue(meta) do
     %Issue{
       rule: :no_enum_at_in_loop,
-      severity: :high,
       message:
         "Avoid `Enum.at/2` inside loops or recursive functions — it traverses the linked list " <>
           "to the index (O(n)) on every call, creating O(n²) cost. Use pattern matching, " <>

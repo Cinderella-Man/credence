@@ -24,7 +24,7 @@ defmodule Credence.Rule.NoListFoldTest do
 
       [issue] = check(code)
       assert issue.rule == :no_list_fold
-      assert issue.severity == :warning
+
       assert issue.message =~ "List.foldl/3"
       assert issue.message =~ "Enum.reduce/3"
     end

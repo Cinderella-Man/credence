@@ -60,7 +60,6 @@ defmodule Credence.Rule.NoMultipleEnumAt do
         [
           %Issue{
             rule: :no_multiple_enum_at,
-            severity: :info,
             message:
               "`Enum.at/2` is called #{length(entries)} times on `#{var_name}`. " <>
                 "Each call traverses the list from the head. Use pattern matching " <>

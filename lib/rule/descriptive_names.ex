@@ -13,7 +13,7 @@ defmodule Credence.Rule.DescriptiveNames do
       def process(base_value, increment), do: base_value + increment
   """
 
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
 
   @impl true
@@ -24,7 +24,6 @@ defmodule Credence.Rule.DescriptiveNames do
         {kind, meta, [{_name, _, args}, _body]} = node, issues
         when kind in [:def, :defp] ->
           found_names = find_short_params(args || [], [])
-          # Return the original node so prewalk keeps traversing into the body
           {node, format_issues(found_names, meta) ++ issues}
 
         # Anonymous functions: fn ... -> ... end
@@ -48,12 +47,10 @@ defmodule Credence.Rule.DescriptiveNames do
     Enum.reverse(issues)
   end
 
-  # Case 1: A list (the argument list itself or pattern matches like [h | t])
   defp find_short_params(args, acc) when is_list(args) do
     Enum.reduce(args, acc, &find_short_params/2)
   end
 
-  # Case 2: A variable (3-tuple where the 3rd element is an atom/nil, e.g., {:x, meta, nil})
   defp find_short_params({name, _meta, context}, acc) when is_atom(name) and is_atom(context) do
     str_name = Atom.to_string(name)
 
@@ -64,18 +61,15 @@ defmodule Credence.Rule.DescriptiveNames do
     end
   end
 
-  # Case 3: A 3-tuple AST node (e.g., {:+, meta, [args]}) - recurse into the args list
   defp find_short_params({_name, _meta, args}, acc) when is_list(args) do
     find_short_params(args, acc)
   end
 
-  # Case 4: A 2-tuple literal (e.g., {a, b}) - correctly pass the accumulator through
   defp find_short_params({left, right}, acc) do
     acc = find_short_params(left, acc)
     find_short_params(right, acc)
   end
 
-  # Case 5: Catch-all for literals or things we don't care about
   defp find_short_params(_, acc), do: acc
 
   defp format_issues(names, meta) do
@@ -84,7 +78,6 @@ defmodule Credence.Rule.DescriptiveNames do
     |> Enum.map(fn name ->
       %Issue{
         rule: :descriptive_names,
-        severity: :warning,
         message: "The parameter `#{name}` is a single letter. Use a more descriptive name.",
         meta: %{line: Keyword.get(meta, :line)}
       }

@@ -81,7 +81,6 @@ defmodule Credence.Rule.NoGuardEqualityForPatternMatch do
   defp build_issue(var_name, literal, meta) do
     %Issue{
       rule: :no_guard_equality_for_pattern_match,
-      severity: :info,
       message:
         "Guard `#{var_name} == #{inspect(literal)}` can be replaced by " <>
           "pattern matching `#{inspect(literal)}` directly in the function head.",

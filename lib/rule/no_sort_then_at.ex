@@ -58,7 +58,6 @@ defmodule Credence.Rule.NoSortThenAt do
   defp build_issue(meta) do
     %Issue{
       rule: :no_sort_then_at,
-      severity: :info,
       message:
         "Sorting a list and then accessing a single element with `Enum.at/2` is O(n log n) " <>
           "when you may only need O(n). For min/max, use `Enum.min/1` or `Enum.max/1`. " <>

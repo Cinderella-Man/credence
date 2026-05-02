@@ -17,10 +17,6 @@ defmodule Credence.Rule.RedundantListGuard do
   | `def f([h \\| t]) when is_list(t)`                   | `def f([h \\| t])`                    |
   | `def f([h \\| t]) when is_list(t) and is_atom(h)`    | `def f([h \\| t]) when is_atom(h)`    |
   | `def f([_ \\| a], [_ \\| b]) when is_list(a) and …` | Remove each redundant `is_list` call  |
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -59,7 +55,6 @@ defmodule Credence.Rule.RedundantListGuard do
           Enum.map(vars, fn var ->
             %Issue{
               rule: :redundant_list_guard,
-              severity: :warning,
               message: build_message(var),
               meta: %{line: Keyword.get(when_meta, :line)}
             }

@@ -37,7 +37,6 @@ defmodule Credence.Rule.NoMapAsSet do
   defp build_issue(meta) do
     %Issue{
       rule: :no_map_as_set,
-      severity: :info,
       message:
         "`Map.put/3` with a boolean literal value suggests the map is used purely for " <>
           "membership tracking. Use `MapSet` instead — `MapSet.put/2` and " <>

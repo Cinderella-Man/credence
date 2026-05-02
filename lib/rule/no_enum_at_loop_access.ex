@@ -14,7 +14,7 @@ defmodule Credence.Rule.NoEnumAtLoopAccess do
     - or using Enum.with_index / direct iteration
   """
 
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
 
   # Special forms/macros that act as loops
@@ -79,7 +79,6 @@ defmodule Credence.Rule.NoEnumAtLoopAccess do
   defp trigger_issue(meta) do
     %Issue{
       rule: :no_enum_at_loop_access,
-      severity: :warning,
       message: """
       `Enum.at/2` inside a loop may cause O(n²) behavior on lists.
 

@@ -22,6 +22,13 @@ defmodule Credence.Rule.NoDestructureReconstruct do
           Enum.all?(parts, &valid_octet?/1)
       end
 
+  ## Auto-fix strategy
+
+  1. Bind the whole list with `= items` on the pattern
+  2. Replace the reconstructed list `[a, b, c]` in the body with `items`
+  3. Check which individual variables are still used elsewhere in the
+     body — replace unused ones with `_` in the pattern
+
   ## Flagged patterns
 
   A list pattern `[a, b, c, ...]` in a `case` branch or function head
@@ -30,14 +37,17 @@ defmodule Credence.Rule.NoDestructureReconstruct do
 
   Only flagged when the pattern contains 2 or more simple variables
   (not literals, patterns, or underscore-prefixed names).
-
-  ## Severity
-
-  `:info`
   """
 
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
+
+  @impl true
+  def fixable?, do: true
+
+  # ════════════════════════════════════════════════════════════════════
+  # check/2
+  # ════════════════════════════════════════════════════════════════════
 
   @impl true
   def check(ast, _opts) do
@@ -52,11 +62,6 @@ defmodule Credence.Rule.NoDestructureReconstruct do
     Enum.reverse(issues)
   end
 
-  # ------------------------------------------------------------
-  # NODE MATCHING
-  # ------------------------------------------------------------
-
-  # case expr do [a, b, c] -> body; ... end
   defp check_node({:case, _meta, [_expr, [do: clauses]]}) when is_list(clauses) do
     issues =
       Enum.flat_map(clauses, fn
@@ -70,34 +75,22 @@ defmodule Credence.Rule.NoDestructureReconstruct do
     if issues == [], do: :error, else: {:ok, issues}
   end
 
-  # def/defp foo([a, b, c]), do: body (unguarded)
-  # Must come after guarded to avoid :when swallowing
   defp check_node({def_type, _meta, [{:when, _, [{_fn_name, _, args}, _guard]}, body]})
        when def_type in [:def, :defp] and is_list(args) do
-    issues =
-      args
-      |> Enum.flat_map(fn arg -> check_pattern_body(arg, body, []) end)
-
+    issues = Enum.flat_map(args, fn arg -> check_pattern_body(arg, body, []) end)
     if issues == [], do: :error, else: {:ok, issues}
   end
 
   defp check_node({def_type, _meta, [{_fn_name, _, args}, body]})
        when def_type in [:def, :defp] and is_list(args) do
-    issues =
-      args
-      |> Enum.flat_map(fn arg -> check_pattern_body(arg, body, []) end)
-
+    issues = Enum.flat_map(args, fn arg -> check_pattern_body(arg, body, []) end)
     if issues == [], do: :error, else: {:ok, issues}
   end
 
   defp check_node(_), do: :error
 
-  # ------------------------------------------------------------
-  # PATTERN/BODY ANALYSIS
-  # ------------------------------------------------------------
-
   defp check_pattern_body(pattern, body, meta) do
-    case extract_var_list(pattern) do
+    case extract_var_names(pattern) do
       {:ok, var_names} when length(var_names) >= 2 ->
         if body_contains_same_list?(body, var_names) do
           [build_issue(var_names, meta)]
@@ -110,15 +103,120 @@ defmodule Credence.Rule.NoDestructureReconstruct do
     end
   end
 
-  # ------------------------------------------------------------
-  # PATTERN EXTRACTION
-  #
-  # Only matches a flat list of simple, non-underscore variables.
-  # Returns :error if any element is a literal, pattern, or
-  # underscore-prefixed name.
-  # ------------------------------------------------------------
+  # ════════════════════════════════════════════════════════════════════
+  # fix/2
+  # ════════════════════════════════════════════════════════════════════
 
-  defp extract_var_list(elements) when is_list(elements) do
+  @impl true
+  def fix(source, _opts) do
+    source
+    |> Sourceror.parse_string!()
+    |> Macro.postwalk(fn
+      # Case expressions
+      {:case, case_meta, [expr, [{:do, clauses}]]} when is_list(clauses) ->
+        fixed_clauses = Enum.map(clauses, &fix_case_clause/1)
+        {:case, case_meta, [expr, [{:do, fixed_clauses}]]}
+
+      # Function heads with guard
+      {def_type, def_meta, [{:when, when_meta, [{fn_name, head_meta, args}, guard]}, body]}
+      when def_type in [:def, :defp] and is_list(args) ->
+        {new_args, new_body} = fix_fn_args(args, body)
+
+        {def_type, def_meta,
+         [{:when, when_meta, [{fn_name, head_meta, new_args}, guard]}, new_body]}
+
+      # Function heads without guard
+      {def_type, def_meta, [{fn_name, head_meta, args}, body]}
+      when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
+        {new_args, new_body} = fix_fn_args(args, body)
+        {def_type, def_meta, [{fn_name, head_meta, new_args}, new_body]}
+
+      node ->
+        node
+    end)
+    |> Sourceror.to_string()
+  end
+
+  defp fix_case_clause({:->, meta, [[pattern], body]}) do
+    case fix_pattern_body(pattern, body) do
+      {:fixed, new_pattern, new_body} -> {:->, meta, [[new_pattern], new_body]}
+      :no_fix -> {:->, meta, [[pattern], body]}
+    end
+  end
+
+  defp fix_case_clause(other), do: other
+
+  defp fix_fn_args(args, body) do
+    Enum.reduce(args, {[], body}, fn arg, {fixed_args, current_body} ->
+      case fix_pattern_body(arg, current_body) do
+        {:fixed, new_arg, new_body} -> {fixed_args ++ [new_arg], new_body}
+        :no_fix -> {fixed_args ++ [arg], current_body}
+      end
+    end)
+  end
+
+  defp fix_pattern_body(pattern, body) when is_list(pattern) do
+    case extract_var_names(pattern) do
+      {:ok, var_names} when length(var_names) >= 2 ->
+        if body_contains_same_list?(body, var_names) do
+          binding_var = {:items, [], nil}
+          new_body = replace_reconstructed_list(body, var_names, binding_var)
+
+          # Determine which individual variables are still used in the new body
+          used = collect_variable_names(new_body)
+
+          new_pattern_elements =
+            Enum.map(pattern, fn
+              {name, meta, ctx} when is_atom(name) and is_atom(ctx) ->
+                if MapSet.member?(used, name), do: {name, meta, ctx}, else: {:_, meta, ctx}
+
+              other ->
+                other
+            end)
+
+          {:fixed, {:=, [], [new_pattern_elements, binding_var]}, new_body}
+        else
+          :no_fix
+        end
+
+      _ ->
+        :no_fix
+    end
+  end
+
+  defp fix_pattern_body(_, _), do: :no_fix
+
+  defp replace_reconstructed_list(body, target_var_names, replacement) do
+    Macro.postwalk(body, fn
+      elements when is_list(elements) ->
+        case extract_var_names(elements) do
+          {:ok, ^target_var_names} -> replacement
+          _ -> elements
+        end
+
+      node ->
+        node
+    end)
+  end
+
+  defp collect_variable_names(ast) do
+    {_, names} =
+      Macro.postwalk(ast, MapSet.new(), fn
+        {name, _, ctx} = node, acc when is_atom(name) and is_atom(ctx) ->
+          {node, MapSet.put(acc, name)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
+  end
+
+  # ════════════════════════════════════════════════════════════════════
+  # Shared helpers
+  # ════════════════════════════════════════════════════════════════════
+
+  defp extract_var_names(elements) when is_list(elements) do
     names =
       Enum.map(elements, fn
         {name, _, ctx} when is_atom(name) and is_atom(ctx) ->
@@ -136,14 +234,7 @@ defmodule Credence.Rule.NoDestructureReconstruct do
     end
   end
 
-  defp extract_var_list(_), do: :error
-
-  # ------------------------------------------------------------
-  # BODY INSPECTION
-  #
-  # Walk the body AST looking for a list literal that contains
-  # the exact same variables in the exact same order.
-  # ------------------------------------------------------------
+  defp extract_var_names(_), do: :error
 
   defp body_contains_same_list?(body, target_var_names) do
     {_, found} =
@@ -152,7 +243,7 @@ defmodule Credence.Rule.NoDestructureReconstruct do
           {node, true}
 
         elements, false when is_list(elements) ->
-          case extract_var_list(elements) do
+          case extract_var_names(elements) do
             {:ok, ^target_var_names} -> {elements, true}
             _ -> {elements, false}
           end
@@ -164,24 +255,19 @@ defmodule Credence.Rule.NoDestructureReconstruct do
     found
   end
 
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
-
   defp build_issue(var_names, meta) do
     vars_str = Enum.map_join(var_names, ", ", &to_string/1)
     count = length(var_names)
 
     %Issue{
       rule: :no_destructure_reconstruct,
-      severity: :info,
       message: """
       List `[#{vars_str}]` is destructured and then reassembled \
       into the same list.
 
       Bind the list as a whole and pattern match for length:
 
-          [#{"_ , " |> String.duplicate(count - 1)}_ ] = parts
+          [#{String.duplicate("_, ", count - 1)}_] = parts\
       """,
       meta: %{line: Keyword.get(meta, :line)}
     }

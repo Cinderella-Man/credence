@@ -32,10 +32,6 @@ defmodule Credence.Rule.NoManualMax do
   | `if a >= b, do: a, else: b`     | `max(a, b)`    |
   | `if b < a, do: a, else: b`      | `max(a, b)`    |
   | `if b <= a, do: a, else: b`     | `max(a, b)`    |
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -65,7 +61,6 @@ defmodule Credence.Rule.NoManualMax do
       {:ok,
        %Issue{
          rule: :no_manual_max,
-         severity: :warning,
          message: build_message(),
          meta: %{line: Keyword.get(meta, :line)}
        }}

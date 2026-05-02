@@ -41,7 +41,7 @@ defmodule Credence.Rule.NoListAppendInLoopTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_list_append_in_loop
-      assert issue.severity == :high
+
       assert issue.message =~ "++"
       assert issue.meta.line != nil
     end
@@ -95,7 +95,7 @@ defmodule Credence.Rule.NoListAppendInLoopTest do
       assert length(issues) == 1
       issue = hd(issues)
       assert issue.rule == :no_list_append_in_loop
-      assert issue.severity == :high
+
       assert issue.meta.line != nil
     end
 

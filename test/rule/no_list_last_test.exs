@@ -38,7 +38,7 @@ defmodule Credence.Rule.NoListLastTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_list_last
-      assert issue.severity == :warning
+
       assert issue.message =~ "List.last/1"
       assert issue.message =~ "O(n)"
       assert issue.meta.line != nil

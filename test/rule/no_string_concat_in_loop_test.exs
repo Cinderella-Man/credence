@@ -64,7 +64,7 @@ defmodule Credence.Rule.NoStringConcatInLoopTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_string_concat_in_loop
-      assert issue.severity == :warning
+
       assert issue.message =~ "iodata"
       assert issue.meta.line != nil
     end

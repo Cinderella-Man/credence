@@ -37,10 +37,6 @@ defmodule Credence.Rule.NoUnnecessaryCatchAllRaise do
   - Clauses with logic before the raise (logging, cleanup)
   - Zero-arity functions
   - Clauses with guard expressions
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -74,7 +70,6 @@ defmodule Credence.Rule.NoUnnecessaryCatchAllRaise do
       {:ok,
        %Issue{
          rule: :no_unnecessary_catch_all_raise,
-         severity: :warning,
          message: build_message(def_type, fn_name, length(args)),
          meta: %{line: Keyword.get(meta, :line)}
        }}

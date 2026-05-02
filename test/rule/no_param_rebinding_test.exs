@@ -62,7 +62,7 @@ defmodule Credence.Rule.NoParamRebindingTest do
       assert length(issues) >= 1
       issue = hd(issues)
       assert issue.message =~ "q"
-      assert issue.severity == :info
+
       assert issue.meta.line != nil
     end
 

@@ -62,7 +62,7 @@ defmodule Credence.Rule.NoEnumAtInLoopTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_enum_at_in_loop
-      assert issue.severity == :high
+
       assert issue.message =~ "Enum.at/2"
       assert issue.meta.line != nil
     end

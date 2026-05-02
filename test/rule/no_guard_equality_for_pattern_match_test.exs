@@ -56,7 +56,7 @@ defmodule Credence.Rule.NoGuardEqualityForPatternMatchTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_guard_equality_for_pattern_match
-      assert issue.severity == :info
+
       assert issue.message =~ "n == 2"
       assert issue.message =~ "pattern matching"
       assert issue.meta.line != nil

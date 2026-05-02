@@ -18,7 +18,7 @@ defmodule Credence.Rule.NoManualMaxTest do
 
       [issue] = check(code)
       assert issue.rule == :no_manual_max
-      assert issue.severity == :warning
+
       assert issue.message =~ "max/2"
     end
 

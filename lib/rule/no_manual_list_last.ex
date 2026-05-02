@@ -25,10 +25,6 @@ defmodule Credence.Rule.NoManualListLast do
 
   1. One clause matches `[val]` (single-element list) and returns `val`
   2. The other clause matches `[_ | rest]` and recurses with `rest`
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -162,7 +158,6 @@ defmodule Credence.Rule.NoManualListLast do
   defp build_issue(def_type, fn_name, meta) do
     %Issue{
       rule: :no_manual_list_last,
-      severity: :warning,
       message: """
       `#{def_type} #{fn_name}/1` is a manual reimplementation of `List.last/1` \
       with the same O(n) cost.

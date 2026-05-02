@@ -20,7 +20,7 @@ defmodule Credence.Rule.UseMapJoinTest do
 
       [issue] = check(code)
       assert issue.rule == :use_map_join
-      assert issue.severity == :warning
+
       assert issue.message =~ "Enum.map_join/3"
     end
 

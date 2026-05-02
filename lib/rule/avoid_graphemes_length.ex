@@ -9,14 +9,16 @@ defmodule Credence.Rule.AvoidGraphemesLength do
   `String.length/1` avoids building this intermediate list.
   """
 
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
+
+  @impl true
+  def fixable?, do: true
 
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        # Match: ... |> length()
         {:|>, meta, [lhs, {:length, _, _}]} = node, issues ->
           if immediate_graphemes?(lhs) do
             {node, [trigger_issue(meta) | issues]}
@@ -24,7 +26,6 @@ defmodule Credence.Rule.AvoidGraphemesLength do
             {node, issues}
           end
 
-        # Match: length(String.graphemes(...))
         {:length, meta, [arg]} = node, issues ->
           if graphemes_call?(arg) do
             {node, [trigger_issue(meta) | issues]}
@@ -39,14 +40,63 @@ defmodule Credence.Rule.AvoidGraphemesLength do
     Enum.reverse(issues)
   end
 
-  # Ensure graphemes is the immediate previous pipeline step
-  defp immediate_graphemes?({:|>, _, [_, rhs]}),
-    do: graphemes_call?(rhs)
+  @impl true
+  def fix(source, _opts) do
+    source
+    |> Sourceror.parse_string!()
+    |> Macro.postwalk(fn
+      # Pipe: String.graphemes(x) |> length()
+      {:|>, _, [lhs, {:length, _, _}]} = node ->
+        fix_pipe_length(lhs, node)
 
-  defp immediate_graphemes?(other),
-    do: graphemes_call?(other)
+      # Direct: length(String.graphemes(x))
+      {:length, _, [arg]} = node ->
+        case extract_graphemes_arg(arg) do
+          {:ok, subject} -> string_length_call(subject)
+          :error -> node
+        end
 
-  # Relaxed match for String.graphemes/1
+      node ->
+        node
+    end)
+    |> Sourceror.to_string()
+  end
+
+  # ── Fix helpers ────────────────────────────────────────────────────
+
+  # String.graphemes(x) |> length() → String.length(x)
+  defp fix_pipe_length(
+         {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, args},
+         _node
+       ) do
+    subject = if args == [], do: raise("unreachable"), else: hd(args)
+    string_length_call(subject)
+  end
+
+  # x |> String.graphemes() |> length() → x |> String.length()
+  defp fix_pipe_length(
+         {:|>, pipe_meta, [deeper, {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}]},
+         _node
+       ) do
+    {:|>, pipe_meta, [deeper, {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], []}]}
+  end
+
+  defp fix_pipe_length(_, node), do: node
+
+  defp extract_graphemes_arg({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [subject]}),
+    do: {:ok, subject}
+
+  defp extract_graphemes_arg(_), do: :error
+
+  defp string_length_call(subject) do
+    {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], [subject]}
+  end
+
+  # ── Shared detection helpers ───────────────────────────────────────
+
+  defp immediate_graphemes?({:|>, _, [_, rhs]}), do: graphemes_call?(rhs)
+  defp immediate_graphemes?(other), do: graphemes_call?(other)
+
   defp graphemes_call?({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, args})
        when is_list(args),
        do: true
@@ -56,7 +106,6 @@ defmodule Credence.Rule.AvoidGraphemesLength do
   defp trigger_issue(meta) do
     %Issue{
       rule: :avoid_graphemes_length,
-      severity: :warning,
       message: """
       Use `String.length/1` instead of counting `String.graphemes/1`.
 

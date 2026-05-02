@@ -126,7 +126,6 @@ defmodule Credence.Rule.NoSortThenReverse do
   defp build_issue(meta) do
     %Issue{
       rule: :no_sort_then_reverse,
-      severity: :warning,
       message:
         "Avoid `Enum.sort/1` followed by `Enum.reverse/1`. Use `Enum.sort(list, :desc)` instead to sort in descending order in a single pass.",
       meta: %{line: Keyword.get(meta, :line)}

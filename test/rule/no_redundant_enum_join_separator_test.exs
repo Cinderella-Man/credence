@@ -59,7 +59,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_redundant_enum_join_separator
-      assert issue.severity == :info
+
       assert issue.message =~ "defaults to an empty string"
       assert issue.meta.line != nil
     end

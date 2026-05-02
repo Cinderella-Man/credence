@@ -25,10 +25,6 @@ defmodule Credence.Rule.NoIsPrefixForNonGuard do
 
   Only `def` and `defp` clauses are flagged.  `defguard`, `defguardp`,
   and `defmacro` are excluded since `is_` is correct for those.
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -80,7 +76,6 @@ defmodule Credence.Rule.NoIsPrefixForNonGuard do
       {:ok,
        %Issue{
          rule: :no_is_prefix_for_non_guard,
-         severity: :warning,
          message: build_message(def_type, fn_name, arity, suggested),
          meta: %{line: Keyword.get(meta, :line)}
        }}

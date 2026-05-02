@@ -39,7 +39,7 @@ defmodule Credence.Rule.NoStringLengthForCharCheckTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_string_length_for_char_check
-      assert issue.severity == :info
+
       assert issue.message =~ "String.length/1"
       assert issue.meta.line != nil
     end

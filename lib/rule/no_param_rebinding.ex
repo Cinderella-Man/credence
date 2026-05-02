@@ -113,7 +113,6 @@ defmodule Credence.Rule.NoParamRebinding do
   defp build_issue(var_name, meta) do
     %Issue{
       rule: :no_param_rebinding,
-      severity: :info,
       message:
         "Variable `#{var_name}` shadows a parameter from the enclosing `fn`. " <>
           "Use a distinct name (e.g. `new_#{var_name}`) to avoid confusion.",

@@ -63,7 +63,6 @@ defmodule Credence.Rule.NoStringLengthForCharCheck do
   defp build_issue(meta) do
     %Issue{
       rule: :no_string_length_for_char_check,
-      severity: :info,
       message:
         "`String.length/1` traverses the entire string (O(n)) just to check for a single character. " <>
           "Use pattern matching (e.g. `<<_::utf8>>`) or `String.graphemes/1` with a match instead.",

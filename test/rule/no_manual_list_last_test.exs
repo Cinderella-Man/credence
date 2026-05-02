@@ -17,7 +17,7 @@ defmodule Credence.Rule.NoManualListLastTest do
 
       [issue] = check(code)
       assert issue.rule == :no_manual_list_last
-      assert issue.severity == :warning
+
       assert issue.message =~ "get_last_element/1"
       assert issue.message =~ "List.last/1"
     end

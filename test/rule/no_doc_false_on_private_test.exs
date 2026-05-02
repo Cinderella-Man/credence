@@ -55,7 +55,7 @@ defmodule Credence.Rule.NoDocFalseOnPrivateTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_doc_false_on_private
-      assert issue.severity == :info
+
       assert issue.message =~ "redundant"
       assert issue.meta.line != nil
     end

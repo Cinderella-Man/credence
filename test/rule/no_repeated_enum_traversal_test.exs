@@ -54,7 +54,7 @@ defmodule Credence.Rule.NoRepeatedEnumTraversalTest do
       Enum.each(issues, fn issue ->
         assert %Issue{} = issue
         assert issue.rule == :no_repeated_enum_traversal
-        assert issue.severity == :warning
+
         assert issue.message =~ "Repeated traversal"
         assert issue.message =~ "Enum"
         assert issue.meta.line != nil

@@ -59,7 +59,6 @@ defmodule Credence.Rule.NoLengthInGuard do
 
           issue = %Issue{
             rule: :no_length_in_guard,
-            severity: :warning,
             message:
               "Avoid `length/1` in guard clauses — it traverses the entire list (O(n)) on every call. " <>
                 "Use pattern matching like `[_ | _]` for non-empty checks, or move the length check into the function body.",

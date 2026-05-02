@@ -23,7 +23,7 @@ defmodule Credence.Rule.NoTakeWhileLengthCheckTest do
 
       [issue] = check(code)
       assert issue.rule == :no_take_while_length_check
-      assert issue.severity == :warning
+
       assert issue.message =~ "Enum.all?"
     end
 

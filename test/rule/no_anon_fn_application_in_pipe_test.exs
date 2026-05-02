@@ -67,7 +67,7 @@ defmodule Credence.Rule.NoAnonFnApplicationInPipeTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_anon_fn_application_in_pipe
-      assert issue.severity == :warning
+
       assert issue.message =~ "then/2"
       assert issue.meta.line != nil
     end

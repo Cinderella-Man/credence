@@ -42,7 +42,6 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparator do
   defp build_issue(meta) do
     %Issue{
       rule: :no_redundant_enum_join_separator,
-      severity: :info,
       message:
         "`Enum.join/1` already defaults to an empty string separator. " <>
           "Remove the redundant `\"\"` argument.",

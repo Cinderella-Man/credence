@@ -28,10 +28,6 @@ defmodule Credence.Rule.UseMapJoin do
 
   Only **adjacent** map→join is flagged.  Intervening steps like
   `Enum.map(f) |> Enum.filter(g) |> Enum.join()` are left alone.
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -76,7 +72,6 @@ defmodule Credence.Rule.UseMapJoin do
   defp build_issue(meta) do
     %Issue{
       rule: :use_map_join,
-      severity: :warning,
       message: """
       `Enum.map/2` piped into `Enum.join` creates an intermediate list.
 

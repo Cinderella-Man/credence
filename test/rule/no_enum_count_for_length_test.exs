@@ -20,7 +20,7 @@ defmodule Credence.Rule.NoEnumCountForLengthTest do
 
       [issue] = check(code)
       assert issue.rule == :no_enum_count_for_length
-      assert issue.severity == :info
+
       assert issue.message =~ "length/1"
     end
 

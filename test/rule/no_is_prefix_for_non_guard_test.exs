@@ -16,7 +16,7 @@ defmodule Credence.Rule.NoIsPrefixForNonGuardTest do
 
       [issue] = check(code)
       assert issue.rule == :no_is_prefix_for_non_guard
-      assert issue.severity == :warning
+
       assert issue.message =~ "is_palindrome"
       assert issue.message =~ "palindrome?"
     end

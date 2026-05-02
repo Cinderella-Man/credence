@@ -98,7 +98,6 @@ defmodule Credence.Rule.UnnecessaryGraphemeChunking do
     if grapheme_chunk_map_pipeline?(calls) do
       %Issue{
         rule: :unnecessary_grapheme_chunking,
-        severity: :warning,
         message: message(),
         meta: %{line: Keyword.get(meta, :line)}
       }

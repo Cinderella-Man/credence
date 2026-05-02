@@ -131,7 +131,6 @@ defmodule Credence.Rule.NoManualEnumUniq do
   defp trigger_issue(meta) do
     %Issue{
       rule: :no_manual_enum_uniq,
-      severity: :warning,
       message: """
       Manual reimplementation of `Enum.uniq/1` detected.
 

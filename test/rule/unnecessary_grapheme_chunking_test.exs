@@ -37,7 +37,6 @@ defmodule Credence.Rule.UnnecessaryGraphemeChunkingTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :unnecessary_grapheme_chunking
-      assert issue.severity == :warning
 
       assert issue.message =~ "allocation chain"
       assert issue.message =~ "List of graphemes"

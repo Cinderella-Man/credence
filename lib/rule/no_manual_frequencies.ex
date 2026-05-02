@@ -78,7 +78,6 @@ defmodule Credence.Rule.NoManualFrequencies do
   defp build_issue(meta) do
     %Issue{
       rule: :no_manual_frequencies,
-      severity: :info,
       message:
         "Manual frequency counting with `Enum.reduce/3` + `Map.update/4` and an empty map " <>
           "can be replaced with `Enum.frequencies/1`, which is clearer and optimized.",

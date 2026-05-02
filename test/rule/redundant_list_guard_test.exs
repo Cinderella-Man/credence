@@ -18,7 +18,7 @@ defmodule Credence.Rule.RedundantListGuardTest do
 
       [issue] = check(code)
       assert issue.rule == :redundant_list_guard
-      assert issue.severity == :warning
+
       assert issue.message =~ "rest"
       assert issue.message =~ "Redundant"
     end

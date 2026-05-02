@@ -47,7 +47,7 @@ defmodule Credence.Rule.NoIntegerToStringDigitsTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_integer_to_string_digits
-      assert issue.severity == :warning
+
       assert issue.message =~ "Integer.digits/2"
       assert issue.meta.line != nil
     end

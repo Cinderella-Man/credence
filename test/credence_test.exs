@@ -19,13 +19,13 @@ defmodule CredenceTest do
       flunk(
         "Expected no issues but got #{length(result.issues)}: #{inspect(rules_triggered)}\n" <>
           Enum.map_join(result.issues, "\n", fn i ->
-            "  [#{i.severity}] #{i.rule}: #{i.message} (line #{i.meta[:line]})"
+            "  [#{i.rule}: #{i.message} (line #{i.meta[:line]})"
           end)
       )
     end
   end
 
-  describe "idiomatic list processing" do
+  describe "analyze works" do
     test "prepend + reverse pattern in reduce" do
       assert_clean("""
       defmodule DoubleList do
@@ -1014,6 +1014,44 @@ defmodule CredenceTest do
         end
       end
       """)
+    end
+  end
+
+  describe "fix works" do
+    test "applies fixable rules and reports remaining issues" do
+      input = """
+      defmodule Foo do
+        @doc false
+        defp helper(x), do: x + 1
+      end
+      """
+
+      result = Credence.fix(input)
+
+      refute result.code =~ "@doc false"
+      assert result.issues == []
+    end
+
+    test "unfixable issues survive in the output" do
+      input = """
+      defmodule Foo do
+        @doc false
+        defp x, do: 1
+      end
+      """
+
+      # Both a fixable rule and an unfixable rule
+      rules = [
+        Credence.Rule.NoDocFalseOnPrivate,
+        Credence.Rule.DescriptiveNames
+      ]
+
+      result = Credence.fix(input, rules: rules)
+
+      # @doc false is fixed
+      refute result.code =~ "@doc false"
+      # But the bad name `x` still shows up as an issue
+      assert Enum.any?(result.issues, &(&1.rule == :no_non_descriptive_names))
     end
   end
 end

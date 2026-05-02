@@ -11,7 +11,6 @@ defmodule Credence.Rule.NoExplicitSumReduce do
           if reduce_call?(node) and sum_reduce_body?(args) do
             issue = %Issue{
               rule: :no_explicit_sum_reduce,
-              severity: :warning,
               message: "Explicit sum-reduction detected. Prefer Enum.sum/1.",
               meta: %{line: Keyword.get(meta, :line)}
             }

@@ -72,7 +72,6 @@ defmodule Credence.Rule.NoManualStringReverse do
   defp build_issue(meta) do
     %Issue{
       rule: :no_manual_string_reverse,
-      severity: :warning,
       message:
         "Use `String.reverse/1` instead of `String.graphemes/1 |> Enum.reverse/0 |> Enum.join/0`. " <>
           "It is clearer and avoids creating an intermediate list.",

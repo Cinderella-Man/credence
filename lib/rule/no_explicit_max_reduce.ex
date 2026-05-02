@@ -13,7 +13,7 @@ defmodule Credence.Rule.NoExplicitMaxReduce do
   will NOT be flagged.
   """
 
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
 
   @impl true
@@ -25,7 +25,6 @@ defmodule Credence.Rule.NoExplicitMaxReduce do
           if reduce_call?(node) and max_reduce_body?(args) do
             issue = %Issue{
               rule: :no_explicit_max_reduce,
-              severity: :warning,
               message: "Explicit max-reduction detected. Prefer Enum.max/1 or Enum.max_by/2.",
               meta: %{line: Keyword.get(meta, :line)}
             }

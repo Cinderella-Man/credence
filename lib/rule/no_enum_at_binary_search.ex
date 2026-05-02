@@ -20,7 +20,7 @@ defmodule Credence.Rule.NoEnumAtBinarySearch do
       # ... inside loop:
       mid_val = elem(tuple, mid) # O(1) access
   """
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
 
   @impl true
@@ -87,7 +87,6 @@ defmodule Credence.Rule.NoEnumAtBinarySearch do
   defp trigger_issue(meta) do
     %Issue{
       rule: :no_enum_at_binary_search,
-      severity: :warning,
       message:
         "Using `Enum.at/2` with a dynamic index on a list is O(n). " <>
           "For binary search or frequent random access, convert the list " <>

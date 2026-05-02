@@ -38,7 +38,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_manual_string_reverse
-      assert issue.severity == :warning
+
       assert issue.message =~ "String.reverse/1"
       assert issue.meta.line != nil
     end

@@ -51,7 +51,7 @@ defmodule Credence.Rule.NoLengthInGuardTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_length_in_guard
-      assert issue.severity == :warning
+
       assert issue.message =~ "length/1"
       assert issue.message =~ "guard"
       assert issue.meta.line != nil

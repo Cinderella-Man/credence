@@ -11,7 +11,6 @@ defmodule Credence.Rule.NoExplicitMinReduce do
           if reduce_call?(node) and min_reduce_body?(args) do
             issue = %Issue{
               rule: :no_explicit_min_reduce,
-              severity: :warning,
               message: "Explicit min-reduction detected. Prefer Enum.min/1 or Enum.min_by/2.",
               meta: %{line: Keyword.get(meta, :line)}
             }

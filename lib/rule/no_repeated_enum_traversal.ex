@@ -43,7 +43,6 @@ defmodule Credence.Rule.NoRepeatedEnumTraversal do
       Enum.map(calls, fn {func, meta} ->
         %Issue{
           rule: :no_repeated_enum_traversal,
-          severity: :warning,
           message:
             "Repeated traversal of `#{var}` using Enum.#{func}/#{arity(func)}. " <>
               "Consider combining traversals into a single Enum.reduce/3 or caching results.",

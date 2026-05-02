@@ -21,7 +21,7 @@ defmodule Credence.Rule.NoEnumDropNegative do
       # Or use Enum.slice/2 if you know the desired length:
       Enum.slice(list, 0..-2//1)
   """
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
 
   @impl true
@@ -48,7 +48,6 @@ defmodule Credence.Rule.NoEnumDropNegative do
   defp build_issue(n, meta) do
     %Issue{
       rule: :no_enum_drop_negative,
-      severity: :warning,
       message:
         "`Enum.drop(list, -#{n})` traverses the entire list to drop from the end. " <>
           "Restructure the algorithm to avoid tail-trimming on linked lists, " <>

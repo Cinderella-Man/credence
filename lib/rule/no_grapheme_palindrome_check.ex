@@ -101,7 +101,6 @@ defmodule Credence.Rule.NoGraphemePalindromeCheck do
   defp build_issue(meta) do
     %Issue{
       rule: :no_grapheme_palindrome_check,
-      severity: :warning,
       message:
         "Avoid decomposing a string into graphemes/charlist just to compare with `Enum.reverse/1`. " <>
           "Use `str == String.reverse(str)` instead — it is clearer and avoids creating an intermediate list.",

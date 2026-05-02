@@ -38,7 +38,6 @@ defmodule Credence.Rule.PreferEnumSliceTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :prefer_enum_slice
-      assert issue.severity == :refactor
       assert issue.message =~ "Enum.slice/3"
       assert issue.meta.line != nil
     end

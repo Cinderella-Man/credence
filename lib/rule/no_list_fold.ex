@@ -21,10 +21,6 @@ defmodule Credence.Rule.NoListFold do
   | -------------------- | ----------------------- |
   | `List.foldl/3`       | `Enum.reduce/3`         |
   | `List.foldr/3`       | `Enum.reduce/3` (with note about reversal) |
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -40,7 +36,6 @@ defmodule Credence.Rule.NoListFold do
           {:ok, fn_name, meta} ->
             issue = %Issue{
               rule: :no_list_fold,
-              severity: :warning,
               message: build_message(fn_name),
               meta: %{line: Keyword.get(meta, :line)}
             }

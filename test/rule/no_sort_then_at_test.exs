@@ -46,7 +46,7 @@ defmodule Credence.Rule.NoSortThenAtTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_sort_then_at
-      assert issue.severity == :info
+
       assert issue.message =~ "Enum.at/2"
       assert issue.meta.line != nil
     end

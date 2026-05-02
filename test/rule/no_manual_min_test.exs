@@ -18,7 +18,7 @@ defmodule Credence.Rule.NoManualMinTest do
 
       [issue] = check(code)
       assert issue.rule == :no_manual_min
-      assert issue.severity == :warning
+
       assert issue.message =~ "min/2"
     end
 

@@ -67,7 +67,7 @@ defmodule Credence.Rule.NoDoubleSortSameListTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_double_sort_same_list
-      assert issue.severity == :warning
+
       assert issue.message =~ "arr"
       assert issue.message =~ "sorted twice"
       assert issue.message =~ "Enum.reverse"

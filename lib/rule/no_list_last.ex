@@ -41,7 +41,6 @@ defmodule Credence.Rule.NoListLast do
         {{:., _, [{:__aliases__, _, [:List]}, :last]}, meta, _args} = node, issues ->
           issue = %Issue{
             rule: :no_list_last,
-            severity: :warning,
             message:
               "`List.last/1` traverses the entire list (O(n)). " <>
                 "Restructure to avoid needing the last element: " <>

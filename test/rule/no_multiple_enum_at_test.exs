@@ -57,7 +57,7 @@ defmodule Credence.Rule.NoMultipleEnumAtTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_multiple_enum_at
-      assert issue.severity == :info
+
       assert issue.message =~ "sorted"
       assert issue.message =~ "pattern matching"
       assert issue.meta.line != nil

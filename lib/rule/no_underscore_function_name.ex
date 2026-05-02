@@ -27,10 +27,6 @@ defmodule Credence.Rule.NoUnderscoreFunctionName do
   a single underscore.  Names starting with double underscores (`__`)
   are excluded — those are legitimate Elixir/Erlang callbacks such as
   `__using__/1`, `__before_compile__/1`, and `__info__/1`.
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -99,7 +95,6 @@ defmodule Credence.Rule.NoUnderscoreFunctionName do
   defp build_issue(def_type, fn_name, arity, meta) do
     %Issue{
       rule: :no_underscore_function_name,
-      severity: :warning,
       message: build_message(def_type, fn_name, arity),
       meta: %{line: Keyword.get(meta, :line)}
     }

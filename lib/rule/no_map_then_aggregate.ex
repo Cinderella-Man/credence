@@ -34,10 +34,6 @@ defmodule Credence.Rule.NoMapThenAggregate do
   - `Enum.sum/1`
 
   Both pipeline and direct-call nesting forms are detected.
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -149,7 +145,6 @@ defmodule Credence.Rule.NoMapThenAggregate do
   defp build_issue(agg_fn, meta) do
     %Issue{
       rule: :no_map_then_aggregate,
-      severity: :warning,
       message: build_message(agg_fn),
       meta: %{line: Keyword.get(meta, :line)}
     }

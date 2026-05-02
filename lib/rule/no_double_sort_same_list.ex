@@ -18,7 +18,7 @@ defmodule Credence.Rule.NoDoubleSortSameList do
       asc = Enum.sort(arr)
       desc = Enum.reverse(asc)
   """
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
 
   @impl true
@@ -81,7 +81,6 @@ defmodule Credence.Rule.NoDoubleSortSameList do
         [
           %Issue{
             rule: :no_double_sort_same_list,
-            severity: :warning,
             message:
               "The list `#{source}` is sorted twice (ascending and descending). " <>
                 "Sort once and use `Enum.reverse/1` on the result instead: " <>

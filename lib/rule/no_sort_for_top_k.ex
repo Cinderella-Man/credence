@@ -17,10 +17,6 @@ defmodule Credence.Rule.NoSortForTopK do
   Sorting an entire collection is O(n log n). When only the first or last
   few elements are needed, a single-pass O(n) approach is both faster and
   clearer in intent.
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -34,7 +30,6 @@ defmodule Credence.Rule.NoSortForTopK do
           {:ok, var, op, k, meta} ->
             issue = %Issue{
               rule: :no_sort_for_top_k,
-              severity: :warning,
               message: build_message(op, var, k),
               meta: %{line: Keyword.get(meta, :line)}
             }

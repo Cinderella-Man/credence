@@ -38,7 +38,7 @@ defmodule Credence.Rule.NoGraphemePalindromeCheckTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_grapheme_palindrome_check
-      assert issue.severity == :warning
+
       assert issue.message =~ "String.reverse"
       assert issue.meta.line != nil
     end

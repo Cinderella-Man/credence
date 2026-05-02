@@ -85,7 +85,7 @@ defmodule Credence.Rule.NoManualFrequenciesTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_manual_frequencies
-      assert issue.severity == :info
+
       assert issue.message =~ "Enum.frequencies"
       assert issue.meta.line != nil
     end

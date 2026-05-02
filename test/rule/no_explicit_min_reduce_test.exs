@@ -50,7 +50,7 @@ defmodule Credence.Rule.NoExplicitMinReduceTest do
 
       assert %Issue{} = issue
       assert issue.rule == :no_explicit_min_reduce
-      assert issue.severity == :warning
+
       assert issue.message =~ "min-reduction"
       assert issue.meta.line != nil
     end

@@ -16,9 +16,6 @@ defmodule Credence.Rule.NoEnumCountForLength do
       # Idiomatic — BIF, no protocol overhead
       total = length(chars)
 
-  LLMs reach for `Enum.count` reflexively because they're in "Enum
-  pipeline" mode after using `Enum.map`, `Enum.reduce`, etc.
-
   For other collection types, more specific functions exist:
   `map_size/1` for maps, `MapSet.size/1` for sets, `tuple_size/1`
   for tuples.
@@ -29,14 +26,13 @@ defmodule Credence.Rule.NoEnumCountForLength do
   The two-argument form `Enum.count(x, predicate)` is not flagged
   because it filters and counts in one pass — there is no simpler
   replacement.
-
-  ## Severity
-
-  `:info`
   """
 
-  @behaviour Credence.Rule
+  use Credence.Rule
   alias Credence.Issue
+
+  @impl true
+  def fixable?, do: true
 
   @impl true
   def check(ast, _opts) do
@@ -51,11 +47,32 @@ defmodule Credence.Rule.NoEnumCountForLength do
     Enum.reverse(issues)
   end
 
-  # ------------------------------------------------------------
-  # NODE MATCHING
-  # ------------------------------------------------------------
+  @impl true
+  def fix(source, _opts) do
+    source
+    |> Sourceror.parse_string!()
+    |> Macro.postwalk(fn
+      # Direct: Enum.count(expr) → length(expr)
+      # Must not match the predicate-only piped form
+      {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg]} = node ->
+        if not predicate?(arg) do
+          {:length, [], [arg]}
+        else
+          node
+        end
 
-  # Direct call: Enum.count(expr) — but NOT pipeline Enum.count(predicate)
+      # Pipeline: ... |> Enum.count() → ... |> length()
+      {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, []} ->
+        {:length, [], []}
+
+      node ->
+        node
+    end)
+    |> Sourceror.to_string()
+  end
+
+  # ── Shared detection helpers ───────────────────────────────────────
+
   defp check_node({{:., meta, [mod, :count]}, _, [arg]}) do
     if enum_module?(mod) and not predicate?(arg) do
       {:ok, build_issue(meta)}
@@ -64,7 +81,6 @@ defmodule Credence.Rule.NoEnumCountForLength do
     end
   end
 
-  # Pipeline form: expr |> Enum.count()
   defp check_node({{:., meta, [mod, :count]}, _, []}) do
     if enum_module?(mod) do
       {:ok, build_issue(meta)}
@@ -75,27 +91,16 @@ defmodule Credence.Rule.NoEnumCountForLength do
 
   defp check_node(_), do: :error
 
-  # ------------------------------------------------------------
-  # HELPERS
-  # ------------------------------------------------------------
-
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true
   defp enum_module?(_), do: false
 
-  # In pipeline form `x |> Enum.count(&pred)`, the single arg is a
-  # predicate (capture or anonymous function), not a collection.
   defp predicate?({:&, _, _}), do: true
   defp predicate?({:fn, _, _}), do: true
   defp predicate?(_), do: false
 
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
-
   defp build_issue(meta) do
     %Issue{
       rule: :no_enum_count_for_length,
-      severity: :info,
       message: """
       `Enum.count/1` used without a predicate.
 

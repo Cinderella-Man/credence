@@ -75,7 +75,6 @@ defmodule Credence.Rule.NoListToTupleForAccess do
   defp build_issue(var, meta) do
     %Issue{
       rule: :no_list_to_tuple_for_access,
-      severity: :warning,
       message:
         "`#{var}` is created with `List.to_tuple/1` and then accessed with `elem/2`. " <>
           "Avoid copying a dynamic list into a tuple for indexed access. " <>

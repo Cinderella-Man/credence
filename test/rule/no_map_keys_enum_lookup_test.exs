@@ -23,7 +23,7 @@ defmodule Credence.Rule.NoMapKeysEnumLookupTest do
 
       [issue] = check(code)
       assert issue.rule == :no_map_keys_enum_lookup
-      assert issue.severity == :warning
+
       assert issue.message =~ "word_freqs"
       assert issue.message =~ "Enum.all?"
     end

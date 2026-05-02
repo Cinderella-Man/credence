@@ -45,7 +45,7 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIterationTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_map_keys_or_values_for_iteration
-      assert issue.severity == :info
+
       assert issue.message =~ "Map.values"
       assert issue.message =~ "Enum.all?"
       assert issue.meta.line != nil

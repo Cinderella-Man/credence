@@ -61,7 +61,7 @@ defmodule Credence.Rule.NoMapAsSetTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_map_as_set
-      assert issue.severity == :info
+
       assert issue.message =~ "MapSet"
       assert issue.meta.line != nil
     end

@@ -21,7 +21,7 @@ result = Credence.analyze(File.read!("lib/my_module.ex"))
 
 unless result.valid do
   Enum.each(result.issues, fn issue ->
-    IO.puts("[#{issue.severity}] #{issue.rule}: #{issue.message}")
+    IO.puts("#{issue.rule}: #{issue.message}")
   end)
 end
 ```

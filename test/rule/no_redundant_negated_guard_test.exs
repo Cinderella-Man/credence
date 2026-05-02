@@ -17,7 +17,7 @@ defmodule Credence.Rule.NoRedundantNegatedGuardTest do
 
       [issue] = check(code)
       assert issue.rule == :no_redundant_negated_guard
-      assert issue.severity == :info
+
       assert issue.message =~ "Redundant"
       assert issue.message =~ "!="
     end

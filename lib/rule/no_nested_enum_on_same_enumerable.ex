@@ -25,7 +25,6 @@ defmodule Credence.Rule.NoNestedEnumOnSameEnumerable do
                 [
                   %Issue{
                     rule: :no_nested_enum_on_same_enumerable,
-                    severity: :warning,
                     message: build_message(func, var),
                     meta: %{line: Keyword.get(meta, :line)}
                   }

@@ -35,7 +35,7 @@ defmodule Credence.Rule.NoSortThenReverseTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_sort_then_reverse
-      assert issue.severity == :warning
+
       assert issue.message =~ "Enum.sort(list, :desc)"
       assert issue.meta.line != nil
     end

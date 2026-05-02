@@ -105,7 +105,6 @@ defmodule Credence.Rule.NoListDeleteAtInLoop do
         {{:., _, [{:__aliases__, _, [:List]}, :delete_at]}, meta, _} = node, issues ->
           issue = %Issue{
             rule: :no_list_delete_at_in_loop,
-            severity: :high,
             message:
               "Avoid `List.delete_at/2` inside loops — it traverses the list to the index (O(n)), " <>
                 "creating O(n²) cost per iteration. Use pattern matching or `List.delete/2` instead.",

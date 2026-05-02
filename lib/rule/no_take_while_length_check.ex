@@ -34,10 +34,6 @@ defmodule Credence.Rule.NoTakeWhileLengthCheck do
   - `length(Enum.take_while(enum, fun))`
   - `Enum.count(Enum.take_while(enum, fun))`
   - `enum |> Enum.take_while(fun) |> length()`
-
-  ## Severity
-
-  `:warning`
   """
 
   @behaviour Credence.Rule
@@ -153,7 +149,6 @@ defmodule Credence.Rule.NoTakeWhileLengthCheck do
   defp build_issue(meta) do
     %Issue{
       rule: :no_take_while_length_check,
-      severity: :warning,
       message: build_message(),
       meta: %{line: Keyword.get(meta, :line)}
     }
