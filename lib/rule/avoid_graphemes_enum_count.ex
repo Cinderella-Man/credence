@@ -1,14 +1,41 @@
 defmodule Credence.Rule.AvoidGraphemesEnumCount do
   @moduledoc """
-  Performance rule: warns when `String.graphemes/1 |> Enum.count()` is used.
+  Performance rule: Detects the use of `Enum.count/1` or `Enum.count/2` on
+  the result of `String.graphemes/1`.
 
-  - For `Enum.count/1` (no predicate): suggests `String.length/1`, which
-    avoids allocating an intermediate list of graphemes.
+  Calling `String.graphemes/1` eagerly allocates a list containing every
+  grapheme in the string. If your goal is simply to count the characters,
+  `String.length/1` accomplishes this without the intermediate list allocation.
 
-  - For `Enum.count/2` (with a predicate): replaces the eager
-    `String.graphemes/1` with a lazy `Stream.unfold/2` backed by
-    `String.next_grapheme/1`, avoiding the intermediate list while
-    keeping the familiar `Enum.count/2` call.
+  If you are counting characters that match a specific condition (using
+  `Enum.count/2`), you can avoid allocating the entire list in memory by
+  using a lazy stream backed by `String.next_grapheme/1`.
+
+  ## Bad
+
+      # Counting all characters
+      string
+      |> String.graphemes()
+      |> Enum.count()
+
+      # Counting characters with a predicate
+      string
+      |> String.graphemes()
+      |> Enum.count(fn char -> char == "a" end)
+
+  ## Good
+
+      # Counting all characters
+      String.length(string)
+
+      # Or in a pipeline:
+      string
+      |> String.length()
+
+      # Counting characters with a predicate
+      string
+      |> Stream.unfold(&String.next_grapheme/1)
+      |> Enum.count(fn char -> char == "a" end)
   """
 
   use Credence.Rule

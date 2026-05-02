@@ -1,12 +1,32 @@
 defmodule Credence.Rule.AvoidGraphemesLength do
-  @moduledoc """
-  Performance rule: warns when `String.graphemes/1 |> length()` is used.
+@moduledoc """
+  Performance rule: Detects the use of `length/1` on the result of
+  `String.graphemes/1`.
 
-  `String.length/1` is significantly more efficient. `String.graphemes/1`
-  allocates a list of all graphemes in memory, which is then traversed by
-  `length/1` and immediately garbage collected.
+  Calling `String.graphemes/1` eagerly allocates a list containing every
+  grapheme in the string. If your only goal is to find out how many characters
+  there are, this list is immediately garbage collected after `length/1` finishes.
 
-  `String.length/1` avoids building this intermediate list.
+  Using `String.length/1` calculates the character count directly without
+  building this intermediate list, making it significantly more memory efficient.
+
+  ## Bad
+
+      # In a pipeline
+      string
+      |> String.graphemes()
+      |> length()
+
+      # As a direct call
+      length(String.graphemes(string))
+
+  ## Good
+
+      String.length(string)
+
+      # Or in a pipeline:
+      string
+      |> String.length()
   """
 
   use Credence.Rule

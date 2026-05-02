@@ -1,16 +1,33 @@
 defmodule Credence.Rule.DescriptiveNames do
   @moduledoc """
-  Maintainability rule: Flags single-letter variable names in function signatures.
+  Maintainability rule: Detects single-letter variable names in function signatures.
 
-  Using names like `a`, `b`, or `n` makes the code harder to reason about.
-  Replacing them with descriptive names like `index`, `accumulator`, or `previous_value`
-  improves readability and reduces cognitive load.
+  Using single-letter names like `a`, `x`, or `n` forces the reader to keep track
+  of the variable's purpose in their short-term memory. Replacing these with
+  descriptive names reduces cognitive load and makes the code self-documenting.
+
+  While common in mathematical contexts, in software development, explicit names
+  like `index`, `accumulator`, or `user_id` make the logic much easier to reason
+  about at a glance.
 
   ## Bad
-      def process(a, b), do: a + b
+
+      # Named functions
+      def handle_event(e, s), do: {:ok, s}
+
+      # Anonymous functions
+      Enum.reduce(list, 0, fn x, acc -> x + acc end)
 
   ## Good
-      def process(base_value, increment), do: base_value + increment
+
+      # Named functions
+      def handle_event(event, state), do: {:ok, state}
+
+      # Anonymous functions
+      Enum.reduce(list, 0, fn price, total_sum -> price + total_sum end)
+
+      # Single underscores (ignored by this rule)
+      def handle_call(_msg, _from, state), do: {:reply, :ok, state}
   """
 
   use Credence.Rule
