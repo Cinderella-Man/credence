@@ -44,10 +44,6 @@ defmodule Credence.Rule.NoSortForTopK do
     Enum.reverse(issues)
   end
 
-  # ------------------------------------------------------------
-  # PIPELINE NORMALIZATION
-  # ------------------------------------------------------------
-
   defp extract_pipeline({:|>, meta, _} = node) do
     pipeline = flatten_pipeline(node)
 
@@ -65,10 +61,6 @@ defmodule Credence.Rule.NoSortForTopK do
 
   defp flatten_pipeline(expr), do: [expr]
 
-  # ------------------------------------------------------------
-  # ANALYSIS
-  # ------------------------------------------------------------
-
   defp analyze_pipeline([first | rest]) do
     with {:ok, var} <- extract_sort(first),
          {:ok, op, k} <- find_topk(rest) do
@@ -77,10 +69,6 @@ defmodule Credence.Rule.NoSortForTopK do
       _ -> :error
     end
   end
-
-  # ------------------------------------------------------------
-  # SORT DETECTION
-  # ------------------------------------------------------------
 
   defp extract_sort({{:., _, [mod, :sort]}, _, [arg | _]}) do
     if enum_module?(mod) do
@@ -137,10 +125,6 @@ defmodule Credence.Rule.NoSortForTopK do
 
   defp extract_topk(_), do: :error
 
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
-
   defp build_message(:take, var, 1) do
     """
     Enum.sort/1 |> Enum.take(1) on `#{var}` is unnecessary O(n log n).
@@ -184,10 +168,6 @@ defmodule Credence.Rule.NoSortForTopK do
     Consider Enum.reduce/3 to track top two values in one pass.
     """
   end
-
-  # ------------------------------------------------------------
-  # HELPERS
-  # ------------------------------------------------------------
 
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true
   defp enum_module?(_), do: false

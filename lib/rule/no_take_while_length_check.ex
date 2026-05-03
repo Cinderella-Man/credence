@@ -52,10 +52,6 @@ defmodule Credence.Rule.NoTakeWhileLengthCheck do
     Enum.reverse(issues)
   end
 
-  # ------------------------------------------------------------
-  # NODE MATCHING
-  # ------------------------------------------------------------
-
   # Pipeline form: ... |> Enum.take_while(fn) |> length()
   #            or: ... |> Enum.take_while(fn) |> Enum.count()
   defp check_node({:|>, meta, _} = node) do
@@ -83,10 +79,6 @@ defmodule Credence.Rule.NoTakeWhileLengthCheck do
 
   defp check_node(_), do: :error
 
-  # ------------------------------------------------------------
-  # PIPELINE ANALYSIS
-  # ------------------------------------------------------------
-
   defp check_pipeline(steps, meta) do
     steps
     |> Enum.chunk_every(2, 1, :discard)
@@ -98,10 +90,6 @@ defmodule Credence.Rule.NoTakeWhileLengthCheck do
       false -> :error
     end)
   end
-
-  # ------------------------------------------------------------
-  # STEP DETECTION
-  # ------------------------------------------------------------
 
   # Enum.take_while(enum, fun) — full call
   defp take_while_call?({{:., _, [mod, :take_while]}, _, args})
@@ -129,10 +117,6 @@ defmodule Credence.Rule.NoTakeWhileLengthCheck do
 
   defp length_step?(_), do: false
 
-  # ------------------------------------------------------------
-  # HELPERS
-  # ------------------------------------------------------------
-
   defp flatten_pipeline({:|>, _, [left, right]}) do
     flatten_pipeline(left) ++ [right]
   end
@@ -141,10 +125,6 @@ defmodule Credence.Rule.NoTakeWhileLengthCheck do
 
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true
   defp enum_module?(_), do: false
-
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
 
   defp build_issue(meta) do
     %Issue{

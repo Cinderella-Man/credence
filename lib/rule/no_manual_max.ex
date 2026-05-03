@@ -116,9 +116,6 @@ defmodule Credence.Rule.NoManualMax do
     {:max, [], [a, b]}
   end
 
-  # ------------------------------------------------------------
-  # NODE MATCHING (for check)
-  # ------------------------------------------------------------
   defp check_node({:if, meta, [condition, branches]}) do
     with {:ok, do_branch} <- fetch_branch(branches, :do),
          {:ok, else_branch} <- fetch_branch(branches, :else),
@@ -159,9 +156,6 @@ defmodule Credence.Rule.NoManualMax do
 
   defp is_max_pattern?(_, _, _, _, _), do: false
 
-  # ------------------------------------------------------------
-  # HELPERS
-  # ------------------------------------------------------------
   defp fetch_branch(branches, key) when is_list(branches) do
     case Keyword.fetch(branches, key) do
       {:ok, val} -> {:ok, val}

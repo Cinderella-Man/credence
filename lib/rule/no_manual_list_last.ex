@@ -67,10 +67,6 @@ defmodule Credence.Rule.NoManualListLast do
     end
   end
 
-  # ------------------------------------------------------------
-  # CLAUSE COLLECTION
-  # ------------------------------------------------------------
-
   defp collect_clauses(ast) do
     {_ast, clauses} =
       Macro.prewalk(ast, [], fn node, acc ->
@@ -95,10 +91,6 @@ defmodule Credence.Rule.NoManualListLast do
 
   defp extract_clause(_), do: :error
 
-  # ------------------------------------------------------------
-  # GROUP ANALYSIS
-  # ------------------------------------------------------------
-
   defp analyze_group(clauses) when length(clauses) != 2, do: []
 
   defp analyze_group([clause_a, clause_b]) do
@@ -117,10 +109,6 @@ defmodule Credence.Rule.NoManualListLast do
         []
     end
   end
-
-  # ------------------------------------------------------------
-  # PATTERN DETECTION
-  # ------------------------------------------------------------
 
   defp is_list_last?(base_clause, recursive_clause, fn_name) do
     single_element_return?(base_clause) and
@@ -171,10 +159,6 @@ defmodule Credence.Rule.NoManualListLast do
   end
 
   defp body_recurses_with?(_, _, _), do: false
-
-  # ------------------------------------------------------------
-  # FIX — find matching functions
-  # ------------------------------------------------------------
 
   defp find_matching_functions(ast) do
     clauses = collect_clauses(ast)
@@ -299,10 +283,6 @@ defmodule Credence.Rule.NoManualListLast do
     list_last_body = {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], [var]}
     {def_type, meta, [{fn_name, [], [var]}, [do: list_last_body]]}
   end
-
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
 
   defp build_issue(def_type, fn_name, meta) do
     %Issue{

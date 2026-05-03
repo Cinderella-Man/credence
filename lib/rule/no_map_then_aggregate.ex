@@ -84,10 +84,6 @@ defmodule Credence.Rule.NoMapThenAggregate do
     |> Sourceror.to_string()
   end
 
-  # ------------------------------------------------------------
-  # PIPELINE FIX
-  # ------------------------------------------------------------
-
   defp fix_pipeline({:|>, _, _} = node) do
     steps = flatten_pipeline(node)
 
@@ -118,10 +114,6 @@ defmodule Credence.Rule.NoMapThenAggregate do
   end
 
   defp fix_pipeline(_), do: nil
-
-  # ------------------------------------------------------------
-  # REDUCE CONSTRUCTION
-  # ------------------------------------------------------------
 
   defp build_reduce(source, map_fn, agg_fn) do
     {body_fn, needs_initial} =
@@ -169,10 +161,6 @@ defmodule Credence.Rule.NoMapThenAggregate do
     {:fn, [], [{:->, [], [[var_el, var_second], body]}]}
   end
 
-  # ------------------------------------------------------------
-  # NODE DETECTION
-  # ------------------------------------------------------------
-
   defp check_node({:|>, meta, _} = node) do
     pipeline = flatten_pipeline(node)
     check_pipeline(pipeline, meta)
@@ -203,10 +191,6 @@ defmodule Credence.Rule.NoMapThenAggregate do
     end
   end
 
-  # ------------------------------------------------------------
-  # STEP DETECTION
-  # ------------------------------------------------------------
-
   defp map_call?({{:., _, [mod, :map]}, _, args})
        when is_list(args) and length(args) == 2 do
     enum_module?(mod)
@@ -229,10 +213,6 @@ defmodule Credence.Rule.NoMapThenAggregate do
   defp agg_step?(_), do: false
 
   defp agg_fn_name({{:., _, [_, fn_name]}, _, _}), do: fn_name
-
-  # ------------------------------------------------------------
-  # AST EXTRACTION HELPERS
-  # ------------------------------------------------------------
 
   defp extract_map_fn({{:., _, [_, :map]}, _, [_arg]} = step) do
     {{:., _, [_, :map]}, _, [fn_ref]} = step
@@ -272,10 +252,6 @@ defmodule Credence.Rule.NoMapThenAggregate do
       end)
     end)
   end
-
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
 
   defp build_issue(agg_fn, meta) do
     %Issue{

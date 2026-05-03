@@ -70,10 +70,6 @@ defmodule Credence.Rule.NoManualMin do
     |> Macro.to_string()
   end
 
-  # ------------------------------------------------------------
-  # NODE MATCHING (for check)
-  # ------------------------------------------------------------
-
   defp check_node({:if, meta, [condition, branches]}) do
     with {:ok, do_branch} <- fetch_branch(branches, :do),
          {:ok, else_branch} <- fetch_branch(branches, :else),
@@ -113,10 +109,6 @@ defmodule Credence.Rule.NoManualMin do
 
   defp is_min_pattern?(_, _, _), do: false
 
-  # ------------------------------------------------------------
-  # FIX HELPERS
-  # ------------------------------------------------------------
-
   defp extract_min_operands(condition, branches) do
     with {:ok, do_branch} <- fetch_branch(branches, :do),
          {:ok, else_branch} <- fetch_branch(branches, :else) do
@@ -153,10 +145,6 @@ defmodule Credence.Rule.NoManualMin do
     {:min, [], [left, right]}
   end
 
-  # ------------------------------------------------------------
-  # GENERAL HELPERS
-  # ------------------------------------------------------------
-
   defp fetch_branch(branches, key) when is_list(branches) do
     Keyword.fetch(branches, key)
   end
@@ -172,10 +160,6 @@ defmodule Credence.Rule.NoManualMin do
   defp strip_meta(list) when is_list(list), do: Enum.map(list, &strip_meta/1)
   defp strip_meta({a, b}), do: {strip_meta(a), strip_meta(b)}
   defp strip_meta(other), do: other
-
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
 
   defp build_message do
     """

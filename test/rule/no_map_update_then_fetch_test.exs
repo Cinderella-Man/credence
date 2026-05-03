@@ -11,10 +11,6 @@ defmodule Credence.Rule.NoMapUpdateThenFetchTest do
     Credence.Rule.NoMapUpdateThenFetch.fix(code, [])
   end
 
-  # -------------------------------------------------------------------
-  # check/2
-  # -------------------------------------------------------------------
-
   describe "check" do
     test "passes code that uses Map.get then Map.put" do
       code = """
@@ -105,10 +101,6 @@ defmodule Credence.Rule.NoMapUpdateThenFetchTest do
       assert check(code) == []
     end
   end
-
-  # -------------------------------------------------------------------
-  # fix/2
-  # -------------------------------------------------------------------
 
   describe "fix" do
     test "fixes Map.update/4 followed by Map.fetch!" do

@@ -29,19 +29,11 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
     Enum.reverse(issues)
   end
 
-  # -------------------------
-  # Pipeline handling
-  # -------------------------
-
   defp flatten_pipeline({:|>, _, [left, right]}) do
     flatten_pipeline(left) ++ [right]
   end
 
   defp flatten_pipeline(other), do: [other]
-
-  # -------------------------
-  # Pattern detection
-  # -------------------------
 
   defp match_pattern?(pipeline) do
     has_plain_sort?(pipeline) and has_negative_take?(pipeline)
@@ -66,10 +58,6 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
         false
     end)
   end
-
-  # -------------------------
-  # Helpers
-  # -------------------------
 
   defp is_negative_integer({:-, _, [int]}) when is_integer(int), do: true
   defp is_negative_integer(int) when is_integer(int) and int < 0, do: true

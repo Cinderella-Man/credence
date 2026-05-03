@@ -45,10 +45,6 @@ defmodule Credence.Rule.NoUnderscoreFunctionName do
     Enum.reverse(issues)
   end
 
-  # ------------------------------------------------------------
-  # NODE MATCHING
-  # ------------------------------------------------------------
-
   # Guarded: def/defp name(args) when guard, do: body
   # Must come before the unguarded clause because {:when, _, _}
   # also matches {fn_name, _, args} where fn_name == :when.
@@ -73,10 +69,6 @@ defmodule Credence.Rule.NoUnderscoreFunctionName do
 
   defp check_node(_), do: :error
 
-  # ------------------------------------------------------------
-  # HELPERS
-  # ------------------------------------------------------------
-
   defp underscore_prefixed?(name) do
     str = Atom.to_string(name)
     String.starts_with?(str, "_") and not String.starts_with?(str, "__")
@@ -87,10 +79,6 @@ defmodule Credence.Rule.NoUnderscoreFunctionName do
     |> Atom.to_string()
     |> String.replace_leading("_", "do_")
   end
-
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
 
   defp build_issue(def_type, fn_name, arity, meta) do
     %Issue{

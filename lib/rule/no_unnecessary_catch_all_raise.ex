@@ -80,10 +80,6 @@ defmodule Credence.Rule.NoUnnecessaryCatchAllRaise do
 
   defp check_node(_), do: :error
 
-  # ------------------------------------------------------------
-  # WILDCARD DETECTION
-  # ------------------------------------------------------------
-
   # A zero-arity function cannot be a "catch-all".
   defp all_wildcards?([]), do: false
 
@@ -107,10 +103,6 @@ defmodule Credence.Rule.NoUnnecessaryCatchAllRaise do
 
   defp body_only_raises?(do: {:raise, _, _}), do: true
   defp body_only_raises?(_), do: false
-
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
 
   defp build_message(def_type, fn_name, arity) do
     """

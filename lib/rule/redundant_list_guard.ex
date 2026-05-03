@@ -35,10 +35,6 @@ defmodule Credence.Rule.RedundantListGuard do
     Enum.reverse(issues)
   end
 
-  # ------------------------------------------------------------
-  # NODE MATCHING
-  # ------------------------------------------------------------
-
   # Match def/defp with a `when` guard.
   defp check_node({def_type, _meta, [{:when, when_meta, [fun_head, guard]}, _body]})
        when def_type in [:def, :defp] do
@@ -65,10 +61,6 @@ defmodule Credence.Rule.RedundantListGuard do
   end
 
   defp check_node(_), do: :error
-
-  # ------------------------------------------------------------
-  # ARGUMENT EXTRACTION
-  # ------------------------------------------------------------
 
   defp extract_args({_fun_name, _, args}) when is_list(args), do: args
   defp extract_args(_), do: []
@@ -115,10 +107,6 @@ defmodule Credence.Rule.RedundantListGuard do
 
     Enum.uniq(found)
   end
-
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
 
   defp build_message(var) do
     """

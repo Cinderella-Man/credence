@@ -66,10 +66,6 @@ defmodule Credence.Rule.NoGuardEqualityForPatternMatch do
     |> Macro.to_string()
   end
 
-  # -------------------------------------------------------------------
-  # Shared: guard-equality detection
-  # -------------------------------------------------------------------
-
   defp extract_guard_matches({kind, _meta, [{:when, _, [call, guard]} | _]})
        when kind in [:def, :defp] do
     {_name, _, params} = call
@@ -109,10 +105,6 @@ defmodule Credence.Rule.NoGuardEqualityForPatternMatch do
   defp flatten_guard({:or, _, [left, right]}), do: flatten_guard(left) ++ flatten_guard(right)
   defp flatten_guard(other), do: [other]
 
-  # -------------------------------------------------------------------
-  # Check-only helpers
-  # -------------------------------------------------------------------
-
   defp build_issue({var_name, literal, meta}) do
     %Issue{
       rule: :no_guard_equality_for_pattern_match,
@@ -122,10 +114,6 @@ defmodule Credence.Rule.NoGuardEqualityForPatternMatch do
       meta: %{line: Keyword.get(meta, :line)}
     }
   end
-
-  # -------------------------------------------------------------------
-  # Fix-only helpers
-  # -------------------------------------------------------------------
 
   defp fix_when_clause(kind, meta, when_meta, call, guard, rest, param_names) do
     if guard_safe_to_fix?(guard) do

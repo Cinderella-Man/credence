@@ -41,10 +41,6 @@ defmodule Credence.Rule.NoRedundantNegatedGuard do
     |> Enum.sort_by(fn issue -> issue.meta[:line] || 0 end)
   end
 
-  # ------------------------------------------------------------
-  # CLAUSE COLLECTION
-  # ------------------------------------------------------------
-
   defp collect_clauses(ast) do
     {_ast, clauses} =
       Macro.prewalk(ast, [], fn node, acc ->
@@ -70,10 +66,6 @@ defmodule Credence.Rule.NoRedundantNegatedGuard do
   end
 
   defp extract_clause(_), do: :error
-
-  # ------------------------------------------------------------
-  # GROUP ANALYSIS
-  # ------------------------------------------------------------
 
   defp analyze_group(clauses) when length(clauses) < 2, do: []
 
@@ -115,20 +107,12 @@ defmodule Credence.Rule.NoRedundantNegatedGuard do
 
   defp extract_comparison(_, _), do: :error
 
-  # ------------------------------------------------------------
-  # VARIABLE COMPARISON
-  # ------------------------------------------------------------
-
   defp same_vars?({name1, _, ctx1}, {name2, _, ctx2})
        when is_atom(name1) and is_atom(name2) and is_atom(ctx1) and is_atom(ctx2) do
     name1 == name2
   end
 
   defp same_vars?(_, _), do: false
-
-  # ------------------------------------------------------------
-  # MESSAGE GENERATION
-  # ------------------------------------------------------------
 
   defp build_issue(def_type, neq_op, eq_op, meta) do
     eq_str = if eq_op == :==, do: "==", else: "==="
