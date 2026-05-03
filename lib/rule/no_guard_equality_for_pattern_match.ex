@@ -29,7 +29,9 @@ defmodule Credence.Rule.NoGuardEqualityForPatternMatch do
       Macro.prewalk(ast, [], fn
         {_kind, _meta, [{:when, _, _} | _]} = node, issues ->
           case extract_guard_matches(node) do
-            [] -> {node, issues}
+            [] ->
+              {node, issues}
+
             matches ->
               new_issues = Enum.map(matches, &build_issue/1)
               {node, new_issues ++ issues}

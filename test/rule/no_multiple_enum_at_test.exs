@@ -7,7 +7,11 @@ defmodule Credence.Rule.NoMultipleEnumAtTest do
     Credence.Rule.NoMultipleEnumAt.check(ast, [])
   end
 
-  describe "NoMultipleEnumAt" do
+  defp fix(code) do
+    Credence.Rule.NoMultipleEnumAt.fix(code, [])
+  end
+
+  describe "check" do
     test "passes code that uses pattern matching" do
       code = """
       defmodule GoodCode do
@@ -52,12 +56,10 @@ defmodule Credence.Rule.NoMultipleEnumAtTest do
       """
 
       issues = check(code)
-
       assert length(issues) == 1
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_multiple_enum_at
-
       assert issue.message =~ "sorted"
       assert issue.message =~ "pattern matching"
       assert issue.meta.line != nil
@@ -89,10 +91,214 @@ defmodule Credence.Rule.NoMultipleEnumAtTest do
       """
 
       issues = check(code)
-
-      # Only `a` has 3+ calls, `b` has just 1
       assert length(issues) == 1
       assert hd(issues).message =~ "a"
+    end
+
+    test "detects negative literal indices" do
+      code = """
+      defmodule NegIndices do
+        def tail(list) do
+          a = Enum.at(list, -1)
+          b = Enum.at(list, -2)
+          c = Enum.at(list, -3)
+          {a, b, c}
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).message =~ "list"
+    end
+  end
+
+  describe "fix" do
+    test "fixes contiguous sequential positive indices" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          a = Enum.at(list, 0)
+          b = Enum.at(list, 1)
+          c = Enum.at(list, 2)
+          {a, b, c}
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "[a, b, c | _] = list"
+      refute fixed =~ "Enum.at(list"
+      assert {:ok, _} = Code.string_to_quoted(fixed)
+    end
+
+    test "fixes contiguous positive indices with small gaps" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          a = Enum.at(list, 0)
+          b = Enum.at(list, 2)
+          c = Enum.at(list, 3)
+          {a, b, c}
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "[a, _, b, c | _] = list"
+      refute fixed =~ "Enum.at(list"
+    end
+
+    test "fixes contiguous negative indices" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          a = Enum.at(list, -1)
+          b = Enum.at(list, -2)
+          c = Enum.at(list, -3)
+          {a, b, c}
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "[a, b, c | _] = Enum.reverse(list)"
+      refute fixed =~ "Enum.at(list"
+    end
+
+    test "fixes mixed positive and negative indices" do
+      source = """
+      defmodule Example do
+        def run(sorted) do
+          min1 = Enum.at(sorted, 0)
+          min2 = Enum.at(sorted, 1)
+          max1 = Enum.at(sorted, -1)
+          max2 = Enum.at(sorted, -2)
+          {min1, min2, max1, max2}
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "[min1, min2 | _] = sorted"
+      assert fixed =~ "[max1, max2 | _] = Enum.reverse(sorted)"
+      refute fixed =~ "Enum.at"
+      assert {:ok, _} = Code.string_to_quoted(fixed)
+    end
+
+    test "returns source unchanged when nothing to fix" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          a = Enum.at(list, 0)
+          b = Enum.at(list, 1)
+          {a, b}
+        end
+      end
+      """
+
+      assert fix(source) == source
+    end
+
+    test "does not fix sparse indices" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          a = Enum.at(list, 0)
+          b = Enum.at(list, 100)
+          c = Enum.at(list, 200)
+          {a, b, c}
+        end
+      end
+      """
+
+      assert fix(source) == source
+    end
+
+    test "fixes contiguous subset when separated by other code" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          a = Enum.at(list, 0)
+          IO.puts(a)
+          b = Enum.at(list, 1)
+          c = Enum.at(list, 2)
+          d = Enum.at(list, 3)
+          {a, b, c, d}
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "[_, b, c, d | _] = list"
+      assert fixed =~ "Enum.at(list, 0)"
+      assert fixed =~ "IO.puts(a)"
+    end
+
+    test "preserves surrounding code" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          before = :ok
+          a = Enum.at(list, 0)
+          b = Enum.at(list, 1)
+          c = Enum.at(list, 2)
+          after_val = :done
+          {before, a, b, c, after_val}
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "before = :ok"
+      assert fixed =~ "[a, b, c | _] = list"
+      assert fixed =~ "after_val = :done"
+      refute fixed =~ "Enum.at(list"
+    end
+
+    test "fixes the documentation example end-to-end" do
+      source = """
+      defmodule Example do
+        def extremes(nums) do
+          sorted = Enum.sort(nums)
+          min1 = Enum.at(sorted, 0)
+          min2 = Enum.at(sorted, 1)
+          max1 = Enum.at(sorted, -1)
+          max2 = Enum.at(sorted, -2)
+          max(min1 * min2, max1 * max2)
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "[min1, min2 | _] = sorted"
+      assert fixed =~ "[max1, max2 | _] = Enum.reverse(sorted)"
+      assert fixed =~ "max(min1 * min2, max1 * max2)"
+      refute fixed =~ "Enum.at"
+      assert {:ok, _} = Code.string_to_quoted(fixed)
+    end
+
+    test "fixed code has fewer check issues" do
+      source = """
+      defmodule Example do
+        def run(sorted) do
+          min1 = Enum.at(sorted, 0)
+          min2 = Enum.at(sorted, 1)
+          max1 = Enum.at(sorted, -1)
+          max2 = Enum.at(sorted, -2)
+          {min1, min2, max1, max2}
+        end
+      end
+      """
+
+      {:ok, ast_before} = Code.string_to_quoted(source)
+      issues_before = Credence.Rule.NoMultipleEnumAt.check(ast_before, [])
+      assert length(issues_before) >= 1
+
+      fixed = fix(source)
+      {:ok, ast_after} = Code.string_to_quoted(fixed)
+      issues_after = Credence.Rule.NoMultipleEnumAt.check(ast_after, [])
+      assert length(issues_after) < length(issues_before)
     end
   end
 end

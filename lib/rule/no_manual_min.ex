@@ -38,6 +38,9 @@ defmodule Credence.Rule.NoManualMin do
   alias Credence.Issue
 
   @impl true
+  def fixable?, do: true
+
+  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, issues ->
@@ -50,8 +53,25 @@ defmodule Credence.Rule.NoManualMin do
     Enum.reverse(issues)
   end
 
+  @impl true
+  def fix(source, _opts) do
+    source
+    |> Code.string_to_quoted!()
+    |> Macro.postwalk(fn
+      {:if, _meta, [condition, branches]} = node ->
+        case extract_min_operands(condition, branches) do
+          {:ok, operands} -> min_call(operands)
+          :error -> node
+        end
+
+      node ->
+        node
+    end)
+    |> Macro.to_string()
+  end
+
   # ------------------------------------------------------------
-  # NODE MATCHING
+  # NODE MATCHING (for check)
   # ------------------------------------------------------------
 
   defp check_node({:if, meta, [condition, branches]}) do
@@ -94,14 +114,51 @@ defmodule Credence.Rule.NoManualMin do
   defp is_min_pattern?(_, _, _), do: false
 
   # ------------------------------------------------------------
-  # HELPERS
+  # FIX HELPERS
+  # ------------------------------------------------------------
+
+  defp extract_min_operands(condition, branches) do
+    with {:ok, do_branch} <- fetch_branch(branches, :do),
+         {:ok, else_branch} <- fetch_branch(branches, :else) do
+      get_min_operands(condition, do_branch, else_branch)
+    end
+  end
+
+  # For < and <=: do_branch == left (the lesser value)
+  # Result: min(left, right)
+  defp get_min_operands({op, _, [left, right]}, do_branch, else_branch)
+       when op in [:<, :<=] do
+    if ast_equal?(do_branch, left) and ast_equal?(else_branch, right) do
+      {:ok, [left, right]}
+    else
+      :error
+    end
+  end
+
+  # For > and >=: do_branch == right (the lesser value)
+  # Result: min(right, left) — puts the lesser value first to match
+  # the convention shown in the documentation
+  defp get_min_operands({op, _, [left, right]}, do_branch, else_branch)
+       when op in [:>, :>=] do
+    if ast_equal?(do_branch, right) and ast_equal?(else_branch, left) do
+      {:ok, [right, left]}
+    else
+      :error
+    end
+  end
+
+  defp get_min_operands(_, _, _), do: :error
+
+  defp min_call([left, right]) do
+    {:min, [], [left, right]}
+  end
+
+  # ------------------------------------------------------------
+  # GENERAL HELPERS
   # ------------------------------------------------------------
 
   defp fetch_branch(branches, key) when is_list(branches) do
-    case Keyword.fetch(branches, key) do
-      {:ok, val} -> {:ok, val}
-      :error -> :error
-    end
+    Keyword.fetch(branches, key)
   end
 
   defp fetch_branch(_, _), do: :error
@@ -123,9 +180,7 @@ defmodule Credence.Rule.NoManualMin do
   defp build_message do
     """
     Manual `if` comparison used instead of `min/2`.
-
     Replace with `Kernel.min/2` for clarity:
-
         min(a, b)
     """
   end

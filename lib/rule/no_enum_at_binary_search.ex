@@ -92,8 +92,7 @@ defmodule Credence.Rule.NoEnumAtBinarySearch do
           {node, {issues, mids}}
 
         # Direct: Enum.at(list, mid)
-        {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, meta, [_list, index]} = node,
-        {issues, mids} ->
+        {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, meta, [_list, index]} = node, {issues, mids} ->
           if flagged_index?(index, mids) do
             {node, {[trigger_issue(meta) | issues], mids}}
           else
@@ -101,8 +100,7 @@ defmodule Credence.Rule.NoEnumAtBinarySearch do
           end
 
         # Piped: list |> Enum.at(mid)
-        {:|>, meta,
-         [_list, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [index]}]} = node,
+        {:|>, meta, [_list, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [index]}]} = node,
         {issues, mids} ->
           if flagged_index?(index, mids) do
             {node, {[trigger_issue(meta) | issues], mids}}

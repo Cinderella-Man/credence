@@ -8,6 +8,86 @@ defmodule Credence.Rule.NoMapAsSetTest do
   end
 
   describe "NoMapAsSet" do
+    test "fixable? returns false" do
+      refute Credence.Rule.NoMapAsSet.fixable?()
+    end
+
+    # --- POSITIVE CASES (should flag) ---
+
+    test "detects Map.put(seen, key, true)" do
+      code = """
+      defmodule Bad do
+        def dedup(list) do
+          Enum.reduce(list, {%{}, []}, fn item, {seen, acc} ->
+            if Map.has_key?(seen, item) do
+              {seen, acc}
+            else
+              {Map.put(seen, item, true), [item | acc]}
+            end
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+
+      issue = hd(issues)
+      assert %Issue{} = issue
+      assert issue.rule == :no_map_as_set
+      assert issue.message =~ "MapSet"
+      assert issue.message =~ "true"
+      assert issue.meta.line != nil
+    end
+
+    test "detects Map.put(seen, key, false)" do
+      code = """
+      defmodule Bad do
+        def mark_absent(map, key) do
+          Map.put(map, key, false)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).message =~ "false"
+    end
+
+    test "detects multiple boolean Map.put calls" do
+      code = """
+      defmodule Bad do
+        def process(a, b, map) do
+          map = Map.put(map, a, true)
+          Map.put(map, b, true)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 2
+    end
+
+    test "detects Map.put with true in pipeline" do
+      code = """
+      map |> Map.put(key, true)
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "detects Map.put with false in pipeline" do
+      code = """
+      map |> Map.put(key, false)
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    # --- NEGATIVE CASES (should NOT flag) ---
+
     test "passes code using MapSet" do
       code = """
       defmodule Good do
@@ -40,59 +120,36 @@ defmodule Credence.Rule.NoMapAsSetTest do
       assert check(code) == []
     end
 
-    test "detects Map.put(seen, key, true)" do
+    test "passes Map.put with variable value" do
       code = """
-      defmodule Bad do
-        def dedup(list) do
-          Enum.reduce(list, {%{}, []}, fn item, {seen, acc} ->
-            if Map.has_key?(seen, item) do
-              {seen, acc}
-            else
-              {Map.put(seen, item, true), [item | acc]}
-            end
-          end)
-        end
-      end
+      Map.put(map, key, value)
       """
 
-      issues = check(code)
-
-      assert length(issues) == 1
-      issue = hd(issues)
-      assert %Issue{} = issue
-      assert issue.rule == :no_map_as_set
-
-      assert issue.message =~ "MapSet"
-      assert issue.meta.line != nil
+      assert check(code) == []
     end
 
-    test "detects Map.put(seen, key, false)" do
+    test "passes Map.put with string value" do
       code = """
-      defmodule Bad do
-        def mark_absent(map, key) do
-          Map.put(map, key, false)
-        end
-      end
+      Map.put(map, key, "true")
       """
 
-      issues = check(code)
-
-      assert length(issues) == 1
+      assert check(code) == []
     end
 
-    test "detects multiple boolean Map.put calls" do
+    test "passes Map.put with nil value" do
       code = """
-      defmodule Bad do
-        def process(a, b, map) do
-          map = Map.put(map, a, true)
-          Map.put(map, b, true)
-        end
-      end
+      Map.put(map, key, nil)
       """
 
-      issues = check(code)
+      assert check(code) == []
+    end
 
-      assert length(issues) == 2
+    test "passes Map.put with atom value" do
+      code = """
+      Map.put(map, key, :active)
+      """
+
+      assert check(code) == []
     end
   end
 end

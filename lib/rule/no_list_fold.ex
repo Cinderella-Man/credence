@@ -59,8 +59,7 @@ defmodule Credence.Rule.NoListFold do
     |> Sourceror.parse_string!()
     |> Macro.postwalk(fn
       # Piped: source |> List.foldl(acc, fun) / List.foldr(acc, fun)
-      {:|>, pipe_meta,
-       [source, {{:., _, [mod, fn_name]}, call_meta, args}]} = node
+      {:|>, pipe_meta, [source, {{:., _, [mod, fn_name]}, call_meta, args}]} = node
       when fn_name in @flagged_fns and is_list(args) ->
         if list_module?(mod) do
           fix_piped_fold(fn_name, source, call_meta, args, pipe_meta)

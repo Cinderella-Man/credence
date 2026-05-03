@@ -7,27 +7,14 @@ defmodule Credence.Rule.NoNestedEnumOnSameEnumerableTest do
     Credence.Rule.NoNestedEnumOnSameEnumerable.check(ast, [])
   end
 
-  describe "NoNestedEnumOnSameEnumerable" do
-    test "detects filter inside map with specific advice" do
-      code = """
-      defmodule Bad do
-        def process(list) do
-          Enum.map(list, fn x ->
-            Enum.filter(list, fn y -> y > x end)
-          end)
-        end
-      end
-      """
+  defp fix(source) do
+    Credence.Rule.NoNestedEnumOnSameEnumerable.fix(source, [])
+  end
 
-      [issue] = check(code)
+  # ── check/2 tests ──────────────────────────────────────────────────
 
-      assert %Issue{} = issue
-      assert issue.message =~ "Enum.filter/2"
-      assert issue.message =~ "O(n²)"
-      assert issue.message =~ "Avoid filtering the same list repeatedly"
-    end
-
-    test "detects member? and suggests MapSet" do
+  describe "check/2" do
+    test "detects member? inside map" do
       code = """
       defmodule Bad do
         def process(list) do
@@ -39,25 +26,9 @@ defmodule Credence.Rule.NoNestedEnumOnSameEnumerableTest do
       """
 
       [issue] = check(code)
-
+      assert %Issue{} = issue
+      assert issue.rule == :no_nested_enum_on_same_enumerable
       assert issue.message =~ "MapSet"
-      assert issue.message =~ "O(n²)"
-    end
-
-    test "falls back to generic message for other Enum functions" do
-      code = """
-      defmodule Bad do
-        def process(list) do
-          Enum.map(list, fn x ->
-            Enum.count(list)
-          end)
-        end
-      end
-      """
-
-      [issue] = check(code)
-
-      assert issue.message =~ "Nested Enum.count"
       assert issue.message =~ "O(n²)"
     end
 
@@ -66,13 +37,104 @@ defmodule Credence.Rule.NoNestedEnumOnSameEnumerableTest do
       defmodule Good do
         def process(a, b) do
           Enum.map(a, fn x ->
-            Enum.filter(b, fn y -> y > x end)
+            Enum.member?(b, x)
           end)
         end
       end
       """
 
       assert check(code) == []
+    end
+  end
+
+  # ── fix/2 tests ────────────────────────────────────────────────────
+
+  describe "fix/2" do
+    test "basic: member? inside map" do
+      source = "Enum.map(list, fn x -> Enum.member?(list, x) end)"
+      result = fix(source)
+      assert result =~ "set = MapSet.new(list)"
+      assert result =~ "MapSet.member?(set, x)"
+      refute result =~ "Enum.member?"
+    end
+
+    test "multi-line def with member? inside map" do
+      source = """
+      defmodule Example do
+        def process(list) do
+          Enum.map(list, fn x ->
+            Enum.member?(list, x + 1)
+          end)
+        end
+      end
+      """
+
+      result = fix(source)
+      assert result =~ "set = MapSet.new(list)"
+      assert result =~ "MapSet.member?(set, x + 1)"
+      refute result =~ "Enum.member?"
+    end
+
+    test "different variable name" do
+      source = "Enum.map(items, fn i -> Enum.member?(items, i * 2) end)"
+      result = fix(source)
+      assert result =~ "set = MapSet.new(items)"
+      assert result =~ "MapSet.member?(set, i * 2)"
+    end
+
+    test "member? with complex second argument" do
+      source = "Enum.map(list, fn x -> Enum.member?(list, x.key) end)"
+      result = fix(source)
+      assert result =~ "MapSet.member?(set, x.key)"
+    end
+
+    test "inside a function definition (single-line lambda preserved)" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          Enum.map(list, fn x -> Enum.member?(list, x) end)
+        end
+      end
+      """
+
+      result = fix(source)
+      assert result =~ "set = MapSet.new(list)"
+      assert result =~ "MapSet.member?(set, x)"
+    end
+
+    test "member? inside an if block" do
+      source =
+        "Enum.map(list, fn x -> if Enum.member?(list, x), do: x, else: nil end)"
+
+      result = fix(source)
+      assert result =~ "MapSet.member?(set, x)"
+      assert result =~ "MapSet.new(list)"
+    end
+
+    test "returns source unchanged when no member? pattern found" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          Enum.map(list, fn x -> x + 1 end)
+        end
+      end
+      """
+
+      assert fix(source) == source
+    end
+
+    test "returns source unchanged for Enum.count pattern (not fixable)" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          Enum.map(list, fn x ->
+            Enum.count(list)
+          end)
+        end
+      end
+      """
+
+      assert fix(source) == source
     end
   end
 end

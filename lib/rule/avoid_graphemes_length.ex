@@ -1,5 +1,5 @@
 defmodule Credence.Rule.AvoidGraphemesLength do
-@moduledoc """
+  @moduledoc """
   Performance rule: Detects the use of `length/1` on the result of
   `String.graphemes/1`.
 

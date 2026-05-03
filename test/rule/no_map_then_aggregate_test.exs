@@ -6,7 +6,11 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
     Credence.Rule.NoMapThenAggregate.check(ast, [])
   end
 
-  describe "NoMapThenAggregate" do
+  defp fix(code) do
+    Credence.Rule.NoMapThenAggregate.fix(code, [])
+  end
+
+  describe "NoMapThenAggregate check" do
     test "detects Enum.map |> Enum.max in pipeline" do
       code = """
       defmodule Bad do
@@ -18,10 +22,8 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       [issue] = check(code)
       assert issue.rule == :no_map_then_aggregate
-
       assert issue.message =~ "Enum.map"
       assert issue.message =~ "Enum.max"
     end
@@ -36,7 +38,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       [issue] = check(code)
       assert issue.message =~ "Enum.min"
     end
@@ -51,7 +52,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       [issue] = check(code)
       assert issue.message =~ "Enum.sum"
     end
@@ -64,7 +64,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       [issue] = check(code)
       assert issue.message =~ "Enum.max"
     end
@@ -77,7 +76,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       [issue] = check(code)
       assert issue.message =~ "Enum.max"
     end
@@ -90,7 +88,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       [issue] = check(code)
       assert issue.message =~ "Enum.sum"
     end
@@ -105,7 +102,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       [issue] = check(code)
       assert issue.rule == :no_map_then_aggregate
     end
@@ -118,7 +114,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       [issue] = check(code)
       assert issue.message =~ "Enum.sum"
     end
@@ -133,7 +128,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       assert check(code) == []
     end
 
@@ -143,7 +137,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         def biggest(list), do: Enum.max(list)
       end
       """
-
       assert check(code) == []
     end
 
@@ -157,7 +150,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       assert check(code) == []
     end
 
@@ -171,7 +163,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       assert check(code) == []
     end
 
@@ -183,7 +174,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       assert check(code) == []
     end
 
@@ -198,7 +188,6 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       assert check(code) == []
     end
 
@@ -210,8 +199,167 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
-
       assert check(code) == []
+    end
+  end
+
+  describe "NoMapThenAggregate fix" do
+    test "fixes basic pipeline: Enum.map |> Enum.max" do
+      code = """
+      list |> Enum.map(&String.length/1) |> Enum.max()
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      assert result =~ "_el"
+      assert result =~ "_best"
+      assert result =~ "max("
+      assert result =~ "apply"
+      assert result =~ "String.length"
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes basic pipeline: Enum.map |> Enum.min" do
+      code = """
+      list |> Enum.map(&String.length/1) |> Enum.min()
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      assert result =~ "min("
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes basic pipeline: Enum.map |> Enum.sum" do
+      code = """
+      list |> Enum.map(&byte_size/1) |> Enum.sum()
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      assert result =~ "0"
+      assert result =~ "_acc"
+      assert result =~ "+"
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes three-step pipeline with preceding step" do
+      code = """
+      numbers
+      |> Enum.chunk_every(k, 1, :discard)
+      |> Enum.map(&Enum.sum/1)
+      |> Enum.max()
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.chunk_every"
+      assert result =~ "Enum.reduce"
+      assert result =~ "max("
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes two-step pipeline (explicit source)" do
+      code = """
+      Enum.map(list, &String.length/1) |> Enum.max()
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce(list"
+      assert result =~ "max("
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes direct nesting: Enum.max(Enum.map(enum, f))" do
+      code = """
+      Enum.max(Enum.map(list, &String.length/1))
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce(list"
+      assert result =~ "max("
+      refute result =~ "Enum.max(Enum.map"
+    end
+
+    test "fixes direct nesting: Enum.sum(Enum.map(enum, f))" do
+      code = """
+      Enum.sum(Enum.map(list, fn x -> x * x end))
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce(list"
+      assert result =~ "0"
+      assert result =~ "+"
+      assert result =~ "apply"
+      refute result =~ "Enum.sum(Enum.map"
+    end
+
+    test "fixes pipeline with anonymous function" do
+      code = """
+      readings
+      |> Enum.map(fn {_, temp} -> temp end)
+      |> Enum.max()
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      assert result =~ "max("
+      assert result =~ "fn {_, temp} -> temp end"
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes pipeline with capture syntax" do
+      code = """
+      strings |> Enum.map(&byte_size/1) |> Enum.sum()
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      assert result =~ "apply"
+      assert result =~ "byte_size"
+      refute result =~ "Enum.map"
+    end
+
+    test "fix does not modify code without map-aggregate pattern" do
+      code = """
+      list |> Enum.map(&(&1 * 2)) |> Enum.filter(&(&1 > 0))
+      """
+
+      result = fix(code)
+      {:ok, original_ast} = Code.string_to_quoted(code)
+      {:ok, fixed_ast} = Code.string_to_quoted(result)
+      assert original_ast == fixed_ast
+    end
+
+    test "fixed code is valid Elixir" do
+      code = """
+      numbers
+      |> Enum.chunk_every(k, 1, :discard)
+      |> Enum.map(&Enum.sum/1)
+      |> Enum.max()
+      """
+
+      result = fix(code)
+      assert {:ok, _ast} = Code.string_to_quoted(result)
+    end
+
+    test "fixed sum code is valid Elixir" do
+      code = """
+      shapes
+      |> Enum.map(&area/1)
+      |> Enum.sum()
+      """
+
+      result = fix(code)
+      assert {:ok, _ast} = Code.string_to_quoted(result)
+    end
+
+    test "fixed anonymous function code is valid Elixir" do
+      code = """
+      Enum.sum(Enum.map(list, fn x -> x * x end))
+      """
+
+      result = fix(code)
+      assert {:ok, _ast} = Code.string_to_quoted(result)
     end
   end
 end

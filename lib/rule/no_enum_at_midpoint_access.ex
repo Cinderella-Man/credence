@@ -164,8 +164,8 @@ defmodule Credence.Rule.NoEnumAtMidpointAccess do
           {node, {vars, mids}}
 
         # Piped: list_var |> Enum.at(index)
-        {:|>, _,
-         [{list_var, _, _}, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [index]}]} = node,
+        {:|>, _, [{list_var, _, _}, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [index]}]} =
+            node,
         {vars, mids}
         when is_atom(list_var) ->
           vars = if flagged_index?(index, mids), do: MapSet.put(vars, list_var), else: vars
@@ -205,8 +205,8 @@ defmodule Credence.Rule.NoEnumAtMidpointAccess do
         end
 
       # Piped: list_var |> Enum.at(index) → elem(tuple_var, index)
-      {:|>, _,
-       [{list_var, _, _}, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [index]}]} = node
+      {:|>, _, [{list_var, _, _}, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [index]}]} =
+          node
       when is_atom(list_var) ->
         case Map.fetch(var_map, list_var) do
           {:ok, tuple_var} -> {:elem, [], [{tuple_var, [], nil}, index]}
@@ -265,8 +265,7 @@ defmodule Credence.Rule.NoEnumAtMidpointAccess do
           {node, {issues, mids}}
 
         # Direct: Enum.at(list, mid)
-        {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, meta, [_list, index]} = node,
-        {issues, mids} ->
+        {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, meta, [_list, index]} = node, {issues, mids} ->
           if flagged_index?(index, mids) do
             {node, {[trigger_issue(meta) | issues], mids}}
           else
@@ -274,8 +273,7 @@ defmodule Credence.Rule.NoEnumAtMidpointAccess do
           end
 
         # Piped: list |> Enum.at(mid)
-        {:|>, meta,
-         [_list, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [index]}]} = node,
+        {:|>, meta, [_list, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [index]}]} = node,
         {issues, mids} ->
           if flagged_index?(index, mids) do
             {node, {[trigger_issue(meta) | issues], mids}}

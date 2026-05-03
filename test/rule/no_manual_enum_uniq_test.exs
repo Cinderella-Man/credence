@@ -6,7 +6,17 @@ defmodule Credence.Rule.NoManualEnumUniqTest do
     Credence.Rule.NoManualEnumUniq.check(ast, [])
   end
 
-  describe "NoManualEnumUniq" do
+  defp fix(code) do
+    Credence.Rule.NoManualEnumUniq.fix(code, [])
+  end
+
+  describe "NoManualEnumUniq fixable?" do
+    test "returns true" do
+      assert Credence.Rule.NoManualEnumUniq.fixable?() == true
+    end
+  end
+
+  describe "NoManualEnumUniq check" do
     test "flags manual Enum.uniq/1 using MapSet and reduce" do
       code = """
       defmodule Example do
@@ -43,17 +53,151 @@ defmodule Credence.Rule.NoManualEnumUniqTest do
       assert length(check(code)) == 1
     end
 
+    test "flags piped Enum.reduce" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          list
+          |> Enum.reduce({MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "flags piped Enum.reduce in longer pipeline" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          list
+          |> Enum.map(&String.upcase/1)
+          |> Enum.reduce({MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "flags negated condition with !" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if !MapSet.member?(seen, item) do
+              {MapSet.put(seen, item), [item | acc]}
+            else
+              {seen, acc}
+            end
+          end)
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "flags negated condition with not" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if not MapSet.member?(seen, item) do
+              {MapSet.put(seen, item), [item | acc]}
+            else
+              {seen, acc}
+            end
+          end)
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "flags case-based dedup" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            case MapSet.member?(seen, item) do
+              true -> {seen, acc}
+              false -> {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "flags inside Enum.map" do
+      code = """
+      Enum.map(list, fn outer ->
+        Enum.reduce(outer, {MapSet.new(), []}, fn item, {seen, acc} ->
+          if MapSet.member?(seen, item) do
+            {seen, acc}
+          else
+            {MapSet.put(seen, item), [item | acc]}
+          end
+        end)
+      end)
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "flags multiple occurrences in same source" do
+      code = """
+      defmodule Example do
+        def run1(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+        end
+
+        def run2(list) do
+          Enum.reduce(list, {[], MapSet.new()}, fn x, {results, tracked} ->
+            unless MapSet.member?(tracked, x) do
+              {[x | results], MapSet.put(tracked, x)}
+            else
+              {results, tracked}
+            end
+          end)
+        end
+      end
+      """
+
+      assert length(check(code)) == 2
+    end
+
     test "does not flag The \"Unique Errors\" Pattern" do
       code = """
       defmodule Example do
         def run(list) do
           Enum.reduce(list, {MapSet.new(), []}, fn item, {error_tags, results} ->
-            # We collect EVERY item into results (no deduplication)
-            # But we also record the 'type' of the item in a set for a summary report
             new_tags = MapSet.put(error_tags, item.type)
 
             if MapSet.member?(error_tags, "CRITICAL") do
-              # Logic is driven by a specific tag presence, not 'item' uniqueness
               {new_tags, [item | results]}
             else
               {new_tags, results}
@@ -72,10 +216,8 @@ defmodule Credence.Rule.NoManualEnumUniqTest do
         def run(list) do
           Enum.reduce(list, {MapSet.new(), []}, fn item, {categories, values} ->
             if String.starts_with?(item, "cat:") do
-              # We only put into the MapSet here
               {MapSet.put(categories, item), values}
             else
-              # We only put into the List here
               {categories, [item | values]}
             end
           end)
@@ -89,11 +231,9 @@ defmodule Credence.Rule.NoManualEnumUniqTest do
     test "does not flag Cross-Referencing (The \"Foreign Key\" Check)" do
       code = """
       defmodule Example do
-        def run(list) do
-          # list_b_set was passed in from outside
+        def run(list_a, list_b_set) do
           Enum.reduce(list_a, {MapSet.new(), []}, fn item, {matched_from_b, acc} ->
             if MapSet.member?(list_b_set, item) do
-              # We track which items from B were actually hit
               {MapSet.put(matched_from_b, item), [item | acc]}
             else
               {matched_from_b, acc}
@@ -137,6 +277,362 @@ defmodule Credence.Rule.NoManualEnumUniqTest do
     test "does not flag valid Enum.uniq/1 usages" do
       code = "Enum.uniq(list)"
       assert check(code) == []
+    end
+  end
+
+  describe "NoManualEnumUniq fix" do
+    test "fixes basic manual Enum.uniq with MapSet first" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq(list)"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes inverted tuple with unless" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {[], MapSet.new()}, fn x, {results, tracked} ->
+            unless MapSet.member?(tracked, x) do
+              {[x | results], MapSet.put(tracked, x)}
+            else
+              {results, tracked}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq(list)"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes piped Enum.reduce" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          list
+          |> Enum.reduce({MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq()"
+      assert result =~ "|>"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes longer pipeline before reduce" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          list
+          |> Enum.map(&String.upcase/1)
+          |> Enum.reduce({MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq"
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.reverse"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes negated condition with !" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if !MapSet.member?(seen, item) do
+              {MapSet.put(seen, item), [item | acc]}
+            else
+              {seen, acc}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq(list)"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes negated condition with not" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if not MapSet.member?(seen, item) do
+              {MapSet.put(seen, item), [item | acc]}
+            else
+              {seen, acc}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq(list)"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes case-based dedup" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            case MapSet.member?(seen, item) do
+              true -> {seen, acc}
+              false -> {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq(list)"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes inside Enum.map" do
+      code = """
+      Enum.map(list, fn outer ->
+        Enum.reduce(outer, {MapSet.new(), []}, fn item, {seen, acc} ->
+          if MapSet.member?(seen, item) do
+            {seen, acc}
+          else
+            {MapSet.put(seen, item), [item | acc]}
+          end
+        end)
+      end)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes multiple occurrences in same source" do
+      code = """
+      defmodule Example do
+        def run1(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+        end
+
+        def run2(list) do
+          Enum.reduce(list, {[], MapSet.new()}, fn x, {results, tracked} ->
+            unless MapSet.member?(tracked, x) do
+              {[x | results], MapSet.put(tracked, x)}
+            else
+              {results, tracked}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "preserves list argument expression" do
+      code = """
+      defmodule Example do
+        def run(items, extra) do
+          Enum.reduce(items ++ extra, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq"
+      assert result =~ "++"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+    end
+
+    test "preserves surrounding code" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          before()
+          result = Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+          after(result)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "before()"
+      assert result =~ "after("
+      assert result =~ "Enum.uniq(list)"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "does not modify The \"Unique Errors\" Pattern" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {error_tags, results} ->
+            new_tags = MapSet.put(error_tags, item.type)
+
+            if MapSet.member?(error_tags, "CRITICAL") do
+              {new_tags, [item | results]}
+            else
+              {new_tags, results}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      assert result =~ "MapSet"
+    end
+
+    test "does not modify The \"Two-Channel\" Filter" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {categories, values} ->
+            if String.starts_with?(item, "cat:") do
+              {MapSet.put(categories, item), values}
+            else
+              {categories, [item | values]}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      assert result =~ "MapSet"
+    end
+
+    test "does not modify Cross-Referencing Pattern" do
+      code = """
+      defmodule Example do
+        def run(list_a, list_b_set) do
+          Enum.reduce(list_a, {MapSet.new(), []}, fn item, {matched_from_b, acc} ->
+            if MapSet.member?(list_b_set, item) do
+              {MapSet.put(matched_from_b, item), [item | acc]}
+            else
+              {matched_from_b, acc}
+            end
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      assert result =~ "MapSet"
+    end
+
+    test "does not modify normal Enum.reduce" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, 0, fn item, acc ->
+            item + acc
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+    end
+
+    test "does not modify MapSet as pure accumulator" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, MapSet.new(), fn item, acc ->
+            MapSet.put(acc, item)
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      assert result =~ "MapSet"
+    end
+
+    test "does not modify valid Enum.uniq" do
+      code = """
+      defmodule Example do
+        def run(list), do: Enum.uniq(list)
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq"
+      refute result =~ "Enum.reduce"
     end
   end
 end

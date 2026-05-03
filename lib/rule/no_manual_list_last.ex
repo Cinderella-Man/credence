@@ -25,19 +25,46 @@ defmodule Credence.Rule.NoManualListLast do
 
   1. One clause matches `[val]` (single-element list) and returns `val`
   2. The other clause matches `[_ | rest]` and recurses with `rest`
+
+  ## Auto-fix
+
+  Replaces the hand-rolled function with a `List.last/1` delegation and
+  rewrites call sites within the same source file.
   """
 
   use Credence.Rule
   alias Credence.Issue
 
   @impl true
+  def fixable?, do: true
+
+  @impl true
   def check(ast, _opts) do
     clauses = collect_clauses(ast)
 
     clauses
-    |> Enum.group_by(fn {name, arity, _def_type, _meta, _pattern, _body} -> {name, arity} end)
+    |> Enum.group_by(fn {name, arity, _def_type, _meta, _pattern, _body} ->
+      {name, arity}
+    end)
     |> Enum.flat_map(fn {_key, group} -> analyze_group(group) end)
     |> Enum.sort_by(fn issue -> issue.meta[:line] || 0 end)
+  end
+
+  @impl true
+  def fix(source, _opts) do
+    ast = Code.string_to_quoted!(source)
+    matches = find_matching_functions(ast)
+
+    if Enum.empty?(matches) do
+      source
+    else
+      match_names = MapSet.new(matches, fn {name, _def_type} -> name end)
+      match_set = MapSet.new(matches)
+
+      transformed = transform_ast(ast, match_set, match_names)
+
+      Macro.to_string(transformed)
+    end
   end
 
   # ------------------------------------------------------------
@@ -56,13 +83,11 @@ defmodule Credence.Rule.NoManualListLast do
     Enum.reverse(clauses)
   end
 
-  # Only unguarded clauses — guarded ones indicate more complex logic
   defp extract_clause({def_type, meta, [{fn_name, _, [arg]}, body]})
        when def_type in [:def, :defp] and is_atom(fn_name) do
     {:ok, {fn_name, 1, def_type, meta, arg, body}}
   end
 
-  # Skip guarded clauses
   defp extract_clause({def_type, _meta, [{:when, _, _}, _body]})
        when def_type in [:def, :defp] do
     :error
@@ -95,9 +120,6 @@ defmodule Credence.Rule.NoManualListLast do
 
   # ------------------------------------------------------------
   # PATTERN DETECTION
-  #
-  # base_clause: matches [val], returns val
-  # recursive_clause: matches [_ | rest], calls name(rest)
   # ------------------------------------------------------------
 
   defp is_list_last?(base_clause, recursive_clause, fn_name) do
@@ -105,8 +127,6 @@ defmodule Credence.Rule.NoManualListLast do
       cons_recurse?(recursive_clause, fn_name)
   end
 
-  # Matches: defp foo([val]), do: val
-  # Pattern is a list with one simple variable, body returns that variable
   defp single_element_return?({_name, 1, _def_type, _meta, pattern, body}) do
     case pattern do
       [{var_name, _, ctx}] when is_atom(var_name) and is_atom(ctx) ->
@@ -124,8 +144,6 @@ defmodule Credence.Rule.NoManualListLast do
 
   defp body_returns_var?(_, _), do: false
 
-  # Matches: defp foo([_ | rest]), do: foo(rest)
-  # Pattern is a cons with ignored head, body recurses on tail
   defp cons_recurse?({_name, 1, _def_type, _meta, pattern, body}, fn_name) do
     case pattern do
       [{:|, _, [head, {tail_name, _, ctx}]}]
@@ -143,13 +161,144 @@ defmodule Credence.Rule.NoManualListLast do
 
   defp wildcard?(_), do: false
 
-  # Body is: do: fn_name(tail_var)
-  defp body_recurses_with?([do: {fn_name, _, [{var_name, _, ctx}]}], fn_name, tail_name)
+  defp body_recurses_with?(
+         [do: {fn_name, _, [{var_name, _, ctx}]}],
+         fn_name,
+         tail_name
+       )
        when is_atom(var_name) and is_atom(ctx) do
     var_name == tail_name
   end
 
   defp body_recurses_with?(_, _, _), do: false
+
+  # ------------------------------------------------------------
+  # FIX — find matching functions
+  # ------------------------------------------------------------
+
+  defp find_matching_functions(ast) do
+    clauses = collect_clauses(ast)
+
+    clauses
+    |> Enum.group_by(fn {name, arity, _def_type, _meta, _pattern, _body} ->
+      {name, arity}
+    end)
+    |> Enum.flat_map(fn {_key, group} -> analyze_group_for_fix(group) end)
+  end
+
+  defp analyze_group_for_fix(clauses) when length(clauses) != 2, do: []
+
+  defp analyze_group_for_fix([clause_a, clause_b]) do
+    {name, _, def_type, _, _, _} = clause_a
+
+    cond do
+      is_list_last?(clause_a, clause_b, name) -> [{name, def_type}]
+      is_list_last?(clause_b, clause_a, name) -> [{name, def_type}]
+      true -> []
+    end
+  end
+
+  # ------------------------------------------------------------
+  # FIX — recursive AST transformer
+  #
+  # A custom recursive walker that:
+  #  • handles 2-tuples (keyword pairs like {:do, body})
+  #  • skips function-definition name/pattern nodes so they
+  #    are never confused with call sites
+  #  • removes recursive clauses and replaces base clauses
+  #    with List.last/1 delegation
+  # ------------------------------------------------------------
+
+  defp transform_ast(node, match_set, match_names) do
+    case node do
+      # ---- Pipe call: x |> fn_name() or x |> fn_name ----
+      {:|>, pipe_meta, [lhs, {fn_name, call_meta, pipe_args}]}
+      when is_atom(fn_name) and (pipe_args == [] or is_nil(pipe_args)) ->
+        if MapSet.member?(match_names, fn_name) do
+          list_last_fn = {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], []}
+
+          {:|>, pipe_meta,
+           [transform_ast(lhs, match_set, match_names), list_last_fn]}
+        else
+          {:|>, pipe_meta,
+           [
+             transform_ast(lhs, match_set, match_names),
+             {fn_name, call_meta, pipe_args}
+           ]}
+        end
+
+      # ---- Function definition ----
+      {def_type, meta, [{fn_name, name_meta, args}, body]}
+      when def_type in [:def, :defp] and is_atom(fn_name) ->
+        if MapSet.member?(match_set, {fn_name, def_type}) do
+          pattern = hd(args)
+
+          if is_single_element_var_pattern?(pattern) do
+            make_list_last_def(def_type, meta, fn_name)
+          else
+            {:__block__, [], []}
+          end
+        else
+          new_body = transform_ast(body, match_set, match_names)
+          {def_type, meta, [{fn_name, name_meta, args}, new_body]}
+        end
+
+      # ---- __block__ — filter out removed clauses ----
+      {:__block__, meta, body} ->
+        new_body =
+          body
+          |> Enum.flat_map(fn elem ->
+            case transform_ast(elem, match_set, match_names) do
+              {:__block__, [], []} -> []
+              other -> [other]
+            end
+          end)
+
+        case new_body do
+          [single] -> single
+          _ -> {:__block__, meta, new_body}
+        end
+
+      # ---- Direct call: fn_name(arg) ----
+      {fn_name, meta, [arg]} when is_atom(fn_name) ->
+        if MapSet.member?(match_names, fn_name) do
+          transformed_arg = transform_ast(arg, match_set, match_names)
+          {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], [transformed_arg]}
+        else
+          {fn_name, meta, [transform_ast(arg, match_set, match_names)]}
+        end
+
+      # ---- Generic 3-tuple (fallthrough) ----
+      {tag, meta, args} when is_list(args) ->
+        {tag, meta, Enum.map(args, &transform_ast(&1, match_set, match_names))}
+
+      # ---- 2-tuple (keyword pair like {:do, expr}) ----
+      {left, right} ->
+        {transform_ast(left, match_set, match_names),
+         transform_ast(right, match_set, match_names)}
+
+      # ---- List ----
+      list when is_list(list) ->
+        Enum.map(list, &transform_ast(&1, match_set, match_names))
+
+      # ---- Leaf (atom, number, string, nil …) ----
+      other ->
+        other
+    end
+  end
+
+  defp is_single_element_var_pattern?(pattern) do
+    case pattern do
+      [{var_name, _, ctx}] when is_atom(var_name) and is_atom(ctx) -> true
+      _ -> false
+    end
+  end
+
+  defp make_list_last_def(def_type, meta, fn_name) do
+    var = {:list, [], nil}
+    list_last_body = {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], [var]}
+    {def_type, meta, [{fn_name, [], [var]}, [do: list_last_body]]}
+  end
 
   # ------------------------------------------------------------
   # MESSAGE GENERATION
@@ -161,10 +310,8 @@ defmodule Credence.Rule.NoManualListLast do
       message: """
       `#{def_type} #{fn_name}/1` is a manual reimplementation of `List.last/1` \
       with the same O(n) cost.
-
       Rather than reimplementing list traversal, restructure the algorithm \
       to avoid needing the last element:
-
       • Track the value in an accumulator during Enum.reduce
       • Reverse the list and take the head: `hd(Enum.reverse(list))`
       • Build results so the needed value is at the head, not the tail

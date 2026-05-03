@@ -69,7 +69,8 @@ defmodule Credence.Rule.NoIsPrefixForNonGuard do
   defp check_name(fn_name, def_type, arity, meta) do
     str = Atom.to_string(fn_name)
 
-    if String.starts_with?(str, "is_") and not String.ends_with?(str, "?") and fn_name not in @erlang_guards do
+    if String.starts_with?(str, "is_") and not String.ends_with?(str, "?") and
+         fn_name not in @erlang_guards do
       # Transforms "is_valid_foo" -> "valid_foo?"
       suggested = str |> String.trim_leading("is_") |> Kernel.<>("?")
 

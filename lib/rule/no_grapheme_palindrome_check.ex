@@ -99,10 +99,11 @@ defmodule Credence.Rule.NoGraphemePalindromeCheck do
 
         # Replace Enum.reverse(var) → String.reverse(var) in == comparisons
         {:==, meta, [lhs, rhs]} ->
-          {:==, meta, [
-            maybe_replace_reverse(lhs, decompose_vars),
-            maybe_replace_reverse(rhs, decompose_vars)
-          ]}
+          {:==, meta,
+           [
+             maybe_replace_reverse(lhs, decompose_vars),
+             maybe_replace_reverse(rhs, decompose_vars)
+           ]}
 
         node ->
           node
