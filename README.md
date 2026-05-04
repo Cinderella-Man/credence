@@ -92,7 +92,6 @@ Pass custom rules via the `:rules` option or add them to `@default_rules` in `Cr
 | `AvoidGraphemesLength` | `length/1` on `String.graphemes/1` result — use `String.length/1` instead | ✅ |
 | `DescriptiveNames` | Single-letter variable names in function signatures | ❌ |
 | `InconsistentParamNames` | Same positional parameter uses different names across function clauses | ✅ |
-| `LengthGuardToPattern` | `length/1` inside guard clauses - use pattern matching up to 5 elements | ✅ |
 | `NoAnonFnApplicationInPipe` | Anonymous functions applied with `.()` inside a pipe chain | ✅ |
 | `NoDestructureReconstruct` | List destructured into variables only to reconstruct the same list | ✅ |
 | `NoDocFalseOnPrivate` | `@doc false` on private functions (`defp`) — redundant | ✅ |
@@ -113,8 +112,11 @@ Pass custom rules via the `:rules` option or add them to `@default_rules` in `Cr
 | `NoIntegerToStringDigits` | `Integer.to_string/1` \|> `String.graphemes/1` — use `Integer.digits/1` | ✅ |
 | `NoIsPrefixForNonGuard` | `is_` prefix on non-guard `def`/`defp` functions | ✅ |
 | `NoKernelShadowing` | Variables that shadow `Kernel` functions | ❌ |
-| `NoLengthInGuard` | `length/1` inside guard clauses — use if instead | ❌ |
-| `NoListAppendInLoop` | `++` inside looping constructs — O(n²) | ❌ |
+| `NoLengthGuardToPattern` | `length/1` inside guard clauses - use pattern matching up to 5 elements | ✅ |
+| `NoLengthInGuard` | `length/1` inside guard clauses — nest logic instead | ❌ |
+| `NoListAppendInLoop` | `++` inside non-fixable looping constructs — O(n²) | ❌ |
+| `NoListAppendInRecursion` | `++` inside recursion — O(n²) | ✅ |
+| `NoListAppendInReduce` | `++` inside reduce — O(n²) | ✅ |
 | `NoListDeleteAtInLoop` | `List.delete_at/2` inside looping constructs | ❌ |
 | `NoListFold` | `List.foldl/3` or `List.foldr/3` — use `Enum.reduce/3` | ✅ |
 | `NoListLast` | `List.last/1` — use pattern matching or `Enum.at(list, -1)` | ❌ |

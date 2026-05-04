@@ -1,4 +1,4 @@
-defmodule Credence.Rule.LengthGuardToPattern do
+defmodule Credence.Rule.NoLengthGuardToPattern do
   @moduledoc """
   Refactoring rule: Detects guards that check list length with a literal
   comparison that can be replaced by a pattern match in the function head.
@@ -99,7 +99,7 @@ defmodule Credence.Rule.LengthGuardToPattern do
 
   defp build_issue(:non_empty, line) do
     %Issue{
-      rule: :length_guard_to_pattern,
+      rule: :no_length_guard_to_pattern,
       message:
         "`length(list) > 0` in a guard traverses the entire list. " <>
           "Use `[_ | _] = list` pattern matching instead — it is O(1).",
@@ -111,7 +111,7 @@ defmodule Credence.Rule.LengthGuardToPattern do
     underscores = List.duplicate("_", n) |> Enum.join(", ")
 
     %Issue{
-      rule: :length_guard_to_pattern,
+      rule: :no_length_guard_to_pattern,
       message:
         "`length(list) == #{n}` in a guard traverses the entire list. " <>
           "Use `[#{underscores}] = list` pattern matching instead — it is O(1).",

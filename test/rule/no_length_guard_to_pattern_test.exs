@@ -1,16 +1,16 @@
-defmodule Credence.Rule.LengthGuardToPatternTest do
+defmodule Credence.Rule.NoLengthGuardToPatternTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.LengthGuardToPattern.check(ast, [])
+    Credence.Rule.NoLengthGuardToPattern.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.LengthGuardToPattern.fix(code, [])
+    Credence.Rule.NoLengthGuardToPattern.fix(code, [])
   end
 
-  describe "LengthGuardToPattern check" do
+  describe "NoLengthGuardToPattern check" do
     # --- POSITIVE CASES (should flag) ---
 
     test "flags length(list) > 0 in a guard" do
@@ -25,7 +25,7 @@ defmodule Credence.Rule.LengthGuardToPatternTest do
       issues = check(code)
       assert length(issues) == 1
       issue = hd(issues)
-      assert issue.rule == :length_guard_to_pattern
+      assert issue.rule == :no_length_guard_to_pattern
       assert issue.message =~ "> 0"
       assert issue.message =~ "[_ | _]"
     end
@@ -41,7 +41,7 @@ defmodule Credence.Rule.LengthGuardToPatternTest do
 
       issues = check(code)
       assert length(issues) == 1
-      assert hd(issues).rule == :length_guard_to_pattern
+      assert hd(issues).rule == :no_length_guard_to_pattern
       assert hd(issues).message =~ "== 3"
     end
 
@@ -55,7 +55,7 @@ defmodule Credence.Rule.LengthGuardToPatternTest do
 
         issues = check(code)
         assert length(issues) == 1, "expected issue for length(list) == #{n}"
-        assert hd(issues).rule == :length_guard_to_pattern
+        assert hd(issues).rule == :no_length_guard_to_pattern
       end
     end
 
@@ -70,7 +70,7 @@ defmodule Credence.Rule.LengthGuardToPatternTest do
 
       issues = check(code)
       assert length(issues) == 1
-      assert hd(issues).rule == :length_guard_to_pattern
+      assert hd(issues).rule == :no_length_guard_to_pattern
     end
 
     # --- NEGATIVE CASES (should NOT flag) ---
@@ -129,7 +129,7 @@ defmodule Credence.Rule.LengthGuardToPatternTest do
     end
   end
 
-  describe "LengthGuardToPattern fix" do
+  describe "NoLengthGuardToPattern fix" do
     test "fixes length(list) > 0 into [_ | _] = list pattern" do
       code = """
       defmodule Example do
@@ -275,7 +275,7 @@ defmodule Credence.Rule.LengthGuardToPatternTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.LengthGuardToPattern.check(ast, [])
+      issues = Credence.Rule.NoLengthGuardToPattern.check(ast, [])
       assert issues == []
     end
 
@@ -290,7 +290,7 @@ defmodule Credence.Rule.LengthGuardToPatternTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.LengthGuardToPattern.check(ast, [])
+      issues = Credence.Rule.NoLengthGuardToPattern.check(ast, [])
       assert issues == []
     end
   end
