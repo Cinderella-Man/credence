@@ -415,10 +415,10 @@ defmodule Credence.Rule.NoStringConcatInLoop do
        ) do
     case left do
       {^acc_name, _, _} ->
-        if not references_var?(right, acc_name) do
-          {:ok, elem_var, right}
-        else
+        if references_var?(right, acc_name) do
           :error
+        else
+          {:ok, elem_var, right}
         end
 
       _ ->

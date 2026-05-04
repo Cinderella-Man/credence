@@ -263,7 +263,8 @@ defmodule Credence.Rule.InconsistentParamNames do
   end
 
   defp build_issue(def_type, name, arity, position, conflicting_bases, meta) do
-    names_str = conflicting_bases |> Enum.map(&"`#{&1}`") |> Enum.join(", ")
+    names_str =
+      Enum.map_join(conflicting_bases, ", ", &"`#{&1}`")
 
     %Issue{
       rule: :inconsistent_param_names,

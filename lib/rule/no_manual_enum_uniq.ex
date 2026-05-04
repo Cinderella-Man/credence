@@ -222,7 +222,7 @@ defmodule Credence.Rule.NoManualEnumUniq do
         seen_var = get_var_name_at_index(acc_pattern, ms_index)
 
         if item_var && seen_var do
-          is_conditional_dedup?(body, seen_var, item_var)
+          conditional_dedup?(body, seen_var, item_var)
         else
           false
         end
@@ -244,7 +244,7 @@ defmodule Credence.Rule.NoManualEnumUniq do
 
   defp get_var_name_at_index(_, _), do: nil
 
-  defp is_conditional_dedup?(body, seen_var, item_var) do
+  defp conditional_dedup?(body, seen_var, item_var) do
     {_, found?} =
       Macro.prewalk(body, false, fn
         {type, _, [condition | _]} = node, acc when type in [:if, :unless, :case] ->

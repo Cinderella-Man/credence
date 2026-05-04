@@ -181,7 +181,7 @@ defmodule Credence.Rule.NoSortForTopK do
   end
 
   defp fix_rest(arg, rest) do
-    {reverses, after_reverses} = Enum.split_while(rest, &is_enum_reverse?/1)
+    {reverses, after_reverses} = Enum.split_while(rest, &enum_reverse?/1)
     parity = rem(length(reverses), 2)
 
     case after_reverses do
@@ -223,8 +223,8 @@ defmodule Credence.Rule.NoSortForTopK do
 
   defp classify_terminal(_), do: :error
 
-  defp is_enum_reverse?({{:., _, [mod, :reverse]}, _, []}), do: enum_module?(mod)
-  defp is_enum_reverse?(_), do: false
+  defp enum_reverse?({{:., _, [mod, :reverse]}, _, []}), do: enum_module?(mod)
+  defp enum_reverse?(_), do: false
 
   # Only single-argument sort (ascending) — safe to determine min/max.
   defp extract_sort_1({{:., _, [mod, :sort]}, _, [arg]}) do

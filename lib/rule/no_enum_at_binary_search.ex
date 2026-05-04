@@ -136,11 +136,11 @@ defmodule Credence.Rule.NoEnumAtBinarySearch do
   end
 
   defp flagged_index?(index, mids) do
-    is_mid_var?(index, mids) or midpoint_expr?(index)
+    mid_var?(index, mids) or midpoint_expr?(index)
   end
 
-  defp is_mid_var?({var, _, _}, mids) when is_atom(var), do: MapSet.member?(mids, var)
-  defp is_mid_var?(_, _), do: false
+  defp mid_var?({var, _, _}, mids) when is_atom(var), do: MapSet.member?(mids, var)
+  defp mid_var?(_, _), do: false
 
   defp unwrap_literal({:__block__, _, [val]}), do: val
   defp unwrap_literal(val), do: val

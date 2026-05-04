@@ -115,7 +115,7 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
   defp plain_sort?(_), do: false
 
   defp negative_take?({{:., _, [{:__aliases__, _, [:Enum]}, :take]}, _, [n]}),
-    do: is_negative_integer(n)
+    do: negative_integer?(n)
 
   defp negative_take?(_), do: false
 
@@ -140,19 +140,19 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
 
   defp has_negative_take?(pipeline) do
     Enum.any?(pipeline, fn
-      {{:., _, [{:__aliases__, _, [:Enum]}, :take]}, _, [n]} -> is_negative_integer(n)
+      {{:., _, [{:__aliases__, _, [:Enum]}, :take]}, _, [n]} -> negative_integer?(n)
       _ -> false
     end)
   end
 
-  defp is_negative_integer({:-, _, [int]}) when is_integer(int), do: true
+  defp negative_integer?({:-, _, [int]}) when is_integer(int), do: true
 
-  defp is_negative_integer({:-, _, [{:__block__, _, [int]}]}) when is_integer(int),
+  defp negative_integer?({:-, _, [{:__block__, _, [int]}]}) when is_integer(int),
     do: true
 
-  defp is_negative_integer({:__block__, _, [int]}), do: is_negative_integer(int)
-  defp is_negative_integer(int) when is_integer(int) and int < 0, do: true
-  defp is_negative_integer(_), do: false
+  defp negative_integer?({:__block__, _, [int]}), do: negative_integer?(int)
+  defp negative_integer?(int) when is_integer(int) and int < 0, do: true
+  defp negative_integer?(_), do: false
 
   defp build_issue(meta) do
     %Issue{

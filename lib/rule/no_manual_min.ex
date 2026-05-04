@@ -73,7 +73,7 @@ defmodule Credence.Rule.NoManualMin do
   defp check_node({:if, meta, [condition, branches]}) do
     with {:ok, do_branch} <- fetch_branch(branches, :do),
          {:ok, else_branch} <- fetch_branch(branches, :else),
-         true <- is_min_pattern?(condition, do_branch, else_branch) do
+         true <- min_pattern?(condition, do_branch, else_branch) do
       {:ok,
        %Issue{
          rule: :no_manual_min,
@@ -97,17 +97,17 @@ defmodule Credence.Rule.NoManualMin do
   #   → "if b > a, do: a, else: b"  (return lesser in true branch)
   # ------------------------------------------------------------
 
-  defp is_min_pattern?({op, _, [left, right]}, do_branch, else_branch)
+  defp min_pattern?({op, _, [left, right]}, do_branch, else_branch)
        when op in [:<, :<=] do
     ast_equal?(do_branch, left) and ast_equal?(else_branch, right)
   end
 
-  defp is_min_pattern?({op, _, [left, right]}, do_branch, else_branch)
+  defp min_pattern?({op, _, [left, right]}, do_branch, else_branch)
        when op in [:>, :>=] do
     ast_equal?(do_branch, right) and ast_equal?(else_branch, left)
   end
 
-  defp is_min_pattern?(_, _, _), do: false
+  defp min_pattern?(_, _, _), do: false
 
   defp extract_min_operands(condition, branches) do
     with {:ok, do_branch} <- fetch_branch(branches, :do),

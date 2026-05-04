@@ -97,7 +97,7 @@ defmodule Credence.Rule.NoManualMax do
          {:ok, else_branch} <- fetch_branch(branches, :else),
          {:ok, op} <- get_comparison_op(condition),
          {left, right} <- extract_operands(condition),
-         true <- is_max_pattern?(op, left, right, do_branch, else_branch) do
+         true <- max_pattern?(op, left, right, do_branch, else_branch) do
       # do_branch is always the "greater" value — use it as max's first arg
       {:ok, max_call(do_branch, else_branch)}
     else
@@ -119,7 +119,7 @@ defmodule Credence.Rule.NoManualMax do
   defp check_node({:if, meta, [condition, branches]}) do
     with {:ok, do_branch} <- fetch_branch(branches, :do),
          {:ok, else_branch} <- fetch_branch(branches, :else),
-         true <- is_max_pattern?(condition, do_branch, else_branch) do
+         true <- max_pattern?(condition, do_branch, else_branch) do
       {:ok,
        %Issue{
          rule: :no_manual_max,
@@ -133,28 +133,28 @@ defmodule Credence.Rule.NoManualMax do
 
   defp check_node(_), do: :error
 
-  defp is_max_pattern?(condition, do_branch, else_branch) do
+  defp max_pattern?(condition, do_branch, else_branch) do
     case get_comparison_op(condition) do
       {:ok, op} ->
         {left, right} = extract_operands(condition)
-        is_max_pattern?(op, left, right, do_branch, else_branch)
+        max_pattern?(op, left, right, do_branch, else_branch)
 
       :error ->
         false
     end
   end
 
-  defp is_max_pattern?(op, left, right, do_branch, else_branch)
+  defp max_pattern?(op, left, right, do_branch, else_branch)
        when op in [:>, :>=] do
     ast_equal?(do_branch, left) and ast_equal?(else_branch, right)
   end
 
-  defp is_max_pattern?(op, left, right, do_branch, else_branch)
+  defp max_pattern?(op, left, right, do_branch, else_branch)
        when op in [:<, :<=] do
     ast_equal?(do_branch, right) and ast_equal?(else_branch, left)
   end
 
-  defp is_max_pattern?(_, _, _, _, _), do: false
+  defp max_pattern?(_, _, _, _, _), do: false
 
   defp fetch_branch(branches, key) when is_list(branches) do
     case Keyword.fetch(branches, key) do

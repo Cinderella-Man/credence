@@ -174,7 +174,7 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
     # 2) For sort/2 with a lambda sorter, wrap it too
     rest =
       case {f, rest} do
-        {:sort, [s]} -> if is_fn?(s), do: [wrap_sort(s, mfunc)], else: rest
+        {:sort, [s]} -> if function?(s), do: [wrap_sort(s, mfunc)], else: rest
         _ -> rest
       end
 
@@ -184,14 +184,14 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
 
       g when g in [:reduce, :reduce_while] ->
         case rest do
-          [acc, cb] -> if is_fn?(cb), do: {:ok, mk.(g, [ma, acc, cb])}, else: :no
+          [acc, cb] -> if function?(cb), do: {:ok, mk.(g, [ma, acc, cb])}, else: :no
           _ -> :no
         end
 
       :count ->
         case rest do
           [] -> {:ok, mk.(:count, [ma])}
-          [cb | _] -> if is_fn?(cb), do: {:ok, mk.(:count, [ma, cb])}, else: :no
+          [cb | _] -> if function?(cb), do: {:ok, mk.(:count, [ma, cb])}, else: :no
         end
 
       :max ->
@@ -219,10 +219,10 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
       :find ->
         case rest do
           [cb] ->
-            if is_fn?(cb), do: {:ok, nc(mk.(:find, [ma, cb]), mfunc, nil)}, else: :no
+            if function?(cb), do: {:ok, nc(mk.(:find, [ma, cb]), mfunc, nil)}, else: :no
 
           [default, cb] ->
-            if is_fn?(cb), do: {:ok, nc(mk.(:find, [ma, cb]), mfunc, default)}, else: :no
+            if function?(cb), do: {:ok, nc(mk.(:find, [ma, cb]), mfunc, default)}, else: :no
 
           _ ->
             :no
@@ -254,7 +254,7 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
               is_atom(s) ->
                 {:ok, mk.(:map, [mk.(:sort_by, [ma, ex(mfunc), s]), ex(mfunc)])}
 
-              is_fn?(s) ->
+              function?(s) ->
                 {:ok, mk.(:map, [mk.(:sort, [ma, s]), ex(mfunc)])}
 
               true ->
@@ -292,7 +292,7 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
       :group_by ->
         case rest do
           [kc, vc] ->
-            if is_fn?(kc) and is_fn?(vc), do: {:ok, mk.(:group_by, [ma, kc, vc])}, else: :no
+            if function?(kc) and function?(vc), do: {:ok, mk.(:group_by, [ma, kc, vc])}, else: :no
 
           _ ->
             :no
@@ -317,7 +317,7 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
     # 2) For sort/2 with a lambda sorter, wrap it too
     ea =
       case {f, ea} do
-        {:sort, [s]} -> if is_fn?(s), do: [wrap_sort(s, mfunc)], else: ea
+        {:sort, [s]} -> if function?(s), do: [wrap_sort(s, mfunc)], else: ea
         _ -> ea
       end
 
@@ -327,14 +327,14 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
 
       g when g in [:reduce, :reduce_while] ->
         case ea do
-          [acc, cb] -> if is_fn?(cb), do: {:ok, mk.(g, [acc, cb])}, else: :no
+          [acc, cb] -> if function?(cb), do: {:ok, mk.(g, [acc, cb])}, else: :no
           _ -> :no
         end
 
       :count ->
         case ea do
           [] -> {:ok, mk.(:count, [])}
-          [cb | _] -> if is_fn?(cb), do: {:ok, mk.(:count, [cb])}, else: :no
+          [cb | _] -> if function?(cb), do: {:ok, mk.(:count, [cb])}, else: :no
         end
 
       :max ->
@@ -362,10 +362,10 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
       :find ->
         case ea do
           [cb] ->
-            if is_fn?(cb), do: {:ok, nc(sn(:find, [ma, cb]), mfunc, nil)}, else: :no
+            if function?(cb), do: {:ok, nc(sn(:find, [ma, cb]), mfunc, nil)}, else: :no
 
           [default, cb] ->
-            if is_fn?(cb), do: {:ok, nc(sn(:find, [ma, cb]), mfunc, default)}, else: :no
+            if function?(cb), do: {:ok, nc(sn(:find, [ma, cb]), mfunc, default)}, else: :no
 
           _ ->
             :no
@@ -397,7 +397,7 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
               is_atom(s) ->
                 {:ok, mk2.(mk.(:sort_by, [ex(mfunc), s]), :map, [ex(mfunc)])}
 
-              is_fn?(s) ->
+              function?(s) ->
                 {:ok, mk2.(mk.(:sort, [s]), :map, [ex(mfunc)])}
 
               true ->
@@ -435,7 +435,7 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
       :group_by ->
         case ea do
           [kc, vc] ->
-            if is_fn?(kc) and is_fn?(vc), do: {:ok, mk.(:group_by, [kc, vc])}, else: :no
+            if function?(kc) and function?(vc), do: {:ok, mk.(:group_by, [kc, vc])}, else: :no
 
           _ ->
             :no
@@ -529,9 +529,9 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
   defp pick(:no, fb), do: fb
 
   # Runtime check: is this node a fn or &func/1?
-  defp is_fn?({:fn, _, _}), do: true
-  defp is_fn?({:&, _, [{:/, _, [_, 1]}]}), do: true
-  defp is_fn?(_), do: false
+  defp function?({:fn, _, _}), do: true
+  defp function?({:&, _, [{:/, _, [_, 1]}]}), do: true
+  defp function?(_), do: false
 
   # ═══════════════════════════════════════════════════════════════════
   # AST builders

@@ -97,11 +97,11 @@ defmodule Credence.Rule.NoManualListLast do
     {name, _, def_type, _, _, _} = clause_a
 
     cond do
-      is_list_last?(clause_a, clause_b, name) ->
+      list_last?(clause_a, clause_b, name) ->
         meta = elem(clause_a, 3)
         [build_issue(def_type, name, meta)]
 
-      is_list_last?(clause_b, clause_a, name) ->
+      list_last?(clause_b, clause_a, name) ->
         meta = elem(clause_b, 3)
         [build_issue(def_type, name, meta)]
 
@@ -110,7 +110,7 @@ defmodule Credence.Rule.NoManualListLast do
     end
   end
 
-  defp is_list_last?(base_clause, recursive_clause, fn_name) do
+  defp list_last?(base_clause, recursive_clause, fn_name) do
     single_element_return?(base_clause) and
       cons_recurse?(recursive_clause, fn_name)
   end
@@ -176,8 +176,8 @@ defmodule Credence.Rule.NoManualListLast do
     {name, _, def_type, _, _, _} = clause_a
 
     cond do
-      is_list_last?(clause_a, clause_b, name) -> [{name, def_type}]
-      is_list_last?(clause_b, clause_a, name) -> [{name, def_type}]
+      list_last?(clause_a, clause_b, name) -> [{name, def_type}]
+      list_last?(clause_b, clause_a, name) -> [{name, def_type}]
       true -> []
     end
   end
@@ -216,7 +216,7 @@ defmodule Credence.Rule.NoManualListLast do
         if MapSet.member?(match_set, {fn_name, def_type}) do
           pattern = hd(args)
 
-          if is_single_element_var_pattern?(pattern) do
+          if single_element_var_pattern?(pattern) do
             make_list_last_def(def_type, meta, fn_name)
           else
             {:__block__, [], []}
@@ -270,7 +270,7 @@ defmodule Credence.Rule.NoManualListLast do
     end
   end
 
-  defp is_single_element_var_pattern?(pattern) do
+  defp single_element_var_pattern?(pattern) do
     case pattern do
       [{var_name, _, ctx}] when is_atom(var_name) and is_atom(ctx) -> true
       _ -> false

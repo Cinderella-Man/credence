@@ -55,10 +55,10 @@ defmodule Credence.Rule.NoEnumCountForLength do
       # Direct: Enum.count(expr) → length(expr)
       # Must not match the predicate-only piped form
       {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg]} = node ->
-        if not predicate?(arg) do
-          {:length, [], [arg]}
-        else
+        if predicate?(arg) do
           node
+        else
+          {:length, [], [arg]}
         end
 
       # Pipeline: ... |> Enum.count() → ... |> length()
