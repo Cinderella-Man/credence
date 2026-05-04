@@ -80,7 +80,7 @@ defmodule Credence.Rule.UnnecessaryGraphemeChunking.Unfixable do
   defp detect_pipeline({:|>, meta, _} = node) do
     calls = flatten_pipeline(node)
 
-    if calls && broad_pattern?(calls) && !fixable_pattern?(calls) do
+    if broad_pattern?(calls) && !fixable_pattern?(calls) do
       %Issue{
         rule: :unnecessary_grapheme_chunking,
         message: message(),

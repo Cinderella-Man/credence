@@ -147,7 +147,6 @@ defmodule Credence.Rule.NoSortThenAt do
   defp replacement_call(:asc, :last, c), do: make_remote(:Enum, :max, [c])
   defp replacement_call(:desc, :first, c), do: make_remote(:Enum, :max, [c])
   defp replacement_call(:desc, :last, c), do: make_remote(:Enum, :min, [c])
-  defp replacement_call(:unknown, _, _c), do: raise("unreachable: :unknown handled upstream")
 
   defp make_remote(mod, fun, args) do
     {{:., [], [{:__aliases__, [], [mod]}, fun]}, [], args}

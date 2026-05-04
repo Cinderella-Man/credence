@@ -215,7 +215,7 @@ defmodule Credence.Rule.NoStringConcatInLoop do
         abs_open = byte_pos + paren_offset
         find_matching_paren(source, abs_open + 1, 1, byte_pos)
 
-      :error ->
+      :nomatch ->
         :error
     end
   end
@@ -273,7 +273,7 @@ defmodule Credence.Rule.NoStringConcatInLoop do
   defp extract_first_arg(matched) do
     case :binary.match(matched, "(") do
       {open_pos, _} -> extract_first_arg_loop(matched, open_pos + 1, open_pos + 1, 0)
-      :error -> "list"
+      :nomatch -> "list"
     end
   end
 

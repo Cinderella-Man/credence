@@ -19,6 +19,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.sort(list) |> Enum.take(1)
       end
       """
+
       [issue] = check(code)
       assert issue.rule == :no_sort_for_top_k
       assert issue.message =~ "Enum.min"
@@ -30,6 +31,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.sort(list) |> hd()
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.min"
     end
@@ -40,6 +42,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.sort(list) |> Enum.at(0)
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.min"
     end
@@ -50,6 +53,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.sort(list) |> Enum.reverse() |> Enum.take(1)
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.max"
     end
@@ -60,6 +64,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.sort(list) |> Enum.reverse() |> hd()
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.max"
     end
@@ -70,6 +75,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.sort(list) |> Enum.reverse() |> Enum.at(0)
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.max"
     end
@@ -78,6 +84,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
       code = """
       Enum.map(list, fn x -> Enum.sort(x) |> Enum.take(1) end)
       """
+
       assert length(check(code)) == 1
     end
 
@@ -90,6 +97,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         end
       end
       """
+
       assert length(check(code)) == 1
     end
 
@@ -97,6 +105,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
       code = """
       Enum.map(list, &{&1, Enum.sort(&1) |> Enum.take(1)})
       """
+
       assert length(check(code)) == 1
     end
   end
@@ -110,6 +119,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.sort(list) |> Enum.take(2)
       end
       """
+
       assert check(code) == []
     end
 
@@ -119,6 +129,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.sort(list) |> Enum.at(1)
       end
       """
+
       assert check(code) == []
     end
 
@@ -126,6 +137,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
       code = """
       Enum.sort(list) |> Enum.take(1) |> length()
       """
+
       assert check(code) == []
     end
 
@@ -135,6 +147,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: list |> Enum.map(&(&1 * 2)) |> Enum.take(1)
       end
       """
+
       assert check(code) == []
     end
 
@@ -144,6 +157,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.min(list)
       end
       """
+
       assert check(code) == []
     end
 
@@ -156,6 +170,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         end
       end
       """
+
       assert check(code) == []
     end
   end
@@ -210,6 +225,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.sort(list) |> Enum.take(1)
       end
       """
+
       result = fix(source)
       assert result =~ "Enum.min(list)"
       refute result =~ "Enum.sort(list)"
@@ -231,6 +247,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         end
       end
       """
+
       result = fix(source)
       assert result =~ "Enum.min(a)"
       assert result =~ "Enum.max(b)"
@@ -262,6 +279,7 @@ defmodule Credence.Rule.NoSortForTopKTest do
         def f(list), do: Enum.min(list)
       end
       """
+
       assert fix(code) == code
     end
   end

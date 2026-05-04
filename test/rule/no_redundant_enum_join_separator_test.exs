@@ -22,6 +22,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       issues = check(code)
       assert length(issues) == 1
       issue = hd(issues)
@@ -39,6 +40,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       issues = check(code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_redundant_enum_join_separator
@@ -52,6 +54,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       issues = check(code)
       assert length(issues) == 1
       issue = hd(issues)
@@ -67,6 +70,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       issues = check(code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_redundant_enum_join_separator
@@ -84,6 +88,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       issues = check(code)
       assert length(issues) == 4
     end
@@ -98,6 +103,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -109,6 +115,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -120,6 +127,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -131,6 +139,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -142,6 +151,7 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
         end
       end
       """
+
       assert check(code) == []
     end
 

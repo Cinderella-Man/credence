@@ -180,8 +180,6 @@ defmodule Credence.Rule.NoSortForTopK do
     end
   end
 
-  defp fix_pipeline_steps(_), do: :error
-
   defp fix_rest(arg, rest) do
     {reverses, after_reverses} = Enum.split_while(rest, &is_enum_reverse?/1)
     parity = rem(length(reverses), 2)

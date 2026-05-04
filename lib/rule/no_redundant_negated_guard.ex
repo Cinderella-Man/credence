@@ -79,9 +79,7 @@ defmodule Credence.Rule.NoRedundantNegatedGuard do
     Enum.reverse(clauses)
   end
 
-  defp extract_clause(
-         {def_type, meta, [{:when, _, [{fn_name, _, args}, guard]}, _body]}
-       )
+  defp extract_clause({def_type, meta, [{:when, _, [{fn_name, _, args}, guard]}, _body]})
        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
     {:ok, {fn_name, length(args), guard, meta, def_type}}
   end

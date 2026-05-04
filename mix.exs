@@ -24,6 +24,7 @@ defmodule Credence.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
       {:sourceror, "~> 1.11"}
     ]
