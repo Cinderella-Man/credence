@@ -102,7 +102,7 @@ Pass custom rules via the `:rules` option or add them to `@default_rules` in `Cr
 | `NoEnumAtLoopAccess` | `Enum.at/2` inside loops (heuristic) | ❌ |
 | `NoEnumAtMidpointAccess` | `Enum.at/2` with a midpoint index inside divide-and-conquer patterns | ✅ |
 | `NoEnumCountForLength` | `Enum.count/1` without a predicate on a plain list — use `length/1` | ✅ |
-| `NoEnumDropNegative` | `Enum.drop(list, -n)` — use `Enum.take/2` instead | ❌ |
+| `NoEnumDropNegative` | `Enum.drop(list, -n)` — use `Enum.take/2` instead | ✅ |
 | `NoEnumTakeNegative` | `Enum.take(list, -n)` — use `Enum.drop/2` and reverse instead | ❌ |
 | `NoExplicitMaxReduce` | Explicit max-reduction pattern inside `Enum.reduce/3` — use `Enum.max/1` | ✅ |
 | `NoExplicitMinReduce` | Explicit min-reduction pattern inside `Enum.reduce/3` — use `Enum.min/1` | ✅ |
