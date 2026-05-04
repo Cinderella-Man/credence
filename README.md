@@ -92,6 +92,7 @@ Pass custom rules via the `:rules` option or add them to `@default_rules` in `Cr
 | `AvoidGraphemesLength` | `length/1` on `String.graphemes/1` result — use `String.length/1` instead | ✅ |
 | `DescriptiveNames` | Single-letter variable names in function signatures | ❌ |
 | `InconsistentParamNames` | Same positional parameter uses different names across function clauses | ✅ |
+| `LengthGuardToPattern` | `length/1` inside guard clauses - use pattern matching up to 5 elements | ✅ |
 | `NoAnonFnApplicationInPipe` | Anonymous functions applied with `.()` inside a pipe chain | ✅ |
 | `NoDestructureReconstruct` | List destructured into variables only to reconstruct the same list | ✅ |
 | `NoDocFalseOnPrivate` | `@doc false` on private functions (`defp`) — redundant | ✅ |
@@ -103,7 +104,7 @@ Pass custom rules via the `:rules` option or add them to `@default_rules` in `Cr
 | `NoEnumAtMidpointAccess` | `Enum.at/2` with a midpoint index inside divide-and-conquer patterns | ✅ |
 | `NoEnumCountForLength` | `Enum.count/1` without a predicate on a plain list — use `length/1` | ✅ |
 | `NoEnumDropNegative` | `Enum.drop(list, -n)` — use `Enum.take/2` instead | ✅ |
-| `NoEnumTakeNegative` | `Enum.take(list, -n)` — use `Enum.drop/2` and reverse instead | ❌ |
+| `NoEnumTakeNegative` | `Enum.take(list, -n)` — use `Enum.drop/2` and reverse instead | ✅ |
 | `NoExplicitMaxReduce` | Explicit max-reduction pattern inside `Enum.reduce/3` — use `Enum.max/1` | ✅ |
 | `NoExplicitMinReduce` | Explicit min-reduction pattern inside `Enum.reduce/3` — use `Enum.min/1` | ✅ |
 | `NoExplicitSumReduce` | Explicit sum-reduction pattern inside `Enum.reduce/3` — use `Enum.sum/1` | ✅ |
@@ -112,7 +113,7 @@ Pass custom rules via the `:rules` option or add them to `@default_rules` in `Cr
 | `NoIntegerToStringDigits` | `Integer.to_string/1` \|> `String.graphemes/1` — use `Integer.digits/1` | ✅ |
 | `NoIsPrefixForNonGuard` | `is_` prefix on non-guard `def`/`defp` functions | ✅ |
 | `NoKernelShadowing` | Variables that shadow `Kernel` functions | ❌ |
-| `NoLengthInGuard` | `length/1` inside guard clauses — use pattern matching instead | ❌ |
+| `NoLengthInGuard` | `length/1` inside guard clauses — use if instead | ❌ |
 | `NoListAppendInLoop` | `++` inside looping constructs — O(n²) | ❌ |
 | `NoListDeleteAtInLoop` | `List.delete_at/2` inside looping constructs | ❌ |
 | `NoListFold` | `List.foldl/3` or `List.foldr/3` — use `Enum.reduce/3` | ✅ |

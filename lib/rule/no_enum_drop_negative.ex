@@ -57,76 +57,58 @@ defmodule Credence.Rule.NoEnumDropNegative do
   @impl true
   def fix(source, _opts) do
     source
-    # First pass: piped Enum.drop(-N) has exactly one arg (no commas at top level)
-    |> fix_piped_drops()
-    # Second pass: direct Enum.drop(expr, -N) with paren matching
-    |> fix_direct_drops()
-  end
-
-  # Piped: Enum.drop(-N) → Enum.slice(0..-(N+1)//1)
-  # Safe regex — only one arg between the parens, always a negative literal.
-  defp fix_piped_drops(source) do
-    Regex.replace(~r/Enum\.drop\(\s*-(\d+)\s*\)/, source, fn _, n_str ->
-      n = String.to_integer(n_str)
-      "Enum.slice(0..#{-(n + 1)}//1)"
-    end)
-  end
-
-  # Direct: Enum.drop(expr, -N) → Enum.slice(expr, 0..-(N+1)//1)
-  # Uses paren-matching to correctly find the closing ) even when expr
-  # contains nested parentheses (e.g. Map.values(map)).
-  defp fix_direct_drops(source) do
-    case :binary.match(source, "Enum.drop(") do
-      :nomatch ->
-        source
-
-      {pos, len} ->
-        before = binary_part(source, 0, pos)
-        from_call = binary_part(source, pos, byte_size(source) - pos)
-        open_idx = len
-
-        case find_closing_paren(from_call, open_idx, 1) do
-          nil ->
-            source
-
-          close_idx ->
-            args_str = binary_part(from_call, open_idx, close_idx - open_idx)
-
-            after_call =
-              binary_part(from_call, close_idx + 1, byte_size(from_call) - close_idx - 1)
-
-            # Greedy (.+) matches everything up to the LAST `, -N` — handles
-            # commas inside nested calls like func(a, b) correctly.
-            case Regex.run(~r/^(.+),\s*-(\d+)\s*$/s, args_str) do
-              [_, expr, n_str] ->
-                n = String.to_integer(n_str)
-                replacement = "Enum.slice(#{expr}, 0..#{-(n + 1)}//1)"
-                fix_direct_drops(before <> replacement <> after_call)
-
-              _ ->
-                # Not a negative-literal last arg; skip past this Enum.drop call
-                skipped = binary_part(from_call, 0, close_idx + 1)
-                before <> skipped <> fix_direct_drops(after_call)
-            end
+    |> Sourceror.parse_string!()
+    |> Macro.postwalk(fn
+      # Direct: Enum.drop(list, -n)
+      {{:., _, [{:__aliases__, _, [:Enum]}, :drop]}, _, [list_arg, second]} = node ->
+        case extract_negative(second) do
+          {:ok, n} -> enum_slice_call(list_arg, n)
+          :error -> node
         end
-    end
+
+      # Piped: |> Enum.drop(-n)
+      {{:., _, [{:__aliases__, _, [:Enum]}, :drop]}, _, [single]} = node ->
+        case extract_negative(single) do
+          {:ok, n} -> enum_slice_piped(n)
+          :error -> node
+        end
+
+      node ->
+        node
+    end)
+    |> Sourceror.to_string()
   end
 
-  # Scan forward through `str` starting at byte `pos`, tracking paren depth.
-  # Returns the index of the matching `)` or nil if not found.
-  defp find_closing_paren(str, pos, depth) do
-    if pos >= byte_size(str) do
-      nil
-    else
-      char = binary_part(str, pos, 1)
+  # Sourceror wraps literals in {:__block__, meta, [value]}, so -1 becomes:
+  #   {:-, meta, [{:__block__, meta, [1]}]}
+  # Code.string_to_quoted produces the simpler:
+  #   {:-, meta, [1]}
+  # We handle both, plus a bare negative integer just in case.
+  defp extract_negative({:-, _, [{:__block__, _, [n]}]}) when is_integer(n) and n > 0,
+    do: {:ok, n}
 
-      cond do
-        char == "(" -> find_closing_paren(str, pos + 1, depth + 1)
-        char == ")" and depth == 1 -> pos
-        char == ")" -> find_closing_paren(str, pos + 1, depth - 1)
-        true -> find_closing_paren(str, pos + 1, depth)
-      end
-    end
+  defp extract_negative({:-, _, [n]}) when is_integer(n) and n > 0,
+    do: {:ok, n}
+
+  defp extract_negative(n) when is_integer(n) and n < 0,
+    do: {:ok, abs(n)}
+
+  defp extract_negative(_), do: :error
+
+  # Enum.slice(list_arg, 0..-(n+1)//1)
+  defp enum_slice_call(list_arg, n) do
+    {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [], [list_arg, build_range(n)]}
+  end
+
+  # Enum.slice(0..-(n+1)//1) — for piped usage
+  defp enum_slice_piped(n) do
+    {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [], [build_range(n)]}
+  end
+
+  # Builds AST for 0..-(n+1)//1
+  # The :..// operator takes three flat args: start, end, step
+  defp build_range(n) do
+    {:..//, [], [0, -(n + 1), 1]}
   end
 
   defp build_issue(n, meta) do

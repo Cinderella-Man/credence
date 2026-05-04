@@ -8,6 +8,8 @@ defmodule Credence.Rule.NoLengthInGuardTest do
   end
 
   describe "NoLengthInGuard" do
+    # --- NEGATIVE CASES (should NOT flag) ---
+
     test "passes code that uses pattern matching instead of length" do
       code = """
       defmodule GoodCode do
@@ -35,6 +37,56 @@ defmodule Credence.Rule.NoLengthInGuardTest do
       assert check(code) == []
     end
 
+    test "ignores is_list and other guards" do
+      code = """
+      defmodule SafeGuard do
+        def process(list) when is_list(list) do
+          length(list)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag length(list) > 0 (handled by LengthGuardToPattern)" do
+      code = """
+      defmodule Fixable do
+        def process(list) when length(list) > 0 do
+          Enum.sum(list)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag length(list) == 3 (handled by LengthGuardToPattern)" do
+      code = """
+      defmodule Fixable do
+        defp helper(list) when length(list) == 3 do
+          :ok
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag length(list) == N for N in 1..5" do
+      for n <- 1..5 do
+        code = """
+        defmodule Fixable#{n} do
+          def check(list) when length(list) == #{n}, do: :ok
+        end
+        """
+
+        assert check(code) == [], "expected no issues for length(list) == #{n}"
+      end
+    end
+
+    # --- POSITIVE CASES (should flag) ---
+
     test "detects length/1 in a guard with comparison" do
       code = """
       defmodule BadGuard do
@@ -57,25 +109,38 @@ defmodule Credence.Rule.NoLengthInGuardTest do
       assert issue.meta.line != nil
     end
 
-    test "detects length/1 in a simple guard" do
+    test "detects length(list) == N for N > 5" do
       code = """
-      defmodule BadSimple do
-        def process(list) when length(list) > 0 do
-          Enum.sum(list)
+      defmodule Big do
+        def check(list) when length(list) == 6 do
+          :ok
         end
       end
       """
 
       issues = check(code)
-
       assert length(issues) == 1
       assert hd(issues).rule == :no_length_in_guard
     end
 
-    test "detects length/1 in a defp guard" do
+    test "detects length(list) > N where N is not 0" do
       code = """
-      defmodule BadPrivate do
-        defp helper(list) when length(list) == 3 do
+      defmodule NotZero do
+        def check(list) when length(list) > 2 do
+          :ok
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_length_in_guard
+    end
+
+    test "flags only the unfixable part in a compound guard" do
+      code = """
+      defmodule Mixed do
+        def process(list, k) when length(list) > 0 and k <= length(list) do
           :ok
         end
       end
@@ -83,20 +148,9 @@ defmodule Credence.Rule.NoLengthInGuardTest do
 
       issues = check(code)
 
+      # length(list) > 0 is skipped (fixable), k <= length(list) is flagged
       assert length(issues) == 1
       assert hd(issues).rule == :no_length_in_guard
-    end
-
-    test "ignores is_list and other guards" do
-      code = """
-      defmodule SafeGuard do
-        def process(list) when is_list(list) do
-          length(list)
-        end
-      end
-      """
-
-      assert check(code) == []
     end
   end
 end
