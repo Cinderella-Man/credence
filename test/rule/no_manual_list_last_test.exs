@@ -18,6 +18,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp get_last_element([_ | rest]), do: get_last_element(rest)
       end
       """
+
       [issue] = check(code)
       assert issue.rule == :no_manual_list_last
       assert issue.message =~ "get_last_element/1"
@@ -31,6 +32,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp last_item([_ | t]), do: last_item(t)
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "last_item/1"
     end
@@ -42,6 +44,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp tail_val([_head | rest]), do: tail_val(rest)
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "tail_val/1"
     end
@@ -53,6 +56,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         def final([_ | rest]), do: final(rest)
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "def final/1"
     end
@@ -64,6 +68,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp my_last([val]), do: val
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "my_last/1"
     end
@@ -76,6 +81,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         def final(list), do: List.last(list)
       end
       """
+
       assert check(code) == []
     end
 
@@ -87,6 +93,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp process([_ | rest]), do: process(rest)
       end
       """
+
       assert check(code) == []
     end
 
@@ -97,6 +104,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp find_last([_ | rest]), do: find_last(rest)
       end
       """
+
       assert check(code) == []
     end
 
@@ -107,6 +115,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp count([_ | rest]), do: 1 + count(rest)
       end
       """
+
       assert check(code) == []
     end
 
@@ -117,6 +126,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp sum([head | rest]), do: head + sum(rest)
       end
       """
+
       assert check(code) == []
     end
 
@@ -127,6 +137,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp find([head | rest]), do: max(head, find(rest))
       end
       """
+
       assert check(code) == []
     end
 
@@ -137,6 +148,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp walk([_ | rest], acc), do: walk(rest, acc)
       end
       """
+
       assert check(code) == []
     end
 
@@ -147,6 +159,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp extract([_ | rest]), do: hd(rest)
       end
       """
+
       assert check(code) == []
     end
 
@@ -157,6 +170,7 @@ defmodule Credence.Rule.NoManualListLastTest do
         defp unwrap({:error, _}), do: nil
       end
       """
+
       assert check(code) == []
     end
   end

@@ -377,7 +377,8 @@ defmodule Credence.Rule.NoMapKeysEnumLookupTest do
       fixed = assert_fixes_cleanly(code)
       assert fixed =~ "{k, v}"
       assert fixed =~ "is_atom(k)"
-      assert fixed =~ "{k, v}"  # the value v replaces m[k]
+      # the value v replaces m[k]
+      assert fixed =~ "{k, v}"
       refute fixed =~ "Map.keys"
     end
 

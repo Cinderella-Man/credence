@@ -218,10 +218,14 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
 
       :find ->
         case rest do
-          [cb] -> if is_fn?(cb), do: {:ok, nc(mk.(:find, [ma, cb]), mfunc, nil)}, else: :no
+          [cb] ->
+            if is_fn?(cb), do: {:ok, nc(mk.(:find, [ma, cb]), mfunc, nil)}, else: :no
+
           [default, cb] ->
             if is_fn?(cb), do: {:ok, nc(mk.(:find, [ma, cb]), mfunc, default)}, else: :no
-          _ -> :no
+
+          _ ->
+            :no
         end
 
       :random ->
@@ -287,8 +291,11 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
 
       :group_by ->
         case rest do
-          [kc, vc] -> if is_fn?(kc) and is_fn?(vc), do: {:ok, mk.(:group_by, [ma, kc, vc])}, else: :no
-          _ -> :no
+          [kc, vc] ->
+            if is_fn?(kc) and is_fn?(vc), do: {:ok, mk.(:group_by, [ma, kc, vc])}, else: :no
+
+          _ ->
+            :no
         end
 
       _ ->
@@ -354,10 +361,14 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
 
       :find ->
         case ea do
-          [cb] -> if is_fn?(cb), do: {:ok, nc(sn(:find, [ma, cb]), mfunc, nil)}, else: :no
+          [cb] ->
+            if is_fn?(cb), do: {:ok, nc(sn(:find, [ma, cb]), mfunc, nil)}, else: :no
+
           [default, cb] ->
             if is_fn?(cb), do: {:ok, nc(sn(:find, [ma, cb]), mfunc, default)}, else: :no
-          _ -> :no
+
+          _ ->
+            :no
         end
 
       :random ->
@@ -557,8 +568,7 @@ defmodule Credence.Rule.NoMapKeysOrValuesForIteration do
   end
 
   defp nc(inner, mf, default) do
-    {:case, [],
-     [inner, [do: [{:->, [], [[nil], default]}, {:->, [], [[ev(mf)], vv(mf)]}]]]}
+    {:case, [], [inner, [do: [{:->, [], [[nil], default]}, {:->, [], [[ev(mf)], vv(mf)]}]]]}
   end
 
   # ═══════════════════════════════════════════════════════════════════

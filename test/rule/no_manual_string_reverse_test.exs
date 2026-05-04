@@ -24,6 +24,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       """
+
       issues = check(code)
       assert length(issues) == 1
       issue = hd(issues)
@@ -41,6 +42,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       """
+
       issues = check(code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_manual_string_reverse
@@ -58,6 +60,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       """
+
       assert length(check(code)) == 1
     end
 
@@ -67,6 +70,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         def reverse(str), do: String.graphemes(str) |> Enum.reverse() |> Enum.join()
       end
       """
+
       assert length(check(code)) == 1
     end
 
@@ -80,6 +84,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       """
+
       assert length(check(code)) == 2
     end
 
@@ -89,6 +94,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         x |> String.graphemes() |> Enum.reverse() |> Enum.join()
       end)
       """
+
       assert length(check(code)) == 1
     end
 
@@ -103,6 +109,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -114,6 +121,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -125,6 +133,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -140,6 +149,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       """
+
       assert check(code) == []
     end
   end
@@ -151,6 +161,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> Enum.join()
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.reverse(str)"
       refute fixed =~ "String.graphemes"
@@ -164,6 +175,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         def reverse(str), do: Enum.join(Enum.reverse(String.graphemes(str)))
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.reverse(str)"
       refute fixed =~ "String.graphemes"
@@ -183,6 +195,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.trim()"
       assert fixed =~ "String.reverse()"
@@ -197,6 +210,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         def reverse(str), do: String.graphemes(str) |> Enum.reverse() |> Enum.join()
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.reverse(str)"
       refute fixed =~ "String.graphemes"
@@ -214,6 +228,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.reverse(a)"
       assert fixed =~ "String.reverse(b)"
@@ -226,6 +241,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> Enum.join() |> String.trim()
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.reverse(str)"
       assert fixed =~ "String.trim()"
@@ -247,6 +263,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.downcase()"
       assert fixed =~ "String.trim()"
@@ -262,6 +279,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         x |> String.graphemes() |> Enum.reverse() |> Enum.join()
       end)
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.reverse(x)"
       refute fixed =~ "String.graphemes"
@@ -278,6 +296,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         end
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.downcase"
       assert fixed =~ "String.reverse(cleaned)"
@@ -289,6 +308,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> Enum.join("-")
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "String.graphemes"
       assert fixed =~ "Enum.reverse"
@@ -301,6 +321,7 @@ defmodule Credence.Rule.NoManualStringReverseTest do
         def process(list), do: list |> Enum.reverse() |> Enum.join()
       end
       '''
+
       fixed = fix(code)
       assert fixed =~ "Enum.reverse"
       assert fixed =~ "Enum.join"

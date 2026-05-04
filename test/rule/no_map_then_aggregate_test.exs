@@ -22,6 +22,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.rule == :no_map_then_aggregate
       assert issue.message =~ "Enum.map"
@@ -38,6 +39,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.min"
     end
@@ -52,6 +54,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.sum"
     end
@@ -64,6 +67,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.max"
     end
@@ -76,6 +80,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.max"
     end
@@ -88,6 +93,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.sum"
     end
@@ -102,6 +108,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.rule == :no_map_then_aggregate
     end
@@ -114,6 +121,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "Enum.sum"
     end
@@ -128,6 +136,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -137,6 +146,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         def biggest(list), do: Enum.max(list)
       end
       """
+
       assert check(code) == []
     end
 
@@ -150,6 +160,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -163,6 +174,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -174,6 +186,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -188,6 +201,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -199,6 +213,7 @@ defmodule Credence.Rule.NoMapThenAggregateTest do
         end
       end
       """
+
       assert check(code) == []
     end
   end

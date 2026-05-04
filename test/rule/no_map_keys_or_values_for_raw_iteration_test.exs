@@ -25,7 +25,11 @@ defmodule Credence.Rule.NoMapKeysOrValuesForRawIterationTest do
     end
 
     test "detects chunk_while" do
-      [i] = check("Enum.chunk_while(Map.values(m), [], fn v, acc -> {:cont, [v | acc]} end, fn acc -> {:cont, acc} end)")
+      [i] =
+        check(
+          "Enum.chunk_while(Map.values(m), [], fn v, acc -> {:cont, [v | acc]} end, fn acc -> {:cont, acc} end)"
+        )
+
       assert i.message =~ "chunk_while"
     end
 

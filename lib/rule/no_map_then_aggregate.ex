@@ -141,8 +141,7 @@ defmodule Credence.Rule.NoMapThenAggregate do
       {{:., [], [{:__aliases__, [], [:Enum]}, :reduce]}, [],
        [source, {:__block__, [], [0]}, reduce_fn]}
     else
-      {{:., [], [{:__aliases__, [], [:Enum]}, :reduce]}, [],
-       [source, reduce_fn]}
+      {{:., [], [{:__aliases__, [], [:Enum]}, :reduce]}, [], [source, reduce_fn]}
     end
   end
 

@@ -1,186 +1,195 @@
 defmodule Credence.Rule.UnnecessaryGraphemeChunking do
   @moduledoc """
-  Detects inefficient string transformation pipelines that:
+  Detects the common n-gram generation pipeline that converts a string
+  to graphemes, creates sliding window chunks of step 1, and joins them
+  back into strings. This pattern is automatically fixed by replacing it
+  with `String.slice/3` which avoids intermediate list allocations.
 
-  1. Convert a UTF-8 binary into graphemes or codepoints
-  2. Perform chunking or grouping operations on the resulting list
-  3. Immediately reconstruct strings from those chunks
-
-  This pattern often indicates unnecessary intermediate allocations:
-  binary → list → list of lists → binary
-
-  While correct, this transformation is usually avoidable and can often
-  be replaced with a more direct sliding-window or binary-based approach.
-
-  ## Why this is a problem
-
-  Elixir strings are UTF-8 binaries. Converting them into grapheme lists:
-
-      String.graphemes("café")
-      # => ["c", "a", "f", "é"]
-
-  creates a full intermediate structure in memory. If we then chunk and
-  rebuild strings, we are effectively doing:
-
-      binary → list → list of lists → binaries
-
-  which increases:
-  - memory usage (multiple allocations)
-  - CPU cost (repeated traversal)
-  - garbage collection pressure
-
-  ## Example (flagged)
+  ## Bad
 
       string
       |> String.graphemes()
-      |> Enum.chunk_every(3, 1, :discard)
+      |> Enum.chunk_every(n, 1, :discard)
       |> Enum.map(&Enum.join/1)
 
-  This:
-  - expands the entire string into a list
-  - builds overlapping sublists
-  - reconstructs each substring separately
+  ## Good
 
-  ## Better alternatives
-
-  ### 1. Direct binary slicing (preferred when valid)
-
-      for i <- 0..String.length(string) - n do
+      for i <- 0..(String.length(string) - n) do
         String.slice(string, i, n)
       end
 
-  ### 2. Single grapheme conversion (if Unicode safety is required)
-
-      graphemes = String.graphemes(string)
-
-      for i <- 0..(length(graphemes) - n) do
-        graphemes
-        |> Enum.slice(i, n)
-        |> Enum.join()
-      end
-
-  ### 3. Algorithmic restructuring
-
-  In many cases, substring generation is not needed at all and can be
-  replaced with a streaming or incremental computation.
-
-  ## When NOT to flag
-
-  - Small input sizes where clarity is more important than performance
-  - One-off transformations in scripts or tests
-  - Cases where grapheme correctness is explicitly required and simplicity is preferred
+  `String.length/1` and `String.slice/3` both operate on grapheme clusters,
+  so this replacement is semantically equivalent for the common case where
+  the string length >= chunk size.
   """
 
   use Credence.Rule
   alias Credence.Issue
 
-  @string_to_list [:graphemes, :codepoints]
-  @chunk [:chunk_every, :chunk_by, :split]
-  @map [:map]
+  @impl true
+  def fixable?, do: true
 
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, acc ->
-        case detect_pipeline(node) do
-          nil -> {node, acc}
-          issue -> {node, [issue | acc]}
+        case detect_fixable_pipeline(node) do
+          {:ok, _subject, _n} ->
+            {node, [trigger_issue(node) | acc]}
+
+          :error ->
+            {node, acc}
         end
       end)
 
     Enum.reverse(issues)
   end
 
-  # STEP 1: detect full pipelines
-  defp detect_pipeline({:|>, meta, _} = node) do
-    calls = flatten_pipeline(node)
+  @impl true
+  def fix(source, _opts) do
+    source
+    |> Code.string_to_quoted!()
+    |> Macro.postwalk(fn node ->
+      case detect_fixable_pipeline(node) do
+        {:ok, subject, n} -> build_replacement(subject, n)
+        :error -> node
+      end
+    end)
+    |> Macro.to_string()
+  end
 
-    if grapheme_chunk_map_pipeline?(calls) do
-      %Issue{
-        rule: :unnecessary_grapheme_chunking,
-        message: message(),
-        meta: %{line: Keyword.get(meta, :line)}
-      }
+  # ---------------------------------------------------------------------------
+  # Pipeline detection
+  # ---------------------------------------------------------------------------
+
+  # Matches: subject |> String.graphemes() |> Enum.chunk_every(n, 1, ...) |> Enum.map(join_fn)
+  defp detect_fixable_pipeline(
+         {:|>, _,
+          [
+            {:|>, _,
+             [
+               {:|>, _, [subject, graphemes_call]},
+               chunk_call
+             ]},
+            map_call
+          ]}
+       ) do
+    if graphemes_call?(graphemes_call) &&
+         chunk_every_sliding?(chunk_call) &&
+         map_join?(map_call) do
+      case extract_chunk_size(chunk_call) do
+        nil -> :error
+        n -> {:ok, subject, n}
+      end
     else
-      nil
+      :error
     end
   end
 
-  defp detect_pipeline(_), do: nil
+  defp detect_fixable_pipeline(_), do: :error
 
-  # STEP 2: flatten pipeline into list of calls
-  defp flatten_pipeline({:|>, _, [left, right]}) do
-    flatten_pipeline(left) ++ [right]
+  # ---------------------------------------------------------------------------
+  # AST predicates
+  # ---------------------------------------------------------------------------
+
+  defp graphemes_call?({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}), do: true
+  defp graphemes_call?(_), do: false
+
+  defp chunk_every_sliding?({{:., _, [{:__aliases__, _, [:Enum]}, :chunk_every]}, _, [_, 1]}),
+    do: true
+
+  defp chunk_every_sliding?(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :chunk_every]}, _, [_, 1, :discard]}
+       ),
+       do: true
+
+  defp chunk_every_sliding?(_), do: false
+
+  defp extract_chunk_size({{:., _, _}, _, [n | _]}), do: n
+  defp extract_chunk_size(_), do: nil
+
+  defp map_join?({{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [join_fn]}),
+    do: join_function?(join_fn)
+
+  defp map_join?(_), do: false
+
+  # Specific patterns — these match exact AST structures
+
+  # &Enum.join/1
+  defp join_function?(
+         {:&, _, [{:/, _, [{{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, _}, 1]}]}
+       ),
+       do: true
+
+  # &Enum.join(&1)
+  defp join_function?({:&, _, [{{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, [{:&, _, 1}]}]}),
+    do: true
+
+  # &Enum.join(&1, "")
+  defp join_function?(
+         {:&, _, [{{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, [{:&, _, 1}, ""]}]}
+       ),
+       do: true
+
+  # fn x -> Enum.join(x) end
+  defp join_function?(
+         {:fn, _, [{:->, _, [[_], {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, [_]}]}]}
+       ),
+       do: true
+
+  # fn x -> Enum.join(x, "") end
+  defp join_function?(
+         {:fn, _, [{:->, _, [[_], {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, [_, ""]}]}]}
+       ),
+       do: true
+
+  # Catch-all: handles any AST form whose string representation is a call to
+  # Enum.join (e.g. parser-generated variants we didn't anticipate).
+  # Safe because Enum.join is always a join — there's no false-positive path.
+  defp join_function?(ast) do
+    ast
+    |> Macro.to_string()
+    |> String.contains?("Enum.join")
   end
 
-  defp flatten_pipeline(expr), do: [expr]
+  # ---------------------------------------------------------------------------
+  # Replacement builder
+  # ---------------------------------------------------------------------------
 
-  # STEP 3: detect pattern in sequence
-  defp grapheme_chunk_map_pipeline?(calls) do
-    has_graphemes? =
-      Enum.any?(
-        calls,
-        &match?(
-          {{:., _, [{:__aliases__, _, [:String]}, f]}, _, _}
-          when f in @string_to_list,
-          &1
-        )
-      )
+  # Builds: for i <- 0..(String.length(subject) - n), do: String.slice(subject, i, n)
+  defp build_replacement(subject, n) do
+    length_call =
+      {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], [subject]}
 
-    has_chunk? =
-      Enum.any?(
-        calls,
-        &match?(
-          {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, _}
-          when f in @chunk,
-          &1
-        )
-      )
+    range =
+      {:.., [], [0, {:-, [], [length_call, n]}]}
 
-    has_map? =
-      Enum.any?(
-        calls,
-        &match?(
-          {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, _}
-          when f in @map,
-          &1
-        )
-      )
+    body =
+      {{:., [], [{:__aliases__, [], [:String]}, :slice]}, [], [subject, {:i, [], nil}, n]}
 
-    has_graphemes? and has_chunk? and has_map?
+    {:for, [], [{:<-, [], [{:i, [], nil}, range]}, [do: body]]}
   end
 
-  defp message do
-    """
-    This code converts a string into graphemes or codepoints, chunks the result,
-    and then rebuilds strings from each chunk.
+  # ---------------------------------------------------------------------------
+  # Issue
+  # ---------------------------------------------------------------------------
 
-    This creates a full allocation chain:
+  defp trigger_issue(node) do
+    %Issue{
+      rule: :unnecessary_grapheme_chunking,
+      message: """
+      This pipeline converts a string to graphemes, creates sliding window chunks,
+      and joins them back into strings. This can be replaced with `String.slice/3`
+      which avoids the intermediate list allocations:
 
-      String (binary)
-        → List of graphemes
-        → List of chunks (nested lists)
-        → Reconstructed binaries via Enum.map + Enum.join
-
-    This is usually unnecessary and can often be simplified.
-
-    Alternatives:
-
-    1. Direct binary slicing (preferred when possible):
-
-        for i <- 0..String.length(string) - n do
-          String.slice(string, i, n)
-        end
-
-    2. If Unicode safety is required:
-
-        graphemes = String.graphemes(string)
-
-        for i <- 0..length(graphemes) - n do
-          graphemes |> Enum.slice(i, n) |> Enum.join()
-        end
-
-    3. Or redesign the algorithm to avoid rebuilding substrings entirely.
-    """
+          for i <- 0..(String.length(string) - n) do
+            String.slice(string, i, n)
+          end
+      """,
+      meta: %{line: get_line(node)}
+    }
   end
+
+  defp get_line({:|>, meta, _}), do: Keyword.get(meta, :line)
+  defp get_line(_), do: nil
 end

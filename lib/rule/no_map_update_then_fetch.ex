@@ -157,8 +157,7 @@ defmodule Credence.Rule.NoMapUpdateThenFetch do
     if references_var?(stmt, var) do
       case extract_fetch_assignment(stmt, var, key) do
         {:ok, fetch_var, fetch_type} ->
-          {:ok, %{assign_var: fetch_var, type: fetch_type},
-           Enum.reverse(skipped) ++ rest}
+          {:ok, %{assign_var: fetch_var, type: fetch_type}, Enum.reverse(skipped) ++ rest}
 
         :not_fetch ->
           :not_found
@@ -172,8 +171,7 @@ defmodule Credence.Rule.NoMapUpdateThenFetch do
          {:=, _,
           [
             {fetch_var, _, nil},
-            {{:., _, [{:__aliases__, _, [:Map]}, func]}, _,
-             [{var, _, nil}, fetch_key | _]}
+            {{:., _, [{:__aliases__, _, [:Map]}, func]}, _, [{var, _, nil}, fetch_key | _]}
           ]},
          var,
          expected_key

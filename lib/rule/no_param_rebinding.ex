@@ -193,7 +193,10 @@ defmodule Credence.Rule.NoParamRebinding do
         {:->, arrow_meta, [params, body]} ->
           param_names = extract_var_names(params)
           body_renames = Map.drop(renames, MapSet.to_list(param_names))
-          new_body = if map_size(body_renames) > 0, do: do_deep_rename(body, body_renames), else: body
+
+          new_body =
+            if map_size(body_renames) > 0, do: do_deep_rename(body, body_renames), else: body
+
           {:->, arrow_meta, [params, new_body]}
 
         clause ->

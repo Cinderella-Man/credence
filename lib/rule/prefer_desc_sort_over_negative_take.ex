@@ -2,12 +2,25 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
   @moduledoc """
   Prefer `Enum.sort(nums, :desc) |> Enum.take(n)`
   over `Enum.sort(nums) |> Enum.take(-n)`.
-
   This is about readability and intent clarity, not performance.
-  """
 
+  ## Bad
+
+      nums
+      |> Enum.sort()
+      |> Enum.take(-3)
+
+  ## Good
+
+      nums
+      |> Enum.sort(:desc)
+      |> Enum.take(3)
+  """
   use Credence.Rule
   alias Credence.Issue
+
+  @impl true
+  def fixable?, do: true
 
   @impl true
   def check(ast, _opts) do
@@ -29,6 +42,85 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
     Enum.reverse(issues)
   end
 
+  @impl true
+  def fix(source, _opts) do
+    source
+    |> Sourceror.parse_string!()
+    |> Macro.prewalk(fn
+      {:|>, _, _} = node ->
+        pipeline = flatten_pipeline(node)
+
+        if match_pattern?(pipeline) and adjacent_sort_take?(pipeline) do
+          transform_pipeline(node)
+        else
+          node
+        end
+
+      node ->
+        node
+    end)
+    |> Sourceror.to_string()
+  end
+
+  # ── Fix helpers ──────────────────────────────────────────────────
+
+  defp transform_pipeline({:|>, meta, [left, right]}) do
+    {:|>, meta, [transform_pipeline(left), transform_step(right)]}
+  end
+
+  defp transform_pipeline(node), do: transform_step(node)
+
+  # Enum.sort() → Enum.sort(:desc)
+  defp transform_step({{:., dm, [{:__aliases__, am, [:Enum]}, :sort]}, cm, []}) do
+    {{:., dm, [{:__aliases__, am, [:Enum]}, :sort]}, cm, [:desc]}
+  end
+
+  # Enum.take(-n) → Enum.take(n)
+  defp transform_step({{:., dm, [{:__aliases__, am, [:Enum]}, :take]}, cm, [n]}) do
+    case positive_value(n) do
+      {:ok, pos} ->
+        {{:., dm, [{:__aliases__, am, [:Enum]}, :take]}, cm, [pos]}
+
+      :error ->
+        {{:., dm, [{:__aliases__, am, [:Enum]}, :take]}, cm, [n]}
+    end
+  end
+
+  defp transform_step(node), do: node
+
+  # ── Integer extraction (handles Sourceror's __block__ wrapper) ──
+
+  defp positive_value({:-, _, [int]}) when is_integer(int), do: {:ok, int}
+
+  defp positive_value({:-, _, [{:__block__, _, [int]}]}) when is_integer(int),
+    do: {:ok, int}
+
+  defp positive_value({:__block__, _, [int]}), do: positive_value(int)
+  defp positive_value(int) when is_integer(int) and int < 0, do: {:ok, abs(int)}
+  defp positive_value(int) when is_integer(int), do: {:ok, int}
+  defp positive_value(_), do: :error
+
+  # ── Adjacency guard ─────────────────────────────────────────────
+
+  defp adjacent_sort_take?(pipeline) do
+    pipeline
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.any?(fn
+      [s, t] -> plain_sort?(s) and negative_take?(t)
+      _ -> false
+    end)
+  end
+
+  defp plain_sort?({{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, args}), do: args == []
+  defp plain_sort?(_), do: false
+
+  defp negative_take?({{:., _, [{:__aliases__, _, [:Enum]}, :take]}, _, [n]}),
+    do: is_negative_integer(n)
+
+  defp negative_take?(_), do: false
+
+  # ── Shared pipeline helpers ─────────────────────────────────────
+
   defp flatten_pipeline({:|>, _, [left, right]}) do
     flatten_pipeline(left) ++ [right]
   end
@@ -41,25 +133,24 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
 
   defp has_plain_sort?(pipeline) do
     Enum.any?(pipeline, fn
-      {{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, args} ->
-        args == []
-
-      _ ->
-        false
+      {{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, args} -> args == []
+      _ -> false
     end)
   end
 
   defp has_negative_take?(pipeline) do
     Enum.any?(pipeline, fn
-      {{:., _, [{:__aliases__, _, [:Enum]}, :take]}, _, [n]} ->
-        is_negative_integer(n)
-
-      _ ->
-        false
+      {{:., _, [{:__aliases__, _, [:Enum]}, :take]}, _, [n]} -> is_negative_integer(n)
+      _ -> false
     end)
   end
 
   defp is_negative_integer({:-, _, [int]}) when is_integer(int), do: true
+
+  defp is_negative_integer({:-, _, [{:__block__, _, [int]}]}) when is_integer(int),
+    do: true
+
+  defp is_negative_integer({:__block__, _, [int]}), do: is_negative_integer(int)
   defp is_negative_integer(int) when is_integer(int) and int < 0, do: true
   defp is_negative_integer(_), do: false
 
@@ -69,7 +160,6 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
       message: """
       Prefer `Enum.sort(nums, :desc) |> Enum.take(3)`
       over `Enum.sort(nums) |> Enum.take(-3)`.
-
       This is about readability and intent clarity, not performance.
       """,
       meta: %{line: Keyword.get(meta, :line)}

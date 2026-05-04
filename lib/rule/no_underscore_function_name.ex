@@ -24,50 +24,132 @@ defmodule Credence.Rule.NoUnderscoreFunctionName do
   ## Detection scope
 
   Flags any `def` or `defp` clause where the function name starts with
-  a single underscore.  Names starting with double underscores (`__`)
+  a single underscore.  Names starting with double underscores `__`)
   are excluded — those are legitimate Elixir/Erlang callbacks such as
   `__using__/1`, `__before_compile__/1`, and `__info__/1`.
+
+  ## Auto-fix
+
+  Renames the function definition and all call sites from `_name` to
+  `do_name` throughout the module.
   """
 
   use Credence.Rule
   alias Credence.Issue
 
   @impl true
+  def fixable?, do: true
+
+  @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn node, issues ->
-        case check_node(node) do
-          {:ok, issue} -> {node, [issue | issues]}
-          :error -> {node, issues}
-        end
+    {_ast, {_names, issues}} =
+      Macro.postwalk(ast, {%{}, []}, fn
+        {def_type, meta, [{:when, _, [{fn_name, _, args}, _guard]}, _body]} = node,
+        {names, issues}
+        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
+          if underscore_prefixed?(fn_name) and not Map.has_key?(names, fn_name) do
+            {node,
+             {Map.put(names, fn_name, true),
+              [build_issue(def_type, fn_name, length(args), meta) | issues]}}
+          else
+            {node, {names, issues}}
+          end
+
+        {def_type, meta, [{fn_name, _, args}, _body]} = node, {names, issues}
+        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
+          if underscore_prefixed?(fn_name) and not Map.has_key?(names, fn_name) do
+            {node,
+             {Map.put(names, fn_name, true),
+              [build_issue(def_type, fn_name, length(args), meta) | issues]}}
+          else
+            {node, {names, issues}}
+          end
+
+        node, acc ->
+          {node, acc}
       end)
 
     Enum.reverse(issues)
   end
 
-  # Guarded: def/defp name(args) when guard, do: body
-  # Must come before the unguarded clause because {:when, _, _}
-  # also matches {fn_name, _, args} where fn_name == :when.
-  defp check_node({def_type, meta, [{:when, _, [{fn_name, _, args}, _guard]}, _body]})
-       when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
-    if underscore_prefixed?(fn_name) do
-      {:ok, build_issue(def_type, fn_name, length(args), meta)}
+  @impl true
+  def fix(source, _opts) do
+    ast = Sourceror.parse_string!(source)
+
+    {_ast, names} =
+      Macro.postwalk(ast, MapSet.new(), fn
+        {def_type, _meta, [{:when, _, [{fn_name, _, args}, _guard]}, _body]} = node, names
+        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
+          if underscore_prefixed?(fn_name),
+            do: {node, MapSet.put(names, fn_name)},
+            else: {node, names}
+
+        {def_type, _meta, [{fn_name, _, args}, _body]} = node, names
+        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
+          if underscore_prefixed?(fn_name),
+            do: {node, MapSet.put(names, fn_name)},
+            else: {node, names}
+
+        node, names ->
+          {node, names}
+      end)
+
+    if MapSet.size(names) == 0 do
+      source
     else
-      :error
+      name_map =
+        for name <- names, into: %{} do
+          {name, suggested_name(name)}
+        end
+
+      renamed =
+        Macro.postwalk(ast, fn
+          {def_type, meta, [{:when, wm, [{fn_name, fm, args}, guard]}, body]} = node
+          when def_type in [:def, :defp] ->
+            case name_map do
+              %{^fn_name => new_name} ->
+                fm_new = Keyword.put(fm, :token, Atom.to_string(new_name))
+                {def_type, meta, [{:when, wm, [{new_name, fm_new, args}, guard]}, body]}
+
+              _ ->
+                node
+            end
+
+          {def_type, meta, [{fn_name, fm, args}, body]} = node
+          when def_type in [:def, :defp] ->
+            case name_map do
+              %{^fn_name => new_name} ->
+                fm_new = Keyword.put(fm, :token, Atom.to_string(new_name))
+                {def_type, meta, [{new_name, fm_new, args}, body]}
+
+              _ ->
+                node
+            end
+
+          {fn_name, meta, args} when is_atom(fn_name) and is_list(args) ->
+            case name_map do
+              %{^fn_name => new_name} ->
+                meta_new = Keyword.put(meta, :token, Atom.to_string(new_name))
+                {new_name, meta_new, args}
+
+              _ ->
+                {fn_name, meta, args}
+            end
+
+          atom when is_atom(atom) ->
+            case name_map do
+              %{^atom => new_name} -> new_name
+              _ -> atom
+            end
+
+          node ->
+            node
+        end)
+
+      renamed
+      |> Sourceror.to_string()
     end
   end
-
-  # Unguarded: def/defp name(args), do: body
-  defp check_node({def_type, meta, [{fn_name, _, args}, _body]})
-       when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
-    if underscore_prefixed?(fn_name) do
-      {:ok, build_issue(def_type, fn_name, length(args), meta)}
-    else
-      :error
-    end
-  end
-
-  defp check_node(_), do: :error
 
   defp underscore_prefixed?(name) do
     str = Atom.to_string(name)
@@ -78,6 +160,7 @@ defmodule Credence.Rule.NoUnderscoreFunctionName do
     fn_name
     |> Atom.to_string()
     |> String.replace_leading("_", "do_")
+    |> String.to_atom()
   end
 
   defp build_issue(def_type, fn_name, arity, meta) do
@@ -93,10 +176,8 @@ defmodule Credence.Rule.NoUnderscoreFunctionName do
 
     """
     `#{def_type} #{fn_name}/#{arity}` uses a Python-style underscore prefix.
-
     In Elixir, `defp` already makes a function private. The leading \
     underscore convention signals "unused variable," not "private function."
-
     Use the `do_` prefix instead:
 
         defp #{suggested}(...)

@@ -209,8 +209,7 @@ defmodule Credence.Rule.NoNestedEnumOnSameEnumerable do
 
   defp replace_member_calls(text, member_calls) do
     {result, _offset} =
-      Enum.reduce(member_calls, {text, 0}, fn {rel_start, rel_end, value_arg},
-                                               {acc, offset} ->
+      Enum.reduce(member_calls, {text, 0}, fn {rel_start, rel_end, value_arg}, {acc, offset} ->
         abs_start = rel_start + offset
         abs_end = rel_end + offset
         new = "MapSet.member?(set, #{value_arg})"
@@ -286,7 +285,11 @@ defmodule Credence.Rule.NoNestedEnumOnSameEnumerable do
 
   defp range_to_bytes(source, start_kw, end_kw) do
     {
-      line_col_to_byte(source, Keyword.get(start_kw, :line, 1), Keyword.get(start_kw, :column, 1)),
+      line_col_to_byte(
+        source,
+        Keyword.get(start_kw, :line, 1),
+        Keyword.get(start_kw, :column, 1)
+      ),
       line_col_to_byte(source, Keyword.get(end_kw, :line, 1), Keyword.get(end_kw, :column, 1))
     }
   end

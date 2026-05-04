@@ -24,6 +24,9 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparator do
   alias Credence.Issue
 
   @impl true
+  def fixable?, do: true
+
+  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
@@ -51,6 +54,33 @@ defmodule Credence.Rule.NoRedundantEnumJoinSeparator do
       end)
 
     Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix(source, _opts) do
+    source
+    |> Sourceror.parse_string!()
+    |> Macro.postwalk(fn
+      # Direct call: Enum.join(list, "") → Enum.join(list)
+      {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _meta, [list_arg, ""]} ->
+        {{:., [], [{:__aliases__, [], [:Enum]}, :join]}, [], [list_arg]}
+
+      # Piped call: ... |> Enum.join("") → ... |> Enum.join()
+      {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _meta, [""]} ->
+        {{:., [], [{:__aliases__, [], [:Enum]}, :join]}, [], []}
+
+      # Direct call: Enum.map_join(list, "", mapper) → Enum.map_join(list, mapper)
+      {{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, _meta, [list_arg, "", mapper]} ->
+        {{:., [], [{:__aliases__, [], [:Enum]}, :map_join]}, [], [list_arg, mapper]}
+
+      # Piped call: ... |> Enum.map_join("", mapper) → ... |> Enum.map_join(mapper)
+      {{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, _meta, ["", mapper]} ->
+        {{:., [], [{:__aliases__, [], [:Enum]}, :map_join]}, [], [mapper]}
+
+      node ->
+        node
+    end)
+    |> Sourceror.to_string()
   end
 
   defp build_issue(meta) do

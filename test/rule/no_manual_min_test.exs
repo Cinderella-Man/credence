@@ -19,6 +19,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.rule == :no_manual_min
       assert issue.message =~ "min/2"
@@ -32,6 +33,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "min/2"
     end
@@ -44,6 +46,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "min/2"
     end
@@ -56,6 +59,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "min/2"
     end
@@ -68,6 +72,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "min/2"
     end
@@ -80,6 +85,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "min/2"
     end
@@ -96,6 +102,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       [issue] = check(code)
       assert issue.message =~ "min/2"
     end
@@ -110,6 +117,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       issues = check(code)
       assert length(issues) == 2
     end
@@ -120,6 +128,7 @@ defmodule Credence.Rule.NoManualMinTest do
         def smaller(a, b), do: min(a, b)
       end
       """
+
       assert check(code) == []
     end
 
@@ -131,6 +140,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -142,6 +152,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -153,6 +164,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -164,6 +176,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -175,6 +188,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       assert check(code) == []
     end
 
@@ -184,6 +198,7 @@ defmodule Credence.Rule.NoManualMinTest do
         def smaller(a, b), do: if(a < b, do: a, else: b)
       end
       """
+
       result = fix(code)
       assert result =~ "min(a, b)"
       refute result =~ "if"
@@ -195,6 +210,7 @@ defmodule Credence.Rule.NoManualMinTest do
         def smaller(a, b), do: if(a <= b, do: a, else: b)
       end
       """
+
       result = fix(code)
       assert result =~ "min(a, b)"
       refute result =~ "if"
@@ -206,6 +222,7 @@ defmodule Credence.Rule.NoManualMinTest do
         def smaller(a, b), do: if(b > a, do: a, else: b)
       end
       """
+
       result = fix(code)
       assert result =~ "min(a, b)"
       refute result =~ "if"
@@ -217,6 +234,7 @@ defmodule Credence.Rule.NoManualMinTest do
         def smaller(a, b), do: if(b >= a, do: a, else: b)
       end
       """
+
       result = fix(code)
       assert result =~ "min(a, b)"
       refute result =~ "if"
@@ -228,6 +246,7 @@ defmodule Credence.Rule.NoManualMinTest do
         def smaller(a, b), do: if(a > b, do: b, else: a)
       end
       """
+
       result = fix(code)
       assert result =~ "min(b, a)"
       refute result =~ "if"
@@ -245,6 +264,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       assert result =~ "min(a, b)"
       refute result =~ "if"
@@ -258,6 +278,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       assert result =~ "min("
       assert result =~ "floor)"
@@ -274,6 +295,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       refute result =~ "if"
     end
@@ -287,6 +309,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       assert result =~ "min(a, b)"
       refute result =~ "if"
@@ -300,6 +323,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       assert result =~ "min(a, b)"
       refute result =~ "if"
@@ -311,6 +335,7 @@ defmodule Credence.Rule.NoManualMinTest do
         def smaller(a, b), do: min(a, b)
       end
       """
+
       result = fix(code)
       assert result =~ "min(a, b)"
       refute result =~ "if"
@@ -324,6 +349,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       assert result =~ "if"
     end
@@ -336,6 +362,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       assert result =~ "if"
     end
@@ -348,6 +375,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       assert result =~ "if"
     end
@@ -360,6 +388,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       assert result =~ "if"
     end
@@ -370,6 +399,7 @@ defmodule Credence.Rule.NoManualMinTest do
         def smaller(a, b), do: if(a < b, do: a, else: b)
       end
       """
+
       result = fix(code)
       assert {:ok, _} = Code.string_to_quoted(result)
     end
@@ -382,6 +412,7 @@ defmodule Credence.Rule.NoManualMinTest do
         end
       end
       """
+
       result = fix(code)
       assert {:ok, _} = Code.string_to_quoted(result)
     end

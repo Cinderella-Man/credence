@@ -201,8 +201,7 @@ defmodule Credence.Rule.NoManualListLast do
         if MapSet.member?(match_names, fn_name) do
           list_last_fn = {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], []}
 
-          {:|>, pipe_meta,
-           [transform_ast(lhs, match_set, match_names), list_last_fn]}
+          {:|>, pipe_meta, [transform_ast(lhs, match_set, match_names), list_last_fn]}
         else
           {:|>, pipe_meta,
            [
