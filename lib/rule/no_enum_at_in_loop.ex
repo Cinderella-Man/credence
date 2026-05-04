@@ -9,6 +9,12 @@ defmodule Credence.Rule.NoEnumAtInLoop do
   one of the most common performance traps for developers coming from
   languages with array-based lists.
 
+  This rule is **not auto-fixable** because every remedy requires non-local
+  changes: inserting `List.to_tuple/1` in an outer scope, restructuring a
+  callback signature for `Enum.with_index/1`, or rewriting the algorithm to
+  use pattern matching. These transformations depend on surrounding context
+  and cannot be expressed as a mechanical AST node swap.
+
   ## Bad
 
       defp expand(graphemes, left, right, count) do
@@ -35,10 +41,14 @@ defmodule Credence.Rule.NoEnumAtInLoop do
       # Option 3: Use Enum.with_index or Enum.zip to pair values with indices
       Enum.reduce(Enum.with_index(list), 0, fn {val, _idx}, acc -> acc + val end)
   """
+
   use Credence.Rule
   alias Credence.Issue
 
   @enum_loops [:reduce, :reduce_while, :map, :flat_map, :each, :filter]
+
+  @impl true
+  def fixable?, do: false
 
   @impl true
   def check(ast, _opts) do

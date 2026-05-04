@@ -7,43 +7,14 @@ defmodule Credence.Rule.NoEnumAtInLoopTest do
     Credence.Rule.NoEnumAtInLoop.check(ast, [])
   end
 
+  describe "fixable?" do
+    test "reports as not fixable" do
+      refute Credence.Rule.NoEnumAtInLoop.fixable?()
+    end
+  end
+
   describe "NoEnumAtInLoop" do
-    test "passes Enum.at outside of any loop" do
-      code = """
-      defmodule Safe do
-        def third(list) do
-          Enum.at(list, 2)
-        end
-      end
-      """
-
-      assert check(code) == []
-    end
-
-    test "passes pattern matching in recursion" do
-      code = """
-      defmodule Good do
-        def sum([]), do: 0
-        def sum([head | tail]), do: head + sum(tail)
-      end
-      """
-
-      assert check(code) == []
-    end
-
-    test "passes Enum.with_index in reduce" do
-      code = """
-      defmodule Good do
-        def indexed_sum(list) do
-          list
-          |> Stream.with_index()
-          |> Enum.reduce(0, fn {val, _idx}, acc -> acc + val end)
-        end
-      end
-      """
-
-      assert check(code) == []
-    end
+    # --- POSITIVE CASES (should flag) ---
 
     test "detects Enum.at inside Enum.reduce" do
       code = """
@@ -62,7 +33,6 @@ defmodule Credence.Rule.NoEnumAtInLoopTest do
       issue = hd(issues)
       assert %Issue{} = issue
       assert issue.rule == :no_enum_at_in_loop
-
       assert issue.message =~ "Enum.at/2"
       assert issue.meta.line != nil
     end
@@ -80,6 +50,57 @@ defmodule Credence.Rule.NoEnumAtInLoopTest do
 
       assert length(issues) >= 1
       assert hd(issues).rule == :no_enum_at_in_loop
+    end
+
+    test "detects Enum.at inside Enum.each" do
+      code = """
+      defmodule Bad do
+        def print_elements(list, indices) do
+          Enum.each(indices, fn i -> IO.puts(Enum.at(list, i)) end)
+        end
+      end
+      """
+
+      assert length(check(code)) >= 1
+    end
+
+    test "detects Enum.at inside Enum.filter" do
+      code = """
+      defmodule Bad do
+        def filter_by_index(list, indices) do
+          Enum.filter(indices, fn i -> Enum.at(list, i) > 0 end)
+        end
+      end
+      """
+
+      assert length(check(code)) >= 1
+    end
+
+    test "detects Enum.at inside Enum.flat_map" do
+      code = """
+      defmodule Bad do
+        def expand(list, indices) do
+          Enum.flat_map(indices, fn i -> [Enum.at(list, i), Enum.at(list, i)] end)
+        end
+      end
+      """
+
+      assert length(check(code)) >= 1
+    end
+
+    test "detects Enum.at inside Enum.reduce_while" do
+      code = """
+      defmodule Bad do
+        def find_first(list, n) do
+          Enum.reduce_while(0..n, nil, fn i, _acc ->
+            val = Enum.at(list, i)
+            if val > 0, do: {:halt, val}, else: {:cont, nil}
+          end)
+        end
+      end
+      """
+
+      assert length(check(code)) >= 1
     end
 
     test "detects Enum.at inside for comprehension" do
@@ -133,19 +154,6 @@ defmodule Credence.Rule.NoEnumAtInLoopTest do
       assert hd(issues).rule == :no_enum_at_in_loop
     end
 
-    test "ignores Enum.at in non-recursive function" do
-      code = """
-      defmodule Safe do
-        def middle(list) do
-          mid = div(length(list), 2)
-          Enum.at(list, mid)
-        end
-      end
-      """
-
-      assert check(code) == []
-    end
-
     test "deduplicates Enum.at calls on the same line in recursive body" do
       code = """
       defmodule Bad do
@@ -159,6 +167,73 @@ defmodule Credence.Rule.NoEnumAtInLoopTest do
 
       # Two Enum.at calls on same line are deduplicated to one
       assert length(issues) == 1
+    end
+
+    # --- NEGATIVE CASES (should NOT flag) ---
+
+    test "passes Enum.at outside of any loop" do
+      code = """
+      defmodule Safe do
+        def third(list) do
+          Enum.at(list, 2)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "passes pattern matching in recursion" do
+      code = """
+      defmodule Good do
+        def sum([]), do: 0
+        def sum([head | tail]), do: head + sum(tail)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "passes Enum.with_index in reduce" do
+      code = """
+      defmodule Good do
+        def indexed_sum(list) do
+          list
+          |> Stream.with_index()
+          |> Enum.reduce(0, fn {val, _idx}, acc -> acc + val end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "ignores Enum.at in non-recursive function" do
+      code = """
+      defmodule Safe do
+        def middle(list) do
+          mid = div(length(list), 2)
+          Enum.at(list, mid)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Enum.at in a function that calls a different function" do
+      code = """
+      defmodule Safe do
+        def foo(list, i) do
+          val = Enum.at(list, i)
+          bar(val)
+        end
+
+        def bar(x), do: x * 2
+      end
+      """
+
+      assert check(code) == []
     end
   end
 end
