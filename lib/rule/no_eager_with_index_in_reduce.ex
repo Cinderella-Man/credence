@@ -134,9 +134,9 @@ defmodule Credence.Rule.NoEagerWithIndexInReduce do
       {:ok, new_fn} ->
         reduce_call =
           {{:., dot_meta, [{:__aliases__, [], [:Enum]}, :reduce]}, call_meta,
-           [list, wrap_two_tuple({0, initial_acc}), new_fn]}
+           [list, wrap_two_tuple({wrap_literal(0), initial_acc}), new_fn]}
 
-        {:elem, [], [reduce_call, 1]}
+        {:elem, [], [reduce_call, wrap_literal(1)]}
 
       :error ->
         fix_direct(list, initial_acc, fn_node, dot_meta, call_meta, :stream)
@@ -161,12 +161,12 @@ defmodule Credence.Rule.NoEagerWithIndexInReduce do
 
             new_reduce =
               {{:., rd_meta, [{:__aliases__, [], [:Enum]}, :reduce]}, rc_meta,
-               [wrap_two_tuple({0, initial_acc}), new_fn]}
+               [wrap_two_tuple({wrap_literal(0), initial_acc}), new_fn]}
 
             {:|>, [],
              [
                {:|>, pipe_meta, [deeper, new_reduce]},
-               {:elem, [], [1]}
+               {:elem, [], [wrap_literal(1)]}
              ]}
 
           :error ->
@@ -177,6 +177,14 @@ defmodule Credence.Rule.NoEagerWithIndexInReduce do
         fix_pipe(left, reduce_call, pipe_meta, :stream)
     end
   end
+
+  # ── Literal wrapping ────────────────────────────────────────────
+  # Sourceror.to_string/1 → Code.Formatter requires __block__ nodes
+  # to carry a :token key in their metadata so the formatter knows
+  # how to render the literal.
+
+  defp wrap_literal(int) when is_integer(int),
+    do: {:__block__, [token: Integer.to_string(int)], [int]}
 
   # ── Fn transformation for :reduce strategy ───
   #
@@ -259,7 +267,7 @@ defmodule Credence.Rule.NoEagerWithIndexInReduce do
 
   # Builds {idx + 1, expr} as a Sourceror-compatible AST node.
   defp index_bump_tuple({name, _, _}, expr) do
-    wrap_two_tuple({{:+, [], [{name, [], nil}, 1]}, expr})
+    wrap_two_tuple({{:+, [], [{name, [], nil}, wrap_literal(1)]}, expr})
   end
 
   # Replaces Enum.with_index → Stream.with_index in the pipe chain

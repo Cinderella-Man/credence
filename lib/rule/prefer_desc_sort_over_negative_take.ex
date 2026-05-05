@@ -72,14 +72,14 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
 
   # Enum.sort() → Enum.sort(:desc)
   defp transform_step({{:., dm, [{:__aliases__, am, [:Enum]}, :sort]}, cm, []}) do
-    {{:., dm, [{:__aliases__, am, [:Enum]}, :sort]}, cm, [:desc]}
+    {{:., dm, [{:__aliases__, am, [:Enum]}, :sort]}, cm, [wrap_literal(:desc)]}
   end
 
   # Enum.take(-n) → Enum.take(n)
   defp transform_step({{:., dm, [{:__aliases__, am, [:Enum]}, :take]}, cm, [n]}) do
     case positive_value(n) do
       {:ok, pos} ->
-        {{:., dm, [{:__aliases__, am, [:Enum]}, :take]}, cm, [pos]}
+        {{:., dm, [{:__aliases__, am, [:Enum]}, :take]}, cm, [wrap_literal(pos)]}
 
       :error ->
         {{:., dm, [{:__aliases__, am, [:Enum]}, :take]}, cm, [n]}
@@ -87,6 +87,17 @@ defmodule Credence.Rule.PreferDescSortOverNegativeTake do
   end
 
   defp transform_step(node), do: node
+
+  # ── Literal wrapping ───────────────────────────────────────────
+  # Sourceror.to_string/1 → Code.Formatter requires __block__ nodes
+  # to carry a :token key in their metadata so the formatter knows
+  # how to render the literal.
+
+  defp wrap_literal(atom) when is_atom(atom),
+    do: {:__block__, [token: inspect(atom)], [atom]}
+
+  defp wrap_literal(int) when is_integer(int),
+    do: {:__block__, [token: Integer.to_string(int)], [int]}
 
   # ── Integer extraction (handles Sourceror's __block__ wrapper) ──
 

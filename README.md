@@ -101,6 +101,7 @@ Pass custom rules via the `:rules` option or add them to `@default_rules` in `Cr
 | `NoEnumAtInLoop` | `Enum.at/2` inside looping constructs — O(n) per iteration | ❌ |
 | `NoEnumAtLoopAccess` | `Enum.at/2` inside loops (heuristic) | ❌ |
 | `NoEnumAtMidpointAccess` | `Enum.at/2` with a midpoint index inside divide-and-conquer patterns | ✅ |
+| `NoEnumAtNegativeIndex` | Multiple `Enum.at/2` inside a single function - converted to reverse + pattern match | ✅ |
 | `NoEnumCountForLength` | `Enum.count/1` without a predicate on a plain list — use `length/1` | ✅ |
 | `NoEnumDropNegative` | `Enum.drop(list, -n)` — use `Enum.take/2` instead | ✅ |
 | `NoEnumTakeNegative` | `Enum.take(list, -n)` — use `Enum.drop/2` and reverse instead | ✅ |
