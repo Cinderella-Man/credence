@@ -38,7 +38,7 @@ defmodule Credence do
         rule.fix(source, opts)
       end)
 
-    %{issues: remaining} = analyze(fixed_code, opts)
+    %{issues: remaining} = analyze(fixed_code, Keyword.put(opts, :source, fixed_code))
 
     %{code: fixed_code, issues: remaining}
   end

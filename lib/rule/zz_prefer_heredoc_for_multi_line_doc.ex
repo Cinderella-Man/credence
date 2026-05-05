@@ -34,13 +34,27 @@ defmodule Credence.Rule.ZzPreferHeredocForMultiLineDoc do
   @impl true
   def fixable?, do: true
 
+  # ── Check ───────────────────────────────────────────────────────
+  #
+  # Code.string_to_quoted doesn't preserve delimiter info, so a heredoc
+  # and a single-line string with \n produce the same AST value.
+  # When :source is available in opts (e.g. during Credence.fix re-check),
+  # we look at the actual source line to skip already-converted heredocs.
+
   @impl true
-  def check(ast, _opts) do
+  def check(ast, opts) do
+    source_lines =
+      case Keyword.get(opts, :source) do
+        nil -> nil
+        source -> String.split(source, "\n")
+      end
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {:@, meta, [{attr, _, [value]}]} = node, acc
         when attr in @doc_attrs and is_binary(value) ->
-          if multi_line_in_single_string?(value) do
+          if multi_line_in_single_string?(value) and
+               not already_heredoc?(source_lines, meta) do
             {node, [build_issue(meta, attr) | acc]}
           else
             {node, acc}
@@ -53,22 +67,33 @@ defmodule Credence.Rule.ZzPreferHeredocForMultiLineDoc do
     Enum.reverse(issues)
   end
 
+  # Check if the source line at this position already uses """
+  defp already_heredoc?(nil, _meta), do: false
+
+  defp already_heredoc?(source_lines, meta) do
+    line = Keyword.get(meta, :line)
+
+    case Enum.at(source_lines, line - 1) do
+      nil -> false
+      source_line -> String.contains?(source_line, ~s("""))
+    end
+  end
+
   @impl true
   def fix(source, _opts) do
+    # Try line-level fix first (works when \n is still escaped in source)
     line_fixed = fix_by_lines(source)
 
     if line_fixed != source do
       line_fixed
     else
-      result = fix_by_ast(source)
-      result
+      # AST-based fallback (works after Sourceror has unescaped \n)
+      fix_by_ast(source)
     end
   end
 
   # The string value (in AST) has at least one internal \n, meaning it
-  # contains multi-line content. We require at least one \n that is not
-  # merely trailing — i.e., the content before the trailing newlines
-  # contains a newline.
+  # contains multi-line content.
   defp multi_line_in_single_string?(value) do
     trimmed = String.trim_trailing(value, "\n")
     String.contains?(trimmed, "\n")
@@ -210,13 +235,11 @@ defmodule Credence.Rule.ZzPreferHeredocForMultiLineDoc do
     found
   end
 
-  # Raw form: has internal \\n (backslash + n) beyond just trailing
   defp raw_multi_line?(value) do
     trimmed = String.trim_trailing(value, "\\n")
     String.contains?(trimmed, "\\n")
   end
 
-  # Resolved form: has internal \n (real newline) beyond just trailing
   defp real_multi_line?(value) do
     trimmed = String.trim_trailing(value, "\n")
     String.contains?(trimmed, "\n")
@@ -230,14 +253,6 @@ defmodule Credence.Rule.ZzPreferHeredocForMultiLineDoc do
     |> String.replace("\\\"", "\"")
     |> String.replace("\x00BACKSLASH\x00", "\\")
   end
-
-  # ── Post-process: fix Sourceror's malformed heredoc closing ─────
-  #
-  # Sourceror puts the closing """ on the same line as the last content:
-  #     Line two."""
-  # We need it on its own line:
-  #     Line two.
-  #     """
 
   defp fix_heredoc_closings(source) do
     source
@@ -256,8 +271,6 @@ defmodule Credence.Rule.ZzPreferHeredocForMultiLineDoc do
     |> Enum.join("\n")
   end
 
-  # A line needs splitting if it ends with """ AND has content before it,
-  # but is NOT an opening @attr """ or a standalone """.
   defp needs_heredoc_split?(trimmed) do
     String.ends_with?(trimmed, ~s(""")) and
       String.length(trimmed) > 3 and
