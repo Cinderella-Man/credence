@@ -14,7 +14,7 @@ defmodule Credence do
 
     case Code.string_to_quoted(code_string) do
       {:ok, ast} ->
-        issues = run_rules(ast, rules, opts)
+        issues = run_rules(ast, rules, Keyword.put(opts, :source, code_string))
         %{valid: Enum.empty?(issues), issues: issues}
 
       {:error, {line, error_msg, token}} ->

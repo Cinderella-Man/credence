@@ -344,4 +344,77 @@ defmodule Credence.Rule.ZzPreferHeredocForMultiLineDocTest do
       refute fixed =~ "\\n"
     end
   end
+
+  defp check_with_source(code) do
+    {:ok, ast} = Code.string_to_quoted(code)
+    Credence.Rule.ZzPreferHeredocForMultiLineDoc.check(ast, source: code)
+  end
+
+  defp analyze(code) do
+    Credence.analyze(code, [])
+  end
+
+  describe "does not flag @doc already using heredoc" do
+    test "heredoc @doc is not flagged (with source in opts)" do
+      code = ~S'''
+      defmodule Example do
+        @doc """
+        Checks if a string is a palindrome.
+
+        ## Examples
+
+            iex> Example.palindrome?("racecar")
+            true
+        """
+        def palindrome?(s), do: s == String.reverse(s)
+      end
+      '''
+
+      issues = check_with_source(code)
+
+      heredoc_issues =
+        Enum.filter(issues, &(&1.rule == :prefer_heredoc_for_multi_line_doc))
+
+      assert heredoc_issues == [],
+             "Heredoc @doc should not be flagged, but got: #{inspect(heredoc_issues)}"
+    end
+
+    test "heredoc @doc is not flagged via Credence.analyze" do
+      code = ~S'''
+      defmodule Example do
+        @doc """
+        Checks if a string is a palindrome.
+
+        ## Examples
+
+            iex> Example.palindrome?("racecar")
+            true
+        """
+        def palindrome?(s), do: s == String.reverse(s)
+      end
+      '''
+
+      %{issues: issues} = analyze(code)
+
+      heredoc_issues =
+        Enum.filter(issues, &(&1.rule == :prefer_heredoc_for_multi_line_doc))
+
+      assert heredoc_issues == [],
+             "Heredoc @doc should not be flagged by analyze, but got: #{inspect(heredoc_issues)}"
+    end
+
+    test "single-line @doc with \\n escapes IS still flagged" do
+      code = ~S'''
+      defmodule Example do
+        @doc "Line one.\nLine two."
+        def foo, do: :ok
+      end
+      '''
+
+      issues = check_with_source(code)
+
+      assert Enum.any?(issues, &(&1.rule == :prefer_heredoc_for_multi_line_doc)),
+             "Single-line @doc with \\n should be flagged"
+    end
+  end
 end
