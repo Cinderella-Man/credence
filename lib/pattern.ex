@@ -3,7 +3,8 @@ defmodule Credence.Pattern do
   Pattern phase — detects and fixes anti-patterns in Elixir code.
 
   Delegates to the 80+ rules implementing `Credence.Pattern.Rule` behaviour.
-  Rules are discovered automatically and run alphabetically by module name.
+  Rules are discovered automatically and run in priority order (lower first),
+  with module name as tiebreaker for determinism.
   """
 
   @spec analyze(String.t(), keyword()) :: [Credence.Issue.t()]
@@ -37,7 +38,7 @@ defmodule Credence.Pattern do
   def default_rules do
     Application.spec(:credence, :modules)
     |> Enum.filter(&implements?(&1, Credence.Pattern.Rule))
-    |> Enum.sort()
+    |> Enum.sort_by(&{&1.priority(), &1})
   end
 
   defp implements?(module, behaviour) do

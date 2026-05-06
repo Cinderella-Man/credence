@@ -1,4 +1,4 @@
-defmodule Credence.Pattern.ZzPreferHeredocForMultiLineDoc do
+defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
   @moduledoc """
   Detects `@doc`, `@moduledoc`, and `@typedoc` strings that contain
   escaped newlines (`\\n`) and should use heredoc syntax instead.
@@ -33,6 +33,9 @@ defmodule Credence.Pattern.ZzPreferHeredocForMultiLineDoc do
 
   @impl true
   def fixable?, do: true
+
+  @impl true
+  def priority, do: 501
 
   # ── Check ───────────────────────────────────────────────────────
   #

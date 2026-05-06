@@ -83,7 +83,7 @@ defmodule Credence.Semantic do
   defp rules do
     Application.spec(:credence, :modules)
     |> Enum.filter(&implements?(&1, Credence.Semantic.Rule))
-    |> Enum.sort()
+    |> Enum.sort_by(&{&1.priority(), &1})
   end
 
   defp implements?(module, behaviour) do

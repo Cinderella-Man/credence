@@ -6,6 +6,8 @@ defmodule Credence.Syntax.Rule do
   Each rule detects a known LLM syntax error pattern and can fix it.
   """
 
+  @callback priority() :: integer()
+
   @doc "Detect issues in unparseable source. Returns list of issues."
   @callback analyze(source :: String.t()) :: [Credence.Issue.t()]
 
@@ -15,6 +17,11 @@ defmodule Credence.Syntax.Rule do
   defmacro __using__(_opts) do
     quote do
       @behaviour Credence.Syntax.Rule
+
+      @impl true
+      def priority, do: 500
+
+      defoverridable priority: 0
     end
   end
 end

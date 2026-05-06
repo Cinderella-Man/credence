@@ -8,6 +8,8 @@ defmodule Credence.Semantic.Rule do
       %{message: String.t(), position: {line, col} | line, severity: :warning | :error}
   """
 
+  @callback priority() :: integer()
+
   @type diagnostic :: %{
           message: String.t(),
           position: {integer(), integer()} | integer(),
@@ -26,6 +28,11 @@ defmodule Credence.Semantic.Rule do
   defmacro __using__(_opts) do
     quote do
       @behaviour Credence.Semantic.Rule
+
+      @impl true
+      def priority, do: 500
+
+      defoverridable priority: 0
     end
   end
 end

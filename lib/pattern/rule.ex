@@ -6,6 +6,8 @@ defmodule Credence.Pattern.Rule do
   80+ anti-pattern detection rules.
   """
 
+  @callback priority() :: integer()
+
   @doc "Detect issues in the AST. Returns list of issues."
   @callback check(ast :: Macro.t(), opts :: keyword()) :: [Credence.Issue.t()]
 
@@ -24,9 +26,12 @@ defmodule Credence.Pattern.Rule do
       def fixable?, do: false
 
       @impl true
+      def priority, do: 500
+
+      @impl true
       def fix(source, _opts), do: source
 
-      defoverridable fixable?: 0, fix: 2
+      defoverridable fixable?: 0, priority: 0, fix: 2
     end
   end
 end
