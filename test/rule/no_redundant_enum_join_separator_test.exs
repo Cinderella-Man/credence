@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoRedundantEnumJoinSeparatorTest do
+defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoRedundantEnumJoinSeparator.check(ast, [])
+    Credence.Pattern.NoRedundantEnumJoinSeparator.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoRedundantEnumJoinSeparator.fix(code, [])
+    Credence.Pattern.NoRedundantEnumJoinSeparator.fix(code, [])
   end
 
   describe "NoRedundantEnumJoinSeparator" do

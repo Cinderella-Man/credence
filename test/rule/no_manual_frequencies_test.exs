@@ -1,17 +1,17 @@
-defmodule Credence.Rule.NoManualFrequenciesTest do
+defmodule Credence.Pattern.NoManualFrequenciesTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoManualFrequencies.check(ast, [])
+    Credence.Pattern.NoManualFrequencies.check(ast, [])
   end
 
-  defp fix(code), do: Credence.Rule.NoManualFrequencies.fix(code, [])
+  defp fix(code), do: Credence.Pattern.NoManualFrequencies.fix(code, [])
 
   describe "fixable?" do
     test "reports as fixable" do
-      assert Credence.Rule.NoManualFrequencies.fixable?() == true
+      assert Credence.Pattern.NoManualFrequencies.fixable?() == true
     end
   end
 
@@ -197,7 +197,7 @@ defmodule Credence.Rule.NoManualFrequenciesTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoManualFrequencies.check(ast, []) == []
+      assert Credence.Pattern.NoManualFrequencies.check(ast, []) == []
     end
   end
 end

@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoMapUpdateThenFetchTest do
+defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoMapUpdateThenFetch.check(ast, [])
+    Credence.Pattern.NoMapUpdateThenFetch.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoMapUpdateThenFetch.fix(code, [])
+    Credence.Pattern.NoMapUpdateThenFetch.fix(code, [])
   end
 
   describe "check" do
@@ -116,7 +116,7 @@ defmodule Credence.Rule.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoMapUpdateThenFetch.check(ast, []) == []
+      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "fixes Map.update!/3 followed by Map.get" do
@@ -132,7 +132,7 @@ defmodule Credence.Rule.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoMapUpdateThenFetch.check(ast, []) == []
+      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "fixes Map.update/4 followed by Map.get" do
@@ -148,7 +148,7 @@ defmodule Credence.Rule.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoMapUpdateThenFetch.check(ast, []) == []
+      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "fixes with intervening code that doesn't reference the map variable" do
@@ -165,7 +165,7 @@ defmodule Credence.Rule.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoMapUpdateThenFetch.check(ast, []) == []
+      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "fixes multiple update+fetch pairs in the same function" do
@@ -183,7 +183,7 @@ defmodule Credence.Rule.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoMapUpdateThenFetch.check(ast, []) == []
+      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "produces valid Elixir code" do

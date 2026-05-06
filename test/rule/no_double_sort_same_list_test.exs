@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoDoubleSortSameListTest do
+defmodule Credence.Pattern.NoDoubleSortSameListTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoDoubleSortSameList.check(ast, [])
+    Credence.Pattern.NoDoubleSortSameList.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoDoubleSortSameList.fix(code, [])
+    Credence.Pattern.NoDoubleSortSameList.fix(code, [])
   end
 
   describe "NoDoubleSortSameList" do
@@ -136,7 +136,7 @@ defmodule Credence.Rule.NoDoubleSortSameListTest do
 
   describe "fixable?" do
     test "reports as fixable" do
-      assert Credence.Rule.NoDoubleSortSameList.fixable?() == true
+      assert Credence.Pattern.NoDoubleSortSameList.fixable?() == true
     end
   end
 
@@ -238,7 +238,7 @@ defmodule Credence.Rule.NoDoubleSortSameListTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.NoDoubleSortSameList.check(fixed_ast, [])
+      issues = Credence.Pattern.NoDoubleSortSameList.check(fixed_ast, [])
 
       assert issues == []
     end

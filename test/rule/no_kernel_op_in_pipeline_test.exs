@@ -1,18 +1,18 @@
-defmodule Credence.Rule.NoKernelOpInPipelineTest do
+defmodule Credence.Pattern.NoKernelOpInPipelineTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoKernelOpInPipeline.check(ast, [])
+    Credence.Pattern.NoKernelOpInPipeline.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoKernelOpInPipeline.fix(code, [])
+    Credence.Pattern.NoKernelOpInPipeline.fix(code, [])
   end
 
   describe "fixable?/0" do
     test "reports as fixable" do
-      assert Credence.Rule.NoKernelOpInPipeline.fixable?() == true
+      assert Credence.Pattern.NoKernelOpInPipeline.fixable?() == true
     end
   end
 

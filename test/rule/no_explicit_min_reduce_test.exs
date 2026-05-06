@@ -1,17 +1,17 @@
-defmodule Credence.Rule.NoExplicitMinReduceTest do
+defmodule Credence.Pattern.NoExplicitMinReduceTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoExplicitMinReduce.check(ast, [])
+    Credence.Pattern.NoExplicitMinReduce.check(ast, [])
   end
 
-  defp fix(code), do: Credence.Rule.NoExplicitMinReduce.fix(code, [])
+  defp fix(code), do: Credence.Pattern.NoExplicitMinReduce.fix(code, [])
 
   describe "fixable?" do
     test "reports as fixable" do
-      assert Credence.Rule.NoExplicitMinReduce.fixable?() == true
+      assert Credence.Pattern.NoExplicitMinReduce.fixable?() == true
     end
   end
 
@@ -228,7 +228,7 @@ defmodule Credence.Rule.NoExplicitMinReduceTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoExplicitMinReduce.check(ast, []) == []
+      assert Credence.Pattern.NoExplicitMinReduce.check(ast, []) == []
     end
   end
 end

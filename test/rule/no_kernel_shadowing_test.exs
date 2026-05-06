@@ -1,9 +1,9 @@
-defmodule Credence.Rule.NoKernelShadowingTest do
+defmodule Credence.Pattern.NoKernelShadowingTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoKernelShadowing.check(ast, [])
+    Credence.Pattern.NoKernelShadowing.check(ast, [])
   end
 
   describe "NoKernelShadowing" do

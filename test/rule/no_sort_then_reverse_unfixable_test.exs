@@ -1,9 +1,9 @@
-defmodule Credence.Rule.NoSortThenReverseUnfixableTest do
+defmodule Credence.Pattern.NoSortThenReverseUnfixableTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoSortThenReverseUnfixable.check(ast, [])
+    Credence.Pattern.NoSortThenReverseUnfixable.check(ast, [])
   end
 
   describe "check" do

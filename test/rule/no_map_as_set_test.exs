@@ -1,15 +1,15 @@
-defmodule Credence.Rule.NoMapAsSetTest do
+defmodule Credence.Pattern.NoMapAsSetTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoMapAsSet.check(ast, [])
+    Credence.Pattern.NoMapAsSet.check(ast, [])
   end
 
   describe "NoMapAsSet" do
     test "fixable? returns false" do
-      refute Credence.Rule.NoMapAsSet.fixable?()
+      refute Credence.Pattern.NoMapAsSet.fixable?()
     end
 
     # --- POSITIVE CASES (should flag) ---

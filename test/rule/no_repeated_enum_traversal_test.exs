@@ -1,10 +1,10 @@
-defmodule Credence.Rule.NoRepeatedEnumTraversalTest do
+defmodule Credence.Pattern.NoRepeatedEnumTraversalTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoRepeatedEnumTraversal.check(ast, [])
+    Credence.Pattern.NoRepeatedEnumTraversal.check(ast, [])
   end
 
   describe "NoRepeatedEnumTraversal" do
@@ -254,7 +254,7 @@ defmodule Credence.Rule.NoRepeatedEnumTraversalTest do
     end
 
     test "fixable? returns false" do
-      assert Credence.Rule.NoRepeatedEnumTraversal.fixable?() == false
+      assert Credence.Pattern.NoRepeatedEnumTraversal.fixable?() == false
     end
   end
 end

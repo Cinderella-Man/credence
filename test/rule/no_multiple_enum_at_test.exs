@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoMultipleEnumAtTest do
+defmodule Credence.Pattern.NoMultipleEnumAtTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoMultipleEnumAt.check(ast, [])
+    Credence.Pattern.NoMultipleEnumAt.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoMultipleEnumAt.fix(code, [])
+    Credence.Pattern.NoMultipleEnumAt.fix(code, [])
   end
 
   describe "check" do
@@ -292,12 +292,12 @@ defmodule Credence.Rule.NoMultipleEnumAtTest do
       """
 
       {:ok, ast_before} = Code.string_to_quoted(source)
-      issues_before = Credence.Rule.NoMultipleEnumAt.check(ast_before, [])
+      issues_before = Credence.Pattern.NoMultipleEnumAt.check(ast_before, [])
       assert length(issues_before) >= 1
 
       fixed = fix(source)
       {:ok, ast_after} = Code.string_to_quoted(fixed)
-      issues_after = Credence.Rule.NoMultipleEnumAt.check(ast_after, [])
+      issues_after = Credence.Pattern.NoMultipleEnumAt.check(ast_after, [])
       assert length(issues_after) < length(issues_before)
     end
   end

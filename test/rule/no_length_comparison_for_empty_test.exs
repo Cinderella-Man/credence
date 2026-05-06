@@ -1,18 +1,18 @@
-defmodule Credence.Rule.NoLengthComparisonForEmptyTest do
+defmodule Credence.Pattern.NoLengthComparisonForEmptyTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoLengthComparisonForEmpty.check(ast, [])
+    Credence.Pattern.NoLengthComparisonForEmpty.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoLengthComparisonForEmpty.fix(code, [])
+    Credence.Pattern.NoLengthComparisonForEmpty.fix(code, [])
   end
 
   describe "fixable?/0" do
     test "reports as fixable" do
-      assert Credence.Rule.NoLengthComparisonForEmpty.fixable?() == true
+      assert Credence.Pattern.NoLengthComparisonForEmpty.fixable?() == true
     end
   end
 

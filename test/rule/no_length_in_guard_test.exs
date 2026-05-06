@@ -1,10 +1,10 @@
-defmodule Credence.Rule.NoLengthInGuardTest do
+defmodule Credence.Pattern.NoLengthInGuardTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoLengthInGuard.check(ast, [])
+    Credence.Pattern.NoLengthInGuard.check(ast, [])
   end
 
   describe "NoLengthInGuard" do

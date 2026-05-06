@@ -1,9 +1,9 @@
-defmodule Credence.Rule.NoEnumAtLoopAccessTest do
+defmodule Credence.Pattern.NoEnumAtLoopAccessTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoEnumAtLoopAccess.check(ast, [])
+    Credence.Pattern.NoEnumAtLoopAccess.check(ast, [])
   end
 
   describe "NoEnumAtLoopAccess" do

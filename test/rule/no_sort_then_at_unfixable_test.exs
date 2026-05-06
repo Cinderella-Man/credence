@@ -1,11 +1,11 @@
-defmodule Credence.Rule.NoSortThenAtUnfixableTest do
+defmodule Credence.Pattern.NoSortThenAtUnfixableTest do
   use ExUnit.Case
 
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoSortThenAtUnfixable.check(ast, [])
+    Credence.Pattern.NoSortThenAtUnfixable.check(ast, [])
   end
 
   describe "check/2 – variable index (pipeline)" do

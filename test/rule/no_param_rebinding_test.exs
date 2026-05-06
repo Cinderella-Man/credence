@@ -1,19 +1,19 @@
-defmodule Credence.Rule.NoParamRebindingTest do
+defmodule Credence.Pattern.NoParamRebindingTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoParamRebinding.check(ast, [])
+    Credence.Pattern.NoParamRebinding.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoParamRebinding.fix(code, [])
+    Credence.Pattern.NoParamRebinding.fix(code, [])
   end
 
   defp fix_and_verify(code) do
     fixed = fix(code)
     {:ok, ast} = Code.string_to_quoted(fixed)
-    issues = Credence.Rule.NoParamRebinding.check(ast, [])
+    issues = Credence.Pattern.NoParamRebinding.check(ast, [])
     {fixed, issues}
   end
 

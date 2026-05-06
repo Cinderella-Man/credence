@@ -1,6 +1,6 @@
-defmodule Credence.Rule.PreferDescSortOverNegativeTakeTest do
+defmodule Credence.Pattern.PreferDescSortOverNegativeTakeTest do
   use ExUnit.Case
-  alias Credence.Rule.PreferDescSortOverNegativeTake
+  alias Credence.Pattern.PreferDescSortOverNegativeTake
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)

@@ -1,15 +1,15 @@
-defmodule Credence.Rule.NoEnumAtInLoopTest do
+defmodule Credence.Pattern.NoEnumAtInLoopTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoEnumAtInLoop.check(ast, [])
+    Credence.Pattern.NoEnumAtInLoop.check(ast, [])
   end
 
   describe "fixable?" do
     test "reports as not fixable" do
-      refute Credence.Rule.NoEnumAtInLoop.fixable?()
+      refute Credence.Pattern.NoEnumAtInLoop.fixable?()
     end
   end
 

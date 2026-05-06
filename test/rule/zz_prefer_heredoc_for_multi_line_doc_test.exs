@@ -1,18 +1,18 @@
-defmodule Credence.Rule.ZzPreferHeredocForMultiLineDocTest do
+defmodule Credence.Pattern.ZzPreferHeredocForMultiLineDocTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.ZzPreferHeredocForMultiLineDoc.check(ast, [])
+    Credence.Pattern.ZzPreferHeredocForMultiLineDoc.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.ZzPreferHeredocForMultiLineDoc.fix(code, [])
+    Credence.Pattern.ZzPreferHeredocForMultiLineDoc.fix(code, [])
   end
 
   describe "fixable?/0" do
     test "reports as fixable" do
-      assert Credence.Rule.ZzPreferHeredocForMultiLineDoc.fixable?() == true
+      assert Credence.Pattern.ZzPreferHeredocForMultiLineDoc.fixable?() == true
     end
   end
 
@@ -347,7 +347,7 @@ defmodule Credence.Rule.ZzPreferHeredocForMultiLineDocTest do
 
   defp check_with_source(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.ZzPreferHeredocForMultiLineDoc.check(ast, source: code)
+    Credence.Pattern.ZzPreferHeredocForMultiLineDoc.check(ast, source: code)
   end
 
   defp analyze(code) do

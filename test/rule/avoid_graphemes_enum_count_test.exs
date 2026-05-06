@@ -1,13 +1,13 @@
-defmodule Credence.Rule.AvoidGraphemesEnumCountTest do
+defmodule Credence.Pattern.AvoidGraphemesEnumCountTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.AvoidGraphemesEnumCount.check(ast, [])
+    Credence.Pattern.AvoidGraphemesEnumCount.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.AvoidGraphemesEnumCount.fix(code, [])
+    Credence.Pattern.AvoidGraphemesEnumCount.fix(code, [])
   end
 
   describe "AvoidGraphemesEnumCount" do
@@ -386,7 +386,7 @@ defmodule Credence.Rule.AvoidGraphemesEnumCountTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert [] == Credence.Rule.AvoidGraphemesEnumCount.check(ast, [])
+      assert [] == Credence.Pattern.AvoidGraphemesEnumCount.check(ast, [])
     end
 
     test "fixed code is valid Elixir" do

@@ -1,13 +1,13 @@
-defmodule Credence.Rule.UseMapJoinTest do
+defmodule Credence.Pattern.UseMapJoinTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.UseMapJoin.check(ast, [])
+    Credence.Pattern.UseMapJoin.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.UseMapJoin.fix(code, [])
+    Credence.Pattern.UseMapJoin.fix(code, [])
   end
 
   describe "check" do
@@ -209,7 +209,7 @@ defmodule Credence.Rule.UseMapJoinTest do
 
   describe "fix" do
     test "is fixable" do
-      assert Credence.Rule.UseMapJoin.fixable?() == true
+      assert Credence.Pattern.UseMapJoin.fixable?() == true
     end
 
     # --- Pipeline: 2-arg Enum.map |> Enum.join ---

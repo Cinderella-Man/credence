@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoManualListLastTest do
+defmodule Credence.Pattern.NoManualListLastTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoManualListLast.check(ast, [])
+    Credence.Pattern.NoManualListLast.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoManualListLast.fix(code, [])
+    Credence.Pattern.NoManualListLast.fix(code, [])
   end
 
   describe "NoManualListLast" do

@@ -1,13 +1,13 @@
-defmodule Credence.Rule.InconsistentParamNamesTest do
+defmodule Credence.Pattern.InconsistentParamNamesTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.InconsistentParamNames.check(ast, [])
+    Credence.Pattern.InconsistentParamNames.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.InconsistentParamNames.fix(code, [])
+    Credence.Pattern.InconsistentParamNames.fix(code, [])
   end
 
   describe "InconsistentParamNames" do
@@ -471,7 +471,7 @@ defmodule Credence.Rule.InconsistentParamNamesTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert [] == Credence.Rule.InconsistentParamNames.check(ast, [])
+      assert [] == Credence.Pattern.InconsistentParamNames.check(ast, [])
     end
 
     test "round-trip: fibonacci example" do
@@ -484,7 +484,7 @@ defmodule Credence.Rule.InconsistentParamNamesTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert [] == Credence.Rule.InconsistentParamNames.check(ast, [])
+      assert [] == Credence.Pattern.InconsistentParamNames.check(ast, [])
     end
 
     test "fixed code is always valid Elixir" do

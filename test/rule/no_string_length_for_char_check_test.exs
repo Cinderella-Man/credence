@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoStringLengthForCharCheckTest do
+defmodule Credence.Pattern.NoStringLengthForCharCheckTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoStringLengthForCharCheck.check(ast, [])
+    Credence.Pattern.NoStringLengthForCharCheck.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoStringLengthForCharCheck.fix(code, [])
+    Credence.Pattern.NoStringLengthForCharCheck.fix(code, [])
   end
 
   describe "NoStringLengthForCharCheck" do

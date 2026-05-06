@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoSortForTopKTest do
+defmodule Credence.Pattern.NoSortForTopKTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoSortForTopK.check(ast, [])
+    Credence.Pattern.NoSortForTopK.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoSortForTopK.fix(code, [])
+    Credence.Pattern.NoSortForTopK.fix(code, [])
   end
 
   # ── check — positive cases ───────────────────────────────────────

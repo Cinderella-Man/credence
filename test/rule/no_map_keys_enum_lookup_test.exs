@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoMapKeysEnumLookupTest do
+defmodule Credence.Pattern.NoMapKeysEnumLookupTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoMapKeysEnumLookup.check(ast, [])
+    Credence.Pattern.NoMapKeysEnumLookup.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoMapKeysEnumLookup.fix(code, [])
+    Credence.Pattern.NoMapKeysEnumLookup.fix(code, [])
   end
 
   defp assert_fixes_cleanly(code) do
@@ -16,7 +16,7 @@ defmodule Credence.Rule.NoMapKeysEnumLookupTest do
     assert {:ok, ast} = Code.string_to_quoted(fixed),
            "Expected fixed code to parse as valid Elixir:\n#{fixed}"
 
-    assert [] == Credence.Rule.NoMapKeysEnumLookup.check(ast, []),
+    assert [] == Credence.Pattern.NoMapKeysEnumLookup.check(ast, []),
            "Expected no remaining issues in fixed code:\n#{fixed}"
 
     fixed

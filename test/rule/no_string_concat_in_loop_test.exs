@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoStringConcatInLoopTest do
+defmodule Credence.Pattern.NoStringConcatInLoopTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoStringConcatInLoop.check(ast, [])
+    Credence.Pattern.NoStringConcatInLoop.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoStringConcatInLoop.fix(code, [])
+    Credence.Pattern.NoStringConcatInLoop.fix(code, [])
   end
 
   defp normalize(code) do

@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoManualMinTest do
+defmodule Credence.Pattern.NoManualMinTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoManualMin.check(ast, [])
+    Credence.Pattern.NoManualMin.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoManualMin.fix(code, [])
+    Credence.Pattern.NoManualMin.fix(code, [])
   end
 
   describe "NoManualMin" do

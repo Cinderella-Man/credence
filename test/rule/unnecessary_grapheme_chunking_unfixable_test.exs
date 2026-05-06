@@ -1,9 +1,9 @@
-defmodule Credence.Rule.UnnecessaryGraphemeChunking.UnfixableTest do
+defmodule Credence.Pattern.UnnecessaryGraphemeChunking.UnfixableTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.UnnecessaryGraphemeChunking.Unfixable.check(ast, [])
+    Credence.Pattern.UnnecessaryGraphemeChunking.Unfixable.check(ast, [])
   end
 
   describe "positive cases — should flag" do

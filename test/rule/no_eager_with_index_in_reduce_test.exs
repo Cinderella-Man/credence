@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoEagerWithIndexInReduceTest do
+defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoEagerWithIndexInReduce.check(ast, [])
+    Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
   end
 
   defp fix(code, opts \\ []) do
-    Credence.Rule.NoEagerWithIndexInReduce.fix(code, opts)
+    Credence.Pattern.NoEagerWithIndexInReduce.fix(code, opts)
   end
 
   describe "check/2" do
@@ -229,7 +229,7 @@ defmodule Credence.Rule.NoEagerWithIndexInReduceTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert [] == Credence.Rule.NoEagerWithIndexInReduce.check(ast, [])
+      assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
     end
   end
 
@@ -373,7 +373,7 @@ defmodule Credence.Rule.NoEagerWithIndexInReduceTest do
 
       fixed = fix(code, fix_strategy: :reduce)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert [] == Credence.Rule.NoEagerWithIndexInReduce.check(ast, [])
+      assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
     end
 
     test "round-trip: pipe form produces zero issues" do
@@ -389,7 +389,7 @@ defmodule Credence.Rule.NoEagerWithIndexInReduceTest do
 
       fixed = fix(code, fix_strategy: :reduce)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert [] == Credence.Rule.NoEagerWithIndexInReduce.check(ast, [])
+      assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
     end
   end
 
@@ -459,7 +459,7 @@ defmodule Credence.Rule.NoEagerWithIndexInReduceTest do
         fixed = fix(code, fix_strategy: strategy)
         {:ok, ast} = Code.string_to_quoted(fixed)
 
-        assert [] == Credence.Rule.NoEagerWithIndexInReduce.check(ast, []),
+        assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, []),
                "Strategy #{strategy} left issues"
       end
     end

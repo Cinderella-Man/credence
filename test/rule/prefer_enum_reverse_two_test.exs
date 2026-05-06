@@ -1,20 +1,20 @@
-defmodule Credence.Rule.PreferEnumReverseTwoTest do
+defmodule Credence.Pattern.PreferEnumReverseTwoTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.PreferEnumReverseTwo.check(ast, [])
+    Credence.Pattern.PreferEnumReverseTwo.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.PreferEnumReverseTwo.fix(code, [])
+    Credence.Pattern.PreferEnumReverseTwo.fix(code, [])
   end
 
   defp assert_fixed(input) do
     result = fix(input)
 
     {:ok, ast} = Code.string_to_quoted(result)
-    issues = Credence.Rule.PreferEnumReverseTwo.check(ast, [])
+    issues = Credence.Pattern.PreferEnumReverseTwo.check(ast, [])
 
     assert issues == [],
            "Expected no issues after fix, got: #{inspect(issues)}\nFixed code:\n#{result}"

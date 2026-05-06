@@ -1,9 +1,9 @@
-defmodule Credence.Rule.AvoidGraphemesLengthTest do
+defmodule Credence.Pattern.AvoidGraphemesLengthTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.AvoidGraphemesLength.check(ast, [])
+    Credence.Pattern.AvoidGraphemesLength.check(ast, [])
   end
 
   describe "AvoidGraphemesLength" do

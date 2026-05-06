@@ -1,19 +1,19 @@
-defmodule Credence.Rule.NoTakeWhileLengthCheckTest do
+defmodule Credence.Pattern.NoTakeWhileLengthCheckTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoTakeWhileLengthCheck.check(ast, [])
+    Credence.Pattern.NoTakeWhileLengthCheck.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoTakeWhileLengthCheck.fix(code, [])
+    Credence.Pattern.NoTakeWhileLengthCheck.fix(code, [])
   end
 
   defp check_fix(code) do
     fixed = fix(code)
     {:ok, ast} = Code.string_to_quoted(fixed)
-    issues = Credence.Rule.NoTakeWhileLengthCheck.check(ast, [])
+    issues = Credence.Pattern.NoTakeWhileLengthCheck.check(ast, [])
     {fixed, issues}
   end
 

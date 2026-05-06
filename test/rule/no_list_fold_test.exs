@@ -1,16 +1,16 @@
-defmodule Credence.Rule.NoListFoldTest do
+defmodule Credence.Pattern.NoListFoldTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoListFold.check(ast, [])
+    Credence.Pattern.NoListFold.check(ast, [])
   end
 
-  defp fix(code), do: Credence.Rule.NoListFold.fix(code, [])
+  defp fix(code), do: Credence.Pattern.NoListFold.fix(code, [])
 
   describe "fixable?" do
     test "reports as fixable" do
-      assert Credence.Rule.NoListFold.fixable?() == true
+      assert Credence.Pattern.NoListFold.fixable?() == true
     end
   end
 
@@ -260,7 +260,7 @@ defmodule Credence.Rule.NoListFoldTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoListFold.check(ast, []) == []
+      assert Credence.Pattern.NoListFold.check(ast, []) == []
     end
 
     test "fixed foldr produces no issues" do
@@ -270,7 +270,7 @@ defmodule Credence.Rule.NoListFoldTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoListFold.check(ast, []) == []
+      assert Credence.Pattern.NoListFold.check(ast, []) == []
     end
   end
 end

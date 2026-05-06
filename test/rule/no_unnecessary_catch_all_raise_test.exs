@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoUnnecessaryCatchAllRaiseTest do
+defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoUnnecessaryCatchAllRaise.check(ast, [])
+    Credence.Pattern.NoUnnecessaryCatchAllRaise.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoUnnecessaryCatchAllRaise.fix(code, [])
+    Credence.Pattern.NoUnnecessaryCatchAllRaise.fix(code, [])
   end
 
   defp normalize(str), do: String.trim_trailing(str, "\n")

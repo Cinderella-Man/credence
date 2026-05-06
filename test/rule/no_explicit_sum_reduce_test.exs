@@ -1,16 +1,16 @@
-defmodule Credence.Rule.NoExplicitSumReduceTest do
+defmodule Credence.Pattern.NoExplicitSumReduceTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoExplicitSumReduce.check(ast, [])
+    Credence.Pattern.NoExplicitSumReduce.check(ast, [])
   end
 
-  defp fix(code), do: Credence.Rule.NoExplicitSumReduce.fix(code, [])
+  defp fix(code), do: Credence.Pattern.NoExplicitSumReduce.fix(code, [])
 
   describe "fixable?" do
     test "reports as fixable" do
-      assert Credence.Rule.NoExplicitSumReduce.fixable?() == true
+      assert Credence.Pattern.NoExplicitSumReduce.fixable?() == true
     end
   end
 
@@ -171,7 +171,7 @@ defmodule Credence.Rule.NoExplicitSumReduceTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoExplicitSumReduce.check(ast, []) == []
+      assert Credence.Pattern.NoExplicitSumReduce.check(ast, []) == []
     end
   end
 end

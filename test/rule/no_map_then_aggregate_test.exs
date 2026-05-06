@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoMapThenAggregateTest do
+defmodule Credence.Pattern.NoMapThenAggregateTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoMapThenAggregate.check(ast, [])
+    Credence.Pattern.NoMapThenAggregate.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoMapThenAggregate.fix(code, [])
+    Credence.Pattern.NoMapThenAggregate.fix(code, [])
   end
 
   describe "NoMapThenAggregate check" do

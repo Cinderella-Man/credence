@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoEnumTakeNegativeTest do
+defmodule Credence.Pattern.NoEnumTakeNegativeTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoEnumTakeNegative.check(ast, [])
+    Credence.Pattern.NoEnumTakeNegative.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoEnumTakeNegative.fix(code, [])
+    Credence.Pattern.NoEnumTakeNegative.fix(code, [])
   end
 
   describe "NoEnumTakeNegative check" do
@@ -169,7 +169,7 @@ defmodule Credence.Rule.NoEnumTakeNegativeTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoEnumTakeNegative.check(ast, []) == []
+      assert Credence.Pattern.NoEnumTakeNegative.check(ast, []) == []
     end
 
     # ── Skip behavior: sort |> take(-n) deferred ──────────────────

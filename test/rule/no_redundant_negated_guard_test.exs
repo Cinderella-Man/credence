@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoRedundantNegatedGuardTest do
+defmodule Credence.Pattern.NoRedundantNegatedGuardTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoRedundantNegatedGuard.check(ast, [])
+    Credence.Pattern.NoRedundantNegatedGuard.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoRedundantNegatedGuard.fix(code, [])
+    Credence.Pattern.NoRedundantNegatedGuard.fix(code, [])
   end
 
   describe "NoRedundantNegatedGuard" do

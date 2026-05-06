@@ -1,9 +1,9 @@
-defmodule Credence.Rule.NoListAppendInLoopTest do
+defmodule Credence.Pattern.NoListAppendInLoopTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoListAppendInLoop.check(ast, [])
+    Credence.Pattern.NoListAppendInLoop.check(ast, [])
   end
 
   describe "NoListAppendInLoop - exclusions for fixable rules" do

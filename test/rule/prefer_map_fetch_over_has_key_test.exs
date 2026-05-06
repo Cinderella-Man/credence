@@ -1,14 +1,14 @@
-defmodule Credence.Rule.PreferMapFetchOverHasKeyTest do
+defmodule Credence.Pattern.PreferMapFetchOverHasKeyTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.PreferMapFetchOverHasKey.check(ast, [])
+    Credence.Pattern.PreferMapFetchOverHasKey.check(ast, [])
   end
 
   describe "fixable?/0" do
     test "reports as not fixable" do
-      assert Credence.Rule.PreferMapFetchOverHasKey.fixable?() == false
+      assert Credence.Pattern.PreferMapFetchOverHasKey.fixable?() == false
     end
   end
 

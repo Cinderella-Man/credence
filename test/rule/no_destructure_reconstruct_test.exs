@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoDestructureReconstructTest do
+defmodule Credence.Pattern.NoDestructureReconstructTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoDestructureReconstruct.check(ast, [])
+    Credence.Pattern.NoDestructureReconstruct.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoDestructureReconstruct.fix(code, [])
+    Credence.Pattern.NoDestructureReconstruct.fix(code, [])
   end
 
   describe "NoDestructureReconstruct" do
@@ -484,7 +484,7 @@ defmodule Credence.Rule.NoDestructureReconstructTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert [] == Credence.Rule.NoDestructureReconstruct.check(ast, [])
+      assert [] == Credence.Pattern.NoDestructureReconstruct.check(ast, [])
     end
 
     test "round-trip: function head fix produces zero issues" do
@@ -498,7 +498,7 @@ defmodule Credence.Rule.NoDestructureReconstructTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert [] == Credence.Rule.NoDestructureReconstruct.check(ast, [])
+      assert [] == Credence.Pattern.NoDestructureReconstruct.check(ast, [])
     end
   end
 end

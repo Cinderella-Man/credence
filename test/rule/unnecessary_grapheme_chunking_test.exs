@@ -1,13 +1,13 @@
-defmodule Credence.Rule.UnnecessaryGraphemeChunkingTest do
+defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.UnnecessaryGraphemeChunking.check(ast, [])
+    Credence.Pattern.UnnecessaryGraphemeChunking.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.UnnecessaryGraphemeChunking.fix(code, [])
+    Credence.Pattern.UnnecessaryGraphemeChunking.fix(code, [])
   end
 
   # Macro.to_string may expand multi-arg calls across multiple lines.

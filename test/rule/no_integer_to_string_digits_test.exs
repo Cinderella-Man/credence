@@ -1,17 +1,17 @@
-defmodule Credence.Rule.NoIntegerToStringDigitsTest do
+defmodule Credence.Pattern.NoIntegerToStringDigitsTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoIntegerToStringDigits.check(ast, [])
+    Credence.Pattern.NoIntegerToStringDigits.check(ast, [])
   end
 
-  defp fix(code), do: Credence.Rule.NoIntegerToStringDigits.fix(code, [])
+  defp fix(code), do: Credence.Pattern.NoIntegerToStringDigits.fix(code, [])
 
   describe "fixable?" do
     test "reports as fixable" do
-      assert Credence.Rule.NoIntegerToStringDigits.fixable?() == true
+      assert Credence.Pattern.NoIntegerToStringDigits.fixable?() == true
     end
   end
 
@@ -176,7 +176,7 @@ defmodule Credence.Rule.NoIntegerToStringDigitsTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoIntegerToStringDigits.check(ast, []) == []
+      assert Credence.Pattern.NoIntegerToStringDigits.check(ast, []) == []
     end
   end
 end

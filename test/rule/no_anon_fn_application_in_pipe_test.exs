@@ -1,10 +1,10 @@
-defmodule Credence.Rule.NoAnonFnApplicationInPipeTest do
+defmodule Credence.Pattern.NoAnonFnApplicationInPipeTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoAnonFnApplicationInPipe.check(ast, [])
+    Credence.Pattern.NoAnonFnApplicationInPipe.check(ast, [])
   end
 
   describe "NoAnonFnApplicationInPipe" do

@@ -1,64 +1,62 @@
 defmodule Credence do
   @moduledoc """
-  Credence (Semantic Linter for Elixir)
-  Main entry point for analyzing Elixir code.
+  Credence — Semantic Linter for Elixir.
+
+  Routes analysis and fixing through three phases:
+
+  1. **Syntax** — string-level fixes for syntax errors that prevent parsing
+     (e.g. `expr div expr` infix syntax from Python translations)
+  2. **Semantic** — fixes for compiler warnings like unused variables
+     and undefined function references
+  3. **Pattern** — AST-level anti-pattern rules (the bulk of Credence)
+
+  Both `analyze/2` and `fix/2` accept a source string and options.
+  `analyze` detects issues without modifying code (stops if code won't parse).
+  `fix` repairs what it can, then re-analyzes for remaining issues.
   """
   alias Credence.Issue
 
   @doc """
   Analyzes an Elixir code string and returns a deterministic pass/fail result.
+
+  Runs all three phases. If the code has syntax errors that PreCompile detects,
+  analysis stops there (later phases need parseable code).
   """
   @spec analyze(String.t(), keyword()) :: %{valid: boolean(), issues: [Issue.t()]}
   def analyze(code_string, opts \\ []) do
-    rules = Keyword.get(opts, :rules, default_rules())
+    pre_issues = Credence.Syntax.analyze(code_string, opts)
 
-    case Code.string_to_quoted(code_string) do
-      {:ok, ast} ->
-        issues = run_rules(ast, rules, Keyword.put(opts, :source, code_string))
-        %{valid: Enum.empty?(issues), issues: issues}
+    if has_blocking_issues?(pre_issues) do
+      %{valid: false, issues: pre_issues}
+    else
+      compiler_issues = Credence.Semantic.analyze(code_string, opts)
+      post_issues = Credence.Pattern.analyze(code_string, opts)
 
-      {:error, {line, error_msg, token}} ->
-        %{valid: false, issues: [parse_error_issue(line, error_msg, token)]}
+      all_issues = compiler_issues ++ post_issues
+      %{valid: Enum.empty?(all_issues), issues: all_issues}
     end
   end
 
   @doc """
   Auto-fixes all fixable issues in the given code string.
 
-  Pipes the source through each fixable rule's `fix/2` in sequence,
+  Pipes the source through Syntax → Semantic → Pattern fixers,
   then re-analyzes to report any remaining (unfixable) issues.
   """
   @spec fix(String.t(), keyword()) :: %{code: String.t(), issues: [Issue.t()]}
   def fix(code_string, opts \\ []) do
-    rules = Keyword.get(opts, :rules, default_rules())
-    {fixable, _unfixable} = Enum.split_with(rules, & &1.fixable?())
+    fixed =
+      code_string
+      |> Credence.Syntax.fix(opts)
+      |> Credence.Semantic.fix(opts)
+      |> Credence.Pattern.fix(opts)
 
-    fixed_code =
-      Enum.reduce(fixable, code_string, fn rule, source ->
-        rule.fix(source, opts)
-      end)
-
-    %{issues: remaining} = analyze(fixed_code, Keyword.put(opts, :source, fixed_code))
-
-    %{code: fixed_code, issues: remaining}
+    %{issues: remaining} = analyze(fixed, Keyword.put(opts, :source, fixed))
+    %{code: fixed, issues: remaining}
   end
 
-  defp run_rules(ast, rules, opts) do
-    Enum.flat_map(rules, & &1.check(ast, opts))
-  end
-
-  defp default_rules do
-    Application.spec(:credence, :modules)
-    |> Enum.filter(fn module ->
-      Credence.Rule in Keyword.get(module.__info__(:attributes), :behaviour, [])
-    end)
-  end
-
-  defp parse_error_issue(line, error_msg, token) do
-    %Issue{
-      rule: :parse_error,
-      message: "Syntax error: #{error_msg} at token #{inspect(token)}",
-      meta: %{line: line}
-    }
+  # Syntax issues are blocking — code can't parse, so later phases can't run
+  defp has_blocking_issues?(issues) do
+    Enum.any?(issues)
   end
 end

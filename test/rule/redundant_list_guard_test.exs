@@ -1,13 +1,13 @@
-defmodule Credence.Rule.RedundantListGuardTest do
+defmodule Credence.Pattern.RedundantListGuardTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.RedundantListGuard.check(ast, [])
+    Credence.Pattern.RedundantListGuard.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.RedundantListGuard.fix(code, [])
+    Credence.Pattern.RedundantListGuard.fix(code, [])
   end
 
   describe "RedundantListGuard check" do

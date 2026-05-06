@@ -1,18 +1,18 @@
-defmodule Credence.Rule.NoManualEnumUniqTest do
+defmodule Credence.Pattern.NoManualEnumUniqTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoManualEnumUniq.check(ast, [])
+    Credence.Pattern.NoManualEnumUniq.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoManualEnumUniq.fix(code, [])
+    Credence.Pattern.NoManualEnumUniq.fix(code, [])
   end
 
   describe "NoManualEnumUniq fixable?" do
     test "returns true" do
-      assert Credence.Rule.NoManualEnumUniq.fixable?() == true
+      assert Credence.Pattern.NoManualEnumUniq.fixable?() == true
     end
   end
 

@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoListAppendInReduceTest do
+defmodule Credence.Pattern.NoListAppendInReduceTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoListAppendInReduce.check(ast, [])
+    Credence.Pattern.NoListAppendInReduce.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoListAppendInReduce.fix(code, [])
+    Credence.Pattern.NoListAppendInReduce.fix(code, [])
   end
 
   describe "NoListAppendInReduce check" do
@@ -260,7 +260,7 @@ defmodule Credence.Rule.NoListAppendInReduceTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.NoListAppendInReduce.check(ast, [])
+      issues = Credence.Pattern.NoListAppendInReduce.check(ast, [])
       assert issues == []
     end
 
@@ -277,7 +277,7 @@ defmodule Credence.Rule.NoListAppendInReduceTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.NoListAppendInReduce.check(ast, [])
+      issues = Credence.Pattern.NoListAppendInReduce.check(ast, [])
       assert issues == []
     end
   end

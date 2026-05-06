@@ -1,9 +1,9 @@
-defmodule Credence.Rule.NoEnumCountForLengthTest do
+defmodule Credence.Pattern.NoEnumCountForLengthTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoEnumCountForLength.check(ast, [])
+    Credence.Pattern.NoEnumCountForLength.check(ast, [])
   end
 
   describe "NoEnumCountForLength" do

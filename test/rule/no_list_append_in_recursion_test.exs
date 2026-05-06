@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoListAppendInRecursionTest do
+defmodule Credence.Pattern.NoListAppendInRecursionTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoListAppendInRecursion.check(ast, [])
+    Credence.Pattern.NoListAppendInRecursion.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoListAppendInRecursion.fix(code, [])
+    Credence.Pattern.NoListAppendInRecursion.fix(code, [])
   end
 
   describe "NoListAppendInRecursion check" do
@@ -228,7 +228,7 @@ defmodule Credence.Rule.NoListAppendInRecursionTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.NoListAppendInRecursion.check(ast, [])
+      issues = Credence.Pattern.NoListAppendInRecursion.check(ast, [])
       assert issues == []
     end
   end

@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoSortThenReverseTest do
+defmodule Credence.Pattern.NoSortThenReverseTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoSortThenReverse.check(ast, [])
+    Credence.Pattern.NoSortThenReverse.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoSortThenReverse.fix(code, [])
+    Credence.Pattern.NoSortThenReverse.fix(code, [])
   end
 
   # Collapse all whitespace so assertions aren't sensitive to formatter line breaks

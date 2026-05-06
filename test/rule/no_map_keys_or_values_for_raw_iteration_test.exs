@@ -1,9 +1,9 @@
-defmodule Credence.Rule.NoMapKeysOrValuesForRawIterationTest do
+defmodule Credence.Pattern.NoMapKeysOrValuesForRawIterationTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoMapKeysOrValuesForRawIteration.check(ast, [])
+    Credence.Pattern.NoMapKeysOrValuesForRawIteration.check(ast, [])
   end
 
   describe "NoMapKeysOrValuesForRawIteration" do

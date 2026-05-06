@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoListToTupleForAccessTest do
+defmodule Credence.Pattern.NoListToTupleForAccessTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoListToTupleForAccess.check(ast, [])
+    Credence.Pattern.NoListToTupleForAccess.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoListToTupleForAccess.fix(code, [])
+    Credence.Pattern.NoListToTupleForAccess.fix(code, [])
   end
 
   defp assert_fix(input, expected) do
@@ -21,7 +21,7 @@ defmodule Credence.Rule.NoListToTupleForAccessTest do
 
   describe "fixable?" do
     test "returns true" do
-      assert Credence.Rule.NoListToTupleForAccess.fixable?() == true
+      assert Credence.Pattern.NoListToTupleForAccess.fixable?() == true
     end
   end
 

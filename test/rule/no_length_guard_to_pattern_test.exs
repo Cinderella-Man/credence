@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoLengthGuardToPatternTest do
+defmodule Credence.Pattern.NoLengthGuardToPatternTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoLengthGuardToPattern.check(ast, [])
+    Credence.Pattern.NoLengthGuardToPattern.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoLengthGuardToPattern.fix(code, [])
+    Credence.Pattern.NoLengthGuardToPattern.fix(code, [])
   end
 
   describe "NoLengthGuardToPattern check" do
@@ -275,7 +275,7 @@ defmodule Credence.Rule.NoLengthGuardToPatternTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.NoLengthGuardToPattern.check(ast, [])
+      issues = Credence.Pattern.NoLengthGuardToPattern.check(ast, [])
       assert issues == []
     end
 
@@ -290,7 +290,7 @@ defmodule Credence.Rule.NoLengthGuardToPatternTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.NoLengthGuardToPattern.check(ast, [])
+      issues = Credence.Pattern.NoLengthGuardToPattern.check(ast, [])
       assert issues == []
     end
   end

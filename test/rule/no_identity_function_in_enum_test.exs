@@ -1,18 +1,18 @@
-defmodule Credence.Rule.NoIdentityFunctionInEnumTest do
+defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoIdentityFunctionInEnum.check(ast, [])
+    Credence.Pattern.NoIdentityFunctionInEnum.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoIdentityFunctionInEnum.fix(code, [])
+    Credence.Pattern.NoIdentityFunctionInEnum.fix(code, [])
   end
 
   describe "fixable?/0" do
     test "reports as fixable" do
-      assert Credence.Rule.NoIdentityFunctionInEnum.fixable?() == true
+      assert Credence.Pattern.NoIdentityFunctionInEnum.fixable?() == true
     end
   end
 

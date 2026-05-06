@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoEnumAtBinarySearchTest do
+defmodule Credence.Pattern.NoEnumAtBinarySearchTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoEnumAtBinarySearch.check(ast, [])
+    Credence.Pattern.NoEnumAtBinarySearch.check(ast, [])
   end
 
   describe "fixable?" do
     test "reports as not fixable" do
-      assert Credence.Rule.NoEnumAtBinarySearch.fixable?() == false
+      assert Credence.Pattern.NoEnumAtBinarySearch.fixable?() == false
     end
   end
 

@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoManualMaxTest do
+defmodule Credence.Pattern.NoManualMaxTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoManualMax.check(ast, [])
+    Credence.Pattern.NoManualMax.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoManualMax.fix(code, []) |> String.trim_trailing()
+    Credence.Pattern.NoManualMax.fix(code, []) |> String.trim_trailing()
   end
 
   defp ast_of(code) do

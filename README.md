@@ -55,9 +55,9 @@ You can also run a subset of rules:
 
 ```elixir
 Credence.analyze(code, rules: [
-  Credence.Rule.NoListAppendInLoop,
-  Credence.Rule.NoSortForTopK,
-  Credence.Rule.NoListFold
+  Credence.Pattern.NoListAppendInLoop,
+  Credence.Pattern.NoSortForTopK,
+  Credence.Pattern.NoListFold
 ])
 ```
 
@@ -66,7 +66,7 @@ Credence.analyze(code, rules: [
 Every rule implements `Credence.Rule`:
 
 ```elixir
-defmodule Credence.Rule.MyRule do
+defmodule Credence.Pattern.MyRule do
   use Credence.Rule
   alias Credence.Issue
 

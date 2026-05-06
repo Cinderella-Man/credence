@@ -1,18 +1,18 @@
-defmodule Credence.Rule.NoEnumAtNegativeIndexTest do
+defmodule Credence.Pattern.NoEnumAtNegativeIndexTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoEnumAtNegativeIndex.check(ast, [])
+    Credence.Pattern.NoEnumAtNegativeIndex.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoEnumAtNegativeIndex.fix(code, [])
+    Credence.Pattern.NoEnumAtNegativeIndex.fix(code, [])
   end
 
   describe "fixable?/0" do
     test "reports as fixable" do
-      assert Credence.Rule.NoEnumAtNegativeIndex.fixable?() == true
+      assert Credence.Pattern.NoEnumAtNegativeIndex.fixable?() == true
     end
   end
 

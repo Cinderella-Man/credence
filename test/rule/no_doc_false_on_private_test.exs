@@ -1,10 +1,10 @@
-defmodule Credence.Rule.NoDocFalseOnPrivateTest do
+defmodule Credence.Pattern.NoDocFalseOnPrivateTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoDocFalseOnPrivate.check(ast, [])
+    Credence.Pattern.NoDocFalseOnPrivate.check(ast, [])
   end
 
   describe "NoDocFalseOnPrivate" do

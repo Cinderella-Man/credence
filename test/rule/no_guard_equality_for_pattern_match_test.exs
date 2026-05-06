@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoGuardEqualityForPatternMatchTest do
+defmodule Credence.Pattern.NoGuardEqualityForPatternMatchTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoGuardEqualityForPatternMatch.check(ast, [])
+    Credence.Pattern.NoGuardEqualityForPatternMatch.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoGuardEqualityForPatternMatch.fix(code, [])
+    Credence.Pattern.NoGuardEqualityForPatternMatch.fix(code, [])
   end
 
   # Compare fix result to expected code via AST to be formatting-agnostic

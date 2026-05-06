@@ -1,10 +1,10 @@
-defmodule Credence.Rule.NoListLastTest do
+defmodule Credence.Pattern.NoListLastTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoListLast.check(ast, [])
+    Credence.Pattern.NoListLast.check(ast, [])
   end
 
   describe "NoListLast" do

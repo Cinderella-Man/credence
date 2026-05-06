@@ -1,10 +1,10 @@
-defmodule Credence.Rule.NoListDeleteAtInLoopTest do
+defmodule Credence.Pattern.NoListDeleteAtInLoopTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoListDeleteAtInLoop.check(ast, [])
+    Credence.Pattern.NoListDeleteAtInLoop.check(ast, [])
   end
 
   describe "NoListDeleteAtInLoop" do

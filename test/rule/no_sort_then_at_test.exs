@@ -1,15 +1,15 @@
-defmodule Credence.Rule.NoSortThenAtTest do
+defmodule Credence.Pattern.NoSortThenAtTest do
   use ExUnit.Case
 
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoSortThenAt.check(ast, [])
+    Credence.Pattern.NoSortThenAt.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoSortThenAt.fix(code, [])
+    Credence.Pattern.NoSortThenAt.fix(code, [])
   end
 
   # ───────────────────────── check/2 tests ─────────────────────────

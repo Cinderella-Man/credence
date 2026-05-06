@@ -1,13 +1,13 @@
-defmodule Credence.Rule.NoIsPrefixForNonGuardTest do
+defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoIsPrefixForNonGuard.check(ast, [])
+    Credence.Pattern.NoIsPrefixForNonGuard.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoIsPrefixForNonGuard.fix(code, [])
+    Credence.Pattern.NoIsPrefixForNonGuard.fix(code, [])
   end
 
   describe "check/2" do
@@ -202,7 +202,7 @@ defmodule Credence.Rule.NoIsPrefixForNonGuardTest do
 
   describe "fixable?/0" do
     test "reports as fixable" do
-      assert Credence.Rule.NoIsPrefixForNonGuard.fixable?() == true
+      assert Credence.Pattern.NoIsPrefixForNonGuard.fixable?() == true
     end
   end
 

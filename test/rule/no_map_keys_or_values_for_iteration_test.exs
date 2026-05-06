@@ -1,12 +1,12 @@
-defmodule Credence.Rule.NoMapKeysOrValuesForIterationTest do
+defmodule Credence.Pattern.NoMapKeysOrValuesForIterationTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoMapKeysOrValuesForIteration.check(ast, [])
+    Credence.Pattern.NoMapKeysOrValuesForIteration.check(ast, [])
   end
 
-  defp fix(code), do: Credence.Rule.NoMapKeysOrValuesForIteration.fix(code, [])
+  defp fix(code), do: Credence.Pattern.NoMapKeysOrValuesForIteration.fix(code, [])
 
   defp assert_fix(input, expected) do
     result = fix(input)

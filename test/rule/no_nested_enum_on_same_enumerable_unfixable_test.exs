@@ -1,10 +1,10 @@
-defmodule Credence.Rule.NoNestedEnumOnSameEnumerable.UnfixableTest do
+defmodule Credence.Pattern.NoNestedEnumOnSameEnumerable.UnfixableTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoNestedEnumOnSameEnumerableUnfixable.check(ast, [])
+    Credence.Pattern.NoNestedEnumOnSameEnumerableUnfixable.check(ast, [])
   end
 
   describe "check/2" do

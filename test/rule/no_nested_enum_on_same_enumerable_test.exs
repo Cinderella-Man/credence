@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoNestedEnumOnSameEnumerableTest do
+defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoNestedEnumOnSameEnumerable.check(ast, [])
+    Credence.Pattern.NoNestedEnumOnSameEnumerable.check(ast, [])
   end
 
   defp fix(source) do
-    Credence.Rule.NoNestedEnumOnSameEnumerable.fix(source, [])
+    Credence.Pattern.NoNestedEnumOnSameEnumerable.fix(source, [])
   end
 
   describe "check/2" do

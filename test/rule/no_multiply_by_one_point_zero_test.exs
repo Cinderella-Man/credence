@@ -1,18 +1,18 @@
-defmodule Credence.Rule.NoMultiplyByOnePointZeroTest do
+defmodule Credence.Pattern.NoMultiplyByOnePointZeroTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoMultiplyByOnePointZero.check(ast, [])
+    Credence.Pattern.NoMultiplyByOnePointZero.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoMultiplyByOnePointZero.fix(code, [])
+    Credence.Pattern.NoMultiplyByOnePointZero.fix(code, [])
   end
 
   describe "fixable?/0" do
     test "reports as fixable" do
-      assert Credence.Rule.NoMultiplyByOnePointZero.fixable?() == true
+      assert Credence.Pattern.NoMultiplyByOnePointZero.fixable?() == true
     end
   end
 

@@ -1,17 +1,17 @@
-defmodule Credence.Rule.NoGraphemePalindromeCheckTest do
+defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoGraphemePalindromeCheck.check(ast, [])
+    Credence.Pattern.NoGraphemePalindromeCheck.check(ast, [])
   end
 
-  defp fix(code), do: Credence.Rule.NoGraphemePalindromeCheck.fix(code, [])
+  defp fix(code), do: Credence.Pattern.NoGraphemePalindromeCheck.fix(code, [])
 
   describe "fixable?" do
     test "reports as fixable" do
-      assert Credence.Rule.NoGraphemePalindromeCheck.fixable?() == true
+      assert Credence.Pattern.NoGraphemePalindromeCheck.fixable?() == true
     end
   end
 
@@ -202,7 +202,7 @@ defmodule Credence.Rule.NoGraphemePalindromeCheckTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoGraphemePalindromeCheck.check(ast, []) == []
+      assert Credence.Pattern.NoGraphemePalindromeCheck.check(ast, []) == []
     end
   end
 end

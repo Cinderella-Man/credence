@@ -1,9 +1,9 @@
-defmodule Credence.Rule.NoStringConcatInLoopComplexTest do
+defmodule Credence.Pattern.NoStringConcatInLoopComplexTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoStringConcatInLoopComplex.check(ast, [])
+    Credence.Pattern.NoStringConcatInLoopComplex.check(ast, [])
   end
 
   describe "positive cases — should flag" do

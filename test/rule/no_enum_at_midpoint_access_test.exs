@@ -1,18 +1,18 @@
-defmodule Credence.Rule.NoEnumAtMidpointAccessTest do
+defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoEnumAtMidpointAccess.check(ast, [])
+    Credence.Pattern.NoEnumAtMidpointAccess.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoEnumAtMidpointAccess.fix(code, [])
+    Credence.Pattern.NoEnumAtMidpointAccess.fix(code, [])
   end
 
   describe "fixable?" do
     test "reports as fixable" do
-      assert Credence.Rule.NoEnumAtMidpointAccess.fixable?() == true
+      assert Credence.Pattern.NoEnumAtMidpointAccess.fixable?() == true
     end
   end
 
@@ -437,7 +437,7 @@ defmodule Credence.Rule.NoEnumAtMidpointAccessTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
+      assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
 
     test "fixed code produces no check issues (piped)" do
@@ -452,7 +452,7 @@ defmodule Credence.Rule.NoEnumAtMidpointAccessTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
+      assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
 
     test "fixed code produces no check issues (inline midpoint)" do
@@ -466,7 +466,7 @@ defmodule Credence.Rule.NoEnumAtMidpointAccessTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
+      assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
 
     test "fixed code produces no check issues (multiple lists)" do
@@ -483,7 +483,7 @@ defmodule Credence.Rule.NoEnumAtMidpointAccessTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Code.string_to_quoted(fixed)
-      assert Credence.Rule.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
+      assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
   end
 end

@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoManualStringReverseTest do
+defmodule Credence.Pattern.NoManualStringReverseTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoManualStringReverse.check(ast, [])
+    Credence.Pattern.NoManualStringReverse.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoManualStringReverse.fix(code, [])
+    Credence.Pattern.NoManualStringReverse.fix(code, [])
   end
 
   describe "NoManualStringReverse - check" do

@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoSplitToCountTest do
+defmodule Credence.Pattern.NoSplitToCountTest do
   use ExUnit.Case
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoSplitToCount.check(ast, [])
+    Credence.Pattern.NoSplitToCount.check(ast, [])
   end
 
   describe "fixable?/0" do
     test "reports as not fixable" do
-      assert Credence.Rule.NoSplitToCount.fixable?() == false
+      assert Credence.Pattern.NoSplitToCount.fixable?() == false
     end
   end
 

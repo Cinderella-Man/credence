@@ -1,14 +1,14 @@
-defmodule Credence.Rule.PreferEnumSliceTest do
+defmodule Credence.Pattern.PreferEnumSliceTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.PreferEnumSlice.check(ast, [])
+    Credence.Pattern.PreferEnumSlice.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.PreferEnumSlice.fix(code, [])
+    Credence.Pattern.PreferEnumSlice.fix(code, [])
   end
 
   describe "PreferEnumSlice" do
@@ -409,7 +409,7 @@ defmodule Credence.Rule.PreferEnumSliceTest do
 
       result = fix(input)
       {:ok, ast} = Code.string_to_quoted(result)
-      assert Credence.Rule.PreferEnumSlice.check(ast, []) == []
+      assert Credence.Pattern.PreferEnumSlice.check(ast, []) == []
     end
 
     test "fixed nested call passes check" do
@@ -423,7 +423,7 @@ defmodule Credence.Rule.PreferEnumSliceTest do
 
       result = fix(input)
       {:ok, ast} = Code.string_to_quoted(result)
-      assert Credence.Rule.PreferEnumSlice.check(ast, []) == []
+      assert Credence.Pattern.PreferEnumSlice.check(ast, []) == []
     end
 
     test "fixed single pipe passes check" do
@@ -437,7 +437,7 @@ defmodule Credence.Rule.PreferEnumSliceTest do
 
       result = fix(input)
       {:ok, ast} = Code.string_to_quoted(result)
-      assert Credence.Rule.PreferEnumSlice.check(ast, []) == []
+      assert Credence.Pattern.PreferEnumSlice.check(ast, []) == []
     end
   end
 end

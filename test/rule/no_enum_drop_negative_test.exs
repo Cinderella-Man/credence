@@ -1,14 +1,14 @@
-defmodule Credence.Rule.NoEnumDropNegativeTest do
+defmodule Credence.Pattern.NoEnumDropNegativeTest do
   use ExUnit.Case
   alias Credence.Issue
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
-    Credence.Rule.NoEnumDropNegative.check(ast, [])
+    Credence.Pattern.NoEnumDropNegative.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.Rule.NoEnumDropNegative.fix(code, [])
+    Credence.Pattern.NoEnumDropNegative.fix(code, [])
   end
 
   describe "NoEnumDropNegative check" do
@@ -257,7 +257,7 @@ defmodule Credence.Rule.NoEnumDropNegativeTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.NoEnumDropNegative.check(ast, [])
+      issues = Credence.Pattern.NoEnumDropNegative.check(ast, [])
       assert issues == []
     end
 
@@ -272,7 +272,7 @@ defmodule Credence.Rule.NoEnumDropNegativeTest do
 
       fixed = fix(code)
       {:ok, ast} = Code.string_to_quoted(fixed)
-      issues = Credence.Rule.NoEnumDropNegative.check(ast, [])
+      issues = Credence.Pattern.NoEnumDropNegative.check(ast, [])
       assert issues == []
     end
   end
