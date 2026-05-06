@@ -90,7 +90,6 @@ Pass custom rules via the `:rules` option or add them to `@default_rules` in `Cr
 |------|-------------|:------------:|
 | `AvoidGraphemesEnumCount` | `Enum.count/1` on `String.graphemes/1` result — use `String.length/1` instead | ✅ |
 | `AvoidGraphemesLength` | `length/1` on `String.graphemes/1` result — use `String.length/1` instead | ✅ |
-| `DescriptiveNames` | Single-letter variable names in function signatures | ❌ |
 | `InconsistentParamNames` | Same positional parameter uses different names across function clauses | ✅ |
 | `NoAnonFnApplicationInPipe` | Anonymous functions applied with `.()` inside a pipe chain | ✅ |
 | `NoDestructureReconstruct` | List destructured into variables only to reconstruct the same list | ✅ |

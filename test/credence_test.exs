@@ -1035,28 +1035,6 @@ defmodule CredenceTest do
       refute result.code =~ "@doc false"
       assert result.issues == []
     end
-
-    test "unfixable issues survive in the output" do
-      input = """
-      defmodule Foo do
-        @doc false
-        defp x(y), do: 1 + y
-      end
-      """
-
-      # Both a fixable rule and an unfixable rule
-      rules = [
-        Credence.Rule.NoDocFalseOnPrivate,
-        Credence.Rule.DescriptiveNames
-      ]
-
-      result = Credence.fix(input, rules: rules)
-
-      # @doc false is fixed
-      refute result.code =~ "@doc false"
-      # But the bad name `y` still shows up as an issue
-      assert Enum.any?(result.issues, &(&1.rule == :descriptive_names))
-    end
   end
 
   describe "fix integration — multi-rule showcase" do
@@ -1211,14 +1189,6 @@ defmodule CredenceTest do
       refute code =~ ~S|Enum.join("")|
     end
 
-    # ─── Unfixable rules still reported ─────────────────────────────
-
-    test "reports descriptive_names issues for single-letter params",
-         %{result: %{issues: issues}} do
-      name_issues = Enum.filter(issues, &(&1.rule == :descriptive_names))
-      assert length(name_issues) >= 2
-    end
-
     # ─── Sanity checks ─────────────────────────────────────────────
 
     test "output compiles without errors", %{result: %{code: code}} do
@@ -1227,7 +1197,7 @@ defmodule CredenceTest do
 
     test "some unfixable rules still detected in remaining issues", %{result: %{issues: issues}} do
       distinct_rules = issues |> Enum.map(& &1.rule) |> Enum.uniq()
-      assert length(distinct_rules) >= 3
+      assert length(distinct_rules) >= 2
     end
   end
 end

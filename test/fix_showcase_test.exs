@@ -174,9 +174,6 @@ defmodule Credence.FixShowcaseTest do
       rules = issues |> Enum.map(& &1.rule) |> Enum.sort()
 
       assert rules == [
-               :descriptive_names,
-               :descriptive_names,
-               :descriptive_names,
                :no_sort_for_top_k_reduce,
                :no_sort_then_reverse
              ]
