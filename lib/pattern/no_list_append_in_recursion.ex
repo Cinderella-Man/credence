@@ -148,7 +148,6 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
       idx = find_acc_param_idx(body, name, params)
       %{type: :recursive, acc_param_idx: idx, returns_param_idx: nil}
     else
-      last = last_expression(body)
       idx = find_returned_param_idx(body, params)
       %{type: :base, acc_param_idx: nil, returns_param_idx: idx}
     end
@@ -181,7 +180,24 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
 
   defp find_returned_param_idx(body, params) do
     last = last_expression(body)
-    if simple_var?(last), do: Enum.find_index(params, &same_var?(&1, last))
+
+    cond do
+      simple_var?(last) ->
+        Enum.find_index(params, &same_var?(&1, last))
+
+      match?({{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [_]}, last) ->
+        case last do
+          {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [arg]} ->
+            if simple_var?(arg),
+              do: Enum.find_index(params, &same_var?(&1, arg))
+
+          _ ->
+            nil
+        end
+
+      true ->
+        nil
+    end
   end
 
   # ---------------------------------------------------------------------------

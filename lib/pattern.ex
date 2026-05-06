@@ -42,7 +42,9 @@ defmodule Credence.Pattern do
     all_rules = rules(opts)
     {fixable, _unfixable} = Enum.split_with(all_rules, & &1.fixable?())
 
-    Logger.debug("[credence_fix] starting pattern fix pipeline (#{length(fixable)} fixable rules)")
+    Logger.debug(
+      "[credence_fix] starting pattern fix pipeline (#{length(fixable)} fixable rules)"
+    )
 
     {code, applied} =
       Enum.reduce(fixable, {code_string, []}, fn rule, {source, applied} ->
@@ -53,12 +55,16 @@ defmodule Credence.Pattern do
             issues = rule.check(ast, opts)
 
             if issues != [] do
-              Logger.debug("[credence_fix] #{rule_name}: check found #{length(issues)} issue(s), running fix...")
+              Logger.debug(
+                "[credence_fix] #{rule_name}: check found #{length(issues)} issue(s), running fix..."
+              )
 
               fixed = rule.fix(source, opts)
 
               if fixed == source do
-                Logger.debug("[credence_fix] #{rule_name}: fix returned IDENTICAL source (no change)")
+                Logger.debug(
+                  "[credence_fix] #{rule_name}: fix returned IDENTICAL source (no change)"
+                )
               else
                 log_diff(rule_name, source, fixed)
               end
@@ -69,7 +75,10 @@ defmodule Credence.Pattern do
             end
 
           {:error, reason} ->
-            Logger.debug("[credence_fix] source no longer parses at #{rule_name}: #{inspect(reason)}")
+            Logger.debug(
+              "[credence_fix] source no longer parses at #{rule_name}: #{inspect(reason)}"
+            )
+
             {source, applied}
         end
       end)
