@@ -254,7 +254,8 @@ defmodule Credence.FixExamplesTest do
 
   describe "Example 5: List Toolkit" do
     setup do
-      %{result: Credence.fix(@toolkit_input, [])}
+      result = Credence.fix(@toolkit_input, [])
+      %{result: result}
     end
 
     test "output is valid Elixir", %{result: %{code: code}} do

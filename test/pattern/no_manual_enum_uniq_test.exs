@@ -346,7 +346,7 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
       refute result =~ "MapSet"
     end
 
-    test "fixes longer pipeline before reduce" do
+    test "fixes longer pipeline and strips orphaned Enum.reverse" do
       code = """
       defmodule Example do
         def run(list) do
@@ -367,7 +367,7 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
       result = fix(code)
       assert result =~ "Enum.uniq"
       assert result =~ "Enum.map"
-      assert result =~ "Enum.reverse"
+      refute result =~ "Enum.reverse"
       refute result =~ "Enum.reduce"
       refute result =~ "MapSet"
     end
@@ -518,14 +518,14 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
               {MapSet.put(seen, item), [item | acc]}
             end
           end)
-          after(result)
+          finish(result)
         end
       end
       """
 
       result = fix(code)
       assert result =~ "before()"
-      assert result =~ "after("
+      assert result =~ "finish("
       assert result =~ "Enum.uniq(list)"
       refute result =~ "Enum.reduce"
     end
@@ -633,6 +633,173 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
       result = fix(code)
       assert result =~ "Enum.uniq"
       refute result =~ "Enum.reduce"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════
+  # Orphaned pipeline stripping (production bug reproduction)
+  # ═══════════════════════════════════════════════════════════════
+
+  describe "fix strips orphaned |> elem(N) |> Enum.reverse()" do
+    test "strips elem(0) and Enum.reverse from piped reduce with {list, MapSet} order" do
+      code = """
+      defmodule UniqueChars do
+        def unique_char_in_order(input_string) do
+          String.graphemes(input_string)
+          |> Enum.reduce({[], MapSet.new()}, fn char, {acc_list, acc_set} ->
+            if MapSet.member?(acc_set, char) do
+              {acc_list, acc_set}
+            else
+              {[char | acc_list], MapSet.put(acc_set, char)}
+            end
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq()"
+      assert result =~ "String.graphemes(input_string)"
+      refute result =~ "Enum.reduce"
+      refute result =~ "MapSet"
+      refute result =~ "elem(0)"
+      refute result =~ "Enum.reverse"
+    end
+
+    test "strips elem(1) and Enum.reverse from {MapSet, list} order" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+          |> elem(1)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq(list)"
+      refute result =~ "elem(1)"
+      refute result =~ "Enum.reverse"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "strips only elem(0) when no Enum.reverse follows" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          list
+          |> Enum.reduce({[], MapSet.new()}, fn char, {acc_list, acc_set} ->
+            if MapSet.member?(acc_set, char) do
+              {acc_list, acc_set}
+            else
+              {[char | acc_list], MapSet.put(acc_set, char)}
+            end
+          end)
+          |> elem(0)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq()"
+      refute result =~ "elem(0)"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "preserves pipeline steps after the orphans are stripped" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          list
+          |> Enum.reduce({[], MapSet.new()}, fn char, {acc_list, acc_set} ->
+            if MapSet.member?(acc_set, char) do
+              {acc_list, acc_set}
+            else
+              {[char | acc_list], MapSet.put(acc_set, char)}
+            end
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+          |> Enum.take(5)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq()"
+      assert result =~ "Enum.take(5)"
+      refute result =~ "elem(0)"
+      refute result =~ "Enum.reverse"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "does not strip elem/reverse from pre-existing Enum.uniq" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          list |> Enum.uniq() |> Enum.reverse()
+        end
+      end
+      """
+
+      result = fix(code)
+      # Pre-existing Enum.uniq should NOT have reverse stripped
+      assert result =~ "Enum.uniq()"
+      assert result =~ "Enum.reverse"
+    end
+
+    test "output compiles without errors" do
+      code = """
+      defmodule UniqueChars do
+        def unique_char_in_order(input_string) do
+          String.graphemes(input_string)
+          |> Enum.reduce({[], MapSet.new()}, fn char, {acc_list, acc_set} ->
+            if MapSet.member?(acc_set, char) do
+              {acc_list, acc_set}
+            else
+              {[char | acc_list], MapSet.put(acc_set, char)}
+            end
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      result = fix(code)
+      assert {:ok, _ast} = Code.string_to_quoted(result)
+    end
+
+    test "round-trip: fixed code has zero issues" do
+      code = """
+      defmodule UniqueChars do
+        def unique_char_in_order(input_string) do
+          String.graphemes(input_string)
+          |> Enum.reduce({[], MapSet.new()}, fn char, {acc_list, acc_set} ->
+            if MapSet.member?(acc_set, char) do
+              {acc_list, acc_set}
+            else
+              {[char | acc_list], MapSet.put(acc_set, char)}
+            end
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      fixed = fix(code)
+      {:ok, ast} = Code.string_to_quoted(fixed)
+      assert [] == Credence.Pattern.NoManualEnumUniq.check(ast, [])
     end
   end
 end

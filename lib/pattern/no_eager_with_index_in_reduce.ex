@@ -85,7 +85,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
 
     source
     |> Sourceror.parse_string!()
-    |> Macro.postwalk(&apply_fix(&1, strategy))
+    |> Sourceror.postwalk(fn node, state -> {apply_fix(node, strategy), state} end)
     |> Sourceror.to_string()
   end
 

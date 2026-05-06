@@ -33,8 +33,7 @@ defmodule Credence.Pattern.NoSortThenAt do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         # Pipeline: ... |> Enum.sort(...) |> Enum.at(literal_index)
-        {:|>, meta,
-         [left, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, at_args}]} = node,
+        {:|>, meta, [left, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, at_args}]} = node,
         issues ->
           if remote_call?(rightmost(left), :Enum, :sort) and has_literal_index?(at_args) do
             {node, [build_issue(meta) | issues]}

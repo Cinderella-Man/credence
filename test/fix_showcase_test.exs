@@ -60,14 +60,17 @@ defmodule Credence.FixShowcaseTest do
   """
 
   setup do
-    %{result: Credence.fix(@input, [])}
+    result = Credence.fix(@input, [])
+    %{result: result}
   end
 
   describe "Credence.fix/2 showcase — 19 anti-patterns in, idiomatic Elixir out" do
     # ── Doc formatting ──────────────────────────────────────────────
 
     test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do
-      assert code =~ ~S|@moduledoc "Provides text analysis utilities for processing and analyzing strings."|
+      assert code =~
+               ~S|@moduledoc "Provides text analysis utilities for processing and analyzing strings."|
+
       refute code =~ ~S|strings.\n"|
     end
 

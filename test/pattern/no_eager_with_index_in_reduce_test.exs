@@ -464,4 +464,88 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
       end
     end
   end
+
+  # ═══════════════════════════════════════════════════════════════
+  # Production bug reproduction: String.graphemes preservation
+  # ═══════════════════════════════════════════════════════════════
+  #
+  # idx=9 (length_of_longest_substring): the LLM wrote correct code
+  # with `graphemes = String.graphemes(input_string)` on a separate
+  # line, then `Enum.reduce(Enum.with_index(graphemes), ...)`.
+  #
+  # The fix should ONLY swap Enum.with_index → Stream.with_index
+  # inside the reduce call. It must NOT modify the variable
+  # assignment on the preceding line.
+  #
+  # If these tests pass but the integrated Credence.fix still strips
+  # String.graphemes, the bug is in a DIFFERENT rule.
+
+  describe "fix preserves surrounding code (production bug regression)" do
+    test "does not strip String.graphemes from variable assignment" do
+      code = """
+      defmodule SlidingWindow do
+        def length_of_longest_substring(input_string) do
+          graphemes = String.graphemes(input_string)
+
+          Enum.reduce(Enum.with_index(graphemes), %{left: 0, last_seen: %{}, max_length: 0}, fn {grapheme, current_index}, acc ->
+            %{acc | max_length: max(acc.max_length, current_index)}
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+
+      # Must swap Enum.with_index → Stream.with_index
+      assert result =~ "Stream.with_index"
+      refute result =~ "Enum.with_index"
+
+      # Must NOT strip String.graphemes from the variable assignment
+      assert result =~ "String.graphemes(input_string)"
+      refute result =~ "graphemes = input_string"
+    end
+
+    test "preserves String.graphemes in pipe form" do
+      code = """
+      defmodule SlidingWindow do
+        def process(input_string) do
+          graphemes = String.graphemes(input_string)
+
+          graphemes
+          |> Enum.with_index()
+          |> Enum.reduce(%{max: 0}, fn {grapheme, idx}, acc ->
+            %{acc | max: max(acc.max, idx)}
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+
+      assert result =~ "Stream.with_index"
+      refute result =~ "Enum.with_index"
+      assert result =~ "String.graphemes(input_string)"
+    end
+
+    test "output compiles for graphemes pattern" do
+      code = """
+      defmodule SlidingWindow do
+        def length_of_longest_substring(input_string) do
+          graphemes = String.graphemes(input_string)
+
+          Enum.reduce(Enum.with_index(graphemes), %{left: 0, max_length: 0}, fn {grapheme, current_index}, acc ->
+            left_start = acc.left
+            current_length = current_index - left_start + 1
+            max_len = max(current_length, acc.max_length)
+            %{left: left_start, max_length: max_len}
+          end)
+          |> Map.get(:max_length)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert {:ok, _ast} = Code.string_to_quoted(result)
+    end
+  end
 end

@@ -27,15 +27,20 @@ defmodule Credence do
     end
   end
 
-  @spec fix(String.t(), keyword()) :: %{code: String.t(), issues: [Issue.t()]}
+  @spec fix(String.t(), keyword()) :: %{
+          code: String.t(),
+          issues: [Issue.t()],
+          applied_rules: [{module(), non_neg_integer()}]
+        }
   def fix(code_string, opts \\ []) do
-    fixed =
-      code_string
-      |> Credence.Syntax.fix(opts)
-      |> Credence.Semantic.fix(opts)
-      |> Credence.Pattern.fix(opts)
+    # Phase 1 & 2: Syntax and Semantic (no trace yet)
+    after_syntax = Credence.Syntax.fix(code_string, opts)
+    after_semantic = Credence.Semantic.fix(after_syntax, opts)
+
+    # Phase 3: Pattern (with trace — check-then-fix)
+    {fixed, pattern_applied} = Credence.Pattern.fix_with_trace(after_semantic, opts)
 
     %{issues: remaining} = analyze(fixed, Keyword.put(opts, :source, fixed))
-    %{code: fixed, issues: remaining}
+    %{code: fixed, issues: remaining, applied_rules: pattern_applied}
   end
 end

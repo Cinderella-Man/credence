@@ -6,6 +6,12 @@ defmodule Credence.Pattern.NoManualEnumUniq do
   Lists are deduplicated most efficiently using the built-in `Enum.uniq/1`
   or `Enum.uniq_by/2`, which are implemented natively.
 
+  The fix also strips orphaned pipeline steps that were part of the manual
+  pattern — specifically `|> elem(0)` / `|> elem(1)` (which extracted the
+  list from the `{list, MapSet}` accumulator) and `|> Enum.reverse()` (which
+  reversed the prepended list). Since `Enum.uniq/1` returns a plain list in
+  insertion order, both steps become unnecessary after the replacement.
+
   ## Bad
 
       Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
@@ -16,24 +22,17 @@ defmodule Credence.Pattern.NoManualEnumUniq do
         end
       end)
 
-      # or in a pipeline:
+      # or in a pipeline with downstream tuple extraction:
       list
-      |> Enum.reduce({MapSet.new(), []}, fn item, {seen, acc} ->
-        if MapSet.member?(seen, item) do
-          {seen, acc}
-        else
-          {MapSet.put(seen, item), [item | acc]}
-        end
-      end)
-
-      # or with inverted tuple order:
-      Enum.reduce(list, {[], MapSet.new()}, fn x, {results, tracked} ->
+      |> Enum.reduce({[], MapSet.new()}, fn x, {results, tracked} ->
         unless MapSet.member?(tracked, x) do
           {[x | results], MapSet.put(tracked, x)}
         else
           {results, tracked}
         end
       end)
+      |> elem(0)
+      |> Enum.reverse()
 
   ## Good
 
@@ -74,132 +73,111 @@ defmodule Credence.Pattern.NoManualEnumUniq do
     Enum.reverse(issues)
   end
 
+  # ── Sourceror-based fix ──────────────────────────────────────────
+  #
+  # Uses Macro.postwalk so transformations compose bottom-up:
+  #
+  #   1. Replace manual-uniq reduce with Enum.uniq (tagged with marker)
+  #   2. Strip orphaned |> elem(N) when left ends with tagged Enum.uniq
+  #   3. Strip orphaned |> Enum.reverse() when left ends with tagged Enum.uniq
+  #
+  # The marker prevents stripping legitimate elem/reverse calls that
+  # happen to follow a pre-existing Enum.uniq in the original source.
+
   @impl true
   def fix(source, _opts) do
-    {:ok, ast} = Code.string_to_quoted(source)
-
-    fixes = collect_fixes(ast)
-
-    fixes
-    |> Enum.sort_by(fn {line, _kind, _list_str} -> line end, :desc)
-    |> Enum.reduce(source, fn {line, kind, list_str}, src ->
-      # Find byte offset of the target line in the full source
-      line_offset = line_byte_offset(src, line)
-      remaining = binary_part(src, line_offset, byte_size(src) - line_offset)
-
-      case :binary.match(remaining, "Enum.reduce(") do
-        {match_start, match_len} ->
-          call_start = line_offset + match_start
-          after_name = line_offset + match_start + match_len
-          rest_from_paren = binary_part(src, after_name - 1, byte_size(src) - (after_name - 1))
-
-          case find_matching_paren(rest_from_paren, 0, 0) do
-            {:ok, paren_offset} ->
-              call_end = after_name - 1 + paren_offset
-
-              case kind do
-                :direct ->
-                  prefix = binary_part(src, 0, call_start)
-                  suffix = binary_part(src, call_end, byte_size(src) - call_end)
-                  prefix <> "Enum.uniq(#{list_str})" <> suffix
-
-                _pipe ->
-                  # For pipes (simple or complex), replace Enum.reduce(...)
-                  # with Enum.uniq() — the list arrives via the pipe.
-                  prefix = binary_part(src, 0, call_start)
-                  suffix = binary_part(src, call_end, byte_size(src) - call_end)
-                  prefix <> "Enum.uniq()" <> suffix
-              end
-
-            :error ->
-              src
-          end
-
-        :nomatch ->
-          src
-      end
-    end)
-  end
-
-  defp collect_fixes(ast) do
-    {_ast, fixes} =
-      Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [list_arg, init_acc, fun]} = node,
-        fixes ->
-          if manual_uniq?(init_acc, fun) do
-            line = Keyword.get(meta, :line)
-            list_str = Macro.to_string(list_arg)
-            {node, [{line, :direct, list_str} | fixes]}
-          else
-            {node, fixes}
-          end
-
-        {:|>, _,
-         [list_arg, {{:., meta, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [init_acc, fun]}]} =
-            node,
-        fixes ->
-          if manual_uniq?(init_acc, fun) do
-            line = Keyword.get(meta, :line)
-            list_str = Macro.to_string(list_arg)
-            kind = :pipe
-            {node, [{line, kind, list_str} | fixes]}
-          else
-            {node, fixes}
-          end
-
-        node, fixes ->
-          {node, fixes}
-      end)
-
-    fixes
-  end
-
-  defp line_byte_offset(source, target_line) do
     source
-    |> String.split("\n")
-    |> Enum.take(target_line - 1)
-    |> Enum.reduce(0, fn line, offset -> offset + byte_size(line) + 1 end)
+    |> Sourceror.parse_string!()
+    |> Sourceror.postwalk(fn node, state -> {apply_uniq_fix(node), state} end)
+    |> Sourceror.to_string()
   end
 
-  defp find_matching_paren(<<>>, _depth, _pos), do: :error
+  defp apply_uniq_fix(node) do
+    case node do
+      # ── Stage 1a: Direct call ──
+      # Enum.reduce(list, {MapSet.new(), []}, fn ...) → Enum.uniq(list)
+      {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :reduce]}, call_meta,
+       [list_arg, init_acc, fun]} ->
+        if manual_uniq?(init_acc, fun) do
+          {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :uniq]},
+           tag_fresh_uniq(call_meta), [list_arg]}
+        else
+          node
+        end
 
-  defp find_matching_paren(<<?(, rest::binary>>, 0, pos) do
-    find_matching_paren(rest, 1, pos + 1)
-  end
+      # ── Stage 1b: Piped call ──
+      # ... |> Enum.reduce({MapSet, []}, fn ...) → ... |> Enum.uniq()
+      {:|>, pipe_meta,
+       [
+         left,
+         {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :reduce]}, call_meta,
+          [init_acc, fun]}
+       ]} ->
+        if manual_uniq?(init_acc, fun) do
+          uniq_call =
+            {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :uniq]},
+             tag_fresh_uniq(call_meta), []}
 
-  defp find_matching_paren(<<?(, rest::binary>>, depth, pos) do
-    find_matching_paren(rest, depth + 1, pos + 1)
-  end
+          {:|>, pipe_meta, [left, uniq_call]}
+        else
+          node
+        end
 
-  defp find_matching_paren(<<?), _rest::binary>>, 1, pos) do
-    {:ok, pos + 1}
-  end
+      # ── Stage 2a: Strip orphaned elem(N) in pipe ──
+      # ... |> Enum.uniq() |> elem(N) → ... |> Enum.uniq()
+      {:|>, _pipe_meta, [left, {:elem, _, _}]} ->
+        if ends_with_fresh_uniq?(left), do: left, else: node
 
-  defp find_matching_paren(<<?), rest::binary>>, depth, pos) do
-    find_matching_paren(rest, depth - 1, pos + 1)
-  end
+      # ── Stage 2b: Strip orphaned elem(uniq, N) direct call ──
+      # elem(Enum.uniq(list), N) → Enum.uniq(list)
+      {:elem, _, [inner, _index]} ->
+        if fresh_uniq_call?(inner), do: inner, else: node
 
-  defp find_matching_paren(<<?", rest::binary>>, depth, pos) do
-    case skip_string(rest, pos + 1) do
-      {:ok, new_pos, new_rest} -> find_matching_paren(new_rest, depth, new_pos)
-      :error -> :error
+      # ── Stage 3a: Strip orphaned Enum.reverse() in pipe ──
+      # ... |> Enum.uniq() |> Enum.reverse() → ... |> Enum.uniq()
+      {:|>, _pipe_meta, [left, {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, []}]} ->
+        if ends_with_fresh_uniq?(left), do: left, else: node
+
+      # ── Stage 3b: Strip orphaned Enum.reverse(uniq) direct call ──
+      # Enum.reverse(Enum.uniq(list)) → Enum.uniq(list)
+      {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [inner]} ->
+        if fresh_uniq_call?(inner), do: inner, else: node
+
+      other ->
+        other
     end
   end
 
-  defp find_matching_paren(<<_c, rest::binary>>, depth, pos) do
-    find_matching_paren(rest, depth, pos + 1)
+  # ── Fresh-uniq tagging ───────────────────────────────────────────
+
+  defp tag_fresh_uniq(meta) when is_list(meta) do
+    [{:__credence_fresh_uniq__, true} | meta]
   end
 
-  defp skip_string(<<?", rest::binary>>, pos), do: {:ok, pos + 1, rest}
-  defp skip_string(<<?\\, _c, rest::binary>>, pos), do: skip_string(rest, pos + 2)
-  defp skip_string(<<>>, _pos), do: :error
-  defp skip_string(<<_c, rest::binary>>, pos), do: skip_string(rest, pos + 1)
+  defp tag_fresh_uniq(_), do: [__credence_fresh_uniq__: true]
+
+  defp fresh_uniq_call?({{:., _, [{:__aliases__, _, [:Enum]}, :uniq]}, meta, _})
+       when is_list(meta) do
+    List.keymember?(meta, :__credence_fresh_uniq__, 0)
+  end
+
+  defp fresh_uniq_call?(_), do: false
+
+  defp ends_with_fresh_uniq?({:|>, _, [_, right]}), do: fresh_uniq_call?(right)
+  defp ends_with_fresh_uniq?(node), do: fresh_uniq_call?(node)
+
+  # ── Detection helpers (shared by check + fix) ────────────────────
 
   defp manual_uniq?(init_acc, fun) do
     case find_mapset_index(init_acc) do
       nil -> false
       index -> matches_dedup_lambda?(fun, index)
     end
+  end
+
+  # Sourceror wraps 2-tuples in {:__block__, meta, [{a, b}]}
+  defp find_mapset_index({:__block__, _, [{e1, e2}]}) do
+    find_mapset_index({e1, e2})
   end
 
   defp find_mapset_index({e1, e2}) do
@@ -236,6 +214,11 @@ defmodule Credence.Pattern.NoManualEnumUniq do
 
   defp get_var_name({name, _, nil}) when is_atom(name), do: name
   defp get_var_name(_), do: nil
+
+  # Sourceror wraps 2-tuples in {:__block__, meta, [{a, b}]}
+  defp get_var_name_at_index({:__block__, _, [{left, right}]}, index) do
+    get_var_name_at_index({left, right}, index)
+  end
 
   defp get_var_name_at_index({left, right}, index) do
     target = if index == 0, do: left, else: right

@@ -506,6 +506,48 @@ defmodule CredenceTest do
   end
 
   describe "edge cases that should NOT trigger rules" do
+    test "Enum.uniq in pipeline (should not trigger NoManualEnumUniq)" do
+      assert_clean("""
+      defmodule UniqueChars do
+        def unique_char_in_order(input_string) do
+          String.graphemes(input_string) |> Enum.uniq()
+        end
+      end
+      """)
+    end
+
+    test "Stream.with_index with variable from String.graphemes" do
+      assert_clean("""
+      defmodule SlidingWindow do
+        def length_of_longest_substring(input_string) do
+          graphemes = String.graphemes(input_string)
+
+          graphemes
+          |> Stream.with_index()
+          |> Enum.reduce(%{left: 0, last_seen: %{}, max_length: 0}, fn {grapheme, current_index}, acc ->
+            left_start = acc.left
+
+            new_left =
+              case Map.fetch(acc.last_seen, grapheme) do
+                {:ok, last_pos} when last_pos >= left_start -> last_pos + 1
+                _ -> left_start
+              end
+
+            current_length = current_index - new_left + 1
+            max_len = max(current_length, acc.max_length)
+
+            %{
+              left: new_left,
+              last_seen: Map.put(acc.last_seen, grapheme, current_index),
+              max_length: max_len
+            }
+          end)
+          |> Map.get(:max_length)
+        end
+      end
+      """)
+    end
+
     test "list ++ outside of any loop" do
       assert_clean("""
       defmodule SafeConcat do
@@ -762,7 +804,7 @@ defmodule CredenceTest do
       """)
     end
 
-    test "" do
+    test "vowel counting with String.next_grapheme" do
       assert_clean("""
       defmodule VowelCounter do
         @vowels ~w(a e i o u)
@@ -862,7 +904,7 @@ defmodule CredenceTest do
       """)
     end
 
-    test "BFS with a queue (`:queue`)" do
+    test "BFS with a queue (:queue)" do
       assert_clean("""
       defmodule BFS do
         def levels(nil), do: []
@@ -916,10 +958,9 @@ defmodule CredenceTest do
       """)
     end
 
-    test "`for` comprehensions" do
+    test "for comprehensions" do
       assert_clean("""
         defmodule Comprehensions do
-          # Cartesian product with filter
           def pythagorean_triples(max_value) do
             for first_number <- 1..max_value,
                 second_number <- first_number..max_value,
@@ -929,21 +970,18 @@ defmodule CredenceTest do
             end
           end
 
-          # into: to build a map
           def index_by(records, key_function) do
             for record <- records, into: %{} do
               {key_function.(record), record}
             end
           end
 
-          # uniq: to deduplicate (Elixir 1.14+)
           def unique_words(text) do
             for word <- String.split(text), uniq: true do
               String.downcase(word)
             end
           end
 
-          # reduce: to fold inside a comprehension (Elixir 1.15+)
           def sum_squares(numbers) do
             for number <- numbers, reduce: 0 do
               accumulator -> accumulator + number * number
@@ -953,7 +991,7 @@ defmodule CredenceTest do
       """)
     end
 
-    test "`Map.new` — build a map from an enumerable with a transform function" do
+    test "Map.new — build a map from an enumerable with a transform" do
       assert_clean("""
       defmodule Lookup do
         def by_id(records), do: Map.new(records, fn record -> {record.id, record} end)
@@ -961,7 +999,7 @@ defmodule CredenceTest do
       """)
     end
 
-    test "`Map.merge/3` — merge with conflict resolution. Great for combining frequency maps" do
+    test "Map.merge/3 — merge with conflict resolution" do
       assert_clean("""
       defmodule FreqMerge do
         def merge_counts(left, right) do
@@ -971,7 +1009,7 @@ defmodule CredenceTest do
       """)
     end
 
-    test "`Map.filter` / `Map.reject` (Elixir 1.13+)" do
+    test "Map.filter / Map.reject" do
       assert_clean("""
       defmodule MapOps do
         def high_scores(scores, threshold) do
@@ -981,7 +1019,7 @@ defmodule CredenceTest do
       """)
     end
 
-    test "Keyword, Tuple, and Agent patterns 2" do
+    test "Tuple swap and rotate" do
       assert_clean("""
       defmodule TupleSwap do
         def swap({elem1, elem2}), do: {elem2, elem1}
@@ -991,16 +1029,13 @@ defmodule CredenceTest do
       """)
     end
 
-    test "String / binary utilities not yet shown" do
+    test "String / binary utilities" do
       assert_clean("""
       defmodule StringUtils do
-        # String.starts_with? / String.ends_with? for validation
         def email?(str), do: String.contains?(str, "@") and not String.starts_with?(str, "@")
 
-        # String.pad_leading for formatting
         def zero_pad(num, width), do: num |> Integer.to_string() |> String.pad_leading(width, "0")
 
-        # String.to_integer with safe fallback
         def safe_int(str) do
           case Integer.parse(str) do
             {num, ""} -> {:ok, num}
@@ -1008,7 +1043,6 @@ defmodule CredenceTest do
           end
         end
 
-        # String.slice for truncation
         def truncate(str, max_length) do
           if String.length(str) > max_length, do: String.slice(str, 0, max_length) <> "…", else: str
         end
@@ -1096,48 +1130,34 @@ defmodule CredenceTest do
       %{result: Credence.fix(@showcase_input, [])}
     end
 
-    # ─── NoLengthComparisonForEmpty ─────────────────────────────────
-
     test "replaces length(words) == 0 with words == []", %{result: %{code: code}} do
       assert code =~ "words == []"
       refute code =~ "length(words) == 0"
     end
-
-    # ─── AvoidGraphemesLength ───────────────────────────────────────
 
     test "replaces String.graphemes |> length with String.length", %{result: %{code: code}} do
       assert code =~ "String.length(text)"
       refute code =~ "String.graphemes(text) |> length()"
     end
 
-    # ─── NoEnumCountForLength ───────────────────────────────────────
-
     test "replaces Enum.count(words) with length(words)", %{result: %{code: code}} do
       assert code =~ "length(words)"
       refute code =~ "Enum.count(words)"
     end
 
-    # ─── NoMultiplyByOnePointZero ───────────────────────────────────
-
     test "removes * 1.0", %{result: %{code: code}} do
       refute code =~ "* 1.0"
     end
-
-    # ─── NoManualFrequencies ────────────────────────────────────────
 
     test "replaces manual frequency reduce with Enum.frequencies", %{result: %{code: code}} do
       assert code =~ "Enum.frequencies"
       refute code =~ "Map.update(acc"
     end
 
-    # ─── NoSortThenReverse ──────────────────────────────────────────
-
     test "replaces Enum.sort |> Enum.reverse with Enum.sort(:desc)", %{result: %{code: code}} do
       assert code =~ "Enum.sort(words, :desc)"
       refute code =~ "Enum.sort(words) |> Enum.reverse()"
     end
-
-    # ─── NoEnumAtNegativeIndex ──────────────────────────────────────
 
     test "groups negative Enum.at calls into reverse + pattern match",
          %{result: %{code: code}} do
@@ -1147,21 +1167,15 @@ defmodule CredenceTest do
       refute code =~ "Enum.at(sorted_desc, -2)"
     end
 
-    # ─── NoIdentityFunctionInEnum ───────────────────────────────────
-
     test "simplifies Enum.uniq_by(fn w -> w end) to Enum.uniq()", %{result: %{code: code}} do
       assert code =~ "Enum.uniq()"
       refute code =~ "Enum.uniq_by"
     end
 
-    # ─── UseMapJoin ─────────────────────────────────────────────────
-
     test "replaces Enum.map |> Enum.join with Enum.map_join", %{result: %{code: code}} do
       assert code =~ "Enum.map_join"
       refute Regex.match?(~r/Enum\.map\(.*\) \|> Enum\.join/, code)
     end
-
-    # ─── NoIsPrefixForNonGuard ──────────────────────────────────────
 
     test "renames is_palindrome to palindrome? in def and call site",
          %{result: %{code: code}} do
@@ -1170,26 +1184,18 @@ defmodule CredenceTest do
       refute code =~ "is_palindrome"
     end
 
-    # ─── NoKernelOpInPipeline ───────────────────────────────────────
-
     test "extracts Kernel.== from pipeline to infix", %{result: %{code: code}} do
       assert code =~ "cleaned == reversed"
       refute code =~ "Kernel.=="
     end
 
-    # ─── NoDocFalseOnPrivate ────────────────────────────────────────
-
     test "removes @doc false on private function", %{result: %{code: code}} do
       refute code =~ "@doc false"
     end
 
-    # ─── NoRedundantEnumJoinSeparator ───────────────────────────────
-
     test "removes empty string from Enum.join", %{result: %{code: code}} do
       refute code =~ ~S|Enum.join("")|
     end
-
-    # ─── Sanity checks ─────────────────────────────────────────────
 
     test "output compiles without errors", %{result: %{code: code}} do
       assert {:ok, _ast} = Code.string_to_quoted(code)
@@ -1198,6 +1204,120 @@ defmodule CredenceTest do
     test "some unfixable rules still detected in remaining issues", %{result: %{issues: issues}} do
       distinct_rules = issues |> Enum.map(& &1.rule) |> Enum.uniq()
       assert length(distinct_rules) >= 2
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PRODUCTION BUG REGRESSIONS
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix integration — production bug regressions" do
+    test "fix returns applied_rules trace" do
+      input = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+            if MapSet.member?(seen, item) do
+              {seen, acc}
+            else
+              {MapSet.put(seen, item), [item | acc]}
+            end
+          end)
+        end
+      end
+      """
+
+      result = Credence.fix(input)
+      assert is_list(result.applied_rules)
+      assert length(result.applied_rules) >= 1
+
+      {rule_mod, count} = hd(result.applied_rules)
+      assert is_atom(rule_mod)
+      assert is_integer(count) and count > 0
+    end
+
+    test "NoManualEnumUniq strips orphaned elem(0) and Enum.reverse (idx=10 unique_char_in_order)" do
+      input = """
+      defmodule UniqueChars do
+        def unique_char_in_order(input_string) do
+          String.graphemes(input_string)
+          |> Enum.reduce({[], MapSet.new()}, fn char, {acc_list, acc_set} ->
+            if MapSet.member?(acc_set, char) do
+              {acc_list, acc_set}
+            else
+              {[char | acc_list], MapSet.put(acc_set, char)}
+            end
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      result = Credence.fix(input)
+
+      assert result.code =~ "Enum.uniq()"
+      assert result.code =~ "String.graphemes(input_string)"
+      refute result.code =~ "Enum.reduce"
+      refute result.code =~ "MapSet"
+      refute result.code =~ "elem(0)"
+      refute result.code =~ "Enum.reverse"
+
+      assert {:ok, _ast} = Code.string_to_quoted(result.code)
+    end
+
+    test "NoEagerWithIndexInReduce preserves String.graphemes (idx=9 length_of_longest_substring)" do
+      input = """
+      defmodule SlidingWindow do
+        def length_of_longest_substring(input_string) do
+          graphemes = String.graphemes(input_string)
+
+          Enum.reduce(Enum.with_index(graphemes), %{left: 0, last_seen: %{}, max_length: 0}, fn {grapheme, current_index}, acc ->
+            left_start = acc.left
+
+            new_left = case Map.fetch(acc.last_seen, grapheme) do
+              {:ok, last_pos} when last_pos >= left_start ->
+                last_pos + 1
+              _ ->
+                left_start
+            end
+
+            current_length = current_index - new_left + 1
+            max_len = if current_length > acc.max_length, do: current_length, else: acc.max_length
+
+            %{
+              left: new_left,
+              last_seen: Map.put(acc.last_seen, grapheme, current_index),
+              max_length: max_len
+            }
+          end)
+          |> Map.get(:max_length)
+        end
+      end
+      """
+
+      result = Credence.fix(input)
+
+      applied_names =
+        Enum.map(result.applied_rules, fn {mod, count} ->
+          short = mod |> Module.split() |> List.last()
+          "#{short}(#{count})"
+        end)
+
+      assert result.code =~ "Stream.with_index",
+             "Expected Stream.with_index but not found. Applied: #{inspect(applied_names)}"
+
+      refute result.code =~ "Enum.with_index",
+             "Enum.with_index should have been replaced. Applied: #{inspect(applied_names)}"
+
+      # CRITICAL: String.graphemes must NOT be stripped
+      assert result.code =~ "String.graphemes(input_string)",
+             "String.graphemes was stripped! Applied rules: #{inspect(applied_names)}\nFixed code:\n#{result.code}"
+
+      refute result.code =~ "graphemes = input_string",
+             "Variable was reduced to raw string! Applied rules: #{inspect(applied_names)}"
+
+      assert {:ok, _ast} = Code.string_to_quoted(result.code)
     end
   end
 end
