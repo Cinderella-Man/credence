@@ -66,20 +66,27 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
 
   # ── Detection ───────────────────────────────────────────────────
 
-  # length(x) op N
-  defp detect_pattern({op, meta, [{:length, _, [_]}, n]})
+  # length(x) op N — only flag simple variables (matching what fix can handle)
+  defp detect_pattern({op, meta, [{:length, _, [arg]}, n]})
        when is_integer(n) and op in [:==, :!=, :>, :>=, :<, :<=] do
-    if valid_comparison?(op, n), do: {:ok, meta}, else: :skip
+    if simple_var?(arg) and valid_comparison?(op, n), do: {:ok, meta}, else: :skip
   end
 
-  # N op length(x) — reversed operand
-  defp detect_pattern({op, meta, [n, {:length, _, [_]}]})
+  # N op length(x) — reversed operand, same simple-variable restriction
+  defp detect_pattern({op, meta, [n, {:length, _, [arg]}]})
        when is_integer(n) and op in [:==, :!=, :>, :>=, :<, :<=] do
     rev = reverse_op(op)
-    if rev && valid_comparison?(rev, n), do: {:ok, meta}, else: :skip
+    if rev && simple_var?(arg) and valid_comparison?(rev, n), do: {:ok, meta}, else: :skip
   end
 
   defp detect_pattern(_), do: :skip
+
+  # A simple variable in AST is {name, meta, context} where name is an atom
+  # and context is nil or an atom. This excludes captures (&1), function calls
+  # (hd(x)), dot-calls (Map.get(m, k)), etc. that the regex-based fix can't
+  # rewrite.
+  defp simple_var?({name, _meta, ctx}) when is_atom(name) and is_atom(ctx), do: true
+  defp simple_var?(_), do: false
 
   # Check whether {op, n} is in our fixable range.
   # Each case generates a pattern with at most @max_n underscores.
