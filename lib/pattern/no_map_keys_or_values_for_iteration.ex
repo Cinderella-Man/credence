@@ -169,11 +169,13 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     mk = &en(dot, al, cm, &1, &2)
 
     # 1) Wrap any lambda/capture callbacks in rest
+    orig_rest = rest
     rest = wrap_fns(rest)
 
-    # 2) For sort/2 with a lambda sorter, wrap it too
+    # 2) For sort/2 with a lambda sorter, use the original (unwrapped) callback
+    #    to avoid double-wrapping — wrap_sort does its own destructuring.
     rest =
-      case {f, rest} do
+      case {f, orig_rest} do
         {:sort, [s]} -> if function?(s), do: [wrap_sort(s, mfunc)], else: rest
         _ -> rest
       end
@@ -312,11 +314,13 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     mk2 = &pe(pm, &1, &2, &3)
 
     # 1) Wrap any lambda/capture callbacks in ea
+    orig_ea = ea
     ea = wrap_fns(ea)
 
-    # 2) For sort/2 with a lambda sorter, wrap it too
+    # 2) For sort/2 with a lambda sorter, use the original (unwrapped) callback
+    #    to avoid double-wrapping — wrap_sort does its own destructuring.
     ea =
-      case {f, ea} do
+      case {f, orig_ea} do
         {:sort, [s]} -> if function?(s), do: [wrap_sort(s, mfunc)], else: ea
         _ -> ea
       end
@@ -376,8 +380,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
       :join ->
         case ea do
-          [] -> {:ok, mk.(:map_join, ["", ex(mfunc)])}
-          [sep] -> {:ok, mk.(:map_join, [sep, ex(mfunc)])}
+          [] -> {:ok, sn(:map_join, [ma, "", ex(mfunc)])}
+          [sep] -> {:ok, sn(:map_join, [ma, sep, ex(mfunc)])}
           _ -> :no
         end
 
@@ -553,8 +557,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   defp ei(:values), do: 1
   defp ei(:keys), do: 0
 
-  defp ex(:values), do: {:fn, [], [{:->, [], [[{:_, [], nil}, {:v, [], nil}], {:v, [], nil}]}]}
-  defp ex(:keys), do: {:fn, [], [{:->, [], [[{:k, [], nil}, {:_, [], nil}], {:k, [], nil}]}]}
+  defp ex(:values), do: {:fn, [], [{:->, [], [[{{:_, [], nil}, {:v, [], nil}}], {:v, [], nil}]}]}
+  defp ex(:keys), do: {:fn, [], [{:->, [], [[{{:k, [], nil}, {:_, [], nil}}], {:k, [], nil}]}]}
 
   defp ev(:values), do: {{:_k, [], nil}, {:v, [], nil}}
   defp ev(:keys), do: {{:k, [], nil}, {:_v, [], nil}}
