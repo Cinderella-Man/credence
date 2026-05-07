@@ -28,14 +28,14 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       )
     end
 
-    test "piped: list |> Enum.join(\"\") → list |> Enum.join()" do
+    test "single-step pipe collapses: list |> Enum.join(\"\") → Enum.join(list)" do
       assert_fix(
         "list |> Enum.join(\"\")",
-        "list |> Enum.join()"
+        "Enum.join(list)"
       )
     end
 
-    test "longer pipeline" do
+    test "multi-step pipe keeps pipe: list |> Enum.reverse() |> Enum.join(\"\") → ... |> Enum.join()" do
       assert_fix(
         "list |> Enum.reverse() |> Enum.join(\"\")",
         "list |> Enum.reverse() |> Enum.join()"
@@ -53,10 +53,17 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       )
     end
 
-    test "piped: list |> Enum.map_join(\"\", mapper) → list |> Enum.map_join(mapper)" do
+    test "single-step pipe collapses: list |> Enum.map_join(\"\", mapper) → Enum.map_join(list, mapper)" do
       assert_fix(
         "list |> Enum.map_join(\"\", &to_string/1)",
-        "list |> Enum.map_join(&to_string/1)"
+        "Enum.map_join(list, &to_string/1)"
+      )
+    end
+
+    test "multi-step pipe keeps pipe" do
+      assert_fix(
+        "list |> Enum.reverse() |> Enum.map_join(\"\", &to_string/1)",
+        "list |> Enum.reverse() |> Enum.map_join(&to_string/1)"
       )
     end
 
@@ -85,13 +92,14 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
         """)
 
       assert result =~ "Enum.join(a)"
-      assert result =~ "Enum.join()"
+      assert result =~ "Enum.join(b)"
       assert result =~ "Enum.map_join(a, &to_string/1)"
-      assert result =~ "Enum.map_join(&to_string/1)"
+      assert result =~ "Enum.map_join(b, &to_string/1)"
       refute result =~ "Enum.join(a, \"\")"
       refute result =~ "Enum.join(\"\")"
       refute result =~ "Enum.map_join(a, \"\", &to_string/1)"
       refute result =~ "Enum.map_join(\"\", &to_string/1)"
+      refute result =~ "|>"
     end
   end
 
@@ -183,7 +191,8 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
       result = fix(input)
 
-      assert result =~ "Enum.join()"
+      assert result =~ "Enum.join(list)"
+      refute result =~ "|>"
       assert result =~ ~s|@moduledoc \"""|
       refute result =~ ~s|@moduledoc "This|
     end

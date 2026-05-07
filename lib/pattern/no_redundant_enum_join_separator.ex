@@ -86,6 +86,22 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparator do
           do: {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :map_join]}, call_m, [mapper]},
           else: node
 
+      # Collapse single-step pipe: x |> Enum.join() → Enum.join(x)
+      # (fires after the "" removal above, since postwalk is bottom-up)
+      {:|>, _, [lhs, {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :join]}, call_m, []}]} = node ->
+        case lhs do
+          {:|>, _, _} -> node
+          _ -> {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :join]}, call_m, [lhs]}
+        end
+
+      # Collapse single-step pipe: x |> Enum.map_join(mapper) → Enum.map_join(x, mapper)
+      {:|>, _, [lhs, {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :map_join]}, call_m, [mapper]}]} =
+          node ->
+        case lhs do
+          {:|>, _, _} -> node
+          _ -> {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :map_join]}, call_m, [lhs, mapper]}
+        end
+
       node ->
         node
     end)
