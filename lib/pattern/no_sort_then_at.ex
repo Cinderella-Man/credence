@@ -18,6 +18,9 @@ defmodule Credence.Pattern.NoSortThenAt do
 
   ## Not flagged
 
+  Other literal indices like `Enum.sort(nums) |> Enum.at(3)` are not flagged
+  because there is no standard-library O(n) replacement for kth-element access.
+
   Variable indices such as `Enum.sort(nums) |> Enum.at(k - 1)` are not flagged
   because they represent valid kth-element access that genuinely needs a sort.
   """
@@ -35,7 +38,7 @@ defmodule Credence.Pattern.NoSortThenAt do
         # Pipeline: ... |> Enum.sort(...) |> Enum.at(literal_index)
         {:|>, meta, [left, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, at_args}]} = node,
         issues ->
-          if remote_call?(rightmost(left), :Enum, :sort) and has_literal_index?(at_args) do
+          if remote_call?(rightmost(left), :Enum, :sort) and has_endpoint_index?(at_args) do
             {node, [build_issue(meta) | issues]}
           else
             {node, issues}
@@ -47,7 +50,7 @@ defmodule Credence.Pattern.NoSortThenAt do
            {{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, _} | rest
          ]} = node,
         issues ->
-          if has_literal_index?(rest) do
+          if has_endpoint_index?(rest) do
             {node, [build_issue(meta) | issues]}
           else
             {node, issues}
@@ -129,12 +132,15 @@ defmodule Credence.Pattern.NoSortThenAt do
 
   # ── Helpers ───────────────────────────────────────────────────────────────
 
-  # Check if the args list to Enum.at contains a literal numeric index
-  defp has_literal_index?([n]) when is_integer(n), do: true
-  defp has_literal_index?([{:__block__, _, [n]}]) when is_integer(n), do: true
-  defp has_literal_index?([{:-, _, [n]}]) when is_integer(n), do: true
-  defp has_literal_index?([{:-, _, [{:__block__, _, [n]}]}]) when is_integer(n), do: true
-  defp has_literal_index?(_), do: false
+  # Check if the args to Enum.at contain literal 0 or -1 — the only
+  # indices replaceable with Enum.min/max.  Other literal indices (2, 3, …)
+  # and variable indices (k - 1, mid) are left alone.
+  defp has_endpoint_index?(at_args) do
+    case at_args do
+      [arg] -> literal_index(arg) in [{:ok, 0}, {:ok, -1}]
+      _ -> false
+    end
+  end
 
   # Normalise Sourceror's various integer representations into {:ok, n} | :error
   defp literal_index(n) when is_integer(n), do: {:ok, n}
