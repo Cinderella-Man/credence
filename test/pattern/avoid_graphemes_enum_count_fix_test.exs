@@ -29,38 +29,6 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
     end
   end
 
-  describe "with predicate → Stream.unfold" do
-    test "two-step pipe" do
-      input = "String.graphemes(str) |> Enum.count(&(&1 == \"a\"))"
-      expected = "Stream.unfold(str, &String.next_grapheme/1) |> Enum.count(&(&1 == \"a\"))"
-      assert fix(input) == expected
-    end
-
-    test "three-step pipe collapses to Stream.unfold" do
-      input = "str |> String.graphemes() |> Enum.count(&(&1 == \"a\"))"
-      expected = "Stream.unfold(str, &String.next_grapheme/1) |> Enum.count(&(&1 == \"a\"))"
-      assert fix(input) == expected
-    end
-
-    test "keeps upstream pipeline with predicate" do
-      input = "str |> String.downcase() |> String.graphemes() |> Enum.count(&(&1 == \"a\"))"
-      expected = "str |> String.downcase() |> Stream.unfold(&String.next_grapheme/1) |> Enum.count(&(&1 == \"a\"))"
-      assert fix(input) == expected
-    end
-
-    test "nested call with predicate" do
-      input = "Enum.count(String.graphemes(str), &(&1 == \"a\"))"
-      expected = "Enum.count(Stream.unfold(str, &String.next_grapheme/1), &(&1 == \"a\"))"
-      assert fix(input) == expected
-    end
-
-    test "preserves fn predicate" do
-      input = "Enum.count(String.graphemes(str), fn g -> g == \"x\" end)"
-      expected = "Enum.count(Stream.unfold(str, &String.next_grapheme/1), fn g -> g == \"x\" end)"
-      assert fix(input) == expected
-    end
-  end
-
   describe "no-ops" do
     test "String.length unchanged" do
       code = "String.length(str)"
@@ -68,7 +36,17 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
     end
 
     test "Enum.count on non-graphemes unchanged" do
-      code = "Enum.count(list, &(&1 > 0))"
+      code = "Enum.count(list)"
+      assert fix(code) == code
+    end
+
+    test "predicate case passes through unchanged" do
+      code = "String.graphemes(str) |> Enum.count(&(&1 == \"a\"))"
+      assert fix(code) == code
+    end
+
+    test "nested predicate case passes through unchanged" do
+      code = "Enum.count(String.graphemes(str), &(&1 == \"a\"))"
       assert fix(code) == code
     end
   end
@@ -80,9 +58,6 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
         def a(s), do: String.graphemes(s) |> Enum.count()
         def b(s), do: Enum.count(String.graphemes(s))
         def c(s), do: s |> String.graphemes() |> Enum.count()
-        def d(s), do: String.graphemes(s) |> Enum.count(&(&1 == "x"))
-        def e(s), do: Enum.count(String.graphemes(s), &(&1 == "x"))
-        def f(s), do: s |> String.graphemes() |> Enum.count(&(&1 == "x"))
       end
       """
 
@@ -93,7 +68,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
       code = """
       defmodule Example do
         def a(s), do: String.graphemes(s) |> Enum.count()
-        def b(s), do: String.graphemes(s) |> Enum.count(&(&1 == "x"))
+        def b(s), do: s |> String.trim() |> String.graphemes() |> Enum.count()
       end
       """
 
