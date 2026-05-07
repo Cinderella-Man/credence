@@ -19,15 +19,32 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
       assert fix("String.graphemes(str) |> Enum.count()") == "String.length(str)"
     end
 
-    test "three-step pipe" do
-      assert fix("str |> String.graphemes() |> Enum.count()") == "str |> String.length()"
+    test "three-step pipe collapses to direct call" do
+      assert fix("str |> String.graphemes() |> Enum.count()") == "String.length(str)"
+    end
+
+    test "keeps upstream pipeline, replaces last two steps" do
+      assert fix("str |> String.trim() |> String.graphemes() |> Enum.count()") ==
+               "str |> String.trim() |> String.length()"
     end
   end
 
   describe "with predicate → Stream.unfold" do
-    test "two-step pipe with predicate" do
+    test "two-step pipe" do
       input = "String.graphemes(str) |> Enum.count(&(&1 == \"a\"))"
       expected = "Stream.unfold(str, &String.next_grapheme/1) |> Enum.count(&(&1 == \"a\"))"
+      assert fix(input) == expected
+    end
+
+    test "three-step pipe collapses to Stream.unfold" do
+      input = "str |> String.graphemes() |> Enum.count(&(&1 == \"a\"))"
+      expected = "Stream.unfold(str, &String.next_grapheme/1) |> Enum.count(&(&1 == \"a\"))"
+      assert fix(input) == expected
+    end
+
+    test "keeps upstream pipeline with predicate" do
+      input = "str |> String.downcase() |> String.graphemes() |> Enum.count(&(&1 == \"a\"))"
+      expected = "str |> String.downcase() |> Stream.unfold(&String.next_grapheme/1) |> Enum.count(&(&1 == \"a\"))"
       assert fix(input) == expected
     end
 
@@ -62,8 +79,10 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
       defmodule Example do
         def a(s), do: String.graphemes(s) |> Enum.count()
         def b(s), do: Enum.count(String.graphemes(s))
-        def c(s), do: String.graphemes(s) |> Enum.count(&(&1 == "x"))
-        def d(s), do: Enum.count(String.graphemes(s), &(&1 == "x"))
+        def c(s), do: s |> String.graphemes() |> Enum.count()
+        def d(s), do: String.graphemes(s) |> Enum.count(&(&1 == "x"))
+        def e(s), do: Enum.count(String.graphemes(s), &(&1 == "x"))
+        def f(s), do: s |> String.graphemes() |> Enum.count(&(&1 == "x"))
       end
       """
 

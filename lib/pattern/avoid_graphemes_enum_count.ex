@@ -134,11 +134,20 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
     string_length_call(subject)
   end
 
-  # x |> String.graphemes() |> Enum.count() → x |> String.length()
+  # x |> String.graphemes() |> Enum.count()
+  # → String.length(x) when x is a simple expression
+  # → x |> String.length() when x is an upstream pipeline
   defp fix_no_predicate_pipe(
          {:|>, pipe_meta, [deeper, {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}]}
        ) do
-    {:|>, pipe_meta, [deeper, {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], []}]}
+    case deeper do
+      {:|>, _, _} ->
+        {:|>, pipe_meta,
+         [deeper, {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], []}]}
+
+      _ ->
+        string_length_call(deeper)
+    end
   end
 
   defp fix_no_predicate_pipe(lhs), do: lhs
@@ -151,15 +160,23 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
     {:|>, [], [grapheme_stream(subject), rhs]}
   end
 
-  # x |> String.graphemes() |> Enum.count(pred) → x |> Stream.unfold(&...) |> Enum.count(pred)
+  # x |> String.graphemes() |> Enum.count(pred)
+  # → Stream.unfold(x, &...) |> Enum.count(pred) when x is a simple expression
+  # → x |> Stream.unfold(&...) |> Enum.count(pred) when x is an upstream pipeline
   defp fix_predicate_pipe(
          {:|>, pipe_meta, [deeper, {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}]},
          rhs
        ) do
-    unfold_step =
-      {{:., [], [{:__aliases__, [], [:Stream]}, :unfold]}, [], [next_grapheme_capture()]}
+    case deeper do
+      {:|>, _, _} ->
+        unfold_step =
+          {{:., [], [{:__aliases__, [], [:Stream]}, :unfold]}, [], [next_grapheme_capture()]}
 
-    {:|>, [], [{:|>, pipe_meta, [deeper, unfold_step]}, rhs]}
+        {:|>, [], [{:|>, pipe_meta, [deeper, unfold_step]}, rhs]}
+
+      _ ->
+        {:|>, [], [grapheme_stream(deeper), rhs]}
+    end
   end
 
   defp fix_predicate_pipe(lhs, rhs), do: {:|>, [], [lhs, rhs]}
