@@ -91,12 +91,21 @@ defmodule Credence.Pattern.AvoidGraphemesLength do
     string_length_call(subject)
   end
 
-  # x |> String.graphemes() |> length() → x |> String.length()
+  # x |> String.graphemes() |> length()
+  # → String.length(x) when x is a simple expression
+  # → x |> String.length() when x is an upstream pipeline
   defp fix_pipe_length(
          {:|>, pipe_meta, [deeper, {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}]},
          _node
        ) do
-    {:|>, pipe_meta, [deeper, {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], []}]}
+    case deeper do
+      {:|>, _, _} ->
+        {:|>, pipe_meta,
+         [deeper, {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], []}]}
+
+      _ ->
+        string_length_call(deeper)
+    end
   end
 
   defp fix_pipe_length(_, node), do: node
