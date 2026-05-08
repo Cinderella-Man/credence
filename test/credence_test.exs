@@ -1203,7 +1203,7 @@ defmodule CredenceTest do
 
     test "some unfixable rules still detected in remaining issues", %{result: %{issues: issues}} do
       distinct_rules = issues |> Enum.map(& &1.rule) |> Enum.uniq()
-      assert length(distinct_rules) >= 2
+      assert length(distinct_rules) >= 1
     end
   end
 

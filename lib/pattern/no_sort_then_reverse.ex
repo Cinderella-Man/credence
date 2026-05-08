@@ -1,27 +1,27 @@
 defmodule Credence.Pattern.NoSortThenReverse do
   @moduledoc """
   Performance & readability rule: Detects the pattern of calling `Enum.sort/1,2`
-  followed by `Enum.reverse/1` on the result.
+  followed by `Enum.reverse/1` on the result, where the sort direction can be
+  statically determined.
 
   Sorting ascending then reversing is equivalent to `Enum.sort(list, :desc)`
   but wastes a full O(n) pass for the reversal.
 
-  This rule can automatically fix pipeline and nested-call patterns where the
-  sort uses a simple direction (`:asc`, `:desc`, or default ascending). Sorts
-  with a custom comparator function are detected but left for manual fixing.
+  ## Recognised direction forms
 
-  ## Bad
+      Enum.sort(nums)                        # default :asc
+      Enum.sort(nums, :asc)                  # explicit atom
+      Enum.sort(nums, :desc)                 # explicit atom
+      Enum.sort(nums, &>=/2)                 # capture → :desc
+      Enum.sort(nums, &<=/2)                 # capture → :asc
+      Enum.sort(nums, fn a, b -> a > b end)  # anonymous comparator → :desc
+      Enum.sort(nums, fn a, b -> b > a end)  # flipped comparator  → :asc
 
-      # In a pipeline
-      nums |> Enum.sort() |> Enum.reverse()
+  ## Not flagged
 
-      # As a nested call
-      Enum.reverse(Enum.sort(nums))
-
-  ## Good
-
-      nums |> Enum.sort(:desc)
-      Enum.sort(nums, :desc)
+  Unresolvable directions such as `Enum.sort(nums, dir) |> Enum.reverse()` or
+  opaque comparators like `Enum.sort(nums, &MyModule.compare/2) |> Enum.reverse()`
+  are not flagged because we cannot determine the flipped direction.
   """
 
   use Credence.Pattern.Rule
@@ -36,8 +36,12 @@ defmodule Credence.Pattern.NoSortThenReverse do
       Macro.prewalk(ast, [], fn
         # Pipeline form: ... |> Enum.sort(...) |> Enum.reverse()
         {:|>, meta, [left, right]} = node, issues ->
+          sort_node = rightmost(left)
+          context = if match?({:|>, _, _}, left), do: :pipe, else: :direct
+
           if remote_call?(right, :Enum, :reverse) and
-               remote_call?(rightmost(left), :Enum, :sort) do
+               remote_call?(sort_node, :Enum, :sort) and
+               resolvable_direction?(call_args(sort_node), context) do
             {node, [build_issue(meta) | issues]}
           else
             {node, issues}
@@ -45,9 +49,13 @@ defmodule Credence.Pattern.NoSortThenReverse do
 
         # Nested call form: Enum.reverse(Enum.sort(...))
         {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, meta,
-         [{{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, _}]} = node,
+         [{{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, sort_args}]} = node,
         issues ->
-          {node, [build_issue(meta) | issues]}
+          if resolvable_direction?(sort_args, :direct) do
+            {node, [build_issue(meta) | issues]}
+          else
+            {node, issues}
+          end
 
         node, issues ->
           {node, issues}
@@ -141,24 +149,93 @@ defmodule Credence.Pattern.NoSortThenReverse do
   # ── Argument classification & transformation ──────────────────────────
 
   # Pipe context: no subject (pipe provides it), only sort direction
-  defp fixable_pipe_args?([]), do: true
-  defp fixable_pipe_args?([:asc]), do: true
-  defp fixable_pipe_args?([:desc]), do: true
-  defp fixable_pipe_args?(_), do: false
+  defp fixable_pipe_args?(args), do: pipe_sort_direction(args) != :unknown
 
-  defp pipe_flip_args([]), do: [:desc]
-  defp pipe_flip_args([:asc]), do: [:desc]
-  defp pipe_flip_args([:desc]), do: []
+  defp pipe_flip_args(args) do
+    case pipe_sort_direction(args) do
+      :asc -> [:desc]
+      :desc -> []
+    end
+  end
 
   # Direct context: first arg is the subject
-  defp fixable_direct_args?([_subject]), do: true
-  defp fixable_direct_args?([_subject, :asc]), do: true
-  defp fixable_direct_args?([_subject, :desc]), do: true
-  defp fixable_direct_args?(_), do: false
+  defp fixable_direct_args?(args), do: direct_sort_direction(args) != :unknown
 
-  defp direct_flip_args([subject]), do: [subject, :desc]
-  defp direct_flip_args([subject, :asc]), do: [subject, :desc]
-  defp direct_flip_args([subject, :desc]), do: [subject]
+  defp direct_flip_args(args) do
+    subject = hd(args)
+
+    case direct_sort_direction(args) do
+      :asc -> [subject, :desc]
+      :desc -> [subject]
+    end
+  end
+
+  # ── Direction resolution ─────────────────────────────────────────────
+
+  # Used by check/2 — works on raw (non-normalized) sort args
+  defp resolvable_direction?(sort_args, context) do
+    normalized = normalize_args(sort_args)
+
+    case context do
+      :pipe -> pipe_sort_direction(normalized) != :unknown
+      :direct -> direct_sort_direction(normalized) != :unknown
+    end
+  end
+
+  # Pipe args (no subject)
+  defp pipe_sort_direction([]), do: :asc
+  defp pipe_sort_direction([:asc]), do: :asc
+  defp pipe_sort_direction([:desc]), do: :desc
+  defp pipe_sort_direction([comparator]), do: resolve_comparator(comparator)
+  defp pipe_sort_direction(_), do: :unknown
+
+  # Direct args (first is subject)
+  defp direct_sort_direction([_subject]), do: :asc
+  defp direct_sort_direction([_subject, :asc]), do: :asc
+  defp direct_sort_direction([_subject, :desc]), do: :desc
+  defp direct_sort_direction([_subject, comparator]), do: resolve_comparator(comparator)
+  defp direct_sort_direction(_), do: :unknown
+
+  # Function captures: &>=/2, &>/2 → :desc; &<=/2, &</2 → :asc
+  defp resolve_comparator({:&, _, [{:/, _, [{op, _, _}, 2]}]})
+       when op in [:>=, :>],
+       do: :desc
+
+  defp resolve_comparator({:&, _, [{:/, _, [{op, _, _}, 2]}]})
+       when op in [:<=, :<],
+       do: :asc
+
+  defp resolve_comparator({:&, _, [{:/, _, [{op, _, _}, {:__block__, _, [2]}]}]})
+       when op in [:>=, :>],
+       do: :desc
+
+  defp resolve_comparator({:&, _, [{:/, _, [{op, _, _}, {:__block__, _, [2]}]}]})
+       when op in [:<=, :<],
+       do: :asc
+
+  # Anonymous comparators: fn a, b -> a OP b end
+  defp resolve_comparator({:fn, _, [{:->, _, [[p1, p2], {op, _, [left, right]}]}]})
+       when op in [:>, :>=] do
+    cond do
+      same_var?(p1, left) and same_var?(p2, right) -> :desc
+      same_var?(p2, left) and same_var?(p1, right) -> :asc
+      true -> :unknown
+    end
+  end
+
+  defp resolve_comparator({:fn, _, [{:->, _, [[p1, p2], {op, _, [left, right]}]}]})
+       when op in [:<, :<=] do
+    cond do
+      same_var?(p1, left) and same_var?(p2, right) -> :asc
+      same_var?(p2, left) and same_var?(p1, right) -> :desc
+      true -> :unknown
+    end
+  end
+
+  defp resolve_comparator(_), do: :unknown
+
+  defp same_var?({name, _, _}, {name, _, _}) when is_atom(name), do: true
+  defp same_var?(_, _), do: false
 
   # ── AST builders & utilities ──────────────────────────────────────────
 
