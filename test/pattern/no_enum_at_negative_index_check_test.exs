@@ -30,7 +30,9 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexCheckTest do
     end
 
     test "multiple on same list" do
-      code = "defmodule M do\n  def f(s) do\n    a = Enum.at(s, -1)\n    b = Enum.at(s, -2)\n    {a, b}\n  end\nend"
+      code =
+        "defmodule M do\n  def f(s) do\n    a = Enum.at(s, -1)\n    b = Enum.at(s, -2)\n    {a, b}\n  end\nend"
+
       assert length(check(code)) == 2
     end
 

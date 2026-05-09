@@ -110,7 +110,7 @@ defmodule Credence.Pattern.NonGroupedClauses do
     # Phase 1: find stray clause indices
     {_, _, stray_set} =
       Enum.reduce(indexed, {nil, MapSet.new(), MapSet.new()}, fn {expr, idx},
-                                                                  {prev_key, seen, strays} ->
+                                                                 {prev_key, seen, strays} ->
         case function_key(expr) do
           nil ->
             {nil, seen, strays}
