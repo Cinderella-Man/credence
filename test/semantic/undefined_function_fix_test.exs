@@ -37,9 +37,34 @@ defmodule Credence.Semantic.UndefinedFunctionFixTest do
     end
 
     test "mid-pipeline" do
-      assert fix("nums |> Enum.sort() |> List.reverse() |> hd()",
-               "List.reverse/1 is undefined or private") ==
+      assert fix(
+               "nums |> Enum.sort() |> List.reverse() |> hd()",
+               "List.reverse/1 is undefined or private"
+             ) ==
                "nums |> Enum.sort() |> Enum.reverse() |> hd()"
+    end
+  end
+
+  describe "Enum.partition → Enum.split_with (deprecated)" do
+    test "direct call" do
+      assert fix(
+               "Enum.partition(list, &is_integer/1)",
+               "Enum.partition/2 is deprecated. Use Enum.split_with/2 instead"
+             ) == "Enum.split_with(list, &is_integer/1)"
+    end
+
+    test "piped" do
+      assert fix(
+               "list |> Enum.partition(fn {_v, i} -> Integer.is_even(i) end)",
+               "Enum.partition/2 is deprecated. Use Enum.split_with/2 instead"
+             ) == "list |> Enum.split_with(fn {_v, i} -> Integer.is_even(i) end)"
+    end
+
+    test "only on reported line" do
+      input = "x = Enum.map(list, &f/1)\n{a, b} = Enum.partition(list, &pred/1)"
+
+      assert fix(input, "Enum.partition/2 is deprecated. Use Enum.split_with/2 instead", 2) ==
+               "x = Enum.map(list, &f/1)\n{a, b} = Enum.split_with(list, &pred/1)"
     end
   end
 

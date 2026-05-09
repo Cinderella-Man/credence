@@ -27,7 +27,8 @@ defmodule Credence.Syntax.FixScientificNotationAnalyzeTest do
     end
 
     test "inside assert_in_delta" do
-      assert [%{rule: :python_scientific_notation}] = analyze("assert_in_delta result, 0.5, 1e-10")
+      assert [%{rule: :python_scientific_notation}] =
+               analyze("assert_in_delta result, 0.5, 1e-10")
     end
   end
 

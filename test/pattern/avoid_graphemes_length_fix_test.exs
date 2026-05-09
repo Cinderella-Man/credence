@@ -37,13 +37,14 @@ defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
       end
       """
 
-      expected = String.trim_trailing("""
-      defmodule Example do
-        def a(s), do: String.length(s)
-        def b(s), do: String.length(s)
-        def c(s), do: String.length(s)
-      end
-      """)
+      expected =
+        String.trim_trailing("""
+        defmodule Example do
+          def a(s), do: String.length(s)
+          def b(s), do: String.length(s)
+          def c(s), do: String.length(s)
+        end
+        """)
 
       assert fix(code) == expected
     end

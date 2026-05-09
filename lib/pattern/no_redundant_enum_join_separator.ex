@@ -77,7 +77,8 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparator do
       {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :map_join]}, call_m, [list_arg, sep, mapper]} =
           node ->
         if empty_string?(sep),
-          do: {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :map_join]}, call_m, [list_arg, mapper]},
+          do:
+            {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :map_join]}, call_m, [list_arg, mapper]},
           else: node
 
       # Piped call: ... |> Enum.map_join("", mapper) → ... |> Enum.map_join(mapper)

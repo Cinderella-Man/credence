@@ -76,7 +76,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   defp detect_pattern({op, meta, [n, {:length, _, [arg]}]})
        when is_integer(n) and op in [:==, :!=, :>, :>=, :<, :<=] do
     rev = reverse_op(op)
-    if rev && simple_var?(arg) and valid_comparison?(rev, n), do: {:ok, meta}, else: :skip
+    if (rev && simple_var?(arg)) and valid_comparison?(rev, n), do: {:ok, meta}, else: :skip
   end
 
   defp detect_pattern(_), do: :skip

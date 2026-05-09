@@ -32,7 +32,9 @@ defmodule Credence.Pattern.NoSortThenReverseCheckTest do
     end
 
     test "longer pipeline" do
-      code = "defmodule M do\n  def f(x), do: x |> Enum.filter(&(&1 > 0)) |> Enum.sort() |> Enum.reverse()\nend"
+      code =
+        "defmodule M do\n  def f(x), do: x |> Enum.filter(&(&1 > 0)) |> Enum.sort() |> Enum.reverse()\nend"
+
       assert [%Issue{rule: :no_sort_then_reverse}] = check(code)
     end
 
@@ -65,17 +67,23 @@ defmodule Credence.Pattern.NoSortThenReverseCheckTest do
 
   describe "flags sort with anonymous comparator then reverse" do
     test "fn a, b -> a > b end pipeline" do
-      code = "defmodule M do\n  def f(x), do: Enum.sort(x, fn a, b -> a > b end) |> Enum.reverse()\nend"
+      code =
+        "defmodule M do\n  def f(x), do: Enum.sort(x, fn a, b -> a > b end) |> Enum.reverse()\nend"
+
       assert [%Issue{rule: :no_sort_then_reverse}] = check(code)
     end
 
     test "fn a, b -> a < b end nested" do
-      code = "defmodule M do\n  def f(x), do: Enum.reverse(Enum.sort(x, fn a, b -> a < b end))\nend"
+      code =
+        "defmodule M do\n  def f(x), do: Enum.reverse(Enum.sort(x, fn a, b -> a < b end))\nend"
+
       assert [%Issue{rule: :no_sort_then_reverse}] = check(code)
     end
 
     test "flipped fn a, b -> b < a end pipeline" do
-      code = "defmodule M do\n  def f(x), do: Enum.sort(x, fn a, b -> b < a end) |> Enum.reverse()\nend"
+      code =
+        "defmodule M do\n  def f(x), do: Enum.sort(x, fn a, b -> b < a end) |> Enum.reverse()\nend"
+
       assert [%Issue{rule: :no_sort_then_reverse}] = check(code)
     end
   end
@@ -89,7 +97,9 @@ defmodule Credence.Pattern.NoSortThenReverseCheckTest do
     end
 
     test "opaque comparator" do
-      code = "defmodule M do\n  def f(x), do: Enum.sort(x, &MyModule.compare/2) |> Enum.reverse()\nend"
+      code =
+        "defmodule M do\n  def f(x), do: Enum.sort(x, &MyModule.compare/2) |> Enum.reverse()\nend"
+
       assert check(code) == []
     end
   end

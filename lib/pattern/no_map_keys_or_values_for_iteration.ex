@@ -469,8 +469,12 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   # Walk a list of args and wrap any lambdas or captures
   defp wrap_fns(args) do
     Enum.map(args, fn
-      {:fn, _, _} = cb -> wrap_cb(cb)
-      {:&, _, [{:/, _, [_, 1]}]} = cb -> wrap_cb(cb)
+      {:fn, _, _} = cb ->
+        wrap_cb(cb)
+
+      {:&, _, [{:/, _, [_, 1]}]} = cb ->
+        wrap_cb(cb)
+
       {:&, _, [_]} = cb ->
         # Complex capture like &(length(&1) > 1) — convert to fn first
         case capture_to_fn(cb) do
@@ -478,7 +482,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
           _ -> cb
         end
 
-      other -> other
+      other ->
+        other
     end)
   end
 

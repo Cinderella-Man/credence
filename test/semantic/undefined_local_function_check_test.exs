@@ -8,7 +8,9 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
   describe "match?/1 – matches known replacements" do
     test "infinity/0" do
       assert UndefinedLocalFunction.match?(
-               error("undefined function infinity/0 (expected MyModule to define such a function or for it to be imported, but none are available)")
+               error(
+                 "undefined function infinity/0 (expected MyModule to define such a function or for it to be imported, but none are available)"
+               )
              )
     end
   end
@@ -16,20 +18,21 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
   describe "match?/1 – rejects" do
     test "unknown local function" do
       refute UndefinedLocalFunction.match?(
-               error("undefined function foobar/0 (expected MyModule to define such a function or for it to be imported, but none are available)")
+               error(
+                 "undefined function foobar/0 (expected MyModule to define such a function or for it to be imported, but none are available)"
+               )
              )
     end
 
     test "module-qualified undefined (handled by UndefinedFunction)" do
-      refute UndefinedLocalFunction.match?(
-               error("Enum.last/1 is undefined or private")
-             )
+      refute UndefinedLocalFunction.match?(error("Enum.last/1 is undefined or private"))
     end
 
     test "warning severity" do
       refute UndefinedLocalFunction.match?(%{
                severity: :warning,
-               message: "undefined function infinity/0 (expected MyModule to define such a function)",
+               message:
+                 "undefined function infinity/0 (expected MyModule to define such a function)",
                position: {1, 1}
              })
     end

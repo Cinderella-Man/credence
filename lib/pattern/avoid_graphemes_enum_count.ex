@@ -95,8 +95,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
        ) do
     case deeper do
       {:|>, _, _} ->
-        {:|>, pipe_meta,
-         [deeper, {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], []}]}
+        {:|>, pipe_meta, [deeper, {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], []}]}
 
       _ ->
         string_length_call(deeper)
@@ -129,7 +128,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
 
   defp graphemes_call?(_), do: false
 
-defp build_issue(meta) do
+  defp build_issue(meta) do
     %Issue{
       rule: :avoid_graphemes_enum_count,
       message: """

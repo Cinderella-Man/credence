@@ -100,8 +100,7 @@ defmodule Credence.Pattern.AvoidGraphemesLength do
        ) do
     case deeper do
       {:|>, _, _} ->
-        {:|>, pipe_meta,
-         [deeper, {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], []}]}
+        {:|>, pipe_meta, [deeper, {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], []}]}
 
       _ ->
         string_length_call(deeper)
