@@ -104,18 +104,18 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   # and their flipped orderings.
   defp boolean_clause_pair?(a, b) do
     case {normalize_pattern(a), normalize_pattern(b)} do
-      {:true, :false} -> true
-      {:false, :true} -> true
-      {:true, :wildcard} -> true
-      {:wildcard, :true} -> true
-      {:false, :wildcard} -> true
-      {:wildcard, :false} -> true
+      {true, false} -> true
+      {false, true} -> true
+      {true, :wildcard} -> true
+      {:wildcard, true} -> true
+      {false, :wildcard} -> true
+      {:wildcard, false} -> true
       _ -> false
     end
   end
 
-  defp normalize_pattern(true), do: :true
-  defp normalize_pattern(false), do: :false
+  defp normalize_pattern(true), do: true
+  defp normalize_pattern(false), do: false
   defp normalize_pattern({:_, _, _}), do: :wildcard
   defp normalize_pattern(_), do: :other
 

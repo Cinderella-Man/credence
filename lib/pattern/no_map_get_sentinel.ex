@@ -125,9 +125,7 @@ defmodule Credence.Pattern.NoMapGetSentinel do
   defp scan_map_get_sentinel(_), do: :skip
 
   # Extracts the sentinel value from a Map.get/3 call.
-  defp extract_map_get_sentinel(
-         {{:., _, [mod, func_ref]}, _, [_map, _key, sentinel_ast]}
-       ) do
+  defp extract_map_get_sentinel({{:., _, [mod, func_ref]}, _, [_map, _key, sentinel_ast]}) do
     if map_module?(mod) and unwrap_atom(func_ref) == :get do
       case unwrap_integer(sentinel_ast) do
         n when is_integer(n) -> {:ok, n}
@@ -313,8 +311,7 @@ defmodule Credence.Pattern.NoMapGetSentinel do
   end
 
   defp drop_sentinel_arg(
-         {{:., _dot_meta, [mod, func_ref]} = dot, call_meta,
-          [map, key, _sentinel]} = call
+         {{:., _dot_meta, [mod, func_ref]} = dot, call_meta, [map, key, _sentinel]} = call
        ) do
     if map_module?(mod) and unwrap_atom(func_ref) == :get do
       {dot, call_meta, [map, key]}

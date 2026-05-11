@@ -148,16 +148,16 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
   # Self-assignment: var = var OP IDENTITY  →  delete entire line
   defp self_assign_identity?(line) do
     # var = var * 1.0
+    # var = 1.0 * var
+    # var = var / 1.0
+    # var = var + 0.0
+    # var = 0.0 + var
+    # var = var - 0.0
     Regex.match?(~r/^\s*(\w+)\s*=\s*\1\s*\*\s*1\.0(?![0-9eE_])\s*$/, line) or
-      # var = 1.0 * var
       Regex.match?(~r/^\s*(\w+)\s*=\s*1\.0(?![0-9eE_])\s*\*\s*\1\s*$/, line) or
-      # var = var / 1.0
       Regex.match?(~r/^\s*(\w+)\s*=\s*\1\s*\/\s*1\.0(?![0-9eE_])\s*$/, line) or
-      # var = var + 0.0
       Regex.match?(~r/^\s*(\w+)\s*=\s*\1\s*\+\s*0\.0(?![0-9eE_])\s*$/, line) or
-      # var = 0.0 + var
       Regex.match?(~r/^\s*(\w+)\s*=\s*0\.0(?![0-9eE_])\s*\+\s*\1\s*$/, line) or
-      # var = var - 0.0
       Regex.match?(~r/^\s*(\w+)\s*=\s*\1\s*\-\s*0\.0(?![0-9eE_])\s*$/, line)
   end
 
