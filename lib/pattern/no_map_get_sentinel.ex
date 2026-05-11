@@ -132,10 +132,26 @@ defmodule Credence.Pattern.NoMapGetSentinel do
 
           cond do
             has_equality ->
-              [%{var_name: var_name, sentinel: sentinel, index: idx, safe_end: safe_end, type: :equality}]
+              [
+                %{
+                  var_name: var_name,
+                  sentinel: sentinel,
+                  index: idx,
+                  safe_end: safe_end,
+                  type: :equality
+                }
+              ]
 
             has_ordering ->
-              [%{var_name: var_name, sentinel: sentinel, index: idx, safe_end: safe_end, type: :ordering}]
+              [
+                %{
+                  var_name: var_name,
+                  sentinel: sentinel,
+                  index: idx,
+                  safe_end: safe_end,
+                  type: :ordering
+                }
+              ]
 
             true ->
               []
