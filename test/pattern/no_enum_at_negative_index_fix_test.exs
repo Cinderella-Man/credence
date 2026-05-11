@@ -1,7 +1,10 @@
 defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
   use ExUnit.Case
 
-  defp fix(code), do: Credence.Pattern.NoEnumAtNegativeIndex.fix(code, [])
+  defp fix(code) do
+    result = Credence.Pattern.NoEnumAtNegativeIndex.fix(code, [])
+    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
+  end
 
   # ── Single -1 → List.last ──────────────────────────────────────────────
 
@@ -42,16 +45,20 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       input =
         "defmodule M do\n  def f(list) do\n    if Enum.at(list, -1) == :done, do: :ok, else: :wait\n  end\nend\n"
 
-      fixed = fix(input)
-      assert fixed =~ "List.last(list)"
-      refute fixed =~ "Enum.at"
+      expected =
+        "defmodule M do\n  def f(list) do\n    if List.last(list) == :done, do: :ok, else: :wait\n  end\nend\n"
+
+      assert fix(input) == expected
     end
 
     test "piped in expression" do
-      input = "defmodule M do\n  def f(list), do: list |> Enum.sort() |> Enum.at(-1)\nend\n"
-      fixed = fix(input)
-      assert fixed =~ "List.last()"
-      refute fixed =~ "Enum.at"
+      input =
+        "defmodule M do\n  def f(list), do: list |> Enum.sort() |> Enum.at(-1)\nend\n"
+
+      expected =
+        "defmodule M do\n  def f(list), do: list |> Enum.sort() |> List.last()\nend\n"
+
+      assert fix(input) == expected
     end
   end
 
@@ -136,10 +143,10 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       input =
         "defmodule M do\n  def foo(list) do\n    a = Enum.at(list, -1)\n    a\n  end\n\n  def bar(list) do\n    b = Enum.at(list, -2)\n    b\n  end\nend\n"
 
-      fixed = fix(input)
-      assert fixed =~ "a = List.last(list)"
-      assert fixed =~ "list_reversed = Enum.reverse(list)"
-      assert fixed =~ "[_, b | _] = list_reversed"
+      expected =
+        "defmodule M do\n  def foo(list) do\n    a = List.last(list)\n    a\n  end\n\n  def bar(list) do\n    list_reversed = Enum.reverse(list)\n    [_, b | _] = list_reversed\n    b\n  end\nend\n"
+
+      assert fix(input) == expected
     end
 
     test "different list variables independent" do
@@ -156,18 +163,17 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       input =
         "defmodule M do\n  def f(sorted, other) do\n    last = Enum.at(sorted, -1)\n    second = Enum.at(sorted, -2)\n    other_last = Enum.at(other, -1)\n    {last, second, other_last}\n  end\nend\n"
 
-      fixed = fix(input)
-      assert fixed =~ "sorted_reversed = Enum.reverse(sorted)"
-      assert fixed =~ "[last, second | _] = sorted_reversed"
-      assert fixed =~ "other_last = List.last(other)"
-      refute fixed =~ "Enum.at"
+      expected =
+        "defmodule M do\n  def f(sorted, other) do\n    sorted_reversed = Enum.reverse(sorted)\n    [last, second | _] = sorted_reversed\n    other_last = List.last(other)\n    {last, second, other_last}\n  end\nend\n"
+
+      assert fix(input) == expected
     end
   end
 
   # ── Expression-form negative indices (non-assignment) ───────────────────
-  # These test the expanded fix: Enum.at(var, -N) inside expressions
-  # gets a reverse + pattern match inserted before, and the Enum.at calls
-  # are replaced with the pattern-matched variables.
+  # These generate temporary variable names for the reverse + pattern match,
+  # so exact output depends on implementation internals. Using targeted
+  # assertions on structure rather than exact string match.
 
   describe "expression-form negative indices" do
     test "two negative indices in multiplication" do
@@ -193,9 +199,10 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       input =
         "defmodule M do\n  def f(list) do\n    result = Enum.at(list, -1) + 1\n    result\n  end\nend\n"
 
-      fixed = fix(input)
-      assert fixed =~ "List.last(list)"
-      refute fixed =~ "Enum.at"
+      expected =
+        "defmodule M do\n  def f(list) do\n    result = List.last(list) + 1\n    result\n  end\nend\n"
+
+      assert fix(input) == expected
     end
   end
 
@@ -225,8 +232,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       input =
         "defmodule M do\n  def f(data) do\n    a = Enum.at(Map.get(data, :items), -1)\n    a\n  end\nend\n"
 
-      fixed = fix(input)
-      assert fixed =~ "Enum.at(Map.get(data, :items), -1)"
+      assert fix(input) == input
     end
 
     test "duplicate LHS variable names skipped for grouping" do

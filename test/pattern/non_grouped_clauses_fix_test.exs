@@ -2,7 +2,8 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.NonGroupedClauses.fix(code, [])
+    result = Credence.Pattern.NonGroupedClauses.fix(code, [])
+    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 
   describe "reorders stray clauses to join siblings" do
@@ -15,17 +16,15 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      fixed = fix(input)
-      # foo clauses should be consecutive
-      assert fixed =~ "def foo(1), do: 1"
-      assert fixed =~ "def foo(x), do: x + 1"
-      assert fixed =~ "def bar(x), do: x"
-      # foo(x) should come right after foo(1), before bar
-      foo1_pos = :binary.match(fixed, "foo(1)") |> elem(0)
-      foox_pos = :binary.match(fixed, "foo(x)") |> elem(0)
-      bar_pos = :binary.match(fixed, "bar(x)") |> elem(0)
-      assert foo1_pos < foox_pos
-      assert foox_pos < bar_pos
+      expected = """
+      defmodule M do
+        def foo(1), do: 1
+        def foo(x), do: x + 1
+        def bar(x), do: x
+      end
+      """
+
+      assert fix(input) == expected
     end
 
     test "three clauses of same function" do
@@ -39,15 +38,17 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      fixed = fix(input)
-      foo1_pos = :binary.match(fixed, "foo(1)") |> elem(0)
-      foo2_pos = :binary.match(fixed, "foo(2)") |> elem(0)
-      foox_pos = :binary.match(fixed, "foo(x)") |> elem(0)
-      bar_pos = :binary.match(fixed, "bar(x)") |> elem(0)
-      # All foos grouped before bar
-      assert foo1_pos < foo2_pos
-      assert foo2_pos < foox_pos
-      assert foox_pos < bar_pos
+      expected = """
+      defmodule M do
+        def foo(1), do: 1
+        def foo(2), do: 2
+        def foo(x), do: x + 1
+        def bar(x), do: x
+        def baz(x), do: x
+      end
+      """
+
+      assert fix(input) == expected
     end
 
     test "defp clauses grouped" do
@@ -59,12 +60,15 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      fixed = fix(input)
-      h1_pos = :binary.match(fixed, "helper(1)") |> elem(0)
-      hx_pos = :binary.match(fixed, "helper(x)") |> elem(0)
-      other_pos = :binary.match(fixed, "other(x)") |> elem(0)
-      assert h1_pos < hx_pos
-      assert hx_pos < other_pos
+      expected = """
+      defmodule M do
+        defp helper(1), do: :one
+        defp helper(x), do: :other
+        defp other(x), do: x
+      end
+      """
+
+      assert fix(input) == expected
     end
   end
 
@@ -79,11 +83,16 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      fixed = fix(input)
-      assert fixed =~ "@moduledoc false"
-      assert fixed =~ "def foo(1)"
-      assert fixed =~ "def foo(x)"
-      assert fixed =~ "def bar(x)"
+      expected = """
+      defmodule M do
+        @moduledoc false
+        def foo(1), do: 1
+        def foo(x), do: x + 1
+        def bar(x), do: x
+      end
+      """
+
+      assert fix(input) == expected
     end
 
     test "different arities not mixed" do
@@ -95,13 +104,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      # foo/1 and foo/2 are different functions — no reordering needed
-      fixed = fix(input)
-      foo1_pos = :binary.match(fixed, "foo(x), do: x\n") |> elem(0)
-      bar_pos = :binary.match(fixed, "bar(x)") |> elem(0)
-      foo2_pos = :binary.match(fixed, "foo(x, y)") |> elem(0)
-      assert foo1_pos < bar_pos
-      assert bar_pos < foo2_pos
+      assert fix(input) == input
     end
   end
 
@@ -115,7 +118,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(input) == String.trim_trailing(input)
+      assert fix(input) == input
     end
 
     test "single clause per function — no change" do
@@ -126,7 +129,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(input) == String.trim_trailing(input)
+      assert fix(input) == input
     end
   end
 end
