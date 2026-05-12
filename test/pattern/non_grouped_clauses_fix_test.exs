@@ -131,5 +131,21 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
 
       assert fix(input) == input
     end
+
+    test "does not move a stray clause preceded by @impl true" do
+      input = """
+      defmodule M do
+        @impl true
+        def handle_event("a", _, s), do: s
+
+        def helper(x), do: x
+
+        @impl true
+        def handle_event("b", _, s), do: s
+      end
+      """
+
+      assert fix(input) == input
+    end
   end
 end

@@ -127,6 +127,13 @@ defmodule Credence.Pattern.NonGroupedClauses do
         end
       end)
 
+    # Don't move clauses preceded by a module attribute (`@impl true`, `@doc`,
+    # etc.) — the attribute would be orphaned. `check/2` still flags them.
+    stray_set =
+      stray_set
+      |> Enum.reject(&preceded_by_attr?(body, &1))
+      |> MapSet.new()
+
     if MapSet.size(stray_set) == 0 do
       body
     else
@@ -175,4 +182,8 @@ defmodule Credence.Pattern.NonGroupedClauses do
   end
 
   defp function_key(_), do: nil
+
+  defp preceded_by_attr?(body, idx) do
+    idx > 0 and match?({:@, _, _}, Enum.at(body, idx - 1))
+  end
 end
