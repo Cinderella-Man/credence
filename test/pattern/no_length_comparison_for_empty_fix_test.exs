@@ -154,6 +154,11 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
       code = "Enum.filter(groups, &(length(&1) > 1))"
       assert fix(code) == code
     end
+
+    test "does not touch qualified calls like String.length(s) >= 2" do
+      code = "if String.length(query) >= 2, do: :ok"
+      assert fix(code) == code
+    end
   end
 
   # ── round-trip ─────────────────────────────────────────────────
