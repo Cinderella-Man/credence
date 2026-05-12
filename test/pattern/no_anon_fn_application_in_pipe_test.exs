@@ -87,5 +87,9 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeTest do
 
       assert length(issues) == 2
     end
+
+    test "does not flag .(extra) — then/2 cannot carry extra args" do
+      assert check("x |> (fn a, b -> a + b end).(y)") == []
+    end
   end
 end

@@ -35,7 +35,7 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipe do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         # Match: ... |> (fn ... end).()
-        {:|>, meta, [_left, {{:., _, [{:fn, _, _}]}, _, _args}]} = node, issues ->
+        {:|>, meta, [_left, {{:., _, [{:fn, _, _}]}, _, []}]} = node, issues ->
           issue = %Issue{
             rule: :no_anon_fn_application_in_pipe,
             message:
@@ -59,7 +59,7 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipe do
     |> Sourceror.parse_string!()
     |> Macro.postwalk(fn
       # |> (fn ... end).() → |> then(fn ... end)
-      {:|>, pipe_meta, [left, {{:., _, [{:fn, _, _} = fn_node]}, _, _args}]} ->
+      {:|>, pipe_meta, [left, {{:., _, [{:fn, _, _} = fn_node]}, _, []}]} ->
         {:|>, pipe_meta, [left, {:then, [], [fn_node]}]}
 
       node ->
