@@ -4,7 +4,7 @@ defmodule Credence.MixProject do
   def project do
     [
       app: :credence,
-      version: "0.4.3",
+      version: "0.4.5",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       deps: deps(),

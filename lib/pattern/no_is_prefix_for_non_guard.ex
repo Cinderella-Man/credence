@@ -126,7 +126,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
   defp maybe_drop_public(rename_map, _ast, true), do: rename_map
 
   defp maybe_drop_public(rename_map, ast, false),
-    do: Map.drop(rename_map, public_def_names(ast))
+    do: Map.drop(rename_map, public_def_names(ast) |> MapSet.to_list())
 
   defp public_def_names(ast) do
     {_ast, names} =
