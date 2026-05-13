@@ -7,6 +7,8 @@ defmodule Credence.Semantic.UndefinedFunctionFixTest do
     UndefinedFunction.fix(source, %{severity: :warning, message: message, position: {line, 1}})
   end
 
+  # ── module.function renames (existing) ─────────────────────────
+
   describe "Enum.last → List.last" do
     test "direct call" do
       assert fix("Enum.last(list)", "Enum.last/1 is undefined or private") == "List.last(list)"
@@ -68,10 +70,105 @@ defmodule Credence.Semantic.UndefinedFunctionFixTest do
     end
   end
 
+  # ── hallucinated Float infinity → atom literals ────────────────
+
+  describe "Float.NegInfinity() → :neg_infinity" do
+    test "direct call" do
+      assert fix("Float.NegInfinity()", "Float.NegInfinity/0 is undefined or private") ==
+               ":neg_infinity"
+    end
+
+    test "as function argument" do
+      assert fix(
+               "validate(root, Float.NegInfinity(), Float.PositiveInfinity())",
+               "Float.NegInfinity/0 is undefined or private"
+             ) == "validate(root, :neg_infinity, Float.PositiveInfinity())"
+    end
+  end
+
+  describe "Float.PositiveInfinity() → :infinity" do
+    test "direct call" do
+      assert fix("Float.PositiveInfinity()", "Float.PositiveInfinity/0 is undefined or private") ==
+               ":infinity"
+    end
+
+    test "as function argument" do
+      assert fix(
+               "validate(root, :neg_infinity, Float.PositiveInfinity())",
+               "Float.PositiveInfinity/0 is undefined or private"
+             ) == "validate(root, :neg_infinity, :infinity)"
+    end
+  end
+
+  describe "Float.NegInf() → :neg_infinity" do
+    test "direct call" do
+      assert fix("Float.NegInf()", "Float.NegInf/0 is undefined or private") == ":neg_infinity"
+    end
+  end
+
+  describe "Float.Infinity() → :infinity" do
+    test "direct call" do
+      assert fix("Float.Infinity()", "Float.Infinity/0 is undefined or private") == ":infinity"
+    end
+  end
+
+  # ── hallucinated Integer bounds → atom literals ────────────────
+
+  describe "Integer.min_value() → :neg_infinity" do
+    test "direct call" do
+      assert fix("Integer.min_value()", "Integer.min_value/0 is undefined or private") ==
+               ":neg_infinity"
+    end
+
+    test "in module attribute" do
+      assert fix("@min_bound Integer.min_value()", "Integer.min_value/0 is undefined or private") ==
+               "@min_bound :neg_infinity"
+    end
+  end
+
+  describe "Integer.max_value() → :infinity" do
+    test "direct call" do
+      assert fix("Integer.max_value()", "Integer.max_value/0 is undefined or private") ==
+               ":infinity"
+    end
+
+    test "in module attribute" do
+      assert fix("@max_bound Integer.max_value()", "Integer.max_value/0 is undefined or private") ==
+               "@max_bound :infinity"
+    end
+  end
+
+  # ── hallucinated List.pop → List.last ──────────────────────────
+
+  describe "List.pop → List.last" do
+    test "direct call" do
+      assert fix("List.pop(items)", "List.pop/1 is undefined or private") == "List.last(items)"
+    end
+
+    test "piped" do
+      assert fix("items |> List.pop()", "List.pop/1 is undefined or private") ==
+               "items |> List.last()"
+    end
+
+    test "mid-pipeline" do
+      assert fix(
+               "acc |> List.pop() |> elem(0)",
+               "List.pop/1 is undefined or private"
+             ) == "acc |> List.last() |> elem(0)"
+    end
+  end
+
+  # ── no-ops ─────────────────────────────────────────────────────
+
   describe "no-ops" do
     test "unknown function unchanged" do
       source = "MyModule.foo(x)"
       assert fix(source, "MyModule.foo/1 is undefined or private") == source
+    end
+
+    test "unknown Float function unchanged" do
+      source = "Float.unknown_thing()"
+      assert fix(source, "Float.unknown_thing/0 is undefined or private") == source
     end
   end
 end

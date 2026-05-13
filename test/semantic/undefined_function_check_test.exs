@@ -5,6 +5,8 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
 
   defp warning(msg), do: %{severity: :warning, message: msg, position: {1, 1}}
 
+  # ── matches module.function renames ────────────────────────────
+
   describe "match?/1 – matches undefined functions" do
     test "Enum.last/1" do
       assert UndefinedFunction.match?(warning("Enum.last/1 is undefined or private"))
@@ -26,6 +28,46 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
              )
     end
   end
+
+  # ── matches hallucinated infinity/bounds constants ─────────────
+
+  describe "match?/1 – matches hallucinated Float infinity calls" do
+    test "Float.NegInfinity/0" do
+      assert UndefinedFunction.match?(warning("Float.NegInfinity/0 is undefined or private"))
+    end
+
+    test "Float.PositiveInfinity/0" do
+      assert UndefinedFunction.match?(warning("Float.PositiveInfinity/0 is undefined or private"))
+    end
+
+    test "Float.NegInf/0" do
+      assert UndefinedFunction.match?(warning("Float.NegInf/0 is undefined or private"))
+    end
+
+    test "Float.Infinity/0" do
+      assert UndefinedFunction.match?(warning("Float.Infinity/0 is undefined or private"))
+    end
+  end
+
+  describe "match?/1 – matches hallucinated Integer bounds calls" do
+    test "Integer.min_value/0" do
+      assert UndefinedFunction.match?(warning("Integer.min_value/0 is undefined or private"))
+    end
+
+    test "Integer.max_value/0" do
+      assert UndefinedFunction.match?(warning("Integer.max_value/0 is undefined or private"))
+    end
+  end
+
+  # ── matches hallucinated List operations ───────────────────────
+
+  describe "match?/1 – matches hallucinated List calls" do
+    test "List.pop/1" do
+      assert UndefinedFunction.match?(warning("List.pop/1 is undefined or private"))
+    end
+  end
+
+  # ── rejects ────────────────────────────────────────────────────
 
   describe "match?/1 – rejects" do
     test "unknown function" do
@@ -49,7 +91,17 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
                position: {1, 1}
              })
     end
+
+    test "unknown Float function" do
+      refute UndefinedFunction.match?(warning("Float.unknown_thing/0 is undefined or private"))
+    end
+
+    test "unknown Integer function" do
+      refute UndefinedFunction.match?(warning("Integer.unknown_thing/0 is undefined or private"))
+    end
   end
+
+  # ── to_issue ───────────────────────────────────────────────────
 
   describe "to_issue/1" do
     test "extracts rule and line" do

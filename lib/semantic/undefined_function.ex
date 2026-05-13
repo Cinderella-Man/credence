@@ -6,7 +6,7 @@ defmodule Credence.Semantic.UndefinedFunction do
   have been deprecated in favour of a replacement. This rule maintains a
   mapping of known corrections.
 
-  ## Examples
+  ## Rename examples (module.function → module.function)
 
       # Warning: Enum.last/1 is undefined or private
       list |> Enum.last()
@@ -17,16 +17,48 @@ defmodule Credence.Semantic.UndefinedFunction do
       Enum.partition(list, &pred/1)
       # Fixed:
       Enum.split_with(list, &pred/1)
+
+  ## Literal examples (hallucinated call → Elixir literal)
+
+      # Warning: Float.NegInfinity/0 is undefined or private
+      validate(root, Float.NegInfinity(), Float.PositiveInfinity())
+      # Fixed:
+      validate(root, :neg_infinity, :infinity)
+
+      # Warning: Integer.min_value/0 is undefined or private
+      @min_bound Integer.min_value()
+      # Fixed:
+      @min_bound :neg_infinity
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
 
-  # Map of {module, function, arity} → {correct_module, correct_function}
+  # ── Replacement table ──────────────────────────────────────────
+  #
+  #   {:rename, new_mod, new_fun}  — swap Module.function, keep args/parens
+  #   {:literal, text}             — replace Module.function() with a literal
+
   @replacements %{
-    {"Enum", "last", 1} => {"List", "last"},
-    {"Enum", "last", 0} => {"List", "last"},
-    {"List", "reverse", 1} => {"Enum", "reverse"},
-    {"Enum", "partition", 2} => {"Enum", "split_with"}
+    # Wrong module for real function
+    {"Enum", "last", 1} => {:rename, "List", "last"},
+    {"Enum", "last", 0} => {:rename, "List", "last"},
+    {"List", "reverse", 1} => {:rename, "Enum", "reverse"},
+
+    # Deprecated
+    {"Enum", "partition", 2} => {:rename, "Enum", "split_with"},
+
+    # Hallucinated Float infinity (from Python float('inf') / Java Double.POSITIVE_INFINITY)
+    {"Float", "NegInfinity", 0} => {:literal, ":neg_infinity"},
+    {"Float", "PositiveInfinity", 0} => {:literal, ":infinity"},
+    {"Float", "NegInf", 0} => {:literal, ":neg_infinity"},
+    {"Float", "Infinity", 0} => {:literal, ":infinity"},
+
+    # Hallucinated Integer bounds (from Java Integer.MIN_VALUE / MAX_VALUE)
+    {"Integer", "min_value", 0} => {:literal, ":neg_infinity"},
+    {"Integer", "max_value", 0} => {:literal, ":infinity"},
+
+    # Hallucinated List.pop (from Python list.pop() — get last element)
+    {"List", "pop", 1} => {:rename, "List", "last"}
   }
 
   @impl true
@@ -54,8 +86,11 @@ defmodule Credence.Semantic.UndefinedFunction do
     case parse_function_ref(msg) do
       {mod, fun, _arity} = key ->
         case Map.get(@replacements, key) do
-          {new_mod, new_fun} ->
+          {:rename, new_mod, new_fun} ->
             replace_on_line(source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}")
+
+          {:literal, text} ->
+            replace_on_line(source, line_no, "#{mod}.#{fun}()", text)
 
           nil ->
             source
