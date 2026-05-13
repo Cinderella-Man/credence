@@ -25,18 +25,19 @@ defmodule Credence.Semantic.UndefinedFunction do
       # Fixed:
       validate(root, :neg_infinity, :infinity)
 
-      # Warning: Integer.min_value/0 is undefined or private
-      @min_bound Integer.min_value()
+      # Warning: Float.inf/0 is undefined or private (often used as -Float.inf)
+      max_num = -Float.inf
       # Fixed:
-      @min_bound :neg_infinity
+      max_num = :neg_infinity
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
 
   # ── Replacement table ──────────────────────────────────────────
   #
-  #   {:rename, new_mod, new_fun}  — swap Module.function, keep args/parens
-  #   {:literal, text}             — replace Module.function() with a literal
+  #   {:rename, new_mod, new_fun}         — swap Module.function, keep args/parens
+  #   {:literal, text}                    — replace Module.function() or Module.function with a literal
+  #   {:literal_with_neg, pos, neg}       — like :literal, but if preceded by `-`, use the neg form
 
   @replacements %{
     # Wrong module for real function
@@ -52,6 +53,9 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Float", "PositiveInfinity", 0} => {:literal, ":infinity"},
     {"Float", "NegInf", 0} => {:literal, ":neg_infinity"},
     {"Float", "Infinity", 0} => {:literal, ":infinity"},
+
+    # Float.inf — lowercase, often used as -Float.inf (Python float('-inf'))
+    {"Float", "inf", 0} => {:literal_with_neg, ":infinity", ":neg_infinity"},
 
     # Hallucinated Integer bounds (from Java Integer.MIN_VALUE / MAX_VALUE)
     {"Integer", "min_value", 0} => {:literal, ":neg_infinity"},
@@ -90,7 +94,10 @@ defmodule Credence.Semantic.UndefinedFunction do
             replace_on_line(source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}")
 
           {:literal, text} ->
-            replace_on_line(source, line_no, "#{mod}.#{fun}()", text)
+            replace_literal(source, line_no, mod, fun, text)
+
+          {:literal_with_neg, pos_text, neg_text} ->
+            replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text)
 
           nil ->
             source
@@ -100,6 +107,39 @@ defmodule Credence.Semantic.UndefinedFunction do
         source
     end
   end
+
+  # ── Literal replacement (with parens fallback to without) ──────
+
+  defp replace_literal(source, line_no, mod, fun, text) do
+    call_with_parens = "#{mod}.#{fun}()"
+    call_without_parens = "#{mod}.#{fun}"
+
+    result = replace_on_line(source, line_no, call_with_parens, text)
+
+    if result == source do
+      replace_on_line(source, line_no, call_without_parens, text)
+    else
+      result
+    end
+  end
+
+  # ── Literal replacement with negation awareness ────────────────
+  # Tries negated forms first (-Float.inf → :neg_infinity),
+  # then positive forms (Float.inf → :infinity).
+
+  defp replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text) do
+    neg_with_parens = "-#{mod}.#{fun}()"
+    neg_without_parens = "-#{mod}.#{fun}"
+    pos_with_parens = "#{mod}.#{fun}()"
+    pos_without_parens = "#{mod}.#{fun}"
+
+    result = replace_on_line(source, line_no, neg_with_parens, neg_text)
+    result = if result == source, do: replace_on_line(source, line_no, neg_without_parens, neg_text), else: result
+    result = if result == source, do: replace_on_line(source, line_no, pos_with_parens, pos_text), else: result
+    if result == source, do: replace_on_line(source, line_no, pos_without_parens, pos_text), else: result
+  end
+
+  # ── Helpers ────────────────────────────────────────────────────
 
   defp extract_line({line, _col}) when is_integer(line), do: line
   defp extract_line(line) when is_integer(line), do: line

@@ -47,6 +47,10 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     test "Float.Infinity/0" do
       assert UndefinedFunction.match?(warning("Float.Infinity/0 is undefined or private"))
     end
+
+    test "Float.inf/0 (lowercase, often used as -Float.inf)" do
+      assert UndefinedFunction.match?(warning("Float.inf/0 is undefined or private"))
+    end
   end
 
   describe "match?/1 – matches hallucinated Integer bounds calls" do

@@ -73,8 +73,13 @@ defmodule Credence.Semantic.UndefinedFunctionFixTest do
   # ── hallucinated Float infinity → atom literals ────────────────
 
   describe "Float.NegInfinity() → :neg_infinity" do
-    test "direct call" do
+    test "direct call with parens" do
       assert fix("Float.NegInfinity()", "Float.NegInfinity/0 is undefined or private") ==
+               ":neg_infinity"
+    end
+
+    test "direct call without parens" do
+      assert fix("Float.NegInfinity", "Float.NegInfinity/0 is undefined or private") ==
                ":neg_infinity"
     end
 
@@ -87,8 +92,13 @@ defmodule Credence.Semantic.UndefinedFunctionFixTest do
   end
 
   describe "Float.PositiveInfinity() → :infinity" do
-    test "direct call" do
+    test "direct call with parens" do
       assert fix("Float.PositiveInfinity()", "Float.PositiveInfinity/0 is undefined or private") ==
+               ":infinity"
+    end
+
+    test "direct call without parens" do
+      assert fix("Float.PositiveInfinity", "Float.PositiveInfinity/0 is undefined or private") ==
                ":infinity"
     end
 
@@ -112,11 +122,47 @@ defmodule Credence.Semantic.UndefinedFunctionFixTest do
     end
   end
 
+  # ── Float.inf (lowercase, often negated) ───────────────────────
+
+  describe "Float.inf → :infinity / -Float.inf → :neg_infinity" do
+    test "negated without parens (the actual LLM pattern)" do
+      assert fix("max_num = -Float.inf", "Float.inf/0 is undefined or private") ==
+               "max_num = :neg_infinity"
+    end
+
+    test "negated with parens" do
+      assert fix("max_num = -Float.inf()", "Float.inf/0 is undefined or private") ==
+               "max_num = :neg_infinity"
+    end
+
+    test "positive without parens" do
+      assert fix("upper = Float.inf", "Float.inf/0 is undefined or private") ==
+               "upper = :infinity"
+    end
+
+    test "positive with parens" do
+      assert fix("upper = Float.inf()", "Float.inf/0 is undefined or private") ==
+               "upper = :infinity"
+    end
+
+    test "realistic context from LLM log" do
+      code = "    max_num = -Float.inf\n    second_max_num = -Float.inf"
+
+      assert fix(code, "Float.inf/0 is undefined or private", 1) ==
+               "    max_num = :neg_infinity\n    second_max_num = -Float.inf"
+    end
+  end
+
   # ── hallucinated Integer bounds → atom literals ────────────────
 
   describe "Integer.min_value() → :neg_infinity" do
     test "direct call" do
       assert fix("Integer.min_value()", "Integer.min_value/0 is undefined or private") ==
+               ":neg_infinity"
+    end
+
+    test "without parens" do
+      assert fix("Integer.min_value", "Integer.min_value/0 is undefined or private") ==
                ":neg_infinity"
     end
 
@@ -129,6 +175,11 @@ defmodule Credence.Semantic.UndefinedFunctionFixTest do
   describe "Integer.max_value() → :infinity" do
     test "direct call" do
       assert fix("Integer.max_value()", "Integer.max_value/0 is undefined or private") ==
+               ":infinity"
+    end
+
+    test "without parens" do
+      assert fix("Integer.max_value", "Integer.max_value/0 is undefined or private") ==
                ":infinity"
     end
 
