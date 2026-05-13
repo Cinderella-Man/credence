@@ -122,7 +122,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
 
   defp replace_forward(line) do
     Regex.replace(
-      ~r/length\((\w+)\)\s*(==|!=|>=|<=|>|<)\s*(\d+)/,
+      ~r/(?<!\.)length\((\w+)\)\s*(==|!=|>=|<=|>|<)\s*(\d+)/,
       line,
       fn _full, var, op, n_str ->
         n = String.to_integer(n_str)
@@ -135,7 +135,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
 
   defp replace_reversed(line) do
     Regex.replace(
-      ~r/(\d+)\s*(==|!=|>=|<=|>|<)\s*length\((\w+)\)/,
+      ~r/(\d+)\s*(==|!=|>=|<=|>|<)\s*(?<!\.)length\((\w+)\)/,
       line,
       fn _full, n_str, op, var ->
         n = String.to_integer(n_str)

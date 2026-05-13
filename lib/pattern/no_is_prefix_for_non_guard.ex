@@ -36,6 +36,11 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
 
   The fix renames the function definition and all bare (unqualified) call sites
   within the same source file. `is_valid_foo` becomes `valid_foo?`.
+
+  Pass `auto_fix_public: false` to restrict the rename to `defp` only.
+  Useful when running file-by-file: external callers of a public function
+  live in other files and aren't visible to a per-file rule, so renaming
+  a `def` can leave imports / qualified calls referencing the old name.
   """
 
   use Credence.Pattern.Rule
@@ -67,9 +72,13 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix(source, opts) do
     ast = Sourceror.parse_string!(source)
-    rename_map = collect_renames(ast)
+
+    rename_map =
+      ast
+      |> collect_renames()
+      |> maybe_drop_public(ast, Keyword.get(opts, :auto_fix_public, true))
 
     if map_size(rename_map) == 0 do
       source
@@ -112,6 +121,28 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
     else
       acc
     end
+  end
+
+  defp maybe_drop_public(rename_map, _ast, true), do: rename_map
+
+  defp maybe_drop_public(rename_map, ast, false),
+    do: Map.drop(rename_map, public_def_names(ast))
+
+  defp public_def_names(ast) do
+    {_ast, names} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {:def, _, [{:when, _, [{name, _, _}, _]}, _]} = node, acc when is_atom(name) ->
+          {node, MapSet.put(acc, name)}
+
+        {:def, _, [{name, _, args}, _]} = node, acc
+        when is_atom(name) and is_list(args) and name != :when ->
+          {node, MapSet.put(acc, name)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
   end
 
   # Second pass: rename every bare occurrence of old names

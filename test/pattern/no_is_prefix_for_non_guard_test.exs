@@ -402,5 +402,27 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
       assert fixed =~ "&positive?/1"
       refute fixed =~ "is_positive"
     end
+
+    test "auto_fix_public: false skips public `def` (external callers invisible)" do
+      code = """
+      defmodule Example do
+        def is_public(x), do: x
+        defp is_private(x), do: x
+      end
+      """
+
+      fixed = Credence.Pattern.NoIsPrefixForNonGuard.fix(code, auto_fix_public: false)
+
+      assert fixed =~ "def is_public(x)"
+      assert fixed =~ "defp private?(x)"
+    end
+
+    test "auto_fix_public defaults to true (renames both def and defp)" do
+      code = "defmodule Example do\n  def is_public(x), do: x\nend\n"
+
+      fixed = Credence.Pattern.NoIsPrefixForNonGuard.fix(code, [])
+
+      assert fixed =~ "def public?(x)"
+    end
   end
 end
