@@ -209,6 +209,50 @@ defmodule Credence.Semantic.UndefinedFunctionFixTest do
     end
   end
 
+  # ── List.drop → Enum.drop ───────────────────────────────────────
+
+  describe "List.drop → Enum.drop" do
+    test "direct call" do
+      assert fix("List.drop(items, 3)", "List.drop/2 is undefined or private") ==
+               "Enum.drop(items, 3)"
+    end
+
+    test "piped" do
+      assert fix("items |> List.drop(1)", "List.drop/2 is undefined or private") ==
+               "items |> Enum.drop(1)"
+    end
+
+    test "nested in expression" do
+      assert fix(
+               "List.last(sorted) * List.second(List.drop(sorted, n))",
+               "List.drop/2 is undefined or private"
+             ) ==
+               "List.last(sorted) * List.second(Enum.drop(sorted, n))"
+    end
+  end
+
+  # ── Enum.cycle → Stream.cycle ──────────────────────────────────
+
+  describe "Enum.cycle → Stream.cycle" do
+    test "direct call" do
+      assert fix("Enum.cycle(items)", "Enum.cycle/1 is undefined or private") ==
+               "Stream.cycle(items)"
+    end
+
+    test "piped" do
+      assert fix("items |> Enum.cycle()", "Enum.cycle/1 is undefined or private") ==
+               "items |> Stream.cycle()"
+    end
+
+    test "inside expression" do
+      assert fix(
+               "Enum.flat_map(1..10, &Enum.cycle([&1]))",
+               "Enum.cycle/1 is undefined or private"
+             ) ==
+               "Enum.flat_map(1..10, &Stream.cycle([&1]))"
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "no-ops" do

@@ -69,6 +69,18 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     test "List.pop/1" do
       assert UndefinedFunction.match?(warning("List.pop/1 is undefined or private"))
     end
+
+    test "List.drop/2" do
+      assert UndefinedFunction.match?(warning("List.drop/2 is undefined or private"))
+    end
+  end
+
+  # ── matches wrong-module calls ─────────────────────────────────
+
+  describe "match?/1 – matches wrong-module calls" do
+    test "Enum.cycle/1 (should be Stream.cycle)" do
+      assert UndefinedFunction.match?(warning("Enum.cycle/1 is undefined or private"))
+    end
   end
 
   # ── rejects ────────────────────────────────────────────────────

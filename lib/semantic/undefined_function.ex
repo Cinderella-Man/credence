@@ -62,7 +62,13 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Integer", "max_value", 0} => {:literal, ":infinity"},
 
     # Hallucinated List.pop (from Python list.pop() — get last element)
-    {"List", "pop", 1} => {:rename, "List", "last"}
+    {"List", "pop", 1} => {:rename, "List", "last"},
+
+    # Wrong module (List.drop doesn't exist — Enum.drop does)
+    {"List", "drop", 2} => {:rename, "Enum", "drop"},
+
+    # Wrong module (Enum.cycle doesn't exist — Stream.cycle does)
+    {"Enum", "cycle", 1} => {:rename, "Stream", "cycle"}
   }
 
   @impl true
