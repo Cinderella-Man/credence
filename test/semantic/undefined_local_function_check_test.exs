@@ -13,6 +13,14 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
                )
              )
     end
+
+    test "max/1 (Python max(list) pattern)" do
+      assert UndefinedLocalFunction.match?(
+               error(
+                 "undefined function max/1 (expected MaxProductThree to define such a function or for it to be imported, but none are available)"
+               )
+             )
+    end
   end
 
   describe "match?/1 – rejects" do
@@ -39,6 +47,14 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
 
     test "unrelated error" do
       refute UndefinedLocalFunction.match?(error("some other error"))
+    end
+
+    test "max/2 (Kernel.max exists — not our problem)" do
+      refute UndefinedLocalFunction.match?(
+               error(
+                 "undefined function max/2 (expected MyModule to define such a function or for it to be imported, but none are available)"
+               )
+             )
     end
   end
 

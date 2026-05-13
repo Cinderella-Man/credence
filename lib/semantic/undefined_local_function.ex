@@ -6,20 +6,36 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
   often translating idioms from other languages. This rule maintains a
   mapping of known corrections.
 
-  ## Example
+  ## Literal example (arity-0 call → replacement text)
 
       # Error: undefined function infinity/0
       Enum.reduce(nums, {-infinity(), -infinity()}, fn ...)
 
       # Fixed:
       Enum.reduce(nums, {-:math.inf(), -:math.inf()}, fn ...)
+
+  ## Rename example (bare call → qualified call)
+
+      # Error: undefined function max/1
+      max([option1, option2])
+
+      # Fixed:
+      Enum.max([option1, option2])
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
 
-  # Map of {function_name, arity} → replacement text
+  # ── Replacement table ──────────────────────────────────────────
+  #
+  #   {:literal, text}         — replace name() with text (arity-0 only)
+  #   {:rename, mod, fun}      — replace name( with mod.fun( (any arity)
+
   @replacements %{
-    {"infinity", 0} => ":math.inf()"
+    # Python float('inf') → bare infinity() call
+    {"infinity", 0} => {:literal, ":math.inf()"},
+
+    # Python max(list) → bare max(list) — Elixir's Kernel.max/2 takes 2 args, not a list
+    {"max", 1} => {:rename, "Enum", "max"}
   }
 
   @impl true
@@ -46,10 +62,16 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
     line_no = extract_line(position)
 
     case parse_local_ref(msg) do
-      {name, 0} = key ->
+      {name, _arity} = key ->
         case Map.get(@replacements, key) do
-          nil -> source
-          replacement -> replace_on_line(source, line_no, "#{name}()", replacement)
+          nil ->
+            source
+
+          {:literal, replacement} ->
+            replace_on_line(source, line_no, "#{name}()", replacement)
+
+          {:rename, mod, fun} ->
+            replace_on_line(source, line_no, "#{name}(", "#{mod}.#{fun}(")
         end
 
       _ ->
