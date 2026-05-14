@@ -4,10 +4,21 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
   alias Credence.Semantic.UndefinedFunction
 
   defp warning(msg), do: %{severity: :warning, message: msg, position: {1, 1}}
+  defp error(msg), do: %{severity: :error, message: msg, position: {1, 1}}
 
-  # ── matches module.function renames ────────────────────────────
+  defp local_matches?(name, arity) do
+    UndefinedFunction.match?(
+      error(
+        "undefined function #{name}/#{arity} (expected MyModule to define such a function or for it to be imported, but none are available)"
+      )
+    )
+  end
 
-  describe "match?/1 – matches undefined functions" do
+  # ═══════════════════════════════════════════════════════════════════
+  # QUALIFIED — matches module.function renames
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – qualified: undefined functions" do
     test "Enum.last/1" do
       assert UndefinedFunction.match?(warning("Enum.last/1 is undefined or private"))
     end
@@ -21,7 +32,7 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     end
   end
 
-  describe "match?/1 – matches deprecated functions" do
+  describe "match?/1 – qualified: deprecated functions" do
     test "Enum.partition/2" do
       assert UndefinedFunction.match?(
                warning("Enum.partition/2 is deprecated. Use Enum.split_with/2 instead")
@@ -29,9 +40,7 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     end
   end
 
-  # ── matches hallucinated infinity/bounds constants ─────────────
-
-  describe "match?/1 – matches hallucinated Float infinity calls" do
+  describe "match?/1 – qualified: hallucinated Float infinity" do
     test "Float.NegInfinity/0" do
       assert UndefinedFunction.match?(warning("Float.NegInfinity/0 is undefined or private"))
     end
@@ -48,12 +57,12 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
       assert UndefinedFunction.match?(warning("Float.Infinity/0 is undefined or private"))
     end
 
-    test "Float.inf/0 (lowercase, often used as -Float.inf)" do
+    test "Float.inf/0" do
       assert UndefinedFunction.match?(warning("Float.inf/0 is undefined or private"))
     end
   end
 
-  describe "match?/1 – matches hallucinated Integer bounds calls" do
+  describe "match?/1 – qualified: hallucinated Integer bounds" do
     test "Integer.min_value/0" do
       assert UndefinedFunction.match?(warning("Integer.min_value/0 is undefined or private"))
     end
@@ -63,9 +72,7 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     end
   end
 
-  # ── matches hallucinated List operations ───────────────────────
-
-  describe "match?/1 – matches hallucinated List calls" do
+  describe "match?/1 – qualified: hallucinated List calls" do
     test "List.pop/1" do
       assert UndefinedFunction.match?(warning("List.pop/1 is undefined or private"))
     end
@@ -75,19 +82,17 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     end
   end
 
-  # ── matches wrong-module calls ─────────────────────────────────
-
-  describe "match?/1 – matches wrong-module calls" do
-    test "Enum.cycle/1 (should be Stream.cycle)" do
+  describe "match?/1 – qualified: wrong-module calls" do
+    test "Enum.cycle/1" do
       assert UndefinedFunction.match?(warning("Enum.cycle/1 is undefined or private"))
     end
   end
 
-  # ── matches via FunctionMatcher fallback ────────────────────────
-
-  describe "match?/1 – matches unknown functions for FunctionMatcher fallback" do
-    test "unknown module function (will be tried by FunctionMatcher)" do
-      assert UndefinedFunction.match?(warning("PalindromeChecker.palindrome/1 is undefined or private"))
+  describe "match?/1 – qualified: FunctionMatcher fallback" do
+    test "unknown module function" do
+      assert UndefinedFunction.match?(
+               warning("PalindromeChecker.palindrome/1 is undefined or private")
+             )
     end
 
     test "unknown Float function" do
@@ -103,14 +108,16 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     end
   end
 
-  # ── rejects ────────────────────────────────────────────────────
+  # ═══════════════════════════════════════════════════════════════════
+  # QUALIFIED — rejects
+  # ═══════════════════════════════════════════════════════════════════
 
-  describe "match?/1 – rejects" do
+  describe "match?/1 – qualified: rejects" do
     test "unrelated warning" do
       refute UndefinedFunction.match?(warning("some other warning"))
     end
 
-    test "error severity" do
+    test "error severity for qualified pattern" do
       refute UndefinedFunction.match?(%{
                severity: :error,
                message: "Enum.last/1 is undefined or private",
@@ -123,10 +130,159 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     end
   end
 
-  # ── to_issue ───────────────────────────────────────────────────
+  # ═══════════════════════════════════════════════════════════════════
+  # LOCAL — matches infinity
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – local: infinity" do
+    test "infinity/0" do
+      assert local_matches?("infinity", 0)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LOCAL — matches max/min
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – local: max" do
+    test "max/1" do
+      assert local_matches?("max", 1)
+    end
+
+    test "max/3" do
+      assert local_matches?("max", 3)
+    end
+
+    test "max/4" do
+      assert local_matches?("max", 4)
+    end
+
+    test "max/5" do
+      assert local_matches?("max", 5)
+    end
+  end
+
+  describe "match?/1 – local: min" do
+    test "min/1" do
+      assert local_matches?("min", 1)
+    end
+
+    test "min/3" do
+      assert local_matches?("min", 3)
+    end
+
+    test "min/4" do
+      assert local_matches?("min", 4)
+    end
+
+    test "min/5" do
+      assert local_matches?("min", 5)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LOCAL — matches Python built-ins
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – local: Python built-ins" do
+    test "sum/1" do
+      assert local_matches?("sum", 1)
+    end
+
+    test "sorted/1" do
+      assert local_matches?("sorted", 1)
+    end
+
+    test "len/1" do
+      assert local_matches?("len", 1)
+    end
+
+    test "reversed/1" do
+      assert local_matches?("reversed", 1)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LOCAL — matches range
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – local: range" do
+    test "range/1" do
+      assert local_matches?("range", 1)
+    end
+
+    test "range/2" do
+      assert local_matches?("range", 2)
+    end
+
+    test "range/3" do
+      assert local_matches?("range", 3)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LOCAL — matches via FunctionMatcher fallback
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – local: FunctionMatcher fallback" do
+    test "fibonacci/1" do
+      assert local_matches?("fibonacci", 1)
+    end
+
+    test "while/2" do
+      assert local_matches?("while", 2)
+    end
+
+    test "foobar/0" do
+      assert local_matches?("foobar", 0)
+    end
+
+    test "max/2" do
+      assert local_matches?("max", 2)
+    end
+
+    test "range/0" do
+      assert local_matches?("range", 0)
+    end
+
+    test "range/4" do
+      assert local_matches?("range", 4)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LOCAL — rejects
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – local: rejects" do
+    test "module-qualified 'undefined or private' (handled as qualified, not local)" do
+      refute UndefinedFunction.match?(error("Enum.last/1 is undefined or private"))
+    end
+
+    test "warning severity for local pattern" do
+      refute UndefinedFunction.match?(%{
+               severity: :warning,
+               message:
+                 "undefined function infinity/0 (expected MyModule to define such a function)",
+               position: {1, 1}
+             })
+    end
+
+    test "unrelated error" do
+      refute UndefinedFunction.match?(error("some other error"))
+    end
+
+    test "error without 'undefined function' text" do
+      refute UndefinedFunction.match?(error("something went wrong with foo/1"))
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # TO_ISSUE
+  # ═══════════════════════════════════════════════════════════════════
 
   describe "to_issue/1" do
-    test "extracts rule and line" do
+    test "extracts rule and line from qualified diagnostic" do
       issue =
         UndefinedFunction.to_issue(%{
           severity: :warning,
@@ -136,6 +292,18 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
 
       assert issue.rule == :undefined_function
       assert issue.meta.line == 10
+    end
+
+    test "extracts rule and line from local diagnostic" do
+      issue =
+        UndefinedFunction.to_issue(%{
+          severity: :error,
+          message: "undefined function infinity/0 (expected MyModule to define such a function)",
+          position: {19, 76}
+        })
+
+      assert issue.rule == :undefined_function
+      assert issue.meta.line == 19
     end
   end
 end
