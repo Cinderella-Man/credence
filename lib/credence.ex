@@ -33,14 +33,17 @@ defmodule Credence do
           applied_rules: [{module(), non_neg_integer()}]
         }
   def fix(code_string, opts \\ []) do
-    # Phase 1 & 2: Syntax and Semantic (no trace yet)
-    after_syntax = Credence.Syntax.fix(code_string, opts)
-    after_semantic = Credence.Semantic.fix(after_syntax, opts)
+    # Phase 1: Syntax (with trace)
+    {after_syntax, syntax_applied} = Credence.Syntax.fix_with_trace(code_string, opts)
 
-    # Phase 3: Pattern (with trace — check-then-fix)
+    # Phase 2: Semantic (with trace)
+    {after_semantic, semantic_applied} = Credence.Semantic.fix_with_trace(after_syntax, opts)
+
+    # Phase 3: Pattern (with trace)
     {fixed, pattern_applied} = Credence.Pattern.fix_with_trace(after_semantic, opts)
 
+    all_applied = syntax_applied ++ semantic_applied ++ pattern_applied
     %{issues: remaining} = analyze(fixed, Keyword.put(opts, :source, fixed))
-    %{code: fixed, issues: remaining, applied_rules: pattern_applied}
+    %{code: fixed, issues: remaining, applied_rules: all_applied}
   end
 end

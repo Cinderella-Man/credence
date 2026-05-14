@@ -13,6 +13,7 @@ defmodule Credence.Semantic do
   once the error is resolved.
   """
 
+  require Logger
   alias Credence.RuleHelpers
 
   @default_max_passes 3
@@ -34,38 +35,106 @@ defmodule Credence.Semantic do
 
   @spec fix(String.t(), keyword()) :: String.t()
   def fix(source, opts \\ []) do
-    max_passes = Keyword.get(opts, :max_passes, @default_max_passes)
-    do_fix(source, max_passes)
+    {code, _applied} = fix_with_trace(source, opts)
+    code
   end
 
-  defp do_fix(source, 0), do: source
+  @doc """
+  Like `fix/2`, but also returns a list of `{rule_module, issue_count}` tuples
+  for every rule that actually fired and was applied.
 
-  defp do_fix(source, passes_remaining) do
+  Every step is logged via `Logger.debug` with `[credence_fix]` prefix:
+  pass number, severity being targeted, rule name, whether the source
+  changed, and a before/after diff of the lines that were modified.
+  """
+  @spec fix_with_trace(String.t(), keyword()) ::
+          {String.t(), [{module(), non_neg_integer()}]}
+  def fix_with_trace(source, opts \\ []) do
+    max_passes = Keyword.get(opts, :max_passes, @default_max_passes)
+
+    Logger.debug(
+      "[credence_fix] starting semantic fix pipeline (max #{max_passes} passes, #{length(rules())} rules)"
+    )
+
+    {code, applied} = do_fix_traced(source, max_passes, 1, [])
+
+    summary =
+      Enum.map_join(applied, ", ", fn {mod, count} ->
+        "#{RuleHelpers.rule_name(mod)}(#{count})"
+      end)
+
+    Logger.debug("[credence_fix] semantic done. Applied: [#{summary}]")
+
+    {code, applied}
+  end
+
+  defp do_fix_traced(source, max_passes, pass, applied) when pass > max_passes do
+    Logger.debug("[credence_fix] semantic pass limit reached (#{max_passes}), stopping")
+    {source, Enum.reverse(applied)}
+  end
+
+  defp do_fix_traced(source, max_passes, pass, applied) do
     case compile_and_capture(source) do
       {:ok, diagnostics} ->
         # Compilation succeeded — fix warnings (terminal pass, no retry needed)
-        apply_fixes(source, diagnostics, :warning)
+        warnings = Enum.filter(diagnostics, &(&1.severity == :warning))
+
+        Logger.debug(
+          "[credence_fix] semantic pass #{pass}: compilation OK, #{length(warnings)} warning(s)"
+        )
+
+        {fixed, new_applied} = apply_fixes_traced(source, warnings)
+        {fixed, Enum.reverse(new_applied ++ applied)}
 
       {:error, diagnostics} ->
         # Compilation failed — fix errors, then retry
-        fixed = apply_fixes(source, diagnostics, :error)
+        errors = Enum.filter(diagnostics, &(&1.severity == :error))
+
+        Logger.debug(
+          "[credence_fix] semantic pass #{pass}: compilation FAILED, #{length(errors)} error(s)"
+        )
+
+        {fixed, new_applied} = apply_fixes_traced(source, errors)
 
         if fixed != source do
-          do_fix(fixed, passes_remaining - 1)
+          Logger.debug("[credence_fix] semantic pass #{pass}: source changed, retrying...")
+          do_fix_traced(fixed, max_passes, pass + 1, new_applied ++ applied)
         else
-          # No rule could fix the error — return as-is
-          fixed
+          Logger.debug(
+            "[credence_fix] semantic pass #{pass}: no rule could fix the error(s), stopping"
+          )
+
+          {fixed, Enum.reverse(new_applied ++ applied)}
         end
     end
   end
 
-  defp apply_fixes(source, diagnostics, severity) do
-    diagnostics
-    |> Enum.filter(&(&1.severity == severity))
-    |> Enum.reduce(source, fn diagnostic, src ->
+  defp apply_fixes_traced(source, diagnostics) do
+    Enum.reduce(diagnostics, {source, []}, fn diagnostic, {src, applied} ->
       case find_matching_rule(diagnostic) do
-        nil -> src
-        rule -> rule.fix(src, diagnostic)
+        nil ->
+          Logger.debug(
+            "[credence_fix] no rule matched diagnostic: #{inspect(diagnostic.message)}"
+          )
+
+          {src, applied}
+
+        rule ->
+          name = RuleHelpers.rule_name(rule)
+
+          Logger.debug(
+            "[credence_fix] #{name}: matched diagnostic, running fix..."
+          )
+
+          fixed = rule.fix(src, diagnostic)
+
+          if fixed == src do
+            Logger.debug("[credence_fix] #{name}: fix returned IDENTICAL source (no change)")
+          else
+            RuleHelpers.log_diff(name, src, fixed)
+          end
+
+          {fixed, [{rule, 1} | applied]}
       end
     end)
   end

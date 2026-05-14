@@ -71,27 +71,19 @@ defmodule Credence.RuleHelpers do
   @doc """
   Logs a before/after diff under a `[credence_fix]` prefix.
 
-  Shows up to 10 changed lines; appends a count of remaining changes
-  if the diff is larger.
+  Shows every changed line — the diff is never truncated so that the
+  full extent of each fix is visible in the log output.
   """
   @spec log_diff(String.t(), String.t(), String.t()) :: :ok
   def log_diff(label, before, after_fix) do
     changes = diff_lines(before, after_fix)
-    shown = Enum.take(changes, 10)
 
     change_summary =
-      Enum.map_join(shown, "\n", fn
+      Enum.map_join(changes, "\n", fn
         {:removed, line_no, text} -> "  L#{line_no} - #{String.trim(text)}"
         {:added, line_no, text} -> "  L#{line_no} + #{String.trim(text)}"
       end)
 
-    remaining = length(changes) - length(shown)
-
-    more =
-      if remaining > 0,
-        do: "\n  ... (#{remaining} more changes)",
-        else: ""
-
-    Logger.debug("[credence_fix] #{label}: source CHANGED:\n#{change_summary}#{more}")
+    Logger.debug("[credence_fix] #{label}: source CHANGED:\n#{change_summary}")
   end
 end
