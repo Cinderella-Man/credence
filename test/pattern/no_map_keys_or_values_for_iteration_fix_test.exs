@@ -765,5 +765,19 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
 
       assert {:ok, _} = Code.string_to_quoted(fix(code))
     end
+
+    test "preserves heredoc when no rewrite applies" do
+      code = ~S'''
+      defmodule M do
+        @moduledoc """
+        line 1
+        line 2
+        """
+        def noop(x), do: x
+      end
+      '''
+
+      assert fix(code) == code
+    end
   end
 end

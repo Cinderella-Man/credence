@@ -124,41 +124,44 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   def fix(source, _opts) do
     {:ok, ast} = source |> Code.string_to_quoted(columns: true)
 
-    ast
-    |> Macro.postwalk(fn
-      # Pattern 1 — nested: Enum.func(Map.keys/values(m), rest_args...)
-      {{:., dot, [{:__aliases__, al, [:Enum]}, f]}, cm, args} = node ->
-        case args do
-          [{{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, [ma]} | rest]
-          when mfunc in @map_funcs ->
-            pick(fix_nested(f, dot, al, cm, mfunc, ma, rest), node)
+    # Skip the Sourceror.to_string round-trip when nothing was rewritten —
+    # it strips heredoc tokens.
+    case Macro.postwalk(ast, fn
+           # Pattern 1 — nested: Enum.func(Map.keys/values(m), rest_args...)
+           {{:., dot, [{:__aliases__, al, [:Enum]}, f]}, cm, args} = node ->
+             case args do
+               [{{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, [ma]} | rest]
+               when mfunc in @map_funcs ->
+                 pick(fix_nested(f, dot, al, cm, mfunc, ma, rest), node)
 
-          _ ->
-            node
-        end
+               _ ->
+                 node
+             end
 
-      # Pattern 2 — pipe: Map.keys/values(m) |> Enum.func(...)
-      {:|>, pm,
-       [
-         {{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, [ma]},
-         {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, ea}
-       ]} = node
-      when mfunc in @map_funcs ->
-        pick(fix_pipe(f, pm, mfunc, ma, ea), node)
+           # Pattern 2 — pipe: Map.keys/values(m) |> Enum.func(...)
+           {:|>, pm,
+            [
+              {{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, [ma]},
+              {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, ea}
+            ]} = node
+           when mfunc in @map_funcs ->
+             pick(fix_pipe(f, pm, mfunc, ma, ea), node)
 
-      # Pattern 3 — triple pipe: map |> Map.keys/values() |> Enum.func(...)
-      {:|>, pm,
-       [
-         {:|>, _, [ma, {{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, _}]},
-         {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, ea}
-       ]} = node
-      when mfunc in @map_funcs ->
-        pick(fix_pipe(f, pm, mfunc, ma, ea), node)
+           # Pattern 3 — triple pipe: map |> Map.keys/values() |> Enum.func(...)
+           {:|>, pm,
+            [
+              {:|>, _, [ma, {{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, _}]},
+              {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, ea}
+            ]} = node
+           when mfunc in @map_funcs ->
+             pick(fix_pipe(f, pm, mfunc, ma, ea), node)
 
-      node ->
-        node
-    end)
-    |> Sourceror.to_string()
+           node ->
+             node
+         end) do
+      ^ast -> source
+      fixed -> Sourceror.to_string(fixed)
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════
