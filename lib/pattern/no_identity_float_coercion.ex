@@ -15,21 +15,28 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
 
   Note: `0.0 - expr` is NOT flagged — it negates, not coerces.
 
+  ## Bare-variable skip
+
+  When the non-identity operand is a bare variable (`n * 1.0`), the rule
+  skips it — the variable's type is unknown, and `* 1.0` may be intentional
+  int → float coercion. Compound expressions (`(a + b) * 1.0`), function
+  calls (`Enum.at(list, 0) * 1.0`), and literals are still flagged because
+  the `* 1.0` is overwhelmingly a Python-ism in those contexts.
+
+  The companion rule `PreferErlangFloat` handles the bare-variable cases
+  by rewriting `n * 1.0` to `:erlang.float(n)`.
+
   ## Bad
 
       Enum.at(sorted_list, mid) * 1.0
 
       Enum.at(combined, mid_index) / 1.0
 
-      count = count + 0.0
-
   ## Good
 
       Enum.at(sorted_list, mid)
 
       Enum.at(combined, mid_index)
-
-      # (self-assignment line removed entirely)
 
   ## Auto-fix
 
@@ -52,18 +59,18 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         # expr OP identity  (right-hand identity)
-        {op, meta, [_expr, val]} = node, acc
+        {op, meta, [expr, val]} = node, acc
         when is_float(val) and op in [:*, :/, :+, :-] ->
-          if identity_right?(op, val) do
+          if identity_right?(op, val) and not bare_var?(expr) do
             {node, [build_issue(op, val, meta) | acc]}
           else
             {node, acc}
           end
 
         # identity OP expr  (left-hand identity, commutative ops only)
-        {op, meta, [val, _expr]} = node, acc
+        {op, meta, [val, expr]} = node, acc
         when is_float(val) and op in [:*, :+] ->
-          if identity_left?(op, val) do
+          if identity_left?(op, val) and not bare_var?(expr) do
             {node, [build_issue(op, val, meta) | acc]}
           else
             {node, acc}
@@ -119,8 +126,12 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
         # Single clause checks both sides — two clauses would shadow each
         # other because the first always matches any binary op node.
         {op, meta, [left, right]} = node, acc when op in [:*, :/, :+, :-] ->
-          hit_right = identity_right?(op, unwrap_float(right))
-          hit_left = op in [:*, :+] and identity_left?(op, unwrap_float(left))
+          hit_right =
+            identity_right?(op, unwrap_float(right)) and not bare_var?(left)
+
+          hit_left =
+            op in [:*, :+] and identity_left?(op, unwrap_float(left)) and
+              not bare_var?(right)
 
           if hit_right or hit_left do
             {node, [Keyword.get(meta, :line) | acc]}
@@ -134,6 +145,13 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
 
     Enum.uniq(lines)
   end
+
+  # ── Bare-variable detection ──────────────────────────────────────
+
+  # Sourceror wraps variables in {:__block__, _, [var_node]}.
+  defp bare_var?({:__block__, _, [inner]}), do: bare_var?(inner)
+  defp bare_var?({name, _meta, ctx}) when is_atom(name) and is_atom(ctx), do: true
+  defp bare_var?(_), do: false
 
   # ── Line-level rewriting (regex) ──────────────────────────────────
 

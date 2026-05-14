@@ -1319,5 +1319,46 @@ defmodule CredenceTest do
 
       assert {:ok, _ast} = Code.string_to_quoted(result.code)
     end
+
+    test "fix works nicely with to float conversion" do
+      input = """
+      defmodule Example do
+        def to_float_a(n) when is_integer(n), do: n * 1.0
+        def to_float_b(n) when is_number(n), do: n * 1.0
+        def to_float_c(n), do: n * 1.0
+
+        def to_float_d(n) when is_integer(n) do
+          n * 1.0
+        end
+        def to_float_e(n) when is_number(n) do
+          n * 1.0
+        end
+        def to_float_f(n) do
+          n * 1.0
+        end
+      end
+      """
+
+      expected_output = """
+      defmodule Example do
+        def to_float_a(n) when is_integer(n), do: :erlang.float(n)
+        def to_float_b(n) when is_number(n), do: :erlang.float(n)
+        def to_float_c(n), do: :erlang.float(n)
+
+        def to_float_d(n) when is_integer(n) do
+          :erlang.float(n)
+        end
+        def to_float_e(n) when is_number(n) do
+          :erlang.float(n)
+        end
+        def to_float_f(n) do
+          :erlang.float(n)
+        end
+      end
+      """
+
+      result = Credence.fix(input)
+      assert result.code == expected_output
+    end
   end
 end

@@ -10,78 +10,62 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionCheckTest do
   defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
-  # MULTIPLY BY 1.0
+  # MULTIPLY BY 1.0 — non-bare operands (flagged)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "* 1.0" do
-    test "flags expr * 1.0" do
-      assert flagged?("n * 1.0")
-    end
-
-    test "flags 1.0 * expr" do
-      assert flagged?("1.0 * n")
-    end
-
-    test "flags complex expression * 1.0" do
+  describe "* 1.0 with non-bare operands" do
+    test "flags function call * 1.0" do
       assert flagged?("Enum.at(list, div(length(list), 2)) * 1.0")
     end
 
-    test "flags (a + b) * 1.0" do
+    test "flags compound expression * 1.0" do
       assert flagged?("(a + b) * 1.0")
     end
 
-    test "flags self-assignment var = var * 1.0" do
-      assert flagged?("count = count * 1.0")
+    test "flags 1.0 * function call" do
+      assert flagged?("1.0 * Enum.sum(list)")
+    end
+
+    test "flags literal * 1.0" do
+      assert flagged?("(2 + 3) * 1.0")
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # DIVIDE BY 1.0
+  # DIVIDE BY 1.0 — non-bare operands (flagged)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "/ 1.0" do
-    test "flags expr / 1.0" do
-      assert flagged?("n / 1.0")
-    end
-
-    test "flags complex expression / 1.0" do
+  describe "/ 1.0 with non-bare operands" do
+    test "flags function call / 1.0" do
       assert flagged?("Enum.at(combined, mid_index) / 1.0")
     end
 
-    test "flags self-assignment var = var / 1.0" do
-      assert flagged?("count = count / 1.0")
+    test "flags compound expression / 1.0" do
+      assert flagged?("(a - b) / 1.0")
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # ADD 0.0
+  # ADD 0.0 — non-bare operands (flagged)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "+ 0.0" do
-    test "flags expr + 0.0" do
-      assert flagged?("n + 0.0")
+  describe "+ 0.0 with non-bare operands" do
+    test "flags function call + 0.0" do
+      assert flagged?("Enum.sum(list) + 0.0")
     end
 
-    test "flags 0.0 + expr" do
-      assert flagged?("0.0 + n")
-    end
-
-    test "flags self-assignment var = var + 0.0" do
-      assert flagged?("count = count + 0.0")
+    test "flags 0.0 + function call" do
+      assert flagged?("0.0 + Enum.sum(list)")
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # SUBTRACT 0.0
+  # SUBTRACT 0.0 — non-bare operands (flagged)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "- 0.0" do
-    test "flags expr - 0.0" do
-      assert flagged?("n - 0.0")
-    end
-
-    test "flags self-assignment var = var - 0.0" do
-      assert flagged?("count = count - 0.0")
+  describe "- 0.0 with non-bare operands" do
+    test "flags function call - 0.0" do
+      assert flagged?("Enum.count(list) - 0.0")
     end
   end
 
@@ -90,22 +74,22 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionCheckTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "multiple hits" do
-    test "flags two different identity ops in same module" do
+    test "flags two non-bare identity ops in same module" do
       code = """
       defmodule Example do
-        def foo(n), do: n * 1.0
-        def bar(n), do: n / 1.0
+        def foo(list), do: Enum.sum(list) * 1.0
+        def bar(list), do: Enum.count(list) / 1.0
       end
       """
 
       assert length(check(code)) == 2
     end
 
-    test "flags mixed * 1.0 and + 0.0" do
+    test "flags mixed * 1.0 and + 0.0 on non-bare operands" do
       code = """
       defmodule Example do
-        def foo(n), do: n * 1.0
-        def bar(n), do: n + 0.0
+        def foo(a, b), do: (a + b) * 1.0
+        def bar(list), do: Enum.sum(list) + 0.0
       end
       """
 
@@ -114,7 +98,45 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionCheckTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # NEGATIVE CASES — must NOT flag
+  # BARE-VARIABLE SKIP — must NOT flag
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "skips bare-variable operands (handled by PreferErlangFloat)" do
+    test "n * 1.0" do
+      assert clean?("n * 1.0")
+    end
+
+    test "1.0 * n" do
+      assert clean?("1.0 * n")
+    end
+
+    test "n / 1.0" do
+      assert clean?("n / 1.0")
+    end
+
+    test "n + 0.0" do
+      assert clean?("n + 0.0")
+    end
+
+    test "0.0 + n" do
+      assert clean?("0.0 + n")
+    end
+
+    test "n - 0.0" do
+      assert clean?("n - 0.0")
+    end
+
+    test "self-assignment count = count * 1.0" do
+      assert clean?("count = count * 1.0")
+    end
+
+    test "self-assignment count = count / 1.0" do
+      assert clean?("count = count / 1.0")
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # NEGATIVE CASES — must NOT flag (real arithmetic)
   # ═══════════════════════════════════════════════════════════════════
 
   describe "does not flag real arithmetic" do

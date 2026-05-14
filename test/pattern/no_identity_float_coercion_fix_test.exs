@@ -6,116 +6,84 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionFixTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # MULTIPLY BY 1.0 — removal
+  # MULTIPLY BY 1.0 — removal (non-bare operands)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "fix * 1.0" do
-    test "removes trailing * 1.0" do
-      assert fix("n * 1.0") == "n"
-    end
-
-    test "removes leading 1.0 *" do
-      assert fix("1.0 * n") == "n"
-    end
-
-    test "removes * 1.0 from complex expression" do
+  describe "fix * 1.0 with non-bare operands" do
+    test "removes * 1.0 from function call" do
       assert fix("Enum.at(list, 0) * 1.0") == "Enum.at(list, 0)"
     end
 
-    test "removes * 1.0 in arithmetic context" do
-      assert fix("a + b * 1.0") == "a + b"
+    test "removes * 1.0 from compound expression" do
+      assert fix("(a + b) * 1.0") == "(a + b)"
+    end
+
+    test "removes leading 1.0 * from function call" do
+      assert fix("1.0 * Enum.sum(list)") == "Enum.sum(list)"
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # DIVIDE BY 1.0 — removal
+  # DIVIDE BY 1.0 — removal (non-bare operands)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "fix / 1.0" do
-    test "removes / 1.0" do
-      assert fix("n / 1.0") == "n"
-    end
-
-    test "removes / 1.0 from complex expression" do
+  describe "fix / 1.0 with non-bare operands" do
+    test "removes / 1.0 from function call" do
       assert fix("Enum.at(combined, mid_index) / 1.0") == "Enum.at(combined, mid_index)"
     end
-  end
 
-  # ═══════════════════════════════════════════════════════════════════
-  # ADD 0.0 — removal
-  # ═══════════════════════════════════════════════════════════════════
-
-  describe "fix + 0.0" do
-    test "removes trailing + 0.0" do
-      assert fix("n + 0.0") == "n"
-    end
-
-    test "removes leading 0.0 +" do
-      assert fix("0.0 + n") == "n"
+    test "removes / 1.0 from compound expression" do
+      assert fix("(a - b) / 1.0") == "(a - b)"
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # SUBTRACT 0.0 — removal
+  # ADD 0.0 — removal (non-bare operands)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "fix - 0.0" do
-    test "removes trailing - 0.0" do
-      assert fix("n - 0.0") == "n"
+  describe "fix + 0.0 with non-bare operands" do
+    test "removes trailing + 0.0 from function call" do
+      assert fix("Enum.sum(list) + 0.0") == "Enum.sum(list)"
+    end
+
+    test "removes leading 0.0 + from function call" do
+      assert fix("0.0 + Enum.sum(list)") == "Enum.sum(list)"
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # SELF-ASSIGNMENT — line deletion
+  # SUBTRACT 0.0 — removal (non-bare operands)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "self-assignment deletion" do
-    test "deletes var = var * 1.0" do
-      input =
-        "defmodule Example do\n  def run(count) do\n    count = count * 1.0\n    count\n  end\nend\n"
-
-      expected =
-        "defmodule Example do\n  def run(count) do\n    count\n  end\nend\n"
-
-      assert fix(input) == expected
+  describe "fix - 0.0 with non-bare operands" do
+    test "removes trailing - 0.0 from function call" do
+      assert fix("Enum.count(list) - 0.0") == "Enum.count(list)"
     end
+  end
 
-    test "deletes var = 1.0 * var" do
-      input =
-        "defmodule Example do\n  def run(n) do\n    n = 1.0 * n\n    n\n  end\nend\n"
+  # ═══════════════════════════════════════════════════════════════════
+  # SELF-ASSIGNMENT — line deletion (non-bare operands)
+  # ═══════════════════════════════════════════════════════════════════
 
-      expected =
-        "defmodule Example do\n  def run(n) do\n    n\n  end\nend\n"
+  describe "self-assignment deletion with non-bare operands" do
+    test "deletes result = Enum.sum(list) * 1.0 style line" do
+      input = """
+      defmodule Example do
+        def run(list) do
+          result = Enum.sum(list) * 1.0
+          result
+        end
+      end
+      """
 
-      assert fix(input) == expected
-    end
-
-    test "deletes var = var / 1.0" do
-      input =
-        "defmodule Example do\n  def run(n) do\n    n = n / 1.0\n    n\n  end\nend\n"
-
-      expected =
-        "defmodule Example do\n  def run(n) do\n    n\n  end\nend\n"
-
-      assert fix(input) == expected
-    end
-
-    test "deletes var = var + 0.0" do
-      input =
-        "defmodule Example do\n  def run(n) do\n    n = n + 0.0\n    n\n  end\nend\n"
-
-      expected =
-        "defmodule Example do\n  def run(n) do\n    n\n  end\nend\n"
-
-      assert fix(input) == expected
-    end
-
-    test "deletes var = var - 0.0" do
-      input =
-        "defmodule Example do\n  def run(n) do\n    n = n - 0.0\n    n\n  end\nend\n"
-
-      expected =
-        "defmodule Example do\n  def run(n) do\n    n\n  end\nend\n"
+      expected = """
+      defmodule Example do
+        def run(list) do
+          result = Enum.sum(list)
+          result
+        end
+      end
+      """
 
       assert fix(input) == expected
     end
@@ -127,28 +95,112 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionFixTest do
 
   describe "preserves surrounding code" do
     test "only touches the offending line" do
-      input =
-        "defmodule Example do\n  def foo(n), do: n + 1\n\n  def bar(n), do: n * 1.0\n\n  def baz(n), do: n - 1\nend\n"
+      input = """
+      defmodule Example do
+        def foo(n), do: n + 1
 
-      expected =
-        "defmodule Example do\n  def foo(n), do: n + 1\n\n  def bar(n), do: n\n\n  def baz(n), do: n - 1\nend\n"
+        def bar(list), do: Enum.sum(list) * 1.0
+
+        def baz(n), do: n - 1
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def foo(n), do: n + 1
+
+        def bar(list), do: Enum.sum(list)
+
+        def baz(n), do: n - 1
+      end
+      """
 
       assert fix(input) == expected
     end
 
-    test "fixes multiple identity ops in one module" do
-      input =
-        "defmodule Example do\n  def foo(n), do: n * 1.0\n  def bar(n), do: n / 1.0\nend\n"
+    test "fixes multiple non-bare identity ops in one module" do
+      input = """
+      defmodule Example do
+        def foo(list), do: Enum.sum(list) * 1.0
+        def bar(list), do: Enum.count(list) / 1.0
+      end
+      """
 
-      expected =
-        "defmodule Example do\n  def foo(n), do: n\n  def bar(n), do: n\nend\n"
+      expected = """
+      defmodule Example do
+        def foo(list), do: Enum.sum(list)
+        def bar(list), do: Enum.count(list)
+      end
+      """
 
       assert fix(input) == expected
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # SAFETY — must not touch
+  # BARE-VARIABLE SKIP — must NOT touch
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "skips bare-variable operands" do
+    test "leaves n * 1.0 alone" do
+      code = "n * 1.0"
+      assert fix(code) == code
+    end
+
+    test "leaves 1.0 * n alone" do
+      code = "1.0 * n"
+      assert fix(code) == code
+    end
+
+    test "leaves n / 1.0 alone" do
+      code = "n / 1.0"
+      assert fix(code) == code
+    end
+
+    test "leaves n + 0.0 alone" do
+      code = "n + 0.0"
+      assert fix(code) == code
+    end
+
+    test "leaves 0.0 + n alone" do
+      code = "0.0 + n"
+      assert fix(code) == code
+    end
+
+    test "leaves n - 0.0 alone" do
+      code = "n - 0.0"
+      assert fix(code) == code
+    end
+
+    test "leaves self-assignment count = count * 1.0 alone" do
+      code = "defmodule Example do\n  def run(count) do\n    count = count * 1.0\n    count\n  end\nend\n"
+      assert fix(code) == code
+    end
+
+    test "leaves the PR author's to_float function alone" do
+      code = """
+      defmodule Coerce do
+        defp to_float(n) when is_integer(n), do: n * 1.0
+      end
+      """
+
+      assert fix(code) == code
+    end
+
+    test "leaves def body with bare var * 1.0 alone" do
+      code = """
+      defmodule Example do
+        def foo(n), do: n * 1.0
+        def bar(n), do: n / 1.0
+      end
+      """
+
+      assert fix(code) == code
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # SAFETY — must not touch (real arithmetic)
   # ═══════════════════════════════════════════════════════════════════
 
   describe "does not modify clean code" do
