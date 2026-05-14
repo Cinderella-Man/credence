@@ -1367,7 +1367,7 @@ defmodule CredenceTest do
       assert result.code == expected
     end
 
-    test "in function context" do
+    test "mixed to float behaviour" do
       input = """
       defmodule Example do
         def foo(n, xs), do: {n * 1.0, Enum.sum(xs) * 1.0}

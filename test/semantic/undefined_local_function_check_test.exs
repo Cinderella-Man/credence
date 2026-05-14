@@ -5,31 +5,105 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
 
   defp error(msg), do: %{severity: :error, message: msg, position: {1, 1}}
 
-  describe "match?/1 – matches known replacements" do
-    test "infinity/0" do
-      assert UndefinedLocalFunction.match?(
-               error(
-                 "undefined function infinity/0 (expected MyModule to define such a function or for it to be imported, but none are available)"
-               )
-             )
-    end
+  defp matches?(name, arity) do
+    UndefinedLocalFunction.match?(
+      error(
+        "undefined function #{name}/#{arity} (expected MyModule to define such a function or for it to be imported, but none are available)"
+      )
+    )
+  end
 
-    test "max/1 (Python max(list) pattern)" do
-      assert UndefinedLocalFunction.match?(
-               error(
-                 "undefined function max/1 (expected MaxProductThree to define such a function or for it to be imported, but none are available)"
-               )
-             )
+  # ═══════════════════════════════════════════════════════════════════
+  # MATCHES — infinity
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – infinity" do
+    test "infinity/0" do
+      assert matches?("infinity", 0)
     end
   end
 
+  # ═══════════════════════════════════════════════════════════════════
+  # MATCHES — max (Python's polymorphic max)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – max" do
+    test "max/1 (max of a list)" do
+      assert matches?("max", 1)
+    end
+
+    test "max/3 (max of three values)" do
+      assert matches?("max", 3)
+    end
+
+    test "max/4 (max of four values)" do
+      assert matches?("max", 4)
+    end
+
+    test "max/5 (max of five values)" do
+      assert matches?("max", 5)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # MATCHES — min (Python's polymorphic min)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – min" do
+    test "min/1 (min of a list)" do
+      assert matches?("min", 1)
+    end
+
+    test "min/3 (min of three values)" do
+      assert matches?("min", 3)
+    end
+
+    test "min/4 (min of four values)" do
+      assert matches?("min", 4)
+    end
+
+    test "min/5 (min of five values)" do
+      assert matches?("min", 5)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # MATCHES — other Python built-ins
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – Python built-ins" do
+    test "sum/1 (Python sum(list))" do
+      assert matches?("sum", 1)
+    end
+
+    test "sorted/1 (Python sorted(list))" do
+      assert matches?("sorted", 1)
+    end
+
+    test "len/1 (Python len(list))" do
+      assert matches?("len", 1)
+    end
+
+    test "reversed/1 (Python reversed(list))" do
+      assert matches?("reversed", 1)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # REJECTS
+  # ═══════════════════════════════════════════════════════════════════
+
   describe "match?/1 – rejects" do
     test "unknown local function" do
-      refute UndefinedLocalFunction.match?(
-               error(
-                 "undefined function foobar/0 (expected MyModule to define such a function or for it to be imported, but none are available)"
-               )
-             )
+      refute matches?("foobar", 0)
+    end
+
+    test "max/2 (Kernel.max/2 exists)" do
+      refute matches?("max", 2)
+    end
+
+    test "min/2 (Kernel.min/2 exists)" do
+      refute matches?("min", 2)
     end
 
     test "module-qualified undefined (handled by UndefinedFunction)" do
@@ -48,15 +122,11 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
     test "unrelated error" do
       refute UndefinedLocalFunction.match?(error("some other error"))
     end
-
-    test "max/2 (Kernel.max exists — not our problem)" do
-      refute UndefinedLocalFunction.match?(
-               error(
-                 "undefined function max/2 (expected MyModule to define such a function or for it to be imported, but none are available)"
-               )
-             )
-    end
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # TO_ISSUE
+  # ═══════════════════════════════════════════════════════════════════
 
   describe "to_issue/1" do
     test "extracts rule and line" do

@@ -7,56 +7,60 @@ defmodule Credence.Semantic.UndefinedLocalFunctionFixTest do
     UndefinedLocalFunction.fix(source, %{severity: :error, message: message, position: {line, 1}})
   end
 
-  @infinity_msg "undefined function infinity/0 (expected MyModule to define such a function or for it to be imported, but none are available)"
+  defp msg(name, arity) do
+    "undefined function #{name}/#{arity} (expected MyModule to define such a function or for it to be imported, but none are available)"
+  end
 
-  @max_msg "undefined function max/1 (expected MaxProductThree to define such a function or for it to be imported, but none are available)"
-
-  # ── infinity() → :math.inf() ──────────────────────────────────
+  # ═══════════════════════════════════════════════════════════════════
+  # infinity() → :math.inf()
+  # ═══════════════════════════════════════════════════════════════════
 
   describe "infinity() → :math.inf()" do
     test "standalone call" do
-      assert fix("infinity()", @infinity_msg) == ":math.inf()"
+      assert fix("infinity()", msg("infinity", 0)) == ":math.inf()"
     end
 
     test "negated" do
-      assert fix("-infinity()", @infinity_msg) == "-:math.inf()"
+      assert fix("-infinity()", msg("infinity", 0)) == "-:math.inf()"
     end
 
     test "in a tuple" do
-      assert fix("{-infinity(), -infinity()}", @infinity_msg) ==
+      assert fix("{-infinity(), -infinity()}", msg("infinity", 0)) ==
                "{-:math.inf(), -:math.inf()}"
     end
 
     test "in Enum.reduce accumulator" do
       input = "Enum.reduce(nums, {-infinity(), -infinity()}, fn x, acc -> x end)"
 
-      assert fix(input, @infinity_msg) ==
+      assert fix(input, msg("infinity", 0)) ==
                "Enum.reduce(nums, {-:math.inf(), -:math.inf()}, fn x, acc -> x end)"
     end
 
     test "only on reported line" do
       input = "x = infinity()\ny = infinity()"
 
-      assert fix(input, @infinity_msg, 2) ==
+      assert fix(input, msg("infinity", 0), 2) ==
                "x = infinity()\ny = :math.inf()"
     end
   end
 
-  # ── max(list) → Enum.max(list) ────────────────────────────────
+  # ═══════════════════════════════════════════════════════════════════
+  # max/1 — max(list) → Enum.max(list)
+  # ═══════════════════════════════════════════════════════════════════
 
-  describe "max(list) → Enum.max(list)" do
+  describe "max/1 → Enum.max(list)" do
     test "with list literal" do
-      assert fix("max([option1, option2])", @max_msg) ==
+      assert fix("max([option1, option2])", msg("max", 1)) ==
                "Enum.max([option1, option2])"
     end
 
     test "with variable" do
-      assert fix("max(values)", @max_msg) ==
+      assert fix("max(values)", msg("max", 1)) ==
                "Enum.max(values)"
     end
 
     test "in assignment" do
-      assert fix("result = max([a, b, c])", @max_msg) ==
+      assert fix("result = max([a, b, c])", msg("max", 1)) ==
                "result = Enum.max([a, b, c])"
     end
 
@@ -73,24 +77,239 @@ defmodule Credence.Semantic.UndefinedLocalFunctionFixTest do
           "\n" <>
           "    Enum.max([option1, option2])"
 
-      assert fix(code, @max_msg, 4) == expected
+      assert fix(code, msg("max", 1), 4) == expected
     end
 
     test "only on reported line" do
       input = "x = max(a, b)\ny = max([option1, option2])"
 
-      assert fix(input, @max_msg, 2) ==
+      assert fix(input, msg("max", 1), 2) ==
                "x = max(a, b)\ny = Enum.max([option1, option2])"
     end
   end
 
-  # ── no-ops ─────────────────────────────────────────────────────
+  # ═══════════════════════════════════════════════════════════════════
+  # max/3,4,5 — max(a, b, c) → Enum.max([a, b, c])
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "max/3 → Enum.max([a, b, c])" do
+    test "three simple args" do
+      assert fix("max(a, b, c)", msg("max", 3)) ==
+               "Enum.max([a, b, c])"
+    end
+
+    test "in assignment" do
+      assert fix("result = max(x, y, z)", msg("max", 3)) ==
+               "result = Enum.max([x, y, z])"
+    end
+
+    test "with nested function call in args" do
+      assert fix("max(foo(x), bar(y), z)", msg("max", 3)) ==
+               "Enum.max([foo(x), bar(y), z])"
+    end
+
+    test "preserves inner Kernel.max/2" do
+      assert fix("max(a, max(b, c), d)", msg("max", 3)) ==
+               "Enum.max([a, max(b, c), d])"
+    end
+  end
+
+  describe "max/4 → Enum.max([a, b, c, d])" do
+    test "four simple args" do
+      assert fix("max(a, b, c, d)", msg("max", 4)) ==
+               "Enum.max([a, b, c, d])"
+    end
+  end
+
+  describe "max/5 → Enum.max([a, b, c, d, e])" do
+    test "five simple args" do
+      assert fix("max(a, b, c, d, e)", msg("max", 5)) ==
+               "Enum.max([a, b, c, d, e])"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # min/1 — min(list) → Enum.min(list)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "min/1 → Enum.min(list)" do
+    test "with list literal" do
+      assert fix("min([a, b])", msg("min", 1)) ==
+               "Enum.min([a, b])"
+    end
+
+    test "with variable" do
+      assert fix("min(values)", msg("min", 1)) ==
+               "Enum.min(values)"
+    end
+
+    test "in assignment" do
+      assert fix("lowest = min([x, y, z])", msg("min", 1)) ==
+               "lowest = Enum.min([x, y, z])"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # min/3,4,5 — min(a, b, c) → Enum.min([a, b, c])
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "min/3 → Enum.min([a, b, c])" do
+    test "three simple args" do
+      assert fix("min(a, b, c)", msg("min", 3)) ==
+               "Enum.min([a, b, c])"
+    end
+
+    test "with nested function call" do
+      assert fix("min(foo(x), bar(y), z)", msg("min", 3)) ==
+               "Enum.min([foo(x), bar(y), z])"
+    end
+
+    test "preserves inner Kernel.min/2" do
+      assert fix("min(a, min(b, c), d)", msg("min", 3)) ==
+               "Enum.min([a, min(b, c), d])"
+    end
+  end
+
+  describe "min/4 → Enum.min([a, b, c, d])" do
+    test "four simple args" do
+      assert fix("min(a, b, c, d)", msg("min", 4)) ==
+               "Enum.min([a, b, c, d])"
+    end
+  end
+
+  describe "min/5 → Enum.min([a, b, c, d, e])" do
+    test "five simple args" do
+      assert fix("min(a, b, c, d, e)", msg("min", 5)) ==
+               "Enum.min([a, b, c, d, e])"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # sum/1 — sum(list) → Enum.sum(list)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "sum/1 → Enum.sum(list)" do
+    test "with variable" do
+      assert fix("sum(numbers)", msg("sum", 1)) ==
+               "Enum.sum(numbers)"
+    end
+
+    test "with list literal" do
+      assert fix("sum([1, 2, 3])", msg("sum", 1)) ==
+               "Enum.sum([1, 2, 3])"
+    end
+
+    test "in assignment" do
+      assert fix("total = sum(values)", msg("sum", 1)) ==
+               "total = Enum.sum(values)"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # sorted/1 — sorted(list) → Enum.sort(list)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "sorted/1 → Enum.sort(list)" do
+    test "with variable" do
+      assert fix("sorted(numbers)", msg("sorted", 1)) ==
+               "Enum.sort(numbers)"
+    end
+
+    test "in pipeline" do
+      assert fix("result = sorted(items) |> Enum.take(5)", msg("sorted", 1)) ==
+               "result = Enum.sort(items) |> Enum.take(5)"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # len/1 — len(list) → length(list)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "len/1 → length(list)" do
+    test "with variable" do
+      assert fix("len(items)", msg("len", 1)) ==
+               "length(items)"
+    end
+
+    test "in comparison" do
+      assert fix("if len(list) > 0, do: :ok", msg("len", 1)) ==
+               "if length(list) > 0, do: :ok"
+    end
+
+    test "in assignment" do
+      assert fix("n = len(words)", msg("len", 1)) ==
+               "n = length(words)"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # reversed/1 — reversed(list) → Enum.reverse(list)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "reversed/1 → Enum.reverse(list)" do
+    test "with variable" do
+      assert fix("reversed(items)", msg("reversed", 1)) ==
+               "Enum.reverse(items)"
+    end
+
+    test "in assignment" do
+      assert fix("rev = reversed(list)", msg("reversed", 1)) ==
+               "rev = Enum.reverse(list)"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # DOUBLE-REPLACEMENT SAFETY
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "double-replacement safety" do
+    test "two max/1 on same line — first fix handles both" do
+      assert fix("max([a, b]) + max([c, d])", msg("max", 1)) ==
+               "Enum.max([a, b]) + Enum.max([c, d])"
+    end
+
+    test "idempotent — second fix on already-fixed line is harmless" do
+      source = "max([a, b]) + max([c, d])"
+      once = fix(source, msg("max", 1))
+      twice = fix(once, msg("max", 1))
+
+      assert once == "Enum.max([a, b]) + Enum.max([c, d])"
+      assert twice == once
+    end
+
+    test "two min/1 on same line" do
+      assert fix("min([a, b]) + min([c, d])", msg("min", 1)) ==
+               "Enum.min([a, b]) + Enum.min([c, d])"
+    end
+
+    test "idempotent for min" do
+      source = "min(values)"
+      once = fix(source, msg("min", 1))
+      twice = fix(once, msg("min", 1))
+
+      assert once == "Enum.min(values)"
+      assert twice == once
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # NO-OPS
+  # ═══════════════════════════════════════════════════════════════════
 
   describe "no-ops" do
     test "unknown local function unchanged" do
       source = "foobar()"
-      msg = "undefined function foobar/0 (expected MyModule to define such a function)"
-      assert fix(source, msg) == source
+      assert fix(source, msg("foobar", 0)) == source
+    end
+
+    test "max/2 not in replacements" do
+      source = "max(a, b)"
+      assert fix(source, msg("max", 2)) == source
+    end
+
+    test "min/2 not in replacements" do
+      source = "min(a, b)"
+      assert fix(source, msg("min", 2)) == source
     end
   end
 end

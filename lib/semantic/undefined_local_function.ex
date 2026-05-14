@@ -21,6 +21,22 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
 
       # Fixed:
       Enum.max([option1, option2])
+
+  ## Wrap-args example (multi-arg call → single list arg)
+
+      # Error: undefined function max/3
+      max(a, b, c)
+
+      # Fixed:
+      Enum.max([a, b, c])
+
+  ## Rename-local example (bare call → different bare call)
+
+      # Error: undefined function len/1
+      len(items)
+
+      # Fixed:
+      length(items)
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
@@ -28,14 +44,37 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
   # ── Replacement table ──────────────────────────────────────────
   #
   #   {:literal, text}         — replace name() with text (arity-0 only)
-  #   {:rename, mod, fun}      — replace name( with mod.fun( (any arity)
+  #   {:rename, mod, fun}      — replace name( with mod.fun(
+  #   {:rename_local, new}     — replace name( with new( (no module prefix)
+  #   {:wrap_args, mod, fun}   — replace name(a, b, c) with mod.fun([a, b, c])
 
   @replacements %{
     # Python float('inf') → bare infinity() call
     {"infinity", 0} => {:literal, ":math.inf()"},
 
-    # Python max(list) → bare max(list) — Elixir's Kernel.max/2 takes 2 args, not a list
-    {"max", 1} => {:rename, "Enum", "max"}
+    # Python max() — polymorphic: max(list) or max(a, b, c, ...)
+    {"max", 1} => {:rename, "Enum", "max"},
+    {"max", 3} => {:wrap_args, "Enum", "max"},
+    {"max", 4} => {:wrap_args, "Enum", "max"},
+    {"max", 5} => {:wrap_args, "Enum", "max"},
+
+    # Python min() — polymorphic: min(list) or min(a, b, c, ...)
+    {"min", 1} => {:rename, "Enum", "min"},
+    {"min", 3} => {:wrap_args, "Enum", "min"},
+    {"min", 4} => {:wrap_args, "Enum", "min"},
+    {"min", 5} => {:wrap_args, "Enum", "min"},
+
+    # Python sum(iterable)
+    {"sum", 1} => {:rename, "Enum", "sum"},
+
+    # Python sorted(iterable) — note: different function name in Elixir
+    {"sorted", 1} => {:rename, "Enum", "sort"},
+
+    # Python len(sequence) — maps to Kernel.length/1 (no module prefix needed)
+    {"len", 1} => {:rename_local, "length"},
+
+    # Python reversed(iterable) — note: different function name in Elixir
+    {"reversed", 1} => {:rename, "Enum", "reverse"}
   }
 
   @impl true
@@ -71,13 +110,21 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
             replace_on_line(source, line_no, "#{name}()", replacement)
 
           {:rename, mod, fun} ->
-            replace_on_line(source, line_no, "#{name}(", "#{mod}.#{fun}(")
+            replace_call_on_line(source, line_no, name, "#{mod}.#{fun}")
+
+          {:rename_local, new_name} ->
+            replace_call_on_line(source, line_no, name, new_name)
+
+          {:wrap_args, mod, fun} ->
+            wrap_args_on_line(source, line_no, name, "#{mod}.#{fun}")
         end
 
       _ ->
         source
     end
   end
+
+  # ── Helpers ────────────────────────────────────────────────────
 
   defp extract_line({line, _col}) when is_integer(line), do: line
   defp extract_line(line) when is_integer(line), do: line
@@ -90,6 +137,8 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
     end
   end
 
+  # ── Literal replacement (arity-0) ─────────────────────────────
+
   defp replace_on_line(source, line_no, old, new) do
     source
     |> String.split("\n")
@@ -100,4 +149,83 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
     end)
     |> Enum.join("\n")
   end
+
+  # ── Call rename (with double-replacement protection) ──────────
+  #
+  # Uses a negative lookbehind so `Enum.max(` is not re-matched as `max(`.
+  # This makes the fix idempotent — applying it twice is harmless.
+
+  defp replace_call_on_line(source, line_no, old_name, new_name) do
+    pattern = Regex.compile!("(?<![.a-zA-Z0-9_])#{Regex.escape(old_name)}\\(")
+    replacement = "#{new_name}("
+
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.map(fn
+      {line, ^line_no} -> Regex.replace(pattern, line, replacement)
+      {line, _} -> line
+    end)
+    |> Enum.join("\n")
+  end
+
+  # ── Wrap-args replacement ─────────────────────────────────────
+  #
+  # Converts name(a, b, c) → mod.fun([a, b, c]) using balanced-paren
+  # matching to find the closing `)`. Handles nested calls correctly:
+  # max(foo(x), bar(y), z) → Enum.max([foo(x), bar(y), z])
+
+  defp wrap_args_on_line(source, line_no, old_name, new_qualified) do
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.map(fn
+      {line, ^line_no} -> do_wrap_args(line, old_name, new_qualified)
+      {line, _} -> line
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp do_wrap_args(line, old_name, new_qualified) do
+    pattern = Regex.compile!("(?<![.a-zA-Z0-9_])#{Regex.escape(old_name)}\\(")
+
+    case Regex.run(pattern, line, return: :index) do
+      [{match_start, match_len}] ->
+        paren_pos = match_start + match_len - 1
+        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
+
+        case find_matching_close(String.to_charlist(after_paren)) do
+          {:ok, inner, rest_after} ->
+            before = String.slice(line, 0, match_start)
+            rest_wrapped = do_wrap_args(rest_after, old_name, new_qualified)
+            "#{before}#{new_qualified}([#{inner}])#{rest_wrapped}"
+
+          :unbalanced ->
+            line
+        end
+
+      _ ->
+        line
+    end
+  end
+
+  # Scans a charlist for the matching `)` at depth 0.
+  # Returns {:ok, inner_content, rest_after_close} or :unbalanced.
+  defp find_matching_close(chars), do: do_find_close(chars, 0, [])
+
+  defp do_find_close([], _depth, _acc), do: :unbalanced
+
+  defp do_find_close([?) | rest], 0, acc) do
+    inner = acc |> Enum.reverse() |> List.to_string()
+    {:ok, inner, List.to_string(rest)}
+  end
+
+  defp do_find_close([?) | rest], depth, acc),
+    do: do_find_close(rest, depth - 1, [?) | acc])
+
+  defp do_find_close([?( | rest], depth, acc),
+    do: do_find_close(rest, depth + 1, [?( | acc])
+
+  defp do_find_close([c | rest], depth, acc),
+    do: do_find_close(rest, depth, [c | acc])
 end
