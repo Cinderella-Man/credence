@@ -37,9 +37,7 @@ defmodule Credence.Syntax.FixStaleAccessModifier do
                   |> Enum.sort_by(&(-String.length(&1)))
                   |> Enum.join("|")
 
-  @line_regex Regex.compile!(
-                "^(\\s*)(#{@prefix_pattern})\\s+(defp?|defmacrop?)\\b"
-              )
+  @line_regex Regex.compile!("^(\\s*)(#{@prefix_pattern})\\s+(defp?|defmacrop?)\\b")
 
   @impl true
   def analyze(source) do

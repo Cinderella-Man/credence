@@ -1056,7 +1056,7 @@ defmodule CredenceTest do
   # ═══════════════════════════════════════════════════════════════════
 
   describe "fix works" do
-    test "applies fixable rules and reports remaining issues" do
+    test "removes @doc false from private function" do
       input = """
       defmodule Foo do
         @doc false
@@ -1064,145 +1064,136 @@ defmodule CredenceTest do
       end
       """
 
-      result = Credence.fix(input)
+      expected = """
+      defmodule Foo do
+        defp helper(bar), do: bar + 1
+      end
+      """
 
-      refute result.code =~ "@doc false"
+      result = Credence.fix(input)
+      assert String.trim_trailing(result.code) == String.trim_trailing(expected)
       assert result.issues == []
     end
   end
 
   describe "fix integration — multi-rule showcase" do
-    @showcase_input """
-    defmodule Solution do
-      @moduledoc "Provides text analysis utilities for processing and analyzing strings.\\n"
-      @doc "Analyzes the given text and returns a map of statistics.\\n\\nReturns word count, character count, average word length,\\nfrequency map, and other derived metrics.\\n"
-      @spec analyze(String.t()) :: map()
-      def analyze(text) do
-        words = String.split(text)
+    test "applies all fixable rules correctly on a densely non-idiomatic module" do
+      input = """
+      defmodule Solution do
+        @moduledoc "Provides text analysis utilities for processing and analyzing strings.\\n"
+        @doc "Analyzes the given text and returns a map of statistics.\\n\\nReturns word count, character count, average word length,\\nfrequency map, and other derived metrics.\\n"
+        @spec analyze(String.t()) :: map()
+        def analyze(text) do
+          words = String.split(text)
 
-        if length(words) == 0 do
-          %{words: 0, chars: 0, avg_length: 0.0}
-        else
-          char_count = String.graphemes(text) |> length()
+          if length(words) == 0 do
+            %{words: 0, chars: 0, avg_length: 0.0}
+          else
+            char_count = String.graphemes(text) |> length()
 
-          total_length = Enum.map(words, fn w -> String.length(w) end) |> Enum.sum()
-          avg_length = total_length / Enum.count(words) * 1.0
+            total_length = Enum.map(words, fn w -> String.length(w) end) |> Enum.sum()
+            avg_length = total_length / Enum.count(words) * 1.0
 
-          frequencies = Enum.reduce(words, %{}, fn word, acc ->
-            Map.update(acc, String.downcase(word), 1, &(&1 + 1))
-          end)
+            frequencies = Enum.reduce(words, %{}, fn word, acc ->
+              Map.update(acc, String.downcase(word), 1, &(&1 + 1))
+            end)
 
-          sorted_desc = Enum.sort(words) |> Enum.reverse()
-          top_3 = Enum.sort(words) |> Enum.take(-3)
+            sorted_desc = Enum.sort(words) |> Enum.reverse()
+            top_3 = Enum.sort(words) |> Enum.take(-3)
 
-          last = Enum.at(sorted_desc, -1)
-          second_last = Enum.at(sorted_desc, -2)
+            last = Enum.at(sorted_desc, -1)
+            second_last = Enum.at(sorted_desc, -2)
 
-          unique_words = words |> Enum.uniq_by(fn w -> w end)
-          unique_csv = Enum.map(unique_words, fn w -> String.upcase(w) end) |> Enum.join(",")
+            unique_words = words |> Enum.uniq_by(fn w -> w end)
+            unique_csv = Enum.map(unique_words, fn w -> String.upcase(w) end) |> Enum.join(",")
 
-          %{
-            char_count: char_count,
-            avg_length: avg_length,
-            frequencies: frequencies,
-            top_3: top_3,
-            last: last,
-            second_last: second_last,
-            unique_csv: unique_csv,
-            palindrome: is_palindrome(text)
-          }
+            %{
+              char_count: char_count,
+              avg_length: avg_length,
+              frequencies: frequencies,
+              top_3: top_3,
+              last: last,
+              second_last: second_last,
+              unique_csv: unique_csv,
+              palindrome: is_palindrome(text)
+            }
+          end
         end
+
+        def is_palindrome(text) do
+          cleaned = text |> String.downcase() |> String.replace(~r/[^a-z0-9]/, "")
+          reversed = String.graphemes(cleaned) |> Enum.reverse() |> Enum.join("")
+          cleaned |> Kernel.==(reversed)
+        end
+
+        @doc false
+        defp normalize_words([], acc), do: Enum.reverse(acc)
+        defp normalize_words([h | t], acc), do: normalize_words(t, acc ++ [String.downcase(h)])
       end
+      """
 
-      def is_palindrome(text) do
-        cleaned = text |> String.downcase() |> String.replace(~r/[^a-z0-9]/, "")
-        reversed = String.graphemes(cleaned) |> Enum.reverse() |> Enum.join("")
-        cleaned |> Kernel.==(reversed)
+      expected = """
+      defmodule Solution do
+        @moduledoc "Provides text analysis utilities for processing and analyzing strings."
+        @doc \"\"\"
+        Analyzes the given text and returns a map of statistics.
+
+        Returns word count, character count, average word length,
+        frequency map, and other derived metrics.
+        \"\"\"
+        @spec analyze(String.t()) :: map()
+        def analyze(text) do
+          words = String.split(text)
+
+          if words == [] do
+            %{words: 0, chars: 0, avg_length: 0.0}
+          else
+            char_count = String.length(text)
+
+            total_length = Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)
+            avg_length = total_length / length(words)
+
+            frequencies =
+              Enum.frequencies(words)
+
+            sorted_desc = Enum.sort(words, :desc)
+            top_3 = Enum.sort(words, :desc) |> Enum.take(3)
+
+            sorted_desc_reversed = Enum.reverse(sorted_desc)
+            [last, second_last | _] = sorted_desc_reversed
+
+            unique_words = words |> Enum.uniq()
+            unique_csv = Enum.map_join(unique_words, ",", fn w -> String.upcase(w) end)
+
+            %{
+              char_count: char_count,
+              avg_length: avg_length,
+              frequencies: frequencies,
+              top_3: top_3,
+              last: last,
+              second_last: second_last,
+              unique_csv: unique_csv,
+              palindrome: palindrome?(text)
+            }
+          end
+        end
+
+        def palindrome?(text) do
+          cleaned = text |> String.downcase() |> String.replace(~r/[^a-z0-9]/, "")
+          reversed = String.reverse(cleaned)
+          cleaned == reversed
+        end
+
+        defp normalize_words([], acc), do: Enum.reverse(acc)
+        defp normalize_words([h | t], acc), do: normalize_words(t, [String.downcase(h) | acc])
       end
+      """
 
-      @doc false
-      defp normalize_words([], acc), do: Enum.reverse(acc)
-      defp normalize_words([h | t], acc), do: normalize_words(t, acc ++ [String.downcase(h)])
-    end
-    """
+      result = Credence.fix(input, [])
+      assert String.trim_trailing(result.code) == String.trim_trailing(expected)
+      assert {:ok, _ast} = Code.string_to_quoted(result.code)
 
-    setup do
-      %{result: Credence.fix(@showcase_input, [])}
-    end
-
-    test "replaces length(words) == 0 with words == []", %{result: %{code: code}} do
-      assert code =~ "words == []"
-      refute code =~ "length(words) == 0"
-    end
-
-    test "replaces String.graphemes |> length with String.length", %{result: %{code: code}} do
-      assert code =~ "String.length(text)"
-      refute code =~ "String.graphemes(text) |> length()"
-    end
-
-    test "replaces Enum.count(words) with length(words)", %{result: %{code: code}} do
-      assert code =~ "length(words)"
-      refute code =~ "Enum.count(words)"
-    end
-
-    test "removes * 1.0", %{result: %{code: code}} do
-      refute code =~ "* 1.0"
-    end
-
-    test "replaces manual frequency reduce with Enum.frequencies", %{result: %{code: code}} do
-      assert code =~ "Enum.frequencies"
-      refute code =~ "Map.update(acc"
-    end
-
-    test "replaces Enum.sort |> Enum.reverse with Enum.sort(:desc)", %{result: %{code: code}} do
-      assert code =~ "Enum.sort(words, :desc)"
-      refute code =~ "Enum.sort(words) |> Enum.reverse()"
-    end
-
-    test "groups negative Enum.at calls into reverse + pattern match",
-         %{result: %{code: code}} do
-      assert code =~ "Enum.reverse(sorted_desc)"
-      assert code =~ "[last, second_last | _]"
-      refute code =~ "Enum.at(sorted_desc, -1)"
-      refute code =~ "Enum.at(sorted_desc, -2)"
-    end
-
-    test "simplifies Enum.uniq_by(fn w -> w end) to Enum.uniq()", %{result: %{code: code}} do
-      assert code =~ "Enum.uniq()"
-      refute code =~ "Enum.uniq_by"
-    end
-
-    test "replaces Enum.map |> Enum.join with Enum.map_join", %{result: %{code: code}} do
-      assert code =~ "Enum.map_join"
-      refute Regex.match?(~r/Enum\.map\(.*\) \|> Enum\.join/, code)
-    end
-
-    test "renames is_palindrome to palindrome? in def and call site",
-         %{result: %{code: code}} do
-      assert code =~ "def palindrome?(text)"
-      assert code =~ "palindrome?(text)"
-      refute code =~ "is_palindrome"
-    end
-
-    test "extracts Kernel.== from pipeline to infix", %{result: %{code: code}} do
-      assert code =~ "cleaned == reversed"
-      refute code =~ "Kernel.=="
-    end
-
-    test "removes @doc false on private function", %{result: %{code: code}} do
-      refute code =~ "@doc false"
-    end
-
-    test "removes empty string from Enum.join", %{result: %{code: code}} do
-      refute code =~ ~S|Enum.join("")|
-    end
-
-    test "output compiles without errors", %{result: %{code: code}} do
-      assert {:ok, _ast} = Code.string_to_quoted(code)
-    end
-
-    test "some unfixable rules still detected in remaining issues", %{result: %{issues: issues}} do
-      distinct_rules = issues |> Enum.map(& &1.rule) |> Enum.uniq()
+      distinct_rules = result.issues |> Enum.map(& &1.rule) |> Enum.uniq()
       assert length(distinct_rules) >= 1
     end
   end
@@ -1254,15 +1245,17 @@ defmodule CredenceTest do
       end
       """
 
+      expected = """
+      defmodule UniqueChars do
+        def unique_char_in_order(input_string) do
+          String.graphemes(input_string)
+          |> Enum.uniq()
+        end
+      end
+      """
+
       result = Credence.fix(input)
-
-      assert result.code =~ "Enum.uniq()"
-      assert result.code =~ "String.graphemes(input_string)"
-      refute result.code =~ "Enum.reduce"
-      refute result.code =~ "MapSet"
-      refute result.code =~ "elem(0)"
-      refute result.code =~ "Enum.reverse"
-
+      assert String.trim_trailing(result.code) == String.trim_trailing(expected)
       assert {:ok, _ast} = Code.string_to_quoted(result.code)
     end
 
@@ -1296,27 +1289,40 @@ defmodule CredenceTest do
       end
       """
 
+      expected = """
+      defmodule SlidingWindow do
+        def length_of_longest_substring(input_string) do
+          graphemes = String.graphemes(input_string)
+
+          Enum.reduce(
+            Stream.with_index(graphemes),
+            %{left: 0, last_seen: %{}, max_length: 0},
+            fn {grapheme, current_index}, acc ->
+              left_start = acc.left
+
+              new_left =
+                case Map.fetch(acc.last_seen, grapheme) do
+                  {:ok, last_pos} when last_pos >= left_start -> last_pos + 1
+                  _ -> left_start
+                end
+
+              current_length = current_index - new_left + 1
+              max_len = max(current_length, acc.max_length)
+
+              %{
+                left: new_left,
+                last_seen: Map.put(acc.last_seen, grapheme, current_index),
+                max_length: max_len
+              }
+            end
+          )
+          |> Map.get(:max_length)
+        end
+      end
+      """
+
       result = Credence.fix(input)
-
-      applied_names =
-        Enum.map(result.applied_rules, fn {mod, count} ->
-          short = mod |> Module.split() |> List.last()
-          "#{short}(#{count})"
-        end)
-
-      assert result.code =~ "Stream.with_index",
-             "Expected Stream.with_index but not found. Applied: #{inspect(applied_names)}"
-
-      refute result.code =~ "Enum.with_index",
-             "Enum.with_index should have been replaced. Applied: #{inspect(applied_names)}"
-
-      # CRITICAL: String.graphemes must NOT be stripped
-      assert result.code =~ "String.graphemes(input_string)",
-             "String.graphemes was stripped! Applied rules: #{inspect(applied_names)}\nFixed code:\n#{result.code}"
-
-      refute result.code =~ "graphemes = input_string",
-             "Variable was reduced to raw string! Applied rules: #{inspect(applied_names)}"
-
+      assert String.trim_trailing(result.code) == String.trim_trailing(expected)
       assert {:ok, _ast} = Code.string_to_quoted(result.code)
     end
 
@@ -1339,7 +1345,7 @@ defmodule CredenceTest do
       end
       """
 
-      expected_output = """
+      expected = """
       defmodule Example do
         def to_float_a(n) when is_integer(n), do: :erlang.float(n)
         def to_float_b(n) when is_number(n), do: :erlang.float(n)
@@ -1358,7 +1364,7 @@ defmodule CredenceTest do
       """
 
       result = Credence.fix(input)
-      assert result.code == expected_output
+      assert result.code == expected
     end
   end
 end

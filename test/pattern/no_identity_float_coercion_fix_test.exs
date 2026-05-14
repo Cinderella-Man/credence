@@ -173,7 +173,9 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionFixTest do
     end
 
     test "leaves self-assignment count = count * 1.0 alone" do
-      code = "defmodule Example do\n  def run(count) do\n    count = count * 1.0\n    count\n  end\nend\n"
+      code =
+        "defmodule Example do\n  def run(count) do\n    count = count * 1.0\n    count\n  end\nend\n"
+
       assert fix(code) == code
     end
 

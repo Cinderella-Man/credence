@@ -140,9 +140,20 @@ defmodule Credence.Semantic.UndefinedFunction do
     pos_without_parens = "#{mod}.#{fun}"
 
     result = replace_on_line(source, line_no, neg_with_parens, neg_text)
-    result = if result == source, do: replace_on_line(source, line_no, neg_without_parens, neg_text), else: result
-    result = if result == source, do: replace_on_line(source, line_no, pos_with_parens, pos_text), else: result
-    if result == source, do: replace_on_line(source, line_no, pos_without_parens, pos_text), else: result
+
+    result =
+      if result == source,
+        do: replace_on_line(source, line_no, neg_without_parens, neg_text),
+        else: result
+
+    result =
+      if result == source,
+        do: replace_on_line(source, line_no, pos_with_parens, pos_text),
+        else: result
+
+    if result == source,
+      do: replace_on_line(source, line_no, pos_without_parens, pos_text),
+      else: result
   end
 
   # ── Helpers ────────────────────────────────────────────────────

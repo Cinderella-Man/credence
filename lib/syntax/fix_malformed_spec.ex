@@ -107,10 +107,12 @@ defmodule Credence.Syntax.FixMalformedSpec do
   defp find_matching_close(chars), do: do_close(chars, 1, [])
 
   defp do_close([], _depth, _acc), do: :unbalanced
+
   defp do_close([?) | rest], 1, acc) do
     inner = acc |> Enum.reverse() |> List.to_string()
     {:ok, inner, List.to_string(rest)}
   end
+
   defp do_close([?) | rest], depth, acc), do: do_close(rest, depth - 1, [?) | acc])
   defp do_close([?( | rest], depth, acc), do: do_close(rest, depth + 1, [?( | acc])
   defp do_close([c | rest], depth, acc), do: do_close(rest, depth, [c | acc])
