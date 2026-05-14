@@ -96,10 +96,7 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
 
   @impl true
   def match?(%{severity: :error, message: msg}) do
-    case parse_local_ref(msg) do
-      nil -> false
-      ref -> Map.has_key?(@replacements, ref)
-    end
+    String.contains?(msg, "undefined function") and parse_local_ref(msg) != nil
   end
 
   def match?(_), do: false
@@ -121,7 +118,20 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
       {name, arity} = key ->
         case Map.get(@replacements, key) do
           nil ->
-            source
+            # Fallback: use FunctionMatcher to find a close match in the module
+            module_name = parse_expected_module(msg)
+
+            if module_name do
+              case Credence.FunctionMatcher.suggest(source, module_name, name, arity) do
+                {:ok, suggested} ->
+                  replace_call_on_line(source, line_no, name, suggested)
+
+                :no_candidates ->
+                  source
+              end
+            else
+              source
+            end
 
           {:literal, replacement} ->
             replace_on_line(source, line_no, "#{name}()", replacement)
@@ -153,6 +163,13 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
   defp parse_local_ref(msg) do
     case Regex.run(~r/undefined function (\w+)\/(\d+)/, msg) do
       [_, name, arity] -> {name, String.to_integer(arity)}
+      _ -> nil
+    end
+  end
+
+  defp parse_expected_module(msg) do
+    case Regex.run(~r/expected ([\w.]+) to define/, msg) do
+      [_, module_name] -> module_name
       _ -> nil
     end
   end

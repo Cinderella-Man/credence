@@ -74,8 +74,7 @@ defmodule Credence.Semantic.UndefinedFunction do
   @impl true
   def match?(%{severity: :warning, message: msg}) do
     (String.contains?(msg, "is undefined or private") or String.contains?(msg, "is deprecated")) and
-      parse_function_ref(msg) != nil and
-      Map.has_key?(@replacements, parse_function_ref(msg))
+      parse_function_ref(msg) != nil
   end
 
   def match?(_), do: false
@@ -94,7 +93,7 @@ defmodule Credence.Semantic.UndefinedFunction do
     line_no = extract_line(position)
 
     case parse_function_ref(msg) do
-      {mod, fun, _arity} = key ->
+      {mod, fun, arity} = key ->
         case Map.get(@replacements, key) do
           {:rename, new_mod, new_fun} ->
             replace_on_line(source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}")
@@ -106,7 +105,16 @@ defmodule Credence.Semantic.UndefinedFunction do
             replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text)
 
           nil ->
-            source
+            # Fallback: use FunctionMatcher to find a close match in the module
+            case Credence.FunctionMatcher.suggest(source, mod, fun, arity,
+                   visibility: :public_only
+                 ) do
+              {:ok, suggested} ->
+                replace_on_line(source, line_no, "#{mod}.#{fun}", "#{mod}.#{suggested}")
+
+              :no_candidates ->
+                source
+            end
         end
 
       nil ->

@@ -415,6 +415,239 @@ defmodule Credence.Semantic.UndefinedLocalFunctionFixTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # FUNCTION MATCHER FALLBACK — missing ? suffix
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "FunctionMatcher fallback — missing ? suffix" do
+    test "palindrome → palindrome?" do
+      source = """
+      defmodule PalindromeChecker do
+        def palindrome?(text), do: text == String.reverse(text)
+        def run(text), do: palindrome(text)
+      end
+      """
+
+      expected = """
+      defmodule PalindromeChecker do
+        def palindrome?(text), do: text == String.reverse(text)
+        def run(text), do: palindrome?(text)
+      end
+      """
+
+      assert fix(
+               source,
+               "undefined function palindrome/1 (expected PalindromeChecker to define such a function or for it to be imported, but none are available)",
+               3
+             ) == expected
+    end
+
+    test "even → even?" do
+      source = """
+      defmodule Math do
+        def even?(n), do: rem(n, 2) == 0
+        def check(n), do: even(n)
+      end
+      """
+
+      expected = """
+      defmodule Math do
+        def even?(n), do: rem(n, 2) == 0
+        def check(n), do: even?(n)
+      end
+      """
+
+      assert fix(
+               source,
+               "undefined function even/1 (expected Math to define such a function or for it to be imported, but none are available)",
+               3
+             ) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # FUNCTION MATCHER FALLBACK — __ demangle
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "FunctionMatcher fallback — __ demangle" do
+    test "perfect__ → perfect?" do
+      source = """
+      defmodule PerfectNumbers do
+        def perfect?(n), do: n == 6
+        def check(n), do: perfect__(n)
+      end
+      """
+
+      expected = """
+      defmodule PerfectNumbers do
+        def perfect?(n), do: n == 6
+        def check(n), do: perfect?(n)
+      end
+      """
+
+      assert fix(
+               source,
+               "undefined function perfect__/1 (expected PerfectNumbers to define such a function or for it to be imported, but none are available)",
+               3
+             ) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # FUNCTION MATCHER FALLBACK — prefix/substring match
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "FunctionMatcher fallback — prefix/substring" do
+    test "fibonacci → fib (candidate is prefix of undefined name)" do
+      source = """
+      defmodule Fibonacci do
+        def fib(0), do: 0
+        def fib(1), do: 1
+        def fib(n), do: fib(n - 1) + fib(n - 2)
+        def run(n), do: fibonacci(n)
+      end
+      """
+
+      expected = """
+      defmodule Fibonacci do
+        def fib(0), do: 0
+        def fib(1), do: 1
+        def fib(n), do: fib(n - 1) + fib(n - 2)
+        def run(n), do: fib(n)
+      end
+      """
+
+      assert fix(
+               source,
+               "undefined function fibonacci/1 (expected Fibonacci to define such a function or for it to be imported, but none are available)",
+               5
+             ) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # FUNCTION MATCHER FALLBACK — sole candidate
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "FunctionMatcher fallback — sole candidate" do
+    test "picks the only arity-matching function even with unrelated name" do
+      source = """
+      defmodule Calculator do
+        def compute(n), do: n * 2
+        def add(a, b), do: a + b
+        def run(n), do: calculate(n)
+      end
+      """
+
+      expected = """
+      defmodule Calculator do
+        def compute(n), do: n * 2
+        def add(a, b), do: a + b
+        def run(n), do: compute(n)
+      end
+      """
+
+      assert fix(
+               source,
+               "undefined function calculate/1 (expected Calculator to define such a function or for it to be imported, but none are available)",
+               4
+             ) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # FUNCTION MATCHER FALLBACK — no candidates / edge cases
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "FunctionMatcher fallback — no candidates" do
+    test "returns source unchanged when no matching-arity functions exist" do
+      source = """
+      defmodule Worker do
+        def process(a, b), do: a + b
+        def run, do: compute(42)
+      end
+      """
+
+      assert fix(
+               source,
+               "undefined function compute/1 (expected Worker to define such a function or for it to be imported, but none are available)",
+               3
+             ) == source
+    end
+
+    test "returns source unchanged when module not found" do
+      source = """
+      defmodule Other do
+        def run, do: something(1)
+      end
+      """
+
+      assert fix(
+               source,
+               "undefined function something/1 (expected Missing to define such a function or for it to be imported, but none are available)",
+               2
+             ) == source
+    end
+
+    test "returns source unchanged when module name not in error message" do
+      source = "fibonacci(5)"
+
+      assert fix(source, "undefined function fibonacci/1", 1) == source
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # FUNCTION MATCHER FALLBACK — includes defp for local calls
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "FunctionMatcher fallback — includes defp" do
+    test "finds defp functions for local calls" do
+      source = """
+      defmodule Worker do
+        defp helper(x), do: x * 2
+        def run(x), do: help(x)
+      end
+      """
+
+      expected = """
+      defmodule Worker do
+        defp helper(x), do: x * 2
+        def run(x), do: helper(x)
+      end
+      """
+
+      assert fix(
+               source,
+               "undefined function help/1 (expected Worker to define such a function or for it to be imported, but none are available)",
+               3
+             ) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # FUNCTION MATCHER FALLBACK — known replacement takes priority
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "FunctionMatcher fallback — known replacement takes priority" do
+    test "max/1 uses hardcoded Enum.max rename, not FunctionMatcher" do
+      source = """
+      defmodule Example do
+        def compute(list), do: list
+        def run(list), do: max(list)
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def compute(list), do: list
+        def run(list), do: Enum.max(list)
+      end
+      """
+
+      assert fix(source, msg("max", 1), 3) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # DOUBLE-REPLACEMENT SAFETY
   # ═══════════════════════════════════════════════════════════════════
 

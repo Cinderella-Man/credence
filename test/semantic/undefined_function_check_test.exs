@@ -83,19 +83,29 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     end
   end
 
+  # ── matches via FunctionMatcher fallback ────────────────────────
+
+  describe "match?/1 – matches unknown functions for FunctionMatcher fallback" do
+    test "unknown module function (will be tried by FunctionMatcher)" do
+      assert UndefinedFunction.match?(warning("PalindromeChecker.palindrome/1 is undefined or private"))
+    end
+
+    test "unknown Float function" do
+      assert UndefinedFunction.match?(warning("Float.unknown_thing/0 is undefined or private"))
+    end
+
+    test "unknown Integer function" do
+      assert UndefinedFunction.match?(warning("Integer.unknown_thing/0 is undefined or private"))
+    end
+
+    test "any module.function undefined" do
+      assert UndefinedFunction.match?(warning("MyModule.foo/2 is undefined or private"))
+    end
+  end
+
   # ── rejects ────────────────────────────────────────────────────
 
   describe "match?/1 – rejects" do
-    test "unknown function" do
-      refute UndefinedFunction.match?(warning("MyModule.foo/2 is undefined or private"))
-    end
-
-    test "unknown deprecated function" do
-      refute UndefinedFunction.match?(
-               warning("MyModule.old_func/1 is deprecated. Use MyModule.new_func/1 instead")
-             )
-    end
-
     test "unrelated warning" do
       refute UndefinedFunction.match?(warning("some other warning"))
     end
@@ -108,12 +118,8 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
              })
     end
 
-    test "unknown Float function" do
-      refute UndefinedFunction.match?(warning("Float.unknown_thing/0 is undefined or private"))
-    end
-
-    test "unknown Integer function" do
-      refute UndefinedFunction.match?(warning("Integer.unknown_thing/0 is undefined or private"))
+    test "no parseable function ref" do
+      refute UndefinedFunction.match?(warning("something is undefined or private"))
     end
   end
 

@@ -253,6 +253,123 @@ defmodule Credence.Semantic.UndefinedFunctionFixTest do
     end
   end
 
+  # ── FunctionMatcher fallback ─────────────────────────────────────
+
+  describe "FunctionMatcher fallback — missing ? suffix" do
+    test "Module.palindrome → Module.palindrome?" do
+      source = """
+      defmodule PalindromeChecker do
+        def palindrome?(text), do: text == String.reverse(text)
+        def run(text), do: PalindromeChecker.palindrome(text)
+      end
+      """
+
+      expected = """
+      defmodule PalindromeChecker do
+        def palindrome?(text), do: text == String.reverse(text)
+        def run(text), do: PalindromeChecker.palindrome?(text)
+      end
+      """
+
+      assert fix(source, "PalindromeChecker.palindrome/1 is undefined or private", 3) ==
+               expected
+    end
+
+    test "Module.valid → Module.valid?" do
+      source = """
+      defmodule Validator do
+        def valid?(input), do: input != nil
+        def check(input), do: Validator.valid(input)
+      end
+      """
+
+      expected = """
+      defmodule Validator do
+        def valid?(input), do: input != nil
+        def check(input), do: Validator.valid?(input)
+      end
+      """
+
+      assert fix(source, "Validator.valid/1 is undefined or private", 3) == expected
+    end
+  end
+
+  describe "FunctionMatcher fallback — prefix/substring match" do
+    test "Module.fib → closest defined function" do
+      source = """
+      defmodule Math do
+        def fibonacci(n), do: n
+        def run(n), do: Math.fib(n)
+      end
+      """
+
+      expected = """
+      defmodule Math do
+        def fibonacci(n), do: n
+        def run(n), do: Math.fibonacci(n)
+      end
+      """
+
+      assert fix(source, "Math.fib/1 is undefined or private", 3) == expected
+    end
+  end
+
+  describe "FunctionMatcher fallback — no candidates" do
+    test "returns source unchanged when module has no matching-arity functions" do
+      source = """
+      defmodule Worker do
+        def process(a, b), do: a + b
+        def run, do: Worker.compute(42)
+      end
+      """
+
+      assert fix(source, "Worker.compute/1 is undefined or private", 3) == source
+    end
+
+    test "returns source unchanged when module not found in source" do
+      source = """
+      defmodule Other do
+        def run, do: Missing.foo(1)
+      end
+      """
+
+      assert fix(source, "Missing.foo/1 is undefined or private", 2) == source
+    end
+  end
+
+  describe "FunctionMatcher fallback — known replacement takes priority" do
+    test "List.drop still uses hardcoded rename, not FunctionMatcher" do
+      source = """
+      defmodule Example do
+        def run(list), do: List.drop(list, 1)
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def run(list), do: Enum.drop(list, 1)
+      end
+      """
+
+      assert fix(source, "List.drop/2 is undefined or private", 2) == expected
+    end
+  end
+
+  describe "FunctionMatcher fallback — only considers public functions" do
+    test "skips defp for module-qualified calls" do
+      source = """
+      defmodule Worker do
+        defp helper(x), do: x * 2
+        def run, do: Worker.help(42)
+      end
+      """
+
+      # helper/1 is defp — excluded by visibility: :public_only
+      # run/0 has wrong arity — no public arity-1 candidates
+      assert fix(source, "Worker.help/1 is undefined or private", 3) == source
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "no-ops" do

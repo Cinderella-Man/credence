@@ -108,30 +108,40 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # MATCHES — via FunctionMatcher fallback (unknown functions)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – matches unknown functions for FunctionMatcher fallback" do
+    test "fibonacci/1 (not in replacements, but matches for fallback)" do
+      assert matches?("fibonacci", 1)
+    end
+
+    test "while/2 (paradigm mismatch, but matches for fallback)" do
+      assert matches?("while", 2)
+    end
+
+    test "foobar/0 (any undefined local function matches)" do
+      assert matches?("foobar", 0)
+    end
+
+    test "max/2 (Kernel.max exists but if compiler says undefined, we match)" do
+      assert matches?("max", 2)
+    end
+
+    test "range/0 (not a Python pattern, but still matches for fallback)" do
+      assert matches?("range", 0)
+    end
+
+    test "range/4 (not a Python pattern, but still matches for fallback)" do
+      assert matches?("range", 4)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # REJECTS
   # ═══════════════════════════════════════════════════════════════════
 
   describe "match?/1 – rejects" do
-    test "unknown local function" do
-      refute matches?("foobar", 0)
-    end
-
-    test "max/2 (Kernel.max/2 exists)" do
-      refute matches?("max", 2)
-    end
-
-    test "min/2 (Kernel.min/2 exists)" do
-      refute matches?("min", 2)
-    end
-
-    test "range/0 (no args — not a Python pattern)" do
-      refute matches?("range", 0)
-    end
-
-    test "range/4 (too many args — not a Python pattern)" do
-      refute matches?("range", 4)
-    end
-
     test "module-qualified undefined (handled by UndefinedFunction)" do
       refute UndefinedLocalFunction.match?(error("Enum.last/1 is undefined or private"))
     end
@@ -147,6 +157,10 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
 
     test "unrelated error" do
       refute UndefinedLocalFunction.match?(error("some other error"))
+    end
+
+    test "error without 'undefined function' text" do
+      refute UndefinedLocalFunction.match?(error("something went wrong with foo/1"))
     end
   end
 
