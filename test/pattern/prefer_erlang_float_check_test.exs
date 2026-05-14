@@ -147,6 +147,32 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # MIXED BARE + NON-BARE ON SAME LINE
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "mixed bare and non-bare on same line" do
+    test "flags bare var but not function call on same line" do
+      assert flagged?("{n * 1.0, Enum.sum(xs) * 1.0}")
+    end
+
+    test "counts only bare-var hits, not non-bare" do
+      assert length(check("{n * 1.0, Enum.sum(xs) * 1.0}")) == 1
+    end
+
+    test "flags both bare vars when two bare + one non-bare" do
+      assert length(check("{n * 1.0, Enum.sum(xs) * 1.0, m + 0.0}")) == 2
+    end
+
+    test "flags bare var with leading identity mixed with non-bare" do
+      assert length(check("{1.0 * n, Enum.sum(xs) * 1.0}")) == 1
+    end
+
+    test "in function context" do
+      assert length(check("def foo(n, xs), do: {n * 1.0, Enum.sum(xs) * 1.0}")) == 1
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # MUST NOT FLAG — non-bare operands (handled by NoIdentityFloatCoercion)
   # ═══════════════════════════════════════════════════════════════════
 

@@ -12,6 +12,15 @@ defmodule Credence.Pattern.PreferErlangFloat do
   by `NoIdentityFloatCoercion`, which removes the identity outright — those
   are overwhelmingly Python-isms, not intentional coercion.
 
+  ## Priority
+
+  This rule runs at priority 501 (above the default 500) so it processes
+  bare-variable sites **before** `NoIdentityFloatCoercion`. This matters
+  when both kinds share a line — e.g. `{n * 1.0, Enum.sum(xs) * 1.0}`.
+  Without the higher priority, `NoIdentityFloatCoercion`'s line-level regex
+  would strip all `* 1.0` on the line, including the bare-variable site
+  that should become `:erlang.float(n)`.
+
   ## Detected patterns
 
       var * 1.0      1.0 * var
@@ -43,6 +52,12 @@ defmodule Credence.Pattern.PreferErlangFloat do
 
   @impl true
   def fixable?, do: true
+
+  # Run before NoIdentityFloatCoercion (priority 500) so bare-variable
+  # sites are rewritten to :erlang.float(var) before the sibling rule's
+  # line-level regex strips all `* 1.0` indiscriminately.
+  @impl true
+  def priority, do: 499
 
   # ── Check ─────────────────────────────────────────────────────────
   # Uses AST from Code.string_to_quoted (bare float literals).

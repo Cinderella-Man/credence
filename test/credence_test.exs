@@ -1366,5 +1366,22 @@ defmodule CredenceTest do
       result = Credence.fix(input)
       assert result.code == expected
     end
+
+    test "in function context" do
+      input = """
+      defmodule Example do
+        def foo(n, xs), do: {n * 1.0, Enum.sum(xs) * 1.0}
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def foo(n, xs), do: {:erlang.float(n), Enum.sum(xs)}
+      end
+      """
+
+      result = Credence.fix(input)
+      assert result.code == expected
+    end
   end
 end

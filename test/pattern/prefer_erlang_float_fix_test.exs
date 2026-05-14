@@ -272,6 +272,50 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # MIXED BARE + NON-BARE ON SAME LINE
+  # (PreferErlangFloat only rewrites bare-var sites; non-bare stays
+  #  for NoIdentityFloatCoercion to handle in its own pass)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "mixed bare and non-bare on same line" do
+    test "rewrites bare var, leaves non-bare intact" do
+      assert fix("{n * 1.0, Enum.sum(xs) * 1.0}") ==
+               "{:erlang.float(n), Enum.sum(xs) * 1.0}"
+    end
+
+    test "rewrites both bare vars, leaves non-bare intact" do
+      assert fix("{n * 1.0, Enum.sum(xs) * 1.0, m + 0.0}") ==
+               "{:erlang.float(n), Enum.sum(xs) * 1.0, :erlang.float(m)}"
+    end
+
+    test "rewrites leading identity bare var, leaves non-bare intact" do
+      assert fix("{1.0 * n, Enum.sum(xs) * 1.0}") ==
+               "{:erlang.float(n), Enum.sum(xs) * 1.0}"
+    end
+
+    test "in function context" do
+      input = """
+      defmodule Example do
+        def foo(n, xs), do: {n * 1.0, Enum.sum(xs) * 1.0}
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def foo(n, xs), do: {:erlang.float(n), Enum.sum(xs) * 1.0}
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "division and addition mixed" do
+      assert fix("{n / 1.0, Enum.count(xs) / 1.0}") ==
+               "{:erlang.float(n), Enum.count(xs) / 1.0}"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # NO-OPS — non-bare operands (handled by NoIdentityFloatCoercion)
   # ═══════════════════════════════════════════════════════════════════
 
