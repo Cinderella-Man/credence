@@ -7,62 +7,28 @@ defmodule Credence.Semantic.UndefinedFunction do
   replacement maps for known patterns, with a FunctionMatcher fallback for
   unknown functions.
 
-  ## Qualified rename (Module.function → Module.function)
+  ## Replacement types
 
-      # Warning: Enum.last/1 is undefined or private
-      list |> Enum.last()
-      # Fixed:
-      list |> List.last()
+  Qualified (module-prefixed):
 
-  ## Qualified literal (hallucinated call → Elixir literal)
+      {:rename, mod, fun}                   — swap Module.function, keep args
+      {:literal, text}                      — replace Module.function() with literal
+      {:literal_with_neg, pos, neg}         — literal, negation-aware
+      {:rename_add_arg, mod, fun, arg}      — rename + append extra argument
+      {:rename_negate_arg, mod, fun, index} — rename + negate argument at index
 
-      # Warning: Float.inf/0 is undefined or private
-      max_num = -Float.inf
-      # Fixed:
-      max_num = :neg_infinity
+  Local (bare calls):
 
-  ## Local rename (bare call → qualified call)
-
-      # Error: undefined function max/1
-      max([option1, option2])
-      # Fixed:
-      Enum.max([option1, option2])
-
-  ## Local wrap-args (multi-arg → single list arg)
-
-      # Error: undefined function max/3
-      max(a, b, c)
-      # Fixed:
-      Enum.max([a, b, c])
-
-  ## Local rename-local (bare call → different bare call)
-
-      # Error: undefined function len/1
-      len(items)
-      # Fixed:
-      length(items)
-
-  ## Local range (Python range → Elixir range literal)
-
-      # Error: undefined function range/3
-      range(max_num, min_num - 1, -1)
-      # Fixed:
-      max_num..min_num - 1//-1
-
-  ## FunctionMatcher fallback
-
-  When no hardcoded replacement exists, searches the module's source for
-  the closest matching defined function by name similarity and arity.
-  Qualified calls only match public functions; local calls also match private ones.
+      {:literal, text}         — replace name() with text
+      {:rename, mod, fun}      — replace name( with mod.fun(
+      {:rename_local, new}     — replace name( with new(
+      {:wrap_args, mod, fun}   — replace name(a,b,c) with mod.fun([a,b,c])
+      :to_range                — replace range(...) with Elixir range literal
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
 
-  # ── Qualified replacement table ────────────────────────────────
-  #
-  #   {:rename, new_mod, new_fun}         — swap Module.function, keep args
-  #   {:literal, text}                    — replace Module.function() with literal
-  #   {:literal_with_neg, pos, neg}       — like :literal, negation-aware
+  # ── Qualified replacements ─────────────────────────────────────
 
   @qualified_replacements %{
     # Wrong module for real function
@@ -84,21 +50,21 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Integer", "min_value", 0} => {:literal, ":neg_infinity"},
     {"Integer", "max_value", 0} => {:literal, ":infinity"},
 
-    # Hallucinated List.pop (Python list.pop())
+    # Hallucinated List operations
     {"List", "pop", 1} => {:rename, "List", "last"},
+    {"List", "drop", 2} => {:rename, "Enum", "drop"},
 
     # Wrong module
-    {"List", "drop", 2} => {:rename, "Enum", "drop"},
-    {"Enum", "cycle", 1} => {:rename, "Stream", "cycle"}
+    {"Enum", "cycle", 1} => {:rename, "Stream", "cycle"},
+
+    # Hallucinated List.second — no such function, use Enum.at(list, 1)
+    {"List", "second", 1} => {:rename_add_arg, "Enum", "at", "1"},
+
+    # Hallucinated Enum.take_last — use Enum.take(list, -n)
+    {"Enum", "take_last", 2} => {:rename_negate_arg, "Enum", "take", 1}
   }
 
-  # ── Local replacement table ────────────────────────────────────
-  #
-  #   {:literal, text}         — replace name() with text (arity-0)
-  #   {:rename, mod, fun}      — replace name( with mod.fun(
-  #   {:rename_local, new}     — replace name( with new( (no module prefix)
-  #   {:wrap_args, mod, fun}   — replace name(a, b, c) with mod.fun([a, b, c])
-  #   :to_range                — replace range(...) with Elixir range literal
+  # ── Local replacements ─────────────────────────────────────────
 
   @local_replacements %{
     # Python float('inf')
@@ -183,8 +149,17 @@ defmodule Credence.Semantic.UndefinedFunction do
       {:literal_with_neg, pos_text, neg_text} ->
         replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text)
 
+      {:rename_add_arg, new_mod, new_fun, extra_arg} ->
+        rename_add_arg_on_line(
+          source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}", extra_arg
+        )
+
+      {:rename_negate_arg, new_mod, new_fun, arg_index} ->
+        rename_negate_arg_on_line(
+          source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}", arg_index
+        )
+
       nil ->
-        # Fallback: FunctionMatcher
         case Credence.FunctionMatcher.suggest(source, mod, fun, arity,
                visibility: :public_only
              ) do
@@ -217,7 +192,6 @@ defmodule Credence.Semantic.UndefinedFunction do
         to_range_on_line(source, line_no, arity)
 
       nil ->
-        # Fallback: FunctionMatcher
         module_name = parse_expected_module(msg)
 
         if module_name do
@@ -271,7 +245,6 @@ defmodule Credence.Semantic.UndefinedFunction do
   defp extract_line(line) when is_integer(line), do: line
   defp extract_line(_), do: nil
 
-  # Replaces first occurrence on the target line (for qualified calls)
   defp replace_first_on_line(source, line_no, old, new) do
     source
     |> String.split("\n")
@@ -283,7 +256,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     |> Enum.join("\n")
   end
 
-  # Replaces all occurrences on the target line (for literal replacements)
   defp replace_all_on_line(source, line_no, old, new) do
     source
     |> String.split("\n")
@@ -331,6 +303,109 @@ defmodule Credence.Semantic.UndefinedFunction do
     if result == source,
       do: replace_first_on_line(source, line_no, pos_without_parens, pos_text),
       else: result
+  end
+
+  # ── Rename + add argument ──────────────────────────────────────
+  #
+  # List.second(list) → Enum.at(list, 1)
+  # Finds the call, extracts args via balanced parens, appends the extra arg.
+
+  defp rename_add_arg_on_line(source, line_no, old_call, new_call, extra_arg) do
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.map(fn
+      {line, ^line_no} -> do_rename_add_arg(line, old_call, new_call, extra_arg)
+      {line, _} -> line
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp do_rename_add_arg(line, old_call, new_call, extra_arg) do
+    case :binary.match(line, "#{old_call}(") do
+      {match_start, match_len} ->
+        paren_pos = match_start + match_len - 1
+        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
+
+        case find_matching_close(String.to_charlist(after_paren)) do
+          {:ok, inner, rest_after} ->
+            before = String.slice(line, 0, match_start)
+            trimmed_inner = String.trim(inner)
+
+            args_str =
+              if trimmed_inner == "",
+                do: extra_arg,
+                else: "#{inner}, #{extra_arg}"
+
+            "#{before}#{new_call}(#{args_str})#{rest_after}"
+
+          :unbalanced ->
+            line
+        end
+
+      :nomatch ->
+        line
+    end
+  end
+
+  # ── Rename + negate argument ───────────────────────────────────
+  #
+  # Enum.take_last(list, n) → Enum.take(list, -n)
+  # Finds the call, extracts + splits args, negates the one at arg_index.
+
+  defp rename_negate_arg_on_line(source, line_no, old_call, new_call, arg_index) do
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.map(fn
+      {line, ^line_no} -> do_rename_negate_arg(line, old_call, new_call, arg_index)
+      {line, _} -> line
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp do_rename_negate_arg(line, old_call, new_call, arg_index) do
+    case :binary.match(line, "#{old_call}(") do
+      {match_start, match_len} ->
+        paren_pos = match_start + match_len - 1
+        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
+
+        case find_matching_close(String.to_charlist(after_paren)) do
+          {:ok, inner, rest_after} ->
+            before = String.slice(line, 0, match_start)
+            args = split_args(inner)
+
+            # In piped form, the first arg is implicit — adjust index
+            adjusted_index =
+              if arg_index >= length(args), do: length(args) - 1, else: arg_index
+
+            negated_args =
+              args
+              |> Enum.with_index()
+              |> Enum.map(fn
+                {arg, ^adjusted_index} -> negate_expr(arg)
+                {arg, _} -> arg
+              end)
+
+            "#{before}#{new_call}(#{Enum.join(negated_args, ", ")})#{rest_after}"
+
+          :unbalanced ->
+            line
+        end
+
+      :nomatch ->
+        line
+    end
+  end
+
+  defp negate_expr(expr) do
+    trimmed = String.trim(expr)
+
+    if Regex.match?(~r/^\w+$/, trimmed) do
+      "-#{trimmed}"
+    else
+      "-(#{trimmed})"
+    end
   end
 
   # ── Local call rename (with double-replacement protection) ─────
