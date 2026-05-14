@@ -90,6 +90,24 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # MATCHES — range (Python's range())
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "match?/1 – range" do
+    test "range/1 (Python range(stop))" do
+      assert matches?("range", 1)
+    end
+
+    test "range/2 (Python range(start, stop))" do
+      assert matches?("range", 2)
+    end
+
+    test "range/3 (Python range(start, stop, step))" do
+      assert matches?("range", 3)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # REJECTS
   # ═══════════════════════════════════════════════════════════════════
 
@@ -104,6 +122,14 @@ defmodule Credence.Semantic.UndefinedLocalFunctionCheckTest do
 
     test "min/2 (Kernel.min/2 exists)" do
       refute matches?("min", 2)
+    end
+
+    test "range/0 (no args — not a Python pattern)" do
+      refute matches?("range", 0)
+    end
+
+    test "range/4 (too many args — not a Python pattern)" do
+      refute matches?("range", 4)
     end
 
     test "module-qualified undefined (handled by UndefinedFunction)" do

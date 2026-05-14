@@ -37,6 +37,14 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
 
       # Fixed:
       length(items)
+
+  ## Range example (Python range → Elixir range literal)
+
+      # Error: undefined function range/3
+      range(max_num, min_num - 1, -1)
+
+      # Fixed:
+      max_num..min_num - 1//-1
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
@@ -47,6 +55,7 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
   #   {:rename, mod, fun}      — replace name( with mod.fun(
   #   {:rename_local, new}     — replace name( with new( (no module prefix)
   #   {:wrap_args, mod, fun}   — replace name(a, b, c) with mod.fun([a, b, c])
+  #   :to_range                — replace range(...) with Elixir range literal
 
   @replacements %{
     # Python float('inf') → bare infinity() call
@@ -74,7 +83,15 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
     {"len", 1} => {:rename_local, "length"},
 
     # Python reversed(iterable) — note: different function name in Elixir
-    {"reversed", 1} => {:rename, "Enum", "reverse"}
+    {"reversed", 1} => {:rename, "Enum", "reverse"},
+
+    # Python range() — three arities, each with different translation:
+    #   range(n)       → 0..n - 1          (implicit start=0, step=1)
+    #   range(a, b)    → a..b - 1          (implicit step=1)
+    #   range(a, b, c) → a..b//c           (naive — LLM already baked in Python's stop adjustment)
+    {"range", 1} => :to_range,
+    {"range", 2} => :to_range,
+    {"range", 3} => :to_range
   }
 
   @impl true
@@ -101,7 +118,7 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
     line_no = extract_line(position)
 
     case parse_local_ref(msg) do
-      {name, _arity} = key ->
+      {name, arity} = key ->
         case Map.get(@replacements, key) do
           nil ->
             source
@@ -117,6 +134,9 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
 
           {:wrap_args, mod, fun} ->
             wrap_args_on_line(source, line_no, name, "#{mod}.#{fun}")
+
+          :to_range ->
+            to_range_on_line(source, line_no, arity)
         end
 
       _ ->
@@ -208,6 +228,91 @@ defmodule Credence.Semantic.UndefinedLocalFunction do
         line
     end
   end
+
+  # ── Range replacement ─────────────────────────────────────────
+  #
+  # Converts Python range() to Elixir range literals:
+  #   range(n)       → 0..n - 1
+  #   range(a, b)    → a..b - 1
+  #   range(a, b, c) → a..b//c
+
+  @range_pattern Regex.compile!("(?<![.a-zA-Z0-9_])range\\(")
+
+  defp to_range_on_line(source, line_no, arity) do
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.map(fn
+      {line, ^line_no} -> do_to_range(line, arity)
+      {line, _} -> line
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp do_to_range(line, arity) do
+    case Regex.run(@range_pattern, line, return: :index) do
+      [{match_start, match_len}] ->
+        paren_pos = match_start + match_len - 1
+        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
+
+        case find_matching_close(String.to_charlist(after_paren)) do
+          {:ok, inner, rest_after} ->
+            before = String.slice(line, 0, match_start)
+            args = split_args(inner)
+
+            case build_range(arity, args) do
+              {:ok, range_expr} ->
+                rest_fixed = do_to_range(rest_after, arity)
+                "#{before}#{range_expr}#{rest_fixed}"
+
+              :error ->
+                line
+            end
+
+          :unbalanced ->
+            line
+        end
+
+      _ ->
+        line
+    end
+  end
+
+  defp build_range(1, [n]), do: {:ok, "0..#{n} - 1"}
+  defp build_range(2, [a, b]), do: {:ok, "#{a}..#{b} - 1"}
+  defp build_range(3, [a, b, c]), do: {:ok, "#{a}..#{b}//#{c}"}
+  defp build_range(_, _), do: :error
+
+  # ── Argument splitting (at top-level commas) ──────────────────
+  #
+  # Splits "foo(1, 2), bar(3), z" into ["foo(1, 2)", "bar(3)", "z"],
+  # respecting paren nesting so commas inside nested calls are skipped.
+
+  defp split_args(content) do
+    content
+    |> String.to_charlist()
+    |> do_split_args(0, [], [])
+    |> Enum.map(&String.trim/1)
+  end
+
+  defp do_split_args([], _depth, current, args) do
+    arg = current |> Enum.reverse() |> List.to_string()
+    Enum.reverse([arg | args])
+  end
+
+  defp do_split_args([?, | rest], 0, current, args) do
+    arg = current |> Enum.reverse() |> List.to_string()
+    do_split_args(rest, 0, [], [arg | args])
+  end
+
+  defp do_split_args([?( | rest], depth, current, args),
+    do: do_split_args(rest, depth + 1, [?( | current], args)
+
+  defp do_split_args([?) | rest], depth, current, args),
+    do: do_split_args(rest, depth - 1, [?) | current], args)
+
+  defp do_split_args([c | rest], depth, current, args),
+    do: do_split_args(rest, depth, [c | current], args)
 
   # Scans a charlist for the matching `)` at depth 0.
   # Returns {:ok, inner_content, rest_after_close} or :unbalanced.
