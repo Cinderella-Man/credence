@@ -52,7 +52,7 @@ defmodule Credence.Pattern.NoManualListLast do
 
   @impl true
   def fix(source, _opts) do
-    ast = Code.string_to_quoted!(source)
+    ast = source |> Sourceror.parse_string!() |> Credence.RuleHelpers.normalize_sourceror_ast()
     matches = find_matching_functions(ast)
 
     if Enum.empty?(matches) do
@@ -63,7 +63,7 @@ defmodule Credence.Pattern.NoManualListLast do
 
       transformed = transform_ast(ast, match_set, match_names)
 
-      Macro.to_string(transformed)
+      Sourceror.to_string(transformed)
     end
   end
 

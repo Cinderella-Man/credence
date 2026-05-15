@@ -132,6 +132,13 @@ defmodule Credence.RuleHelpers do
     val
   end
 
+  # Sourceror wraps list literals in {:__block__, meta, [[elements...]]}
+  # for position tracking (closing bracket location, etc.).
+  # Standard AST has bare lists.
+  defp unwrap_sourceror_node({:__block__, _meta, [val]}) when is_list(val) do
+    val
+  end
+
   # Sourceror wraps single-expression bodies in {:__block__, meta, [expr]}
   # for position tracking. Standard AST has just the expression directly.
   # Only unwrap when the child is a single AST node (3-tuple), not

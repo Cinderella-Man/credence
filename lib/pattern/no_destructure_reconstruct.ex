@@ -102,7 +102,8 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   @impl true
   def fix(source, _opts) do
     source
-    |> Code.string_to_quoted!()
+    |> Sourceror.parse_string!()
+    |> Credence.RuleHelpers.normalize_sourceror_ast()
     |> Macro.postwalk(fn
       # Case expressions
       {:case, case_meta, [expr, [do: clauses]]} when is_list(clauses) ->
@@ -126,7 +127,7 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
       node ->
         node
     end)
-    |> Macro.to_string()
+    |> Sourceror.to_string()
   end
 
   defp fix_case_clause({:->, meta, [[pattern], body]}) do
