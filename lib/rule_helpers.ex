@@ -2,8 +2,9 @@ defmodule Credence.RuleHelpers do
   @moduledoc """
   Shared utilities used by all three Credence phases (Syntax, Semantic, Pattern).
 
-  Provides rule discovery, diff computation, and change logging so the
-  phase modules don't duplicate this plumbing.
+  Provides rule discovery, safe compilation with diagnostics capture,
+  diff computation, and change logging so the phase modules don't
+  duplicate this plumbing.
   """
 
   require Logger
@@ -39,6 +40,62 @@ defmodule Credence.RuleHelpers do
   @spec rule_name(module()) :: String.t()
   def rule_name(module) do
     module |> Module.split() |> List.last()
+  end
+
+  @doc """
+  Compiles `source` with `Code.with_diagnostics/1` and returns
+  `{:ok, diagnostics}` or `{:error, diagnostics}`.
+
+  Uses `:code.soft_purge/1` for cleanup so that compiling source
+  which redefines a currently-executing module does not kill the BEAM
+  (see `:code.purge/1` — it sends an unconditional kill signal to
+  any process still running the old version of the module).
+  """
+  @spec compile_and_capture(String.t()) :: {:ok, [map()]} | {:error, [map()]}
+  def compile_and_capture(source) do
+    {result, diagnostics} =
+      Code.with_diagnostics(fn ->
+        try do
+          Code.compile_string(source, "credence_check.ex")
+        rescue
+          e ->
+            Logger.debug(
+              "[credence_fix] Code.compile_string raised: #{Exception.message(e)}"
+            )
+
+            :error
+        end
+      end)
+
+    case result do
+      :error ->
+        {:error, diagnostics}
+
+      modules when is_list(modules) ->
+        safe_cleanup_modules(modules)
+        {:ok, diagnostics}
+    end
+  end
+
+  @doc """
+  Returns `true` if `source` compiles without errors.
+
+  Convenience wrapper around `compile_and_capture/1` for callers
+  that only need a boolean (e.g., the Pattern phase compile gate).
+  """
+  @spec compiles?(String.t()) :: boolean()
+  def compiles?(source) do
+    match?({:ok, _}, compile_and_capture(source))
+  end
+
+  defp safe_cleanup_modules(modules) do
+    for {mod, _binary} <- modules do
+      # soft_purge any pre-existing old code so that delete can proceed
+      # (delete fails if old code exists and cannot be purged)
+      :code.soft_purge(mod)
+      :code.delete(mod)
+      :code.soft_purge(mod)
+    end
   end
 
   @doc """

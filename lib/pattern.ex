@@ -36,6 +36,11 @@ defmodule Credence.Pattern do
   Every step is logged via `Logger.debug` with `[credence_fix]` prefix:
   rule name, issue count, whether the source changed, and a before/after
   diff of the lines that were modified.
+
+  Pattern rules operate on AST and assume semantically valid code.
+  If the source does not compile, the pipeline is skipped entirely —
+  applying AST transforms to code with undefined variables or functions
+  risks introducing new errors and wasting an LLM retry attempt.
   """
   @spec fix_with_trace(String.t(), keyword()) ::
           {String.t(), [{module(), non_neg_integer()}]}
@@ -47,6 +52,18 @@ defmodule Credence.Pattern do
       "[credence_fix] starting pattern fix pipeline (#{length(fixable)} fixable rules)"
     )
 
+    if RuleHelpers.compiles?(code_string) do
+      run_fixable_rules(fixable, code_string, opts)
+    else
+      Logger.debug(
+        "[credence_fix] source does not compile, skipping pattern fix pipeline"
+      )
+
+      {code_string, []}
+    end
+  end
+
+  defp run_fixable_rules(fixable, code_string, opts) do
     {code, applied} =
       Enum.reduce(fixable, {code_string, []}, fn rule, {source, applied} ->
         name = RuleHelpers.rule_name(rule)

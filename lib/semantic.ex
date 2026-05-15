@@ -20,7 +20,7 @@ defmodule Credence.Semantic do
 
   @spec analyze(String.t(), keyword()) :: [Credence.Issue.t()]
   def analyze(source, _opts \\ []) do
-    case compile_and_capture(source) do
+    case RuleHelpers.compile_and_capture(source) do
       {:ok, diagnostics} ->
         diagnostics
         |> Enum.filter(&(&1.severity == :warning))
@@ -74,7 +74,7 @@ defmodule Credence.Semantic do
   end
 
   defp do_fix_traced(source, max_passes, pass, applied) do
-    case compile_and_capture(source) do
+    case RuleHelpers.compile_and_capture(source) do
       {:ok, diagnostics} ->
         # Compilation succeeded — fix warnings (terminal pass, no retry needed)
         warnings = Enum.filter(diagnostics, &(&1.severity == :warning))
@@ -137,33 +137,6 @@ defmodule Credence.Semantic do
           {fixed, [{rule, 1} | applied]}
       end
     end)
-  end
-
-  defp compile_and_capture(source) do
-    {result, diagnostics} =
-      Code.with_diagnostics(fn ->
-        try do
-          Code.compile_string(source, "credence_check.ex")
-        rescue
-          _ -> :error
-        end
-      end)
-
-    case result do
-      :error ->
-        {:error, diagnostics}
-
-      modules when is_list(modules) ->
-        cleanup_modules(modules)
-        {:ok, diagnostics}
-    end
-  end
-
-  defp cleanup_modules(modules) do
-    for {mod, _binary} <- modules do
-      :code.purge(mod)
-      :code.delete(mod)
-    end
   end
 
   defp match_rules(diagnostic) do
