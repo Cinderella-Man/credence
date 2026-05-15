@@ -59,9 +59,7 @@ defmodule Credence.RuleHelpers do
           Code.compile_string(source, "credence_check.ex")
         rescue
           e ->
-            Logger.debug(
-              "[credence_fix] Code.compile_string raised: #{Exception.message(e)}"
-            )
+            Logger.debug("[credence_fix] Code.compile_string raised: #{Exception.message(e)}")
 
             :error
         end
@@ -97,6 +95,62 @@ defmodule Credence.RuleHelpers do
       :code.soft_purge(mod)
     end
   end
+
+  @doc """
+  Normalizes an AST produced by `Sourceror.parse_string!/1` so that
+  standard `Code.string_to_quoted` pattern matches work against it.
+
+  Sourceror wraps literals and 2-tuples in `{:__block__, meta, [value]}`
+  nodes to carry position metadata (the standard AST has no metadata slot
+  for these). This breaks patterns like `{:==, _, [expr, 1]}` because
+  the `1` is actually `{:__block__, [token: "1"], [1]}`.
+
+  This function recursively unwraps:
+
+  - Literals: `{:__block__, _, [1]}` → `1`
+  - Atoms: `{:__block__, _, [:do]}` → `:do`
+  - 2-tuples: `{:__block__, _, [{a, b}]}` → `{a, b}`
+
+  As a result, keyword blocks like `[{{:__block__, _, [:do]}, body}]`
+  become `[do: body]`, matching standard AST shapes.
+
+  Use this in rule `fix/2` functions between parsing and walking:
+
+      source
+      |> Sourceror.parse_string!()
+      |> RuleHelpers.normalize_sourceror_ast()
+      |> Macro.postwalk(fn ... end)
+      |> Sourceror.to_string()
+  """
+  @spec normalize_sourceror_ast(Macro.t()) :: Macro.t()
+  def normalize_sourceror_ast(ast) do
+    Macro.postwalk(ast, &unwrap_sourceror_node/1)
+  end
+
+  defp unwrap_sourceror_node({:__block__, _meta, [val]})
+       when is_integer(val) or is_float(val) or is_binary(val) or is_atom(val) do
+    val
+  end
+
+  # Sourceror wraps single-expression bodies in {:__block__, meta, [expr]}
+  # for position tracking. Standard AST has just the expression directly.
+  # Only unwrap when the child is a single AST node (3-tuple), not
+  # multi-expression blocks which have 2+ children.
+  defp unwrap_sourceror_node({:__block__, _meta, [expr]})
+       when is_tuple(expr) and tuple_size(expr) == 3 do
+    expr
+  end
+
+  defp unwrap_sourceror_node({:__block__, _meta, [{left, right}]})
+       when not (is_list(right) and is_atom(left)) do
+    # Unwrap 2-tuples that Sourceror wrapped for position metadata.
+    # Guard excludes 3-tuple AST nodes that happen to look like {atom, list}
+    # — those are real AST nodes like {:foo, [], nil} (impossible here since
+    # nil is not a list, but we guard defensively).
+    {left, right}
+  end
+
+  defp unwrap_sourceror_node(node), do: node
 
   @doc """
   Computes a line-by-line diff between two strings.

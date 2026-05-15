@@ -48,14 +48,15 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
   @impl true
   def fix(source, _opts) do
     source
-    |> Code.string_to_quoted!()
+    |> Sourceror.parse_string!()
+    |> Credence.RuleHelpers.normalize_sourceror_ast()
     |> Macro.postwalk(fn node ->
       case detect_fixable_pipeline(node) do
         {:ok, subject, n} -> build_replacement(subject, n)
         :error -> node
       end
     end)
-    |> Macro.to_string()
+    |> Sourceror.to_string()
   end
 
   # ---------------------------------------------------------------------------

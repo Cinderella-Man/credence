@@ -54,43 +54,19 @@ defmodule Credence.Pattern.NoManualMax do
   @impl true
   def fix(source, _opts) do
     source
-    |> Code.string_to_quoted!()
-    |> transform_max_patterns()
+    |> Sourceror.parse_string!()
+    |> Macro.postwalk(fn
+      {:if, _meta, [condition, branches]} = node ->
+        case try_fix_max(condition, branches) do
+          {:ok, max_call} -> max_call
+          :error -> node
+        end
+
+      node ->
+        node
+    end)
     |> Sourceror.to_string()
   end
-
-  # Recursive bottom-up transform: process children first so nested
-  # `if` expressions are simplified before the outer `if` is checked.
-  defp transform_max_patterns({:if, meta, [condition, branches]}) do
-    new_condition = transform_max_patterns(condition)
-    new_branches = transform_branches(branches)
-
-    case try_fix_max(new_condition, new_branches) do
-      {:ok, max_call} -> max_call
-      :error -> {:if, meta, [new_condition, new_branches]}
-    end
-  end
-
-  defp transform_max_patterns({form, meta, args}) when is_list(args) do
-    {form, meta, Enum.map(args, &transform_max_patterns/1)}
-  end
-
-  defp transform_max_patterns({a, b}),
-    do: {transform_max_patterns(a), transform_max_patterns(b)}
-
-  defp transform_max_patterns(list) when is_list(list),
-    do: Enum.map(list, &transform_max_patterns/1)
-
-  defp transform_max_patterns(other), do: other
-
-  defp transform_branches(branches) when is_list(branches) do
-    Enum.map(branches, fn
-      {key, value} when is_atom(key) -> {key, transform_max_patterns(value)}
-      other -> transform_max_patterns(other)
-    end)
-  end
-
-  defp transform_branches(other), do: transform_max_patterns(other)
 
   defp try_fix_max(condition, branches) do
     with {:ok, do_branch} <- fetch_branch(branches, :do),
@@ -158,8 +134,15 @@ defmodule Credence.Pattern.NoManualMax do
 
   defp fetch_branch(branches, key) when is_list(branches) do
     case Keyword.fetch(branches, key) do
-      {:ok, val} -> {:ok, val}
-      :error -> :error
+      {:ok, _} = ok ->
+        ok
+
+      :error ->
+        # Sourceror wraps do/else keys as {:__block__, meta, [:do]}
+        Enum.find_value(branches, :error, fn
+          {{:__block__, _, [^key]}, val} -> {:ok, val}
+          _ -> nil
+        end)
     end
   end
 

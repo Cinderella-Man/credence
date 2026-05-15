@@ -56,7 +56,7 @@ defmodule Credence.Pattern.NoManualMin do
   @impl true
   def fix(source, _opts) do
     source
-    |> Code.string_to_quoted!()
+    |> Sourceror.parse_string!()
     |> Macro.postwalk(fn
       {:if, _meta, [condition, branches]} = node ->
         case extract_min_operands(condition, branches) do
@@ -67,7 +67,7 @@ defmodule Credence.Pattern.NoManualMin do
       node ->
         node
     end)
-    |> Macro.to_string()
+    |> Sourceror.to_string()
   end
 
   defp check_node({:if, meta, [condition, branches]}) do
@@ -146,7 +146,17 @@ defmodule Credence.Pattern.NoManualMin do
   end
 
   defp fetch_branch(branches, key) when is_list(branches) do
-    Keyword.fetch(branches, key)
+    case Keyword.fetch(branches, key) do
+      {:ok, _} = ok ->
+        ok
+
+      :error ->
+        # Sourceror wraps do/else keys as {:__block__, meta, [:do]}
+        Enum.find_value(branches, :error, fn
+          {{:__block__, _, [^key]}, val} -> {:ok, val}
+          _ -> nil
+        end)
+    end
   end
 
   defp fetch_branch(_, _), do: :error

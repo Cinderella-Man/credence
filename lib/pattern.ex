@@ -55,9 +55,7 @@ defmodule Credence.Pattern do
     if RuleHelpers.compiles?(code_string) do
       run_fixable_rules(fixable, code_string, opts)
     else
-      Logger.debug(
-        "[credence_fix] source does not compile, skipping pattern fix pipeline"
-      )
+      Logger.debug("[credence_fix] source does not compile, skipping pattern fix pipeline")
 
       {code_string, []}
     end

@@ -60,7 +60,8 @@ defmodule Credence.Pattern.NoStringLengthForCharCheck do
   @impl true
   def fix(source, _opts) do
     source
-    |> Code.string_to_quoted!()
+    |> Sourceror.parse_string!()
+    |> Credence.RuleHelpers.normalize_sourceror_ast()
     |> Macro.postwalk(fn
       # Standard form: String.length(x) op 1
       {op, _meta,

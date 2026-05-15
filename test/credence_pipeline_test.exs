@@ -189,8 +189,8 @@ defmodule Credence.PipelineTest do
       result = Credence.fix(source)
 
       refute has_pattern_rules?(result.applied_rules),
-        "pattern rules should be skipped on non-compiling code, " <>
-          "but these fired: #{inspect(pattern_rules(result.applied_rules))}"
+             "pattern rules should be skipped on non-compiling code, " <>
+               "but these fired: #{inspect(pattern_rules(result.applied_rules))}"
 
       # The Enum.reduce anti-pattern should NOT have been touched
       assert result.code =~ "Enum.reduce"
@@ -289,7 +289,7 @@ defmodule Credence.PipelineTest do
       Logger.configure(level: previous_level)
 
       assert log =~ "does not compile" or log =~ "skipping pattern",
-        "expected a log message indicating pattern was skipped, got:\n#{log}"
+             "expected a log message indicating pattern was skipped, got:\n#{log}"
     end
   end
 
@@ -313,10 +313,10 @@ defmodule Credence.PipelineTest do
       result = Credence.fix(source)
 
       assert has_semantic_rules?(result.applied_rules),
-        "semantic should have fixed _result → result"
+             "semantic should have fixed _result → result"
 
       assert has_pattern_rules?(result.applied_rules),
-        "pattern should have fired on compiling code"
+             "pattern should have fired on compiling code"
     end
   end
 
@@ -468,7 +468,7 @@ defmodule Credence.PipelineTest do
       result = Credence.fix(source)
 
       assert code_compiles?(result.code),
-        "fix must not break compiling code. Output:\n#{result.code}"
+             "fix must not break compiling code. Output:\n#{result.code}"
     end
 
     test "output compiles when input compiles (multiple function clauses)" do
@@ -489,7 +489,7 @@ defmodule Credence.PipelineTest do
       result = Credence.fix(source)
 
       assert code_compiles?(result.code),
-        "fix must not break compiling code. Output:\n#{result.code}"
+             "fix must not break compiling code. Output:\n#{result.code}"
     end
 
     test "output compiles when input compiles (pattern match heavy)" do
@@ -509,7 +509,7 @@ defmodule Credence.PipelineTest do
       result = Credence.fix(source)
 
       assert code_compiles?(result.code),
-        "fix must not break compiling code. Output:\n#{result.code}"
+             "fix must not break compiling code. Output:\n#{result.code}"
     end
   end
 
@@ -528,10 +528,10 @@ defmodule Credence.PipelineTest do
       second = Credence.fix(first.code)
 
       assert first.code == second.code,
-        "fix is not idempotent.\nFirst:\n#{first.code}\nSecond:\n#{second.code}"
+             "fix is not idempotent.\nFirst:\n#{first.code}\nSecond:\n#{second.code}"
 
       assert second.applied_rules == [],
-        "second pass should find nothing to fix, but applied: #{inspect(second.applied_rules)}"
+             "second pass should find nothing to fix, but applied: #{inspect(second.applied_rules)}"
     end
   end
 
@@ -687,7 +687,7 @@ defmodule Credence.PipelineTest do
         end)
 
       refute log =~ "more changes)",
-        "diff should not be truncated — found truncation marker in log"
+             "diff should not be truncated — found truncation marker in log"
     end
 
     test "semantic fix pipeline logs pass number and compilation result" do

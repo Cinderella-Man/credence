@@ -1302,8 +1302,11 @@ defmodule CredenceTest do
 
               new_left =
                 case Map.fetch(acc.last_seen, grapheme) do
-                  {:ok, last_pos} when last_pos >= left_start -> last_pos + 1
-                  _ -> left_start
+                  {:ok, last_pos} when last_pos >= left_start ->
+                    last_pos + 1
+
+                  _ ->
+                    left_start
                 end
 
               current_length = current_index - new_left + 1

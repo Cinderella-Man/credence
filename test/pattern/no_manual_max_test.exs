@@ -407,4 +407,99 @@ defmodule Credence.Pattern.NoManualMaxTest do
       refute fixed =~ "if"
     end
   end
+
+  describe "fix preserves unrelated formatting" do
+    test "does not collapse @doc heredoc into single-line string" do
+      source = ~S'''
+      defmodule Example do
+        @doc """
+        Finds the maximum of running sum and global max.
+
+        ## Examples
+
+            iex> Example.step(5, 3)
+            5
+        """
+        @spec step(integer(), integer()) :: integer()
+        def step(current_sum, num) do
+          new_current = if(current_sum + num > num, do: current_sum + num, else: num)
+          new_current
+        end
+      end
+      '''
+
+      fixed = Credence.Pattern.NoManualMax.fix(source, [])
+
+      # The actual fix should happen
+      assert fixed =~ "max("
+      refute fixed =~ "if(current_sum"
+
+      # But the heredoc must survive intact
+      assert fixed =~ ~s(@doc """)
+
+      refute fixed =~ ~r/@doc "[^"]+"/,
+             "heredoc was collapsed into a single-line @doc string"
+    end
+
+    test "does not alter lines outside the if expression" do
+      source = ~S'''
+      defmodule Example do
+        @moduledoc "Example module."
+
+        @doc """
+        Computes the larger value.
+        """
+        @spec pick(integer(), integer()) :: integer()
+        def pick(a, b) do
+          result = if a > b, do: a, else: b
+          result
+        end
+      end
+      '''
+
+      fixed = Credence.Pattern.NoManualMax.fix(source, [])
+
+      source_lines = String.split(source, "\n")
+      fixed_lines = String.split(fixed, "\n")
+
+      # Find lines that changed
+      changed =
+        Enum.zip(source_lines, fixed_lines)
+        |> Enum.with_index(1)
+        |> Enum.reject(fn {{s, f}, _idx} -> s == f end)
+        |> Enum.map(fn {{_s, _f}, idx} -> idx end)
+
+      # Only the line with the `if` should change.
+      # If @doc, @moduledoc, @spec, or other lines changed, that's the bug.
+      for line_no <- changed do
+        original = Enum.at(source_lines, line_no - 1)
+
+        refute original =~ "@doc",
+               "line #{line_no} contains @doc and should not have changed"
+
+        refute original =~ "@moduledoc",
+               "line #{line_no} contains @moduledoc and should not have changed"
+
+        refute original =~ "@spec",
+               "line #{line_no} contains @spec and should not have changed"
+      end
+    end
+
+    test "preserves comment formatting" do
+      source = ~S'''
+      defmodule Example do
+        # This is an important comment
+        # that spans multiple lines
+        def bigger(a, b) do
+          if a >= b, do: a, else: b
+        end
+      end
+      '''
+
+      fixed = Credence.Pattern.NoManualMax.fix(source, [])
+
+      assert fixed =~ "# This is an important comment"
+      assert fixed =~ "# that spans multiple lines"
+    end
+  end
 end

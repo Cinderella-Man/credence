@@ -151,18 +151,24 @@ defmodule Credence.Semantic.UndefinedFunction do
 
       {:rename_add_arg, new_mod, new_fun, extra_arg} ->
         rename_add_arg_on_line(
-          source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}", extra_arg
+          source,
+          line_no,
+          "#{mod}.#{fun}",
+          "#{new_mod}.#{new_fun}",
+          extra_arg
         )
 
       {:rename_negate_arg, new_mod, new_fun, arg_index} ->
         rename_negate_arg_on_line(
-          source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}", arg_index
+          source,
+          line_no,
+          "#{mod}.#{fun}",
+          "#{new_mod}.#{new_fun}",
+          arg_index
         )
 
       nil ->
-        case Credence.FunctionMatcher.suggest(source, mod, fun, arity,
-               visibility: :public_only
-             ) do
+        case Credence.FunctionMatcher.suggest(source, mod, fun, arity, visibility: :public_only) do
           {:ok, suggested} ->
             replace_first_on_line(source, line_no, "#{mod}.#{fun}", "#{mod}.#{suggested}")
 

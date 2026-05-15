@@ -90,9 +90,16 @@ defmodule Credence.Semantic do
         # Compilation failed — fix errors, then retry
         errors = Enum.filter(diagnostics, &(&1.severity == :error))
 
-        Logger.debug(
-          "[credence_fix] semantic pass #{pass}: compilation FAILED, #{length(errors)} error(s)"
-        )
+        if errors == [] do
+          Logger.debug(
+            "[credence_fix] semantic pass #{pass}: compilation raised an exception " <>
+              "(0 diagnostics captured — see Code.compile_string raised log above)"
+          )
+        else
+          Logger.debug(
+            "[credence_fix] semantic pass #{pass}: compilation FAILED, #{length(errors)} error(s)"
+          )
+        end
 
         {fixed, new_applied} = apply_fixes_traced(source, errors)
 
@@ -122,9 +129,7 @@ defmodule Credence.Semantic do
         rule ->
           name = RuleHelpers.rule_name(rule)
 
-          Logger.debug(
-            "[credence_fix] #{name}: matched diagnostic, running fix..."
-          )
+          Logger.debug("[credence_fix] #{name}: matched diagnostic, running fix...")
 
           fixed = rule.fix(src, diagnostic)
 

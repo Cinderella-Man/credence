@@ -1,8 +1,10 @@
 require Logger
 
-Logger.configure(level: :debug)
+Logger.configure(level: :info)
 
-:logger.update_handler_config(:default, :formatter,
+:logger.update_handler_config(
+  :default,
+  :formatter,
   Logger.Formatter.new(format: "$date $time [$level] $message\n\n")
 )
 

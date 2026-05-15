@@ -59,9 +59,7 @@ defmodule Credence.Syntax do
             if result == src do
               {src, applied}
             else
-              Logger.debug(
-                "[credence_fix] #{name}: fix produced a change"
-              )
+              Logger.debug("[credence_fix] #{name}: fix produced a change")
 
               RuleHelpers.log_diff(name, src, result)
               {result, [{rule, 1} | applied]}

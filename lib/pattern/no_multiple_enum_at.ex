@@ -76,11 +76,11 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
 
   @impl true
   def fix(source, _opts) do
-    ast = Code.string_to_quoted!(source)
+    ast = source |> Sourceror.parse_string!() |> Credence.RuleHelpers.normalize_sourceror_ast()
     {new_ast, changed?} = apply_fixes(ast)
 
     if changed? do
-      Macro.to_string(new_ast)
+      Sourceror.to_string(new_ast)
     else
       source
     end
