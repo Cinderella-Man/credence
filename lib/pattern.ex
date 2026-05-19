@@ -43,7 +43,7 @@ defmodule Credence.Pattern do
   risks introducing new errors and wasting an LLM retry attempt.
   """
   @spec fix_with_trace(String.t(), keyword()) ::
-          {String.t(), [{module(), non_neg_integer()}]}
+          {String.t(), [{module(), non_neg_integer() | :reverted}]}
   def fix_with_trace(code_string, opts \\ []) do
     all_rules = rules(opts)
     {fixable, _unfixable} = Enum.split_with(all_rules, & &1.fixable?())
@@ -76,15 +76,8 @@ defmodule Credence.Pattern do
                 "[credence_fix] #{name}: check found #{length(issues)} issue(s), running fix..."
               )
 
-              fixed = rule.fix(source, check_opts)
-
-              if fixed == source do
-                Logger.debug("[credence_fix] #{name}: fix returned IDENTICAL source (no change)")
-              else
-                RuleHelpers.log_diff(name, source, fixed)
-              end
-
-              {fixed, [{rule, length(issues)} | applied]}
+              fixed = invoke_fix(rule, source, check_opts)
+              apply_or_revert(rule, name, source, fixed, issues, applied)
             else
               {source, applied}
             end
@@ -99,13 +92,44 @@ defmodule Credence.Pattern do
     applied = Enum.reverse(applied)
 
     summary =
-      Enum.map_join(applied, ", ", fn {mod, count} ->
-        "#{RuleHelpers.rule_name(mod)}(#{count})"
+      Enum.map_join(applied, ", ", fn {mod, count_or_status} ->
+        "#{RuleHelpers.rule_name(mod)}(#{count_or_status})"
       end)
 
     Logger.debug("[credence_fix] done. Applied: [#{summary}]")
 
     {code, applied}
+  end
+
+  # Dispatch to either the new patch-based interface or the legacy
+  # whole-source interface, per-rule. See
+  # `Credence.RuleHelpers.apply_rule_fix/3` for the routing logic.
+  defp invoke_fix(rule, source, opts), do: RuleHelpers.apply_rule_fix(rule, source, opts)
+
+  # Compile-output gate. A rule whose `fix/2` returns source that no
+  # longer compiles would otherwise:
+  #   - get propagated to the next rule (which then either crashes on
+  #     parse or compounds the damage), or
+  #   - be returned silently to the caller as a "successful" fix.
+  # Instead we revert to the pre-fix source for that rule and mark
+  # it as `:reverted` in the trace so the offending rule is visible.
+  defp apply_or_revert(rule, name, source, fixed, issues, applied) do
+    cond do
+      fixed == source ->
+        Logger.debug("[credence_fix] #{name}: fix returned IDENTICAL source (no change)")
+        {source, applied}
+
+      not RuleHelpers.compiles?(fixed) ->
+        Logger.warning(
+          "[credence_fix] #{name}: fix produced non-compiling output, reverting"
+        )
+
+        {source, [{rule, :reverted} | applied]}
+
+      true ->
+        RuleHelpers.log_diff(name, source, fixed)
+        {fixed, [{rule, length(issues)} | applied]}
+    end
   end
 
   defp rules(opts) do

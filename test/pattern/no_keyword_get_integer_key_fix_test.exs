@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoKeywordGetIntegerKey.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoKeywordGetIntegerKey, code, [])
   end
 
   # ── index -1 → List.last ──────────────────────────────────────

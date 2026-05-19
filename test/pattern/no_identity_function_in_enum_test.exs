@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoIdentityFunctionInEnum.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIdentityFunctionInEnum, code, [])
   end
 
   describe "fixable?/0" do

@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoGuardEqualityForPatternMatch.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoGuardEqualityForPatternMatch, code, [])
   end
 
   # Compare fix result to expected code via AST to be formatting-agnostic

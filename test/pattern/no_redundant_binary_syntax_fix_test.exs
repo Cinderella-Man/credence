@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoRedundantBinarySyntax.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoRedundantBinarySyntax, code, [])
   end
 
   # ── single string literal ─────────────────────────────────────

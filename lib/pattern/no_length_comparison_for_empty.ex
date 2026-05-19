@@ -57,12 +57,124 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> String.split("\n")
-    |> Enum.map(&fix_line/1)
-    |> Enum.join("\n")
+  def fix_patches(ast, _opts) do
+    guard_ids = collect_guard_member_ids(ast)
+    collect_patches(ast, guard_ids)
   end
+
+  # ── AST-based fix ───────────────────────────────────────────────
+  #
+  # `match?/2` desugars to `case`, which is not allowed in guards.
+  # So we have to know *which* `length(x) op N` sites sit inside a
+  # `:when` guard and leave those alone — otherwise the fix produces
+  # code that no longer compiles. Walk the AST, collect the set of
+  # node positions inside guards, and skip them when generating
+  # source-range patches.
+
+  defp collect_guard_member_ids(ast) do
+    {_, ids} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        # `:when` shape is {:when, _, [head_or_pattern, guard_expr | more_guards]}.
+        # The first child is the call/pattern being guarded; everything after is
+        # the guard expression (multiple entries indicate `when … when …` OR-chains).
+        {:when, _, [_head | guard_parts]} = node, ids ->
+          ids =
+            Enum.reduce(guard_parts, ids, fn g, acc -> collect_subtree_ids(g, acc) end)
+
+          {node, ids}
+
+        node, ids ->
+          {node, ids}
+      end)
+
+    ids
+  end
+
+  defp collect_subtree_ids(subtree, acc) do
+    {_, acc} =
+      Macro.prewalk(subtree, acc, fn
+        {_, meta, _} = node, acc when is_list(meta) ->
+          case node_id(meta) do
+            nil -> {node, acc}
+            id -> {node, MapSet.put(acc, id)}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    acc
+  end
+
+  defp node_id(meta) do
+    case {Keyword.get(meta, :line), Keyword.get(meta, :column)} do
+      {nil, _} -> nil
+      {_, nil} -> nil
+      id -> id
+    end
+  end
+
+  defp collect_patches(ast, guard_ids) do
+    {_, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case match_comparison(node) do
+          {:ok, var, op, n, meta} ->
+            cond do
+              node_id(meta) in guard_ids ->
+                {node, acc}
+
+              replacement = build_replacement(var, op, n) ->
+                {node, [%{range: Sourceror.get_range(node), change: replacement} | acc]}
+
+              true ->
+                {node, acc}
+            end
+
+          :skip ->
+            {node, acc}
+        end
+      end)
+
+    patches
+  end
+
+  # length(x) op N
+  defp match_comparison({op, meta, [{:length, _, [arg]}, n_ast]})
+       when op in [:==, :!=, :>, :>=, :<, :<=] do
+    with {:ok, var} <- extract_var(arg),
+         {:ok, n} <- extract_int(n_ast),
+         true <- valid_comparison?(op, n) do
+      {:ok, var, op, n, meta}
+    else
+      _ -> :skip
+    end
+  end
+
+  # N op length(x)
+  defp match_comparison({op, meta, [n_ast, {:length, _, [arg]}]})
+       when op in [:==, :!=, :>, :>=, :<, :<=] do
+    rev = reverse_op(op)
+
+    with {:ok, var} <- extract_var(arg),
+         {:ok, n} <- extract_int(n_ast),
+         true <- valid_comparison?(rev, n) do
+      {:ok, var, rev, n, meta}
+    else
+      _ -> :skip
+    end
+  end
+
+  defp match_comparison(_), do: :skip
+
+  defp extract_var({name, _meta, ctx}) when is_atom(name) and is_atom(ctx),
+    do: {:ok, Atom.to_string(name)}
+
+  defp extract_var(_), do: :error
+
+  # Sourceror wraps integer literals in :__block__; Code.string_to_quoted doesn't.
+  defp extract_int(n) when is_integer(n), do: {:ok, n}
+  defp extract_int({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
+  defp extract_int(_), do: :error
 
   # ── Detection ───────────────────────────────────────────────────
 
@@ -76,7 +188,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   defp detect_pattern({op, meta, [n, {:length, _, [arg]}]})
        when is_integer(n) and op in [:==, :!=, :>, :>=, :<, :<=] do
     rev = reverse_op(op)
-    if (rev && simple_var?(arg)) and valid_comparison?(rev, n), do: {:ok, meta}, else: :skip
+    if simple_var?(arg) and valid_comparison?(rev, n), do: {:ok, meta}, else: :skip
   end
 
   defp detect_pattern(_), do: :skip
@@ -100,7 +212,6 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   defp valid_comparison?(:<, n), do: n in 1..@max_n
   # <= N means "fewer than N+1" → need N+1 underscores → N+1 <= @max_n
   defp valid_comparison?(:<=, n), do: n >= 0 and n + 1 <= @max_n
-  defp valid_comparison?(_, _), do: false
 
   defp reverse_op(:==), do: :==
   defp reverse_op(:!=), do: :!=
@@ -108,44 +219,6 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   defp reverse_op(:<), do: :>
   defp reverse_op(:>=), do: :<=
   defp reverse_op(:<=), do: :>=
-  defp reverse_op(_), do: nil
-
-  # ── Fix ─────────────────────────────────────────────────────────
-
-  defp fix_line(line) do
-    line
-    # length(var) op N
-    |> replace_forward()
-    # N op length(var)
-    |> replace_reversed()
-  end
-
-  defp replace_forward(line) do
-    Regex.replace(
-      ~r/(?<!\.)length\((\w+)\)\s*(==|!=|>=|<=|>|<)\s*(\d+)/,
-      line,
-      fn _full, var, op, n_str ->
-        n = String.to_integer(n_str)
-
-        build_replacement(var, String.to_existing_atom(op), n) ||
-          "length(#{var}) #{op} #{n}"
-      end
-    )
-  end
-
-  defp replace_reversed(line) do
-    Regex.replace(
-      ~r/(\d+)\s*(==|!=|>=|<=|>|<)\s*(?<!\.)length\((\w+)\)/,
-      line,
-      fn _full, n_str, op, var ->
-        n = String.to_integer(n_str)
-        rev = reverse_op(String.to_existing_atom(op))
-
-        (rev && build_replacement(var, rev, n)) ||
-          "#{n} #{op} length(#{var})"
-      end
-    )
-  end
 
   # ── Replacement builders ────────────────────────────────────────
 

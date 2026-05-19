@@ -25,6 +25,9 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
   def fixable?, do: true
 
   @impl true
+  def fix(source, _opts), do: source
+
+  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
@@ -44,16 +47,27 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> String.split("\n")
-    |> Enum.map(&fix_line/1)
-    |> Enum.join("\n")
-  end
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        {:|>, _meta,
+         [
+           _left,
+           {{:., _, [{:__aliases__, _, [:Regex]} = alias_node, :replace]}, _, _args}
+         ]} = node,
+        acc ->
+          patch = %{
+            range: Sourceror.get_range(alias_node),
+            change: "String"
+          }
 
-  # Only replace Regex.replace when preceded by |> on the same line
-  defp fix_line(line) do
-    Regex.replace(~r/(\|>\s*)Regex\.replace\(/, line, "\\1String.replace(")
+          {node, [patch | acc]}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reverse(patches)
   end
 
   defp build_issue(meta) do

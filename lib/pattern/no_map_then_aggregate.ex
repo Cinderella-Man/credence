@@ -58,30 +58,116 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
-      # Pipeline form: ... |> Enum.map(f) |> Enum.max()
-      {:|>, _, _} = node ->
-        fix_pipeline(node) || node
+  def fix_patches(ast, _opts), do: collect_patches(ast)
 
-      # Direct nesting: Enum.max(Enum.map(enum, f))
-      {{:., _, [mod, agg_fn]}, _, [inner]} = node
-      when agg_fn in @aggregators ->
-        if enum_module?(mod) and map_call?(inner) do
-          {_, _, map_fn_args} = inner
-          enum_source = hd(map_fn_args)
-          map_fn = hd(tl(map_fn_args))
-          build_reduce(enum_source, map_fn, agg_fn)
-        else
-          node
+  # ── Patch collection ────────────────────────────────────────────
+  #
+  # Walks the AST and builds one `Sourceror.patch_string/2` patch per
+  # match site (either a pipeline ending in `|> Enum.<agg>` or a
+  # direct `Enum.<agg>(Enum.map(...))` nesting). Each patch covers
+  # just the byte range of the matched expression, so surrounding
+  # source (assignments, blank lines, sibling expressions, comments)
+  # stays byte-identical — unlike the previous whole-AST round-trip
+  # through `Sourceror.to_string/1`, which Sourceror was free to
+  # reformat anywhere.
+
+  defp collect_patches(ast) do
+    {_, {patches, _replaced_lines}} =
+      Macro.prewalk(ast, {[], MapSet.new()}, fn node, {patches, seen_lines} ->
+        line = node_line(node)
+
+        cond do
+          line == nil ->
+            {node, {patches, seen_lines}}
+
+          MapSet.member?(seen_lines, line) ->
+            # Avoid emitting two overlapping patches when a match is
+            # nested inside another match's range (e.g. a pipeline
+            # whose head is itself a map+agg). Prewalk visits outer
+            # first; the inner match's line is already claimed.
+            {node, {patches, seen_lines}}
+
+          true ->
+            case build_patch(node) do
+              {:ok, patch, range_lines} ->
+                {node, {[patch | patches], MapSet.union(seen_lines, range_lines)}}
+
+              :skip ->
+                {node, {patches, seen_lines}}
+            end
         end
+      end)
 
-      node ->
-        node
-    end)
-    |> Sourceror.to_string()
+    patches
+  end
+
+  defp node_line({_form, meta, _args}) when is_list(meta), do: Keyword.get(meta, :line)
+  defp node_line(_), do: nil
+
+  defp build_patch({:|>, _, _} = node) do
+    case fix_pipeline(node) do
+      nil ->
+        :skip
+
+      new_ast ->
+        emit_patch(node, new_ast)
+    end
+  end
+
+  defp build_patch({{:., _, [mod, agg_fn]}, _, [inner]} = node)
+       when agg_fn in @aggregators do
+    if enum_module?(mod) and map_call?(inner) do
+      {_, _, map_fn_args} = inner
+      enum_source = hd(map_fn_args)
+      map_fn = hd(tl(map_fn_args))
+      emit_patch(node, build_reduce(enum_source, map_fn, agg_fn))
+    else
+      :skip
+    end
+  end
+
+  defp build_patch(_), do: :skip
+
+  # Returns the length of the longest line touched by the original
+  # expression's range, less the indentation of the first line — i.e.
+  # the wrap budget Sourceror should aim for so the replacement looks
+  # roughly as long as the original's longest line. `nil` when the
+  # original sits on a single line (we keep Sourceror's default).
+  defp original_line_budget(_node, range) do
+    if range.start[:line] == range.end[:line] do
+      nil
+    else
+      # Conservative budget: just enough to keep `fn args -> body`
+      # from collapsing onto one line. A value slightly smaller than
+      # the longest expected segment forces the formatter to break at
+      # the natural `->` / `|>` points.
+      max(range.end[:column] - range.start[:column], 40)
+    end
+  end
+
+  defp emit_patch(original_node, new_ast) do
+    range = Sourceror.get_range(original_node)
+
+    # If the original expression spans multiple source lines, encourage
+    # the replacement to also wrap — otherwise Sourceror's default
+    # 98-col heuristic collapses short replacements into a single line
+    # that visually swallows the structure the user wrote. We compute
+    # the longest *body* line of the original and use that as the
+    # wrap budget, so a replacement that's shorter than the original's
+    # longest line stays compact, and a replacement that's longer wraps.
+    opts =
+      case original_line_budget(original_node, range) do
+        nil -> []
+        budget -> [line_length: budget]
+      end
+
+    replacement = Sourceror.to_string(new_ast, opts)
+
+    range_lines =
+      range.start[:line]..range.end[:line]
+      |> Enum.into(MapSet.new())
+
+    {:ok, %{range: range, change: replacement}, range_lines}
   end
 
   # ── Pipeline fix ────────────────────────────────────────────────
@@ -207,20 +293,18 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   end
 
   # ── Variable substitution ───────────────────────────────────────
-
-  defp substitute({name, _meta, ctx}, name, replacement) when is_atom(ctx),
-    do: replacement
-
-  defp substitute({form, meta, args}, name, replacement) when is_list(args),
-    do: {form, meta, Enum.map(args, &substitute(&1, name, replacement))}
-
-  defp substitute({left, right}, name, replacement),
-    do: {substitute(left, name, replacement), substitute(right, name, replacement)}
-
-  defp substitute(list, name, replacement) when is_list(list),
-    do: Enum.map(list, &substitute(&1, name, replacement))
-
-  defp substitute(other, _, _), do: other
+  #
+  # `Macro.prewalk/2` rather than hand-written clauses, because earlier
+  # versions missed AST shapes where the variable lives in the *form*
+  # half of a 3-tuple — most notably remote-call dot access like
+  # `c.delivery` parses to `{{:., _, [{:c, _, nil}, :delivery]}, _, []}`
+  # and a clause that only maps over `args` never reaches the `:c`.
+  defp substitute(body, name, replacement) do
+    Macro.prewalk(body, fn
+      {^name, _meta, ctx} when is_atom(ctx) -> replacement
+      other -> other
+    end)
+  end
 
   # ── Literal wrapping (Sourceror compat) ─────────────────────────
 

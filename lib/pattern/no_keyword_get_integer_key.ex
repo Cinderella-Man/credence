@@ -79,36 +79,55 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   # ── Fix ────────────────────────────────────────────────────────
 
-  # Direct: Keyword.get(var, integer)
-  @direct_re ~r/Keyword\.get\((\w+),\s*(-?\d+)\)/
-  # Piped: |> Keyword.get(integer)
-  @piped_re ~r/Keyword\.get\((-?\d+)\)/
-
   @impl true
-  def fix(source, _opts) do
-    source
-    |> String.split("\n")
-    |> Enum.map(&fix_line/1)
-    |> Enum.join("\n")
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case detect_fix(node) do
+          {:ok, patch} -> {node, [patch | acc]}
+          :skip -> {node, acc}
+        end
+      end)
+
+    Enum.reverse(patches)
   end
 
-  defp fix_line(line) do
-    line
-    |> fix_direct()
-    |> fix_piped()
+  # Direct: Keyword.get(list, integer) — only when list is a simple var
+  # (matches the legacy regex's `(\w+)` capture group).
+  defp detect_fix(
+         {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _meta, [list, key]} = node
+       ) do
+    with {:ok, n} <- integer_value(key),
+         {:ok, var} <- simple_var(list) do
+      {:ok, %{range: Sourceror.get_range(node), change: direct_replacement(var, n)}}
+    else
+      _ -> :skip
+    end
   end
 
-  defp fix_direct(line) do
-    Regex.replace(@direct_re, line, fn _full, var, index_str ->
-      direct_replacement(var, String.to_integer(index_str))
-    end)
+  # Piped: expr |> Keyword.get(integer)
+  defp detect_fix({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _meta, [key]} = node) do
+    case integer_value(key) do
+      {:ok, n} ->
+        {:ok, %{range: Sourceror.get_range(node), change: piped_replacement(n)}}
+
+      :error ->
+        :skip
+    end
   end
 
-  defp fix_piped(line) do
-    Regex.replace(@piped_re, line, fn _full, index_str ->
-      piped_replacement(String.to_integer(index_str))
-    end)
-  end
+  defp detect_fix(_), do: :skip
+
+  defp integer_value(n) when is_integer(n), do: {:ok, n}
+  defp integer_value({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
+  defp integer_value({:-, _, [n]}) when is_integer(n), do: {:ok, -n}
+  defp integer_value({:-, _, [{:__block__, _, [n]}]}) when is_integer(n), do: {:ok, -n}
+  defp integer_value(_), do: :error
+
+  defp simple_var({name, _, ctx}) when is_atom(name) and is_atom(ctx),
+    do: {:ok, Atom.to_string(name)}
+
+  defp simple_var(_), do: :error
 
   # ── Replacements ───────────────────────────────────────────────
 

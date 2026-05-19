@@ -78,11 +78,54 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> String.split("\n")
-    |> Enum.map(&fix_line/1)
-    |> Enum.join("\n")
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        # Direct: Enum.func_by(list, identity)
+        {{:., _, [{:__aliases__, _, [:Enum]}, func]}, _meta, [list, callback]} = node, acc
+        when func in @by_funcs ->
+          if identity_fn?(callback) do
+            {node, [direct_patch(node, list, func) | acc]}
+          else
+            {node, acc}
+          end
+
+        # Piped: list |> Enum.func_by(identity). Patch only the RHS call,
+        # leaving the `|>` and the LHS source byte-identical.
+        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Enum]}, func]}, _meta, [callback]} = rhs]} =
+            node,
+        acc
+        when func in @by_funcs ->
+          if identity_fn?(callback) do
+            {node, [piped_patch(rhs, func) | acc]}
+          else
+            {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reverse(patches)
+  end
+
+  defp direct_patch(node, list, func) do
+    simple = Map.fetch!(@by_to_simple, func)
+    list_text = Sourceror.to_string(list)
+
+    %{
+      range: Sourceror.get_range(node),
+      change: "Enum.#{simple}(#{list_text})"
+    }
+  end
+
+  defp piped_patch(rhs_node, func) do
+    simple = Map.fetch!(@by_to_simple, func)
+
+    %{
+      range: Sourceror.get_range(rhs_node),
+      change: "Enum.#{simple}()"
+    }
   end
 
   # ── Identity function detection ─────────────────────────────────
@@ -125,39 +168,6 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
        do: true
 
   defp identity_fn?(_), do: false
-
-  # ── Fix ─────────────────────────────────────────────────────────
-
-  defp fix_line(line) do
-    line
-    |> fix_direct_call()
-    |> fix_piped_call()
-  end
-
-  # Enum.func_by(arg, fn x -> x end) → Enum.func(arg)
-  # Enum.func_by(arg, & &1) → Enum.func(arg)
-  defp fix_direct_call(line) do
-    Regex.replace(
-      ~r/Enum\.(uniq_by|sort_by|min_by|max_by|dedup_by)\((.+),\s*(?:fn\s+(\w+)\s*->\s*\3\s*end|& &1|&\(&1\)|&Function\.identity\/1)\)/,
-      line,
-      fn _, func, arg, _ -> "Enum.#{simplify(func)}(#{String.trim(arg)})" end
-    )
-  end
-
-  # |> Enum.func_by(fn x -> x end) → |> Enum.func()
-  defp fix_piped_call(line) do
-    Regex.replace(
-      ~r/Enum\.(uniq_by|sort_by|min_by|max_by|dedup_by)\((?:fn\s+(\w+)\s*->\s*\2\s*end|& &1|&\(&1\)|&Function\.identity\/1)\)/,
-      line,
-      fn _, func -> "Enum.#{simplify(func)}()" end
-    )
-  end
-
-  defp simplify(func) do
-    @by_to_simple
-    |> Map.get(String.to_existing_atom(func))
-    |> Atom.to_string()
-  end
 
   defp build_issue(meta, func) do
     simple = Map.get(@by_to_simple, func)

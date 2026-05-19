@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.NoPipedRegexReplace.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoPipedRegexReplace, code, [])
   end
 
   describe "replaces piped Regex.replace with String.replace" do

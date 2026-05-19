@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoIsNilGuardFixTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoIsNilGuard.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIsNilGuard, code, [])
   end
 
   # ── sole guard, param unused ───────────────────────────────────

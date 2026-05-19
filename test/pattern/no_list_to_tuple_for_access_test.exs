@@ -8,11 +8,11 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoListToTupleForAccess.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoListToTupleForAccess, code, [])
   end
 
   defp assert_fix(input, expected) do
-    result = fix(input)
+    result = fix(input) |> String.trim_trailing("\n")
     # Both sides go through Code.format_string! so formatting
     # differences (trailing newlines, whitespace) are normalised.
     formatted_expected = expected |> Code.format_string!() |> IO.iodata_to_binary()

@@ -1,5 +1,6 @@
 defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
   use ExUnit.Case
+  alias Credence.RuleHelpers
 
   defp check(code) do
     {:ok, ast} = Code.string_to_quoted(code)
@@ -7,7 +8,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoLengthComparisonForEmpty.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoLengthComparisonForEmpty, code, [])
   end
 
   # ── exactly N ──────────────────────────────────────────────────
@@ -200,6 +201,51 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
       """
 
       assert {:ok, _} = Code.string_to_quoted(fix(code))
+    end
+  end
+
+  describe "guard-context safety (issue: match? is not guard-safe)" do
+    test "does not rewrite length comparison inside a function-head guard" do
+      code = """
+      defmodule Test do
+        def from_state(state) when is_list(state) and length(state) == 4, do: state
+      end
+      """
+
+      output = fix(code)
+
+      assert output == code
+      assert {:ok, _} = Code.string_to_quoted(output)
+      # And the fixed output must still compile (the actual symptom).
+      assert RuleHelpers.compiles?(output)
+    end
+
+    test "does not rewrite length comparison inside a case-clause guard" do
+      code = """
+      case x do
+        l when length(l) >= 3 -> :big
+        _ -> :other
+      end
+      """
+
+      assert fix(code) == code
+    end
+
+    test "still rewrites length comparison in the body even when a guard exists" do
+      code = """
+      defmodule Test do
+        def f(state) when is_list(state) do
+          length(state) == 0
+        end
+      end
+      """
+
+      output = fix(code)
+
+      # Guard untouched, body rewritten.
+      assert output =~ "when is_list(state)"
+      refute output =~ "length(state) == 0"
+      assert output =~ "state == []"
     end
   end
 end

@@ -293,6 +293,124 @@ defmodule Credence.PipelineTest do
     end
   end
 
+  # ── Compile-output gate ───────────────────────────────────────────
+  #
+  # If a rule's `fix/2` returns source that no longer compiles, the
+  # pipeline must revert to the pre-fix source and surface the rule
+  # as `:reverted` in the trace — never silently propagate broken
+  # output to the next rule or to the caller.
+
+  defmodule BrokenFixRule do
+    @moduledoc false
+    use Credence.Pattern.Rule
+
+    @impl true
+    def fixable?, do: true
+
+    @impl true
+    def priority, do: 100
+
+    @impl true
+    def check(_ast, _opts) do
+      [%Credence.Issue{rule: :broken_fix, message: "broken", meta: %{line: 1}}]
+    end
+
+    @impl true
+    def fix(_source, _opts) do
+      # Parses but does not compile (undefined function).
+      "defmodule Broken_NotARealMod_xyz do\n  def go, do: some_undefined_thing()\nend\n"
+    end
+  end
+
+  defmodule UnparseableFixRule do
+    @moduledoc false
+    use Credence.Pattern.Rule
+
+    @impl true
+    def fixable?, do: true
+
+    @impl true
+    def priority, do: 100
+
+    @impl true
+    def check(_ast, _opts) do
+      [%Credence.Issue{rule: :unparseable_fix, message: "x", meta: %{line: 1}}]
+    end
+
+    @impl true
+    def fix(_source, _opts), do: "this is <<< not valid elixir at all"
+  end
+
+  describe "compile-output gate" do
+    test "reverts a rule whose output does not compile" do
+      input = ~S"""
+      defmodule CrdPT_RevertTarget do
+        def go, do: :ok
+      end
+      """
+
+      {output, applied} =
+        Credence.Pattern.fix_with_trace(input, rules: [BrokenFixRule])
+
+      assert output == input
+      assert applied == [{BrokenFixRule, :reverted}]
+    end
+
+    test "reverts a rule whose output does not even parse" do
+      input = ~S"""
+      defmodule CrdPT_UnparseableTarget do
+        def go, do: :ok
+      end
+      """
+
+      {output, applied} =
+        Credence.Pattern.fix_with_trace(input, rules: [UnparseableFixRule])
+
+      assert output == input
+      assert applied == [{UnparseableFixRule, :reverted}]
+    end
+
+    test "logs a warning identifying the offending rule" do
+      input = ~S"""
+      defmodule CrdPT_RevertLog do
+        def go, do: :ok
+      end
+      """
+
+      log =
+        capture_log(fn ->
+          Credence.Pattern.fix_with_trace(input, rules: [BrokenFixRule])
+        end)
+
+      assert log =~ "BrokenFixRule"
+      assert log =~ "non-compiling" or log =~ "reverting"
+    end
+
+    test "a reverted rule does not poison the rest of the pipeline" do
+      # Run the broken rule alongside the real rule set. The broken rule
+      # should revert; the real rules should still operate on the
+      # original (compiling) input afterwards.
+      input = ~S"""
+      defmodule CrdPT_RevertIsolation do
+        def go(list) do
+          length(list) == 0
+        end
+      end
+      """
+
+      rules = [BrokenFixRule | Credence.Pattern.default_rules()]
+
+      {output, applied} = Credence.Pattern.fix_with_trace(input, rules: rules)
+
+      # Broken rule reverted, other rules still applied.
+      assert {BrokenFixRule, :reverted} in applied
+      assert code_compiles?(output)
+      # The real rule for length == 0 should have fired and produced
+      # `list == []` in the output.
+      assert output =~ "list == []"
+    end
+  end
+
   describe "pattern gating: pattern runs after semantic fixes resolve compilation" do
     test "semantic fixes warning, code was already compiling, pattern fires" do
       # _result is used → UsedUnderscoreVariable fires (warning-level).

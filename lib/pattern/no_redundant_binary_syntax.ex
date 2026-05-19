@@ -61,12 +61,42 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> String.split("\n")
-    |> Enum.map(&fix_line/1)
-    |> Enum.join("\n")
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        cond do
+          sigil_node?(node) ->
+            # Same trick as `check/2`: replace with an opaque atom so
+            # prewalk doesn't descend into the sigil's internal <<>>.
+            {:__sigil_skip__, acc}
+
+          patch = detect_for_patch(node) ->
+            {node, [patch | acc]}
+
+          true ->
+            {node, acc}
+        end
+      end)
+
+    Enum.reverse(patches)
   end
+
+  # Sourceror's AST wraps the binary literal in :__block__ to carry
+  # position metadata. Standard AST has the raw binary. Handle both.
+  defp detect_for_patch({:<<>>, _meta, [child]} = node) do
+    if binary_literal?(child) do
+      %{
+        range: Sourceror.get_range(node),
+        change: Sourceror.to_string(child)
+      }
+    end
+  end
+
+  defp detect_for_patch(_), do: nil
+
+  defp binary_literal?(str) when is_binary(str), do: true
+  defp binary_literal?({:__block__, _, [str]}) when is_binary(str), do: true
+  defp binary_literal?(_), do: false
 
   # ── Detection ───────────────────────────────────────────────────
 
@@ -90,16 +120,6 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
   end
 
   defp sigil_node?(_), do: false
-
-  # ── Fix ─────────────────────────────────────────────────────────
-
-  @redundant_binary_re ~r/<<\s*("(?:[^"\\\\]|\\\\.)*")\s*>>/
-
-  defp fix_line(line) do
-    Regex.replace(@redundant_binary_re, line, fn _full, string_literal ->
-      string_literal
-    end)
-  end
 
   # ── Issue ───────────────────────────────────────────────────────
 

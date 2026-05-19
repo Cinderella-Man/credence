@@ -187,6 +187,60 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
+  Invokes a Pattern rule's fix on `source`, dispatching to either the
+  new patch-based `fix_patches/2` callback (if the rule has migrated)
+  or the legacy `fix/2` callback.
+
+  Used by both the orchestrator (`Credence.Pattern.run_fixable_rules/3`)
+  and rule tests, so test assertions on the post-fix source string
+  continue working unchanged regardless of which side of the
+  migration a rule is on.
+  """
+  @spec apply_rule_fix(module(), String.t(), keyword()) :: String.t()
+  def apply_rule_fix(rule, source, opts \\ []) do
+    Code.ensure_loaded(rule)
+
+    if function_exported?(rule, :fix_patches, 2) do
+      ast = Sourceror.parse_string!(source)
+
+      case rule.fix_patches(ast, opts) do
+        [] -> source
+        patches when is_list(patches) -> Sourceror.patch_string(source, patches)
+      end
+    else
+      rule.fix(source, opts)
+    end
+  end
+
+  @doc """
+  Renders a replacement subtree as source text suitable for patching
+  back into the original source at `original_range`'s position.
+
+  Used by patch-based rules to keep multi-line originals from
+  collapsing onto a single line just because the replacement fits
+  Sourceror's default 98-column line budget.
+
+  The heuristic: if the original spans multiple lines, set Sourceror's
+  `line_length` to the original expression's column-width (with a
+  floor of 40 so tiny snippets don't over-wrap). If the original sits
+  on a single line, use Sourceror's default.
+
+  Established by the Issue 4 fix on `no_map_then_aggregate`.
+  """
+  @spec render_replacement(Macro.t(), map()) :: String.t()
+  def render_replacement(new_ast, original_range) do
+    opts =
+      if original_range.start[:line] == original_range.end[:line] do
+        []
+      else
+        budget = max(original_range.end[:column] - original_range.start[:column], 40)
+        [line_length: budget]
+      end
+
+    Sourceror.to_string(new_ast, opts)
+  end
+
+  @doc """
   Logs a before/after diff under a `[credence_fix]` prefix.
 
   Shows every changed line — the diff is never truncated so that the

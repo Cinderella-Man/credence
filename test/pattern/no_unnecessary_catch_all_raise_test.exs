@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoUnnecessaryCatchAllRaise.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoUnnecessaryCatchAllRaise, code, [])
   end
 
   defp normalize(str), do: String.trim_trailing(str, "\n")

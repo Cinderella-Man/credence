@@ -30,7 +30,7 @@ defmodule Credence do
   @spec fix(String.t(), keyword()) :: %{
           code: String.t(),
           issues: [Issue.t()],
-          applied_rules: [{module(), non_neg_integer()}]
+          applied_rules: [{module(), non_neg_integer() | :reverted}]
         }
   def fix(code_string, opts \\ []) do
     # Phase 1: Syntax (with trace)

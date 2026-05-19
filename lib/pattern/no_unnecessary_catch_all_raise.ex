@@ -62,182 +62,37 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaise do
   end
 
   @impl true
-  def fix(source, _opts) do
-    {:ok, ast} = Code.string_to_quoted(source)
-
-    to_remove = collect_removal_targets(ast)
-
-    case MapSet.size(to_remove) do
-      0 ->
-        source
-
-      _ ->
-        ranges = find_removal_ranges(source, to_remove)
-
-        result =
-          ranges
-          |> Enum.sort_by(fn {s, _} -> -s end)
-          |> Enum.reduce(source, fn {start_pos, end_pos}, src ->
-            before = binary_part(src, 0, start_pos)
-            after_part = binary_part(src, end_pos, byte_size(src) - end_pos)
-            before <> after_part
-          end)
-          |> String.replace(~r/\n{3,}/, "\n\n")
-          |> String.trim_trailing("\n")
-
-        result <> "\n"
-    end
-  end
-
-  # ------------------------------------------------------------
-  # FIX: IDENTIFY CATCH-ALL-RAISES
-  #
-  # Walks the AST (using the same parser as check) and collects
-  # {name, arity, line} triples so we match the exact clause,
-  # not every clause with the same name/arity.
-  # ------------------------------------------------------------
-
-  defp collect_removal_targets(ast) do
-    {_ast, targets} =
-      Macro.prewalk(ast, [], fn node, acc ->
-        case node do
-          {def_type, meta, [{fn_name, _, args}, body]}
-          when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
-            if all_wildcards?(args) and body_only_raises?(body) do
-              line = Keyword.get(meta, :line)
-              {node, [{fn_name, length(args), line} | acc]}
-            else
-              {node, acc}
-            end
-
-          _ ->
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        {def_type, _meta, [{fn_name, _, args}, body]} = node, acc
+        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
+          if all_wildcards?(args) and body_only_raises?(body) do
+            {node, [removal_patch(node) | acc]}
+          else
             {node, acc}
-        end
+          end
+
+        node, acc ->
+          {node, acc}
       end)
 
-    MapSet.new(targets)
+    Enum.reverse(patches)
   end
 
-  # ------------------------------------------------------------
-  # FIX: TEXT-BASED REMOVAL
-  #
-  # Scans source text to find byte ranges of flagged function
-  # definitions.  Uses line numbers from the AST to match the
-  # exact clause, avoiding false matches on other clauses of
-  # the same function.
-  # ------------------------------------------------------------
+  # Replace the def node — plus the trailing newline that follows it
+  # on its own line — with the empty string. Same trick as
+  # `binding_removal_patch/1` in `no_list_to_tuple_for_access.ex`.
+  defp removal_patch(def_node) do
+    range = Sourceror.get_range(def_node)
 
-  defp find_removal_ranges(source, targets) do
-    lines = String.split(source, "\n")
-
-    targets
-    |> Enum.flat_map(fn {name, _arity, line} ->
-      # AST lines are 1-indexed; our list is 0-indexed
-      idx = line - 1
-
-      case Enum.at(lines, idx) do
-        nil ->
-          []
-
-        text ->
-          if Regex.match?(~r/^\s*(defp?)\s+/, text) do
-            case find_function_range(lines, idx, name) do
-              {:ok, range} -> [range]
-              :error -> []
-            end
-          else
-            []
-          end
-      end
-    end)
-  end
-
-  defp find_function_range(lines, start_idx, name) do
-    first_line = Enum.at(lines, start_idx)
-
-    # Keyword-style: entire def on one line with `do:` before any bare `do`
-    if Regex.match?(~r/\bdo\s*:/, first_line) and
-         Regex.match?(~r/^(\s*)(defp?)\s+#{name}\s*\(/, first_line) do
-      {:ok, line_range_to_byte_range(lines, start_idx, start_idx)}
-    else
-      # Do-block style: find the matching `end` by tracking nesting
-      case find_matching_end(lines, start_idx) do
-        {:ok, end_idx} ->
-          {:ok, line_range_to_byte_range(lines, start_idx, end_idx)}
-
-        :error ->
-          :error
-      end
-    end
-  end
-
-  defp find_matching_end(lines, def_line_idx) do
-    case find_do_keyword(lines, def_line_idx) do
-      {:ok, do_line_idx} ->
-        scan_for_end(lines, do_line_idx + 1, 1)
-
-      :error ->
-        :error
-    end
-  end
-
-  defp find_do_keyword(lines, start_idx) do
-    lines
-    |> Enum.drop(start_idx)
-    |> Enum.with_index(start_idx)
-    |> Enum.find_value(:error, fn {line, idx} ->
-      if Regex.match?(~r/\bdo\s*$/, line), do: {:ok, idx}
-    end)
-  end
-
-  defp scan_for_end(lines, start_idx, initial_depth) do
-    lines
-    |> Enum.drop(start_idx)
-    |> Enum.with_index(start_idx)
-    |> Enum.reduce_while(initial_depth, fn {line, idx}, depth ->
-      trimmed = String.trim(line)
-
-      cond do
-        Regex.match?(~r/^end\b/, trimmed) ->
-          new_depth = depth - 1
-
-          if new_depth == 0 do
-            {:halt, {:found, idx}}
-          else
-            {:cont, new_depth}
-          end
-
-        Regex.match?(~r/\bdo\s*$/, line) ->
-          {:cont, depth + 1}
-
-        true ->
-          {:cont, depth}
-      end
-    end)
-    |> case do
-      {:found, idx} -> {:ok, idx}
-      _ -> :error
-    end
-  end
-
-  defp line_range_to_byte_range(lines, start_line, end_line) do
-    before =
-      lines
-      |> Enum.take(start_line)
-      |> Enum.join("\n")
-
-    start_byte =
-      case start_line do
-        0 -> 0
-        _ -> byte_size(before) + 1
-      end
-
-    range_text =
-      lines
-      |> Enum.slice(start_line..end_line)
-      |> Enum.join("\n")
-
-    {start_byte, start_byte + byte_size(range_text)}
+    %{
+      range: %{
+        start: [line: range.start[:line], column: 1],
+        end: [line: range.end[:line] + 1, column: 1]
+      },
+      change: ""
+    }
   end
 
   # ------------------------------------------------------------
@@ -272,8 +127,24 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaise do
 
   defp wildcard?(_), do: false
 
-  defp body_only_raises?(do: {:raise, _, _}), do: true
+  defp body_only_raises?(body) when is_list(body) do
+    case extract_do_body(body) do
+      {:ok, {:raise, _, _}} -> true
+      _ -> false
+    end
+  end
+
   defp body_only_raises?(_), do: false
+
+  # Accept both `Code.string_to_quoted` keyword shape (`[do: expr]`) and
+  # Sourceror's `[{{:__block__, _, [:do]}, expr}]`.
+  defp extract_do_body(body) do
+    Enum.find_value(body, :error, fn
+      {:do, expr} -> {:ok, expr}
+      {{:__block__, _, [:do]}, expr} -> {:ok, expr}
+      _ -> nil
+    end)
+  end
 
   defp build_message(def_type, fn_name, arity) do
     """

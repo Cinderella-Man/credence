@@ -68,26 +68,17 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
   # ── Fix ───────────────────────────────────────────────────────────
 
   @impl true
-  def fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
+  def fix_patches(ast, _opts) do
     bindings = collect_bindings(ast)
 
     if map_size(bindings) == 0 do
-      source
+      []
     else
       readers = collect_elem_readers(ast, bindings)
       {elem_patches, removable_bindings} = decide_patches(bindings, readers, ast)
 
       binding_patches = Enum.map(removable_bindings, &binding_removal_patch/1)
-      patches = elem_patches ++ binding_patches
-
-      if patches == [] do
-        source
-      else
-        source
-        |> Sourceror.patch_string(patches)
-        |> String.trim_trailing("\n")
-      end
+      elem_patches ++ binding_patches
     end
   end
 

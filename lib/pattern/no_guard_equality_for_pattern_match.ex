@@ -45,25 +45,58 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   end
 
   @impl true
-  def fix(source, _opts) do
-    {_ok, ast} = Code.string_to_quoted(source)
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        {kind, _meta, [{:when, _when_meta, [call, guard]} = when_node | rest]} = node, acc
+        when kind in [:def, :defp] ->
+          {_name, _call_meta, params} = call
+          param_names = extract_param_names(params)
 
-    ast
-    |> Macro.postwalk(fn
-      {kind, meta, [{:when, when_meta, [call, guard]} | rest]} = node
-      when kind in [:def, :defp] ->
-        {_name, _call_meta, params} = call
-        param_names = extract_param_names(params)
+          case build_when_patch(when_node, call, guard, rest, param_names) do
+            nil -> {node, acc}
+            patch -> {node, [patch | acc]}
+          end
 
-        case fix_when_clause(kind, meta, when_meta, call, guard, rest, param_names) do
-          :unchanged -> node
-          fixed -> fixed
-        end
+        node, acc ->
+          {node, acc}
+      end)
 
-      node ->
-        node
-    end)
-    |> Macro.to_string()
+    Enum.reverse(patches)
+  end
+
+  # Builds a patch that replaces the `{:when, _, [call, guard]}` node's
+  # source range with either the rewritten call (when every guard
+  # equality has been substituted into the head) or `call when remaining_guard`
+  # (when some guard expressions remain). Body is untouched.
+  defp build_when_patch(when_node, call, guard, rest, param_names) do
+    if guard_safe_to_fix?(guard) do
+      case find_guard_equalities(guard, param_names) do
+        [] ->
+          nil
+
+        matches ->
+          remaining_guard = remove_matched_equalities(guard, param_names)
+          matched_vars = MapSet.new(matches, fn {var, _, _} -> var end)
+
+          if references_any?(remaining_guard, matched_vars) or
+               body_references_any?(rest, matched_vars) do
+            nil
+          else
+            {_name, _, params} = call
+            new_params = apply_fixes_to_params(params, matches)
+            new_call = put_elem(call, 2, new_params)
+
+            change =
+              case remaining_guard do
+                nil -> Macro.to_string(new_call)
+                remaining -> "#{Macro.to_string(new_call)} when #{Macro.to_string(remaining)}"
+              end
+
+            %{range: Sourceror.get_range(when_node), change: change}
+          end
+      end
+    end
   end
 
   defp extract_guard_matches({kind, _meta, [{:when, _, [call, guard]} | _]})
@@ -85,21 +118,40 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
     guard
     |> flatten_guard()
     |> Enum.reduce([], fn
-      {:==, meta, [{var_name, _, nil}, literal]}, acc
-      when is_atom(var_name) and
-             (is_integer(literal) or is_atom(literal) or is_binary(literal)) ->
-        if var_name in param_names, do: [{var_name, literal, meta} | acc], else: acc
+      {:==, meta, [{var_name, _, nil}, maybe_literal]}, acc when is_atom(var_name) ->
+        case fixable_literal(maybe_literal) do
+          {:ok, literal} ->
+            if var_name in param_names, do: [{var_name, literal, meta} | acc], else: acc
 
-      {:==, meta, [literal, {var_name, _, nil}]}, acc
-      when is_atom(var_name) and
-             (is_integer(literal) or is_atom(literal) or is_binary(literal)) ->
-        if var_name in param_names, do: [{var_name, literal, meta} | acc], else: acc
+          :error ->
+            acc
+        end
+
+      {:==, meta, [maybe_literal, {var_name, _, nil}]}, acc when is_atom(var_name) ->
+        case fixable_literal(maybe_literal) do
+          {:ok, literal} ->
+            if var_name in param_names, do: [{var_name, literal, meta} | acc], else: acc
+
+          :error ->
+            acc
+        end
 
       _, acc ->
         acc
     end)
     |> Enum.reverse()
   end
+
+  # Accepts both raw literals (`Code.string_to_quoted` shape) and
+  # Sourceror's `:__block__`-wrapped literals.
+  defp fixable_literal(literal) when is_integer(literal) or is_atom(literal) or is_binary(literal),
+    do: {:ok, literal}
+
+  defp fixable_literal({:__block__, _, [literal]})
+       when is_integer(literal) or is_atom(literal) or is_binary(literal),
+       do: {:ok, literal}
+
+  defp fixable_literal(_), do: :error
 
   defp flatten_guard({:and, _, [left, right]}), do: flatten_guard(left) ++ flatten_guard(right)
   defp flatten_guard({:or, _, [left, right]}), do: flatten_guard(left) ++ flatten_guard(right)
@@ -113,40 +165,6 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
           "pattern matching `#{inspect(literal)}` directly in the function head.",
       meta: %{line: Keyword.get(meta, :line)}
     }
-  end
-
-  defp fix_when_clause(kind, meta, when_meta, call, guard, rest, param_names) do
-    if guard_safe_to_fix?(guard) do
-      matches = find_guard_equalities(guard, param_names)
-
-      case matches do
-        [] ->
-          :unchanged
-
-        matches ->
-          remaining_guard = remove_matched_equalities(guard, param_names)
-          matched_vars = MapSet.new(matches, fn {var, _, _} -> var end)
-
-          if references_any?(remaining_guard, matched_vars) or
-               body_references_any?(rest, matched_vars) do
-            :unchanged
-          else
-            {_name, _call_meta, params} = call
-            new_params = apply_fixes_to_params(params, matches)
-            new_call = put_elem(call, 2, new_params)
-
-            case remaining_guard do
-              nil ->
-                {kind, meta, [new_call | rest]}
-
-              remaining ->
-                {kind, meta, [{:when, when_meta, [new_call, remaining]} | rest]}
-            end
-          end
-      end
-    else
-      :unchanged
-    end
   end
 
   defp references_any?(nil, _var_names), do: false
@@ -209,20 +227,24 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
     end
   end
 
-  defp remove_from_guard({:==, meta, [{var_name, var_meta, ctx}, literal]}, param_names)
-       when is_atom(var_name) and is_atom(ctx) and
-              (is_integer(literal) or is_atom(literal) or is_binary(literal)) do
-    if var_name in param_names,
-      do: nil,
-      else: {:==, meta, [{var_name, var_meta, ctx}, literal]}
+  defp remove_from_guard({:==, _meta, [{var_name, _, ctx}, literal]} = node, param_names)
+       when is_atom(var_name) and is_atom(ctx) do
+    with {:ok, _} <- fixable_literal(literal),
+         true <- var_name in param_names do
+      nil
+    else
+      _ -> node
+    end
   end
 
-  defp remove_from_guard({:==, meta, [literal, {var_name, var_meta, ctx}]}, param_names)
-       when is_atom(var_name) and is_atom(ctx) and
-              (is_integer(literal) or is_atom(literal) or is_binary(literal)) do
-    if var_name in param_names,
-      do: nil,
-      else: {:==, meta, [literal, {var_name, var_meta, ctx}]}
+  defp remove_from_guard({:==, _meta, [literal, {var_name, _, ctx}]} = node, param_names)
+       when is_atom(var_name) and is_atom(ctx) do
+    with {:ok, _} <- fixable_literal(literal),
+         true <- var_name in param_names do
+      nil
+    else
+      _ -> node
+    end
   end
 
   defp remove_from_guard(other, _param_names), do: other

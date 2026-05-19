@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoMapThenAggregate.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapThenAggregate, code, [])
   end
 
   describe "NoMapThenAggregate check" do
@@ -373,6 +373,111 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
 
       result = fix(code)
       assert {:ok, _ast} = Code.string_to_quoted(result)
+    end
+  end
+
+  describe "NoMapThenAggregate fix — locality (issue: collapses multi-line pipes)" do
+    test "preserves surrounding code byte-identically outside the change site" do
+      input = """
+      defmodule Test do
+        def compute(items, dim) do
+          weighted =
+            items
+            |> Enum.map(fn item ->
+              Enum.at(item.weights, dim, 0)
+            end)
+            |> Enum.sum()
+
+          {:ok, weighted}
+        end
+      end
+      """
+
+      output = fix(input)
+
+      assert output =~ "defmodule Test do\n"
+      assert output =~ "  def compute(items, dim) do\n"
+      assert output =~ "    weighted =\n"
+      # Blank line and return-tuple line untouched.
+      assert output =~ "\n\n    {:ok, weighted}\n"
+      assert output =~ "  end\nend\n"
+      assert {:ok, _} = Code.string_to_quoted(output)
+    end
+
+    test "keeps the replacement multi-line when the original pipeline was multi-line" do
+      input = """
+      defmodule Test do
+        def compute(items, dim) do
+          items
+          |> Enum.map(fn item -> Enum.at(item.weights, dim, 0) end)
+          |> Enum.sum()
+        end
+      end
+      """
+
+      output = fix(input)
+
+      # The fn body should not collapse onto the same line as `fn el, acc ->`.
+      refute output =~ ~r/fn el, acc -> [^\n]*end\)/,
+             "fn body collapsed to one line — expected newline after `->`:\n#{output}"
+
+      assert output =~ "|> Enum.reduce("
+      assert {:ok, _} = Code.string_to_quoted(output)
+    end
+  end
+
+  describe "NoMapThenAggregate fix — closure-parameter substitution (issue: c.delivery survives)" do
+    test "substitutes closure parameter through a dot-access in the body" do
+      input = """
+      clients |> Enum.map(fn c -> Enum.at(c.delivery, dim, 0) end) |> Enum.sum()
+      """
+
+      output = fix(input)
+
+      assert {:ok, _} = Code.string_to_quoted(output)
+      refute output =~ ~r/\bc\.delivery\b/
+      assert output =~ ~r/\bel\.delivery\b/
+    end
+
+    test "substitutes closure parameter through a chained dot-access (r.inner.field)" do
+      input = """
+      records |> Enum.map(fn r -> r.inner.field end) |> Enum.sum()
+      """
+
+      output = fix(input)
+
+      assert {:ok, _} = Code.string_to_quoted(output)
+      refute output =~ ~r/\br\.inner\b/
+      assert output =~ ~r/\bel\.inner\.field\b/
+    end
+
+    test "substitutes closure parameter inside a remote-call argument" do
+      input = """
+      strings |> Enum.map(fn s -> String.length(s) end) |> Enum.sum()
+      """
+
+      output = fix(input)
+
+      assert {:ok, _} = Code.string_to_quoted(output)
+      assert output =~ ~r/\bString\.length\(el\)/
+      refute output =~ ~r/\bString\.length\(s\)/
+    end
+
+    test "full module repro from the GitHub issue compiles" do
+      input = """
+      defmodule Test do
+        def calc(clients, dim) do
+          clients
+          |> Enum.map(fn c -> Enum.at(c.delivery, dim, 0) end)
+          |> Enum.sum()
+        end
+      end
+      """
+
+      output = fix(input)
+
+      assert {:ok, _} = Code.string_to_quoted(output)
+      refute output =~ ~r/\bc\.delivery\b/
     end
   end
 end
