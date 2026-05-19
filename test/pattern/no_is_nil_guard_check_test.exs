@@ -7,13 +7,6 @@ defmodule Credence.Pattern.NoIsNilGuardCheckTest do
     {:ok, ast} = Code.string_to_quoted(code)
     Credence.Pattern.NoIsNilGuard.check(ast, [])
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoIsNilGuard.fixable?() == true
-    end
-  end
-
   # ── flags sole is_nil guard ────────────────────────────────────
 
   describe "flags sole is_nil guard" do

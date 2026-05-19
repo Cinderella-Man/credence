@@ -22,9 +22,6 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
   def priority, do: 50
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def fix(source, _opts), do: source
 
   @impl true

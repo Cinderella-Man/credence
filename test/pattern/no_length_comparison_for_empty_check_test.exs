@@ -7,13 +7,6 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyCheckTest do
     {:ok, ast} = Code.string_to_quoted(code)
     Credence.Pattern.NoLengthComparisonForEmpty.check(ast, [])
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoLengthComparisonForEmpty.fixable?() == true
-    end
-  end
-
   # ── flags equality ─────────────────────────────────────────────
 
   describe "flags equality" do

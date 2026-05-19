@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoMapKeysOrValuesForIteration.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapKeysOrValuesForIteration, code, [])
   end
 
   # Normalize via AST round-trip to ignore whitespace/formatting differences

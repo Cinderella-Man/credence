@@ -36,9 +36,6 @@ defmodule Credence.Pattern.NoManualListLast do
   alias Credence.Issue
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     clauses = collect_clauses(ast)
 

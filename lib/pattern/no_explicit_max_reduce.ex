@@ -17,9 +17,6 @@ defmodule Credence.Pattern.NoExplicitMaxReduce do
   alias Credence.Issue
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn

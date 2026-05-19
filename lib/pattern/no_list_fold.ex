@@ -29,9 +29,6 @@ defmodule Credence.Pattern.NoListFold do
   @flagged_fns [:foldl, :foldr]
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, issues ->

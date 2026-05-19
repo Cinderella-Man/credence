@@ -198,17 +198,41 @@ defmodule Credence.RuleHelpers do
   """
   @spec apply_rule_fix(module(), String.t(), keyword()) :: String.t()
   def apply_rule_fix(rule, source, opts \\ []) do
-    Code.ensure_loaded(rule)
+    opts = Keyword.put(opts, :source, source)
+    ast = Sourceror.parse_string!(source)
 
-    if function_exported?(rule, :fix_patches, 2) do
-      ast = Sourceror.parse_string!(source)
+    case rule.fix_patches(ast, opts) do
+      [] -> source
+      patches when is_list(patches) -> Sourceror.patch_string(source, patches)
+    end
+  end
 
-      case rule.fix_patches(ast, opts) do
-        [] -> source
-        patches when is_list(patches) -> Sourceror.patch_string(source, patches)
-      end
+  @doc """
+  Builds a single-patch list that replaces the whole source from
+  `(1, 1)` through the end of `original_source` with `new_source`.
+
+  An adapter used by Pattern rules that already implement complex
+  source-level transformations but need to expose the patch-based
+  `fix_patches/2` interface. Loses the per-edit locality that proper
+  patch decomposition would deliver — only use when refactoring the
+  rule into discrete patches would be substantially more work than
+  it's worth.
+  """
+  @spec whole_source_patches(String.t(), String.t()) :: [map()]
+  def whole_source_patches(original_source, new_source) do
+    if new_source == original_source do
+      []
     else
-      rule.fix(source, opts)
+      lines = String.split(original_source, "\n")
+      end_line = max(length(lines), 1)
+      end_col = (lines |> List.last() |> byte_size()) + 1
+
+      [
+        %{
+          range: %{start: [line: 1, column: 1], end: [line: end_line, column: end_col]},
+          change: new_source
+        }
+      ]
     end
   end
 

@@ -9,13 +9,6 @@ defmodule Credence.Pattern.NoKernelOpInPipelineTest do
   defp fix(code) do
     Credence.Pattern.NoKernelOpInPipeline.fix(code, [])
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoKernelOpInPipeline.fixable?() == true
-    end
-  end
-
   # ═══════════════════════════════════════════════════════════════════
   # CHECK TESTS
   # ═══════════════════════════════════════════════════════════════════

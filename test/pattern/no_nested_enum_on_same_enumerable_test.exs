@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableTest do
   end
 
   defp fix(source) do
-    Credence.Pattern.NoNestedEnumOnSameEnumerable.fix(source, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoNestedEnumOnSameEnumerable, source, [])
   end
 
   describe "check/2" do

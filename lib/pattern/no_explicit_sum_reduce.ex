@@ -5,9 +5,6 @@ defmodule Credence.Pattern.NoExplicitSumReduce do
   alias Credence.Issue
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def priority, do: 501
 
   @impl true

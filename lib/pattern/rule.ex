@@ -1,26 +1,26 @@
 defmodule Credence.Pattern.Rule do
   @moduledoc """
-  Behaviour for pattern-level rules that detect and fix anti-patterns.
+  Behaviour for pattern-level rules that detect and auto-fix anti-patterns.
 
-  These rules work on parsed ASTs and are the core of Credence's
-  80+ anti-pattern detection rules.
+  Every Pattern rule fixes the issue it detects — there is no "warn-only"
+  mode. Rules that could only detect but not fix were archived to
+  `docs/unfixable_rules/` and removed from compilation.
 
-  ## Fix interface — migration in progress
+  ## Fix interface
 
-  The fix interface is being migrated from `fix(source, opts) :: String.t()`
-  (full-AST round-trip, layout-fragile) to `fix_patches(ast, opts) :: [patch]`
-  (byte-range patches, layout-safe). See `docs/ast-callback-interface-analysis.md`
-  for the design rationale.
+  Two callbacks express a fix, and rules can use either:
 
-  During migration:
-  - Rules that have migrated implement `fix_patches/2` and the orchestrator
-    routes through `Sourceror.patch_string/2`.
-  - Rules that have NOT migrated retain `fix/2` and the orchestrator routes
-    through the legacy whole-source path.
-  - The orchestrator dispatches per rule via `function_exported?/2`.
+  - **`fix_patches(ast, opts) :: [patch]`** — preferred. Emit byte-range
+    patches against the source. Only the changed bytes move; everything
+    else stays byte-identical. Layout is preserved by construction.
+    See `Credence.Pattern.NoListToTupleForAccess` for an example.
 
-  Once every rule has migrated, the legacy `fix/2` callback is removed
-  and `fix_patches/2` is renamed to `fix/2`.
+  - **`fix(source, opts) :: String.t()`** — adapter shape. Returns a
+    transformed source string. The default `fix_patches/2` (provided by
+    `__using__`) wraps `fix/2` in a single whole-source patch. Adequate
+    when the rule's existing logic is source-level and refactoring into
+    per-site patches would be substantially more work than the locality
+    gain.
   """
 
   @typedoc """
@@ -39,26 +39,14 @@ defmodule Credence.Pattern.Rule do
   @doc "Detect issues in the AST. Returns list of issues."
   @callback check(ast :: Macro.t(), opts :: keyword()) :: [Credence.Issue.t()]
 
-  @doc """
-  Auto-fix via byte-range patches. Returns a list of patches.
-
-  Optional during migration. Once all rules implement this, it replaces
-  the legacy `fix/2` callback.
-  """
+  @doc "Auto-fix via byte-range patches. Returns a list of patches; `[]` means no change."
   @callback fix_patches(ast :: Macro.t(), opts :: keyword()) :: [patch()]
 
   @doc """
-  Legacy auto-fix interface. Returns modified source string.
-
-  Being phased out. New rule implementations should define `fix_patches/2`
-  instead. Once all rules have migrated, this callback is removed.
+  Auto-fix returning the transformed source string. The default
+  `fix_patches/2` wraps this in a whole-source patch.
   """
   @callback fix(source :: String.t(), opts :: keyword()) :: String.t()
-
-  @doc "Whether this rule supports auto-fixing."
-  @callback fixable?() :: boolean()
-
-  @optional_callbacks fix_patches: 2
 
   defmacro __using__(_opts) do
     quote do
@@ -66,15 +54,25 @@ defmodule Credence.Pattern.Rule do
       alias Credence.Issue
 
       @impl true
-      def fixable?, do: false
-
-      @impl true
       def priority, do: 500
 
       @impl true
       def fix(source, _opts), do: source
 
-      defoverridable fixable?: 0, priority: 0, fix: 2
+      # Default `fix_patches/2`: emits a single whole-source patch
+      # that delegates to the rule's `fix/2`. Lets every rule satisfy
+      # the new patch-based interface without per-rule code changes.
+      #
+      # Rules that want real locality (one patch per match site, not a
+      # whole-source rewrite) should override `fix_patches/2` directly
+      # and ignore `fix/2`. See `NoListToTupleForAccess` for an example.
+      @impl true
+      def fix_patches(_ast, opts) do
+        source = Keyword.fetch!(opts, :source)
+        Credence.RuleHelpers.whole_source_patches(source, fix(source, opts))
+      end
+
+      defoverridable priority: 0, fix: 2, fix_patches: 2
     end
   end
 end

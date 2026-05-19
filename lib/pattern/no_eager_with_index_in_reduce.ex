@@ -45,9 +45,6 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
   @fix_strategy :stream
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn

@@ -9,13 +9,6 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
   defp fix(code) do
     Credence.Pattern.NoEnumAtMidpointAccess.fix(code, [])
   end
-
-  describe "fixable?" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoEnumAtMidpointAccess.fixable?() == true
-    end
-  end
-
   describe "detects non-recursive midpoint access patterns" do
     test "flags Enum.at with mid from low + div(high - low, 2)" do
       code = """

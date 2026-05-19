@@ -2,7 +2,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.PreferErlangFloat.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferErlangFloat, code, [])
   end
 
   # ═══════════════════════════════════════════════════════════════════

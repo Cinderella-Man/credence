@@ -27,9 +27,6 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
   alias Credence.Issue
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     # Pass 1: collect variables bound to an expression ending in
     # String.graphemes/1 or String.to_charlist/1

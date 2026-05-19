@@ -305,9 +305,6 @@ defmodule Credence.PipelineTest do
     use Credence.Pattern.Rule
 
     @impl true
-    def fixable?, do: true
-
-    @impl true
     def priority, do: 100
 
     @impl true
@@ -325,9 +322,6 @@ defmodule Credence.PipelineTest do
   defmodule UnparseableFixRule do
     @moduledoc false
     use Credence.Pattern.Rule
-
-    @impl true
-    def fixable?, do: true
 
     @impl true
     def priority, do: 100
@@ -349,8 +343,13 @@ defmodule Credence.PipelineTest do
       end
       """
 
-      {output, applied} =
-        Credence.Pattern.fix_with_trace(input, rules: [BrokenFixRule])
+      # `with_log/1` keeps the (intentional) revert warning out of test
+      # output. The dedicated `logs a warning ...` test below asserts
+      # the warning's content.
+      {{output, applied}, _log} =
+        ExUnit.CaptureLog.with_log(fn ->
+          Credence.Pattern.fix_with_trace(input, rules: [BrokenFixRule])
+        end)
 
       assert output == input
       assert applied == [{BrokenFixRule, :reverted}]
@@ -363,8 +362,10 @@ defmodule Credence.PipelineTest do
       end
       """
 
-      {output, applied} =
-        Credence.Pattern.fix_with_trace(input, rules: [UnparseableFixRule])
+      {{output, applied}, _log} =
+        ExUnit.CaptureLog.with_log(fn ->
+          Credence.Pattern.fix_with_trace(input, rules: [UnparseableFixRule])
+        end)
 
       assert output == input
       assert applied == [{UnparseableFixRule, :reverted}]
@@ -400,7 +401,10 @@ defmodule Credence.PipelineTest do
 
       rules = [BrokenFixRule | Credence.Pattern.default_rules()]
 
-      {output, applied} = Credence.Pattern.fix_with_trace(input, rules: rules)
+      {{output, applied}, _log} =
+        ExUnit.CaptureLog.with_log(fn ->
+          Credence.Pattern.fix_with_trace(input, rules: rules)
+        end)
 
       # Broken rule reverted, other rules still applied.
       assert {BrokenFixRule, :reverted} in applied

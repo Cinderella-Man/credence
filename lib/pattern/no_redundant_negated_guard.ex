@@ -38,9 +38,6 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
   @inequality_ops [:!=, :!==]
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     clauses = collect_clauses(ast)
 

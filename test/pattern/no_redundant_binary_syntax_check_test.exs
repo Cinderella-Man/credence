@@ -7,13 +7,6 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
     {:ok, ast} = Code.string_to_quoted(code)
     Credence.Pattern.NoRedundantBinarySyntax.check(ast, [])
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoRedundantBinarySyntax.fixable?() == true
-    end
-  end
-
   # ── flags single string literal in binary syntax ───────────────
 
   describe "flags single string literal in binary syntax" do

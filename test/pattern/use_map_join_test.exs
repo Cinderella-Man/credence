@@ -208,10 +208,6 @@ defmodule Credence.Pattern.UseMapJoinTest do
   end
 
   describe "fix" do
-    test "is fixable" do
-      assert Credence.Pattern.UseMapJoin.fixable?() == true
-    end
-
     # --- Pipeline: 2-arg Enum.map |> Enum.join ---
 
     test "fixes direct pipeline: Enum.map(enum, f) |> Enum.join()" do

@@ -11,16 +11,18 @@ Credence runs code through three escalating phases:
 ```
 Credence.Syntax    → can the parser read it?     (string-level fixes)
 Credence.Semantic  → does the compiler accept it? (compiler warning fixes)
-Credence.Pattern   → is it idiomatic Elixir?      (80+ AST-level rules)
+Credence.Pattern   → is it idiomatic Elixir?      (~76 AST-level rules)
 ```
 
 **Syntax** repairs code that won't parse — e.g. `n * (n + 1) div 2` (Python's `//` translated as infix) becomes `div(n * (n + 1), 2)`.
 
 **Semantic** captures compiler warnings via `Code.with_diagnostics/1` and fixes them — unused variables get `_` prefixed, undefined function calls get corrected(if possible).
 
-**Pattern** detects and auto-fixes 80+ anti-patterns using AST analysis — `Enum.sort |> Enum.reverse` becomes `Enum.sort(:desc)`, manual frequency counting becomes `Enum.frequencies/1`, `acc ++ [x]` becomes `[x | acc]`.
+**Pattern** detects and auto-fixes ~76 anti-patterns using AST analysis — `Enum.sort |> Enum.reverse` becomes `Enum.sort(:desc)`, manual frequency counting becomes `Enum.frequencies/1`, `acc ++ [x]` becomes `[x | acc]`.
 
 Each phase has its own `Rule` behaviour. Rules are discovered automatically and run in priority order.
+
+**Project stance: every Pattern rule auto-fixes the issue it detects.** There is no "warn-only" mode. Anti-patterns whose fix needs non-local restructuring, ambiguous remedies, or return-shape changes were archived to `docs/unfixable_rules/` and removed from the compiled rule set — see that folder's `README.md` for the full list and reasoning.
 
 ## Installation
 
@@ -95,6 +97,10 @@ Each phase has its own `Rule` behaviour:
 
 ### Pattern rules (AST-level)
 
+A Pattern rule has two parts: `check/2` returns issues for the analyze phase, and the fix is expressed as **either** of two shapes — pick whichever is cleaner for your transformation.
+
+**Shape A — patches (preferred).** Walk the AST, locate target nodes via `Sourceror.get_range/1`, emit `%{range, change}` patches. Only the changed bytes move; layout outside the change site is preserved by construction.
+
 ```elixir
 defmodule Credence.Pattern.MyRule do
   use Credence.Pattern.Rule
@@ -106,22 +112,43 @@ defmodule Credence.Pattern.MyRule do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, issues ->
-        # pattern match on node
+        # pattern match on node, push %Credence.Issue{} when matched
         {node, issues}
       end)
     Enum.reverse(issues)
   end
 
   @impl true
-  def fixable?, do: true
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        # for each matched node, emit:
+        #   %{range: Sourceror.get_range(node), change: replacement_source}
+        {node, acc}
+      end)
+    Enum.reverse(patches)
+  end
+end
+```
+
+**Shape B — whole-source adapter.** When the transformation is naturally source-level (regex replacement, line surgery, etc.), implement `fix/2` instead. The default `fix_patches/2` from `use Credence.Pattern.Rule` wraps it as a single whole-source patch.
+
+```elixir
+defmodule Credence.Pattern.MyRule do
+  use Credence.Pattern.Rule
+
+  @impl true
+  def check(ast, _opts), do: [...]
 
   @impl true
   def fix(source, _opts) do
-    # return modified source string
+    # return modified source string; layout is your responsibility
     source
   end
 end
 ```
+
+Shape A delivers better layout preservation when multiple rules fire on the same file. Shape B is fine for self-contained one-shot rewrites.
 
 ### Syntax rules (string-level, for unparseable code)
 
@@ -199,7 +226,7 @@ These rules look at the parsed AST for patterns that compile fine and pass tests
 
 **The compile gate.** Before running any pattern rules, Credence compiles the source one more time to check if it actually succeeds. If the code doesn't compile — say it has an undefined variable that no semantic rule could fix — pattern rules are skipped entirely. This is deliberate. Pattern rules rewrite code based on AST structure, and rewriting code that has semantic holes (variables that don't exist, functions that aren't defined) tends to make things worse, not better. Skipping is the safe choice.
 
-When the gate passes, each rule gets the AST (via `Code.string_to_quoted/1`) and walks it looking for specific shapes. For example, `NoExplicitSumReduce` looks for:
+When the gate passes, each rule gets the AST and walks it looking for specific shapes. For example, `NoExplicitSumReduce` looks for:
 
 ```elixir
 Enum.reduce(list, 0, fn x, acc -> acc + x end)
@@ -211,7 +238,9 @@ and replaces it with:
 Enum.sum(list)
 ```
 
-Rules run in priority order (lower number = runs first), and each rule gets the source as modified by all previous rules. If a rule's fix accidentally breaks parsing, the pipeline detects this and stops applying further rules — it won't snowball a small mistake into an unreadable mess.
+Rules run in priority order (lower number = runs first), and each rule gets the source as modified by all previous rules.
+
+**Compile-output gate.** After each rule's fix runs, the pipeline compiles the result. If the new source doesn't compile (a buggy rule, or a rule whose transformation was correct in isolation but interacts badly with prior fixes), the pipeline **reverts** to the pre-fix source for that rule and continues. The offending rule shows up as `{Rule, :reverted}` in `applied_rules` and a `[warning]` log line names it. This keeps one broken rule from poisoning the rest of the pipeline.
 
 ### What you see in the logs
 
@@ -226,7 +255,7 @@ Every step of the fix pipeline is logged at `:debug` level with a `[credence_fix
   L4 - unused = 1
   L4 + _unused = 1
 [debug] [credence_fix] semantic done. Applied: [UnusedVariable(1)]
-[debug] [credence_fix] starting pattern fix pipeline (76 fixable rules)
+[debug] [credence_fix] starting pattern fix pipeline (76 rules)
 [debug] [credence_fix] NoExplicitSumReduce: check found 1 issue(s), running fix...
 [debug] [credence_fix] NoExplicitSumReduce: source CHANGED:
   L5 - Enum.reduce(list, 0, fn x, acc -> acc + x end)
@@ -243,14 +272,14 @@ Every line-level change is shown in full diff. When something goes wrong, the lo
 ```elixir
 %{
   code: "...",           # the fixed source string
-  issues: [...],         # issues that were detected but NOT auto-fixable
-  applied_rules: [...]   # {rule_module, issue_count} for every rule that fired
+  issues: [...],         # issues still detected after the fix pipeline ran
+  applied_rules: [...]   # {rule_module, issue_count | :reverted} for every rule that fired
 }
 ```
 
-The `issues` list contains problems that Credence can detect but doesn't know how to fix automatically — for example, it might notice that `length/1` and `Enum.sum/1` both traverse the same list (a performance issue), but merging them into a single pass requires understanding your specific logic. These show up as advisories for you to review.
+The `issues` list captures whatever `check/2` still flags after the fix pipeline has finished. Now that every Pattern rule auto-fixes the issue it detects, this list is usually empty — but a rule whose fix produced non-compiling output gets reverted by the compile-output gate, leaving the original issue intact for review.
 
-The `applied_rules` list tells you exactly what was changed. Each entry is a tuple of the rule module and how many issues it fixed, and the rules span all three phases — syntax, semantic, and pattern — so you can see the full history of what the pipeline did to your code.
+The `applied_rules` list tells you exactly what each phase did. Each entry is `{rule_module, issue_count}` for a successful fix, or `{rule_module, :reverted}` when the compile-output gate reverted a buggy rule. Rules span all three phases — syntax, semantic, and pattern — so you can see the full history of what the pipeline did to your code.
 
 ## License
 

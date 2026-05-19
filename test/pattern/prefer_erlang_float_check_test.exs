@@ -275,10 +275,4 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
   # ═══════════════════════════════════════════════════════════════════
   # META
   # ═══════════════════════════════════════════════════════════════════
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.PreferErlangFloat.fixable?() == true
-    end
-  end
 end

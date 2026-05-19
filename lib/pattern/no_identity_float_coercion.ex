@@ -48,9 +48,6 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  @impl true
-  def fixable?, do: true
-
   # ── Check ─────────────────────────────────────────────────────────
   # Uses AST from Code.string_to_quoted (bare float literals).
 

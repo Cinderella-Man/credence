@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.NoIdentityFloatCoercion.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIdentityFloatCoercion, code, [])
   end
 
   # ═══════════════════════════════════════════════════════════════════

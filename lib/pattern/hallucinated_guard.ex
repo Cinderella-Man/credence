@@ -27,9 +27,6 @@ defmodule Credence.Pattern.HallucinatedGuard do
   @guard_names Map.keys(@hallucinated_guards) |> MapSet.new()
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn

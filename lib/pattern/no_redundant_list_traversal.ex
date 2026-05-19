@@ -50,9 +50,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   # Enum functions we track (arity 1 only — arity 2 has different semantics)
   @tracked_enum_funcs [:count, :sum, :min, :max]
 
-  @impl true
-  def fixable?, do: true
-
   # ── Check ─────────────────────────────────────────────────────────
 
   @impl true

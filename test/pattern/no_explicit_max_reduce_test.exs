@@ -166,13 +166,6 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
       assert check(code) == []
     end
   end
-
-  describe "fixable?" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoExplicitMaxReduce.fixable?() == true
-    end
-  end
-
   describe "fix/2" do
     test "replaces max/2 reduce with Enum.max/1" do
       code = """

@@ -9,13 +9,6 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
   defp fix(code) do
     Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIdentityFunctionInEnum, code, [])
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoIdentityFunctionInEnum.fixable?() == true
-    end
-  end
-
   # ═══════════════════════════════════════════════════════════════════
   # CHECK — positive cases
   # ═══════════════════════════════════════════════════════════════════

@@ -34,9 +34,6 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
   @max_gap_ratio 2
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, calls} =
       Macro.prewalk(ast, [], fn

@@ -26,9 +26,6 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
   alias Credence.Issue
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     # Pass 1: collect variables bound to Map.update/Map.update!
     {_ast, update_vars} =

@@ -7,13 +7,6 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
     {:ok, ast} = Code.string_to_quoted(code)
     Credence.Pattern.NoKeywordGetIntegerKey.check(ast, [])
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoKeywordGetIntegerKey.fixable?() == true
-    end
-  end
-
   # ── flags integer keys ─────────────────────────────────────────
 
   describe "flags integer keys" do

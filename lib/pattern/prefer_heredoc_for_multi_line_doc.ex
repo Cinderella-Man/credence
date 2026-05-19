@@ -32,9 +32,6 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
   @doc_attrs [:doc, :moduledoc, :typedoc]
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def priority, do: 501
 
   # ── Check ───────────────────────────────────────────────────────

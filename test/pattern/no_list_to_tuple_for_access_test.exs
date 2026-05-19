@@ -18,13 +18,6 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
     formatted_expected = expected |> Code.format_string!() |> IO.iodata_to_binary()
     assert result == formatted_expected
   end
-
-  describe "fixable?" do
-    test "returns true" do
-      assert Credence.Pattern.NoListToTupleForAccess.fixable?() == true
-    end
-  end
-
   describe "check/2" do
     test "passes code that uses pattern matching on a list" do
       code = """

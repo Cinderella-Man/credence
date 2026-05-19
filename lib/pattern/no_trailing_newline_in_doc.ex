@@ -32,9 +32,6 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
 
   @doc_attrs [:doc, :moduledoc, :typedoc]
 
-  @impl true
-  def fixable?, do: true
-
   # ── Check (Code.string_to_quoted AST — escapes resolved) ───────
 
   @impl true

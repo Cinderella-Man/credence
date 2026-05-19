@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoStringConcatInLoop.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoStringConcatInLoop, code, [])
   end
 
   defp normalize(code) do

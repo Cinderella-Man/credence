@@ -8,13 +8,6 @@ defmodule Credence.Pattern.NoIntegerToStringDigitsTest do
   end
 
   defp fix(code), do: Credence.Pattern.NoIntegerToStringDigits.fix(code, [])
-
-  describe "fixable?" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoIntegerToStringDigits.fixable?() == true
-    end
-  end
-
   describe "NoIntegerToStringDigits" do
     test "passes code that uses Integer.digits/2" do
       code = """

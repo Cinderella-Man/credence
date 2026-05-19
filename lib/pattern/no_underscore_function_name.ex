@@ -38,9 +38,6 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
   alias Credence.Issue
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, {_names, issues}} =
       Macro.postwalk(ast, {%{}, []}, fn

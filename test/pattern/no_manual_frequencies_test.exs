@@ -8,13 +8,6 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
   end
 
   defp fix(code), do: Credence.Pattern.NoManualFrequencies.fix(code, [])
-
-  describe "fixable?" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoManualFrequencies.fixable?() == true
-    end
-  end
-
   describe "NoManualFrequencies" do
     test "passes code using Enum.frequencies/1" do
       code = """

@@ -50,9 +50,6 @@ defmodule Credence.Pattern.PreferErlangFloat do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  @impl true
-  def fixable?, do: true
-
   # Run before NoIdentityFloatCoercion (priority 500) so bare-variable
   # sites are rewritten to :erlang.float(var) before the sibling rule's
   # line-level regex strips all `* 1.0` indiscriminately.

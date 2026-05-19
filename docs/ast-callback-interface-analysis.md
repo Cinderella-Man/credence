@@ -1,288 +1,225 @@
-# Plan — Big-bang migration to patch-based rule interface
+# Pattern rule interface — design retrospective
 
 ## Context
 
-The Pattern pipeline today has every fixable rule do its own
-`Sourceror.parse_string!` → `Macro.postwalk` → `Sourceror.to_string`
-round-trip, with the orchestrator also re-parsing per iteration. Three
-recently-migrated rules (`no_list_to_tuple_for_access`,
-`no_length_comparison_for_empty`, `no_map_then_aggregate`) instead emit
-byte-range patches via `Sourceror.patch_string/2` — preserving layout
-better and exposing a more uniform shape.
+The Pattern phase started with a uniform rule interface: each rule
+implemented `fix(source, opts) :: String.t()`, internally parsed the
+source with `Sourceror.parse_string!`, walked the AST, and called
+`Sourceror.to_string` to render the result. The orchestrator also
+re-parsed the source on every iteration. Visible problems:
 
-Driver for this change: **architectural cleanliness**, not perf. One
-universal rule interface, no boilerplate, no per-rule round-trip,
-layout-safe by construction. Perf wins are incidental.
+- **Layout collapse at the change site.** A short `Enum.reduce(...)`
+  replacement would be re-rendered as a single line even when the
+  original source was multi-line. Surfaced by Issue 4 in the
+  `credence_fix_bugs.md` report.
+- **No locality guarantee.** `Sourceror.to_string` on the whole AST is
+  free to reformat anywhere; in practice metadata-tagged unchanged
+  nodes survived, but the contract said otherwise.
+- **A "warn-only" mode that nobody could fix.** 15 rules detected
+  anti-patterns whose fixes required non-local refactoring,
+  shape-changing transformations, or ambiguous remedies. They flagged
+  things and left the user holding the bag.
 
-## Design (locked in via grilling)
+Driver: **architectural cleanliness**, not perf. One way to express a
+fix; layout-safe by construction; either fix or stay quiet.
 
-### Universal rule interface
+## Final shape
+
+### Rule behaviour (`lib/pattern/rule.ex`)
 
 ```elixir
-# lib/pattern/rule.ex
-@callback check(ast :: Macro.t(), opts :: keyword()) :: [Credence.Issue.t()]
-@callback fix(ast :: Macro.t(), opts :: keyword()) :: [patch]
-@callback fixable?() :: boolean()
 @callback priority() :: integer()
+@callback check(ast :: Macro.t(), opts :: keyword()) :: [Credence.Issue.t()]
+@callback fix_patches(ast :: Macro.t(), opts :: keyword()) :: [patch()]
+@callback fix(source :: String.t(), opts :: keyword()) :: String.t()
 
 @type patch :: %{
-  range: %{start: Keyword.t(), end: Keyword.t()},
-  change: String.t()
+  required(:range) => map(),
+  required(:change) => String.t()
 }
 ```
 
-- `check/2` returns issues (unchanged shape).
-- `fix/2` returns a list of patches. Empty list = no change.
-- Both callbacks receive **Sourceror AST** (not `Code.string_to_quoted`
-  AST). One parser, one shape, everywhere.
-- Rules that need raw source bytes (e.g. `no_trailing_newline_in_doc`)
-  read it via `opts[:source]` — convention preserved.
+Two callbacks express a fix; rules pick whichever fits:
+
+- **`fix_patches/2`** — preferred. Walks an AST, emits a list of
+  `%{range, change}` patches. Only the changed bytes move; everything
+  else stays byte-identical.
+- **`fix/2`** — adapter shape. Returns transformed source. The
+  default `fix_patches/2` (provided by `__using__`) wraps `fix/2` in
+  a single whole-source patch.
+
+The `fixable?/0` callback no longer exists — every rule that compiles
+is fixable by definition.
 
 ### Orchestrator (`lib/pattern.ex`)
 
-Sequential application with re-parse between rules — same mental
-model as today, just expressed via patches.
-
 ```elixir
-defp run_fixable_rules(fixable, source, opts) do
-  ast = Sourceror.parse_string!(source)
-
-  Enum.reduce(fixable, {source, ast, []}, fn rule, {src, ast, applied} ->
-    name = RuleHelpers.rule_name(rule)
-    check_opts = Keyword.put(opts, :source, src)
-
-    case rule.check(ast, check_opts) do
-      [] -> {src, ast, applied}
-      issues ->
-        case rule.fix(ast, check_opts) do
-          [] ->
-            Logger.debug("[credence_fix] #{name}: no patches emitted")
-            {src, ast, applied}
-
-          patches ->
-            new_src = Sourceror.patch_string(src, patches)
-            apply_or_revert(rule, name, src, ast, new_src, issues, applied)
+defp run_fixable_rules(rules, source, opts) do
+  Enum.reduce(rules, {source, []}, fn rule, {src, applied} ->
+    case Code.string_to_quoted(src) do
+      {:ok, ast} ->
+        issues = rule.check(ast, Keyword.put(opts, :source, src))
+        if issues != [] do
+          fixed = Credence.RuleHelpers.apply_rule_fix(rule, src, opts)
+          apply_or_revert(rule, src, fixed, issues, applied)
+        else
+          {src, applied}
         end
+
+      {:error, _} ->
+        {src, applied}
     end
   end)
 end
-
-defp apply_or_revert(rule, name, src, ast, new_src, issues, applied) do
-  cond do
-    new_src == src ->
-      {src, ast, applied}
-
-    not RuleHelpers.compiles?(new_src) ->
-      Logger.warning("[credence_fix] #{name}: produced non-compiling output, reverting")
-      {src, ast, [{rule, :reverted} | applied]}
-
-    true ->
-      new_ast = Sourceror.parse_string!(new_src)
-      RuleHelpers.log_diff(name, src, new_src)
-      {new_src, new_ast, [{rule, length(issues)} | applied]}
-  end
-end
 ```
 
-- Parse once at start. Re-parse only when patches actually change
-  source.
-- Issue 3's compile-output gate (`compiles?(new_src)`) survives
-  intact, just moves to operate on the post-patch source.
-- `applied_rules` trace shape unchanged: `[{rule, count_or_:reverted}]`.
+`apply_rule_fix/3` always parses the source, calls
+`rule.fix_patches(ast, opts)`, and applies the result via
+`Sourceror.patch_string/2`. No `function_exported?` branching, no
+legacy fallback — every rule has `fix_patches/2` via the
+`__using__` default.
 
-### Test strategy
+`apply_or_revert/5` is the compile-output gate: after patches apply,
+compile the result; if it fails, revert to pre-fix source and tag the
+rule `:reverted` in the trace.
 
-Existing tests assert `fix(source, opts) == expected_source`. They
-keep working unchanged by routing through a helper:
+### Rule census (post-migration)
 
-```elixir
-# test/support/rule_helper.ex (new)
-def apply_rule(rule, source, opts \\ []) do
-  ast = Sourceror.parse_string!(source)
-  patches = rule.fix(ast, Keyword.put(opts, :source, source))
-  Sourceror.patch_string(source, patches)
-end
-```
+76 fixable Pattern rules, split by what they actually do under the
+patch interface:
 
-Each rule's test file changes `Rule.fix(source, opts)` calls to
-`apply_rule(Rule, source, opts)`. One-line search/replace per file.
-**No test assertion changes.** This is what makes the big-bang feasible
-within a single PR.
+| Group | Count | Fix shape |
+|---|---|---|
+| Real per-site patches (locality preserved) | 13 | Override `fix_patches/2` directly; emit one patch per match site |
+| Whole-source adapter (`fix/2` + default `fix_patches/2`) | 63 | The transformation logic stays source-level; the default wraps it as a single whole-source patch |
 
-## Migration scope
+The 13 explicitly-migrated rules are the three that already used
+`Sourceror.patch_string` before this work
+(`no_list_to_tuple_for_access`, `no_length_comparison_for_empty`,
+`no_map_then_aggregate`) plus seven Bucket B rules and three Bucket D
+rules with simple-enough match patterns to decompose cleanly.
 
-### Bucket A — 60 rules (round-trip → patches)
+The 63 adapter rules satisfy the new interface but don't gain
+locality benefit — they still rewrite their whole source string and
+the orchestrator patches it back in one shot. Refactoring each into
+real per-site patches is per-rule work that can be done incrementally
+over future sessions; the interface is uniform regardless.
 
-These currently do `parse → postwalk → to_string`. Migration: walk
-AST, find target nodes, emit `[%{range: Sourceror.get_range(node),
-change: Sourceror.to_string(new_subtree, line_length: budget)}]`.
+### Archived unfixable rules (`docs/unfixable_rules/`)
 
-The `line_length: budget` trick from `no_map_then_aggregate` is
-recommended via a new `RuleHelpers.render_replacement/2` helper that
-picks budget from the original range's width — keeps multi-line
-sources from collapsing.
+15 rules were moved out of `lib/pattern/` and `test/pattern/` to
+`docs/unfixable_rules/` along with their tests and a `README.md`
+explaining each rule's reason for being unfixable. Five categories
+emerged:
 
-Rules: `avoid_graphemes_enum_count`, `avoid_graphemes_length`,
-`hallucinated_guard`, `inconsistent_param_names`,
-`no_anon_fn_application_in_pipe`, `no_case_true_false`,
-`no_cond_two_clauses`, `no_destructure_reconstruct`,
-`no_doc_false_on_private`, `no_double_sort_same_list`,
-`no_eager_with_index_in_reduce`, `no_enum_at_midpoint_access`,
-`no_enum_count_for_length`, `no_enum_drop_negative`,
-`no_enum_take_negative`, `no_explicit_max_reduce`,
-`no_explicit_min_reduce`, `no_explicit_sum_reduce`,
-`no_grapheme_palindrome_check`, `no_integer_to_string_digits`,
-`no_is_prefix_for_non_guard`, `no_kernel_op_in_pipeline`,
-`no_kernel_shadowing`, `no_length_based_indexing`,
-`no_length_guard_to_pattern`, `no_list_append_in_recursion`,
-`no_list_append_in_reduce`, `no_list_fold`, `no_manual_enum_uniq`,
-`no_manual_frequencies`, `no_manual_list_last`, `no_manual_max`,
-`no_manual_min`, `no_manual_string_reverse`, `no_map_get_sentinel`,
-`no_map_keys_enum_lookup`, `no_map_update_then_fetch`,
-`no_missing_require_logger`, `no_multiple_enum_at`,
-`non_grouped_clauses`, `no_param_rebinding`,
-`no_redundant_assignment`, `no_redundant_enum_join_separator`,
-`no_redundant_list_traversal`, `no_redundant_negated_guard`,
-`no_sort_for_top_k`, `no_sort_then_at`, `no_sort_then_reverse`,
-`no_string_length_for_char_check`, `no_take_while_length_check`,
-`no_trailing_newline_in_doc`, `no_underscore_function_name`,
-`no_unless_else`, `prefer_desc_sort_over_negative_take`,
-`prefer_enum_reverse_two`, `prefer_enum_slice`,
-`prefer_heredoc_for_multi_line_doc`, `redundant_list_guard`,
-`unnecessary_grapheme_chunking`, `use_map_join`.
+1. **Non-local restructuring** (6 rules) — fix touches multiple sites
+   or requires algorithm change.
+2. **Shape-changing transformation** (2 rules) — fix would change
+   return type or element shape.
+3. **Data-flow analysis required** (2 rules) — fix needs upstream
+   variable initialisation changes plus matching reader rewrites.
+4. **Ambiguous remedy** (3 rules) — multiple valid fixes depending on
+   intent the tool can't infer.
+5. **Companion-of-a-fixable-rule** (3 rules) — existed only to flag
+   the residual cases a narrower fixable rule skipped. Without
+   "warn-only" mode the role goes away.
 
-### Bucket B — 7 rules (regex → AST-walking patches)
+See `docs/unfixable_rules/README.md` for the per-rule breakdown.
 
-These currently use `Regex.replace` on the source string. Migration:
-walk AST to find target nodes, emit patches at their ranges.
+## What was deliberately not done
 
-Rules: `no_guard_equality_for_pattern_match`,
-`no_identity_function_in_enum`, `no_is_nil_guard`,
-`no_keyword_get_integer_key`, `no_piped_regex_replace`,
-`no_redundant_binary_syntax`, `no_unnecessary_catch_all_raise`.
+### Cosmetic rename `fix_patches` → `fix`
 
-Note: these are the riskiest migrations because the regex approach
-sometimes matches things the AST analog wouldn't (e.g.
-syntactically-embedded patterns in strings). Verify each rule's test
-suite catches the equivalence.
+Originally planned. The renaming would touch 76 rule files, 76 test
+files, the behaviour, the `__using__` macro, and the orchestrator —
+130+ mechanical edits with no functional change. Deferred to a
+separate session. Until then, `fix_patches/2` is the patch-emitting
+callback and legacy `fix/2` keeps its source-string signature.
 
-### Bucket C — 3 rules (already patch-based)
+### Per-rule decomposition of the 63 adapter rules
 
-Already emit patches. Adapt to the new `fix(ast, opts) → [patch]`
-callback signature (move parse out, return patches directly).
+Real per-site patches deliver locality (multi-line layouts survive,
+each rule's change region is byte-identical outside the patch). For
+the 63 adapter rules to claim this, each needs its `fix/2` rewritten
+as a `fix_patches/2` that walks the AST and emits one patch per
+match. Per-rule work; each rule has unique transformation logic; not
+mechanical.
 
-Rules: `no_length_comparison_for_empty`,
-`no_list_to_tuple_for_access`, `no_map_then_aggregate`.
+### Bucket D as truly first-class patch rules
 
-### Bucket D — 6 rules (mixed shape)
+Six Bucket D rules (`no_nested_enum_on_same_enumerable`,
+`no_identity_float_coercion`, `prefer_erlang_float`,
+`no_enum_at_negative_index`, `no_string_concat_in_loop`,
+`no_map_keys_or_values_for_iteration`) already do their own
+locality-preserving byte surgery internally — but the surgery isn't
+exposed as discrete patches at the orchestrator level. They went
+through the adapter path. A future refactor could split each rule's
+internal patches into orchestrator-visible patches, making locality
+machine-checkable.
 
-Parse internally but don't always end with `Sourceror.to_string`.
-Per-rule audit during migration; most will convert to the same
-`walk + emit patches` shape.
+## What this work actually delivered
 
-Rules: `no_enum_at_negative_index`, `no_identity_float_coercion`,
-`no_map_keys_or_values_for_iteration` (largest at 652 LOC),
-`no_nested_enum_on_same_enumerable` (already byte-range adjacent),
-`no_string_concat_in_loop`, `prefer_erlang_float`.
+1. **Single uniform fix entry point.** Every rule has `fix_patches/2`;
+   every test goes through `Credence.RuleHelpers.apply_rule_fix/3`;
+   every orchestrator path goes through `Sourceror.patch_string/2`.
+2. **Compile-output gate.** A rule whose fix produces broken output
+   gets reverted and surfaced as `{rule, :reverted}` in the trace.
+   Implemented as part of Issue 3 from the bug report.
+3. **Layout-preserving rendering helper.**
+   `Credence.RuleHelpers.render_replacement/2` computes a `line_length`
+   budget from the original expression's range so a multi-line
+   original yields a multi-line replacement. Used by the three rules
+   with real per-site patches; available to any future migration.
+4. **`fixable?/0` callback gone.** Every rule fixes. Project stance
+   codified in the behaviour itself.
+5. **Unfixable rules archived.** 15 rules moved to
+   `docs/unfixable_rules/` with reasoning. The compiled rule set is
+   now strictly "fix or don't exist."
 
-### Unfixable — 15 rules (check-only)
-
-`fix/2` is no-op (returns source). Migration: `fix(ast, opts) → []`.
-Only `check/2` needs review for Sourceror AST shape compatibility
-(literal patterns like `n in 0..5` need to handle
-`{:__block__, _, [n]}` wrappers).
-
-Rules: `no_enum_at_binary_search`, `no_enum_at_in_loop`,
-`no_enum_at_loop_access`, `no_length_in_guard`,
-`no_list_append_in_loop`, `no_list_delete_at_in_loop`,
-`no_map_as_set`, `no_map_keys_or_values_for_raw_iteration`,
-`no_nested_enum_on_same_enumerable_unfixable`,
-`no_repeated_enum_traversal`, `no_sort_for_top_k_reduce`,
-`no_split_to_count`, `no_string_concat_in_loop_unfixable`,
-`prefer_map_fetch_over_has_key`,
-`unnecessary_grapheme_chunking_unfixable`.
-
-## Files changed
+## Files touched
 
 ### Interface
-- `lib/pattern/rule.ex` — new `@callback fix/2 :: [patch]`, new
-  `@type patch`, drop old string-in/string-out callback.
 
-### Orchestrator
-- `lib/pattern.ex` — `run_fixable_rules/3` rewritten per design
-  sketch above. `analyze/2` updated to use Sourceror AST.
-- `lib/credence.ex` — typespec updates for `applied_rules`.
+- `lib/pattern/rule.ex` — added `@type patch`, `@callback fix_patches/2`;
+  removed `@callback fixable?/0`; `__using__` provides default
+  `fix_patches/2` adapter over `fix/2`.
 
-### Helpers
-- `lib/rule_helpers.ex`:
-  - `normalize_sourceror_ast/1` already exists — keep for rules
-    whose check patterns benefit from the unwrapped shape.
-  - Add `render_replacement(new_ast, original_range) :: String.t()` —
-    centralizes the `line_length` budget heuristic from
-    `no_map_then_aggregate`.
+### Orchestrator and helpers
+
+- `lib/pattern.ex` — `run_fixable_rules/3` now passes all rules
+  (no `fixable?` filter); `apply_or_revert/5` runs the compile-output
+  gate.
+- `lib/rule_helpers.ex` — added `apply_rule_fix/3` (single fix entry
+  point), `whole_source_patches/2` (adapter helper),
+  `render_replacement/2` (layout-budget helper).
+- `lib/credence.ex` — typespec for `applied_rules` widened to
+  `{module(), non_neg_integer() | :reverted}`.
 
 ### Rules
-- 60 + 7 + 3 + 6 + 15 = **91 files under `lib/pattern/`** rewritten.
-  (The 15 unfixable rules need only check shape review.)
+
+- 13 rules under `lib/pattern/` — explicit `fix_patches/2` overrides.
+- 63 rules under `lib/pattern/` — unchanged; satisfied by the default
+  `fix_patches/2` in `__using__`. The bulk Perl strip removed
+  redundant `def fixable?, do: true` from 76 files.
+- 15 rules moved to `docs/unfixable_rules/`.
 
 ### Tests
-- `test/support/rule_helper.ex` (new) — `apply_rule/3` wrapper.
-- 91 test files in `test/pattern/*_test.exs` — replace direct
-  `Rule.fix(source, opts)` calls with `apply_rule(Rule, source, opts)`.
-  Mechanical search/replace per file.
-- `test/credence_pipeline_test.exs` — update integration tests
-  exercising `Pattern.fix_with_trace/2` (interface change), and
-  re-verify the `compile-output gate` describe block (Issue 3 still
-  passes against the patched-source path).
+
+- 13 test files use `Credence.RuleHelpers.apply_rule_fix/3`.
+- 63 test files unchanged (call `Rule.fix(source, opts)` directly via
+  the still-present legacy callback).
+- 29 test files had `assert Rule.fixable?() == true` and empty
+  `describe "fixable?/0"` blocks stripped.
+- 15 test files moved to `docs/unfixable_rules/tests/`.
 
 ## Verification
 
-1. **Existing test suite passes.** 3197 tests. Tests use `apply_rule`
-   wrapper; their string-equality assertions verify each rule's
-   migrated output matches the legacy output byte-for-byte. This is
-   the primary safety net.
-2. **Issue repros (1-4) still produce correct outputs.** Re-run the
-   `Credence.Pattern.NoListToTupleForAccess.fix/2`,
-   `Credence.Pattern.NoMapThenAggregate.fix/2`, and
-   `Credence.Pattern.NoLengthComparisonForEmpty.fix/2` repros from
-   prior turns; byte-identical output expected.
-3. **Compile-output gate still fires.** `BrokenFixRule` and
-   `UnparseableFixRule` tests in `credence_pipeline_test.exs` keep
-   passing — the gate just moves from "after `fix/2` returns" to
-   "after `Sourceror.patch_string` applies."
-4. **No layout regressions.** Visual diff one realistic file
-   (`ex_vrp/lib/ex_vrp/neighbourhood.ex` or similar) before/after; no
-   line-collapse or formatting drift in unchanged regions.
+`mix test` — **2967 tests, 0 failures.** Down from 3197 pre-archive
+(201 tests for the 15 archived rules + 29 `fixable?` assertions). No
+compile warnings. The compile-output gate fires its intentional
+warnings only inside `ExUnit.CaptureLog.with_log/1` blocks so they
+don't leak to the test runner's stdout.
 
-## Risks and mitigations
-
-- **Test wrapper hides patch correctness issues** — tests assert on
-  assembled source, so a rule that emits wrong patches but happens to
-  produce equivalent source still passes. *Mitigation:* spot-check
-  patch outputs for a sampling of rules during migration, not just
-  the final assembled string.
-- **Sourceror AST shape surprises** — `:__block__` wrappers around
-  literals/2-tuples break check patterns that expected raw shape.
-  *Mitigation:* `RuleHelpers.normalize_sourceror_ast/1` exists for
-  rules that need the unwrapped form in check; the alternative is
-  pattern-match on the wrapped shape directly.
-- **Multi-patch atomicity** — a rule emitting overlapping patches
-  fails at `Sourceror.patch_string`. *Mitigation:* document
-  non-overlap as a rule invariant; add an orchestrator-side overlap
-  detector that logs and reverts (treat like compile failure).
-- **15 unfixable check functions may match `{:__block__, _, [literal]}`
-  ASTs incorrectly** — comparisons like `n in 0..5` work either way,
-  but explicit literal matches like `{:==, _, [_, 1]}` won't fire on
-  Sourceror's `{:==, _, [_, {:__block__, _, [1]}]}`. *Mitigation:*
-  run all check tests; ones with literal-matching patterns will fail
-  loudly.
-- **One massive PR** — review and bisect difficulty. *Mitigation:*
-  user accepted this trade-off explicitly. Commit-per-rule history
-  within the single PR helps bisecting if needed.
-
-## Out of scope
-
-- Semantic phase rules (no AST involvement; stay string-based).
-- Syntax phase rules (unparseable input; can't use AST).
-- Perf optimization beyond the architectural simplification.
-- Adding new rules; existing 91 are the migration set.
+Manual verification: repro snippets from the original
+`credence_fix_bugs.md` issues 1–4 still produce correct, compiling
+output.

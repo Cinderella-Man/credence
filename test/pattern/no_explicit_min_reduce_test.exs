@@ -8,13 +8,6 @@ defmodule Credence.Pattern.NoExplicitMinReduceTest do
   end
 
   defp fix(code), do: Credence.Pattern.NoExplicitMinReduce.fix(code, [])
-
-  describe "fixable?" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoExplicitMinReduce.fixable?() == true
-    end
-  end
-
   describe "NoExplicitMinReduce" do
     test "passes code that uses Enum.min/1 instead of reduce" do
       code = """

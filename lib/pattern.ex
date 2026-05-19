@@ -46,14 +46,13 @@ defmodule Credence.Pattern do
           {String.t(), [{module(), non_neg_integer() | :reverted}]}
   def fix_with_trace(code_string, opts \\ []) do
     all_rules = rules(opts)
-    {fixable, _unfixable} = Enum.split_with(all_rules, & &1.fixable?())
 
     Logger.debug(
-      "[credence_fix] starting pattern fix pipeline (#{length(fixable)} fixable rules)"
+      "[credence_fix] starting pattern fix pipeline (#{length(all_rules)} rules)"
     )
 
     if RuleHelpers.compiles?(code_string) do
-      run_fixable_rules(fixable, code_string, opts)
+      run_fixable_rules(all_rules, code_string, opts)
     else
       Logger.debug("[credence_fix] source does not compile, skipping pattern fix pipeline")
 

@@ -65,9 +65,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     take_every drop_every
   )a
 
-  @impl true
-  def fixable?, do: true
-
   # ═══════════════════════════════════════════════════════════════════
   # check
   # ═══════════════════════════════════════════════════════════════════

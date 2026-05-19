@@ -8,13 +8,6 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
   end
 
   defp fix(code), do: Credence.Pattern.NoGraphemePalindromeCheck.fix(code, [])
-
-  describe "fixable?" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoGraphemePalindromeCheck.fixable?() == true
-    end
-  end
-
   describe "NoGraphemePalindromeCheck" do
     test "passes code that compares strings directly with String.reverse" do
       code = """

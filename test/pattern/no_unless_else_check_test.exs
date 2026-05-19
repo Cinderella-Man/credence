@@ -209,10 +209,4 @@ defmodule Credence.Pattern.NoUnlessElseCheckTest do
              """)
     end
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoUnlessElse.fixable?() == true
-    end
-  end
 end

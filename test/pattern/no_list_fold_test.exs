@@ -7,13 +7,6 @@ defmodule Credence.Pattern.NoListFoldTest do
   end
 
   defp fix(code), do: Credence.Pattern.NoListFold.fix(code, [])
-
-  describe "fixable?" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoListFold.fixable?() == true
-    end
-  end
-
   describe "NoListFold" do
     test "detects List.foldl/3" do
       code = """

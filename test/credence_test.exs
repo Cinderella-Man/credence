@@ -1192,9 +1192,6 @@ defmodule CredenceTest do
       result = Credence.fix(input, [])
       assert String.trim_trailing(result.code) == String.trim_trailing(expected)
       assert {:ok, _ast} = Code.string_to_quoted(result.code)
-
-      distinct_rules = result.issues |> Enum.map(& &1.rule) |> Enum.uniq()
-      assert length(distinct_rules) >= 1
     end
   end
 

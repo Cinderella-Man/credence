@@ -32,9 +32,6 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerable do
   ]
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, {_, issues}} =
       Macro.prewalk(ast, {[], []}, fn node, {stack, issues} ->

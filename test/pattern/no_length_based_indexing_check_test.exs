@@ -231,10 +231,4 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
              """)
     end
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoLengthBasedIndexing.fixable?() == true
-    end
-  end
 end

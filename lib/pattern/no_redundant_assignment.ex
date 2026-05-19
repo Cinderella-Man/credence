@@ -37,9 +37,6 @@ defmodule Credence.Pattern.NoRedundantAssignment do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  @impl true
-  def fixable?, do: true
-
   # ── Check ─────────────────────────────────────────────────────────
 
   @impl true

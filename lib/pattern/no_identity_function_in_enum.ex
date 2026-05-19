@@ -42,9 +42,6 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
   @by_funcs Map.keys(@by_to_simple)
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def priority, do: 499
 
   @impl true

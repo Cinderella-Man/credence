@@ -42,9 +42,6 @@ defmodule Credence.Pattern.NoIsNilGuard do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  @impl true
-  def fixable?, do: true
-
   # ── Check ──────────────────────────────────────────────────────
 
   @impl true

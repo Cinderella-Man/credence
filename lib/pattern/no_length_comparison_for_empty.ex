@@ -41,9 +41,6 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   @max_n 5
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, acc ->

@@ -199,13 +199,6 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
       assert check(code) == []
     end
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoIsPrefixForNonGuard.fixable?() == true
-    end
-  end
-
   describe "fix/2" do
     test "renames simple def is_palindrome to palindrome?" do
       code = """

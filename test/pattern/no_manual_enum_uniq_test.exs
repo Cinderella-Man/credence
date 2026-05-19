@@ -10,12 +10,6 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
     Credence.Pattern.NoManualEnumUniq.fix(code, [])
   end
 
-  describe "NoManualEnumUniq fixable?" do
-    test "returns true" do
-      assert Credence.Pattern.NoManualEnumUniq.fixable?() == true
-    end
-  end
-
   describe "NoManualEnumUniq check" do
     test "flags manual Enum.uniq/1 using MapSet and reduce" do
       code = """

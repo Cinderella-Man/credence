@@ -217,10 +217,4 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
              """)
     end
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoCaseTrueFalse.fixable?() == true
-    end
-  end
 end

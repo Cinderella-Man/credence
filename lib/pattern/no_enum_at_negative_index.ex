@@ -43,9 +43,6 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
   @max_fixable_depth 5
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn

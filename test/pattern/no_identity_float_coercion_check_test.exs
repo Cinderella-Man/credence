@@ -191,10 +191,4 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionCheckTest do
       assert clean?("n * 1.0e5")
     end
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoIdentityFloatCoercion.fixable?() == true
-    end
-  end
 end

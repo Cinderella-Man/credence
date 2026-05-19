@@ -173,12 +173,13 @@ defmodule Credence.FixShowcaseTest do
 
     # ── Remaining issues (expected) ───────────────────────────────
 
-    test "only expected issues remain", %{result: %{issues: issues}} do
-      rules = issues |> Enum.map(& &1.rule) |> Enum.sort()
-
-      assert rules == [
-               :no_sort_for_top_k_reduce
-             ]
+    test "no issues remain after fix", %{result: %{issues: issues}} do
+      # Project stance: every rule either auto-fixes its anti-pattern
+      # or it doesn't exist. After running `Credence.fix/2`, no
+      # outstanding issues should remain. (The unfixable companion
+      # rules that previously reported residual cases have been
+      # archived to `docs/unfixable_rules/`.)
+      assert issues |> Enum.map(& &1.rule) |> Enum.sort() == []
     end
 
     # ── Sanity ────────────────────────────────────────────────────

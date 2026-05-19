@@ -71,9 +71,6 @@ defmodule Credence.Pattern.NoMapGetSentinel do
   @comparison_ops [:==, :!=, :===, :!==]
   @ordering_ops [:>=, :>, :<=, :<]
 
-  @impl true
-  def fixable?, do: true
-
   # ── Check ─────────────────────────────────────────────────────────
 
   @impl true

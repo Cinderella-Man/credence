@@ -50,9 +50,6 @@ defmodule Credence.Pattern.NoKernelShadowing do
   }
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn

@@ -7,13 +7,6 @@ defmodule Credence.Pattern.NoExplicitSumReduceTest do
   end
 
   defp fix(code), do: Credence.Pattern.NoExplicitSumReduce.fix(code, [])
-
-  describe "fixable?" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoExplicitSumReduce.fixable?() == true
-    end
-  end
-
   describe "NoExplicitSumReduce" do
     test "passes code that uses Enum.sum/1 instead of reduce" do
       code = """

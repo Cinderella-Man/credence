@@ -54,9 +54,6 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
   )a
 
   @impl true
-  def fixable?, do: true
-
-  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, issues ->

@@ -4,13 +4,6 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
   defp fix(code) do
     Credence.Pattern.PreferHeredocForMultiLineDoc.fix(code, [])
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.PreferHeredocForMultiLineDoc.fixable?() == true
-    end
-  end
-
   describe "fix/2 — conversions" do
     test "converts simple two-line @doc to heredoc" do
       code = """

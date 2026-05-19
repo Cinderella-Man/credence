@@ -97,14 +97,14 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccess do
         end)
       end
 
-  See also `Credence.Pattern.NoEnumAtBinarySearch` which catches the same
-  anti-pattern in recursive functions (not auto-fixable).
+  (The recursive variant of this anti-pattern was previously caught by a
+  separate `NoEnumAtBinarySearch` rule. It was archived to
+  `docs/unfixable_rules/` because the fix requires non-local restructuring
+  — wrapping the recursion to thread a tuple — which the project chose
+  not to auto-fix.)
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
-
-  @impl true
-  def fixable?, do: true
 
   @impl true
   def check(ast, _opts) do

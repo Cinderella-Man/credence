@@ -231,10 +231,4 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
              """)
     end
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoCondTwoClauses.fixable?() == true
-    end
-  end
 end

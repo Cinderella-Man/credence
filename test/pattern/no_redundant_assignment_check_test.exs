@@ -373,10 +373,4 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
       assert length(check(code)) == 2
     end
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoRedundantAssignment.fixable?() == true
-    end
-  end
 end

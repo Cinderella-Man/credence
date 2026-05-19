@@ -34,9 +34,6 @@ defmodule Credence.Pattern.NoSortForTopK do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  @impl true
-  def fixable?, do: true
-
   # ── Check ────────────────────────────────────────────────────────
   #
   # We use a custom recursive walk instead of Macro.prewalk so that

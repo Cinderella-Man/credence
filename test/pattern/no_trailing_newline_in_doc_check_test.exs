@@ -10,13 +10,6 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
     {:ok, ast} = Code.string_to_quoted(code)
     Credence.Pattern.NoTrailingNewlineInDoc.check(ast, source: code)
   end
-
-  describe "fixable?/0" do
-    test "reports as fixable" do
-      assert Credence.Pattern.NoTrailingNewlineInDoc.fixable?() == true
-    end
-  end
-
   describe "flags single-line docs with trailing newline" do
     test "flags @doc with trailing newline" do
       code = """
