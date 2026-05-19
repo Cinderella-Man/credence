@@ -59,13 +59,19 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:defmodule, meta, [_name, [{:do, body}]]} = node, acc ->
-          statements = block_to_list(body)
+        {:defmodule, meta, [_name, kw]} = node, acc when is_list(kw) ->
+          case Credence.RuleHelpers.extract_do_body(kw) do
+            {:ok, body} ->
+              statements = block_to_list(body)
 
-          if has_logger_macro_call?(body) and not has_logger_require?(statements) do
-            {node, [build_issue(meta) | acc]}
-          else
-            {node, acc}
+              if has_logger_macro_call?(body) and not has_logger_require?(statements) do
+                {node, [build_issue(meta) | acc]}
+              else
+                {node, acc}
+              end
+
+            :error ->
+              {node, acc}
           end
 
         node, acc ->
@@ -76,25 +82,8 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        if needs_fix?(ast) do
-          ast
-          |> Macro.prewalk(&maybe_fix_module/1)
-          |> Sourceror.to_string()
-        else
-          source
-        end
-
-      {:error, _} ->
-        source
-    end
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_fix_module/1)
   end
 
   # Walks the body looking for Logger.macro_name(...) calls.
@@ -135,34 +124,6 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
   defp block_to_list({:__block__, _, stmts}), do: stmts
   defp block_to_list(single), do: [single]
 
-  defp needs_fix?(ast) do
-    {_, found} =
-      Macro.prewalk(ast, false, fn
-        _node, true ->
-          {nil, true}
-
-        {:defmodule, _, [_name, kw]} = node, false ->
-          case extract_do_body(kw) do
-            nil ->
-              {node, false}
-
-            body ->
-              statements = block_to_list(body)
-
-              if has_logger_macro_call?(body) and not has_logger_require?(statements) do
-                {node, true}
-              else
-                {node, false}
-              end
-          end
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found
-  end
-
   defp maybe_fix_module({:defmodule, meta, [name, kw]}) do
     case extract_do_body(kw) do
       nil ->
@@ -183,14 +144,9 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
 
   defp maybe_fix_module(node), do: node
 
-  # Extracts the body from a defmodule's keyword argument list,
-  # handling both standard and Sourceror AST forms.
-  defp extract_do_body([{:do, body}]), do: body
+  # Extracts the body from a defmodule's keyword argument list.
   defp extract_do_body([{{:__block__, _, [:do]}, body}]), do: body
   defp extract_do_body(_), do: nil
-
-  defp replace_do_body([{:do, _old}], new_body),
-    do: [{:do, new_body}]
 
   defp replace_do_body([{{:__block__, m, [:do]}, _old}], new_body),
     do: [{{:__block__, m, [:do]}, new_body}]
@@ -200,7 +156,7 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
   # Inserts `require Logger` after the last directive-like statement
   # at the top of the module body.
   defp insert_require(statements) do
-    require_ast = Code.string_to_quoted!("require Logger")
+    require_ast = Sourceror.parse_string!("require Logger")
     insert_idx = find_directive_end(statements)
     List.insert_at(statements, insert_idx, require_ast)
   end

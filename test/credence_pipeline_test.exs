@@ -50,7 +50,7 @@ defmodule Credence.PipelineTest do
   end
 
   defp code_parses?(code) do
-    match?({:ok, _}, Code.string_to_quoted(code))
+    match?({:ok, _}, Sourceror.parse_string(code))
   end
 
   defp cleanup_module(mod) do
@@ -319,7 +319,18 @@ defmodule Credence.PipelineTest do
       broken_source =
         "defmodule Broken_NotARealMod_xyz do\n  def go, do: some_undefined_thing()\nend\n"
 
-      Credence.RuleHelpers.patches_from_legacy_fix(_ast = nil, source, fn _ -> broken_source end)
+      [whole_source_patch(source, broken_source)]
+    end
+
+    defp whole_source_patch(source, replacement) do
+      lines = String.split(source, "\n")
+      end_line = max(length(lines), 1)
+      end_col = (lines |> List.last() |> byte_size()) + 1
+
+      %{
+        range: %{start: [line: 1, column: 1], end: [line: end_line, column: end_col]},
+        change: replacement
+      }
     end
   end
 
@@ -336,12 +347,18 @@ defmodule Credence.PipelineTest do
     end
 
     @impl true
-    def fix_patches(ast, opts) do
+    def fix_patches(_ast, opts) do
       source = Keyword.fetch!(opts, :source)
+      lines = String.split(source, "\n")
+      end_line = max(length(lines), 1)
+      end_col = (lines |> List.last() |> byte_size()) + 1
 
-      Credence.RuleHelpers.patches_from_legacy_fix(ast, source, fn _ ->
-        "this is <<< not valid elixir at all"
-      end)
+      [
+        %{
+          range: %{start: [line: 1, column: 1], end: [line: end_line, column: end_col]},
+          change: "this is <<< not valid elixir at all"
+        }
+      ]
     end
   end
 
@@ -782,7 +799,7 @@ defmodule Credence.PipelineTest do
 
       refute code_parses?(source)
 
-      # Pattern's fix_with_trace has a Code.string_to_quoted guard in
+      # Pattern's fix_with_trace has a Sourceror.parse_string guard in
       # its reduce — it should bail gracefully.
       {result_code, applied} = Credence.Pattern.fix_with_trace(source)
 

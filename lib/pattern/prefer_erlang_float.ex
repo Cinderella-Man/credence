@@ -56,28 +56,22 @@ defmodule Credence.Pattern.PreferErlangFloat do
   @impl true
   def priority, do: 499
 
-  # Uses AST from Code.string_to_quoted (bare float literals).
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        # bare_var OP identity  (right-hand identity)
-        {op, meta, [expr, val]} = node, acc
-        when is_float(val) and op in [:*, :/, :+, :-] ->
-          if identity_right?(op, val) and bare_var?(expr) do
-            {node, [build_issue(meta) | acc]}
-          else
-            {node, acc}
-          end
+        {op, meta, [left, right]} = node, acc when op in [:*, :/, :+, :-] ->
+          cond do
+            # bare_var OP identity (right-hand identity)
+            identity_right?(op, unwrap_float(right)) and bare_var?(left) ->
+              {node, [build_issue(meta) | acc]}
 
-        # identity OP bare_var  (left-hand identity, commutative ops only)
-        {op, meta, [val, expr]} = node, acc
-        when is_float(val) and op in [:*, :+] ->
-          if identity_left?(op, val) and bare_var?(expr) do
-            {node, [build_issue(meta) | acc]}
-          else
-            {node, acc}
+            # identity OP bare_var (left-hand identity, commutative ops only)
+            op in [:*, :+] and identity_left?(op, unwrap_float(left)) and bare_var?(right) ->
+              {node, [build_issue(meta) | acc]}
+
+            true ->
+              {node, acc}
           end
 
         node, acc ->
@@ -87,72 +81,36 @@ defmodule Credence.Pattern.PreferErlangFloat do
     Enum.reverse(issues)
   end
 
-  # Uses Sourceror for parsing (wraps literals in __block__).
-
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_to_erlang_float/1)
   end
 
-  defp legacy_fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        target_lines = find_target_lines(ast)
+  # Replace identity arithmetic on a bare variable with `:erlang.float(var)`.
+  # AST patterns are precise enough that this rule and `NoIdentityFloatCoercion`
+  # (priority 500) cleanly partition their targets — no line-level
+  # coordination needed: this rule fires only on bare vars, the other
+  # only on non-bare expressions.
+  defp maybe_to_erlang_float({op, _meta, [left, right]} = node) when op in [:*, :/, :+, :-] do
+    cond do
+      identity_right?(op, unwrap_float(right)) and bare_var?(left) ->
+        erlang_float(unwrap_var(left))
 
-        if target_lines == [] do
-          source
-        else
-          line_set = MapSet.new(target_lines)
+      op in [:*, :+] and identity_left?(op, unwrap_float(left)) and bare_var?(right) ->
+        erlang_float(unwrap_var(right))
 
-          source
-          |> String.split("\n")
-          |> Enum.with_index(1)
-          |> Enum.map(fn {line, idx} ->
-            if idx in line_set, do: replace_with_erlang_float(line), else: line
-          end)
-          |> Enum.join("\n")
-        end
-
-      {:error, _} ->
-        source
+      true ->
+        node
     end
   end
 
-  defp find_target_lines(ast) do
-    {_ast, lines} =
-      Macro.prewalk(ast, [], fn
-        {op, meta, [left, right]} = node, acc when op in [:*, :/, :+, :-] ->
-          hit_right = identity_right?(op, unwrap_float(right)) and bare_var?(left)
+  defp maybe_to_erlang_float(node), do: node
 
-          hit_left =
-            op in [:*, :+] and identity_left?(op, unwrap_float(left)) and bare_var?(right)
+  defp unwrap_var({:__block__, _, [inner]}), do: inner
+  defp unwrap_var(node), do: node
 
-          if hit_right or hit_left do
-            {node, [Keyword.get(meta, :line) | acc]}
-          else
-            {node, acc}
-          end
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    Enum.uniq(lines)
-  end
-
-  @no_ext ~S"(?![0-9eE_])"
-
-  defp replace_with_erlang_float(line) do
-    line
-    # Trailing: var OP IDENTITY → :erlang.float(var)
-    |> then(&Regex.replace(~r/(\w+)\s*\*\s*1\.0#{@no_ext}/, &1, ":erlang.float(\\1)"))
-    |> then(&Regex.replace(~r/(\w+)\s*\/\s*1\.0#{@no_ext}/, &1, ":erlang.float(\\1)"))
-    |> then(&Regex.replace(~r/(\w+)\s*\+\s*0\.0#{@no_ext}/, &1, ":erlang.float(\\1)"))
-    |> then(&Regex.replace(~r/(\w+)\s*\-\s*0\.0#{@no_ext}/, &1, ":erlang.float(\\1)"))
-    # Leading: IDENTITY OP var → :erlang.float(var)
-    |> then(&Regex.replace(~r/1\.0#{@no_ext}\s*\*\s*(\w+)/, &1, ":erlang.float(\\1)"))
-    |> then(&Regex.replace(~r/0\.0#{@no_ext}\s*\+\s*(\w+)/, &1, ":erlang.float(\\1)"))
+  defp erlang_float(var_node) do
+    {{:., [], [:erlang, :float]}, [], [var_node]}
   end
 
   # Sourceror wraps variables in {:__block__, _, [var_node]}.
@@ -172,7 +130,6 @@ defmodule Credence.Pattern.PreferErlangFloat do
 
   # Sourceror wraps float literals in {:__block__, meta, [value]}.
   defp unwrap_float({:__block__, _, [val]}) when is_float(val), do: val
-  defp unwrap_float(val) when is_float(val), do: val
   defp unwrap_float(_), do: nil
 
   defp build_issue(meta) do

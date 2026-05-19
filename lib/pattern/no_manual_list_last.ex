@@ -34,6 +34,7 @@ defmodule Credence.Pattern.NoManualListLast do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -50,22 +51,20 @@ defmodule Credence.Pattern.NoManualListLast do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    ast = source |> Sourceror.parse_string!() |> Credence.RuleHelpers.normalize_sourceror_ast()
-    matches = find_matching_functions(ast)
+    normalized = RuleHelpers.normalize_sourceror_ast(ast)
+    matches = find_matching_functions(normalized)
 
     if Enum.empty?(matches) do
-      source
+      []
     else
       match_names = MapSet.new(matches, fn {name, _def_type} -> name end)
       match_set = MapSet.new(matches)
 
-      transformed = transform_ast(ast, match_set, match_names)
-
-      Sourceror.to_string(transformed)
+      RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
+        input
+        |> RuleHelpers.normalize_sourceror_ast()
+        |> transform_ast(match_set, match_names)
+      end)
     end
   end
 
@@ -118,8 +117,8 @@ defmodule Credence.Pattern.NoManualListLast do
   end
 
   defp single_element_return?({_name, 1, _def_type, _meta, pattern, body}) do
-    case pattern do
-      [{var_name, _, ctx}] when is_atom(var_name) and is_atom(ctx) ->
+    case Credence.RuleHelpers.unwrap_list(pattern) do
+      {:ok, [{var_name, _, ctx}], _} when is_atom(var_name) and is_atom(ctx) ->
         body_returns_var?(body, var_name)
 
       _ ->
@@ -127,16 +126,19 @@ defmodule Credence.Pattern.NoManualListLast do
     end
   end
 
-  defp body_returns_var?([do: {var_name, _, ctx}], target)
-       when is_atom(var_name) and is_atom(ctx) do
-    var_name == target
+  defp body_returns_var?(body, target) do
+    case Credence.RuleHelpers.extract_do_body(body) do
+      {:ok, {var_name, _, ctx}} when is_atom(var_name) and is_atom(ctx) ->
+        var_name == target
+
+      _ ->
+        false
+    end
   end
 
-  defp body_returns_var?(_, _), do: false
-
   defp cons_recurse?({_name, 1, _def_type, _meta, pattern, body}, fn_name) do
-    case pattern do
-      [{:|, _, [head, {tail_name, _, ctx}]}]
+    case Credence.RuleHelpers.unwrap_list(pattern) do
+      {:ok, [{:|, _, [head, {tail_name, _, ctx}]}], _}
       when is_atom(tail_name) and is_atom(ctx) ->
         wildcard?(head) and body_recurses_with?(body, fn_name, tail_name)
 
@@ -151,16 +153,16 @@ defmodule Credence.Pattern.NoManualListLast do
 
   defp wildcard?(_), do: false
 
-  defp body_recurses_with?(
-         [do: {fn_name, _, [{var_name, _, ctx}]}],
-         fn_name,
-         tail_name
-       )
-       when is_atom(var_name) and is_atom(ctx) do
-    var_name == tail_name
-  end
+  defp body_recurses_with?(body, fn_name, tail_name) do
+    case Credence.RuleHelpers.extract_do_body(body) do
+      {:ok, {^fn_name, _, [{var_name, _, ctx}]}}
+      when is_atom(var_name) and is_atom(ctx) ->
+        var_name == tail_name
 
-  defp body_recurses_with?(_, _, _), do: false
+      _ ->
+        false
+    end
+  end
 
   defp find_matching_functions(ast) do
     clauses = collect_clauses(ast)

@@ -41,6 +41,7 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -55,17 +56,19 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
     Enum.reverse(issues)
   end
 
-  defp check_node({:case, _meta, [_expr, [do: clauses]]}) when is_list(clauses) do
-    issues =
-      Enum.flat_map(clauses, fn
-        {:->, meta, [[pattern], body]} ->
-          check_pattern_body(pattern, body, meta)
+  defp check_node({:case, _meta, [_expr, kw_list]}) when is_list(kw_list) do
+    with {:ok, clauses} <- RuleHelpers.extract_do_body(kw_list),
+         true <- is_list(clauses) do
+      issues =
+        Enum.flat_map(clauses, fn
+          {:->, meta, [[pattern], body]} -> check_pattern_body(pattern, body, meta)
+          _ -> []
+        end)
 
-        _ ->
-          []
-      end)
-
-    if issues == [], do: :error, else: {:ok, issues}
+      if issues == [], do: :error, else: {:ok, issues}
+    else
+      _ -> :error
+    end
   end
 
   defp check_node({def_type, _meta, [{:when, _, [{_fn_name, _, args}, _guard]}, body]})
@@ -97,39 +100,59 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
   end
 
-  defp legacy_fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Credence.RuleHelpers.normalize_sourceror_ast()
-    |> Macro.postwalk(fn
-      # Case expressions
-      {:case, case_meta, [expr, [do: clauses]]} when is_list(clauses) ->
-        fixed_clauses = Enum.map(clauses, &fix_case_clause/1)
-        {:case, case_meta, [expr, [do: fixed_clauses]]}
+  defp maybe_rewrite({:case, case_meta, [expr, kw_list]} = node) when is_list(kw_list) do
+    with {:ok, clauses} <- RuleHelpers.extract_do_body(kw_list),
+         true <- is_list(clauses),
+         fixed_clauses <- Enum.map(clauses, &fix_case_clause/1),
+         true <- fixed_clauses != clauses do
+      {:case, case_meta, [expr, RuleHelpers.replace_do_body(kw_list, fixed_clauses)]}
+    else
+      _ -> node
+    end
+  end
 
-      # Function heads with guard
-      {def_type, def_meta, [{:when, when_meta, [{fn_name, head_meta, args}, guard]}, body]}
-      when def_type in [:def, :defp] and is_list(args) ->
-        {new_args, new_body} = fix_fn_args(args, body, guard)
-
+  defp maybe_rewrite(
+         {def_type, def_meta, [{:when, when_meta, [{fn_name, head_meta, args}, guard]}, body]} =
+           node
+       )
+       when def_type in [:def, :defp] and is_list(args) do
+    case rewrite_args_and_body(args, body, guard) do
+      {:changed, new_args, new_body} ->
         {def_type, def_meta,
          [{:when, when_meta, [{fn_name, head_meta, new_args}, guard]}, new_body]}
 
-      # Function heads without guard
-      {def_type, def_meta, [{fn_name, head_meta, args}, body]}
-      when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
-        {new_args, new_body} = fix_fn_args(args, body, nil)
+      :unchanged ->
+        node
+    end
+  end
+
+  defp maybe_rewrite({def_type, def_meta, [{fn_name, head_meta, args}, body]} = node)
+       when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
+    case rewrite_args_and_body(args, body, nil) do
+      {:changed, new_args, new_body} ->
         {def_type, def_meta, [{fn_name, head_meta, new_args}, new_body]}
 
-      node ->
+      :unchanged ->
         node
-    end)
-    |> Sourceror.to_string()
+    end
+  end
+
+  defp maybe_rewrite(node), do: node
+
+  defp rewrite_args_and_body(args, body, extra_ast) do
+    {new_args, new_body, changed?} =
+      Enum.reduce(args, {[], body, false}, fn arg, {acc, cur_body, changed} ->
+        case fix_pattern_body(arg, cur_body, extra_ast) do
+          {:fixed, new_arg, new_body} -> {acc ++ [new_arg], new_body, true}
+          :no_fix -> {acc ++ [arg], cur_body, changed}
+        end
+      end)
+
+    if changed?, do: {:changed, new_args, new_body}, else: :unchanged
   end
 
   defp fix_case_clause({:->, meta, [[pattern], body]}) do
@@ -141,67 +164,70 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
 
   defp fix_case_clause(other), do: other
 
-  defp fix_fn_args(args, body, extra_ast) do
-    Enum.reduce(args, {[], body}, fn arg, {fixed_args, current_body} ->
-      case fix_pattern_body(arg, current_body, extra_ast) do
-        {:fixed, new_arg, new_body} -> {fixed_args ++ [new_arg], new_body}
-        :no_fix -> {fixed_args ++ [arg], current_body}
-      end
-    end)
-  end
+  defp fix_pattern_body(pattern, body, extra_ast \\ nil) do
+    with {:ok, elements, list_node} <- RuleHelpers.unwrap_list(pattern),
+         {:ok, var_names} when length(var_names) >= 2 <- extract_names_from_elements(elements),
+         true <- body_contains_same_list?(body, var_names) do
+      binding_var = {:items, [], nil}
+      new_body = replace_reconstructed_list(body, var_names, binding_var)
 
-  defp fix_pattern_body(pattern, body, extra_ast \\ nil)
+      used = collect_variable_names(new_body)
 
-  defp fix_pattern_body(pattern, body, extra_ast) when is_list(pattern) do
-    case extract_var_names(pattern) do
-      {:ok, var_names} when length(var_names) >= 2 ->
-        if body_contains_same_list?(body, var_names) do
-          binding_var = {:items, [], nil}
-          new_body = replace_reconstructed_list(body, var_names, binding_var)
+      used =
+        if extra_ast, do: MapSet.union(used, collect_variable_names(extra_ast)), else: used
 
-          # Determine which individual variables are still used in the new body
-          # and in any extra AST (e.g. guard clauses)
-          used = collect_variable_names(new_body)
+      new_elements =
+        Enum.map(elements, fn
+          {name, meta, ctx} when is_atom(name) and is_atom(ctx) ->
+            if MapSet.member?(used, name), do: {name, meta, ctx}, else: {:_, meta, ctx}
 
-          used =
-            if extra_ast do
-              MapSet.union(used, collect_variable_names(extra_ast))
-            else
-              used
-            end
+          other ->
+            other
+        end)
 
-          new_pattern_elements =
-            Enum.map(pattern, fn
-              {name, meta, ctx} when is_atom(name) and is_atom(ctx) ->
-                if MapSet.member?(used, name), do: {name, meta, ctx}, else: {:_, meta, ctx}
-
-              other ->
-                other
-            end)
-
-          {:fixed, {:=, [], [new_pattern_elements, binding_var]}, new_body}
-        else
-          :no_fix
-        end
-
-      _ ->
-        :no_fix
+      new_list = RuleHelpers.rewrap_list(list_node, new_elements)
+      {:fixed, {:=, [], [new_list, binding_var]}, new_body}
+    else
+      _ -> :no_fix
     end
   end
 
-  defp fix_pattern_body(_, _, _), do: :no_fix
-
   defp replace_reconstructed_list(body, target_var_names, replacement) do
-    Macro.postwalk(body, fn
-      elements when is_list(elements) ->
-        case extract_var_names(elements) do
+    # Prewalk so we hit the `:__block__` wrapper before descending into
+    # the inner list — replacing the inner list alone leaves the
+    # bracket-carrying wrapper behind, which re-renders as `[items]`.
+    Macro.prewalk(body, fn
+      {:__block__, _, [elements]} = node when is_list(elements) ->
+        case extract_names_from_elements(elements) do
           {:ok, ^target_var_names} -> replacement
-          _ -> elements
+          _ -> node
         end
 
       node ->
         node
     end)
+  end
+
+  defp body_contains_same_list?(body, target_var_names) do
+    {_, found} =
+      Macro.prewalk(body, false, fn
+        node, true ->
+          {node, true}
+
+        node, false ->
+          case RuleHelpers.unwrap_list(node) do
+            {:ok, elements, _} ->
+              case extract_names_from_elements(elements) do
+                {:ok, ^target_var_names} -> {node, true}
+                _ -> {node, false}
+              end
+
+            :error ->
+              {node, false}
+          end
+      end)
+
+    found
   end
 
   defp collect_variable_names(ast) do
@@ -217,7 +243,13 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
     names
   end
 
-  defp extract_var_names(elements) when is_list(elements) do
+  defp extract_var_names(pattern) do
+    with {:ok, elements, _} <- RuleHelpers.unwrap_list(pattern) do
+      extract_names_from_elements(elements)
+    end
+  end
+
+  defp extract_names_from_elements(elements) when is_list(elements) do
     names =
       Enum.map(elements, fn
         {name, _, ctx} when is_atom(name) and is_atom(ctx) ->
@@ -228,33 +260,10 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
           :skip
       end)
 
-    if Enum.any?(names, &(&1 == :skip)) do
-      :error
-    else
-      {:ok, names}
-    end
+    if Enum.any?(names, &(&1 == :skip)), do: :error, else: {:ok, names}
   end
 
-  defp extract_var_names(_), do: :error
-
-  defp body_contains_same_list?(body, target_var_names) do
-    {_, found} =
-      Macro.prewalk(body, false, fn
-        node, true ->
-          {node, true}
-
-        elements, false when is_list(elements) ->
-          case extract_var_names(elements) do
-            {:ok, ^target_var_names} -> {elements, true}
-            _ -> {elements, false}
-          end
-
-        node, false ->
-          {node, false}
-      end)
-
-    found
-  end
+  defp extract_names_from_elements(_), do: :error
 
   defp build_issue(var_names, meta) do
     vars_str = Enum.map_join(var_names, ", ", &to_string/1)

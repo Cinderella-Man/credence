@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoExplicitMaxReduce.check(ast, [])
   end
 
@@ -268,7 +268,7 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
       """
 
       fixed = fix(code)
-      {:ok, fixed_ast} = Code.string_to_quoted(fixed)
+      {:ok, fixed_ast} = Sourceror.parse_string(fixed)
       issues = Credence.Pattern.NoExplicitMaxReduce.check(fixed_ast, [])
 
       assert issues == []

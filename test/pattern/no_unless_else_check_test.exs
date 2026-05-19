@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoUnlessElseCheckTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoUnlessElse.check(ast, [])
   end
 

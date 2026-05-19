@@ -36,6 +36,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -70,14 +71,17 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  def fix_patches(ast, _opts) do
+    name_map = collect_renames(ast)
+
+    if map_size(name_map) == 0 do
+      []
+    else
+      RuleHelpers.patches_from_postwalk(ast, &rename_node(&1, name_map))
+    end
   end
 
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
-
+  defp collect_renames(ast) do
     {_ast, names} =
       Macro.postwalk(ast, MapSet.new(), fn
         {def_type, _meta, [{:when, _, [{fn_name, _, args}, _guard]}, _body]} = node, names
@@ -96,62 +100,29 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
           {node, names}
       end)
 
-    if MapSet.size(names) == 0 do
-      source
-    else
-      name_map =
-        for name <- names, into: %{} do
-          {name, suggested_name(name)}
-        end
+    for name <- names, into: %{}, do: {name, suggested_name(name)}
+  end
 
-      renamed =
-        Macro.postwalk(ast, fn
-          {def_type, meta, [{:when, wm, [{fn_name, fm, args}, guard]}, body]} = node
-          when def_type in [:def, :defp] ->
-            case name_map do
-              %{^fn_name => new_name} ->
-                fm_new = Keyword.put(fm, :token, Atom.to_string(new_name))
-                {def_type, meta, [{:when, wm, [{new_name, fm_new, args}, guard]}, body]}
+  defp rename_node({fn_name, meta, args}, name_map)
+       when is_atom(fn_name) and is_list(args) do
+    case name_map do
+      %{^fn_name => new_name} ->
+        meta_new = Keyword.put(meta, :token, Atom.to_string(new_name))
+        {new_name, meta_new, args}
 
-              _ ->
-                node
-            end
-
-          {def_type, meta, [{fn_name, fm, args}, body]} = node
-          when def_type in [:def, :defp] ->
-            case name_map do
-              %{^fn_name => new_name} ->
-                fm_new = Keyword.put(fm, :token, Atom.to_string(new_name))
-                {def_type, meta, [{new_name, fm_new, args}, body]}
-
-              _ ->
-                node
-            end
-
-          {fn_name, meta, args} when is_atom(fn_name) and is_list(args) ->
-            case name_map do
-              %{^fn_name => new_name} ->
-                meta_new = Keyword.put(meta, :token, Atom.to_string(new_name))
-                {new_name, meta_new, args}
-
-              _ ->
-                {fn_name, meta, args}
-            end
-
-          atom when is_atom(atom) ->
-            case name_map do
-              %{^atom => new_name} -> new_name
-              _ -> atom
-            end
-
-          node ->
-            node
-        end)
-
-      renamed
-      |> Sourceror.to_string()
+      _ ->
+        {fn_name, meta, args}
     end
   end
+
+  defp rename_node(atom, name_map) when is_atom(atom) do
+    case name_map do
+      %{^atom => new_name} -> new_name
+      _ -> atom
+    end
+  end
+
+  defp rename_node(node, _name_map), do: node
 
   defp underscore_prefixed?(name) do
     str = Atom.to_string(name)

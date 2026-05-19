@@ -2,7 +2,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.UseMapJoin.check(ast, [])
   end
 
@@ -220,7 +220,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
     end
@@ -235,7 +235,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
     end
@@ -254,7 +254,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
     end
@@ -271,7 +271,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
     end
@@ -288,7 +288,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
     end
@@ -303,7 +303,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
     end
@@ -323,7 +323,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
       assert output =~ "filter"
@@ -342,7 +342,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
       assert output =~ "String.upcase"
@@ -362,7 +362,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
     end
@@ -377,7 +377,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
     end
@@ -396,7 +396,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "map_join"
     end
@@ -411,7 +411,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
     end
 
@@ -427,7 +427,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
     end
 
@@ -444,7 +444,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
       """
 
       output = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert check(output) == []
       assert output =~ "uniq"
     end

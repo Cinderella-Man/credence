@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyCheckTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoLengthComparisonForEmpty.check(ast, [])
   end
   # ── flags equality ─────────────────────────────────────────────

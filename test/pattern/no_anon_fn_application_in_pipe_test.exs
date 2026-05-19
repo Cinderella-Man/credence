@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoAnonFnApplicationInPipe.check(ast, [])
   end
 

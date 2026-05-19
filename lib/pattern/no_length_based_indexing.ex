@@ -170,16 +170,17 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
 
   defp match_var?(_, _), do: false
 
-  defp unwrap_integer(n) when is_integer(n), do: n
   defp unwrap_integer({:__block__, _, [n]}) when is_integer(n), do: n
   defp unwrap_integer(_), do: nil
 
+  # Atoms in function-name position (e.g. the `:count` in `Enum.count`) and
+  # in module names are NOT wrapped by Sourceror — only atoms in argument
+  # position are wrapped in `:__block__` to carry position meta. Handle both.
   defp unwrap_atom({:__block__, _, [atom]}) when is_atom(atom), do: atom
   defp unwrap_atom(atom) when is_atom(atom), do: atom
   defp unwrap_atom(_), do: nil
 
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true
-  defp enum_module?({:__aliases__, _, [{:__block__, _, [:Enum]}]}), do: true
   defp enum_module?(_), do: false
 
   defp rebinds_variable?({:=, _, [lhs, _rhs]}, var_name) do

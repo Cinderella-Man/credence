@@ -14,12 +14,12 @@ defmodule Credence.Pattern do
   def analyze(code_string, opts \\ []) do
     opts = Keyword.put_new(opts, :source, code_string)
 
-    case Code.string_to_quoted(code_string) do
+    case Sourceror.parse_string(code_string) do
       {:ok, ast} ->
         Enum.flat_map(rules(opts), & &1.check(ast, opts))
 
-      {:error, {line, error_msg, token}} ->
-        [parse_error_issue(line, error_msg, token)]
+      {:error, {meta, error_msg, token}} ->
+        [parse_error_issue(Keyword.get(meta, :line), error_msg, token)]
     end
   end
 
@@ -65,7 +65,7 @@ defmodule Credence.Pattern do
       Enum.reduce(fixable, {code_string, []}, fn rule, {source, applied} ->
         name = RuleHelpers.rule_name(rule)
 
-        case Code.string_to_quoted(source) do
+        case Sourceror.parse_string(source) do
           {:ok, ast} ->
             check_opts = Keyword.put(opts, :source, source)
             issues = rule.check(ast, check_opts)

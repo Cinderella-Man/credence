@@ -1191,7 +1191,7 @@ defmodule CredenceTest do
 
       result = Credence.fix(input, [])
       assert String.trim_trailing(result.code) == String.trim_trailing(expected)
-      assert {:ok, _ast} = Code.string_to_quoted(result.code)
+      assert {:ok, _ast} = Sourceror.parse_string(result.code)
     end
   end
 
@@ -1253,7 +1253,7 @@ defmodule CredenceTest do
 
       result = Credence.fix(input)
       assert String.trim_trailing(result.code) == String.trim_trailing(expected)
-      assert {:ok, _ast} = Code.string_to_quoted(result.code)
+      assert {:ok, _ast} = Sourceror.parse_string(result.code)
     end
 
     test "NoEagerWithIndexInReduce preserves String.graphemes (idx=9 length_of_longest_substring)" do
@@ -1325,8 +1325,8 @@ defmodule CredenceTest do
       # Compare ASTs rather than exact string — the patch path may
       # wrap long lines differently than the legacy whole-AST
       # renderer, but the semantic should be identical.
-      assert {:ok, result_ast} = Code.string_to_quoted(result.code)
-      assert {:ok, expected_ast} = Code.string_to_quoted(expected)
+      assert {:ok, result_ast} = Sourceror.parse_string(result.code)
+      assert {:ok, expected_ast} = Sourceror.parse_string(expected)
       assert Macro.to_string(result_ast) == Macro.to_string(expected_ast)
     end
 

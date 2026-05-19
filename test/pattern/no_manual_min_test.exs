@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoManualMinTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoManualMin.check(ast, [])
   end
 
@@ -401,7 +401,7 @@ defmodule Credence.Pattern.NoManualMinTest do
       """
 
       result = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
     end
 
     test "fix: produces valid Elixir code for complex expression" do
@@ -414,7 +414,7 @@ defmodule Credence.Pattern.NoManualMinTest do
       """
 
       result = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
     end
   end
 end

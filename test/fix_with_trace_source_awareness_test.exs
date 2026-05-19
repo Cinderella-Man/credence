@@ -1,11 +1,12 @@
 defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
   use ExUnit.Case
 
-  # ── Prove the bug: checks give different results with/without source ──
+  # Heredoc handling: Sourceror records the string delimiter (`"""` vs `"`)
+  # in the `:__block__` metadata, so `check/2` can tell heredocs apart from
+  # escape-string docs purely from the AST — no `:source` needed.
 
-  describe "check behaviour depends on :source in opts" do
-    test "PreferHeredocForMultiLineDoc falsely flags multi-line heredoc without source" do
-      # Multi-line content is required — single-line heredocs don't trigger multi_line? check
+  describe "check does not false-flag heredocs (delimiter from AST meta)" do
+    test "PreferHeredocForMultiLineDoc skips multi-line heredoc" do
       code = ~S'''
       defmodule Example do
         @doc """
@@ -19,24 +20,13 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
       end
       '''
 
-      {:ok, ast} = Code.string_to_quoted(code)
+      ast = Sourceror.parse_string!(code)
 
-      # Without source: check cannot tell it's already a heredoc → flags it
-      issues_no_source = Credence.Pattern.PreferHeredocForMultiLineDoc.check(ast, [])
-
-      assert length(issues_no_source) > 0,
-             "Expected check to false-detect multi-line heredoc when :source is missing"
-
-      # With source: check sees """ on the source line → skips it
-      issues_with_source =
-        Credence.Pattern.PreferHeredocForMultiLineDoc.check(ast, source: code)
-
-      assert issues_with_source == [],
-             "Expected check to skip heredoc when :source is provided"
+      assert Credence.Pattern.PreferHeredocForMultiLineDoc.check(ast, []) == []
+      assert Credence.Pattern.PreferHeredocForMultiLineDoc.check(ast, source: code) == []
     end
 
-    test "NoTrailingNewlineInDoc falsely flags single-line heredoc without source" do
-      # A single-line heredoc's AST value is "Content.\n" — trailing newline only
+    test "NoTrailingNewlineInDoc skips single-line heredoc" do
       code = ~S'''
       defmodule Example do
         @moduledoc """
@@ -46,18 +36,10 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
       end
       '''
 
-      {:ok, ast} = Code.string_to_quoted(code)
+      ast = Sourceror.parse_string!(code)
 
-      issues_no_source = Credence.Pattern.NoTrailingNewlineInDoc.check(ast, [])
-
-      assert length(issues_no_source) > 0,
-             "Expected check to false-detect single-line heredoc when :source is missing"
-
-      issues_with_source =
-        Credence.Pattern.NoTrailingNewlineInDoc.check(ast, source: code)
-
-      assert issues_with_source == [],
-             "Expected check to skip heredoc when :source is provided"
+      assert Credence.Pattern.NoTrailingNewlineInDoc.check(ast, []) == []
+      assert Credence.Pattern.NoTrailingNewlineInDoc.check(ast, source: code) == []
     end
   end
 

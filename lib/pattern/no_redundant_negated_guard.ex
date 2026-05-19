@@ -33,6 +33,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @equality_ops [:==, :===]
   @inequality_ops [:!=, :!==]
@@ -48,22 +49,14 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
+  def fix_patches(ast, _opts) do
     clauses = collect_clauses_for_fix(ast)
     fixable = find_fixable_clauses(clauses)
 
     if Enum.empty?(fixable) do
-      source
+      []
     else
-      ast
-      |> Macro.prewalk(fn node -> apply_fix_if_needed(node, fixable) end)
-      |> Sourceror.to_string()
+      RuleHelpers.patches_from_postwalk(ast, &apply_fix_if_needed(&1, fixable))
     end
   end
 

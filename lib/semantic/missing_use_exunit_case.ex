@@ -118,7 +118,7 @@ defmodule Credence.Semantic.MissingUseExUnitCase do
         statements = block_to_list(body)
 
         if has_exunit_calls?(body) and not has_use_exunit?(statements) do
-          use_ast = Code.string_to_quoted!("use ExUnit.Case")
+          use_ast = Sourceror.parse_string!("use ExUnit.Case")
           insert_idx = find_insert_position(statements)
           new_statements = List.insert_at(statements, insert_idx, use_ast)
           new_body = {:__block__, [], new_statements}
@@ -137,11 +137,9 @@ defmodule Credence.Semantic.MissingUseExUnitCase do
   defp block_to_list({:__block__, _, stmts}), do: stmts
   defp block_to_list(single), do: [single]
 
-  defp extract_do_body([{:do, body}]), do: body
   defp extract_do_body([{{:__block__, _, [:do]}, body}]), do: body
   defp extract_do_body(_), do: nil
 
-  defp replace_do_body([{:do, _}], new), do: [{:do, new}]
   defp replace_do_body([{{:__block__, m, [:do]}, _}], new), do: [{{:__block__, m, [:do]}, new}]
   defp replace_do_body(other, _), do: other
 

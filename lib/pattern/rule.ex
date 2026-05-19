@@ -8,26 +8,35 @@ defmodule Credence.Pattern.Rule do
 
   ## Interface
 
-  Every rule implements two callbacks:
+  Three callbacks, all mandatory (only `priority/0` has a default):
 
+  - **`priority() :: integer()`** — fire order, lower runs first. Default 500.
   - **`check(ast, opts) :: [Issue.t()]`** — detect issues in the AST.
-  - **`fix_patches(ast, opts) :: [patch]`** — emit byte-range patches
-    that, when applied, resolve the issues `check/2` reported. Empty
-    list = no change.
+  - **`fix_patches(ast, opts) :: [patch]`** — emit byte-range patches that,
+    when applied, resolve the issues `check/2` reported. Empty list = no
+    change.
 
-  Rules typically take one of two shapes:
+  Both callbacks receive Sourceror AST (`Sourceror.parse_string!/1`) and
+  `opts` containing `:source` for rules that need raw source bytes.
 
-  - **AST-walking** — walk the AST, locate target nodes, emit
-    `%{range, change}` patches directly. See
-    `Credence.Pattern.NoListToTupleForAccess` for an example.
+  ## Implementation choices for `fix_patches/2`
 
-  - **Source-level adapter** — when the transformation logic is
-    naturally source-level (regex on lines, byte-range surgery), keep
-    that logic in a private `legacy_fix/2` and delegate `fix_patches/2`
-    to `Credence.RuleHelpers.patches_from_legacy_fix/3`. The adapter
-    parses the post-fix source and AST-diffs against the original to
-    emit one patch per outermost changed subtree (falling back to a
-    whole-source patch when AST round-tripping is lossy).
+  All rules return `[patch]`, but the way they compute those patches
+  varies with what the transformation needs:
+
+  - **AST-walking** — `Credence.RuleHelpers.patches_from_postwalk/2`
+    handles rules whose fix is a single `Macro.postwalk/2` matcher.
+  - **AST-with-restructuring** —
+    `Credence.RuleHelpers.patches_from_ast_transform/3` for fixes that
+    prune, reorder, or insert siblings (the rendered result is re-parsed
+    for clean range diffing).
+  - **Direct patch emission** — a rule walks the AST itself and builds
+    `[%{range: Sourceror.Range, change: String.t()}]` manually. Useful
+    when the kept subtree's source bytes must be preserved verbatim
+    (e.g. parens metadata Sourceror's renderer would drop) — slice the
+    original source bytes for the kept range instead of re-rendering.
+
+  See each helper's docstring for the rule-side calling convention.
   """
 
   @typedoc """

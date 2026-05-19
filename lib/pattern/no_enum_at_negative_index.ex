@@ -39,6 +39,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @max_fixable_depth 5
 
@@ -71,107 +72,116 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+    RuleHelpers.patches_from_ast_transform(ast, source, &transform_ast/1)
   end
 
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
-    lines = String.split(source, "\n")
-
-    # Step 1: Collect assignment-form Enum.at(var, -N) entries, scoped by function
-    entries = collect_assignment_entries(ast)
-
-    # Step 2: Keep only entries whose source line matches a single-line pattern
-    entries = Enum.filter(entries, &single_line_match?(&1, lines))
-
-    # Step 3: Group by {scope, list_var}
-    groups =
-      entries
-      |> Enum.group_by(fn e -> {e.scope, e.list_var} end)
-      |> Map.values()
-
-    # Step 4: Separate into reverse-groups (multi or non-(-1)) and simple-last
-    {reverse_groups, last_groups} =
-      Enum.split_with(groups, fn grp ->
-        length(grp) >= 2 or Enum.any?(grp, &(&1.index != -1))
-      end)
-
-    # Step 5: Validate reverse groups (unique lhs vars, indices in range)
-    reverse_groups = Enum.filter(reverse_groups, &valid_reverse_group?/1)
-
-    # Step 6: Build line-level action map
-    actions = build_all_actions(reverse_groups, last_groups, lines)
-
-    # Step 7: Apply actions to produce modified source
-    result =
-      lines
-      |> apply_actions(actions)
-      |> Enum.join("\n")
-
-    # Step 8: Fix remaining Enum.at(x, -N) in expression context
-    fix_remaining_negative_indices(result)
-  end
-
+  # Two-pass transform:
   #
-  # Elixir AST represents `-1` as `{:-, meta, [1]}` (unary minus).
-  # Sourceror additionally wraps the inner literal:
-  #   `{:-, meta, [{:__block__, meta, [1]}]}`
-  # We handle all representations.
-
-  defp extract_negative_index({:-, _, [{:__block__, _, [n]}]}) when is_integer(n) and n > 0,
-    do: {:ok, -n}
-
-  defp extract_negative_index({:-, _, [n]}) when is_integer(n) and n > 0, do: {:ok, -n}
-  defp extract_negative_index({:__block__, _, [n]}), do: extract_negative_index(n)
-  defp extract_negative_index(n) when is_integer(n) and n < 0, do: {:ok, n}
-  defp extract_negative_index(_), do: :error
-
-  defp collect_assignment_entries(ast) do
-    {_ast, {entries, _scope}} =
-      Macro.traverse(ast, {[], nil}, &pre_collect/2, &post_collect/2)
-
-    Enum.reverse(entries)
+  #   Pass 1 (prewalk): rewrite each `:__block__` to consolidate bare
+  #     `lhs = Enum.at(list_var, -N)` assignments by list_var into a
+  #     single `Enum.reverse/1` + destructure, OR replace lone `-1`
+  #     accesses with `List.last/1`. Also handles inline `-N>1` calls
+  #     in expression position by prepending reverse+pattern statements
+  #     to the block and substituting the inline calls with bound names.
+  #
+  #   Pass 2 (postwalk): replace any remaining bare `Enum.at(x, -1)`
+  #     / `|> Enum.at(-1)` calls with `List.last/1` — this catches
+  #     single-expression bodies (`def f(x), do: Enum.at(x, -1)`) that
+  #     never go through a `:__block__`.
+  defp transform_ast(ast) do
+    ast
+    |> Macro.prewalk(&rewrite_block_or_pass/1)
+    |> Macro.postwalk(&replace_inline_minus_one/1)
   end
 
-  # Track function scope (enter)
-  defp pre_collect({def_type, meta, _} = node, {entries, _scope})
-       when def_type in [:def, :defp] do
-    {node, {entries, Keyword.get(meta, :line)}}
+  defp rewrite_block_or_pass({:__block__, meta, stmts})
+       when is_list(stmts) and length(stmts) > 0 do
+    {:__block__, meta, rewrite_statements(stmts)}
   end
 
-  # var = Enum.at(list_var, -N)
-  defp pre_collect(
-         {:=, meta,
-          [
-            {lhs, _, lhs_ctx},
-            {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{list_var, _, list_ctx}, idx_node]}
-          ]} = node,
-         {entries, scope}
-       )
-       when is_atom(lhs) and is_atom(list_var) and
-              scope != nil and
-              (is_nil(lhs_ctx) or is_atom(lhs_ctx)) and
-              (is_nil(list_ctx) or is_atom(list_ctx)) do
-    case extract_negative_index(idx_node) do
-      {:ok, idx} when idx >= -@max_fixable_depth ->
-        entry = %{
-          lhs_var: lhs,
-          list_var: list_var,
-          index: idx,
-          line: Keyword.get(meta, :line),
-          scope: scope
-        }
+  defp rewrite_block_or_pass(node), do: node
 
-        {node, {[entry | entries], scope}}
-
-      _ ->
-        {node, {entries, scope}}
+  # Only rewrite when the list arg is a plain variable — match the original
+  # regex's conservative scope (`Enum.at(\w+, -1)`). Complex expressions
+  # like `Enum.at(Map.get(data, :items), -1)` are deliberately preserved.
+  defp replace_inline_minus_one(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [list_arg, idx_node]} = node
+       ) do
+    with true <- simple_var?(list_arg),
+         {:ok, -1} <- extract_negative_index(idx_node) do
+      list_last_call(list_arg)
+    else
+      _ -> node
     end
   end
 
-  # var = list_var |> Enum.at(-N)
-  defp pre_collect(
-         {:=, meta,
+  defp replace_inline_minus_one(
+         {:|>, pipe_meta,
+          [lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [idx_node]}]} = node
+       ) do
+    case extract_negative_index(idx_node) do
+      {:ok, -1} -> {:|>, pipe_meta, [lhs, list_last_pipe_call()]}
+      _ -> node
+    end
+  end
+
+  defp replace_inline_minus_one(node), do: node
+
+  defp simple_var?({name, _, ctx}) when is_atom(name) and (is_nil(ctx) or is_atom(ctx)),
+    do: true
+
+  defp simple_var?(_), do: false
+
+  # Block-level rewrite — handles bare assignments + inline `-N>1`.
+  defp rewrite_statements(stmts) do
+    indexed = Enum.with_index(stmts)
+    bare = collect_bare_entries(indexed)
+
+    # Bare-assignment groups by list_var (sorted by stmt order)
+    bare_groups =
+      bare
+      |> Enum.group_by(& &1.list_var)
+      |> Map.values()
+      |> Enum.map(&Enum.sort_by(&1, fn e -> e.stmt_idx end))
+
+    {bare_actions, bare_handled} = plan_bare_actions(bare_groups)
+
+    # Statements not consumed by bare-grouping: scan for inline `-N>1`
+    # calls that need block-level prepends.
+    inline_plan = plan_inline_actions(indexed, bare_handled)
+
+    apply_plan(stmts, bare_actions, inline_plan)
+  end
+
+  defp collect_bare_entries(indexed) do
+    Enum.flat_map(indexed, fn {stmt, idx} ->
+      case classify_bare(stmt) do
+        {:ok, lhs, list_var, index} when index >= -@max_fixable_depth ->
+          [%{lhs_var: lhs, list_var: list_var, index: index, stmt_idx: idx, stmt: stmt}]
+
+        _ ->
+          []
+      end
+    end)
+  end
+
+  # `lhs = Enum.at(list_var, -N)` direct form
+  defp classify_bare(
+         {:=, _,
+          [
+            {lhs, _, lhs_ctx},
+            {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{list_var, _, list_ctx}, idx_node]}
+          ]}
+       )
+       when is_atom(lhs) and is_atom(list_var) and
+              (is_nil(lhs_ctx) or is_atom(lhs_ctx)) and
+              (is_nil(list_ctx) or is_atom(list_ctx)) do
+    with {:ok, idx} <- extract_negative_index(idx_node), do: {:ok, lhs, list_var, idx}
+  end
+
+  # `lhs = list_var |> Enum.at(-N)` piped form
+  defp classify_bare(
+         {:=, _,
           [
             {lhs, _, lhs_ctx},
             {:|>, _,
@@ -179,236 +189,289 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
                {list_var, _, list_ctx},
                {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [idx_node]}
              ]}
-          ]} = node,
-         {entries, scope}
+          ]}
        )
        when is_atom(lhs) and is_atom(list_var) and
-              scope != nil and
               (is_nil(lhs_ctx) or is_atom(lhs_ctx)) and
               (is_nil(list_ctx) or is_atom(list_ctx)) do
-    case extract_negative_index(idx_node) do
-      {:ok, idx} when idx >= -@max_fixable_depth ->
-        entry = %{
-          lhs_var: lhs,
-          list_var: list_var,
-          index: idx,
-          line: Keyword.get(meta, :line),
-          scope: scope
-        }
-
-        {node, {[entry | entries], scope}}
-
-      _ ->
-        {node, {entries, scope}}
-    end
+    with {:ok, idx} <- extract_negative_index(idx_node), do: {:ok, lhs, list_var, idx}
   end
 
-  defp pre_collect(node, acc), do: {node, acc}
+  defp classify_bare(_), do: :error
 
-  # Track function scope (leave)
-  defp post_collect({def_type, _, _} = node, {entries, _scope})
-       when def_type in [:def, :defp] do
-    {node, {entries, nil}}
-  end
+  # Decide what to do per bare group:
+  #   single -1: rewrite the assignment in-place to `lhs = List.last(list_var)`
+  #   multi or non-(-1) with unique LHS vars: replace first stmt with
+  #     [reverse, pattern], delete the others
+  defp plan_bare_actions(groups) do
+    Enum.reduce(groups, {%{}, MapSet.new()}, fn entries, {actions, handled} ->
+      case bare_group_action(entries) do
+        {:list_last, entry} ->
+          {Map.put(actions, entry.stmt_idx, {:replace, [list_last_assign(entry)]}),
+           MapSet.put(handled, entry.stmt_idx)}
 
-  defp post_collect(node, acc), do: {node, acc}
+        {:reverse_pattern, first, others, list_var, pattern_elems} ->
+          first_repl = reverse_and_pattern(list_var, pattern_elems)
 
-  # Confirm the source line is a single-line assignment we can safely edit
-  defp single_line_match?(entry, lines) do
-    line_idx = entry.line - 1
+          {Map.put(actions, first.stmt_idx, {:replace, first_repl})
+           |> then(fn acc ->
+             Enum.reduce(others, acc, fn e, a -> Map.put(a, e.stmt_idx, :delete) end)
+           end),
+           MapSet.union(
+             handled,
+             MapSet.new([first.stmt_idx | Enum.map(others, & &1.stmt_idx)])
+           )}
 
-    if line_idx >= 0 and line_idx < length(lines) do
-      line = Enum.at(lines, line_idx)
-
-      Regex.match?(
-        ~r/^\s*\w+\s*=\s*(Enum\.at\(\w+,\s*-\d+\)|\w+\s*\|>\s*Enum\.at\(-\d+\))\s*$/,
-        line
-      )
-    else
-      false
-    end
-  end
-
-  # Ensure the group has unique LHS variable names (otherwise pattern match fails)
-  defp valid_reverse_group?(entries) do
-    lhs_vars = Enum.map(entries, & &1.lhs_var)
-    length(lhs_vars) == length(Enum.uniq(lhs_vars))
-  end
-
-  defp build_all_actions(reverse_groups, last_groups, lines) do
-    actions =
-      Enum.reduce(reverse_groups, %{}, fn entries, acc ->
-        build_reverse_actions(entries, lines, acc)
-      end)
-
-    Enum.reduce(last_groups, actions, fn
-      [entry], acc -> build_list_last_action(entry, lines, acc)
-      _, acc -> acc
+        :skip ->
+          {actions, handled}
+      end
     end)
   end
 
-  defp build_reverse_actions(entries, lines, actions) do
-    sorted = Enum.sort_by(entries, &abs(&1.index))
-    first_entry = Enum.min_by(entries, & &1.line)
-    other_entries = Enum.reject(entries, &(&1.line == first_entry.line))
+  # Single entry of -1: convert to List.last
+  defp bare_group_action([%{index: -1} = entry]), do: {:list_last, entry}
 
-    first_line_idx = first_entry.line - 1
-    first_line = Enum.at(lines, first_line_idx)
-    indent = extract_indent(first_line)
+  # Single entry with deeper index, OR multiple entries: build reverse+pattern.
+  defp bare_group_action(entries) do
+    lhs_vars = Enum.map(entries, & &1.lhs_var)
 
-    list_var = Atom.to_string(first_entry.list_var)
-    reversed_var = "#{list_var}_reversed"
+    if length(lhs_vars) != length(Enum.uniq(lhs_vars)) do
+      :skip
+    else
+      by_depth = Map.new(entries, fn e -> {abs(e.index), e.lhs_var} end)
+      max_depth = entries |> Enum.map(&abs(&1.index)) |> Enum.max()
 
-    # Build pattern elements, filling gaps with _
-    max_depth = abs(List.last(sorted).index)
+      pattern_elems =
+        for pos <- 1..max_depth do
+          case Map.get(by_depth, pos) do
+            nil -> {:_, [], nil}
+            name -> {name, [], nil}
+          end
+        end
 
-    elements =
-      for pos <- 1..max_depth do
-        case Enum.find(sorted, &(abs(&1.index) == pos)) do
-          nil -> "_"
-          entry -> Atom.to_string(entry.lhs_var)
+      [first | others] = Enum.sort_by(entries, & &1.stmt_idx)
+      {:reverse_pattern, first, others, first.list_var, pattern_elems}
+    end
+  end
+
+  # Inline-call planning: walk each remaining statement for `Enum.at(var, -N)`
+  # calls (any -N including -1) and prepend `reversed = Enum.reverse(var)` +
+  # destructure, then substitute calls with the new variable references.
+  defp plan_inline_actions(indexed, bare_handled) do
+    Enum.flat_map(indexed, fn {stmt, idx} ->
+      if MapSet.member?(bare_handled, idx) do
+        []
+      else
+        case collect_inline_calls(stmt) do
+          [] ->
+            []
+
+          calls ->
+            [{idx, plan_inline_for_statement(stmt, calls)}]
         end
       end
-
-    pattern = "[#{Enum.join(elements, ", ")} | _]"
-
-    replacement = [
-      "#{indent}#{reversed_var} = Enum.reverse(#{list_var})",
-      "#{indent}#{pattern} = #{reversed_var}"
-    ]
-
-    actions = Map.put(actions, first_line_idx, {:replace, replacement})
-
-    Enum.reduce(other_entries, actions, fn entry, acc ->
-      Map.put(acc, entry.line - 1, :delete)
     end)
+    |> Map.new()
   end
 
-  defp build_list_last_action(entry, lines, actions) do
-    line_idx = entry.line - 1
-    line = Enum.at(lines, line_idx)
-    indent = extract_indent(line)
+  defp plan_inline_for_statement(stmt, calls) do
+    by_var = Enum.group_by(calls, & &1.list_var)
 
-    lhs = Atom.to_string(entry.lhs_var)
-    list = Atom.to_string(entry.list_var)
+    {prepends_rev, subst_map} =
+      Enum.reduce(by_var, {[], %{}}, fn {list_var, var_calls}, {prepends, subst} ->
+        indices = var_calls |> Enum.map(& &1.index) |> Enum.uniq() |> Enum.sort()
 
-    replacement = ["#{indent}#{lhs} = List.last(#{list})"]
-    Map.put(actions, line_idx, {:replace, replacement})
-  end
+        cond do
+          # Single -1 only — handled later by the postwalk pass.
+          indices == [-1] ->
+            {prepends, subst}
 
-  defp apply_actions(lines, actions) when map_size(actions) == 0, do: lines
+          # Deeper or mixed — emit reverse+pattern, build substitution map.
+          Enum.all?(indices, &(&1 >= -@max_fixable_depth)) ->
+            depths = Enum.map(indices, &abs/1)
+            max_depth = Enum.max(depths)
 
-  defp apply_actions(lines, actions) do
-    lines
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {line, idx} ->
-      case Map.get(actions, idx) do
-        {:replace, new_lines} -> new_lines
-        :delete -> []
-        nil -> [line]
-      end
-    end)
-  end
-
-  # Handle Enum.at(var, -N) calls that weren't caught by the assignment-form
-  # fix above. This covers expression contexts like:
-  #   result = Enum.at(sorted, -1) * Enum.at(sorted, -2)
-  # and piped forms like:
-  #   list |> Enum.sort() |> Enum.at(-1)
-
-  defp fix_remaining_negative_indices(source) do
-    source
-    |> fix_piped_minus_one()
-    |> fix_direct_negative()
-  end
-
-  # Pass 1: Piped |> Enum.at(-1) → |> List.last()
-  defp fix_piped_minus_one(source) do
-    source
-    |> String.split("\n")
-    |> Enum.map(fn line ->
-      if String.trim(line) |> String.starts_with?("#") do
-        line
-      else
-        Regex.replace(~r/\|>\s*Enum\.at\(\s*-1\s*\)/, line, "|> List.last()")
-      end
-    end)
-    |> Enum.join("\n")
-  end
-
-  # Pass 2: Direct-call Enum.at(var, -N) in expression context
-  defp fix_direct_negative(source) do
-    source
-    |> String.split("\n")
-    |> Enum.flat_map(fn line ->
-      if String.trim(line) |> String.starts_with?("#") do
-        [line]
-      else
-        process_direct_negative(line)
-      end
-    end)
-    |> Enum.join("\n")
-  end
-
-  defp process_direct_negative(line) do
-    matches = Regex.scan(~r/Enum\.at\((\w+),\s*-(\d+)\)/, line)
-
-    if matches == [] do
-      [line]
-    else
-      by_var = Enum.group_by(matches, fn [_, var, _] -> var end)
-
-      {result_line, prepend_lines} =
-        Enum.reduce(by_var, {line, []}, fn {var, var_matches}, {current_line, prepends} ->
-          indices =
-            var_matches
-            |> Enum.map(fn [_, _, n] -> String.to_integer(n) end)
-            |> Enum.sort()
-
-          max_depth = Enum.max(indices)
-
-          if max_depth == 1 and length(indices) == 1 do
-            # Single -1: replace with List.last
-            new_line =
-              Regex.replace(~r/Enum\.at\(#{var},\s*-1\)/, current_line, "List.last(#{var})")
-
-            {new_line, prepends}
-          else
-            # Deep indices: reverse + pattern match + substitute
-            indent = extract_indent(current_line)
-            reversed_var = "#{var}_reversed"
-
-            elements =
-              for pos <- 1..max_depth do
-                if pos in indices, do: "#{var}_neg#{pos}", else: "_"
-              end
-
-            pattern = "[#{Enum.join(elements, ", ")} | _]"
-
-            new_prepends = [
-              "#{indent}#{reversed_var} = Enum.reverse(#{var})",
-              "#{indent}#{pattern} = #{reversed_var}"
-            ]
-
-            new_line =
-              Enum.reduce(indices, current_line, fn n, acc ->
-                Regex.replace(~r/Enum\.at\(#{var},\s*-#{n}\)/, acc, "#{var}_neg#{n}")
+            depth_to_name =
+              Map.new(depths, fn d ->
+                {d, String.to_atom("#{Atom.to_string(list_var)}_neg#{d}")}
               end)
 
-            {new_line, prepends ++ new_prepends}
+            pattern_elems =
+              for pos <- 1..max_depth do
+                case Map.get(depth_to_name, pos) do
+                  nil -> {:_, [], nil}
+                  name -> {name, [], nil}
+                end
+              end
+
+            new_subst =
+              Enum.reduce(indices, subst, fn idx, acc ->
+                Map.put(acc, {list_var, idx}, Map.fetch!(depth_to_name, abs(idx)))
+              end)
+
+            {reverse_and_pattern(list_var, pattern_elems) ++ prepends, new_subst}
+
+          true ->
+            {prepends, subst}
+        end
+      end)
+
+    rewritten =
+      if map_size(subst_map) == 0 do
+        stmt
+      else
+        substitute_enum_at_calls(stmt, subst_map)
+      end
+
+    {Enum.reverse(prepends_rev), rewritten}
+  end
+
+  # Walk statement and collect `Enum.at(list_var, -N)` calls (direct or piped).
+  # Stops at nested function bodies (`def`, `defp`, `fn`) — calls inside them
+  # belong to that scope's own `:__block__` rewrite, not this block's.
+  defp collect_inline_calls(stmt), do: Enum.reverse(do_collect_inline(stmt, []))
+
+  defp do_collect_inline({def_type, _, _}, acc) when def_type in [:def, :defp], do: acc
+  defp do_collect_inline({:fn, _, _}, acc), do: acc
+  # Nested `:__block__` is a child scope — let its own block walk handle it.
+  defp do_collect_inline({:__block__, _, stmts}, acc) when is_list(stmts) and length(stmts) > 1,
+    do: acc
+
+  defp do_collect_inline(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{list_var, _, list_ctx}, idx_node]},
+         acc
+       )
+       when is_atom(list_var) and (is_nil(list_ctx) or is_atom(list_ctx)) do
+    case extract_negative_index(idx_node) do
+      {:ok, idx} -> [%{list_var: list_var, index: idx} | acc]
+      :error -> acc
+    end
+  end
+
+  defp do_collect_inline(
+         {:|>, _,
+          [
+            {list_var, _, list_ctx},
+            {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [idx_node]}
+          ]},
+         acc
+       )
+       when is_atom(list_var) and (is_nil(list_ctx) or is_atom(list_ctx)) do
+    case extract_negative_index(idx_node) do
+      {:ok, idx} -> [%{list_var: list_var, index: idx} | acc]
+      :error -> acc
+    end
+  end
+
+  defp do_collect_inline({_form, _meta, args}, acc) when is_list(args) do
+    Enum.reduce(args, acc, &do_collect_inline/2)
+  end
+
+  defp do_collect_inline({left, right}, acc) do
+    do_collect_inline(right, do_collect_inline(left, acc))
+  end
+
+  defp do_collect_inline(list, acc) when is_list(list) do
+    Enum.reduce(list, acc, &do_collect_inline/2)
+  end
+
+  defp do_collect_inline(_, acc), do: acc
+
+  defp substitute_enum_at_calls(stmt, subst) do
+    Macro.prewalk(stmt, fn
+      {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{list_var, _, _}, idx_node]} = node
+      when is_atom(list_var) ->
+        with {:ok, idx} <- extract_negative_index(idx_node),
+             {:ok, new_name} <- Map.fetch(subst, {list_var, idx}) do
+          {new_name, [], nil}
+        else
+          _ -> node
+        end
+
+      {:|>, _,
+       [
+         {list_var, _, _},
+         {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [idx_node]}
+       ]} = node
+      when is_atom(list_var) ->
+        with {:ok, idx} <- extract_negative_index(idx_node),
+             {:ok, new_name} <- Map.fetch(subst, {list_var, idx}) do
+          {new_name, [], nil}
+        else
+          _ -> node
+        end
+
+      node ->
+        node
+    end)
+  end
+
+  defp apply_plan(stmts, bare_actions, inline_plan) do
+    stmts
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {stmt, idx} ->
+      cond do
+        action = Map.get(bare_actions, idx) ->
+          case action do
+            {:replace, new_stmts} -> new_stmts
+            :delete -> []
           end
-        end)
 
-      prepend_lines ++ [result_line]
-    end
+        plan = Map.get(inline_plan, idx) ->
+          {prepends, new_stmt} = plan
+          prepends ++ [new_stmt]
+
+        true ->
+          [stmt]
+      end
+    end)
   end
 
-  defp extract_indent(line) do
-    case Regex.run(~r/^(\s*)/, line) do
-      [_, indent] -> indent
-      _ -> ""
-    end
+  # AST builders
+
+  defp list_last_call(list_arg) do
+    {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], [list_arg]}
   end
+
+  defp list_last_pipe_call do
+    {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], []}
+  end
+
+  defp list_last_assign(%{lhs_var: lhs, list_var: list_var}) do
+    {:=, [], [{lhs, [], nil}, list_last_call({list_var, [], nil})]}
+  end
+
+  defp reverse_and_pattern(list_var, pattern_elems) do
+    reversed_name = String.to_atom("#{Atom.to_string(list_var)}_reversed")
+
+    reverse_stmt =
+      {:=, [],
+       [
+         {reversed_name, [], nil},
+         {{:., [], [{:__aliases__, [], [:Enum]}, :reverse]}, [], [{list_var, [], nil}]}
+       ]}
+
+    pattern_list = build_cons_pattern(pattern_elems)
+
+    pattern_stmt = {:=, [], [pattern_list, {reversed_name, [], nil}]}
+
+    [reverse_stmt, pattern_stmt]
+  end
+
+  # Build `[a, b, ... | _]` AST
+  defp build_cons_pattern(elems) do
+    tail = {:_, [], nil}
+    [{:|, [], [List.last(elems), tail]} | []]
+    |> then(fn last_segment ->
+      front = Enum.drop(elems, -1)
+      front ++ last_segment
+    end)
+  end
+
+  defp extract_negative_index({:-, _, [{:__block__, _, [n]}]}) when is_integer(n) and n > 0,
+    do: {:ok, -n}
+
+  defp extract_negative_index(_), do: :error
 
   defp build_issue(meta, index) do
     message =

@@ -56,10 +56,8 @@ defmodule Credence.Pattern.NoUnlessElse do
   end
 
   # Checks if a keyword list (from unless/if args) has an :else clause.
-  # Handles both Code.string_to_quoted and Sourceror AST forms.
   defp has_else?(clauses) when is_list(clauses) do
     Enum.any?(clauses, fn
-      {:else, _} -> true
       {{:__block__, _, [:else]}, _} -> true
       _ -> false
     end)
@@ -84,8 +82,6 @@ defmodule Credence.Pattern.NoUnlessElse do
     else_body = extract_clause(clauses, :else)
 
     Enum.map(clauses, fn
-      {:do, _} -> {:do, else_body}
-      {:else, _} -> {:else, do_body}
       {{:__block__, m, [:do]}, _} -> {{:__block__, m, [:do]}, else_body}
       {{:__block__, m, [:else]}, _} -> {{:__block__, m, [:else]}, do_body}
       other -> other
@@ -95,7 +91,6 @@ defmodule Credence.Pattern.NoUnlessElse do
   # Extracts the body for a given clause key (:do or :else).
   defp extract_clause(clauses, key) do
     Enum.find_value(clauses, fn
-      {^key, body} -> body
       {{:__block__, _, [^key]}, body} -> body
       _ -> nil
     end)

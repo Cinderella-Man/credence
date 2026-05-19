@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoIdentityFunctionInEnum.check(ast, [])
   end
 

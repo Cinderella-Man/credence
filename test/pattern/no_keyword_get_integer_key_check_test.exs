@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoKeywordGetIntegerKey.check(ast, [])
   end
   # ── flags integer keys ─────────────────────────────────────────

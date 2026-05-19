@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoManualListLastTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoManualListLast.check(ast, [])
   end
 
@@ -202,7 +202,7 @@ defmodule Credence.Pattern.NoManualListLastTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _ast} = Code.string_to_quoted(fixed)
+      assert {:ok, _ast} = Sourceror.parse_string(fixed)
     end
 
     test "replaces direct calls to the function" do

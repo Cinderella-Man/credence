@@ -26,6 +26,7 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @min_calls_to_flag 3
   # Only build a destructuring pattern when the total list positions spanned
@@ -74,18 +75,12 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
 
-  defp legacy_fix(source, _opts) do
-    ast = source |> Sourceror.parse_string!() |> Credence.RuleHelpers.normalize_sourceror_ast()
-    {new_ast, changed?} = apply_fixes(ast)
-
-    if changed? do
-      Sourceror.to_string(new_ast)
-    else
-      source
-    end
+    RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
+      normalized = RuleHelpers.normalize_sourceror_ast(input)
+      {new_ast, _changed?} = apply_fixes(normalized)
+      new_ast
+    end)
   end
 
   # Use Macro.prewalk (same traversal the check function relies on) so we
@@ -152,7 +147,9 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
 
   defp extract_enum_at_info(_), do: :error
 
-  defp normalize_index(idx) when is_integer(idx), do: {:ok, idx}
+  # Used after `normalize_sourceror_ast/1` in the fix path, so integers
+  # are bare (the wrappers have been stripped).
+  defp normalize_index(n) when is_integer(n), do: {:ok, n}
   defp normalize_index({:-, _, [n]}) when is_integer(n), do: {:ok, -n}
   defp normalize_index(_), do: :error
 
@@ -266,7 +263,7 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
       end
 
     code = "[#{Enum.join(elements, ", ")} | _] = #{rhs}"
-    Code.string_to_quoted!(code)
+    Sourceror.parse_string!(code)
   end
 
   defp insert_fixes(children, fixes) do
@@ -291,7 +288,7 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
     end)
   end
 
-  defp literal_index?(idx) when is_integer(idx), do: true
-  defp literal_index?({:-, _, [n]}) when is_integer(n), do: true
+  defp literal_index?({:__block__, _, [n]}) when is_integer(n), do: true
+  defp literal_index?({:-, _, [{:__block__, _, [n]}]}) when is_integer(n), do: true
   defp literal_index?(_), do: false
 end

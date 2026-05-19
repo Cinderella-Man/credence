@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoEnumDropNegative.check(ast, [])
   end
 
@@ -256,7 +256,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       issues = Credence.Pattern.NoEnumDropNegative.check(ast, [])
       assert issues == []
     end
@@ -271,7 +271,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       issues = Credence.Pattern.NoEnumDropNegative.check(ast, [])
       assert issues == []
     end

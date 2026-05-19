@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoMultipleEnumAtTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoMultipleEnumAt.check(ast, [])
   end
 
@@ -129,7 +129,7 @@ defmodule Credence.Pattern.NoMultipleEnumAtTest do
       fixed = fix(source)
       assert fixed =~ "[a, b, c | _] = list"
       refute fixed =~ "Enum.at(list"
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "fixes contiguous positive indices with small gaps" do
@@ -183,7 +183,7 @@ defmodule Credence.Pattern.NoMultipleEnumAtTest do
       assert fixed =~ "[min1, min2 | _] = sorted"
       assert fixed =~ "[max1, max2 | _] = Enum.reverse(sorted)"
       refute fixed =~ "Enum.at"
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "returns source unchanged when nothing to fix" do
@@ -275,7 +275,7 @@ defmodule Credence.Pattern.NoMultipleEnumAtTest do
       assert fixed =~ "[max1, max2 | _] = Enum.reverse(sorted)"
       assert fixed =~ "max(min1 * min2, max1 * max2)"
       refute fixed =~ "Enum.at"
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "fixed code has fewer check issues" do
@@ -291,12 +291,12 @@ defmodule Credence.Pattern.NoMultipleEnumAtTest do
       end
       """
 
-      {:ok, ast_before} = Code.string_to_quoted(source)
+      {:ok, ast_before} = Sourceror.parse_string(source)
       issues_before = Credence.Pattern.NoMultipleEnumAt.check(ast_before, [])
       assert length(issues_before) >= 1
 
       fixed = fix(source)
-      {:ok, ast_after} = Code.string_to_quoted(fixed)
+      {:ok, ast_after} = Sourceror.parse_string(fixed)
       issues_after = Credence.Pattern.NoMultipleEnumAt.check(ast_after, [])
       assert length(issues_after) < length(issues_before)
     end

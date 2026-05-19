@@ -33,6 +33,7 @@ defmodule Credence.Pattern.NoSortForTopK do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   #
   # We use a custom recursive walk instead of Macro.prewalk so that
@@ -95,23 +96,7 @@ defmodule Credence.Pattern.NoSortForTopK do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    result =
-      source
-      |> Sourceror.parse_string!()
-      |> transform_ast()
-      |> Sourceror.to_string()
-
-    # Sourceror.to_string/1 strips trailing newlines; preserve them
-    # so that round-tripping unchanged code stays identical.
-    if String.ends_with?(source, "\n") and not String.ends_with?(result, "\n") do
-      result <> "\n"
-    else
-      result
-    end
+    RuleHelpers.patches_from_ast_transform(ast, source, &transform_ast/1)
   end
 
   #
@@ -195,10 +180,8 @@ defmodule Credence.Pattern.NoSortForTopK do
   defp min_or_max(0), do: :min
   defp min_or_max(_), do: :max
 
-  # Sourceror wraps bare integer literals in {:__block__, meta, [n]},
-  # so we need to unwrap before comparing.
+  # Sourceror wraps integer literals in {:__block__, meta, [n]}.
   defp unwrap_int({:__block__, _, [n]}) when is_integer(n), do: n
-  defp unwrap_int(n) when is_integer(n), do: n
   defp unwrap_int(_), do: nil
 
   defp classify_terminal({{:., _, [mod, :take]}, _, [k_node]}) do
@@ -280,14 +263,14 @@ defmodule Credence.Pattern.NoSortForTopK do
   end
 
   # Only match the single-element terminals this module can fix.
-  defp extract_topk({{:., _, [mod, :take]}, _, [1]}) do
-    if enum_module?(mod), do: {:ok, :take, 1}, else: :error
+  defp extract_topk({{:., _, [mod, :take]}, _, [n_node]}) do
+    if enum_module?(mod) and unwrap_int(n_node) == 1, do: {:ok, :take, 1}, else: :error
   end
 
   defp extract_topk({:hd, _, []}), do: {:ok, :hd, 1}
 
-  defp extract_topk({{:., _, [mod, :at]}, _, [0]}) do
-    if enum_module?(mod), do: {:ok, :at, 0}, else: :error
+  defp extract_topk({{:., _, [mod, :at]}, _, [n_node]}) do
+    if enum_module?(mod) and unwrap_int(n_node) == 0, do: {:ok, :at, 0}, else: :error
   end
 
   defp extract_topk({{:., _, [mod, :reverse]}, _, []}) do

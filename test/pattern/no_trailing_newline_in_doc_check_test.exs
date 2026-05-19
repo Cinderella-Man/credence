@@ -2,12 +2,12 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoTrailingNewlineInDoc.check(ast, [])
   end
 
   defp check_with_source(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoTrailingNewlineInDoc.check(ast, source: code)
   end
   describe "flags single-line docs with trailing newline" do

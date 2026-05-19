@@ -94,12 +94,13 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
   defp extract_chunk_size({{:., _, _}, _, [n | _]}), do: n
   defp extract_chunk_size(_), do: nil
 
-  defp int_value(n) when is_integer(n), do: n
   defp int_value({:__block__, _, [n]}) when is_integer(n), do: n
   defp int_value(_), do: nil
 
-  defp atom_value(a) when is_atom(a), do: a
+  # Atoms in function-name / module positions are bare; argument-position
+  # atoms are wrapped in `:__block__`.
   defp atom_value({:__block__, _, [a]}) when is_atom(a), do: a
+  defp atom_value(a) when is_atom(a), do: a
   defp atom_value(_), do: nil
 
   defp map_join?({{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [join_fn]}),

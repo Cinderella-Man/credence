@@ -4,7 +4,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountCheckTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.AvoidGraphemesEnumCount.check(ast, [])
   end
 

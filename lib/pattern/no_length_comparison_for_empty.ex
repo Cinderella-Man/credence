@@ -167,22 +167,32 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
 
   defp extract_var(_), do: :error
 
-  # Sourceror wraps integer literals in :__block__; Code.string_to_quoted doesn't.
-  defp extract_int(n) when is_integer(n), do: {:ok, n}
+  # Sourceror wraps integer literals in :__block__ for position metadata.
   defp extract_int({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
   defp extract_int(_), do: :error
 
   # length(x) op N — only flag simple variables (matching what fix can handle)
-  defp detect_pattern({op, meta, [{:length, _, [arg]}, n]})
-       when is_integer(n) and op in [:==, :!=, :>, :>=, :<, :<=] do
-    if simple_var?(arg) and valid_comparison?(op, n), do: {:ok, meta}, else: :skip
+  defp detect_pattern({op, meta, [{:length, _, [arg]}, n_node]})
+       when op in [:==, :!=, :>, :>=, :<, :<=] do
+    with {:ok, n} <- extract_int(n_node),
+         true <- simple_var?(arg),
+         true <- valid_comparison?(op, n) do
+      {:ok, meta}
+    else
+      _ -> :skip
+    end
   end
 
   # N op length(x) — reversed operand, same simple-variable restriction
-  defp detect_pattern({op, meta, [n, {:length, _, [arg]}]})
-       when is_integer(n) and op in [:==, :!=, :>, :>=, :<, :<=] do
-    rev = reverse_op(op)
-    if simple_var?(arg) and valid_comparison?(rev, n), do: {:ok, meta}, else: :skip
+  defp detect_pattern({op, meta, [n_node, {:length, _, [arg]}]})
+       when op in [:==, :!=, :>, :>=, :<, :<=] do
+    with {:ok, n} <- extract_int(n_node),
+         true <- simple_var?(arg),
+         true <- valid_comparison?(reverse_op(op), n) do
+      {:ok, meta}
+    else
+      _ -> :skip
+    end
   end
 
   defp detect_pattern(_), do: :skip

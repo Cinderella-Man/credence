@@ -70,15 +70,24 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
     {_ast, issues} =
       Macro.prewalk(guard_ast, acc, fn
         # length(var) > 0
-        {:>, meta, [{:length, _, [_var]}, 0]} = node, issues ->
-          line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
-          {node, [build_issue(:non_empty, line) | issues]}
+        {:>, meta, [{:length, _, [_var]}, n_node]} = node, issues ->
+          if unwrap_int(n_node) == 0 do
+            line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
+            {node, [build_issue(:non_empty, line) | issues]}
+          else
+            {node, issues}
+          end
 
         # length(var) == N where N in 1..5
-        {:==, meta, [{:length, _, [_var]}, n]} = node, issues
-        when is_integer(n) and n >= 1 and n <= 5 ->
-          line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
-          {node, [build_issue({:exact, n}, line) | issues]}
+        {:==, meta, [{:length, _, [_var]}, n_node]} = node, issues ->
+          case unwrap_int(n_node) do
+            n when is_integer(n) and n >= 1 and n <= 5 ->
+              line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
+              {node, [build_issue({:exact, n}, line) | issues]}
+
+            _ ->
+              {node, issues}
+          end
 
         node, issues ->
           {node, issues}
@@ -86,6 +95,9 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
 
     issues
   end
+
+  defp unwrap_int({:__block__, _, [n]}) when is_integer(n), do: n
+  defp unwrap_int(_), do: nil
 
   defp build_issue(:non_empty, line) do
     %Issue{
@@ -166,7 +178,6 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
 
   defp extract_fixable_check(_), do: :error
   defp extract_int({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
-  defp extract_int(n) when is_integer(n), do: {:ok, n}
   defp extract_int(_), do: :error
   defp simple_var?({name, _, ctx}) when is_atom(name) and (is_nil(ctx) or is_atom(ctx)),
     do: true

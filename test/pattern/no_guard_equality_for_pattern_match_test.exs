@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoGuardEqualityForPatternMatch.check(ast, [])
   end
 
@@ -24,7 +24,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchTest do
   end
 
   defp normalize(code) do
-    {_ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Macro.to_string(ast)
   end
 

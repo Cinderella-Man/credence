@@ -3,7 +3,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.PreferEnumSlice.check(ast, [])
   end
 
@@ -209,7 +209,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       assert result =~ "Enum.slice"
       assert result =~ "start"
       assert result =~ "len"
@@ -227,7 +227,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       assert result =~ "Enum.slice"
       assert result =~ "list"
       assert result =~ "start"
@@ -246,7 +246,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       assert result =~ "Enum.slice"
       refute result =~ "Enum.drop"
       refute result =~ "Enum.take"
@@ -266,7 +266,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       assert result =~ "Enum.slice"
       assert result =~ "5"
       assert result =~ "3"
@@ -288,7 +288,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       assert result =~ "Enum.slice"
       refute result =~ "Enum.drop"
       refute result =~ "Enum.take"
@@ -304,7 +304,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       assert result =~ "Enum.slice"
       assert result =~ "2"
       assert result =~ "5"
@@ -322,7 +322,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       assert result =~ "Enum.slice"
       assert result =~ "list"
       assert result =~ "config.start"
@@ -342,7 +342,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       refute result =~ "Enum.drop"
     end
 
@@ -358,7 +358,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       assert result =~ "Enum.take"
       assert result =~ "Enum.drop"
     end
@@ -375,7 +375,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
       assert result =~ "Stream.drop"
       assert result =~ "Stream.take"
     end
@@ -408,7 +408,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      {:ok, ast} = Code.string_to_quoted(result)
+      ast = Sourceror.parse_string!(result)
       assert Credence.Pattern.PreferEnumSlice.check(ast, []) == []
     end
 
@@ -422,7 +422,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      {:ok, ast} = Code.string_to_quoted(result)
+      ast = Sourceror.parse_string!(result)
       assert Credence.Pattern.PreferEnumSlice.check(ast, []) == []
     end
 
@@ -436,7 +436,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
       """
 
       result = fix(input)
-      {:ok, ast} = Code.string_to_quoted(result)
+      ast = Sourceror.parse_string!(result)
       assert Credence.Pattern.PreferEnumSlice.check(ast, []) == []
     end
   end

@@ -40,6 +40,7 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   # Pairs we know how to auto-fix
   @fixable_pairs [
@@ -67,24 +68,14 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
+    groups = collect_all_fixable_groups(ast)
 
-  defp legacy_fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        groups = collect_all_fixable_groups(ast)
-
-        if groups == [] do
-          source
-        else
-          ast
-          |> Macro.postwalk(&maybe_rewrite_block/1)
-          |> Sourceror.to_string()
-        end
-
-      {:error, _} ->
-        source
+    if groups == [] do
+      []
+    else
+      RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
+        Macro.postwalk(input, &maybe_rewrite_block/1)
+      end)
     end
   end
 
@@ -289,7 +280,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   defp unwrap_atom(_), do: nil
 
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true
-  defp enum_module?({:__aliases__, _, [{:__block__, _, [:Enum]}]}), do: true
   defp enum_module?(_), do: false
 
   # Returns true if `var_name` is bound on the LHS of any assignment
@@ -484,7 +474,7 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
     {min_entry, max_entry} =
       if entry_a.type == :min, do: {entry_a, entry_b}, else: {entry_b, entry_a}
 
-    Code.string_to_quoted!(
+    Sourceror.parse_string!(
       "{#{min_entry.result_var}, #{max_entry.result_var}} = Enum.min_max(#{list_var})"
     )
   end
@@ -507,7 +497,7 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
     accs = parts |> Enum.map(& &1.acc) |> Enum.join(", ")
     updates = parts |> Enum.map(& &1.update) |> Enum.join(", ")
 
-    Code.string_to_quoted!(
+    Sourceror.parse_string!(
       "{#{lhs}} = Enum.reduce(#{list_var}, {#{inits}}, fn x, {#{accs}} -> {#{updates}} end)"
     )
   end

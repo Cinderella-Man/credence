@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoRedundantEnumJoinSeparator.check(ast, [])
   end
 
@@ -12,7 +12,13 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
   defp assert_fix(input, expected) do
     result = fix(input)
-    norm = &(&1 |> Code.string_to_quoted!() |> Macro.to_string())
+
+    norm = fn s ->
+      s
+      |> Sourceror.parse_string!()
+      |> Credence.RuleHelpers.normalize_sourceror_ast()
+      |> Macro.to_string()
+    end
 
     assert norm.(result) == norm.(expected),
            "Fix mismatch.\nInput:    #{input}\nExpected: #{expected}\nGot:      #{result}"
@@ -69,7 +75,14 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
     test "inline fn mapper" do
       result = fix("Enum.map_join(list, \"\", fn x -> String.upcase(x) end)")
-      norm = &(&1 |> Code.string_to_quoted!() |> Macro.to_string())
+
+      norm = fn s ->
+        s
+        |> Sourceror.parse_string!()
+        |> Credence.RuleHelpers.normalize_sourceror_ast()
+        |> Macro.to_string()
+      end
+
       assert norm.(result) == norm.("Enum.map_join(list, fn x -> String.upcase(x) end)")
     end
   end
@@ -222,7 +235,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       end
       """
 
-      assert {:ok, _} = Code.string_to_quoted(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(code))
     end
   end
 end

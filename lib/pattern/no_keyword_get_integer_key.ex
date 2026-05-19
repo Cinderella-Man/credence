@@ -66,10 +66,11 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   defp detect(_), do: :skip
 
-  # In the AST, positive integers are bare values (is_integer/1).
-  # Negative integers are {:-, _, [positive_integer]} (unary minus).
-  defp integer_literal?(n) when is_integer(n), do: true
-  defp integer_literal?({:-, _, [n]}) when is_integer(n), do: true
+  # Positives are `{:__block__, _, [n]}` (Sourceror wraps int literals).
+  # Negatives are `{:-, _, [{:__block__, _, [n]}]}` — unary minus over
+  # a wrapped positive.
+  defp integer_literal?({:__block__, _, [n]}) when is_integer(n), do: true
+  defp integer_literal?({:-, _, [{:__block__, _, [n]}]}) when is_integer(n), do: true
   defp integer_literal?(_), do: false
 
   @impl true
@@ -111,9 +112,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   defp detect_fix(_), do: :skip
 
-  defp integer_value(n) when is_integer(n), do: {:ok, n}
   defp integer_value({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
-  defp integer_value({:-, _, [n]}) when is_integer(n), do: {:ok, -n}
   defp integer_value({:-, _, [{:__block__, _, [n]}]}) when is_integer(n), do: {:ok, -n}
   defp integer_value(_), do: :error
 

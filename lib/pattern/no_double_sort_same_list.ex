@@ -20,6 +20,7 @@ defmodule Credence.Pattern.NoDoubleSortSameList do
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -49,13 +50,7 @@ defmodule Credence.Pattern.NoDoubleSortSameList do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
+  def fix_patches(ast, _opts) do
     bindings = collect_bound_sorts(ast)
 
     replacements =
@@ -73,10 +68,9 @@ defmodule Credence.Pattern.NoDoubleSortSameList do
       end)
 
     if map_size(replacements) == 0 do
-      source
+      []
     else
-      ast
-      |> Macro.postwalk(fn
+      RuleHelpers.patches_from_postwalk(ast, fn
         {:=, meta, [{bound, _, nil} = lhs, rhs]} = node when is_atom(bound) ->
           case rhs_sort_info(rhs) do
             {src, :desc} when is_map_key(replacements, src) ->
@@ -90,7 +84,6 @@ defmodule Credence.Pattern.NoDoubleSortSameList do
         node ->
           node
       end)
-      |> Sourceror.to_string()
     end
   end
 

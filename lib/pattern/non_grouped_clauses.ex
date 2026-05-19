@@ -21,13 +21,17 @@ defmodule Credence.Pattern.NonGroupedClauses do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:defmodule, _, [_, [do: {:__block__, _, body}]]} = node, issues ->
-          {node, issues ++ check_body(body)}
+        {:defmodule, _, [_, kw]} = node, issues when is_list(kw) ->
+          case Credence.RuleHelpers.extract_do_body(kw) do
+            {:ok, {:__block__, _, body}} -> {node, issues ++ check_body(body)}
+            _ -> {node, issues}
+          end
 
         node, issues ->
           {node, issues}
@@ -39,18 +43,10 @@ defmodule Credence.Pattern.NonGroupedClauses do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
 
-  defp legacy_fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        fixed = Macro.postwalk(ast, &fix_module_node/1)
-        Sourceror.to_string(fixed)
-
-      {:error, _} ->
-        source
-    end
+    RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
+      Macro.postwalk(input, &fix_module_node/1)
+    end)
   end
 
   defp check_body(body) do

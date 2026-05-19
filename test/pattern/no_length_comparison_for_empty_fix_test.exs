@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
   alias Credence.RuleHelpers
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoLengthComparisonForEmpty.check(ast, [])
   end
 
@@ -200,7 +200,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
       end
       """
 
-      assert {:ok, _} = Code.string_to_quoted(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(code))
     end
   end
 
@@ -215,7 +215,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
       output = fix(code)
 
       assert output == code
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       # And the fixed output must still compile (the actual symptom).
       assert RuleHelpers.compiles?(output)
     end

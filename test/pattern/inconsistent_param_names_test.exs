@@ -2,7 +2,7 @@ defmodule Credence.Pattern.InconsistentParamNamesTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.InconsistentParamNames.check(ast, [])
   end
 
@@ -433,7 +433,7 @@ defmodule Credence.Pattern.InconsistentParamNamesTest do
       """
 
       result = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
     end
 
     test "does not touch single-clause functions" do
@@ -470,7 +470,7 @@ defmodule Credence.Pattern.InconsistentParamNamesTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert [] == Credence.Pattern.InconsistentParamNames.check(ast, [])
     end
 
@@ -483,7 +483,7 @@ defmodule Credence.Pattern.InconsistentParamNamesTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert [] == Credence.Pattern.InconsistentParamNames.check(ast, [])
     end
 
@@ -501,7 +501,7 @@ defmodule Credence.Pattern.InconsistentParamNamesTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
   end
 end

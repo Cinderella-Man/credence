@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoManualEnumUniq.check(ast, [])
   end
 
@@ -770,7 +770,7 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
       """
 
       result = fix(code)
-      assert {:ok, _ast} = Code.string_to_quoted(result)
+      assert {:ok, _ast} = Sourceror.parse_string(result)
     end
 
     test "round-trip: fixed code has zero issues" do
@@ -792,7 +792,7 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert [] == Credence.Pattern.NoManualEnumUniq.check(ast, [])
     end
   end

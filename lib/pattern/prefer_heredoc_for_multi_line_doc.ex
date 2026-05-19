@@ -28,32 +28,27 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @doc_attrs [:doc, :moduledoc, :typedoc]
 
   @impl true
   def priority, do: 501
 
-  #
-  # Code.string_to_quoted doesn't preserve delimiter info, so a heredoc
-  # and a single-line string with \n produce the same AST value.
-  # When :source is available in opts (e.g. during Credence.fix re-check),
-  # we look at the actual source line to skip already-converted heredocs.
+  # Sourceror records the string delimiter (`"""` vs `"`) in the
+  # `:__block__` metadata's `:delimiter` key. The check uses that to
+  # tell heredocs apart from escape-string docs purely from the AST.
 
   @impl true
-  def check(ast, opts) do
-    source_lines =
-      case Keyword.get(opts, :source) do
-        nil -> nil
-        source -> String.split(source, "\n")
-      end
-
+  def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:@, meta, [{attr, _, [value]}]} = node, acc
+        # Sourceror shape: string wrapped in :__block__ with :delimiter meta.
+        {:@, meta, [{attr, _, [{:__block__, str_meta, [value]}]}]} = node, acc
         when attr in @doc_attrs and is_binary(value) ->
-          if multi_line_in_single_string?(value) and
-               not already_heredoc?(source_lines, meta) do
+          already_heredoc = Keyword.get(str_meta, :delimiter) == ~s(""")
+
+          if not already_heredoc and (raw_multi_line?(value) or real_multi_line?(value)) do
             {node, [build_issue(meta, attr) | acc]}
           else
             {node, acc}
@@ -66,138 +61,16 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
     Enum.reverse(issues)
   end
 
-  # Check if the source line at this position already uses """
-  defp already_heredoc?(nil, _meta), do: false
-
-  defp already_heredoc?(source_lines, meta) do
-    line = Keyword.get(meta, :line)
-
-    case Enum.at(source_lines, line - 1) do
-      nil -> false
-      source_line -> String.contains?(source_line, ~s("""))
-    end
-  end
-
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    # Try line-level fix first (works when \n is still escaped in source)
-    line_fixed = fix_by_lines(source)
-
-    if line_fixed != source do
-      line_fixed
-    else
-      # AST-based fallback (works after Sourceror has unescaped \n)
-      fix_by_ast(source)
-    end
-  end
-
-  # The string value (in AST) has at least one internal \n, meaning it
-  # contains multi-line content.
-  defp multi_line_in_single_string?(value) do
-    trimmed = String.trim_trailing(value, "\n")
-    String.contains?(trimmed, "\n")
-  end
-
-  # Path A: Line-level fix (works on fresh source with \n escapes)
-
-  defp fix_by_lines(source) do
-    source
-    |> String.split("\n")
-    |> fix_lines([])
-    |> Enum.reverse()
-    |> Enum.join("\n")
-  end
-
-  defp fix_lines([], acc), do: acc
-
-  defp fix_lines([line | rest], acc) do
-    case try_extract_doc_string(line) do
-      {:ok, attr, indent, content_raw} ->
-        if safe_to_convert?(content_raw) do
-          heredoc_lines = build_heredoc(attr, indent, content_raw)
-          fix_lines(rest, Enum.reverse(heredoc_lines) ++ acc)
-        else
-          fix_lines(rest, [line | acc])
-        end
-
-      :skip ->
-        fix_lines(rest, [line | acc])
-    end
-  end
-
-  defp try_extract_doc_string(line) do
-    case Regex.run(
-           ~r/^(\s*)@(doc|moduledoc|typedoc)\s+"(.*)"(\s*)$/,
-           line
-         ) do
-      [_full, indent, attr, content, _trailing] ->
-        if has_internal_escaped_newlines?(content) do
-          {:ok, attr, indent, content}
-        else
-          :skip
-        end
-
-      _ ->
-        :skip
-    end
-  end
-
-  defp has_internal_escaped_newlines?(content) do
-    stripped = Regex.replace(~r/(\\n)+$/, content, "")
-    String.contains?(stripped, "\\n")
-  end
-
-  defp safe_to_convert?(content_raw) do
-    not String.contains?(content_raw, ~S("""))
-  end
-
-  defp build_heredoc(attr, indent, content_raw) do
-    content =
-      content_raw
-      |> String.replace("\\\\", "\x00BACKSLASH\x00")
-      |> String.replace("\\n", "\n")
-      |> String.replace("\\\"", "\"")
-      |> String.replace("\\t", "\t")
-      |> String.replace("\x00BACKSLASH\x00", "\\")
-
-    content = String.trim_trailing(content, "\n")
-
-    doc_lines =
-      content
-      |> String.split("\n")
-      |> Enum.map(fn doc_line ->
-        if doc_line == "", do: "", else: "#{indent}#{doc_line}"
-      end)
-
-    opening = "#{indent}@#{attr} \"\"\""
-    closing = "#{indent}\"\"\""
-
-    [opening | doc_lines] ++ [closing]
-  end
-
-  # Path B: AST-based fix (works after Sourceror has unescaped \n)
-
-  defp fix_by_ast(source) do
-    ast = Sourceror.parse_string!(source)
-
-    if has_fixable_multi_line_doc?(ast) do
-      fixed_ast = Macro.postwalk(ast, &fix_doc_node/1)
-      result = Sourceror.to_string(fixed_ast)
-      result = fix_heredoc_closings(result)
-
-      if String.ends_with?(source, "\n") and not String.ends_with?(result, "\n") do
-        result <> "\n"
-      else
-        result
-      end
-    else
-      source
-    end
+  def fix_patches(ast, _opts) do
+    # Sourceror's AST preserves both shapes of multi-line doc strings:
+    # `@doc "a\\nb"` keeps the literal `\\n` in the string value, while
+    # `@doc """\na\nb\n"""` carries a `:delimiter` of `~s(""")` in the
+    # block metadata. `fix_doc_node/1` handles both via `raw_multi_line?`
+    # and `real_multi_line?`. The `:delimiter` check skips already-heredoc
+    # strings — re-processing one through `Sourceror.to_string` corrupts
+    # indentation.
+    RuleHelpers.patches_from_postwalk(ast, &fix_doc_node/1)
   end
 
   defp fix_doc_node({:@, meta, [{attr, attr_meta, [{:__block__, str_meta, [value]}]}]} = node)
@@ -210,13 +83,15 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
     else
       cond do
         raw_multi_line?(value) ->
-          content = unescape_value(value)
-          content = String.trim_trailing(content, "\n")
+          # Sourceror needs the value to end with `\n` so the closing
+          # `"""` renders on its own line — without it the closing
+          # delimiter ends up glued to the last content line.
+          content = unescape_value(value) |> ensure_trailing_newline()
           new_str_meta = Keyword.put(str_meta, :delimiter, ~s("""))
           {:@, meta, [{attr, attr_meta, [{:__block__, new_str_meta, [content]}]}]}
 
         real_multi_line?(value) ->
-          content = String.trim_trailing(value, "\n")
+          content = ensure_trailing_newline(value)
           new_str_meta = Keyword.put(str_meta, :delimiter, ~s("""))
           {:@, meta, [{attr, attr_meta, [{:__block__, new_str_meta, [content]}]}]}
 
@@ -228,20 +103,8 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
 
   defp fix_doc_node(node), do: node
 
-  defp has_fixable_multi_line_doc?(ast) do
-    {_ast, found} =
-      Macro.prewalk(ast, false, fn
-        {:@, _, [{attr, _, [{:__block__, str_meta, [value]}]}]} = node, acc
-        when attr in @doc_attrs and is_binary(value) ->
-          already_heredoc = Keyword.get(str_meta, :delimiter) == ~s(""")
-          needs_fix = not already_heredoc and (raw_multi_line?(value) or real_multi_line?(value))
-          {node, acc or needs_fix}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found
+  defp ensure_trailing_newline(s) do
+    if String.ends_with?(s, "\n"), do: s, else: s <> "\n"
   end
 
   defp raw_multi_line?(value) do
@@ -261,37 +124,6 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
     |> String.replace("\\t", "\t")
     |> String.replace("\\\"", "\"")
     |> String.replace("\x00BACKSLASH\x00", "\\")
-  end
-
-  defp fix_heredoc_closings(source) do
-    source
-    |> String.split("\n")
-    |> Enum.flat_map(fn line ->
-      trimmed = String.trim_trailing(line)
-
-      if needs_heredoc_split?(trimmed) do
-        before = String.slice(trimmed, 0, String.length(trimmed) - 3)
-        indent = leading_whitespace(line)
-        [before, indent <> ~s(""")]
-      else
-        [line]
-      end
-    end)
-    |> Enum.join("\n")
-  end
-
-  defp needs_heredoc_split?(trimmed) do
-    String.ends_with?(trimmed, ~s(""")) and
-      String.length(trimmed) > 3 and
-      not Regex.match?(~r/^\s*@(doc|moduledoc|typedoc)\s+"""$/, trimmed) and
-      not Regex.match?(~r/^\s*"""$/, trimmed)
-  end
-
-  defp leading_whitespace(line) do
-    case Regex.run(~r/^(\s*)/, line) do
-      [_, ws] -> ws
-      _ -> ""
-    end
   end
 
   defp build_issue(meta, attr) do

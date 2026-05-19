@@ -13,18 +13,23 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:Enum]}, :take]}, meta, [_, {:-, _, [n]}]} = node, issues
-        when is_integer(n) and n > 0 ->
-          {node, [build_issue(n, meta) | issues]}
+        {{:., _, [{:__aliases__, _, [:Enum]}, :take]}, meta, [_list, idx_node]} = node, issues ->
+          case extract_negative(idx_node) do
+            {:ok, n} -> {node, [build_issue(n, meta) | issues]}
+            :error -> {node, issues}
+          end
 
-        {{:., _, [{:__aliases__, _, [:Enum]}, :take]}, meta, [{:-, _, [n]}]} = node, issues
-        when is_integer(n) and n > 0 ->
-          {node, [build_issue(n, meta) | issues]}
+        {{:., _, [{:__aliases__, _, [:Enum]}, :take]}, meta, [idx_node]} = node, issues ->
+          case extract_negative(idx_node) do
+            {:ok, n} -> {node, [build_issue(n, meta) | issues]}
+            :error -> {node, issues}
+          end
 
         node, issues ->
           {node, issues}
@@ -34,17 +39,10 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
+  def fix_patches(ast, _opts) do
     skip = sort_take_lines(ast)
 
-    ast
-    |> Macro.postwalk(fn
+    RuleHelpers.patches_from_postwalk(ast, fn
       {{:., meta, [{:__aliases__, _, [:Enum]}, :take]}, _, [list_arg, second]} = node ->
         if Keyword.get(meta, :line) in skip do
           node
@@ -68,7 +66,6 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp sort_take_lines(ast) do
@@ -88,13 +85,8 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
     lines
   end
 
-  # Handle both Code.string_to_quoted (bare int) and Sourceror (__block__-wrapped)
-  defp negative_take_args?([{:-, _, [n]}]) when is_integer(n) and n > 0, do: true
-
   defp negative_take_args?([{:-, _, [{:__block__, _, [n]}]}]) when is_integer(n) and n > 0,
     do: true
-
-  defp negative_take_args?([_, {:-, _, [n]}]) when is_integer(n) and n > 0, do: true
 
   defp negative_take_args?([_, {:-, _, [{:__block__, _, [n]}]}]) when is_integer(n) and n > 0,
     do: true
@@ -125,8 +117,6 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
   defp extract_negative({:-, _, [{:__block__, _, [n]}]}) when is_integer(n) and n > 0,
     do: {:ok, n}
 
-  defp extract_negative({:-, _, [n]}) when is_integer(n) and n > 0, do: {:ok, n}
-  defp extract_negative(n) when is_integer(n) and n < 0, do: {:ok, abs(n)}
   defp extract_negative(_), do: :error
 
   defp enum_slice_call(list_arg, n),

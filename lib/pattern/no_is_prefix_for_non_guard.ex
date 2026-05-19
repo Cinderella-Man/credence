@@ -45,6 +45,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   # Guard-safe BIFs from Erlang that legitimately use the is_ prefix.
   @erlang_guards ~w(
@@ -70,24 +71,15 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
 
   @impl true
   def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, opts) do
-    ast = Sourceror.parse_string!(source)
-
     rename_map =
       ast
       |> collect_renames()
       |> maybe_drop_public(ast, Keyword.get(opts, :auto_fix_public, true))
 
     if map_size(rename_map) == 0 do
-      source
+      []
     else
-      ast
-      |> Macro.postwalk(fn node -> apply_renames(node, rename_map) end)
-      |> Sourceror.to_string()
+      RuleHelpers.patches_from_postwalk(ast, &apply_renames(&1, rename_map))
     end
   end
 

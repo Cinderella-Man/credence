@@ -136,27 +136,16 @@ defmodule Credence.Pattern.NoSortThenAt do
     end
   end
 
-  # Normalise Sourceror's various integer representations into {:ok, n} | :error
-  defp literal_index(n) when is_integer(n), do: {:ok, n}
+  # Normalise Sourceror's integer representations into {:ok, n} | :error.
   defp literal_index({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
-  defp literal_index({:-, _, [n]}) when is_integer(n), do: {:ok, -n}
   defp literal_index({:-, _, [{:__block__, _, [n]}]}) when is_integer(n), do: {:ok, -n}
   defp literal_index(_), do: :error
 
   defp sort_direction([_collection]), do: :asc
   defp sort_direction([_collection, {:__block__, _, [dir]}]) when dir in [:asc, :desc], do: dir
-  defp sort_direction([_collection, dir]) when dir in [:asc, :desc], do: dir
 
-  # Function captures: &>=/2, &>/2 → :desc; &<=/2, &</2 → :asc
-  defp sort_direction([_collection, {:&, _, [{:/, _, [{op, _, _}, 2]}]}])
-       when op in [:>=, :>],
-       do: :desc
-
-  defp sort_direction([_collection, {:&, _, [{:/, _, [{op, _, _}, 2]}]}])
-       when op in [:<=, :<],
-       do: :asc
-
-  # Same but with Sourceror wrapping the arity in __block__
+  # Function captures: &>=/2, &>/2 → :desc; &<=/2, &</2 → :asc.
+  # Sourceror wraps the arity in `:__block__`.
   defp sort_direction([_collection, {:&, _, [{:/, _, [{op, _, _}, {:__block__, _, [2]}]}]}])
        when op in [:>=, :>],
        do: :desc

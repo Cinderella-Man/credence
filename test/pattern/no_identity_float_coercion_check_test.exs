@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionCheckTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoIdentityFloatCoercion.check(ast, [])
   end
 
@@ -187,7 +187,7 @@ defmodule Credence.Pattern.NoIdentityFloatCoercionCheckTest do
 
   describe "does not flag scientific notation" do
     test "* 1.0e5" do
-      # Code.string_to_quoted evaluates 1.0e5 to 100_000.0, so not 1.0
+      # The parser evaluates 1.0e5 to 100_000.0, so not the 1.0 identity.
       assert clean?("n * 1.0e5")
     end
   end

@@ -41,6 +41,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @fix_strategy :stream
 
@@ -78,17 +79,8 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
 
   @impl true
   def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, opts) do
     strategy = Keyword.get(opts, :fix_strategy, @fix_strategy)
-
-    source
-    |> Sourceror.parse_string!()
-    |> Sourceror.postwalk(fn node, state -> {apply_fix(node, strategy), state} end)
-    |> Sourceror.to_string()
+    RuleHelpers.patches_from_postwalk(ast, &apply_fix(&1, strategy))
   end
 
   defp apply_fix(node, strategy) do
@@ -241,10 +233,8 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
 
   defp extract_with_index_params(_), do: :error
 
-  # Sourceror form: 2-tuple wrapped in __block__ for metadata
+  # Sourceror wraps 2-tuples in :__block__ to carry position metadata.
   defp unwrap_two_tuple({:__block__, _, [{a, b}]}), do: {:ok, a, b}
-  # Standard Code.string_to_quoted form: bare 2-tuple
-  defp unwrap_two_tuple({a, b}) when is_tuple(a) and tuple_size(a) == 3, do: {:ok, a, b}
   defp unwrap_two_tuple(_), do: :error
 
   defp variable_node?({name, _meta, ctx}) when is_atom(name) and is_atom(ctx), do: true

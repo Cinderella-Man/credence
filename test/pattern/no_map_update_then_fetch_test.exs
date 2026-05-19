@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoMapUpdateThenFetch.check(ast, [])
   end
 
@@ -115,7 +115,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, ast} = Code.string_to_quoted(fixed)
+      assert ast = Sourceror.parse_string!(fixed)
       assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
@@ -131,7 +131,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, ast} = Code.string_to_quoted(fixed)
+      assert ast = Sourceror.parse_string!(fixed)
       assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
@@ -147,7 +147,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, ast} = Code.string_to_quoted(fixed)
+      assert ast = Sourceror.parse_string!(fixed)
       assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
@@ -164,7 +164,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, ast} = Code.string_to_quoted(fixed)
+      assert ast = Sourceror.parse_string!(fixed)
       assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
@@ -182,7 +182,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, ast} = Code.string_to_quoted(fixed)
+      assert ast = Sourceror.parse_string!(fixed)
       assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
     end
 
@@ -198,7 +198,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "fixed update/4 replacement uses Map.put and Map.fetch (no bang)" do
@@ -245,7 +245,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "does not modify code with only Map.update and no following fetch" do
@@ -258,7 +258,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "does not modify when fetch is on a different variable" do
@@ -273,7 +273,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       assert fixed =~ "Map.update"
     end
 
@@ -289,7 +289,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       assert fixed =~ "Map.update"
     end
 
@@ -306,7 +306,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       assert fixed =~ "Map.update"
     end
   end

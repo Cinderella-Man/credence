@@ -24,6 +24,7 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -47,24 +48,13 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
-
-    # Pass 1: determine which functions can be fixed
+  def fix_patches(ast, _opts) do
     fixable = analyze_functions(ast)
 
     if map_size(fixable) == 0 do
-      source
+      []
     else
-      # Pass 2: apply fixes
-      ast
-      |> Macro.postwalk(&apply_fix(&1, fixable))
-      |> Sourceror.to_string()
+      RuleHelpers.patches_from_postwalk(ast, &apply_fix(&1, fixable))
     end
   end
   # Check
@@ -280,15 +270,20 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
     end
   end
   # Shared helpers
-  # Used by check (Code.string_to_quoted AST) — lists are plain [expr]
   defp direct_append_in_call?(body, name, params) do
     last = last_expression(body)
 
     case last do
       {^name, _, args} when is_list(args) ->
         Enum.any?(args, fn
-          {:++, _, [lhs, [single]]} ->
-            not cons_cell?(single) and Enum.any?(params, &same_var?(&1, lhs))
+          {:++, _, [lhs, rhs]} ->
+            case extract_single_elem_list(rhs) do
+              {:ok, single} ->
+                not cons_cell?(single) and Enum.any?(params, &same_var?(&1, lhs))
+
+              :error ->
+                false
+            end
 
           _ ->
             false
@@ -314,9 +309,8 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
     end
   end
 
-  # Sourceror wraps list literals like [expr] in {:__block__, _, [[expr]]}.
-  # Code.string_to_quoted keeps them as plain [expr].
-  defp extract_single_elem_list([single]), do: {:ok, single}
+  # Sourceror wraps list literals in `{:__block__, _, [list]}` for position
+  # metadata, so `[expr]` becomes `{:__block__, _, [[expr]]}`.
   defp extract_single_elem_list({:__block__, _, [[single]]}), do: {:ok, single}
   defp extract_single_elem_list(_), do: :error
 
@@ -335,7 +329,6 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
   defp extract_body(body_kw) when is_list(body_kw) do
     Enum.find_value(body_kw, fn
       {{:__block__, _, [:do]}, body} -> body
-      {:do, body} -> body
       _ -> nil
     end)
   end
@@ -345,7 +338,6 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
   defp put_body(body_kw, new_body) when is_list(body_kw) do
     Enum.map(body_kw, fn
       {{:__block__, m, [:do]}, _old} -> {{:__block__, m, [:do]}, new_body}
-      {:do, _old} -> {:do, new_body}
       other -> other
     end)
   end

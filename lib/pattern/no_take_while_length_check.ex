@@ -53,28 +53,14 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
-    patches = collect_fixes(ast, source)
-
-    patches
-    |> Enum.sort_by(fn {start, _, _} -> start end, :desc)
-    |> Enum.reduce(source, fn {start_off, end_off, replacement}, src ->
-      before = binary_part(src, 0, start_off)
-      after_ = binary_part(src, end_off, byte_size(src) - end_off)
-      before <> replacement <> after_
-    end)
+  def fix_patches(ast, _opts) do
+    collect_patches(ast)
   end
 
   # Single-pass collection: handles both pipeline and direct call patterns.
   # Returns early (without visiting children) when a pattern matches,
   # preventing overlapping patches from inner take_while nodes.
-  defp collect_fixes(ast, source) do
+  defp collect_patches(ast) do
     {_, patches} =
       Macro.prewalk(ast, [], fn
         # Pipeline: ... |> Enum.take_while(fun) |> length()
@@ -90,8 +76,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
                 Enum.map(pairs, fn {tw_idx, count_idx} ->
                   build_pipeline_patch(
                     Enum.at(steps, tw_idx),
-                    Enum.at(steps, count_idx),
-                    source
+                    Enum.at(steps, count_idx)
                   )
                 end)
 
@@ -101,7 +86,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
         # Direct call: length(Enum.take_while(enum, fun))
         {:length, _, [arg]} = node, acc ->
           if take_while_call?(arg) do
-            {node, [build_direct_patch(node, arg, source) | acc]}
+            {node, [build_direct_patch(node, arg) | acc]}
           else
             {node, acc}
           end
@@ -109,7 +94,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
         # Direct call: Enum.count(Enum.take_while(enum, fun))
         {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg]} = node, acc ->
           if take_while_call?(arg) do
-            {node, [build_direct_patch(node, arg, source) | acc]}
+            {node, [build_direct_patch(node, arg) | acc]}
           else
             {node, acc}
           end
@@ -122,20 +107,21 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
           {node, acc}
       end)
 
-    patches
+    Enum.reverse(patches)
   end
-  defp build_pipeline_patch(tw_step, count_step, source) do
+
+  defp build_pipeline_patch(tw_step, count_step) do
     tw_range = Sourceror.get_range(tw_step, include_parens: true)
     count_range = Sourceror.get_range(count_step, include_parens: true)
-
-    start_off = byte_offset(tw_range.start, source)
-    end_off = byte_offset(count_range.end, source)
 
     fun_text = take_while_fun_text(tw_step)
     enum_text = take_while_enum_text(tw_step)
     replacement = build_reduce_while_text("Enum", fun_text, enum_text)
 
-    {start_off, end_off, replacement}
+    %{
+      range: %Sourceror.Range{start: tw_range.start, end: count_range.end},
+      change: replacement
+    }
   end
 
   defp find_pipeline_take_while_pairs(steps) do
@@ -149,18 +135,17 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
     end)
     |> Enum.reverse()
   end
-  defp build_direct_patch(outer_node, take_while_node, source) do
-    outer_range = Sourceror.get_range(outer_node, include_parens: true)
 
-    start_off = byte_offset(outer_range.start, source)
-    end_off = byte_offset(outer_range.end, source)
+  defp build_direct_patch(outer_node, take_while_node) do
+    outer_range = Sourceror.get_range(outer_node, include_parens: true)
 
     fun_text = take_while_fun_text(take_while_node)
     enum_text = take_while_enum_text(take_while_node)
     replacement = build_reduce_while_text("Enum", fun_text, enum_text)
 
-    {start_off, end_off, replacement}
+    %{range: outer_range, change: replacement}
   end
+
   defp take_while_fun_text({{:., _, [{:__aliases__, _, [:Enum]}, :take_while]}, _, [_enum, fun]}) do
     Sourceror.to_string(fun)
   end
@@ -175,24 +160,6 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
 
   defp take_while_enum_text({{:., _, [{:__aliases__, _, [:Enum]}, :take_while]}, _, [_fun]}) do
     nil
-  end
-
-  # Sourceror positions are 1-indexed for both line and column.
-  # byte_offset converts to absolute byte position in the source string.
-  defp byte_offset(%{line: line, column: col}, source) do
-    lines = String.split(source, "\n")
-
-    line_offset =
-      lines
-      |> Enum.take(line - 1)
-      |> Enum.map(&(byte_size(&1) + 1))
-      |> Enum.sum()
-
-    line_offset + col - 1
-  end
-
-  defp byte_offset([line: line, column: col], source) do
-    byte_offset(%{line: line, column: col}, source)
   end
 
   defp build_reduce_while_text(enum_mod, fun_text, nil) do

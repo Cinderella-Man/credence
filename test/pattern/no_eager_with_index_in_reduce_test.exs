@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
   end
 
@@ -228,7 +228,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
     end
   end
@@ -272,7 +272,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
       """
 
       result = fix(code, fix_strategy: :reduce)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
     end
   end
 
@@ -335,7 +335,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
       """
 
       result = fix(code, fix_strategy: :reduce)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
     end
   end
 
@@ -372,7 +372,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
       """
 
       fixed = fix(code, fix_strategy: :reduce)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
     end
 
@@ -388,7 +388,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
       """
 
       fixed = fix(code, fix_strategy: :reduce)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
     end
   end
@@ -444,8 +444,8 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
       stream_result = fix(code, fix_strategy: :stream)
       reduce_result = fix(code, fix_strategy: :reduce)
 
-      assert {:ok, _} = Code.string_to_quoted(stream_result)
-      assert {:ok, _} = Code.string_to_quoted(reduce_result)
+      assert {:ok, _} = Sourceror.parse_string(stream_result)
+      assert {:ok, _} = Sourceror.parse_string(reduce_result)
     end
 
     test "both strategies produce zero check issues for same input" do
@@ -457,7 +457,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
 
       for strategy <- [:stream, :reduce] do
         fixed = fix(code, fix_strategy: strategy)
-        {:ok, ast} = Code.string_to_quoted(fixed)
+        ast = Sourceror.parse_string!(fixed)
 
         assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, []),
                "Strategy #{strategy} left issues"
@@ -545,7 +545,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
       """
 
       result = fix(code)
-      assert {:ok, _ast} = Code.string_to_quoted(result)
+      assert {:ok, _ast} = Sourceror.parse_string(result)
     end
   end
 end

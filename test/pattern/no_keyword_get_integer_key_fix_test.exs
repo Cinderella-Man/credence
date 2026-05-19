@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoKeywordGetIntegerKey.check(ast, [])
   end
 
@@ -130,7 +130,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
       end
       """
 
-      assert {:ok, _} = Code.string_to_quoted(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(code))
     end
   end
 end

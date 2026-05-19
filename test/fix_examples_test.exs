@@ -37,7 +37,7 @@ defmodule Credence.FixExamplesTest do
     end
 
     test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Code.string_to_quoted(code)
+      assert {:ok, _} = Sourceror.parse_string(code)
     end
 
     test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do
@@ -101,7 +101,7 @@ defmodule Credence.FixExamplesTest do
     end
 
     test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Code.string_to_quoted(code)
+      assert {:ok, _} = Sourceror.parse_string(code)
     end
 
     test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do
@@ -147,7 +147,7 @@ defmodule Credence.FixExamplesTest do
     end
 
     test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Code.string_to_quoted(code)
+      assert {:ok, _} = Sourceror.parse_string(code)
     end
 
     test "replaces length(nums) == 0 with nums == []", %{result: %{code: code}} do
@@ -211,7 +211,7 @@ defmodule Credence.FixExamplesTest do
     end
 
     test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Code.string_to_quoted(code)
+      assert {:ok, _} = Sourceror.parse_string(code)
     end
 
     test "replaces manual frequency reduce with Enum.frequencies", %{result: %{code: code}} do
@@ -259,7 +259,7 @@ defmodule Credence.FixExamplesTest do
     end
 
     test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Code.string_to_quoted(code)
+      assert {:ok, _} = Sourceror.parse_string(code)
     end
 
     test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do

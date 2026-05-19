@@ -41,18 +41,22 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # Uses AST from Code.string_to_quoted (bare boolean literals).
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:case, meta, [subject, [do: [clause_a, clause_b]]]} = node, acc ->
-          if not plain_variable?(subject) and
-               boolean_clause_pair?(clause_pattern(clause_a), clause_pattern(clause_b)) do
-            {node, [build_issue(meta) | acc]}
-          else
-            {node, acc}
+        {:case, meta, [subject, kw]} = node, acc when is_list(kw) ->
+          case extract_do_clauses(kw) do
+            [clause_a, clause_b] ->
+              if not plain_variable?(subject) and
+                   boolean_clause_pair?(clause_pattern(clause_a), clause_pattern(clause_b)) do
+                {node, [build_issue(meta) | acc]}
+              else
+                {node, acc}
+              end
+
+            _ ->
+              {node, acc}
           end
 
         node, acc ->
@@ -97,14 +101,12 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
 
   defp normalize_pattern(true), do: true
   defp normalize_pattern(false), do: false
+  defp normalize_pattern({:__block__, _, [true]}), do: true
+  defp normalize_pattern({:__block__, _, [false]}), do: false
   defp normalize_pattern({:_, _, _}), do: :wildcard
   defp normalize_pattern(_), do: :other
 
   # Extracts the clause list from a case node's keyword block.
-  # Handles both Code.string_to_quoted format ([do: clauses]) and
-  # Sourceror format ([{{:__block__, _, [:do]}, clauses}]).
-  defp extract_do_clauses([{:do, clauses}]) when is_list(clauses), do: clauses
-
   defp extract_do_clauses([{{:__block__, _, [:do]}, clauses}]) when is_list(clauses),
     do: clauses
 

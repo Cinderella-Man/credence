@@ -2,7 +2,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.UnnecessaryGraphemeChunking.check(ast, [])
   end
 
@@ -332,7 +332,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "replaces pipeline with for + String.slice comprehension" do
@@ -348,7 +348,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       f = norm(fixed)
       assert f =~ "for"
       assert f =~ "String.length"
@@ -372,7 +372,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       f = norm(fixed)
       assert f =~ "String.length(string)"
       assert f =~ "String.slice(string, i, 3)"
@@ -392,7 +392,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       f = norm(fixed)
       assert f =~ "for"
       assert f =~ "String.slice"
@@ -412,7 +412,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       f = norm(fixed)
       assert f =~ "for"
       assert f =~ "String.slice"
@@ -434,7 +434,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       f = norm(fixed)
       assert f =~ "String.trim"
       assert f =~ "String.downcase"
@@ -456,7 +456,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       f = norm(fixed)
       refute f =~ "String.graphemes"
       refute f =~ "chunk_every"
@@ -489,7 +489,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
       f = norm(fixed)
       assert f =~ "String.slice"
       refute f =~ "String.graphemes"

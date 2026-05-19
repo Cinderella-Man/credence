@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoParamRebindingTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoParamRebinding.check(ast, [])
   end
 
@@ -12,7 +12,7 @@ defmodule Credence.Pattern.NoParamRebindingTest do
 
   defp fix_and_verify(code) do
     fixed = fix(code)
-    {:ok, ast} = Code.string_to_quoted(fixed)
+    ast = Sourceror.parse_string!(fixed)
     issues = Credence.Pattern.NoParamRebinding.check(ast, [])
     {fixed, issues}
   end

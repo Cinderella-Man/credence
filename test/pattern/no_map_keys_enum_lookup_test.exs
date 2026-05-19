@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoMapKeysEnumLookup.check(ast, [])
   end
 
@@ -13,7 +13,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupTest do
   defp assert_fixes_cleanly(code) do
     fixed = fix(code)
 
-    assert {:ok, ast} = Code.string_to_quoted(fixed),
+    assert {:ok, ast} = Sourceror.parse_string(fixed),
            "Expected fixed code to parse as valid Elixir:\n#{fixed}"
 
     assert [] == Credence.Pattern.NoMapKeysEnumLookup.check(ast, []),
@@ -582,7 +582,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupTest do
       """
 
       fixed = fix(code)
-      {:ok, _} = Code.string_to_quoted(fixed)
+      {:ok, _} = Sourceror.parse_string(fixed)
       # Should still contain Map.keys since the pattern wasn't flagged
       assert fixed =~ "Map.keys"
     end
@@ -598,7 +598,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupTest do
 
       # Multi-clause callbacks are not transformed — node is left as-is
       fixed = fix(code)
-      {:ok, _} = Code.string_to_quoted(fixed)
+      {:ok, _} = Sourceror.parse_string(fixed)
       assert fixed =~ "Map.keys"
     end
   end

@@ -65,10 +65,8 @@ defmodule Credence.Pattern.NoCondTwoClauses do
   defp two_clause_cond?(_), do: false
 
   # Extracts the list of arrow clauses from the cond's keyword args.
-  # Handles both Code.string_to_quoted and Sourceror forms.
   defp extract_do_clauses(kw) do
     Enum.find_value(kw, fn
-      {:do, clauses} when is_list(clauses) -> clauses
       {{:__block__, _, [:do]}, clauses} when is_list(clauses) -> clauses
       _ -> nil
     end)
@@ -110,19 +108,15 @@ defmodule Credence.Pattern.NoCondTwoClauses do
     {:if, meta, [condition, if_clauses]}
   end
 
-  # Builds the keyword list for the if node, preserving the
-  # keyword format (bare or __block__-wrapped) from the original cond.
+  # Builds the keyword list for the if node, reusing the original cond's
+  # `:do` meta so the rendered output sits on the same source line.
   defp build_if_clauses(original_kw, do_body, else_body) do
-    case hd(original_kw) do
-      {{:__block__, do_meta, [:do]}, _} ->
-        [
-          {{:__block__, do_meta, [:do]}, do_body},
-          {{:__block__, do_meta, [:else]}, else_body}
-        ]
+    {{:__block__, do_meta, [:do]}, _} = hd(original_kw)
 
-      {:do, _} ->
-        [do: do_body, else: else_body]
-    end
+    [
+      {{:__block__, do_meta, [:do]}, do_body},
+      {{:__block__, do_meta, [:else]}, else_body}
+    ]
   end
 
   defp build_issue(meta) do

@@ -27,24 +27,21 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparator do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        # Direct call: Enum.join(list, "")
-        {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, meta, [_list, ""]} = node, issues ->
-          {node, [build_issue(meta) | issues]}
+        # Enum.join(list, "")  |  ... |> Enum.join("")
+        {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, meta, args} = node, issues
+        when length(args) in [1, 2] ->
+          if empty_string?(List.last(args)),
+            do: {node, [build_issue(meta) | issues]},
+            else: {node, issues}
 
-        # In a pipe the separator is the only explicit arg: ... |> Enum.join("")
-        # The piped value becomes the first arg, so the AST call has [""]
-        {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, meta, [""]} = node, issues ->
-          {node, [build_issue(meta) | issues]}
+        # Enum.map_join(list, "", mapper)  |  ... |> Enum.map_join("", mapper)
+        {{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, meta, args} = node, issues
+        when length(args) in [2, 3] ->
+          sep = args |> Enum.reverse() |> Enum.at(1)
 
-        # Direct call: Enum.map_join(list, "", mapper)
-        {{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, meta, [_list, "", _mapper]} = node,
-        issues ->
-          {node, [build_issue(meta) | issues]}
-
-        # In a pipe the separator is the first explicit arg: ... |> Enum.map_join("", mapper)
-        # The piped value becomes the first arg, so the AST call has ["", mapper]
-        {{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, meta, ["", _mapper]} = node, issues ->
-          {node, [build_issue(meta) | issues]}
+          if empty_string?(sep),
+            do: {node, [build_issue(meta) | issues]},
+            else: {node, issues}
 
         node, issues ->
           {node, issues}

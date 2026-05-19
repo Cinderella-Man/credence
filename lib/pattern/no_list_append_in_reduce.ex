@@ -33,12 +33,17 @@ defmodule Credence.Pattern.NoListAppendInReduce do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         # 3-arg: Enum.reduce(enum, [], fn ...)
-        {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [_enum, [], fun]} = node, issues ->
-          {node, check_lambda(fun, meta, issues)}
+        {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [_enum, initial, fun]} = node,
+        issues ->
+          if empty_list?(initial),
+            do: {node, check_lambda(fun, meta, issues)},
+            else: {node, issues}
 
         # 2-arg piped: |> Enum.reduce([], fn ...)
-        {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [[], fun]} = node, issues ->
-          {node, check_lambda(fun, meta, issues)}
+        {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [initial, fun]} = node, issues ->
+          if empty_list?(initial),
+            do: {node, check_lambda(fun, meta, issues)},
+            else: {node, issues}
 
         node, issues ->
           {node, issues}
@@ -146,8 +151,8 @@ defmodule Credence.Pattern.NoListAppendInReduce do
 
   defp fix_lambda_body(_), do: :error
   # Shared helpers
-  # Extracts the expression from acc ++ [expr], handling both
-  # Code.string_to_quoted ([expr]) and Sourceror ({:__block__, _, [[expr]]})
+  # Extracts the expression from `acc ++ [expr]`. Sourceror wraps the
+  # `[expr]` list literal in `{:__block__, _, [[expr]]}` for position meta.
   defp extract_append_expr(body, acc_var) do
     last = last_expression(body)
 
@@ -170,9 +175,6 @@ defmodule Credence.Pattern.NoListAppendInReduce do
     end
   end
 
-  # Sourceror wraps list literals like [expr] in {:__block__, _, [[expr]]}.
-  # Code.string_to_quoted keeps them as plain [expr].
-  defp extract_single_elem_list([single]), do: {:ok, single}
   defp extract_single_elem_list({:__block__, _, [[single]]}), do: {:ok, single}
   defp extract_single_elem_list(_), do: :error
 

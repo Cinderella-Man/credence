@@ -26,6 +26,7 @@ defmodule Credence.Pattern.NoSortThenReverse do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -62,15 +63,8 @@ defmodule Credence.Pattern.NoSortThenReverse do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.prewalk(fn
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, fn
       # Pipeline: ... |> Enum.sort(...) |> Enum.reverse()
       {:|>, pipe_meta, [left, reverse_node]} = node ->
         if remote_call?(reverse_node, :Enum, :reverse) do
@@ -90,9 +84,6 @@ defmodule Credence.Pattern.NoSortThenReverse do
       node ->
         node
     end)
-    |> Sourceror.to_string()
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
   end
 
   # Multi-step pipe: before |> Enum.sort() |> Enum.reverse()

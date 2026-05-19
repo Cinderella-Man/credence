@@ -29,22 +29,18 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @doc_attrs [:doc, :moduledoc, :typedoc]
 
   @impl true
-  def check(ast, opts) do
-    source_lines =
-      case Keyword.get(opts, :source) do
-        nil -> nil
-        source -> String.split(source, "\n")
-      end
-
+  def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:@, meta, [{attr, _, [value]}]} = node, acc
+        # Sourceror shape: string wrapped in :__block__ with :delimiter meta.
+        {:@, meta, [{attr, _, [{:__block__, str_meta, [value]}]}]} = node, acc
         when attr in @doc_attrs and is_binary(value) ->
-          if trailing_newline_only?(value) and not already_heredoc?(source_lines, meta) do
+          if not heredoc?(str_meta) and trailing_newline?(value) do
             {node, [build_issue(meta, attr) | acc]}
           else
             {node, acc}
@@ -57,40 +53,14 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
     Enum.reverse(issues)
   end
 
-  # Heredoc trailing \n is structural — not a real issue.
-  # When source is available, check the actual source line for """.
-  defp already_heredoc?(nil, _meta), do: false
+  defp heredoc?(str_meta), do: Keyword.get(str_meta, :delimiter) == ~s(""")
 
-  defp already_heredoc?(source_lines, meta) do
-    line = Keyword.get(meta, :line)
-
-    case Enum.at(source_lines, line - 1) do
-      nil -> false
-      source_line -> String.contains?(source_line, ~s("""))
-    end
-  end
+  defp trailing_newline?(value),
+    do: raw_trailing_only?(value) or real_trailing_only?(value)
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
-
-    if has_fixable_doc?(ast) do
-      fixed_ast = Macro.postwalk(ast, &fix_node/1)
-      result = Sourceror.to_string(fixed_ast)
-
-      if String.ends_with?(source, "\n") and not String.ends_with?(result, "\n") do
-        result <> "\n"
-      else
-        result
-      end
-    else
-      source
-    end
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, &fix_node/1)
   end
 
   defp fix_node({:@, meta, [{attr, attr_meta, [{:__block__, str_meta, [value]}]}]} = node)
@@ -111,21 +81,6 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
 
   defp fix_node(node), do: node
 
-  defp has_fixable_doc?(ast) do
-    {_ast, found} =
-      Macro.prewalk(ast, false, fn
-        {:@, _, [{attr, _, [{:__block__, str_meta, [value]}]}]} = node, acc
-        when attr in @doc_attrs and is_binary(value) ->
-          already_heredoc = Keyword.get(str_meta, :delimiter) == ~s(""")
-          {node, acc or (not already_heredoc and fixable_value?(value))}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found
-  end
-
   #
   # Sourceror preserves raw escape sequences in string values when
   # parsing fresh source: "text\n" → value is "text\\n" (backslash + n).
@@ -135,10 +90,6 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
   # a value with an actual newline character.
   #
   # We handle both forms.
-
-  defp fixable_value?(value) do
-    raw_trailing_only?(value) or real_trailing_only?(value)
-  end
 
   defp strip_trailing_doc_newline(value) do
     cond do
@@ -164,9 +115,6 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
     String.ends_with?(value, "\n") and
       not String.contains?(String.trim_trailing(value, "\n"), "\n")
   end
-
-  # For check (Code.string_to_quoted — always resolved)
-  defp trailing_newline_only?(value), do: real_trailing_only?(value)
 
   defp build_issue(meta, attr) do
     %Issue{

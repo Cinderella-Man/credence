@@ -129,11 +129,8 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaise do
 
   defp body_only_raises?(_), do: false
 
-  # Accept both `Code.string_to_quoted` keyword shape (`[do: expr]`) and
-  # Sourceror's `[{{:__block__, _, [:do]}, expr}]`.
   defp extract_do_body(body) do
     Enum.find_value(body, :error, fn
-      {:do, expr} -> {:ok, expr}
       {{:__block__, _, [:do]}, expr} -> {:ok, expr}
       _ -> nil
     end)

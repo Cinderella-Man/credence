@@ -185,7 +185,7 @@ defmodule Credence.FixShowcaseTest do
     # ── Sanity ────────────────────────────────────────────────────
 
     test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _ast} = Code.string_to_quoted(code)
+      assert {:ok, _ast} = Sourceror.parse_string(code)
     end
   end
 end

@@ -24,6 +24,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -63,14 +64,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> transform_ast()
-    |> Sourceror.to_string()
+    RuleHelpers.patches_from_ast_transform(ast, source, &transform_ast/1)
   end
 
   defp transform_ast({:__block__, meta, statements}) do

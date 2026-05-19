@@ -2,7 +2,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.PreferEnumReverseTwo.check(ast, [])
   end
 
@@ -13,7 +13,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoTest do
   defp assert_fixed(input) do
     result = fix(input)
 
-    {:ok, ast} = Code.string_to_quoted(result)
+    ast = Sourceror.parse_string!(result)
     issues = Credence.Pattern.PreferEnumReverseTwo.check(ast, [])
 
     assert issues == [],

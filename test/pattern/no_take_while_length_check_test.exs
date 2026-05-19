@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoTakeWhileLengthCheck.check(ast, [])
   end
 
@@ -12,7 +12,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckTest do
 
   defp check_fix(code) do
     fixed = fix(code)
-    {:ok, ast} = Code.string_to_quoted(fixed)
+    ast = Sourceror.parse_string!(fixed)
     issues = Credence.Pattern.NoTakeWhileLengthCheck.check(ast, [])
     {fixed, issues}
   end

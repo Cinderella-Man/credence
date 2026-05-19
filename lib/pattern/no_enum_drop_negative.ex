@@ -34,15 +34,17 @@ defmodule Credence.Pattern.NoEnumDropNegative do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        # Direct: Enum.drop(list, -1)
-        {{:., _, [{:__aliases__, _, [:Enum]}, :drop]}, meta, [_, {:-, _, [n]}]} = node, issues
-        when is_integer(n) and n > 0 ->
-          {node, [build_issue(n, meta) | issues]}
+        {{:., _, [{:__aliases__, _, [:Enum]}, :drop]}, meta, [_list, idx_node]} = node, issues ->
+          case extract_negative(idx_node) do
+            {:ok, n} -> {node, [build_issue(n, meta) | issues]}
+            :error -> {node, issues}
+          end
 
-        # Piped: list |> Enum.drop(-1)
-        {{:., _, [{:__aliases__, _, [:Enum]}, :drop]}, meta, [{:-, _, [n]}]} = node, issues
-        when is_integer(n) and n > 0 ->
-          {node, [build_issue(n, meta) | issues]}
+        {{:., _, [{:__aliases__, _, [:Enum]}, :drop]}, meta, [idx_node]} = node, issues ->
+          case extract_negative(idx_node) do
+            {:ok, n} -> {node, [build_issue(n, meta) | issues]}
+            :error -> {node, issues}
+          end
 
         node, issues ->
           {node, issues}
@@ -73,19 +75,10 @@ defmodule Credence.Pattern.NoEnumDropNegative do
     end)
   end
 
-  # Sourceror wraps literals in {:__block__, meta, [value]}, so -1 becomes:
-  #   {:-, meta, [{:__block__, meta, [1]}]}
-  # Code.string_to_quoted produces the simpler:
-  #   {:-, meta, [1]}
-  # We handle both, plus a bare negative integer just in case.
+  # Sourceror wraps the integer in `{:__block__, meta, [n]}` for position
+  # metadata, so `-1` becomes `{:-, meta, [{:__block__, meta, [1]}]}`.
   defp extract_negative({:-, _, [{:__block__, _, [n]}]}) when is_integer(n) and n > 0,
     do: {:ok, n}
-
-  defp extract_negative({:-, _, [n]}) when is_integer(n) and n > 0,
-    do: {:ok, n}
-
-  defp extract_negative(n) when is_integer(n) and n < 0,
-    do: {:ok, abs(n)}
 
   defp extract_negative(_), do: :error
 

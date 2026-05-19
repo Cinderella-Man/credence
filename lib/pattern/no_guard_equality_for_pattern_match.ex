@@ -139,11 +139,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
     |> Enum.reverse()
   end
 
-  # Accepts both raw literals (`Code.string_to_quoted` shape) and
-  # Sourceror's `:__block__`-wrapped literals.
-  defp fixable_literal(literal) when is_integer(literal) or is_atom(literal) or is_binary(literal),
-    do: {:ok, literal}
-
+  # Sourceror wraps literals in :__block__ to carry position metadata.
   defp fixable_literal({:__block__, _, [literal]})
        when is_integer(literal) or is_atom(literal) or is_binary(literal),
        do: {:ok, literal}

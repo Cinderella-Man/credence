@@ -2,7 +2,7 @@ defmodule Credence.Syntax do
   @moduledoc """
   Syntax phase — fixes code that won't parse.
 
-  Only runs when `Code.string_to_quoted/1` fails. Delegates to rules
+  Only runs when `Sourceror.parse_string/1` fails. Delegates to rules
   implementing `Credence.Syntax.Rule` behaviour.
 
   Rules are discovered automatically and run in priority order (lower first),
@@ -14,7 +14,7 @@ defmodule Credence.Syntax do
 
   @spec analyze(String.t(), keyword()) :: [Credence.Issue.t()]
   def analyze(source, _opts \\ []) do
-    case Code.string_to_quoted(source) do
+    case Sourceror.parse_string(source) do
       {:ok, _ast} -> []
       {:error, _} -> Enum.flat_map(rules(), & &1.analyze(source))
     end
@@ -40,12 +40,14 @@ defmodule Credence.Syntax do
   def fix_with_trace(source, _opts \\ []) do
     all_rules = rules()
 
-    case Code.string_to_quoted(source) do
+    case Sourceror.parse_string(source) do
       {:ok, _ast} ->
         Logger.debug("[credence_fix] syntax fix pipeline: source already parses, skipping")
         {source, []}
 
-      {:error, {line, error_msg, token}} ->
+      {:error, {meta, error_msg, token}} ->
+        line = Keyword.get(meta, :line)
+
         Logger.debug(
           "[credence_fix] starting syntax fix pipeline (#{length(all_rules)} rules), " <>
             "parse error at line #{line}: #{error_msg} near #{inspect(token)}"
@@ -69,11 +71,13 @@ defmodule Credence.Syntax do
         applied = Enum.reverse(applied)
 
         # Verify fix actually helped
-        case Code.string_to_quoted(fixed) do
+        case Sourceror.parse_string(fixed) do
           {:ok, _} ->
             Logger.debug("[credence_fix] syntax fix pipeline: source now parses successfully")
 
-          {:error, {line, error_msg, token}} ->
+          {:error, {meta, error_msg, token}} ->
+            line = Keyword.get(meta, :line)
+
             Logger.debug(
               "[credence_fix] syntax fix pipeline: source still does not parse " <>
                 "(line #{line}: #{error_msg} near #{inspect(token)})"

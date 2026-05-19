@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoDoubleSortSameList.check(ast, [])
   end
 
@@ -230,7 +230,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListTest do
       """
 
       fixed = fix(code)
-      {:ok, fixed_ast} = Code.string_to_quoted(fixed)
+      {:ok, fixed_ast} = Sourceror.parse_string(fixed)
       issues = Credence.Pattern.NoDoubleSortSameList.check(fixed_ast, [])
 
       assert issues == []

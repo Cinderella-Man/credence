@@ -181,7 +181,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       """
 
       fixed = Credence.Syntax.FixDivRem.fix(source)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
   end
 end

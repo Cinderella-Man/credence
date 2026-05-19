@@ -63,7 +63,7 @@ defmodule Credence.FunctionMatcher do
   end
 
   defp defined_functions(source, module_name) do
-    case Code.string_to_quoted(source) do
+    case Sourceror.parse_string(source) do
       {:ok, ast} ->
         ast
         |> find_module_body(module_name)
@@ -77,9 +77,12 @@ defmodule Credence.FunctionMatcher do
   defp find_module_body(ast, module_name) do
     {_, result} =
       Macro.prewalk(ast, nil, fn
-        {:defmodule, _, [{:__aliases__, _, parts}, [do: body]]} = node, acc ->
+        {:defmodule, _, [{:__aliases__, _, parts}, kw]} = node, acc when is_list(kw) ->
           if module_parts_match?(parts, module_name) do
-            {node, body}
+            case Credence.RuleHelpers.extract_do_body(kw) do
+              {:ok, body} -> {node, body}
+              :error -> {node, acc}
+            end
           else
             {node, acc}
           end

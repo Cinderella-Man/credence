@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoGraphemePalindromeCheck.check(ast, [])
   end
 
@@ -194,7 +194,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert Credence.Pattern.NoGraphemePalindromeCheck.check(ast, []) == []
     end
   end

@@ -41,6 +41,7 @@ defmodule Credence.Pattern.NoManualEnumUniq do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -81,16 +82,8 @@ defmodule Credence.Pattern.NoManualEnumUniq do
   # happen to follow a pre-existing Enum.uniq in the original source.
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Sourceror.postwalk(fn node, state -> {apply_uniq_fix(node), state} end)
-    |> Sourceror.to_string()
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, &apply_uniq_fix/1)
   end
 
   defp apply_uniq_fix(node) do

@@ -30,7 +30,7 @@ defmodule Credence.PipelineIntegrationTest do
 
       %{code: fixed} = Credence.fix(source)
       assert fixed =~ "div("
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "valid code passes through Syntax unchanged" do
@@ -105,7 +105,7 @@ defmodule Credence.PipelineIntegrationTest do
 
       %{code: fixed, issues: _issues} = Credence.fix(source)
       assert fixed =~ "div("
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "analyze on valid code runs all phases" do

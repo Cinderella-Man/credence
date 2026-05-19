@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoMapKeysOrValuesForIteration.check(ast, [])
   end
 
@@ -10,13 +10,34 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapKeysOrValuesForIteration, code, [])
   end
 
-  # Normalize via AST round-trip to ignore whitespace/formatting differences
+  # Normalize via AST round-trip to ignore whitespace/formatting differences.
+  # Strip Sourceror's `:__block__` literal wrappers (so `Macro.to_string/1`
+  # gets the bare-literal shape it expects) and also drop `:parens` /
+  # `:closing` metadata, which Sourceror preserves but Macro.to_string
+  # honours — comparing them across renderings would conflate layout
+  # with semantics.
   defp assert_fix(input, expected) do
     result = fix(input)
-    norm = &(&1 |> Code.string_to_quoted!() |> Macro.to_string())
-
-    assert norm.(result) == norm.(expected),
+    assert norm(result) == norm(expected),
            "Fix mismatch.\nInput:    #{input}\nExpected: #{expected}\nGot:      #{result}"
+  end
+
+  defp norm(source) do
+    source
+    |> Sourceror.parse_string!()
+    |> Credence.RuleHelpers.normalize_sourceror_ast()
+    |> strip_layout_meta()
+    |> Macro.to_string()
+  end
+
+  defp strip_layout_meta(ast) do
+    Macro.prewalk(ast, fn
+      {form, meta, args} when is_list(meta) ->
+        {form, Keyword.drop(meta, [:parens, :closing, :end, :do]), args}
+
+      other ->
+        other
+    end)
   end
 
   # ═══════════════════════════════════════════════════════════════
@@ -763,7 +784,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       end
       """
 
-      assert {:ok, _} = Code.string_to_quoted(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(code))
     end
 
     test "preserves heredoc when no rewrite applies" do

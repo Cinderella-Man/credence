@@ -21,7 +21,7 @@ defmodule Credence.Pattern.NoSortThenAtKthLargestRegressionTest do
       end
       """
 
-      {:ok, ast} = Code.string_to_quoted(code)
+      {:ok, ast} = Sourceror.parse_string(code)
       issues = Credence.Pattern.NoSortThenAt.check(ast, [])
 
       assert issues == [],
@@ -35,7 +35,7 @@ defmodule Credence.Pattern.NoSortThenAtKthLargestRegressionTest do
       end
       """
 
-      {:ok, ast} = Code.string_to_quoted(code)
+      {:ok, ast} = Sourceror.parse_string(code)
       issues = Credence.Pattern.NoSortThenAt.check(ast, [])
 
       assert issues == [],
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoSortThenAtKthLargestRegressionTest do
       end
       """
 
-      {:ok, ast} = Code.string_to_quoted(code)
+      {:ok, ast} = Sourceror.parse_string(code)
       issues = Credence.Pattern.NoSortThenAt.check(ast, [])
 
       assert length(issues) > 0,

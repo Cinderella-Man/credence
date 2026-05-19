@@ -116,50 +116,54 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+
+    Credence.RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
+      # The matchers below pattern-match against bare literals (`is_atom(s)`,
+      # integer indices, `{a, b}` 2-tuple captures). Sourceror wraps those
+      # in `{:__block__, meta, [v]}` to carry position info; normalize the
+      # input so the matchers see bare literals. `Sourceror.to_string/1`
+      # accepts the normalized form, and `patches_from_ast_transform`
+      # re-parses the rendered output to get a clean Sourceror AST for diffing.
+      input
+      |> Credence.RuleHelpers.normalize_sourceror_ast()
+      |> transform_ast()
+    end)
   end
 
-  defp legacy_fix(source, _opts) do
-    {:ok, ast} = source |> Code.string_to_quoted(columns: true)
+  defp transform_ast(ast) do
+    Macro.postwalk(ast, fn
+      # Pattern 1 — nested: Enum.func(Map.keys/values(m), rest_args...)
+      {{:., dot, [{:__aliases__, al, [:Enum]}, f]}, cm, args} = node ->
+        case args do
+          [{{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, [ma]} | rest]
+          when mfunc in @map_funcs ->
+            pick(fix_nested(f, dot, al, cm, mfunc, ma, rest), node)
 
-    # Skip the Sourceror.to_string round-trip when nothing was rewritten —
-    # it strips heredoc tokens.
-    case Macro.postwalk(ast, fn
-           # Pattern 1 — nested: Enum.func(Map.keys/values(m), rest_args...)
-           {{:., dot, [{:__aliases__, al, [:Enum]}, f]}, cm, args} = node ->
-             case args do
-               [{{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, [ma]} | rest]
-               when mfunc in @map_funcs ->
-                 pick(fix_nested(f, dot, al, cm, mfunc, ma, rest), node)
+          _ ->
+            node
+        end
 
-               _ ->
-                 node
-             end
+      # Pattern 2 — pipe: Map.keys/values(m) |> Enum.func(...)
+      {:|>, pm,
+       [
+         {{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, [ma]},
+         {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, ea}
+       ]} = node
+      when mfunc in @map_funcs ->
+        pick(fix_pipe(f, pm, mfunc, ma, ea), node)
 
-           # Pattern 2 — pipe: Map.keys/values(m) |> Enum.func(...)
-           {:|>, pm,
-            [
-              {{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, [ma]},
-              {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, ea}
-            ]} = node
-           when mfunc in @map_funcs ->
-             pick(fix_pipe(f, pm, mfunc, ma, ea), node)
+      # Pattern 3 — triple pipe: map |> Map.keys/values() |> Enum.func(...)
+      {:|>, pm,
+       [
+         {:|>, _, [ma, {{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, _}]},
+         {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, ea}
+       ]} = node
+      when mfunc in @map_funcs ->
+        pick(fix_pipe(f, pm, mfunc, ma, ea), node)
 
-           # Pattern 3 — triple pipe: map |> Map.keys/values() |> Enum.func(...)
-           {:|>, pm,
-            [
-              {:|>, _, [ma, {{:., _, [{:__aliases__, _, [:Map]}, mfunc]}, _, _}]},
-              {{:., _, [{:__aliases__, _, [:Enum]}, f]}, _, ea}
-            ]} = node
-           when mfunc in @map_funcs ->
-             pick(fix_pipe(f, pm, mfunc, ma, ea), node)
-
-           node ->
-             node
-         end) do
-      ^ast -> source
-      fixed -> Sourceror.to_string(fixed)
-    end
+      node ->
+        node
+    end)
   end
 
   # fix_nested — "Enum.func(Map.values(m), rest...)"

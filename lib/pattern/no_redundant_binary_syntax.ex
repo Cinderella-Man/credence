@@ -91,15 +91,14 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
 
   defp detect_for_patch(_), do: nil
 
-  defp binary_literal?(str) when is_binary(str), do: true
   defp binary_literal?({:__block__, _, [str]}) when is_binary(str), do: true
   defp binary_literal?(_), do: false
 
   # <<>> with a single child that is a plain string literal (binary).
   # This excludes: multi-segment binaries, byte values, variables,
   # and any segment with a type specifier (::).
-  defp detect_pattern({:<<>>, meta, [child]}) when is_binary(child) do
-    {:ok, meta}
+  defp detect_pattern({:<<>>, meta, [child]}) do
+    if binary_literal?(child), do: {:ok, meta}, else: :skip
   end
 
   defp detect_pattern(_), do: :skip

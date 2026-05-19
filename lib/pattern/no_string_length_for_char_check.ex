@@ -27,25 +27,12 @@ defmodule Credence.Pattern.NoStringLengthForCharCheck do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        # Match: String.length(x) == 1, String.length(x) != 1, etc.
-        {op, _meta,
-         [
-           {{:., _, [{:__aliases__, _, [:String]}, :length]}, _, [_arg]},
-           1
-         ]} = node,
-        issues
-        when op in [:==, :!=, :===, :!==] ->
-          {node, [build_issue(node) | issues]}
-
-        # Match the reversed form: 1 == String.length(x)
-        {op, _meta,
-         [
-           1,
-           {{:., _, [{:__aliases__, _, [:String]}, :length]}, _, [_arg]}
-         ]} = node,
-        issues
-        when op in [:==, :!=, :===, :!==] ->
-          {node, [build_issue(node) | issues]}
+        {op, _meta, [lhs, rhs]} = node, issues when op in [:==, :!=, :===, :!==] ->
+          cond do
+            string_length_call?(lhs) and int_one?(rhs) -> {node, [build_issue(node) | issues]}
+            int_one?(lhs) and string_length_call?(rhs) -> {node, [build_issue(node) | issues]}
+            true -> {node, issues}
+          end
 
         node, issues ->
           {node, issues}

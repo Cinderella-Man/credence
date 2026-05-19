@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoMapThenAggregate.check(ast, [])
   end
 
@@ -338,8 +338,8 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       """
 
       result = fix(code)
-      {:ok, original_ast} = Code.string_to_quoted(code)
-      {:ok, fixed_ast} = Code.string_to_quoted(result)
+      {:ok, original_ast} = Sourceror.parse_string(code)
+      {:ok, fixed_ast} = Sourceror.parse_string(result)
       assert original_ast == fixed_ast
     end
 
@@ -352,7 +352,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       """
 
       result = fix(code)
-      assert {:ok, _ast} = Code.string_to_quoted(result)
+      assert {:ok, _ast} = Sourceror.parse_string(result)
     end
 
     test "fixed sum code is valid Elixir" do
@@ -363,7 +363,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       """
 
       result = fix(code)
-      assert {:ok, _ast} = Code.string_to_quoted(result)
+      assert {:ok, _ast} = Sourceror.parse_string(result)
     end
 
     test "fixed anonymous function code is valid Elixir" do
@@ -372,7 +372,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       """
 
       result = fix(code)
-      assert {:ok, _ast} = Code.string_to_quoted(result)
+      assert {:ok, _ast} = Sourceror.parse_string(result)
     end
   end
 
@@ -401,7 +401,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       # Blank line and return-tuple line untouched.
       assert output =~ "\n\n    {:ok, weighted}\n"
       assert output =~ "  end\nend\n"
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
     end
 
     test "keeps the replacement multi-line when the original pipeline was multi-line" do
@@ -422,7 +422,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
              "fn body collapsed to one line — expected newline after `->`:\n#{output}"
 
       assert output =~ "|> Enum.reduce("
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
     end
   end
 
@@ -434,7 +434,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
 
       output = fix(input)
 
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       refute output =~ ~r/\bc\.delivery\b/
       assert output =~ ~r/\bel\.delivery\b/
     end
@@ -446,7 +446,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
 
       output = fix(input)
 
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       refute output =~ ~r/\br\.inner\b/
       assert output =~ ~r/\bel\.inner\.field\b/
     end
@@ -458,7 +458,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
 
       output = fix(input)
 
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       assert output =~ ~r/\bString\.length\(el\)/
       refute output =~ ~r/\bString\.length\(s\)/
     end
@@ -476,7 +476,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
 
       output = fix(input)
 
-      assert {:ok, _} = Code.string_to_quoted(output)
+      assert {:ok, _} = Sourceror.parse_string(output)
       refute output =~ ~r/\bc\.delivery\b/
     end
   end

@@ -25,6 +25,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -75,23 +76,13 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
+  def fix_patches(ast, _opts) do
     decompose_vars = collect_decompose_vars(ast)
 
     if MapSet.size(decompose_vars) == 0 do
-      source
+      []
     else
-      ast
-      |> Macro.postwalk(fn
-        # Strip decomposition from bindings:
-        # graphemes = String.graphemes(s) → graphemes = s
-        # normalized = s |> String.downcase() |> String.graphemes() → normalized = s |> String.downcase()
+      RuleHelpers.patches_from_postwalk(ast, fn
         {:=, meta, [{var_name, _, nil} = lhs, rhs]} when is_atom(var_name) ->
           if MapSet.member?(decompose_vars, var_name) do
             {:=, meta, [lhs, strip_decomposition(rhs)]}
@@ -99,7 +90,6 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
             {:=, meta, [lhs, rhs]}
           end
 
-        # Replace Enum.reverse(var) → String.reverse(var) in == comparisons
         {:==, meta, [lhs, rhs]} ->
           {:==, meta,
            [
@@ -110,7 +100,6 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
         node ->
           node
       end)
-      |> Sourceror.to_string()
     end
   end
 

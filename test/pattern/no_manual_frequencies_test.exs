@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
   alias Credence.Issue
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoManualFrequencies.check(ast, [])
   end
 
@@ -189,7 +189,7 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert Credence.Pattern.NoManualFrequencies.check(ast, []) == []
     end
   end

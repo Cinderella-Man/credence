@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoManualMaxTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoManualMax.check(ast, [])
   end
 
@@ -11,7 +11,7 @@ defmodule Credence.Pattern.NoManualMaxTest do
   end
 
   defp ast_of(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     ast
   end
 

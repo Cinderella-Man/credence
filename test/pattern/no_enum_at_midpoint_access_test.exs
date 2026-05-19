@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoEnumAtMidpointAccess.check(ast, [])
   end
 
@@ -429,7 +429,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
       """
 
       fixed = fix(code)
-      {:ok, fixed_ast} = Code.string_to_quoted(fixed)
+      {:ok, fixed_ast} = Sourceror.parse_string(fixed)
       assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
 
@@ -444,7 +444,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
       """
 
       fixed = fix(code)
-      {:ok, fixed_ast} = Code.string_to_quoted(fixed)
+      {:ok, fixed_ast} = Sourceror.parse_string(fixed)
       assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
 
@@ -458,7 +458,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
       """
 
       fixed = fix(code)
-      {:ok, fixed_ast} = Code.string_to_quoted(fixed)
+      {:ok, fixed_ast} = Sourceror.parse_string(fixed)
       assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
 
@@ -475,7 +475,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
       """
 
       fixed = fix(code)
-      {:ok, fixed_ast} = Code.string_to_quoted(fixed)
+      {:ok, fixed_ast} = Sourceror.parse_string(fixed)
       assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
   end

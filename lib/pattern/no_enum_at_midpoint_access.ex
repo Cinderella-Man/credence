@@ -105,6 +105,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccess do
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -117,16 +118,13 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccess do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
 
-  defp legacy_fix(source, _opts) do
-    Sourceror.parse_string!(source)
-    |> Macro.postwalk(fn
-      {kind, _, _} = node when kind in [:def, :defp] -> maybe_fix_function(node)
-      node -> node
+    RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
+      Macro.postwalk(input, fn
+        {kind, _, _} = node when kind in [:def, :defp] -> maybe_fix_function(node)
+        node -> node
+      end)
     end)
-    |> Sourceror.to_string()
   end
 
   defp maybe_fix_function({kind, meta, [head, body_kw]} = node) when is_list(body_kw) do
@@ -228,7 +226,6 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccess do
   defp put_do_body(body_kw, new_body) when is_list(body_kw) do
     Enum.map(body_kw, fn
       {{:__block__, _, [:do]} = key, _old} -> {key, new_body}
-      {:do, _old} -> {:do, new_body}
       other -> other
     end)
   end
@@ -288,7 +285,6 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccess do
   defp extract_do_body(body_kw) when is_list(body_kw) do
     Enum.find_value(body_kw, fn
       {{:__block__, _, [:do]}, body} -> body
-      {:do, body} -> body
       _ -> nil
     end)
   end

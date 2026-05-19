@@ -32,6 +32,7 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @flagged_ops ~w(== != === !== < > <= >= and or)a
 
@@ -51,42 +52,15 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, fn
+      {:|>, _meta, [lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, _, [arg]}]}
+      when op in @flagged_ops ->
+        transform_kernel_pipe(lhs, op, arg)
 
-  defp legacy_fix(source, _opts) do
-    ast = Sourceror.parse_string!(source)
-
-    if has_flagged_kernel_op?(ast) do
-      ast
-      |> Macro.postwalk(fn
-        {:|>, _meta, [lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, _, [arg]}]}
-        when op in @flagged_ops ->
-          transform_kernel_pipe(lhs, op, arg)
-
-        node ->
-          node
-      end)
-      |> Sourceror.to_string()
-    else
-      source
-    end
-  end
-
-  defp has_flagged_kernel_op?(ast) do
-    {_ast, found?} =
-      Macro.prewalk(ast, false, fn
-        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, _, [_arg]}]} = node, _acc
-        when op in @flagged_ops ->
-          {node, true}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found?
+      node ->
+        node
+    end)
   end
 
   defp transform_kernel_pipe(lhs, op, arg) do

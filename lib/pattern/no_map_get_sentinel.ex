@@ -146,7 +146,7 @@ defmodule Credence.Pattern.NoMapGetSentinel do
   defp scan_map_get_sentinel({:=, _, [lhs, rhs]}) do
     with {:ok, var_name} <- plain_variable_name(lhs),
          {:ok, sentinel} <- extract_map_get_sentinel(rhs),
-         true <- is_integer(sentinel) and sentinel < 0 do
+         true <- sentinel < 0 do
       {:ok, var_name, sentinel}
     else
       _ -> :skip
@@ -160,7 +160,7 @@ defmodule Credence.Pattern.NoMapGetSentinel do
     if map_module?(mod) and unwrap_atom(func_ref) == :get do
       case unwrap_integer(sentinel_ast) do
         n when is_integer(n) -> {:ok, n}
-        _ -> :skip
+        nil -> :skip
       end
     else
       :skip
@@ -243,19 +243,18 @@ defmodule Credence.Pattern.NoMapGetSentinel do
     unwrap_integer(ast) == target
   end
 
-  # Handles bare integers, __block__-wrapped, and unary-minus forms.
-  defp unwrap_integer(n) when is_integer(n), do: n
+  # Handles `:__block__`-wrapped integers and unary-minus forms.
   defp unwrap_integer({:__block__, _, [n]}) when is_integer(n), do: n
-  defp unwrap_integer({:-, _, [n]}) when is_integer(n) and n > 0, do: -n
   defp unwrap_integer({:-, _, [{:__block__, _, [n]}]}) when is_integer(n) and n > 0, do: -n
   defp unwrap_integer(_), do: nil
 
+  # Atoms in function-name position (e.g. `:get` in `Map.get`) are NOT
+  # wrapped by Sourceror — only atoms in argument position are.
   defp unwrap_atom({:__block__, _, [atom]}) when is_atom(atom), do: atom
   defp unwrap_atom(atom) when is_atom(atom), do: atom
   defp unwrap_atom(_), do: nil
 
   defp map_module?({:__aliases__, _, [:Map]}), do: true
-  defp map_module?({:__aliases__, _, [{:__block__, _, [:Map]}]}), do: true
   defp map_module?(_), do: false
 
   defp rebinds_variable?({:=, _, [lhs, _rhs]}, var_name) do

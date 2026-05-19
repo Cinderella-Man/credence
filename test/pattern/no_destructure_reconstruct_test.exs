@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
   use ExUnit.Case
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoDestructureReconstruct.check(ast, [])
   end
 
@@ -427,7 +427,7 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
       """
 
       result = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
     end
 
     test "does not touch already-idiomatic code" do
@@ -465,7 +465,7 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(fixed)
+      assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
     test "round-trip: fixed code produces zero issues" do
@@ -483,7 +483,7 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert [] == Credence.Pattern.NoDestructureReconstruct.check(ast, [])
     end
 
@@ -497,7 +497,7 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
       """
 
       fixed = fix(code)
-      {:ok, ast} = Code.string_to_quoted(fixed)
+      ast = Sourceror.parse_string!(fixed)
       assert [] == Credence.Pattern.NoDestructureReconstruct.check(ast, [])
     end
   end

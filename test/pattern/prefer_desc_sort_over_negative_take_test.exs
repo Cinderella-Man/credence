@@ -3,7 +3,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeTest do
   alias Credence.Pattern.PreferDescSortOverNegativeTake
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     PreferDescSortOverNegativeTake.check(ast, [])
   end
 
@@ -192,7 +192,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeTest do
       """
 
       result = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
     end
 
     test "produces valid Elixir code for direct form" do
@@ -205,7 +205,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeTest do
       """
 
       result = fix(code)
-      assert {:ok, _} = Code.string_to_quoted(result)
+      assert {:ok, _} = Sourceror.parse_string(result)
     end
   end
 end

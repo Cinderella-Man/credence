@@ -97,30 +97,26 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
-  Normalizes an AST produced by `Sourceror.parse_string!/1` so that
-  standard `Code.string_to_quoted` pattern matches work against it.
+  Normalizes an AST produced by `Sourceror.parse_string!/1` by stripping
+  the `{:__block__, meta, [value]}` wrappers that Sourceror puts around
+  literals and 2-tuples to carry position metadata.
 
-  Sourceror wraps literals and 2-tuples in `{:__block__, meta, [value]}`
-  nodes to carry position metadata (the standard AST has no metadata slot
-  for these). This breaks patterns like `{:==, _, [expr, 1]}` because
-  the `1` is actually `{:__block__, [token: "1"], [1]}`.
+  Use this when a rule's matchers are simpler to write against bare-literal
+  shape — patterns like `{:==, _, [expr, 1]}` won't match Sourceror's
+  `{:==, _, [expr, {:__block__, _, [1]}]}` unless the AST is normalized
+  (or the matcher handles both shapes). Normalizing loses position info,
+  so it's best used to drive issue detection in `check/2` rather than
+  range-based patching in `fix_patches/2`.
 
-  This function recursively unwraps:
+  Unwraps:
 
   - Literals: `{:__block__, _, [1]}` → `1`
   - Atoms: `{:__block__, _, [:do]}` → `:do`
   - 2-tuples: `{:__block__, _, [{a, b}]}` → `{a, b}`
+  - Lists: `{:__block__, _, [[a, b]]}` → `[a, b]`
 
   As a result, keyword blocks like `[{{:__block__, _, [:do]}, body}]`
-  become `[do: body]`, matching standard AST shapes.
-
-  Use this in rule `fix/2` functions between parsing and walking:
-
-      source
-      |> Sourceror.parse_string!()
-      |> RuleHelpers.normalize_sourceror_ast()
-      |> Macro.postwalk(fn ... end)
-      |> Sourceror.to_string()
+  become `[do: body]`, matching bare-keyword shape.
   """
   @spec normalize_sourceror_ast(Macro.t()) :: Macro.t()
   def normalize_sourceror_ast(ast) do
@@ -223,6 +219,63 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
+  Returns the value bound to `:do` in a keyword list.
+
+  Accepts both Sourceror's shape (`[{{:__block__, _, [:do]}, body}]`) and
+  the bare-keyword shape (`[do: body]`) produced by `normalize_sourceror_ast/1`
+  or by manually built AST templates.
+
+  Returns `{:ok, body}` when present, `:error` otherwise.
+  """
+  @spec extract_do_body(list()) :: {:ok, term()} | :error
+  def extract_do_body(kw) when is_list(kw) do
+    Enum.find_value(kw, :error, fn
+      {:do, body} -> {:ok, body}
+      {{:__block__, _, [:do]}, body} -> {:ok, body}
+      _ -> nil
+    end)
+  end
+
+  def extract_do_body(_), do: :error
+
+  @doc """
+  Replaces the value bound to `:do` in a Sourceror-shaped keyword list
+  (`[{{:__block__, _, [:do]}, body} | _]`) with `new_body`. Returns the
+  list unchanged if no `:do` entry is found.
+  """
+  @spec replace_do_body(list(), term()) :: list()
+  def replace_do_body(kw_list, new_body) when is_list(kw_list) do
+    Enum.map(kw_list, fn
+      {{:__block__, _, [:do]} = k, _} -> {k, new_body}
+      other -> other
+    end)
+  end
+
+  @doc """
+  Unwraps a list literal AST node, accepting both Sourceror's
+  `{:__block__, meta, [list]}` wrapper and a bare list — the latter
+  for callers walking an AST passed through `normalize_sourceror_ast/1`.
+
+  Returns `{:ok, elements, original_node}` where `original_node` is the
+  wrapper (for range/rewrap) when present, otherwise the bare list.
+  """
+  @spec unwrap_list(term()) :: {:ok, list(), term()} | :error
+  def unwrap_list({:__block__, _, [elements]} = node) when is_list(elements),
+    do: {:ok, elements, node}
+
+  def unwrap_list(elements) when is_list(elements), do: {:ok, elements, elements}
+  def unwrap_list(_), do: :error
+
+  @doc """
+  Re-wraps a list of elements in a Sourceror `:__block__` wrapper, reusing
+  the original wrapper's meta so bracket-position metadata survives the
+  rewrite. Paired with `unwrap_list/1` for list-literal AST surgery.
+  """
+  @spec rewrap_list(term(), list()) :: term()
+  def rewrap_list({:__block__, meta, [_]}, new_elements),
+    do: {:__block__, meta, [new_elements]}
+
+  @doc """
   Mechanical migration helper for rules that today do
   `source |> Sourceror.parse_string!() |> Macro.postwalk(matcher) |>
   Sourceror.to_string()`.
@@ -247,6 +300,53 @@ defmodule Credence.RuleHelpers do
     diff_patches(ast, transformed)
   end
 
+  @doc """
+  Emits patches by AST-diffing `original` against a pre-computed
+  `transformed` AST. Use when the transformation can't be expressed
+  as a single `Macro.postwalk/2` matcher — e.g. it prunes nodes,
+  reorders siblings, or needs cross-clause information.
+
+  The transformed AST should be built by walking `original` (so that
+  unchanged subtrees retain their Sourceror metadata for range lookup);
+  replacement subtrees can be freshly synthesized without metadata —
+  the diff uses the *original* node's range.
+  """
+  @spec patches_from_diff(Macro.t(), Macro.t()) :: [map()]
+  def patches_from_diff(original, transformed) do
+    diff_patches(original, transformed)
+  end
+
+  @doc """
+  Applies an AST-to-AST `transform_fn`, then emits patches via
+  AST-diff between the original AST and a *re-parsed* version of the
+  rendered output.
+
+  The re-parse step gives the transformed AST clean Sourceror metadata
+  (literal wrappers, ranges) so the diff lines up structurally with
+  the original. This is needed when a rule's transformation produces
+  fresh subtrees with bare-literal shape that wouldn't otherwise match
+  the original Sourceror-wrapped shape.
+
+  Returns `[]` if the transformation produced an identical AST.
+  Falls back to a whole-source patch when re-parsing fails (rare —
+  typically signals the transform produced invalid code).
+  """
+  @spec patches_from_ast_transform(Macro.t(), String.t(), (Macro.t() -> Macro.t())) :: [map()]
+  def patches_from_ast_transform(ast, source, transform_fn) when is_function(transform_fn, 1) do
+    transformed = transform_fn.(ast)
+
+    if transformed == ast do
+      []
+    else
+      rendered = Sourceror.to_string(transformed)
+
+      case Sourceror.parse_string(rendered) do
+        {:ok, fresh_ast} -> diff_patches(ast, fresh_ast)
+        {:error, _} -> whole_source_patch(source, rendered)
+      end
+    end
+  end
+
   # Walks original and transformed ASTs in parallel. When the structural
   # shape matches, recurses into children. When the shape diverges (or
   # values differ at a leaf), emits a single patch covering the original
@@ -254,6 +354,19 @@ defmodule Credence.RuleHelpers do
   # never nested.
 
   defp diff_patches(same, same), do: []
+
+  # `:__block__` wrappers around a single literal leaf (string, atom,
+  # number) carry no source position of their own beyond the wrapper.
+  # If the wrapped value changed, the patch must land at the wrapper's
+  # range — recursing into the args list would drop us at a bare literal
+  # with no range, losing the patch.
+  defp diff_patches({:__block__, _, [val_o]} = orig, {:__block__, _, [val_m]} = modified)
+       when val_o != val_m and not is_tuple(val_o) and not is_list(val_o) do
+    case node_range(orig) do
+      nil -> []
+      range -> [%{range: range, change: render_replacement(modified, range)}]
+    end
+  end
 
   # Same 3-tuple shape with same arity — recurse into args. (Form must
   # be deeply equal too: an atom-form vs tuple-form is structurally
@@ -298,42 +411,27 @@ defmodule Credence.RuleHelpers do
     end
   end
 
+  # Lists and 2-tuples have no Sourceror metadata of their own, but we
+  # can synthesize a range from their first and last children. Needed
+  # when `diff_patches` hits a divergence at a list pattern (e.g. a
+  # `case` clause's `[a, b, c]` rewritten to `[_, _, _] = items`).
+  defp node_range([_ | _] = list) do
+    range_from(List.first(list), List.last(list))
+  end
+
+  defp node_range({a, b}) do
+    range_from(a, b)
+  end
+
   defp node_range(_), do: nil
 
-  @doc """
-  Universal adapter for rules whose fix is naturally source-level:
-  call the rule's `fix(source, opts)`, re-parse the result, and diff
-  the resulting AST against the original. Emit one patch per outermost
-  changed subtree.
+  defp range_from(first, last) do
+    case {node_range(first), node_range(last)} do
+      {%Sourceror.Range{} = f, %Sourceror.Range{} = l} ->
+        %Sourceror.Range{start: f.start, end: l.end}
 
-  Falls back to a single whole-source patch when AST round-tripping
-  the legacy output would be lossy (e.g. rules that do regex-level
-  edits and rely on the surrounding source bytes — parens, whitespace,
-  doc-string quirks — that Sourceror's renderer doesn't reproduce).
-
-  Used as the default `fix_patches/2` from `Credence.Pattern.Rule`'s
-  `__using__` macro. Gives per-site patches automatically for the
-  rules where it's safe; preserves the legacy behavior for the
-  source-sensitive rules where it isn't.
-  """
-  @spec patches_from_legacy_fix(Macro.t(), String.t(), (String.t() -> String.t())) :: [map()]
-  def patches_from_legacy_fix(ast, source, fix_fn) when is_function(fix_fn, 1) do
-    case fix_fn.(source) do
-      ^source ->
-        []
-
-      new_source ->
-        case Sourceror.parse_string(new_source) do
-          {:ok, new_ast} ->
-            if Sourceror.to_string(new_ast) == new_source do
-              diff_patches(ast, new_ast)
-            else
-              whole_source_patch(source, new_source)
-            end
-
-          {:error, _} ->
-            whole_source_patch(source, new_source)
-        end
+      _ ->
+        nil
     end
   end
 
@@ -363,7 +461,27 @@ defmodule Credence.RuleHelpers do
   """
   @spec render_replacement(Macro.t(), map(), keyword()) :: String.t()
   def render_replacement(new_ast, _original_range, opts \\ []) do
-    Sourceror.to_string(new_ast, opts)
+    new_ast
+    |> strip_layout_meta()
+    |> Sourceror.to_string(opts)
+  end
+
+  # Sourceror infers layout (single-line vs. multi-line) from each node's
+  # `line`/`column` metadata — a wide line span forces multi-line. When
+  # a rule builds a replacement subtree by reusing original subnodes
+  # (with their original line positions) inside a freshly-synthesized
+  # outer node (no line meta), Sourceror sees a wide span and wraps
+  # unnecessarily. Stripping just `:line` and `:column` lets Sourceror
+  # fall back to length-based layout, while preserving `:end_of_expression`
+  # (blank-line spacing) and `:closing` (bracket positions).
+  defp strip_layout_meta(ast) do
+    Macro.prewalk(ast, fn
+      {form, meta, args} when is_list(meta) ->
+        {form, Keyword.drop(meta, [:line, :column, :closing, :last, :end]), args}
+
+      other ->
+        other
+    end)
   end
 
   @doc """

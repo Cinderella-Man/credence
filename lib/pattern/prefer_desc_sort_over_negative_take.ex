@@ -44,15 +44,8 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.fetch!(opts, :source)
-    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
-  end
-
-  defp legacy_fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.prewalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {:|>, _, _} = node ->
         pipeline = flatten_pipeline(node)
 
@@ -65,7 +58,6 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp transform_pipeline({:|>, meta, [left, right]}) do
@@ -126,14 +118,10 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
   defp wrap_literal(int) when is_integer(int),
     do: {:__block__, [token: Integer.to_string(int)], [int]}
 
-  defp positive_value({:-, _, [int]}) when is_integer(int), do: {:ok, int}
-
   defp positive_value({:-, _, [{:__block__, _, [int]}]}) when is_integer(int),
     do: {:ok, int}
 
-  defp positive_value({:__block__, _, [int]}), do: positive_value(int)
-  defp positive_value(int) when is_integer(int) and int < 0, do: {:ok, abs(int)}
-  defp positive_value(int) when is_integer(int), do: {:ok, int}
+  defp positive_value({:__block__, _, [int]}) when is_integer(int), do: {:ok, int}
   defp positive_value(_), do: :error
 
   defp adjacent_sort_take?(pipeline) do
@@ -172,13 +160,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
     end)
   end
 
-  defp negative_integer?({:-, _, [int]}) when is_integer(int), do: true
-
-  defp negative_integer?({:-, _, [{:__block__, _, [int]}]}) when is_integer(int),
-    do: true
-
-  defp negative_integer?({:__block__, _, [int]}), do: negative_integer?(int)
-  defp negative_integer?(int) when is_integer(int) and int < 0, do: true
+  defp negative_integer?({:-, _, [{:__block__, _, [int]}]}) when is_integer(int), do: true
   defp negative_integer?(_), do: false
 
   defp build_issue(meta) do

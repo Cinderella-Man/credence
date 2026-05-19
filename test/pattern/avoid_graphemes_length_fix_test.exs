@@ -6,7 +6,7 @@ defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
   end
 
   defp check(code) do
-    {:ok, ast} = Code.string_to_quoted(code)
+    ast = Sourceror.parse_string!(code)
     Credence.Pattern.AvoidGraphemesLength.check(ast, [])
   end
 
@@ -78,7 +78,7 @@ defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
     end
 
     test "fixed code is valid Elixir" do
-      assert {:ok, _} = Code.string_to_quoted(fix("String.graphemes(str) |> length()"))
+      assert {:ok, _} = Sourceror.parse_string(fix("String.graphemes(str) |> length()"))
     end
   end
 end
