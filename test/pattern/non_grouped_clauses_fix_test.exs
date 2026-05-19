@@ -106,6 +106,19 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
 
       assert fix(input) == input
     end
+
+    test "module attributes between consecutive clauses stay in place" do
+      input = """
+      defmodule M do
+        def foo(1), do: 1
+
+        @decorate telemetry([:demo])
+        def foo(x), do: x + 1
+      end
+      """
+
+      assert fix(input) == input
+    end
   end
 
   describe "no-ops" do
@@ -142,6 +155,21 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
 
         @impl true
         def handle_event("b", _, s), do: s
+      end
+      """
+
+      assert fix(input) == input
+    end
+
+    test "does not move a stray clause preceded by @decorate" do
+      input = """
+      defmodule M do
+        def foo(1), do: 1
+
+        def bar(x), do: x
+
+        @decorate telemetry([:demo])
+        def foo(x), do: x + 1
       end
       """
 

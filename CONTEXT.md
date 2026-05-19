@@ -117,14 +117,24 @@ differences. Rules that don't account for these silently fail to match.
   strings, 2-tuples, lists) in `{:__block__, meta, [value]}` to carry
   position metadata. Standard Elixir AST has bare literals. A pattern like
   `{:==, _, [_, 1]}` won't match Sourceror's `{:==, _, [_, {:__block__, _, [1]}]}`.
-  Two ways to handle it:
-  - `RuleHelpers.normalize_sourceror_ast/1` — strips all wrappers, giving
-    you bare-literal shape. Loses position info, but matchers become
-    simpler. Best used inside `check/2` where you only need line numbers
-    (which live on outer 3-tuple nodes, not on literals).
-  - Match Sourceror's wrapped shape directly. Use `unwrap_literal/1` /
-    `unwrap_list/1` / `extract_do_body/1` in `RuleHelpers` for the common
-    patterns (literal-or-bare, list-or-wrapped-list, do-keyword).
+  Rules pattern-match against the wrapped form directly — use
+  `unwrap_literal/1`, `unwrap_list/1`, or `extract_do_body/1` in
+  `RuleHelpers` for the common cases (literal-or-`__block__`,
+  list-or-wrapped-list, do-keyword). Don't normalize the AST inside a
+  rule — every Pattern rule walks Sourceror shape end-to-end.
+- **Atom positions that stay bare**: Sourceror wraps atom *values* in
+  `:__block__` (e.g. `:asc` in `Enum.sort(list, :asc)`) but leaves atoms
+  bare in *function-name* positions (`:get` in `Map.get(...)`) and *module*
+  positions (`:Enum` in `{:__aliases__, _, [:Enum]}`). The `unwrap_atom`
+  helpers in rules accept both — the bare clause is for these legitimately-
+  bare atom positions, not a Code-AST compat shim.
+- **Building Sourceror-shaped output**: when a rule synthesizes new literal
+  nodes for the patch's replacement, wrap them too — `Sourceror.to_string/1`
+  crashes on bare integers in argument positions and renders bare 2-tuples
+  as map-update syntax (`{_k, v}` → `_k => v`). Wrap integers as
+  `{:__block__, [token: "N"], [n]}`, strings as `{:__block__, [delimiter: ~s(")], [s]}`,
+  tuples as `{:__block__, [], [{a, b}]}`. See `no_map_keys_or_values_for_iteration`'s
+  `wrap_int/1`, `wrap_str/1`, `wrap_tuple/1` for the canonical builders.
 - **String `:delimiter` metadata**: heredocs (`"""`) and regular strings
   (`"`) produce the *same* string value in standard Elixir AST — both
   collapse to a bare binary. Sourceror keeps them apart via a `:delimiter`
@@ -192,10 +202,13 @@ multiple traversals of the same list).
    `patches_from_postwalk`. Restructures or inserts siblings →
    `patches_from_ast_transform`. Needs verbatim source bytes → walk + emit
    patches directly.
-2. Write `check/2` to detect the issue. Return `[Issue.t()]`.
-3. Write `fix_patches/2`. Handle Sourceror's `:__block__` wrappers — either
-   normalize first or match both shapes.
-4. Write tests in `test/pattern/<rule>_test.exs`. Use
+2. Write `check/2` to detect the issue. Pattern-match Sourceror's wrapped
+   shape directly. Return `[Issue.t()]`.
+3. Write `fix_patches/2`. Pattern-match Sourceror's wrapped shape directly
+   when reading the AST; wrap any fresh literal nodes (integers, strings,
+   tuples) you emit so `Sourceror.to_string/1` renders them correctly.
+4. Write tests in `test/pattern/<rule>_test.exs`. Parse the source with
+   `Sourceror.parse_string!/1` before calling `check/2`. Use
    `RuleHelpers.apply_rule_fix/3` to invoke the fix from a test.
 5. Run the full suite. The compile-output gate will revert any rule that
    produces non-compiling output (with a debug log) — fix the rule or the
@@ -215,10 +228,17 @@ multiple traversals of the same list).
   parser) does not appear in `lib/` or `test/` — it produces a different
   AST shape than Sourceror, and mixing the two silently corrupts rule
   behaviour. Both `check/2` and `fix_patches/2` receive Sourceror AST;
-  rules pattern-match against its wrapped-literal shape (or use
-  `normalize_sourceror_ast/1` when the matchers are simpler in bare form).
-  Template construction inside a rule uses `Sourceror.parse_string!/1`,
-  not `Code.string_to_quoted!/1`.
+  rules pattern-match against its wrapped-literal shape directly. Template
+  construction inside a rule uses `Sourceror.parse_string!/1`, not
+  `Code.string_to_quoted!/1`.
+- **No `normalize_sourceror_ast/1` inside rules**: every Pattern rule
+  walks Sourceror's wrapped AST end-to-end. The `normalize_sourceror_ast/1`
+  helper still exists in `RuleHelpers` but is used only by test-helper
+  `norm/1` functions for AST-equivalence comparison via `Macro.to_string/1`
+  — never by production rule logic. Earlier the helper was used by three
+  rules as an internal shortcut; that pattern was removed because it
+  smuggled standard-Elixir-AST shape into a project that's nominally
+  Sourceror-only.
 - **Rules don't re-parse the source as a shape workaround**: if a matcher
-  doesn't fit, fix the matcher or normalize the AST — don't re-parse the
-  source string with a different parser to get a shape that matches.
+  doesn't fit, fix the matcher. Don't re-parse the source string with a
+  different parser to get a shape that matches.
