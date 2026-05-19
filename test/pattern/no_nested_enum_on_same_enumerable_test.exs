@@ -45,6 +45,42 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableTest do
 
       assert check(code) == []
     end
+
+    test "does not flag sibling def clauses sharing a parameter name" do
+      code = """
+      defmodule Sibling do
+        def f1([h | _t], xs), do: Enum.map(xs, fn x -> x + h end)
+        def f1([], xs),       do: Enum.map(xs, fn x -> x * 2 end)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag siblings inside separate function bodies" do
+      code = """
+      defmodule TwoFns do
+        def a(items), do: Enum.map(items, & &1 + 1)
+        def b(items), do: Enum.filter(items, & &1 > 0)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "still flags real nested Enum on the same enumerable" do
+      code = """
+      defmodule Bad do
+        def process(list) do
+          Enum.map(list, fn x ->
+            Enum.member?(list, x + 1)
+          end)
+        end
+      end
+      """
+
+      assert [%Issue{rule: :no_nested_enum_on_same_enumerable}] = check(code)
+    end
   end
 
   describe "fix/2" do

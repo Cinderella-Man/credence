@@ -34,29 +34,43 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerable do
 
   @impl true
   def check(ast, _opts) do
+    # `Macro.traverse/4` so each Enum frame pushed on entry is popped
+    # on exit. The flat `Macro.prewalk` version never popped, which made
+    # sibling Enum calls (e.g. across separate `def` clauses) see each
+    # other's frames and false-positive as "nested on same enumerable".
     {_ast, {_, issues}} =
-      Macro.prewalk(ast, {[], []}, fn node, {stack, issues} ->
-        case extract_enum_call(node) do
-          {:ok, func, var, meta} ->
-            new_issues =
-              if Enum.any?(stack, fn {_f, v} -> v == var end) do
-                [
-                  %Issue{
-                    rule: :no_nested_enum_on_same_enumerable,
-                    message: build_message(func, var),
-                    meta: %{line: Keyword.get(meta, :line)}
-                  }
-                ]
-              else
-                []
-              end
+      Macro.traverse(
+        ast,
+        {[], []},
+        fn node, {stack, issues} ->
+          case extract_enum_call(node) do
+            {:ok, func, var, meta} ->
+              new_issues =
+                if Enum.any?(stack, fn {_f, v} -> v == var end) do
+                  [
+                    %Issue{
+                      rule: :no_nested_enum_on_same_enumerable,
+                      message: build_message(func, var),
+                      meta: %{line: Keyword.get(meta, :line)}
+                    }
+                  ]
+                else
+                  []
+                end
 
-            {node, {[{func, var} | stack], issues ++ new_issues}}
+              {node, {[{func, var} | stack], issues ++ new_issues}}
 
-          _ ->
-            {node, {stack, issues}}
+            _ ->
+              {node, {stack, issues}}
+          end
+        end,
+        fn node, {stack, issues} ->
+          case extract_enum_call(node) do
+            {:ok, _, _, _} -> {node, {tl(stack), issues}}
+            _ -> {node, {stack, issues}}
+          end
         end
-      end)
+      )
 
     issues
   end
