@@ -132,7 +132,7 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
   end
 
   describe "fix/2" do
-    test "converts direct List.to_tuple + elem to Enum.at" do
+    test "converts direct List.to_tuple + elem to Enum.at, dropping the dead binding" do
       assert_fix(
         """
         defmodule Example do
@@ -145,7 +145,6 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
         """
         defmodule Example do
           def run(list) do
-            t = List.to_tuple(list)
             Enum.at(list, 0)
           end
         end
@@ -153,7 +152,7 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
       )
     end
 
-    test "converts piped List.to_tuple + elem to Enum.at" do
+    test "converts piped List.to_tuple + elem to Enum.at, dropping the dead binding" do
       assert_fix(
         """
         defmodule Example do
@@ -166,7 +165,6 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
         """
         defmodule Example do
           def run(list) do
-            t = list |> List.to_tuple()
             Enum.at(list, 0)
           end
         end
@@ -174,7 +172,7 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
       )
     end
 
-    test "converts multiple elem calls on same tuple variable" do
+    test "converts multiple elem calls and drops the now-unused binding" do
       assert_fix(
         """
         defmodule Example do
@@ -189,7 +187,6 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
         """
         defmodule Example do
           def run(list) do
-            t = List.to_tuple(list)
             a = Enum.at(list, 0)
             b = Enum.at(list, 1)
             {a, b}
@@ -339,7 +336,7 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
       assert length(issues) == 1
     end
 
-    test "FALSE POSITIVE: different t inside anonymous function" do
+    test "no longer flags shadowed t inside an anonymous function" do
       code = """
       defmodule NestedScope do
         def run(list) do
@@ -349,10 +346,128 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
       end
       """
 
-      issues = check(code)
-      # Flags the inner `elem(t, 0)` even though `t` is a different binding.
-      # Documenting the false positive
-      assert length(issues) == 1
+      # The inner `elem(t, 0)` is shadowed by the fn parameter — and the
+      # loop-scope guard (introduced for the `List.to_tuple` perf-regression
+      # bug) coincidentally suppresses this false positive too, since the
+      # elem sits inside a `:fn` opened after the binding.
+      assert check(code) == []
+    end
+  end
+
+  describe "fix/2 — loop-scope safety (issue: perf regression + dead code)" do
+    test "does not rewrite elem inside an Enum.reduce lambda" do
+      input = """
+      defmodule Demo do
+        def f(coords, indices) do
+          coords_tuple = List.to_tuple(coords)
+
+          Enum.reduce(indices, [], fn idx, acc ->
+            {x, y} = elem(coords_tuple, idx)
+            [{x, y} | acc]
+          end)
+        end
+      end
+      """
+
+      assert fix(input) == input
+      assert check(input) == []
+    end
+
+    test "does not rewrite elem inside a for comprehension" do
+      input = """
+      defmodule Demo do
+        def f(list, idxs) do
+          t = List.to_tuple(list)
+          for i <- idxs, do: elem(t, i)
+        end
+      end
+      """
+
+      assert fix(input) == input
+      assert check(input) == []
+    end
+
+    test "does not rewrite elem inside Enum.map lambda" do
+      input = """
+      defmodule Demo do
+        def f(list, idxs) do
+          t = List.to_tuple(list)
+          Enum.map(idxs, fn i -> elem(t, i) end)
+        end
+      end
+      """
+
+      assert fix(input) == input
+      assert check(input) == []
+    end
+
+    test "removes the dead List.to_tuple binding when its only reader is a fixed elem call" do
+      assert_fix(
+        """
+        defmodule Example do
+          def run(list) do
+            t = List.to_tuple(list)
+            elem(t, 0)
+          end
+        end
+        """,
+        """
+        defmodule Example do
+          def run(list) do
+            Enum.at(list, 0)
+          end
+        end
+        """
+      )
+    end
+
+    test "removes the dead binding when all elem readers are out-of-loop and rewritten" do
+      assert_fix(
+        """
+        defmodule Example do
+          def run(list) do
+            t = List.to_tuple(list)
+            a = elem(t, 0)
+            b = elem(t, 1)
+            {a, b}
+          end
+        end
+        """,
+        """
+        defmodule Example do
+          def run(list) do
+            a = Enum.at(list, 0)
+            b = Enum.at(list, 1)
+            {a, b}
+          end
+        end
+        """
+      )
+    end
+
+    test "preserves binding when a non-elem reader (e.g. tuple_size) remains" do
+      assert_fix(
+        """
+        defmodule Example do
+          def run(list) do
+            t = List.to_tuple(list)
+            size = tuple_size(t)
+            first = elem(t, 0)
+            {first, size}
+          end
+        end
+        """,
+        """
+        defmodule Example do
+          def run(list) do
+            t = List.to_tuple(list)
+            size = tuple_size(t)
+            first = Enum.at(list, 0)
+            {first, size}
+          end
+        end
+        """
+      )
     end
   end
 end
