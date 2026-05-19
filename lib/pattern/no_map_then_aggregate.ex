@@ -57,7 +57,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   @impl true
   def fix_patches(ast, _opts), do: collect_patches(ast)
 
-  # ── Patch collection ────────────────────────────────────────────
   #
   # Walks the AST and builds one `Sourceror.patch_string/2` patch per
   # match site (either a pipeline ending in `|> Enum.<agg>` or a
@@ -167,8 +166,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     {:ok, %{range: range, change: replacement}, range_lines}
   end
 
-  # ── Pipeline fix ────────────────────────────────────────────────
-
   defp fix_pipeline({:|>, _, _} = node) do
     steps = flatten_pipeline(node)
 
@@ -194,8 +191,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
       end
     end)
   end
-
-  # ── Build the reduce replacement ────────────────────────────────
 
   defp build_reduce(source, map_fn, agg_fn) do
     el_var = {:el, [], Elixir}
@@ -226,7 +221,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     end
   end
 
-  # ── Inline a map function applied to a variable ─────────────────
   #
   # Instead of generating `apply(fn, el)` or `fn.(el)`, we inline
   # the function call directly:
@@ -289,7 +283,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     {{:., [], [map_fn]}, [], [var]}
   end
 
-  # ── Variable substitution ───────────────────────────────────────
   #
   # `Macro.prewalk/2` rather than hand-written clauses, because earlier
   # versions missed AST shapes where the variable lives in the *form*
@@ -303,12 +296,8 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     end)
   end
 
-  # ── Literal wrapping (Sourceror compat) ─────────────────────────
-
   defp wrap_literal(int) when is_integer(int),
     do: {:__block__, [token: Integer.to_string(int)], [int]}
-
-  # ── Check helpers ───────────────────────────────────────────────
 
   defp check_node({:|>, meta, _} = node) do
     pipeline = flatten_pipeline(node)
@@ -339,8 +328,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
       _ -> :error
     end
   end
-
-  # ── AST matchers ────────────────────────────────────────────────
 
   defp map_call?({{:., _, [mod, :map]}, _, args})
        when is_list(args) and length(args) == 2,
@@ -375,8 +362,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true
   defp enum_module?(_), do: false
 
-  # ── Pipeline rebuilding ─────────────────────────────────────────
-
   defp rebuild_pipeline([], reduce, []), do: reduce
 
   defp rebuild_pipeline([], reduce, after_) do
@@ -391,8 +376,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
       end)
     end)
   end
-
-  # ── Issue building ──────────────────────────────────────────────
 
   defp build_issue(agg_fn, meta) do
     %Issue{

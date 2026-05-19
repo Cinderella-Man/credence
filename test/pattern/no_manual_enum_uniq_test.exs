@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoManualEnumUniq.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualEnumUniq, code, [])
   end
 
   describe "NoManualEnumUniq check" do

@@ -67,21 +67,15 @@ defmodule Credence.Syntax.FixPythonModulo do
     |> Enum.join("\n")
   end
 
-  # ── Detection ──────────────────────────────────────────────────
-
   defp modulo_line?(line) do
     not comment?(line) and Regex.match?(@modulo_pattern, line)
   end
 
   defp comment?(line), do: Regex.match?(~r/^\s*#/, line)
 
-  # ── Fix ────────────────────────────────────────────────────────
-
   defp fix_line(line) do
     Regex.replace(@modulo_pattern, line, "rem(\\1, \\2)")
   end
-
-  # ── Issue ──────────────────────────────────────────────────────
 
   defp build_issue(line_no) do
     %Issue{

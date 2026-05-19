@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoParamRebindingTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoParamRebinding.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoParamRebinding, code, [])
   end
 
   defp fix_and_verify(code) do

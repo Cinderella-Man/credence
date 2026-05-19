@@ -76,7 +76,12 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
         if needs_fix?(ast) do
@@ -91,8 +96,6 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
         source
     end
   end
-
-  # ── Detection ─────────────────────────────────────────────────
 
   # Walks the body looking for Logger.macro_name(...) calls.
   # Stops at nested defmodule nodes so inner modules don't get
@@ -131,8 +134,6 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
 
   defp block_to_list({:__block__, _, stmts}), do: stmts
   defp block_to_list(single), do: [single]
-
-  # ── Fix ───────────────────────────────────────────────────────
 
   defp needs_fix?(ast) do
     {_, found} =
@@ -217,8 +218,6 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
   defp directive_like?({tag, _, _}) when tag in @directives, do: true
   defp directive_like?({:@, _, [{:moduledoc, _, _}]}), do: true
   defp directive_like?(_), do: false
-
-  # ── Issue ─────────────────────────────────────────────────────
 
   defp build_issue(meta) do
     %Issue{

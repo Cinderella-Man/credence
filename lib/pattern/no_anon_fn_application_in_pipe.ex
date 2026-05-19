@@ -51,10 +51,8 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipe do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # |> (fn ... end).() → |> then(fn ... end)
       {:|>, pipe_meta, [left, {{:., _, [{:fn, _, _} = fn_node]}, _, []}]} ->
         {:|>, pipe_meta, [left, {:then, [], [fn_node]}]}
@@ -62,6 +60,5 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipe do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 end

@@ -8,7 +8,7 @@ defmodule Credence.Pattern.PreferEnumSliceTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.PreferEnumSlice.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferEnumSlice, code, [])
   end
 
   describe "PreferEnumSlice" do

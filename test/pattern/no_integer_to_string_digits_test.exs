@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoIntegerToStringDigitsTest do
     Credence.Pattern.NoIntegerToStringDigits.check(ast, [])
   end
 
-  defp fix(code), do: Credence.Pattern.NoIntegerToStringDigits.fix(code, [])
+  defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIntegerToStringDigits, code, [])
   describe "NoIntegerToStringDigits" do
     test "passes code that uses Integer.digits/2" do
       code = """

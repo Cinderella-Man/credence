@@ -32,8 +32,6 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ─────────────────────────────────────────────────────────
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
@@ -48,26 +46,10 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
     Enum.reverse(issues)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
-
   @impl true
-  def fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        if has_fixable_pattern?(ast) do
-          ast
-          |> Macro.postwalk(&maybe_rewrite_block/1)
-          |> Sourceror.to_string()
-        else
-          source
-        end
-
-      {:error, _} ->
-        source
-    end
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite_block/1)
   end
-
-  # ── Shared: scanning ──────────────────────────────────────────────
 
   # Finds length assignments with matching computed Enum.at indices
   # in the same block.
@@ -176,8 +158,6 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
     if rebind_idx, do: rebind_idx - 1, else: length(statements) - 1
   end
 
-  # ── Variable and value helpers ────────────────────────────────────
-
   defp plain_variable_name({name, _, context})
        when is_atom(name) and is_atom(context) and name != :_,
        do: {:ok, name}
@@ -201,8 +181,6 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true
   defp enum_module?({:__aliases__, _, [{:__block__, _, [:Enum]}]}), do: true
   defp enum_module?(_), do: false
-
-  # ── Rebinding detection ──────────────────────────────────────────
 
   defp rebinds_variable?({:=, _, [lhs, _rhs]}, var_name) do
     ast_binds_name?(lhs, var_name)
@@ -235,8 +213,6 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
 
   defp ast_contains_variable?(_, _), do: false
 
-  # ── Check: issue generation ──────────────────────────────────────
-
   defp find_issues(statements) do
     find_length_patterns(statements)
     |> Enum.map(fn %{length_var: length_var, list_var: list_var, index: idx} ->
@@ -255,24 +231,6 @@ defmodule Credence.Pattern.NoLengthBasedIndexing do
         meta: %{line: line}
       }
     end)
-  end
-
-  # ── Fix: block rewriting ─────────────────────────────────────────
-
-  defp has_fixable_pattern?(ast) do
-    {_, found} =
-      Macro.prewalk(ast, false, fn
-        _node, true ->
-          {nil, true}
-
-        {:__block__, _, statements} = node, false when is_list(statements) ->
-          {node, find_length_patterns(statements) != []}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found
   end
 
   defp maybe_rewrite_block({:__block__, meta, statements} = node)

@@ -69,7 +69,12 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
   end
 
   @impl true
-  def fix(source, opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, opts) do
     ast = Sourceror.parse_string!(source)
 
     rename_map =
@@ -85,8 +90,6 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
       |> Sourceror.to_string()
     end
   end
-
-  # ── Fix helpers ──────────────────────────────────────────────────────
 
   # First pass: walk defs to build %{is_foo => :foo?} rename map
   defp collect_renames(ast) do
@@ -152,8 +155,6 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
   end
 
   defp apply_renames(node, _rename_map), do: node
-
-  # ── Check helpers ────────────────────────────────────────────────────
 
   # Guarded clause: must come first to avoid :when match
   defp check_node({def_type, meta, [{:when, _, [{fn_name, _, args}, _guard]}, _body]})

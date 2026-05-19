@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoUnderscoreFunctionName.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoUnderscoreFunctionName, code, [])
   end
 
   describe "NoUnderscoreFunctionName — check" do

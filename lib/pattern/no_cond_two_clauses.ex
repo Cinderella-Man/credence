@@ -30,8 +30,6 @@ defmodule Credence.Pattern.NoCondTwoClauses do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ─────────────────────────────────────────────────────────
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
@@ -50,26 +48,10 @@ defmodule Credence.Pattern.NoCondTwoClauses do
     Enum.reverse(issues)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
-
   @impl true
-  def fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        if has_fixable?(ast) do
-          ast
-          |> Macro.postwalk(&maybe_rewrite/1)
-          |> Sourceror.to_string()
-        else
-          source
-        end
-
-      {:error, _} ->
-        source
-    end
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
   end
-
-  # ── Detection ────────────────────────────────────────────────────
 
   # Checks if a cond node has exactly 2 clauses with `true` as
   # the second guard.
@@ -102,26 +84,6 @@ defmodule Credence.Pattern.NoCondTwoClauses do
   defp match_true?(true), do: true
   defp match_true?({:__block__, _, [true]}), do: true
   defp match_true?(_), do: false
-
-  # ── Pre-scan ─────────────────────────────────────────────────────
-
-  defp has_fixable?(ast) do
-    {_, found} =
-      Macro.prewalk(ast, false, fn
-        _node, true ->
-          {nil, true}
-
-        {:cond, _, _} = node, false ->
-          {node, two_clause_cond?(node)}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found
-  end
-
-  # ── Fix: node rewriting ──────────────────────────────────────────
 
   defp maybe_rewrite({:cond, meta, [kw]} = node) when is_list(kw) do
     case extract_do_clauses(kw) do
@@ -162,8 +124,6 @@ defmodule Credence.Pattern.NoCondTwoClauses do
         [do: do_body, else: else_body]
     end
   end
-
-  # ── Issue construction ───────────────────────────────────────────
 
   defp build_issue(meta) do
     %Issue{

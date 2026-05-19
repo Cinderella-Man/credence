@@ -44,7 +44,12 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     source
     |> Sourceror.parse_string!()
     |> Macro.prewalk(fn
@@ -62,8 +67,6 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
     end)
     |> Sourceror.to_string()
   end
-
-  # ── Fix helpers ──────────────────────────────────────────────────
 
   defp transform_pipeline({:|>, meta, [left, right]}) do
     {:|>, meta, [transform_pipeline(left), transform_step(right)]}
@@ -98,8 +101,6 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
 
   defp transform_step(node), do: node
 
-  # ── Sort direction / comparator detection ───────────────────────
-
   defp sort_direction_or_comparator?(:asc), do: true
   defp sort_direction_or_comparator?(:desc), do: true
   defp sort_direction_or_comparator?({:__block__, _, [:asc]}), do: true
@@ -108,7 +109,6 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
   defp sort_direction_or_comparator?({:&, _, _}), do: true
   defp sort_direction_or_comparator?(_), do: false
 
-  # ── Plain sort detection ────────────────────────────────────────
   # "Plain sort" = default ascending, either piped (0 args) or direct (1 list arg)
 
   defp plain_sort_args?([]), do: true
@@ -120,15 +120,11 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
 
   defp plain_sort?(_), do: false
 
-  # ── Literal wrapping ───────────────────────────────────────────
-
   defp wrap_literal(atom) when is_atom(atom),
     do: {:__block__, [token: inspect(atom)], [atom]}
 
   defp wrap_literal(int) when is_integer(int),
     do: {:__block__, [token: Integer.to_string(int)], [int]}
-
-  # ── Integer extraction ──────────────────────────────────────────
 
   defp positive_value({:-, _, [int]}) when is_integer(int), do: {:ok, int}
 
@@ -139,8 +135,6 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
   defp positive_value(int) when is_integer(int) and int < 0, do: {:ok, abs(int)}
   defp positive_value(int) when is_integer(int), do: {:ok, int}
   defp positive_value(_), do: :error
-
-  # ── Adjacency guard ─────────────────────────────────────────────
 
   defp adjacent_sort_take?(pipeline) do
     pipeline
@@ -155,8 +149,6 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
     do: negative_integer?(n)
 
   defp negative_take?(_), do: false
-
-  # ── Shared pipeline helpers ─────────────────────────────────────
 
   defp flatten_pipeline({:|>, _, [left, right]}),
     do: flatten_pipeline(left) ++ [right]

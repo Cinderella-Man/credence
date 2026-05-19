@@ -61,10 +61,8 @@ defmodule Credence.Pattern.UseMapJoin do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Pipeline: ... |> Enum.map(f) |> Enum.join(sep)
       {:|>, _meta, [left, join_call]} = node ->
         with true <- remote_call?(join_call, :Enum, :join),
@@ -115,7 +113,6 @@ defmodule Credence.Pattern.UseMapJoin do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   # -- Shared helpers --

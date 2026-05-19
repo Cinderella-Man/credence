@@ -45,10 +45,8 @@ defmodule Credence.Pattern.HallucinatedGuard do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {name, _, [arg]} = node when is_atom(name) ->
         case Map.get(@hallucinated_guards, name) do
           {op, bound} ->
@@ -61,7 +59,6 @@ defmodule Credence.Pattern.HallucinatedGuard do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp build_issue(name, meta) do

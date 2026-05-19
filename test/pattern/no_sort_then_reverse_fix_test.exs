@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoSortThenReverseFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.NoSortThenReverse.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoSortThenReverse, code, [])
   end
 
   # ── Atom direction: pipeline form ───────────────────────────────────────

@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoKernelShadowingFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.NoKernelShadowing.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoKernelShadowing, code, [])
   end
 
   describe "max → max_value" do

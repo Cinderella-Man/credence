@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoListAppendInRecursion.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoListAppendInRecursion, code, [])
   end
 
   describe "NoListAppendInRecursion check" do

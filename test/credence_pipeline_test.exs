@@ -313,9 +313,13 @@ defmodule Credence.PipelineTest do
     end
 
     @impl true
-    def fix(_source, _opts) do
+    def fix_patches(_ast, opts) do
+      source = Keyword.fetch!(opts, :source)
       # Parses but does not compile (undefined function).
-      "defmodule Broken_NotARealMod_xyz do\n  def go, do: some_undefined_thing()\nend\n"
+      broken_source =
+        "defmodule Broken_NotARealMod_xyz do\n  def go, do: some_undefined_thing()\nend\n"
+
+      Credence.RuleHelpers.patches_from_legacy_fix(_ast = nil, source, fn _ -> broken_source end)
     end
   end
 
@@ -332,7 +336,13 @@ defmodule Credence.PipelineTest do
     end
 
     @impl true
-    def fix(_source, _opts), do: "this is <<< not valid elixir at all"
+    def fix_patches(ast, opts) do
+      source = Keyword.fetch!(opts, :source)
+
+      Credence.RuleHelpers.patches_from_legacy_fix(ast, source, fn _ ->
+        "this is <<< not valid elixir at all"
+      end)
+    end
   end
 
   describe "compile-output gate" do

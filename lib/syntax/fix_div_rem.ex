@@ -43,8 +43,6 @@ defmodule Credence.Syntax.FixDivRem do
     |> Enum.join("\n")
   end
 
-  # ── Detection ───────────────────────────────────────────────────
-
   defp infix_use?(line, op) do
     trimmed = String.trim(line)
 
@@ -57,8 +55,6 @@ defmodule Credence.Syntax.FixDivRem do
   defp infix_pattern(op) do
     ~r"(?<![|>.])\b\S+\)\s+#{op}\s+\w|(?<![|>.])\b\w+\s+#{op}\s+\w"
   end
-
-  # ── Fixing ──────────────────────────────────────────────────────
 
   defp fix_line(line) do
     Enum.reduce(@operators, line, fn op, current ->

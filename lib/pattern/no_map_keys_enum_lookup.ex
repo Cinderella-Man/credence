@@ -55,16 +55,13 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn node ->
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
       case try_fix_node(node) do
         {:ok, fixed} -> fixed
         _ -> node
       end
     end)
-    |> Sourceror.to_string()
   end
 
   defp try_fix_node({:|>, _, _} = node) do

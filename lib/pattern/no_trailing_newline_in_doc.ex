@@ -32,8 +32,6 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
 
   @doc_attrs [:doc, :moduledoc, :typedoc]
 
-  # ── Check (Code.string_to_quoted AST — escapes resolved) ───────
-
   @impl true
   def check(ast, opts) do
     source_lines =
@@ -72,10 +70,13 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
     end
   end
 
-  # ── Fix (Sourceror AST — escapes may be raw OR resolved) ───────
-
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = Sourceror.parse_string!(source)
 
     if has_fixable_doc?(ast) do
@@ -110,8 +111,6 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
 
   defp fix_node(node), do: node
 
-  # ── Pre-check ───────────────────────────────────────────────────
-
   defp has_fixable_doc?(ast) do
     {_ast, found} =
       Macro.prewalk(ast, false, fn
@@ -127,7 +126,6 @@ defmodule Credence.Pattern.NoTrailingNewlineInDoc do
     found
   end
 
-  # ── Value analysis and stripping ────────────────────────────────
   #
   # Sourceror preserves raw escape sequences in string values when
   # parsing fresh source: "text\n" → value is "text\\n" (backslash + n).

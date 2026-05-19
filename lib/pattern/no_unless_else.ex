@@ -32,8 +32,6 @@ defmodule Credence.Pattern.NoUnlessElse do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ─────────────────────────────────────────────────────────
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
@@ -52,26 +50,10 @@ defmodule Credence.Pattern.NoUnlessElse do
     Enum.reverse(issues)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
-
   @impl true
-  def fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        if has_unless_else?(ast) do
-          ast
-          |> Macro.postwalk(&maybe_rewrite/1)
-          |> Sourceror.to_string()
-        else
-          source
-        end
-
-      {:error, _} ->
-        source
-    end
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
   end
-
-  # ── Detection helpers ─────────────────────────────────────────────
 
   # Checks if a keyword list (from unless/if args) has an :else clause.
   # Handles both Code.string_to_quoted and Sourceror AST forms.
@@ -84,25 +66,6 @@ defmodule Credence.Pattern.NoUnlessElse do
   end
 
   defp has_else?(_), do: false
-
-  # Pre-scan: checks if the AST contains any unless...else nodes.
-  defp has_unless_else?(ast) do
-    {_, found} =
-      Macro.prewalk(ast, false, fn
-        _node, true ->
-          {nil, true}
-
-        {:unless, _, [_condition, clauses]} = node, false ->
-          {node, has_else?(clauses)}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found
-  end
-
-  # ── Fix: node rewriting ──────────────────────────────────────────
 
   # Rewrites a single unless...else node to if...else with swapped bodies.
   defp maybe_rewrite({:unless, meta, [condition, clauses]} = node) do
@@ -137,8 +100,6 @@ defmodule Credence.Pattern.NoUnlessElse do
       _ -> nil
     end)
   end
-
-  # ── Issue construction ───────────────────────────────────────────
 
   defp build_issue(meta) do
     %Issue{

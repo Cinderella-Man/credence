@@ -70,7 +70,6 @@ defmodule Credence.Pattern.NoManualEnumUniq do
     Enum.reverse(issues)
   end
 
-  # ── Sourceror-based fix ──────────────────────────────────────────
   #
   # Uses Macro.postwalk so transformations compose bottom-up:
   #
@@ -82,7 +81,12 @@ defmodule Credence.Pattern.NoManualEnumUniq do
   # happen to follow a pre-existing Enum.uniq in the original source.
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     source
     |> Sourceror.parse_string!()
     |> Sourceror.postwalk(fn node, state -> {apply_uniq_fix(node), state} end)
@@ -91,7 +95,6 @@ defmodule Credence.Pattern.NoManualEnumUniq do
 
   defp apply_uniq_fix(node) do
     case node do
-      # ── Stage 1a: Direct call ──
       # Enum.reduce(list, {MapSet.new(), []}, fn ...) → Enum.uniq(list)
       {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :reduce]}, call_meta,
        [list_arg, init_acc, fun]} ->
@@ -102,7 +105,6 @@ defmodule Credence.Pattern.NoManualEnumUniq do
           node
         end
 
-      # ── Stage 1b: Piped call ──
       # ... |> Enum.reduce({MapSet, []}, fn ...) → ... |> Enum.uniq()
       {:|>, pipe_meta,
        [
@@ -120,22 +122,18 @@ defmodule Credence.Pattern.NoManualEnumUniq do
           node
         end
 
-      # ── Stage 2a: Strip orphaned elem(N) in pipe ──
       # ... |> Enum.uniq() |> elem(N) → ... |> Enum.uniq()
       {:|>, _pipe_meta, [left, {:elem, _, _}]} ->
         if ends_with_fresh_uniq?(left), do: left, else: node
 
-      # ── Stage 2b: Strip orphaned elem(uniq, N) direct call ──
       # elem(Enum.uniq(list), N) → Enum.uniq(list)
       {:elem, _, [inner, _index]} ->
         if fresh_uniq_call?(inner), do: inner, else: node
 
-      # ── Stage 3a: Strip orphaned Enum.reverse() in pipe ──
       # ... |> Enum.uniq() |> Enum.reverse() → ... |> Enum.uniq()
       {:|>, _pipe_meta, [left, {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, []}]} ->
         if ends_with_fresh_uniq?(left), do: left, else: node
 
-      # ── Stage 3b: Strip orphaned Enum.reverse(uniq) direct call ──
       # Enum.reverse(Enum.uniq(list)) → Enum.uniq(list)
       {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [inner]} ->
         if fresh_uniq_call?(inner), do: inner, else: node
@@ -144,8 +142,6 @@ defmodule Credence.Pattern.NoManualEnumUniq do
         other
     end
   end
-
-  # ── Fresh-uniq tagging ───────────────────────────────────────────
 
   defp tag_fresh_uniq(meta) when is_list(meta) do
     [{:__credence_fresh_uniq__, true} | meta]
@@ -162,8 +158,6 @@ defmodule Credence.Pattern.NoManualEnumUniq do
 
   defp ends_with_fresh_uniq?({:|>, _, [_, right]}), do: fresh_uniq_call?(right)
   defp ends_with_fresh_uniq?(node), do: fresh_uniq_call?(node)
-
-  # ── Detection helpers (shared by check + fix) ────────────────────
 
   defp manual_uniq?(init_acc, fun) do
     case find_mapset_index(init_acc) do

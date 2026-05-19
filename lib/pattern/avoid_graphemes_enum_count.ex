@@ -56,10 +56,8 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Pipe: ... |> String.graphemes() |> Enum.count()
       {:|>, _, [lhs, rhs]} = node when is_tuple(rhs) ->
         if enum_count_no_pred?(rhs) and immediate_graphemes?(lhs) do
@@ -78,7 +76,6 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   # String.graphemes(x) |> Enum.count() → String.length(x)

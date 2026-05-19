@@ -82,21 +82,15 @@ defmodule Credence.Pattern.NoKernelShadowing do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {name, meta, ctx} when name in @shadowed and is_atom(ctx) ->
         {Map.get(@renames, name, :"#{name}_value"), meta, ctx}
 
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
-
-  # --- Helpers ---
-
   defp extract_vars(ast, meta) do
     Macro.prewalk(ast, [], fn
       {name, var_meta, ctx} = node, acc

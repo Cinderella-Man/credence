@@ -2,7 +2,7 @@ defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.AvoidGraphemesLength.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.AvoidGraphemesLength, code, [])
   end
 
   defp check(code) do
@@ -37,14 +37,13 @@ defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
       end
       """
 
-      expected =
-        String.trim_trailing("""
-        defmodule Example do
-          def a(s), do: String.length(s)
-          def b(s), do: String.length(s)
-          def c(s), do: String.length(s)
-        end
-        """)
+      expected = """
+      defmodule Example do
+        def a(s), do: String.length(s)
+        def b(s), do: String.length(s)
+        def c(s), do: String.length(s)
+      end
+      """
 
       assert fix(code) == expected
     end

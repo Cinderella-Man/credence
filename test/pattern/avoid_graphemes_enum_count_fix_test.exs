@@ -7,7 +7,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.AvoidGraphemesEnumCount.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.AvoidGraphemesEnumCount, code, [])
   end
 
   describe "no predicate → String.length" do

@@ -1322,8 +1322,12 @@ defmodule CredenceTest do
       """
 
       result = Credence.fix(input)
-      assert String.trim_trailing(result.code) == String.trim_trailing(expected)
-      assert {:ok, _ast} = Code.string_to_quoted(result.code)
+      # Compare ASTs rather than exact string — the patch path may
+      # wrap long lines differently than the legacy whole-AST
+      # renderer, but the semantic should be identical.
+      assert {:ok, result_ast} = Code.string_to_quoted(result.code)
+      assert {:ok, expected_ast} = Code.string_to_quoted(expected)
+      assert Macro.to_string(result_ast) == Macro.to_string(expected_ast)
     end
 
     test "fix works nicely with to float conversion" do

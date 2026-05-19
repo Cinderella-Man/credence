@@ -48,7 +48,6 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ─────────────────────────────────────────────────────────
   # Uses AST from Code.string_to_quoted (bare float literals).
 
   @impl true
@@ -80,11 +79,15 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
     Enum.reverse(issues)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
   # Uses Sourceror for parsing (wraps literals in __block__).
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
         target_lines = find_target_lines(ast)
@@ -115,8 +118,6 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
     end
   end
 
-  # ── Target-line collection (Sourceror AST) ────────────────────────
-
   defp find_target_lines(ast) do
     {_ast, lines} =
       Macro.prewalk(ast, [], fn
@@ -143,14 +144,10 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
     Enum.uniq(lines)
   end
 
-  # ── Bare-variable detection ──────────────────────────────────────
-
   # Sourceror wraps variables in {:__block__, _, [var_node]}.
   defp bare_var?({:__block__, _, [inner]}), do: bare_var?(inner)
   defp bare_var?({name, _meta, ctx}) when is_atom(name) and is_atom(ctx), do: true
   defp bare_var?(_), do: false
-
-  # ── Line-level rewriting (regex) ──────────────────────────────────
 
   defp fix_line(line) do
     if self_assign_identity?(line) do
@@ -189,8 +186,6 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
     |> then(&Regex.replace(~r/0\.0(?![0-9eE_])\s*\+\s*/, &1, ""))
   end
 
-  # ── Identity helpers ──────────────────────────────────────────────
-
   # Right-hand identity:  expr * 1.0,  expr / 1.0,  expr + 0.0,  expr - 0.0
   defp identity_right?(:*, 1.0), do: true
   defp identity_right?(:/, 1.0), do: true
@@ -209,8 +204,6 @@ defmodule Credence.Pattern.NoIdentityFloatCoercion do
   defp unwrap_float({:__block__, _, [val]}) when is_float(val), do: val
   defp unwrap_float(val) when is_float(val), do: val
   defp unwrap_float(_), do: nil
-
-  # ── Issue construction ────────────────────────────────────────────
 
   defp build_issue(op, val, meta) do
     identity = if val == 1.0, do: "1.0", else: "0.0"

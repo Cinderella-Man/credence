@@ -51,21 +51,15 @@ defmodule Credence.Pattern.NoDocFalseOnPrivate do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.prewalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {:__block__, meta, stmts} when is_list(stmts) ->
         {:__block__, meta, drop_redundant_doc_false(stmts)}
 
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
-
-  # --- Shared helpers (both AST shapes) ---
-
   # Matches @doc false in both standard AST and Sourceror AST.
   # Sourceror wraps literals in __block__, so `false` becomes
   # {:__block__, meta, [false]}.
@@ -76,9 +70,6 @@ defmodule Credence.Pattern.NoDocFalseOnPrivate do
   # All defp forms (with or without guards) match {:defp, _, _}.
   defp defp_node?({:defp, _, _}), do: true
   defp defp_node?(_), do: false
-
-  # --- Fix-specific: remove the offending nodes from statement lists ---
-
   defp drop_redundant_doc_false([]), do: []
 
   defp drop_redundant_doc_false([doc_node, defp_node | rest]) do
@@ -92,9 +83,6 @@ defmodule Credence.Pattern.NoDocFalseOnPrivate do
   defp drop_redundant_doc_false([node | rest]) do
     [node | drop_redundant_doc_false(rest)]
   end
-
-  # --- Check-specific ---
-
   defp build_issue(meta) do
     %Issue{
       rule: :no_doc_false_on_private,

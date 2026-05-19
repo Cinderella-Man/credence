@@ -53,7 +53,12 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = Sourceror.parse_string!(source)
     patches = collect_fixes(ast, source)
 
@@ -119,9 +124,6 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
 
     patches
   end
-
-  # --- Pipeline patches ---
-
   defp build_pipeline_patch(tw_step, count_step, source) do
     tw_range = Sourceror.get_range(tw_step, include_parens: true)
     count_range = Sourceror.get_range(count_step, include_parens: true)
@@ -147,9 +149,6 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
     end)
     |> Enum.reverse()
   end
-
-  # --- Direct call patches ---
-
   defp build_direct_patch(outer_node, take_while_node, source) do
     outer_range = Sourceror.get_range(outer_node, include_parens: true)
 
@@ -162,9 +161,6 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
 
     {start_off, end_off, replacement}
   end
-
-  # --- Source-level helpers ---
-
   defp take_while_fun_text({{:., _, [{:__aliases__, _, [:Enum]}, :take_while]}, _, [_enum, fun]}) do
     Sourceror.to_string(fun)
   end
@@ -206,9 +202,6 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
   defp build_reduce_while_text(enum_mod, fun_text, enum_text) do
     "#{enum_mod}.reduce_while(#{enum_text}, 0, fn elem, acc -> if #{fun_text}.(elem), do: {:cont, acc + 1}, else: {:halt, acc} end)"
   end
-
-  # --- AST pattern helpers (shared by check and fix) ---
-
   defp check_node({:|>, meta, _} = node) do
     pipeline = flatten_pipeline(node)
     check_pipeline(pipeline, meta)

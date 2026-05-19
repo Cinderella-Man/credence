@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoMapGetSentinelFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    result = Credence.Pattern.NoMapGetSentinel.fix(code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapGetSentinel, code, [])
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 
@@ -106,7 +106,6 @@ defmodule Credence.Pattern.NoMapGetSentinelFixTest do
       expected = """
       def run(char_map, grapheme, start_index) do
         last_seen = Map.get(char_map, grapheme)
-
         if last_seen != nil and last_seen >= start_index do
           last_seen + 1
         else
@@ -216,11 +215,9 @@ defmodule Credence.Pattern.NoMapGetSentinelFixTest do
       expected = """
       def run(map) do
         val = Map.get(map, :key)
-
         if val != nil do
           process(val)
         end
-
         if val == nil do
           log_miss()
         end
@@ -273,7 +270,6 @@ defmodule Credence.Pattern.NoMapGetSentinelFixTest do
       def run(map, threshold) do
         val = Map.get(map, :key)
         threshold = threshold + 1
-
         if val != nil and val >= threshold do
           val
         else
@@ -306,7 +302,6 @@ defmodule Credence.Pattern.NoMapGetSentinelFixTest do
       expected = """
       def run(char_map, current_char, left_index) do
         previous_position = Map.get(char_map, current_char)
-
         if previous_position != nil and previous_position >= left_index do
           previous_position + 1
         else
@@ -387,8 +382,7 @@ defmodule Credence.Pattern.NoMapGetSentinelFixTest do
       expected = """
       def run(map, low, high) do
         val = Map.get(map, :key)
-
-        if val != nil and val >= low and (val != nil and val < high) do
+        if val != nil and val >= low and val != nil and val < high do
           val
         else
           0

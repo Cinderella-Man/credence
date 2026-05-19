@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoExplicitMaxReduce.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoExplicitMaxReduce, code, [])
   end
 
   describe "NoExplicitMaxReduce" do

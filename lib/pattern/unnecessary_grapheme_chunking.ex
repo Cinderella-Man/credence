@@ -43,23 +43,15 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Credence.RuleHelpers.normalize_sourceror_ast()
-    |> Macro.postwalk(fn node ->
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
       case detect_fixable_pipeline(node) do
         {:ok, subject, n} -> build_replacement(subject, n)
         :error -> node
       end
     end)
-    |> Sourceror.to_string()
   end
-
-  # ---------------------------------------------------------------------------
   # Pipeline detection
-  # ---------------------------------------------------------------------------
-
   # Matches: subject |> String.graphemes() |> Enum.chunk_every(n, 1, ...) |> Enum.map(join_fn)
   defp detect_fixable_pipeline(
          {:|>, _,
@@ -85,26 +77,30 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
   end
 
   defp detect_fixable_pipeline(_), do: :error
-
-  # ---------------------------------------------------------------------------
   # AST predicates
-  # ---------------------------------------------------------------------------
-
   defp graphemes_call?({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}), do: true
   defp graphemes_call?(_), do: false
 
-  defp chunk_every_sliding?({{:., _, [{:__aliases__, _, [:Enum]}, :chunk_every]}, _, [_, 1]}),
-    do: true
-
-  defp chunk_every_sliding?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :chunk_every]}, _, [_, 1, :discard]}
-       ),
-       do: true
+  defp chunk_every_sliding?({{:., _, [{:__aliases__, _, [:Enum]}, :chunk_every]}, _, args}) do
+    case args do
+      [_, n] -> int_value(n) == 1
+      [_, n, discard] -> int_value(n) == 1 and atom_value(discard) == :discard
+      _ -> false
+    end
+  end
 
   defp chunk_every_sliding?(_), do: false
 
   defp extract_chunk_size({{:., _, _}, _, [n | _]}), do: n
   defp extract_chunk_size(_), do: nil
+
+  defp int_value(n) when is_integer(n), do: n
+  defp int_value({:__block__, _, [n]}) when is_integer(n), do: n
+  defp int_value(_), do: nil
+
+  defp atom_value(a) when is_atom(a), do: a
+  defp atom_value({:__block__, _, [a]}) when is_atom(a), do: a
+  defp atom_value(_), do: nil
 
   defp map_join?({{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [join_fn]}),
     do: join_function?(join_fn)
@@ -149,11 +145,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
     |> Macro.to_string()
     |> String.contains?("Enum.join")
   end
-
-  # ---------------------------------------------------------------------------
   # Replacement builder
-  # ---------------------------------------------------------------------------
-
   # Builds: for i <- 0..(String.length(subject) - n), do: String.slice(subject, i, n)
   defp build_replacement(subject, n) do
     length_call =
@@ -167,11 +159,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
 
     {:for, [], [{:<-, [], [{:i, [], nil}, range]}, [do: body]]}
   end
-
-  # ---------------------------------------------------------------------------
   # Issue
-  # ---------------------------------------------------------------------------
-
   defp trigger_issue(node) do
     %Issue{
       rule: :unnecessary_grapheme_chunking,

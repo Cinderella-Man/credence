@@ -51,7 +51,12 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = Sourceror.parse_string!(source)
 
     if has_flagged_kernel_op?(ast) do
@@ -83,8 +88,6 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
 
     found?
   end
-
-  # ── Transform logic ─────────────────────────────────────────────
 
   defp transform_kernel_pipe(lhs, op, arg) do
     case count_pipes(lhs) do
@@ -121,8 +124,6 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
   defp inline_pipe_step(input, step) do
     {:|>, [], [input, step]}
   end
-
-  # ── Issue building ──────────────────────────────────────────────
 
   defp build_issue(meta, op) do
     %Issue{

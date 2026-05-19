@@ -62,7 +62,12 @@ defmodule Credence.Pattern.NoSortThenReverse do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     source
     |> Sourceror.parse_string!()
     |> Macro.prewalk(fn
@@ -89,8 +94,6 @@ defmodule Credence.Pattern.NoSortThenReverse do
     |> Code.format_string!()
     |> IO.iodata_to_binary()
   end
-
-  # ── Pipeline fix helpers ──────────────────────────────────────────────
 
   # Multi-step pipe: before |> Enum.sort() |> Enum.reverse()
   defp fix_pipeline({:|>, _, [before_sort, sort_node]}, pipe_meta, fallback) do
@@ -133,8 +136,6 @@ defmodule Credence.Pattern.NoSortThenReverse do
     end
   end
 
-  # ── Sourceror AST normalization ───────────────────────────────────────
-
   # Sourceror wraps literal atoms (and other literals) in
   # {:__block__, meta, [value]} nodes to preserve source metadata.
   # Unwrap them so our pattern-matching helpers see plain atoms.
@@ -142,8 +143,6 @@ defmodule Credence.Pattern.NoSortThenReverse do
 
   defp normalize_arg({:__block__, _, [literal]}) when is_atom(literal), do: literal
   defp normalize_arg(other), do: other
-
-  # ── Argument classification & transformation ──────────────────────────
 
   # Pipe context: no subject (pipe provides it), only sort direction
   defp fixable_pipe_args?(args), do: pipe_sort_direction(args) != :unknown
@@ -166,8 +165,6 @@ defmodule Credence.Pattern.NoSortThenReverse do
       :desc -> [subject]
     end
   end
-
-  # ── Direction resolution ─────────────────────────────────────────────
 
   # Used by check/2 — works on raw (non-normalized) sort args
   defp resolvable_direction?(sort_args, context) do
@@ -233,8 +230,6 @@ defmodule Credence.Pattern.NoSortThenReverse do
 
   defp same_var?({name, _, _}, {name, _, _}) when is_atom(name), do: true
   defp same_var?(_, _), do: false
-
-  # ── AST builders & utilities ──────────────────────────────────────────
 
   defp build_sort_call(args) do
     {{:., [], [{:__aliases__, [], [:Enum]}, :sort]}, [], args}

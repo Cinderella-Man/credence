@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoLengthGuardToPattern.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoLengthGuardToPattern, code, [])
   end
 
   describe "NoLengthGuardToPattern check" do

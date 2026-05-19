@@ -49,10 +49,8 @@ defmodule Credence.Pattern.NoManualMax do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {:if, _meta, [condition, branches]} = node ->
         case try_fix_max(condition, branches) do
           {:ok, max_call} -> max_call
@@ -62,7 +60,6 @@ defmodule Credence.Pattern.NoManualMax do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp try_fix_max(condition, branches) do

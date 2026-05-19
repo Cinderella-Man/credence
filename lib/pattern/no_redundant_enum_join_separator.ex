@@ -54,10 +54,8 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparator do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Direct call: Enum.join(list, "") → Enum.join(list)
       {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :join]}, call_m, [list_arg, sep]} = node ->
         if empty_string?(sep),
@@ -103,7 +101,6 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparator do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   # Sourceror wraps string literals with metadata: {:__block__, meta, [""]}

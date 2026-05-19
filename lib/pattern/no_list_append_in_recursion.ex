@@ -47,7 +47,12 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = Sourceror.parse_string!(source)
 
     # Pass 1: determine which functions can be fixed
@@ -62,11 +67,7 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
       |> Sourceror.to_string()
     end
   end
-
-  # ---------------------------------------------------------------------------
   # Check
-  # ---------------------------------------------------------------------------
-
   defp check_clause(body, name, params, meta, issues) do
     if body_calls_self?(body, name) and direct_append_in_call?(body, name, params) do
       pp_meta = find_append_meta(body, name) || meta
@@ -86,11 +87,7 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
       issues
     end
   end
-
-  # ---------------------------------------------------------------------------
   # Fix — Pass 1: analysis
-  # ---------------------------------------------------------------------------
-
   defp analyze_functions(ast) do
     {_ast, by_fn} =
       Macro.prewalk(ast, %{}, fn
@@ -196,11 +193,7 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
         nil
     end
   end
-
-  # ---------------------------------------------------------------------------
   # Fix — Pass 2: apply transforms
-  # ---------------------------------------------------------------------------
-
   defp apply_fix(
          {kind, meta, [{:when, _, [{name, _, params}, _guard]} = when_clause, body_kw]} = node,
          fixable
@@ -286,11 +279,7 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
       {kind, meta, [call_or_when, body_kw]}
     end
   end
-
-  # ---------------------------------------------------------------------------
   # Shared helpers
-  # ---------------------------------------------------------------------------
-
   # Used by check (Code.string_to_quoted AST) — lists are plain [expr]
   defp direct_append_in_call?(body, name, params) do
     last = last_expression(body)

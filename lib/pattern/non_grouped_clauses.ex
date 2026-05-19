@@ -37,7 +37,12 @@ defmodule Credence.Pattern.NonGroupedClauses do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
         fixed = Macro.postwalk(ast, &fix_module_node/1)
@@ -47,8 +52,6 @@ defmodule Credence.Pattern.NonGroupedClauses do
         source
     end
   end
-
-  # ── Check helpers ───────────────────────────────────────────────
 
   defp check_body(body) do
     {_, _, _, issues} =
@@ -84,8 +87,6 @@ defmodule Credence.Pattern.NonGroupedClauses do
 
     Enum.reverse(issues)
   end
-
-  # ── Fix helpers ─────────────────────────────────────────────────
 
   defp fix_module_node({:defmodule, meta, [alias_node, [do: {:__block__, block_meta, body}]]}) do
     new_body = group_clauses(body)
@@ -163,8 +164,6 @@ defmodule Credence.Pattern.NonGroupedClauses do
     {before, after_part} = Enum.split(body, last_idx + 1)
     before ++ clauses ++ after_part
   end
-
-  # ── Shared helpers ──────────────────────────────────────────────
 
   defp function_key({kind, _, [{:when, _, [{name, _, args} | _]} | _]})
        when kind in [:def, :defp] and is_atom(name) do

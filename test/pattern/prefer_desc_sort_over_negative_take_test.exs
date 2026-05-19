@@ -7,7 +7,8 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeTest do
     PreferDescSortOverNegativeTake.check(ast, [])
   end
 
-  defp fix(code), do: PreferDescSortOverNegativeTake.fix(code, [])
+  defp fix(code),
+    do: Credence.RuleHelpers.apply_rule_fix(PreferDescSortOverNegativeTake, code, [])
 
   # ── check ───────────────────────────────────────────────────────
 

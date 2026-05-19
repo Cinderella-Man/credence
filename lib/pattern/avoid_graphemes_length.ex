@@ -58,10 +58,8 @@ defmodule Credence.Pattern.AvoidGraphemesLength do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Pipe: String.graphemes(x) |> length()
       {:|>, _, [lhs, {:length, _, _}]} = node ->
         fix_pipe_length(lhs, node)
@@ -76,7 +74,6 @@ defmodule Credence.Pattern.AvoidGraphemesLength do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   # String.graphemes(x) |> length() → String.length(x)

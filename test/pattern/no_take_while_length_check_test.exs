@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoTakeWhileLengthCheck.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoTakeWhileLengthCheck, code, [])
   end
 
   defp check_fix(code) do

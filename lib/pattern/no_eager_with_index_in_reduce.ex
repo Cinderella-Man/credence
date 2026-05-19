@@ -77,7 +77,12 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
   end
 
   @impl true
-  def fix(source, opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, opts) do
     strategy = Keyword.get(opts, :fix_strategy, @fix_strategy)
 
     source
@@ -175,7 +180,6 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
     end
   end
 
-  # ── Literal wrapping ────────────────────────────────────────────
   # Sourceror.to_string/1 → Code.Formatter requires __block__ nodes
   # to carry a :token key in their metadata so the formatter knows
   # how to render the literal.
@@ -183,7 +187,6 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
   defp wrap_literal(int) when is_integer(int),
     do: {:__block__, [token: Integer.to_string(int)], [int]}
 
-  # ── Fn transformation for :reduce strategy ───
   #
   # Transforms:
   #   fn {val, idx}, acc -> body end

@@ -61,7 +61,12 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     source
     |> Sourceror.parse_string!()
     |> transform_ast()
@@ -100,8 +105,6 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
         [stmt | transform_block(rest)]
     end
   end
-
-  # ── Extract Map.update / Map.update! from assignment ─────────────────
 
   defp extract_map_update(
          {:=, _,
@@ -259,8 +262,6 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
 
     [val_assign, map_assign]
   end
-
-  # ── Case expression builder (string-based, Sourceror-safe) ───────────
 
   defp build_case_expr(map_ast, key_ast, default_ast, fun_ast) do
     map_s = Macro.to_string(map_ast)

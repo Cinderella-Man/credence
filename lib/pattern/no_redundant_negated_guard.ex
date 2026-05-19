@@ -48,7 +48,12 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = Sourceror.parse_string!(source)
     clauses = collect_clauses_for_fix(ast)
     fixable = find_fixable_clauses(clauses)
@@ -61,8 +66,6 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
       |> Sourceror.to_string()
     end
   end
-
-  # ── CHECK helpers ──────────────────────────────────────────────
 
   defp collect_clauses(ast) do
     {_ast, clauses} =
@@ -111,8 +114,6 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
     end
   end
 
-  # ── GUARD EXTRACTION ───────────────────────────────────────────
-
   defp extract_comparison(nil, _), do: :error
 
   defp extract_comparison({op, _, [left, right]}, target_ops) when is_list(target_ops) do
@@ -154,7 +155,6 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
     }
   end
 
-  # ── FIX helpers ────────────────────────────────────────────────
   #
   # The fix collects ALL guarded function clauses (both equality and
   # inequality), groups them by {name, arity}, finds adjacent pairs
@@ -166,7 +166,6 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
   #   1. The preceding clause has an equality guard (== or ===)
   #   2. The current clause has an inequality guard (!= or !==)
   #   3. The variable names match across both clauses
-  # ───────────────────────────────────────────────────────────────
 
   defp collect_clauses_for_fix(ast) do
     {_ast, clauses} =

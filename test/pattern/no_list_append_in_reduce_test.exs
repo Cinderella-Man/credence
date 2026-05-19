@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoListAppendInReduceTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoListAppendInReduce.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoListAppendInReduce, code, [])
   end
 
   describe "NoListAppendInReduce check" do

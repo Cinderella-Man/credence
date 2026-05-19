@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoMapKeysEnumLookup.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapKeysEnumLookup, code, [])
   end
 
   defp assert_fixes_cleanly(code) do

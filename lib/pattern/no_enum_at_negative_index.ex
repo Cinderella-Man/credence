@@ -69,7 +69,12 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = Sourceror.parse_string!(source)
     lines = String.split(source, "\n")
 
@@ -107,7 +112,6 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
     fix_remaining_negative_indices(result)
   end
 
-  # ── Negative index extraction ──────────────────────────────────────
   #
   # Elixir AST represents `-1` as `{:-, meta, [1]}` (unary minus).
   # Sourceror additionally wraps the inner literal:
@@ -121,8 +125,6 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
   defp extract_negative_index({:__block__, _, [n]}), do: extract_negative_index(n)
   defp extract_negative_index(n) when is_integer(n) and n < 0, do: {:ok, n}
   defp extract_negative_index(_), do: :error
-
-  # ── Entry collection ───────────────────────────────────────────────
 
   defp collect_assignment_entries(ast) do
     {_ast, {entries, _scope}} =
@@ -211,8 +213,6 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
 
   defp post_collect(node, acc), do: {node, acc}
 
-  # ── Verification ───────────────────────────────────────────────────
-
   # Confirm the source line is a single-line assignment we can safely edit
   defp single_line_match?(entry, lines) do
     line_idx = entry.line - 1
@@ -234,8 +234,6 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
     lhs_vars = Enum.map(entries, & &1.lhs_var)
     length(lhs_vars) == length(Enum.uniq(lhs_vars))
   end
-
-  # ── Action building ────────────────────────────────────────────────
 
   defp build_all_actions(reverse_groups, last_groups, lines) do
     actions =
@@ -298,8 +296,6 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
     Map.put(actions, line_idx, {:replace, replacement})
   end
 
-  # ── Action application ─────────────────────────────────────────────
-
   defp apply_actions(lines, actions) when map_size(actions) == 0, do: lines
 
   defp apply_actions(lines, actions) do
@@ -313,8 +309,6 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
       end
     end)
   end
-
-  # ── Remaining negative index fix ─────────────────────────────────
 
   # Handle Enum.at(var, -N) calls that weren't caught by the assignment-form
   # fix above. This covers expression contexts like:
@@ -408,8 +402,6 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
       prepend_lines ++ [result_line]
     end
   end
-
-  # ── Helpers ─────────────────────────────────────────────────────────
 
   defp extract_indent(line) do
     case Regex.run(~r/^(\s*)/, line) do

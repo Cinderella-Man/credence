@@ -37,10 +37,8 @@ defmodule Credence.Pattern.NoIntegerToStringDigits do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Nested: String.to_charlist(Integer.to_string(n, base))
       {{:., _, [{:__aliases__, _, [:String]}, :to_charlist]}, _,
        [{{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, int_args}]} ->
@@ -65,7 +63,6 @@ defmodule Credence.Pattern.NoIntegerToStringDigits do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp integer_digits_call(args) do

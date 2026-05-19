@@ -55,34 +55,28 @@ defmodule Credence.Pattern.NoStringLengthForCharCheck do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Credence.RuleHelpers.normalize_sourceror_ast()
-    |> Macro.postwalk(fn
-      # Standard form: String.length(x) op 1
-      {op, _meta,
-       [
-         {{:., _, [{:__aliases__, _, [:String]}, :length]}, _, [arg]},
-         1
-       ]}
-      when op in [:==, :!=, :===, :!==] ->
-        build_fix(op, arg)
-
-      # Reversed form: 1 op String.length(x)
-      {op, _meta,
-       [
-         1,
-         {{:., _, [{:__aliases__, _, [:String]}, :length]}, _, [arg]}
-       ]}
-      when op in [:==, :!=, :===, :!==] ->
-        build_fix(op, arg)
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
+      {op, _meta, [lhs, rhs]} = node when op in [:==, :!=, :===, :!==] ->
+        cond do
+          string_length_call?(lhs) and int_one?(rhs) -> build_fix(op, length_arg(lhs))
+          int_one?(lhs) and string_length_call?(rhs) -> build_fix(op, length_arg(rhs))
+          true -> node
+        end
 
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
+
+  defp string_length_call?({{:., _, [{:__aliases__, _, [:String]}, :length]}, _, [_]}), do: true
+  defp string_length_call?(_), do: false
+
+  defp length_arg({{:., _, [{:__aliases__, _, [:String]}, :length]}, _, [arg]}), do: arg
+
+  defp int_one?(1), do: true
+  defp int_one?({:__block__, _, [1]}), do: true
+  defp int_one?(_), do: false
 
   # ==, === → match?([_], String.graphemes(x))
   # !=, !== → not match?([_], String.graphemes(x))

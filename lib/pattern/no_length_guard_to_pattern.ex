@@ -53,10 +53,8 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {:def, meta, [{:when, when_meta, [call, guard]} | rest]} = node ->
         try_fix_def(:def, meta, when_meta, call, guard, rest, node)
 
@@ -66,13 +64,8 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
-
-  # ---------------------------------------------------------------------------
   # Check helpers
-  # ---------------------------------------------------------------------------
-
   defp find_fixable_length(guard_ast, def_meta, acc) do
     {_ast, issues} =
       Macro.prewalk(guard_ast, acc, fn
@@ -115,11 +108,7 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
       meta: %{line: line}
     }
   end
-
-  # ---------------------------------------------------------------------------
   # Fix helpers
-  # ---------------------------------------------------------------------------
-
   defp try_fix_def(kind, meta, when_meta, call, guard, rest, original) do
     case extract_fixable_check(guard) do
       {:ok, var, pattern_kind, remaining_guard} ->
@@ -140,9 +129,6 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
         original
     end
   end
-
-  # --- Guard extraction (Sourceror AST: integers may be __block__-wrapped) ---
-
   # length(var) > 0
   defp extract_fixable_check({:>, _, [{:length, _, [var]}, zero]}) do
     with {:ok, 0} <- extract_int(zero),
@@ -179,15 +165,9 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
   end
 
   defp extract_fixable_check(_), do: :error
-
-  # --- Integer extraction (handles Sourceror's __block__ wrapper) ---
-
   defp extract_int({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
   defp extract_int(n) when is_integer(n), do: {:ok, n}
   defp extract_int(_), do: :error
-
-  # --- Variable helpers ---
-
   defp simple_var?({name, _, ctx}) when is_atom(name) and (is_nil(ctx) or is_atom(ctx)),
     do: true
 
@@ -195,9 +175,6 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
 
   defp same_var?({name, _, _}, {name, _, _}) when is_atom(name), do: true
   defp same_var?(_, _), do: false
-
-  # --- Parameter replacement ---
-
   defp replace_param({func_name, func_meta, params}, var, pattern) do
     if Enum.any?(params, &same_var?(&1, var)) do
       new_params =
@@ -210,9 +187,6 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
       :error
     end
   end
-
-  # --- Pattern builders ---
-
   # [_ | _]
   defp build_match_pattern(:non_empty) do
     [{:|, [], [{:_, [], nil}, {:_, [], nil}]}]

@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoMapUpdateThenFetch.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapUpdateThenFetch, code, [])
   end
 
   describe "check" do

@@ -42,8 +42,6 @@ defmodule Credence.Pattern.NoIsNilGuard do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ──────────────────────────────────────────────────────
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
@@ -91,8 +89,6 @@ defmodule Credence.Pattern.NoIsNilGuard do
   defp has_fixable_is_nil?({:not, _, _}, _), do: false
   defp has_fixable_is_nil?({:!, _, _}, _), do: false
   defp has_fixable_is_nil?(_, _), do: false
-
-  # ── Fix ────────────────────────────────────────────────────────
 
   @impl true
   def fix_patches(ast, _opts) do
@@ -205,8 +201,6 @@ defmodule Credence.Pattern.NoIsNilGuard do
   end
 
   defp remove_is_nil_from_guard(other, _), do: other
-
-  # ── Issue ──────────────────────────────────────────────────────
 
   defp build_issue(meta) do
     %Issue{

@@ -55,10 +55,8 @@ defmodule Credence.Pattern.RedundantListGuard do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {def_type, meta, [{:when, when_meta, [fun_head, guard]}, body]} = node
       when def_type in [:def, :defp] ->
         args = extract_args(fun_head)
@@ -83,10 +81,7 @@ defmodule Credence.Pattern.RedundantListGuard do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
-
-  # ------------------------------------------------------------
   # GUARD SIMPLIFICATION
   #
   # Recursively walk a guard expression, removing every
@@ -95,7 +90,6 @@ defmodule Credence.Pattern.RedundantListGuard do
   # Returns:
   #   :always_true        — the whole expression is trivially true
   #   {:ok, simplified}   — a (possibly smaller) guard expression
-  # ------------------------------------------------------------
   defp simplify_guard(guard, redundant_vars) do
     case guard do
       # is_list(v) where v comes from a cons tail → always true
@@ -154,13 +148,10 @@ defmodule Credence.Pattern.RedundantListGuard do
 
   defp extract_args({_fun_name, _, args}) when is_list(args), do: args
   defp extract_args(_), do: []
-
-  # ------------------------------------------------------------
   # CONS-TAIL COLLECTION
   #
   # Recursively walk function arguments to find every variable
   # sitting in the tail position of a cons pattern `[_ | var]`.
-  # ------------------------------------------------------------
   defp collect_cons_tails(args) do
     {_, vars} =
       Macro.prewalk(args, [], fn
@@ -174,14 +165,11 @@ defmodule Credence.Pattern.RedundantListGuard do
 
     Enum.uniq(vars)
   end
-
-  # ------------------------------------------------------------
   # GUARD INSPECTION
   #
   # Walk the guard expression (which may be compound via `and` /
   # `or`) and collect every `is_list(var)` where `var` appears in
   # the set of known cons-tail variables.
-  # ------------------------------------------------------------
   defp find_redundant_is_list(guard, cons_tail_vars) do
     {_, found} =
       Macro.prewalk(guard, [], fn

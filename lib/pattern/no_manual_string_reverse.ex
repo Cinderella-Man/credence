@@ -68,10 +68,8 @@ defmodule Credence.Pattern.NoManualStringReverse do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Pipeline: ... |> String.graphemes() |> Enum.reverse() |> Enum.join()
       #
       # Matches the outermost `|>` whose right side is Enum.join(),
@@ -112,7 +110,6 @@ defmodule Credence.Pattern.NoManualStringReverse do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   # Extracts the subject from String.graphemes in the middle of a pipe chain.

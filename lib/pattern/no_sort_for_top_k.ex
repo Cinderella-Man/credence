@@ -34,7 +34,6 @@ defmodule Credence.Pattern.NoSortForTopK do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ────────────────────────────────────────────────────────
   #
   # We use a custom recursive walk instead of Macro.prewalk so that
   # when we encounter a pipe node we analyse the *entire* flattened
@@ -42,7 +41,6 @@ defmodule Credence.Pattern.NoSortForTopK do
   # (but NOT into sub-pipes) — this prevents a longer pipeline like
   # `sort |> take(1) |> length()` from having its inner sub-pipe
   # `sort |> take(1)` independently flagged as a false positive.
-  # ────────────────────────────────────────────────────────────────
 
   @impl true
   def check(ast, _opts) do
@@ -94,10 +92,13 @@ defmodule Credence.Pattern.NoSortForTopK do
 
   defp collect_issues_from_step_args(_), do: []
 
-  # ── Fix ──────────────────────────────────────────────────────────
-
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     result =
       source
       |> Sourceror.parse_string!()
@@ -113,7 +114,6 @@ defmodule Credence.Pattern.NoSortForTopK do
     end
   end
 
-  # ── Fix: AST transformation ──────────────────────────────────────
   #
   # We walk the AST top-down with a custom traversal instead of
   # Macro.prewalk/postwalk.  The key difference: when a pipe node
@@ -122,7 +122,6 @@ defmodule Credence.Pattern.NoSortForTopK do
   # must NOT be independently fixed.  This prevents, e.g., the inner
   # pipe in `sort |> take(1) |> do_stuff()` from being turned into
   # `Enum.min(x) |> do_stuff()` which would change the return type.
-  # ──────────────────────────────────────────────────────────────────
 
   defp transform_ast(ast), do: transform_node(ast)
 
@@ -168,8 +167,6 @@ defmodule Credence.Pattern.NoSortForTopK do
   end
 
   defp transform_pipe_left(node), do: transform_node(node)
-
-  # ── Pipeline analysis for fix ────────────────────────────────────
 
   defp fix_pipeline_steps([sort_expr | rest]) do
     with {:ok, arg} <- extract_sort_1(sort_expr) do
@@ -233,8 +230,6 @@ defmodule Credence.Pattern.NoSortForTopK do
   defp enum_call(fun, arg) when fun in [:min, :max] do
     {{:., [], [{:__aliases__, [], [:Enum]}, fun]}, [], [arg]}
   end
-
-  # ── Check helpers ────────────────────────────────────────────────
 
   defp flatten_pipeline({:|>, _, [left, right]}) do
     flatten_pipeline(left) ++ [right]

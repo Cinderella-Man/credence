@@ -52,10 +52,8 @@ defmodule Credence.Pattern.NoEnumDropNegative do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Direct: Enum.drop(list, -n)
       {{:., _, [{:__aliases__, _, [:Enum]}, :drop]}, _, [list_arg, second]} = node ->
         case extract_negative(second) do
@@ -73,7 +71,6 @@ defmodule Credence.Pattern.NoEnumDropNegative do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   # Sourceror wraps literals in {:__block__, meta, [value]}, so -1 becomes:

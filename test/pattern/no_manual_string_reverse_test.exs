@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoManualStringReverseTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoManualStringReverse.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualStringReverse, code, [])
   end
 
   describe "NoManualStringReverse - check" do

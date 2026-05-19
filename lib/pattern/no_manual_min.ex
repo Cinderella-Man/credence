@@ -51,10 +51,8 @@ defmodule Credence.Pattern.NoManualMin do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {:if, _meta, [condition, branches]} = node ->
         case extract_min_operands(condition, branches) do
           {:ok, operands} -> min_call(operands)
@@ -64,7 +62,6 @@ defmodule Credence.Pattern.NoManualMin do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp check_node({:if, meta, [condition, branches]}) do
@@ -83,8 +80,6 @@ defmodule Credence.Pattern.NoManualMin do
   end
 
   defp check_node(_), do: :error
-
-  # ------------------------------------------------------------
   # MIN PATTERN DETECTION
   #
   # For `<` and `<=`: do == left operand, else == right operand
@@ -92,8 +87,6 @@ defmodule Credence.Pattern.NoManualMin do
   #
   # For `>` and `>=`: do == right operand, else == left operand
   #   → "if b > a, do: a, else: b"  (return lesser in true branch)
-  # ------------------------------------------------------------
-
   defp min_pattern?({op, _, [left, right]}, do_branch, else_branch)
        when op in [:<, :<=] do
     ast_equal?(do_branch, left) and ast_equal?(else_branch, right)

@@ -65,7 +65,12 @@ defmodule Credence.Pattern.NoStringConcatInLoop do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = Sourceror.parse_string!(source)
 
     {_ast, patches} =
@@ -113,8 +118,6 @@ defmodule Credence.Pattern.NoStringConcatInLoop do
   defp empty_string_literal?({:__block__, _, [""]}), do: true
   defp empty_string_literal?(_), do: false
 
-  # ── Patch application (reverse order so byte ranges stay valid) ─────
-
   defp apply_patches(source, patches) do
     patches
     |> Enum.reverse()
@@ -136,8 +139,6 @@ defmodule Credence.Pattern.NoStringConcatInLoop do
       end
     end)
   end
-
-  # ── Find "Enum.reduce" skipping string literals ────────────────────
 
   defp find_real_reduce(source), do: find_real_reduce_loop(source, 0)
 
@@ -202,8 +203,6 @@ defmodule Credence.Pattern.NoStringConcatInLoop do
     end
   end
 
-  # ── Find byte range of Enum.reduce(...) ────────────────────────────
-
   defp find_reduce_range(source, byte_pos) do
     rest = binary_part(source, byte_pos, byte_size(source) - byte_pos)
 
@@ -236,8 +235,6 @@ defmodule Credence.Pattern.NoStringConcatInLoop do
         end
     end
   end
-
-  # ── Build replacement text ─────────────────────────────────────────
 
   defp build_replacement({:direct, elem_var, expr}, matched) do
     list_text = extract_first_arg(matched)
@@ -397,8 +394,6 @@ defmodule Credence.Pattern.NoStringConcatInLoop do
     after_ = binary_part(source, to, byte_size(source) - to)
     before <> replacement <> after_
   end
-
-  # ── AST helpers (used by check/2) ──────────────────────────────────
 
   defp extract_simple_concat(
          {:fn, _,

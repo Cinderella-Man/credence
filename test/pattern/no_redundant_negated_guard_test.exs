@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoRedundantNegatedGuard.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoRedundantNegatedGuard, code, [])
   end
 
   describe "NoRedundantNegatedGuard" do

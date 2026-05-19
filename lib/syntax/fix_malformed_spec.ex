@@ -44,8 +44,6 @@ defmodule Credence.Syntax.FixMalformedSpec do
     |> Enum.join("\n")
   end
 
-  # ── Detection ──────────────────────────────────────────────────
-
   defp malformed_spec?(line) do
     case extract_spec_parts(line) do
       {:ok, _prefix, inner, after_close} ->
@@ -57,8 +55,6 @@ defmodule Credence.Syntax.FixMalformedSpec do
         false
     end
   end
-
-  # ── Fix ────────────────────────────────────────────────────────
 
   defp fix_line(line) do
     case extract_spec_parts(line) do
@@ -82,8 +78,6 @@ defmodule Credence.Syntax.FixMalformedSpec do
         line
     end
   end
-
-  # ── Shared parsing ─────────────────────────────────────────────
 
   # Extracts the prefix (@spec func_name), the content between the
   # outermost parens, and whatever follows the matching close paren.
@@ -117,8 +111,6 @@ defmodule Credence.Syntax.FixMalformedSpec do
   defp do_close([?( | rest], depth, acc), do: do_close(rest, depth + 1, [?( | acc])
   defp do_close([c | rest], depth, acc), do: do_close(rest, depth, [c | acc])
 
-  # ── Separator finding ──────────────────────────────────────────
-
   # Finds the character position of the LAST :: at paren depth 0
   # within the content string. Returns nil if none found.
   defp find_last_separator(content) do
@@ -130,8 +122,6 @@ defmodule Credence.Syntax.FixMalformedSpec do
   defp do_sep([?) | rest], pos, depth, last), do: do_sep(rest, pos + 1, depth - 1, last)
   defp do_sep([?:, ?: | rest], pos, 0, _last), do: do_sep(rest, pos + 2, 0, pos)
   defp do_sep([_ | rest], pos, depth, last), do: do_sep(rest, pos + 1, depth, last)
-
-  # ── Issue ──────────────────────────────────────────────────────
 
   defp build_issue(line_no) do
     %Issue{

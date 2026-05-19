@@ -7,7 +7,7 @@ defmodule Credence.Pattern.UseMapJoinTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.UseMapJoin.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.UseMapJoin, code, [])
   end
 
   describe "check" do

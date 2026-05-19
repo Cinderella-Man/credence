@@ -50,8 +50,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   # Enum functions we track (arity 1 only — arity 2 has different semantics)
   @tracked_enum_funcs [:count, :sum, :min, :max]
 
-  # ── Check ─────────────────────────────────────────────────────────
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
@@ -66,10 +64,13 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
     Enum.reverse(issues)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
-
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
         groups = collect_all_fixable_groups(ast)
@@ -86,8 +87,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
         source
     end
   end
-
-  # ── Shared: scanning and grouping ─────────────────────────────────
 
   # Scans a block's direct children for bare traversal assignments.
   # Returns a list of entry maps, each: %{result_var, list_var, type, label, index, line, mode}
@@ -253,8 +252,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
     end)
   end
 
-  # ── Call identification ───────────────────────────────────────────
-
   # length(var) — Kernel BIF
   defp identify_call({:length, _, [arg]}) do
     with {:ok, var_name} <- plain_variable_name(arg) do
@@ -277,8 +274,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
 
   defp identify_call(_), do: :skip
 
-  # ── Variable helpers ──────────────────────────────────────────────
-
   # Returns {:ok, name} for a plain variable, :skip for anything else
   # (underscore, pattern, expression, field access, etc.)
   defp plain_variable_name({name, _, context})
@@ -296,8 +291,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true
   defp enum_module?({:__aliases__, _, [{:__block__, _, [:Enum]}]}), do: true
   defp enum_module?(_), do: false
-
-  # ── Rebinding detection ──────────────────────────────────────────
 
   # Returns true if `var_name` is bound on the LHS of any assignment
   # between statement indices from_idx (exclusive) and to_idx (exclusive).
@@ -329,8 +322,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
 
   defp ast_binds_name?(_, _), do: false
 
-  # ── Check: issue generation ──────────────────────────────────────
-
   defp build_issues(statements) do
     find_valid_groups(statements)
     |> Enum.map(fn %{list_var: list_var, entries: entries} ->
@@ -345,8 +336,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
       }
     end)
   end
-
-  # ── Fix: block rewriting ─────────────────────────────────────────
 
   # Pre-scan: collects all fixable groups across the entire AST.
   # Used to short-circuit Sourceror.to_string() when nothing to fix.
@@ -476,8 +465,6 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
       end
     end)
   end
-
-  # ── Fix: replacement AST builders ────────────────────────────────
 
   defp build_replacement(list_var, first, second) do
     types = MapSet.new([first.type, second.type])

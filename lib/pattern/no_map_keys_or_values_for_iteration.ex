@@ -65,9 +65,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     take_every drop_every
   )a
 
-  # ═══════════════════════════════════════════════════════════════════
   # check
-  # ═══════════════════════════════════════════════════════════════════
 
   @impl true
   def check(ast, _opts) do
@@ -113,12 +111,15 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     Enum.reverse(issues)
   end
 
-  # ═══════════════════════════════════════════════════════════════════
   # fix
-  # ═══════════════════════════════════════════════════════════════════
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     {:ok, ast} = source |> Code.string_to_quoted(columns: true)
 
     # Skip the Sourceror.to_string round-trip when nothing was rewritten —
@@ -161,9 +162,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     end
   end
 
-  # ═══════════════════════════════════════════════════════════════════
   # fix_nested — "Enum.func(Map.values(m), rest...)"
-  # ═══════════════════════════════════════════════════════════════════
 
   defp fix_nested(f, dot, al, cm, mfunc, ma, rest) do
     mk = &en(dot, al, cm, &1, &2)
@@ -305,9 +304,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     end
   end
 
-  # ═══════════════════════════════════════════════════════════════════
   # fix_pipe — "Map.values(m) |> Enum.func(ea)"
-  # ═══════════════════════════════════════════════════════════════════
 
   defp fix_pipe(f, pm, mfunc, ma, ea) do
     # Build Enum call: collapses to nested when ma isn't itself a pipe
@@ -462,9 +459,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     end
   end
 
-  # ═══════════════════════════════════════════════════════════════════
   # callback wrapping
-  # ═══════════════════════════════════════════════════════════════════
 
   # Walk a list of args and wrap any lambdas or captures
   defp wrap_fns(args) do
@@ -572,9 +567,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     {{:., [], [{:__aliases__, [], mod}, func]}, [], [arg]}
   end
 
-  # ═══════════════════════════════════════════════════════════════════
   # dispatch helpers
-  # ═══════════════════════════════════════════════════════════════════
 
   defp on_first([cb | _], fun), do: fun.(cb)
   defp on_first(_, _), do: :no
@@ -590,9 +583,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   defp function?({:&, _, [{:/, _, [_, 1]}]}), do: true
   defp function?(_), do: false
 
-  # ═══════════════════════════════════════════════════════════════════
   # AST builders
-  # ═══════════════════════════════════════════════════════════════════
 
   # Enum.f(args) with explicit metadata
   defp en(d, a, c, f, x), do: {{:., d, [{:__aliases__, a, [:Enum]}, f]}, c, x}
@@ -628,9 +619,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     {:case, [], [inner, [do: [{:->, [], [[nil], default]}, {:->, [], [[ev(mf)], vv(mf)]}]]]}
   end
 
-  # ═══════════════════════════════════════════════════════════════════
   # issue + fixable?
-  # ═══════════════════════════════════════════════════════════════════
 
   defp issue(mf, ef, meta) do
     %Issue{

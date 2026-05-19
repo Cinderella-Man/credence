@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.NoSortThenAt.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoSortThenAt, code, [])
   end
 
   # ── Atom direction (existing) ───────────────────────────────────────────
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
       end
       """
 
-      assert fix(input) == String.trim_trailing(expected, "\n")
+      assert fix(input) == expected
     end
   end
 
@@ -87,7 +87,7 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
       end
       """
 
-      assert fix(input) == String.trim_trailing(expected, "\n")
+      assert fix(input) == expected
     end
   end
 

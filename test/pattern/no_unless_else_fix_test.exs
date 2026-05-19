@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    result = Credence.Pattern.NoUnlessElse.fix(code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoUnlessElse, code, [])
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 
@@ -206,7 +206,6 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       expected = """
       def run(x) do
         before = setup()
-
         if x > 0 do
           :positive
         else
@@ -232,13 +231,11 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
 
       expected = """
       def run(x) do
-        result =
-          if x > 0 do
-            :positive
-          else
-            :negative
-          end
-
+        result = if x > 0 do
+          :positive
+        else
+          :negative
+        end
         result
       end
       """

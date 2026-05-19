@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoDestructureReconstruct.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoDestructureReconstruct, code, [])
   end
 
   describe "NoDestructureReconstruct" do

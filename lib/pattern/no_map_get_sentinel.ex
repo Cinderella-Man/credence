@@ -71,8 +71,6 @@ defmodule Credence.Pattern.NoMapGetSentinel do
   @comparison_ops [:==, :!=, :===, :!==]
   @ordering_ops [:>=, :>, :<=, :<]
 
-  # ── Check ─────────────────────────────────────────────────────────
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
@@ -87,26 +85,10 @@ defmodule Credence.Pattern.NoMapGetSentinel do
     Enum.reverse(issues)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
-
   @impl true
-  def fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        if has_fixable_pattern?(ast) do
-          ast
-          |> Macro.postwalk(&maybe_rewrite_block/1)
-          |> Sourceror.to_string()
-        else
-          source
-        end
-
-      {:error, _} ->
-        source
-    end
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite_block/1)
   end
-
-  # ── Shared: scanning ──────────────────────────────────────────────
 
   # Scans a block's statements for Map.get sentinel assignments
   # that have a matching comparison in scope.
@@ -245,8 +227,6 @@ defmodule Credence.Pattern.NoMapGetSentinel do
     found
   end
 
-  # ── Variable and value helpers ────────────────────────────────────
-
   defp plain_variable_name({name, _, context})
        when is_atom(name) and is_atom(context) and name != :_,
        do: {:ok, name}
@@ -278,8 +258,6 @@ defmodule Credence.Pattern.NoMapGetSentinel do
   defp map_module?({:__aliases__, _, [{:__block__, _, [:Map]}]}), do: true
   defp map_module?(_), do: false
 
-  # ── Rebinding detection ──────────────────────────────────────────
-
   defp rebinds_variable?({:=, _, [lhs, _rhs]}, var_name) do
     ast_binds_name?(lhs, var_name)
   end
@@ -297,8 +275,6 @@ defmodule Credence.Pattern.NoMapGetSentinel do
     do: Enum.any?(list, &ast_binds_name?(&1, target))
 
   defp ast_binds_name?(_, _), do: false
-
-  # ── Check: issue generation ──────────────────────────────────────
 
   defp find_issues(statements) do
     find_sentinel_patterns(statements)
@@ -329,24 +305,6 @@ defmodule Credence.Pattern.NoMapGetSentinel do
       {:=, meta, _} -> Keyword.get(meta, :line)
       _ -> nil
     end
-  end
-
-  # ── Fix: block rewriting ─────────────────────────────────────────
-
-  defp has_fixable_pattern?(ast) do
-    {_, found} =
-      Macro.prewalk(ast, false, fn
-        _node, true ->
-          {nil, true}
-
-        {:__block__, _, statements} = node, false when is_list(statements) ->
-          {node, find_sentinel_patterns(statements) != []}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found
   end
 
   defp maybe_rewrite_block({:__block__, meta, statements} = node)

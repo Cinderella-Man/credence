@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    result = Credence.Pattern.NoCondTwoClauses.fix(code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoCondTwoClauses, code, [])
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 
@@ -210,7 +210,6 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       expected = """
       def run(x) do
         setup()
-
         if x > 0 do
           :positive
         else
@@ -245,20 +244,16 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
 
       expected = """
       def run(x, y) do
-        a =
-          if x > 0 do
-            :pos
-          else
-            :neg
-          end
-
-        b =
-          if y > 0 do
-            :pos
-          else
-            :neg
-          end
-
+        a = if x > 0 do
+          :pos
+        else
+          :neg
+        end
+        b = if y > 0 do
+          :pos
+        else
+          :neg
+        end
         {a, b}
       end
       """

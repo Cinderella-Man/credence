@@ -6,21 +6,28 @@ defmodule Credence.Pattern.Rule do
   mode. Rules that could only detect but not fix were archived to
   `docs/unfixable_rules/` and removed from compilation.
 
-  ## Fix interface
+  ## Interface
 
-  Two callbacks express a fix, and rules can use either:
+  Every rule implements two callbacks:
 
-  - **`fix_patches(ast, opts) :: [patch]`** — preferred. Emit byte-range
-    patches against the source. Only the changed bytes move; everything
-    else stays byte-identical. Layout is preserved by construction.
-    See `Credence.Pattern.NoListToTupleForAccess` for an example.
+  - **`check(ast, opts) :: [Issue.t()]`** — detect issues in the AST.
+  - **`fix_patches(ast, opts) :: [patch]`** — emit byte-range patches
+    that, when applied, resolve the issues `check/2` reported. Empty
+    list = no change.
 
-  - **`fix(source, opts) :: String.t()`** — adapter shape. Returns a
-    transformed source string. The default `fix_patches/2` (provided by
-    `__using__`) wraps `fix/2` in a single whole-source patch. Adequate
-    when the rule's existing logic is source-level and refactoring into
-    per-site patches would be substantially more work than the locality
-    gain.
+  Rules typically take one of two shapes:
+
+  - **AST-walking** — walk the AST, locate target nodes, emit
+    `%{range, change}` patches directly. See
+    `Credence.Pattern.NoListToTupleForAccess` for an example.
+
+  - **Source-level adapter** — when the transformation logic is
+    naturally source-level (regex on lines, byte-range surgery), keep
+    that logic in a private `legacy_fix/2` and delegate `fix_patches/2`
+    to `Credence.RuleHelpers.patches_from_legacy_fix/3`. The adapter
+    parses the post-fix source and AST-diffs against the original to
+    emit one patch per outermost changed subtree (falling back to a
+    whole-source patch when AST round-tripping is lossy).
   """
 
   @typedoc """
@@ -42,12 +49,6 @@ defmodule Credence.Pattern.Rule do
   @doc "Auto-fix via byte-range patches. Returns a list of patches; `[]` means no change."
   @callback fix_patches(ast :: Macro.t(), opts :: keyword()) :: [patch()]
 
-  @doc """
-  Auto-fix returning the transformed source string. The default
-  `fix_patches/2` wraps this in a whole-source patch.
-  """
-  @callback fix(source :: String.t(), opts :: keyword()) :: String.t()
-
   defmacro __using__(_opts) do
     quote do
       @behaviour Credence.Pattern.Rule
@@ -56,23 +57,7 @@ defmodule Credence.Pattern.Rule do
       @impl true
       def priority, do: 500
 
-      @impl true
-      def fix(source, _opts), do: source
-
-      # Default `fix_patches/2`: emits a single whole-source patch
-      # that delegates to the rule's `fix/2`. Lets every rule satisfy
-      # the new patch-based interface without per-rule code changes.
-      #
-      # Rules that want real locality (one patch per match site, not a
-      # whole-source rewrite) should override `fix_patches/2` directly
-      # and ignore `fix/2`. See `NoListToTupleForAccess` for an example.
-      @impl true
-      def fix_patches(_ast, opts) do
-        source = Keyword.fetch!(opts, :source)
-        Credence.RuleHelpers.whole_source_patches(source, fix(source, opts))
-      end
-
-      defoverridable priority: 0, fix: 2, fix_patches: 2
+      defoverridable priority: 0
     end
   end
 end

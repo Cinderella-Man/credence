@@ -56,10 +56,8 @@ defmodule Credence.Pattern.NoManualFrequencies do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Piped: list |> Enum.reduce(%{}, fn ... end) → Enum.frequencies(list)
       {:|>, _,
        [
@@ -83,7 +81,6 @@ defmodule Credence.Pattern.NoManualFrequencies do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp enum_frequencies_call(enum) do

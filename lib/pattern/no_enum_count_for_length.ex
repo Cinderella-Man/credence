@@ -45,10 +45,8 @@ defmodule Credence.Pattern.NoEnumCountForLength do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Direct: Enum.count(expr) → length(expr)
       # Must not match the predicate-only piped form
       {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg]} = node ->
@@ -65,7 +63,6 @@ defmodule Credence.Pattern.NoEnumCountForLength do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp check_node({{:., meta, [mod, :count]}, _, [arg]}) do

@@ -41,8 +41,6 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ──────────────────────────────────────────────────────
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
@@ -73,8 +71,6 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
   defp integer_literal?(n) when is_integer(n), do: true
   defp integer_literal?({:-, _, [n]}) when is_integer(n), do: true
   defp integer_literal?(_), do: false
-
-  # ── Fix ────────────────────────────────────────────────────────
 
   @impl true
   def fix_patches(ast, _opts) do
@@ -126,8 +122,6 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   defp simple_var(_), do: :error
 
-  # ── Replacements ───────────────────────────────────────────────
-
   defp direct_replacement(var, -1), do: "List.last(#{var})"
   defp direct_replacement(var, 0), do: "List.first(#{var})"
   defp direct_replacement(var, n), do: "Enum.at(#{var}, #{n})"
@@ -135,8 +129,6 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
   defp piped_replacement(-1), do: "List.last()"
   defp piped_replacement(0), do: "List.first()"
   defp piped_replacement(n), do: "Enum.at(#{n})"
-
-  # ── Issue ──────────────────────────────────────────────────────
 
   defp build_issue(meta) do
     %Issue{

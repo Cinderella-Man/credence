@@ -51,10 +51,8 @@ defmodule Credence.Pattern.NoParamRebinding do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {:fn, meta, clauses} when is_list(clauses) ->
         new_clauses =
           Enum.map(clauses, fn
@@ -77,7 +75,6 @@ defmodule Credence.Pattern.NoParamRebinding do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp fix_body(body, param_vars) do

@@ -2,7 +2,7 @@ defmodule Credence.Pattern.HallucinatedGuardFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.HallucinatedGuard.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.HallucinatedGuard, code, [])
   end
 
   describe "is_pos_integer → is_integer and > 0" do

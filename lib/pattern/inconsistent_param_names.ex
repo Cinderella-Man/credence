@@ -96,17 +96,14 @@ defmodule Credence.Pattern.InconsistentParamNames do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {:__block__, block_meta, stmts} when is_list(stmts) ->
         {:__block__, block_meta, fix_block_stmts(stmts)}
 
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp fix_block_stmts(stmts) do

@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    result = Credence.Pattern.NoRedundantListTraversal.fix(code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoRedundantListTraversal, code, [])
     # Sourceror.to_string/1 omits trailing newline; heredocs always include one.
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end

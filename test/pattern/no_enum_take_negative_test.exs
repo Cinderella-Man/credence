@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoEnumTakeNegative.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoEnumTakeNegative, code, [])
   end
 
   describe "NoEnumTakeNegative check" do

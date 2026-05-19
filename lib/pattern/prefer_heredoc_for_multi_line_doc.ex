@@ -34,7 +34,6 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
   @impl true
   def priority, do: 501
 
-  # ── Check ───────────────────────────────────────────────────────
   #
   # Code.string_to_quoted doesn't preserve delimiter info, so a heredoc
   # and a single-line string with \n produce the same AST value.
@@ -80,7 +79,12 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     # Try line-level fix first (works when \n is still escaped in source)
     line_fixed = fix_by_lines(source)
 
@@ -99,9 +103,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
     String.contains?(trimmed, "\n")
   end
 
-  # ══════════════════════════════════════════════════════════════════
   # Path A: Line-level fix (works on fresh source with \n escapes)
-  # ══════════════════════════════════════════════════════════════════
 
   defp fix_by_lines(source) do
     source
@@ -178,9 +180,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
     [opening | doc_lines] ++ [closing]
   end
 
-  # ══════════════════════════════════════════════════════════════════
   # Path B: AST-based fix (works after Sourceror has unescaped \n)
-  # ══════════════════════════════════════════════════════════════════
 
   defp fix_by_ast(source) do
     ast = Sourceror.parse_string!(source)

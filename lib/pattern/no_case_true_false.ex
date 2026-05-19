@@ -41,7 +41,6 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ─────────────────────────────────────────────────────────
   # Uses AST from Code.string_to_quoted (bare boolean literals).
 
   @impl true
@@ -63,28 +62,13 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
     Enum.reverse(issues)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
   # Uses Sourceror for parsing; rewrites matching case nodes to if/else
   # via Macro.postwalk, then emits source with Sourceror.to_string().
 
   @impl true
-  def fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        if has_fixable_case?(ast) do
-          ast
-          |> Macro.postwalk(&maybe_rewrite_case/1)
-          |> Sourceror.to_string()
-        else
-          source
-        end
-
-      {:error, _} ->
-        source
-    end
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite_case/1)
   end
-
-  # ── Check helpers ─────────────────────────────────────────────────
 
   # Extract the pattern from a case clause: {:->, _, [[pattern], body]}
   defp clause_pattern({:->, _, [[pattern], _body]}), do: pattern
@@ -116,8 +100,6 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp normalize_pattern({:_, _, _}), do: :wildcard
   defp normalize_pattern(_), do: :other
 
-  # ── Fix helpers ───────────────────────────────────────────────────
-
   # Extracts the clause list from a case node's keyword block.
   # Handles both Code.string_to_quoted format ([do: clauses]) and
   # Sourceror format ([{{:__block__, _, [:do]}, clauses}]).
@@ -127,34 +109,6 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
     do: clauses
 
   defp extract_do_clauses(_), do: nil
-
-  # Quick pre-scan: is there at least one case node we can rewrite?
-  # Prevents unnecessary Sourceror.to_string() (which reformats the file).
-  defp has_fixable_case?(ast) do
-    {_, found} =
-      Macro.prewalk(ast, false, fn
-        _node, true ->
-          {nil, true}
-
-        {:case, _, [subject, kw]} = node, false when is_list(kw) ->
-          fixable =
-            case extract_do_clauses(kw) do
-              [clause_a, clause_b] ->
-                not plain_variable?(subject) and
-                  rewrite_clauses(clause_a, clause_b) != :skip
-
-              _ ->
-                false
-            end
-
-          {node, fixable}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found
-  end
 
   # Postwalk callback: rewrite a matching case node to if/else.
   defp maybe_rewrite_case({:case, meta, [subject, kw]} = node) when is_list(kw) do
@@ -216,8 +170,6 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp unwrap_pattern(false), do: false
   defp unwrap_pattern({:_, _, _}), do: :wildcard
   defp unwrap_pattern(_), do: :other
-
-  # ── Issue construction ────────────────────────────────────────────
 
   defp build_issue(meta) do
     %Issue{

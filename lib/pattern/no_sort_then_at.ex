@@ -67,10 +67,8 @@ defmodule Credence.Pattern.NoSortThenAt do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Pipeline form: Enum.sort(c, dir?) |> Enum.at(index)
       {:|>, _, [lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [index_arg]}]} = node ->
         fix_pipe_sort_at(lhs, index_arg, node)
@@ -87,10 +85,7 @@ defmodule Credence.Pattern.NoSortThenAt do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
-
-  # ── Pipeline fix ──────────────────────────────────────────────────────────
 
   defp fix_pipe_sort_at(
          {{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, sort_args} = _lhs,
@@ -123,8 +118,6 @@ defmodule Credence.Pattern.NoSortThenAt do
 
   defp fix_pipe_sort_at(_lhs, _index, node), do: node
 
-  # ── Nested fix ────────────────────────────────────────────────────────────
-
   defp fix_nested_sort_at(sort_args, index_arg, node) do
     case {literal_index(index_arg), sort_direction(sort_args)} do
       {{:ok, 0}, dir} when dir in [:asc, :desc] -> replacement_call(dir, :first, hd(sort_args))
@@ -132,8 +125,6 @@ defmodule Credence.Pattern.NoSortThenAt do
       {_, _} -> node
     end
   end
-
-  # ── Helpers ───────────────────────────────────────────────────────────────
 
   # Check if the args to Enum.at contain literal 0 or -1 — the only
   # indices replaceable with Enum.min/max.  Other literal indices (2, 3, …)

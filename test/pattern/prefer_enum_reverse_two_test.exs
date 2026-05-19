@@ -7,7 +7,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.PreferEnumReverseTwo.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferEnumReverseTwo, code, [])
   end
 
   defp assert_fixed(input) do

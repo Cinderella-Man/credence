@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
   end
 
   defp fix(code, opts \\ []) do
-    Credence.Pattern.NoEagerWithIndexInReduce.fix(code, opts)
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoEagerWithIndexInReduce, code, opts)
   end
 
   describe "check/2" do

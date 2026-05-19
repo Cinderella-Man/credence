@@ -7,7 +7,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.UnnecessaryGraphemeChunking.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.UnnecessaryGraphemeChunking, code, [])
   end
 
   # Macro.to_string may expand multi-arg calls across multiple lines.

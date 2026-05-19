@@ -125,8 +125,6 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
     }
   end
 
-  # ── Identity function detection ─────────────────────────────────
-
   # fn x -> x end (single-clause, same variable in arg and body)
   defp identity_fn?({:fn, _, [{:->, _, [[{var, _, ctx}], {var, _, ctx}]}]})
        when is_atom(var) and is_atom(ctx),

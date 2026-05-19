@@ -61,7 +61,12 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerable do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = Sourceror.parse_string!(source)
     outer_calls = collect_outer_calls(ast, source)
 
@@ -125,7 +130,6 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerable do
 
   defp compute_range_from_metadata(_, _), do: :error
 
-  # ── Find the byte position of the matching ')' ─────────────────────
   defp find_matching_close(source, start_byte) do
     remaining = binary_part(source, start_byte, byte_size(source) - start_byte)
 

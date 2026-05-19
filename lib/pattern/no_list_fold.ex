@@ -51,10 +51,8 @@ defmodule Credence.Pattern.NoListFold do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Piped: source |> List.foldl(acc, fun) / List.foldr(acc, fun)
       {:|>, pipe_meta, [source, {{:., _, [mod, fn_name]}, call_meta, args}]} = node
       when fn_name in @flagged_fns and is_list(args) ->
@@ -76,7 +74,6 @@ defmodule Credence.Pattern.NoListFold do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   # foldl piped: source |> List.foldl(acc, fun) → source |> Enum.reduce(acc, fun)

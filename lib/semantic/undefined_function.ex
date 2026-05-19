@@ -28,8 +28,6 @@ defmodule Credence.Semantic.UndefinedFunction do
   use Credence.Semantic.Rule
   alias Credence.Issue
 
-  # ── Qualified replacements ─────────────────────────────────────
-
   @qualified_replacements %{
     # Wrong module for real function
     {"Enum", "last", 1} => {:rename, "List", "last"},
@@ -64,8 +62,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Enum", "take_last", 2} => {:rename_negate_arg, "Enum", "take", 1}
   }
 
-  # ── Local replacements ─────────────────────────────────────────
-
   @local_replacements %{
     # Python float('inf')
     {"infinity", 0} => {:literal, ":math.inf()"},
@@ -92,8 +88,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"range", 3} => :to_range
   }
 
-  # ── match? ─────────────────────────────────────────────────────
-
   @impl true
   def match?(%{severity: :warning, message: msg}) do
     (String.contains?(msg, "is undefined or private") or
@@ -107,8 +101,6 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   def match?(_), do: false
 
-  # ── to_issue ───────────────────────────────────────────────────
-
   @impl true
   def to_issue(%{message: msg, position: position}) do
     %Issue{
@@ -117,8 +109,6 @@ defmodule Credence.Semantic.UndefinedFunction do
       meta: %{line: extract_line(position)}
     }
   end
-
-  # ── fix ────────────────────────────────────────────────────────
 
   @impl true
   def fix(source, %{message: msg, position: position}) do
@@ -135,8 +125,6 @@ defmodule Credence.Semantic.UndefinedFunction do
         source
     end
   end
-
-  # ── Qualified fix ──────────────────────────────────────────────
 
   defp fix_qualified(source, line_no, mod, fun, arity) do
     case Map.get(@qualified_replacements, {mod, fun, arity}) do
@@ -178,8 +166,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     end
   end
 
-  # ── Local fix ──────────────────────────────────────────────────
-
   defp fix_local(source, line_no, name, arity, msg) do
     case Map.get(@local_replacements, {name, arity}) do
       {:literal, replacement} ->
@@ -214,8 +200,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     end
   end
 
-  # ── Diagnostic parsing ────────────────────────────────────────
-
   defp parse_diagnostic(msg) do
     cond do
       ref = parse_qualified_ref(msg) -> {:qualified, ref}
@@ -245,8 +229,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     end
   end
 
-  # ── Common helpers ─────────────────────────────────────────────
-
   defp extract_line({line, _col}) when is_integer(line), do: line
   defp extract_line(line) when is_integer(line), do: line
   defp extract_line(_), do: nil
@@ -272,8 +254,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     end)
     |> Enum.join("\n")
   end
-
-  # ── Qualified literal replacement ──────────────────────────────
 
   defp replace_literal(source, line_no, mod, fun, text) do
     call_with_parens = "#{mod}.#{fun}()"
@@ -311,7 +291,6 @@ defmodule Credence.Semantic.UndefinedFunction do
       else: result
   end
 
-  # ── Rename + add argument ──────────────────────────────────────
   #
   # List.second(list) → Enum.at(list, 1)
   # Finds the call, extracts args via balanced parens, appends the extra arg.
@@ -354,7 +333,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     end
   end
 
-  # ── Rename + negate argument ───────────────────────────────────
   #
   # Enum.take_last(list, n) → Enum.take(list, -n)
   # Finds the call, extracts + splits args, negates the one at arg_index.
@@ -414,8 +392,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     end
   end
 
-  # ── Local call rename (with double-replacement protection) ─────
-
   defp replace_call_on_line(source, line_no, old_name, new_name) do
     pattern = Regex.compile!("(?<![.a-zA-Z0-9_])#{Regex.escape(old_name)}\\(")
     replacement = "#{new_name}("
@@ -429,8 +405,6 @@ defmodule Credence.Semantic.UndefinedFunction do
     end)
     |> Enum.join("\n")
   end
-
-  # ── Wrap-args replacement ──────────────────────────────────────
 
   defp wrap_args_on_line(source, line_no, old_name, new_qualified) do
     source
@@ -465,8 +439,6 @@ defmodule Credence.Semantic.UndefinedFunction do
         line
     end
   end
-
-  # ── Range replacement ──────────────────────────────────────────
 
   @range_pattern Regex.compile!("(?<![.a-zA-Z0-9_])range\\(")
 
@@ -515,8 +487,6 @@ defmodule Credence.Semantic.UndefinedFunction do
   defp build_range(3, [a, b, c]), do: {:ok, "#{a}..#{b}//#{c}"}
   defp build_range(_, _), do: :error
 
-  # ── Argument splitting (at top-level commas) ───────────────────
-
   defp split_args(content) do
     content
     |> String.to_charlist()
@@ -542,8 +512,6 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   defp do_split_args([c | rest], depth, current, args),
     do: do_split_args(rest, depth, [c | current], args)
-
-  # ── Balanced-paren matching ────────────────────────────────────
 
   defp find_matching_close(chars), do: do_find_close(chars, 0, [])
 

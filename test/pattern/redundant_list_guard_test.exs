@@ -7,7 +7,7 @@ defmodule Credence.Pattern.RedundantListGuardTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.RedundantListGuard.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.RedundantListGuard, code, [])
   end
 
   describe "RedundantListGuard check" do

@@ -32,10 +32,8 @@ defmodule Credence.Pattern.NoExplicitSumReduce do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {{:., _, _}, _, args} = node ->
         if reduce_call?(node) and sum_reduce_body?(args) do
           [enum | _] = args
@@ -47,7 +45,6 @@ defmodule Credence.Pattern.NoExplicitSumReduce do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
 
   defp enum_sum_call(enum) do

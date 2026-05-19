@@ -72,7 +72,12 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = source |> Sourceror.parse_string!() |> Credence.RuleHelpers.normalize_sourceror_ast()
     {new_ast, changed?} = apply_fixes(ast)
 

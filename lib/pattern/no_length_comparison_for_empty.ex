@@ -59,7 +59,6 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
     collect_patches(ast, guard_ids)
   end
 
-  # ── AST-based fix ───────────────────────────────────────────────
   #
   # `match?/2` desugars to `case`, which is not allowed in guards.
   # So we have to know *which* `length(x) op N` sites sit inside a
@@ -173,8 +172,6 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   defp extract_int({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
   defp extract_int(_), do: :error
 
-  # ── Detection ───────────────────────────────────────────────────
-
   # length(x) op N — only flag simple variables (matching what fix can handle)
   defp detect_pattern({op, meta, [{:length, _, [arg]}, n]})
        when is_integer(n) and op in [:==, :!=, :>, :>=, :<, :<=] do
@@ -217,8 +214,6 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   defp reverse_op(:>=), do: :<=
   defp reverse_op(:<=), do: :>=
 
-  # ── Replacement builders ────────────────────────────────────────
-
   # "exactly N"
   defp build_replacement(var, :==, 0), do: "#{var} == []"
 
@@ -255,8 +250,6 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
   defp fewer_than(var, 1), do: "#{var} == []"
   defp fewer_than(var, n), do: "!match?(#{at_least_pattern(n)}, #{var})"
 
-  # ── Pattern generators ─────────────────────────────────────────
-
   # [_, _, _] — exactly N elements
   defp exact_pattern(n) do
     innards = List.duplicate("_", n) |> Enum.join(", ")
@@ -268,8 +261,6 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
     innards = List.duplicate("_", n) |> Enum.join(", ")
     "[#{innards} | _]"
   end
-
-  # ── Issue ───────────────────────────────────────────────────────
 
   defp build_issue(meta) do
     %Issue{

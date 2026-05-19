@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
     Credence.Pattern.NoManualFrequencies.check(ast, [])
   end
 
-  defp fix(code), do: Credence.Pattern.NoManualFrequencies.fix(code, [])
+  defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualFrequencies, code, [])
   describe "NoManualFrequencies" do
     test "passes code using Enum.frequencies/1" do
       code = """

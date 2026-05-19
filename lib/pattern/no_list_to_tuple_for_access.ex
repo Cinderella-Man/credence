@@ -33,8 +33,6 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ─────────────────────────────────────────────────────────
-
   @impl true
   def check(ast, _opts) do
     bindings = collect_bindings(ast)
@@ -62,8 +60,6 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
     end
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
-
   @impl true
   def fix_patches(ast, _opts) do
     bindings = collect_bindings(ast)
@@ -78,8 +74,6 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
       elem_patches ++ binding_patches
     end
   end
-
-  # ── Phase 1: collect bindings with scope ──────────────────────────
 
   defp collect_bindings(ast) do
     {_, {_, bindings}} =
@@ -114,8 +108,6 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
   end
 
   defp maybe_record_binding(_, _, bindings), do: bindings
-
-  # ── Phase 2: collect elem readers with scope ──────────────────────
 
   defp collect_elem_readers(ast, bindings) do
     {_, {_, readers}} =
@@ -152,8 +144,6 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
   end
 
   defp maybe_record_elem(_, _, _, readers), do: readers
-
-  # ── Phase 3: decide what to patch ─────────────────────────────────
 
   defp decide_patches(bindings, readers, ast) do
     Enum.reduce(bindings, {[], []}, fn {var, binding_info}, {patches, removable} ->
@@ -215,8 +205,6 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
     }
   end
 
-  # ── Loop-scope tracking ───────────────────────────────────────────
-
   # Stack entries identify a `:fn` or `:for` ancestor by its source
   # position so two siblings with the same shape don't collide.
   defp enter_scope({:fn, meta, _}, stack), do: [{:fn, meta_id(meta)} | stack]
@@ -239,8 +227,6 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
     rlen > blen and Enum.drop(reader_scope, rlen - blen) == binding_scope
   end
 
-  # ── List.to_tuple source extraction ───────────────────────────────
-
   defp extract_tuple_source({{:., _, [{:__aliases__, _, [:List]}, :to_tuple]}, _, [source]}),
     do: {:ok, source}
 
@@ -250,8 +236,6 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
        do: {:ok, source}
 
   defp extract_tuple_source(_), do: :error
-
-  # ── Issue construction ────────────────────────────────────────────
 
   defp build_issue(var, {:elem, meta, _}) do
     %Issue{

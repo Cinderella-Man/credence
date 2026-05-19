@@ -56,7 +56,6 @@ defmodule Credence.Pattern.PreferErlangFloat do
   @impl true
   def priority, do: 499
 
-  # ── Check ─────────────────────────────────────────────────────────
   # Uses AST from Code.string_to_quoted (bare float literals).
 
   @impl true
@@ -88,11 +87,15 @@ defmodule Credence.Pattern.PreferErlangFloat do
     Enum.reverse(issues)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
   # Uses Sourceror for parsing (wraps literals in __block__).
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
         target_lines = find_target_lines(ast)
@@ -116,8 +119,6 @@ defmodule Credence.Pattern.PreferErlangFloat do
     end
   end
 
-  # ── Target-line collection (Sourceror AST) ────────────────────────
-
   defp find_target_lines(ast) do
     {_ast, lines} =
       Macro.prewalk(ast, [], fn
@@ -140,8 +141,6 @@ defmodule Credence.Pattern.PreferErlangFloat do
     Enum.uniq(lines)
   end
 
-  # ── Line-level rewriting (regex) ──────────────────────────────────
-
   @no_ext ~S"(?![0-9eE_])"
 
   defp replace_with_erlang_float(line) do
@@ -156,14 +155,10 @@ defmodule Credence.Pattern.PreferErlangFloat do
     |> then(&Regex.replace(~r/0\.0#{@no_ext}\s*\+\s*(\w+)/, &1, ":erlang.float(\\1)"))
   end
 
-  # ── Bare-variable detection ──────────────────────────────────────
-
   # Sourceror wraps variables in {:__block__, _, [var_node]}.
   defp bare_var?({:__block__, _, [inner]}), do: bare_var?(inner)
   defp bare_var?({name, _meta, ctx}) when is_atom(name) and is_atom(ctx), do: true
   defp bare_var?(_), do: false
-
-  # ── Identity helpers ──────────────────────────────────────────────
 
   defp identity_right?(:*, 1.0), do: true
   defp identity_right?(:/, 1.0), do: true
@@ -179,8 +174,6 @@ defmodule Credence.Pattern.PreferErlangFloat do
   defp unwrap_float({:__block__, _, [val]}) when is_float(val), do: val
   defp unwrap_float(val) when is_float(val), do: val
   defp unwrap_float(_), do: nil
-
-  # ── Issue construction ────────────────────────────────────────────
 
   defp build_issue(meta) do
     %Issue{

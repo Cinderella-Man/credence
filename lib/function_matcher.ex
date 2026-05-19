@@ -62,8 +62,6 @@ defmodule Credence.FunctionMatcher do
     |> Enum.sort_by(& &1.score, :desc)
   end
 
-  # ── Function extraction ────────────────────────────────────────
-
   defp defined_functions(source, module_name) do
     case Code.string_to_quoted(source) do
       {:ok, ast} ->
@@ -125,8 +123,6 @@ defmodule Credence.FunctionMatcher do
   defp arg_count(args) when is_list(args), do: length(args)
   defp arg_count(_), do: 0
 
-  # ── Filtering ──────────────────────────────────────────────────
-
   defp filter_by_arity(functions, arity) do
     Enum.filter(functions, fn %{arity: a} -> a == arity end)
   end
@@ -136,8 +132,6 @@ defmodule Credence.FunctionMatcher do
   defp filter_by_visibility(functions, :public_only) do
     Enum.filter(functions, fn %{visibility: v} -> v == :def end)
   end
-
-  # ── Scoring ────────────────────────────────────────────────────
 
   defp score(undefined, candidate) do
     cond do

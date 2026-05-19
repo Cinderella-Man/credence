@@ -2,7 +2,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    Credence.Pattern.PreferHeredocForMultiLineDoc.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferHeredocForMultiLineDoc, code, [])
   end
   describe "fix/2 — conversions" do
     test "converts simple two-line @doc to heredoc" do

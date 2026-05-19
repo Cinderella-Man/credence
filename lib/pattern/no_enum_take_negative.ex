@@ -34,7 +34,12 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = Sourceror.parse_string!(source)
     skip = sort_take_lines(ast)
 
@@ -65,8 +70,6 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
     end)
     |> Sourceror.to_string()
   end
-
-  # ── Skip-detection ──────────────────────────────────────────────
 
   defp sort_take_lines(ast) do
     {_ast, lines} =
@@ -118,8 +121,6 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
   defp sort_direction_or_comparator?({:fn, _, _}), do: true
   defp sort_direction_or_comparator?({:&, _, _}), do: true
   defp sort_direction_or_comparator?(_), do: false
-
-  # ── Helpers ─────────────────────────────────────────────────────
 
   defp extract_negative({:-, _, [{:__block__, _, [n]}]}) when is_integer(n) and n > 0,
     do: {:ok, n}

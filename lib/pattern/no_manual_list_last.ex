@@ -48,7 +48,12 @@ defmodule Credence.Pattern.NoManualListLast do
   end
 
   @impl true
-  def fix(source, _opts) do
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    Credence.RuleHelpers.patches_from_legacy_fix(ast, source, &legacy_fix(&1, opts))
+  end
+
+  defp legacy_fix(source, _opts) do
     ast = source |> Sourceror.parse_string!() |> Credence.RuleHelpers.normalize_sourceror_ast()
     matches = find_matching_functions(ast)
 
@@ -178,8 +183,6 @@ defmodule Credence.Pattern.NoManualListLast do
       true -> []
     end
   end
-
-  # ------------------------------------------------------------
   # FIX — recursive AST transformer
   #
   # A custom recursive walker that:
@@ -188,11 +191,8 @@ defmodule Credence.Pattern.NoManualListLast do
   #    are never confused with call sites
   #  • removes recursive clauses and replaces base clauses
   #    with List.last/1 delegation
-  # ------------------------------------------------------------
-
   defp transform_ast(node, match_set, match_names) do
     case node do
-      # ---- Pipe call: x |> fn_name() or x |> fn_name ----
       {:|>, pipe_meta, [lhs, {fn_name, call_meta, pipe_args}]}
       when is_atom(fn_name) and (pipe_args == [] or is_nil(pipe_args)) ->
         if MapSet.member?(match_names, fn_name) do
@@ -206,8 +206,6 @@ defmodule Credence.Pattern.NoManualListLast do
              {fn_name, call_meta, pipe_args}
            ]}
         end
-
-      # ---- Function definition ----
       {def_type, meta, [{fn_name, name_meta, args}, body]}
       when def_type in [:def, :defp] and is_atom(fn_name) ->
         if MapSet.member?(match_set, {fn_name, def_type}) do
@@ -223,7 +221,6 @@ defmodule Credence.Pattern.NoManualListLast do
           {def_type, meta, [{fn_name, name_meta, args}, new_body]}
         end
 
-      # ---- __block__ — filter out removed clauses ----
       {:__block__, meta, body} ->
         new_body =
           body
@@ -238,8 +235,6 @@ defmodule Credence.Pattern.NoManualListLast do
           [single] -> single
           _ -> {:__block__, meta, new_body}
         end
-
-      # ---- Direct call: fn_name(arg) ----
       {fn_name, meta, [arg]} when is_atom(fn_name) ->
         if MapSet.member?(match_names, fn_name) do
           transformed_arg = transform_ast(arg, match_set, match_names)
@@ -247,21 +242,14 @@ defmodule Credence.Pattern.NoManualListLast do
         else
           {fn_name, meta, [transform_ast(arg, match_set, match_names)]}
         end
-
-      # ---- Generic 3-tuple (fallthrough) ----
       {tag, meta, args} when is_list(args) ->
         {tag, meta, Enum.map(args, &transform_ast(&1, match_set, match_names))}
 
-      # ---- 2-tuple (keyword pair like {:do, expr}) ----
       {left, right} ->
         {transform_ast(left, match_set, match_names),
          transform_ast(right, match_set, match_names)}
-
-      # ---- List ----
       list when is_list(list) ->
         Enum.map(list, &transform_ast(&1, match_set, match_names))
-
-      # ---- Leaf (atom, number, string, nil …) ----
       other ->
         other
     end

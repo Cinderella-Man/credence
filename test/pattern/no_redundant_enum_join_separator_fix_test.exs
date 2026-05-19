@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoRedundantEnumJoinSeparator.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoRedundantEnumJoinSeparator, code, [])
   end
 
   defp assert_fix(input, expected) do

@@ -37,8 +37,6 @@ defmodule Credence.Pattern.NoRedundantAssignment do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  # ── Check ─────────────────────────────────────────────────────────
-
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =
@@ -56,26 +54,10 @@ defmodule Credence.Pattern.NoRedundantAssignment do
     Enum.reverse(issues)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────────
-
   @impl true
-  def fix(source, _opts) do
-    case Sourceror.parse_string(source) do
-      {:ok, ast} ->
-        if has_fixable_block?(ast) do
-          ast
-          |> Macro.postwalk(&maybe_rewrite_block/1)
-          |> Sourceror.to_string()
-        else
-          source
-        end
-
-      {:error, _} ->
-        source
-    end
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite_block/1)
   end
-
-  # ── Detection: last-pair check ────────────────────────────────────
 
   # Checks if the last two statements in a block form a redundant
   # assign-and-return pattern.
@@ -97,8 +79,6 @@ defmodule Credence.Pattern.NoRedundantAssignment do
   end
 
   defp check_last_pair(_), do: :clean
-
-  # ── Pattern classification ────────────────────────────────────────
 
   # A pattern is fixable if it consists entirely of plain variables.
   # Patterns with literals, pins, maps, or underscore are NOT fixable.
@@ -150,8 +130,6 @@ defmodule Credence.Pattern.NoRedundantAssignment do
 
   defp fixable_list_or_cons?(_), do: false
 
-  # ── Structural comparison ─────────────────────────────────────────
-
   # Two AST nodes are structurally identical if they represent the
   # same source code, ignoring position metadata. Using Macro.to_string
   # as the normalizer handles all AST representation differences
@@ -159,8 +137,6 @@ defmodule Credence.Pattern.NoRedundantAssignment do
   defp structurally_identical?(a, b) do
     Macro.to_string(a) == Macro.to_string(b)
   end
-
-  # ── Check: issue construction ─────────────────────────────────────
 
   defp build_issue(meta) do
     %Issue{
@@ -171,39 +147,6 @@ defmodule Credence.Pattern.NoRedundantAssignment do
       meta: %{line: Keyword.get(meta, :line)}
     }
   end
-
-  # ── Fix: block rewriting ─────────────────────────────────────────
-
-  defp has_fixable_block?(ast) do
-    {_, found} =
-      Macro.prewalk(ast, false, fn
-        _node, true ->
-          {nil, true}
-
-        {:__block__, _, statements} = node, false when is_list(statements) ->
-          {node, block_is_fixable?(statements)}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    found
-  end
-
-  defp block_is_fixable?(statements) when length(statements) >= 2 do
-    second_to_last = Enum.at(statements, -2)
-    last = Enum.at(statements, -1)
-
-    case second_to_last do
-      {:=, _, [lhs, _rhs]} ->
-        fixable_pattern?(lhs) and structurally_identical?(lhs, last)
-
-      _ ->
-        false
-    end
-  end
-
-  defp block_is_fixable?(_), do: false
 
   # Postwalk callback: rewrites a __block__ if its last two statements
   # form a redundant assign-and-return.

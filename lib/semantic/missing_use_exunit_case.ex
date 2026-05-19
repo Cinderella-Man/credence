@@ -19,8 +19,6 @@ defmodule Credence.Semantic.MissingUseExUnitCase do
   @behaviour Credence.Semantic.Rule
   alias Credence.Issue
 
-  # ── Rule callbacks ────────────────────────────────────────────
-
   @impl true
   def priority, do: 100
 
@@ -58,8 +56,6 @@ defmodule Credence.Semantic.MissingUseExUnitCase do
         source
     end
   end
-
-  # ── Detection ─────────────────────────────────────────────────
 
   defp needs_fix?(ast) do
     {_, found} =
@@ -113,8 +109,6 @@ defmodule Credence.Semantic.MissingUseExUnitCase do
     end)
   end
 
-  # ── Fix ───────────────────────────────────────────────────────
-
   defp maybe_insert_use({:defmodule, meta, [name, kw]}) do
     case extract_do_body(kw) do
       nil ->
@@ -136,8 +130,6 @@ defmodule Credence.Semantic.MissingUseExUnitCase do
   end
 
   defp maybe_insert_use(node), do: node
-
-  # ── AST helpers ───────────────────────────────────────────────
 
   defp extract_line({line, _col}), do: line
   defp extract_line(line) when is_integer(line), do: line

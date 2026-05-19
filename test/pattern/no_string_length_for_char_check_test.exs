@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoStringLengthForCharCheck.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoStringLengthForCharCheck, code, [])
   end
 
   describe "NoStringLengthForCharCheck" do

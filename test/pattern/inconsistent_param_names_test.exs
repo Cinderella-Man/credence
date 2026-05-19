@@ -7,7 +7,7 @@ defmodule Credence.Pattern.InconsistentParamNamesTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.InconsistentParamNames.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.InconsistentParamNames, code, [])
   end
 
   describe "InconsistentParamNames" do

@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoSortForTopKTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoSortForTopK.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoSortForTopK, code, [])
   end
 
   # ── check — positive cases ───────────────────────────────────────

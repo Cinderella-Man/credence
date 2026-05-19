@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoIsPrefixForNonGuard.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIsPrefixForNonGuard, code, [])
   end
 
   describe "check/2" do
@@ -404,7 +404,12 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
       end
       """
 
-      fixed = Credence.Pattern.NoIsPrefixForNonGuard.fix(code, auto_fix_public: false)
+      fixed =
+        Credence.RuleHelpers.apply_rule_fix(
+          Credence.Pattern.NoIsPrefixForNonGuard,
+          code,
+          auto_fix_public: false
+        )
 
       assert fixed =~ "def is_public(x)"
       assert fixed =~ "defp private?(x)"
@@ -413,7 +418,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
     test "auto_fix_public defaults to true (renames both def and defp)" do
       code = "defmodule Example do\n  def is_public(x), do: x\nend\n"
 
-      fixed = Credence.Pattern.NoIsPrefixForNonGuard.fix(code, [])
+      fixed = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIsPrefixForNonGuard, code, [])
 
       assert fixed =~ "def public?(x)"
     end

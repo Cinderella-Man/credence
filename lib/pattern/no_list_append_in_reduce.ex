@@ -48,10 +48,8 @@ defmodule Credence.Pattern.NoListAppendInReduce do
   end
 
   @impl true
-  def fix(source, _opts) do
-    source
-    |> Sourceror.parse_string!()
-    |> Macro.postwalk(fn
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # 3-arg standalone: Enum.reduce(enum, [], fn ...)
       {{:., dot_meta, [{:__aliases__, al_meta, [:Enum]}, :reduce]}, call_meta,
        [enum, initial, fun]} = node ->
@@ -80,13 +78,8 @@ defmodule Credence.Pattern.NoListAppendInReduce do
       node ->
         node
     end)
-    |> Sourceror.to_string()
   end
-
-  # ---------------------------------------------------------------------------
   # Check helpers
-  # ---------------------------------------------------------------------------
-
   defp check_lambda({:fn, _, [{:->, _, [params, body]}]}, meta, issues)
        when length(params) == 2 do
     acc_var = List.last(params)
@@ -106,11 +99,7 @@ defmodule Credence.Pattern.NoListAppendInReduce do
   end
 
   defp check_lambda(_, _, issues), do: issues
-
-  # ---------------------------------------------------------------------------
   # Fix helpers
-  # ---------------------------------------------------------------------------
-
   defp try_fix_lambda(initial, fun) do
     with true <- empty_list?(initial),
          {:ok, fixed_fun} <- fix_lambda_body(fun) do
@@ -156,11 +145,7 @@ defmodule Credence.Pattern.NoListAppendInReduce do
   end
 
   defp fix_lambda_body(_), do: :error
-
-  # ---------------------------------------------------------------------------
   # Shared helpers
-  # ---------------------------------------------------------------------------
-
   # Extracts the expression from acc ++ [expr], handling both
   # Code.string_to_quoted ([expr]) and Sourceror ({:__block__, _, [[expr]]})
   defp extract_append_expr(body, acc_var) do

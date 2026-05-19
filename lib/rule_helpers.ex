@@ -202,65 +202,167 @@ defmodule Credence.RuleHelpers do
     ast = Sourceror.parse_string!(source)
 
     case rule.fix_patches(ast, opts) do
-      [] -> source
-      patches when is_list(patches) -> Sourceror.patch_string(source, patches)
+      [] ->
+        source
+
+      patches when is_list(patches) ->
+        source
+        |> Sourceror.patch_string(patches)
+        |> strip_trailing_ws_per_line()
     end
   end
 
+  # `Sourceror.patch_string` re-indents multi-line replacements to
+  # match the patch's start column, which can turn empty blank lines
+  # in the replacement into whitespace-only lines. Clean those up.
+  defp strip_trailing_ws_per_line(text) do
+    text
+    |> String.split("\n")
+    |> Enum.map(&String.trim_trailing/1)
+    |> Enum.join("\n")
+  end
+
   @doc """
-  Builds a single-patch list that replaces the whole source from
-  `(1, 1)` through the end of `original_source` with `new_source`.
+  Mechanical migration helper for rules that today do
+  `source |> Sourceror.parse_string!() |> Macro.postwalk(matcher) |>
+  Sourceror.to_string()`.
 
-  An adapter used by Pattern rules that already implement complex
-  source-level transformations but need to expose the patch-based
-  `fix_patches/2` interface. Loses the per-edit locality that proper
-  patch decomposition would deliver — only use when refactoring the
-  rule into discrete patches would be substantially more work than
-  it's worth.
+  Applies the `matcher` via `Macro.postwalk/2` to build a transformed
+  AST, then diffs the original against the transformed and emits one
+  patch per *outermost* changed subtree. Non-overlapping by construction
+  — nested matches are subsumed by the outer patch.
+
+  The rule's `fix_patches/2` becomes a one-line delegation:
+
+      def fix_patches(ast, _opts) do
+        Credence.RuleHelpers.patches_from_postwalk(ast, fn
+          {target_pattern, _, _} = node -> build_replacement(node)
+          node -> node
+        end)
+      end
   """
-  @spec whole_source_patches(String.t(), String.t()) :: [map()]
-  def whole_source_patches(original_source, new_source) do
-    if new_source == original_source do
-      []
-    else
-      lines = String.split(original_source, "\n")
-      end_line = max(length(lines), 1)
-      end_col = (lines |> List.last() |> byte_size()) + 1
+  @spec patches_from_postwalk(Macro.t(), (Macro.t() -> Macro.t())) :: [map()]
+  def patches_from_postwalk(ast, matcher) when is_function(matcher, 1) do
+    transformed = Macro.postwalk(ast, matcher)
+    diff_patches(ast, transformed)
+  end
 
-      [
-        %{
-          range: %{start: [line: 1, column: 1], end: [line: end_line, column: end_col]},
-          change: new_source
-        }
-      ]
+  # Walks original and transformed ASTs in parallel. When the structural
+  # shape matches, recurses into children. When the shape diverges (or
+  # values differ at a leaf), emits a single patch covering the original
+  # node's range. Result: patches at the *outermost* point of divergence,
+  # never nested.
+
+  defp diff_patches(same, same), do: []
+
+  # Same 3-tuple shape with same arity — recurse into args. (Form must
+  # be deeply equal too: an atom-form vs tuple-form is structurally
+  # different and should patch the whole node.)
+  defp diff_patches({form, _, args_o}, {form, _, args_m})
+       when is_list(args_o) and is_list(args_m) and length(args_o) == length(args_m) do
+    args_o
+    |> Enum.zip(args_m)
+    |> Enum.flat_map(fn {o, m} -> diff_patches(o, m) end)
+  end
+
+  # Lists of the same length — zip and recurse.
+  defp diff_patches([_ | _] = orig, [_ | _] = modified)
+       when length(orig) == length(modified) do
+    orig
+    |> Enum.zip(modified)
+    |> Enum.flat_map(fn {o, m} -> diff_patches(o, m) end)
+  end
+
+  # 2-tuples (keyword pair etc.) — recurse on each side.
+  defp diff_patches({a_o, b_o}, {a_m, b_m}) do
+    diff_patches(a_o, a_m) ++ diff_patches(b_o, b_m)
+  end
+
+  # Structures diverge here — emit one patch covering the original
+  # node's range. Skip if the original is a leaf without a range
+  # (Sourceror can't pinpoint bare literals/atoms).
+  defp diff_patches(orig, modified) do
+    case node_range(orig) do
+      nil ->
+        []
+
+      range ->
+        [%{range: range, change: render_replacement(modified, range)}]
     end
+  end
+
+  defp node_range(node) when is_tuple(node) and tuple_size(node) == 3 do
+    case Sourceror.get_range(node) do
+      %Sourceror.Range{} = r -> r
+      _ -> nil
+    end
+  end
+
+  defp node_range(_), do: nil
+
+  @doc """
+  Universal adapter for rules whose fix is naturally source-level:
+  call the rule's `fix(source, opts)`, re-parse the result, and diff
+  the resulting AST against the original. Emit one patch per outermost
+  changed subtree.
+
+  Falls back to a single whole-source patch when AST round-tripping
+  the legacy output would be lossy (e.g. rules that do regex-level
+  edits and rely on the surrounding source bytes — parens, whitespace,
+  doc-string quirks — that Sourceror's renderer doesn't reproduce).
+
+  Used as the default `fix_patches/2` from `Credence.Pattern.Rule`'s
+  `__using__` macro. Gives per-site patches automatically for the
+  rules where it's safe; preserves the legacy behavior for the
+  source-sensitive rules where it isn't.
+  """
+  @spec patches_from_legacy_fix(Macro.t(), String.t(), (String.t() -> String.t())) :: [map()]
+  def patches_from_legacy_fix(ast, source, fix_fn) when is_function(fix_fn, 1) do
+    case fix_fn.(source) do
+      ^source ->
+        []
+
+      new_source ->
+        case Sourceror.parse_string(new_source) do
+          {:ok, new_ast} ->
+            if Sourceror.to_string(new_ast) == new_source do
+              diff_patches(ast, new_ast)
+            else
+              whole_source_patch(source, new_source)
+            end
+
+          {:error, _} ->
+            whole_source_patch(source, new_source)
+        end
+    end
+  end
+
+  defp whole_source_patch(original_source, new_source) do
+    lines = String.split(original_source, "\n")
+    end_line = max(length(lines), 1)
+    end_col = (lines |> List.last() |> byte_size()) + 1
+
+    [
+      %{
+        range: %{start: [line: 1, column: 1], end: [line: end_line, column: end_col]},
+        change: new_source
+      }
+    ]
   end
 
   @doc """
   Renders a replacement subtree as source text suitable for patching
   back into the original source at `original_range`'s position.
 
-  Used by patch-based rules to keep multi-line originals from
-  collapsing onto a single line just because the replacement fits
-  Sourceror's default 98-column line budget.
+  Uses Sourceror's default `line_length: 98`. Pass `:line_length` to
+  override — e.g. when a rule wants to force a multi-line replacement
+  to mirror a multi-line original (the original Issue 4 trick).
 
-  The heuristic: if the original spans multiple lines, set Sourceror's
-  `line_length` to the original expression's column-width (with a
-  floor of 40 so tiny snippets don't over-wrap). If the original sits
-  on a single line, use Sourceror's default.
-
-  Established by the Issue 4 fix on `no_map_then_aggregate`.
+  `original_range` is currently unused but reserved as a hint for
+  future rule-specific budget heuristics.
   """
-  @spec render_replacement(Macro.t(), map()) :: String.t()
-  def render_replacement(new_ast, original_range) do
-    opts =
-      if original_range.start[:line] == original_range.end[:line] do
-        []
-      else
-        budget = max(original_range.end[:column] - original_range.start[:column], 40)
-        [line_length: budget]
-      end
-
+  @spec render_replacement(Macro.t(), map(), keyword()) :: String.t()
+  def render_replacement(new_ast, _original_range, opts \\ []) do
     Sourceror.to_string(new_ast, opts)
   end
 

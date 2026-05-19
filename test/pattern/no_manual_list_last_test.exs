@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoManualListLastTest do
   end
 
   defp fix(code) do
-    Credence.Pattern.NoManualListLast.fix(code, [])
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualListLast, code, [])
   end
 
   describe "NoManualListLast" do
