@@ -45,6 +45,20 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
 
       assert length(check(code)) == 2
     end
+
+    test "def separated by another def is still flagged when later clause has an attribute" do
+      code = """
+      defmodule M do
+        def foo(1), do: 1
+        def bar(x), do: x
+
+        @decorate telemetry([:demo])
+        def foo(x), do: x + 1
+      end
+      """
+
+      assert [%Issue{rule: :non_grouped_clauses}] = check(code)
+    end
   end
 
   describe "does NOT flag grouped clauses" do
@@ -65,6 +79,32 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       defmodule M do
         def foo(1), do: 1
         def foo(x), do: x
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "module attributes between consecutive clauses" do
+      code = """
+      defmodule M do
+        def foo(1), do: 1
+
+        @doc "Handles other values"
+        def foo(x), do: x + 1
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "decorator attributes between consecutive clauses" do
+      code = """
+      defmodule M do
+        def foo(1), do: 1
+
+        @decorate telemetry([:demo])
+        def foo(x), do: x + 1
       end
       """
 

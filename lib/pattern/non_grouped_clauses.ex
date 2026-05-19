@@ -60,7 +60,7 @@ defmodule Credence.Pattern.NonGroupedClauses do
                                                                    issues} ->
         case function_key(expr) do
           nil ->
-            {nil, seen, flagged, issues}
+            {previous_key_after_non_function(expr, prev_key), seen, flagged, issues}
 
           key when key == prev_key ->
             {key, seen, flagged, issues}
@@ -113,7 +113,7 @@ defmodule Credence.Pattern.NonGroupedClauses do
                                                                  {prev_key, seen, strays} ->
         case function_key(expr) do
           nil ->
-            {nil, seen, strays}
+            {previous_key_after_non_function(expr, prev_key), seen, strays}
 
           key when key == prev_key ->
             {key, seen, strays}
@@ -182,6 +182,11 @@ defmodule Credence.Pattern.NonGroupedClauses do
   end
 
   defp function_key(_), do: nil
+
+  # Module attributes attach to the following definition and do not trigger
+  # Elixir's grouped-clause warning, so they should not break a clause group.
+  defp previous_key_after_non_function({:@, _, _}, prev_key), do: prev_key
+  defp previous_key_after_non_function(_expr, _prev_key), do: nil
 
   defp preceded_by_attr?(body, idx) do
     idx > 0 and match?({:@, _, _}, Enum.at(body, idx - 1))
