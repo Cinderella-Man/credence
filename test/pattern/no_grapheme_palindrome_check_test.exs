@@ -1,14 +1,18 @@
 defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
   use ExUnit.Case
+
+  alias Credence.Pattern.NoGraphemePalindromeCheck
+
   alias Credence.Issue
+  alias NoGraphemePalindrome
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoGraphemePalindromeCheck.check(ast, [])
+    NoGraphemePalindromeCheck.check(ast, [])
   end
 
   defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoGraphemePalindromeCheck, code, [])
+    do: Credence.RuleHelpers.apply_rule_fix(NoGraphemePalindromeCheck, code, [])
 
   describe "NoGraphemePalindromeCheck" do
     test "passes code that compares strings directly with String.reverse" do
@@ -197,7 +201,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoGraphemePalindromeCheck.check(ast, []) == []
+      assert NoGraphemePalindromeCheck.check(ast, []) == []
     end
   end
 end

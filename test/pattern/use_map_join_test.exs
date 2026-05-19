@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.UseMapJoinTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.UseMapJoin
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.UseMapJoin.check(ast, [])
+    UseMapJoin.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.UseMapJoin, code, [])
+    Credence.RuleHelpers.apply_rule_fix(UseMapJoin, code, [])
   end
 
   describe "check" do

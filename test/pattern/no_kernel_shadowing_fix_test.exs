@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoKernelShadowingFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoKernelShadowing
+
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoKernelShadowing, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoKernelShadowing, code, [])
   end
 
   describe "max → max_value" do

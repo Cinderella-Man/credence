@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.RedundantListGuardTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.RedundantListGuard
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.RedundantListGuard.check(ast, [])
+    RedundantListGuard.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.RedundantListGuard, code, [])
+    Credence.RuleHelpers.apply_rule_fix(RedundantListGuard, code, [])
   end
 
   describe "RedundantListGuard check" do

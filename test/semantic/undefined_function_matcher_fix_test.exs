@@ -2,6 +2,7 @@ defmodule Credence.Semantic.UndefinedFunction.MatcherFixTest do
   use ExUnit.Case
 
   alias Credence.Semantic.UndefinedFunction
+  alias Matcher
 
   defp fix_qualified(source, message, line) do
     UndefinedFunction.fix(source, %{severity: :warning, message: message, position: {line, 1}})

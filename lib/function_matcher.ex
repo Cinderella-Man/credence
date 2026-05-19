@@ -100,8 +100,7 @@ defmodule Credence.FunctionMatcher do
 
   defp module_parts_match?(parts, module_name) do
     parts
-    |> Enum.map(&Atom.to_string/1)
-    |> Enum.join(".")
+    |> Enum.map_join(".", &Atom.to_string/1)
     |> Kernel.==(module_name)
   end
 

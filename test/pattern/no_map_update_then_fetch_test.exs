@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoMapUpdateThenFetch
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoMapUpdateThenFetch.check(ast, [])
+    NoMapUpdateThenFetch.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapUpdateThenFetch, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoMapUpdateThenFetch, code, [])
   end
 
   describe "check" do
@@ -116,7 +118,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
+      assert NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "fixes Map.update!/3 followed by Map.get" do
@@ -132,7 +134,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
+      assert NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "fixes Map.update/4 followed by Map.get" do
@@ -148,7 +150,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
+      assert NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "fixes with intervening code that doesn't reference the map variable" do
@@ -165,7 +167,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
+      assert NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "fixes multiple update+fetch pairs in the same function" do
@@ -183,7 +185,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchTest do
 
       fixed = fix(code)
       assert ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoMapUpdateThenFetch.check(ast, []) == []
+      assert NoMapUpdateThenFetch.check(ast, []) == []
     end
 
     test "produces valid Elixir code" do

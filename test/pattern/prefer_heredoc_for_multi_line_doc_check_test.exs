@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.PreferHeredocForMultiLineDoc
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.PreferHeredocForMultiLineDoc.check(ast, [])
+    PreferHeredocForMultiLineDoc.check(ast, [])
   end
 
   defp check_with_source(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.PreferHeredocForMultiLineDoc.check(ast, source: code)
+    PreferHeredocForMultiLineDoc.check(ast, source: code)
   end
 
   defp analyze(code) do

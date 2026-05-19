@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoRedundantAssignment
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoRedundantAssignment.check(ast, [])
+    NoRedundantAssignment.check(ast, [])
   end
 
   defp flagged?(code), do: check(code) != []

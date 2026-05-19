@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoManualStringReverseTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoManualStringReverse
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoManualStringReverse.check(ast, [])
+    NoManualStringReverse.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualStringReverse, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoManualStringReverse, code, [])
   end
 
   describe "NoManualStringReverse - check" do

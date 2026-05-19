@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NonGroupedClausesFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NonGroupedClauses
+
   defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NonGroupedClauses, code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(NonGroupedClauses, code, [])
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 

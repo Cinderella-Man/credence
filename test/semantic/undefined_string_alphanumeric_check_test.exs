@@ -94,7 +94,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericCheckTest do
 
       issues = Credence.Semantic.analyze(source)
       matched = Enum.filter(issues, &(&1.rule == :undefined_string_alphanumeric))
-      assert length(matched) >= 1
+      refute Enum.empty?(matched)
     end
 
     test "no issues when String.match? is used correctly" do

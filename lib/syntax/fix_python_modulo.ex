@@ -61,10 +61,9 @@ defmodule Credence.Syntax.FixPythonModulo do
   def fix(source) do
     source
     |> String.split("\n")
-    |> Enum.map(fn line ->
+    |> Enum.map_join("\n", fn line ->
       if modulo_line?(line), do: fix_line(line), else: line
     end)
-    |> Enum.join("\n")
   end
 
   defp modulo_line?(line) do

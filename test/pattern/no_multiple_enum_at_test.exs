@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoMultipleEnumAtTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoMultipleEnumAt
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoMultipleEnumAt.check(ast, [])
+    NoMultipleEnumAt.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMultipleEnumAt, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoMultipleEnumAt, code, [])
   end
 
   describe "check" do
@@ -292,12 +294,12 @@ defmodule Credence.Pattern.NoMultipleEnumAtTest do
       """
 
       {:ok, ast_before} = Sourceror.parse_string(source)
-      issues_before = Credence.Pattern.NoMultipleEnumAt.check(ast_before, [])
-      assert length(issues_before) >= 1
+      issues_before = NoMultipleEnumAt.check(ast_before, [])
+      refute Enum.empty?(issues_before)
 
       fixed = fix(source)
       {:ok, ast_after} = Sourceror.parse_string(fixed)
-      issues_after = Credence.Pattern.NoMultipleEnumAt.check(ast_after, [])
+      issues_after = NoMultipleEnumAt.check(ast_after, [])
       assert length(issues_after) < length(issues_before)
     end
   end

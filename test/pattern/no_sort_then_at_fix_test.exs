@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoSortThenAtFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoSortThenAt
+
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoSortThenAt, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoSortThenAt, code, [])
   end
 
   # ── Atom direction (existing) ───────────────────────────────────────────

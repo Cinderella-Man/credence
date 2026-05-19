@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoCondTwoClauses
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoCondTwoClauses.check(ast, [])
+    NoCondTwoClauses.check(ast, [])
   end
 
   defp flagged?(code), do: check(code) != []

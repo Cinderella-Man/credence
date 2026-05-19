@@ -90,24 +90,14 @@ defmodule Credence.Pattern.UseMapJoin do
 
       # Nested: Enum.join(Enum.map(enum, f), sep)
       {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _meta, join_args} = node ->
-        case join_args do
-          [map_call | rest] ->
-            if remote_call?(map_call, :Enum, :map) do
-              case extract_enum(map_call) do
-                nil ->
-                  node
-
-                enum ->
-                  mapper = extract_mapper(map_call)
-                  sep = if rest == [], do: nil, else: hd(rest)
-                  build_full_map_join(enum, sep, mapper)
-              end
-            else
-              node
-            end
-
-          _ ->
-            node
+        with [map_call | rest] <- join_args,
+             true <- remote_call?(map_call, :Enum, :map),
+             enum when not is_nil(enum) <- extract_enum(map_call) do
+          mapper = extract_mapper(map_call)
+          sep = if rest == [], do: nil, else: hd(rest)
+          build_full_map_join(enum, sep, mapper)
+        else
+          _ -> node
         end
 
       node ->

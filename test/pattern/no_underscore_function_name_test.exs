@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoUnderscoreFunctionNameTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoUnderscoreFunctionName
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoUnderscoreFunctionName.check(ast, [])
+    NoUnderscoreFunctionName.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoUnderscoreFunctionName, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoUnderscoreFunctionName, code, [])
   end
 
   describe "NoUnderscoreFunctionName — check" do
@@ -256,7 +258,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Sourceror.parse_string(fixed)
-      assert Credence.Pattern.NoUnderscoreFunctionName.check(fixed_ast, []) == []
+      assert NoUnderscoreFunctionName.check(fixed_ast, []) == []
     end
   end
 end

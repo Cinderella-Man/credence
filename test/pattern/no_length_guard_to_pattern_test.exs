@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoLengthGuardToPatternTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoLengthGuardToPattern
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoLengthGuardToPattern.check(ast, [])
+    NoLengthGuardToPattern.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoLengthGuardToPattern, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoLengthGuardToPattern, code, [])
   end
 
   describe "NoLengthGuardToPattern check" do
@@ -275,7 +277,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      issues = Credence.Pattern.NoLengthGuardToPattern.check(ast, [])
+      issues = NoLengthGuardToPattern.check(ast, [])
       assert issues == []
     end
 
@@ -290,7 +292,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      issues = Credence.Pattern.NoLengthGuardToPattern.check(ast, [])
+      issues = NoLengthGuardToPattern.check(ast, [])
       assert issues == []
     end
   end

@@ -2,8 +2,9 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Syntax.FixPythonModulo
 
-  defp analyze(code), do: Credence.Syntax.FixPythonModulo.analyze(code)
+  defp analyze(code), do: FixPythonModulo.analyze(code)
 
   # ═══════════════════════════════════════════════════════════════════
   # FLAGS — identifier % integer (the core LLM pattern)

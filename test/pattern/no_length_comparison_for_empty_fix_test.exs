@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
   use ExUnit.Case
+
+  alias Credence.Pattern.NoLengthComparisonForEmpty
   alias Credence.RuleHelpers
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoLengthComparisonForEmpty.check(ast, [])
+    NoLengthComparisonForEmpty.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoLengthComparisonForEmpty, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoLengthComparisonForEmpty, code, [])
   end
 
   # ── exactly N ──────────────────────────────────────────────────

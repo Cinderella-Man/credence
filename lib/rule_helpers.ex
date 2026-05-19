@@ -209,8 +209,7 @@ defmodule Credence.RuleHelpers do
   defp strip_trailing_ws_per_line(text) do
     text
     |> String.split("\n")
-    |> Enum.map(&String.trim_trailing/1)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", &String.trim_trailing/1)
   end
 
   @doc """

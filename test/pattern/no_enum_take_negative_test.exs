@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoEnumTakeNegativeTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoEnumTakeNegative
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoEnumTakeNegative.check(ast, [])
+    NoEnumTakeNegative.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoEnumTakeNegative, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoEnumTakeNegative, code, [])
   end
 
   describe "NoEnumTakeNegative check" do
@@ -169,7 +171,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoEnumTakeNegative.check(ast, []) == []
+      assert NoEnumTakeNegative.check(ast, []) == []
     end
 
     # ── Skip behavior: sort |> take(-n) deferred ──────────────────

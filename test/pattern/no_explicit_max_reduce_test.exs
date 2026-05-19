@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoExplicitMaxReduceTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoExplicitMaxReduce
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoExplicitMaxReduce.check(ast, [])
+    NoExplicitMaxReduce.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoExplicitMaxReduce, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoExplicitMaxReduce, code, [])
   end
 
   describe "NoExplicitMaxReduce" do
@@ -270,7 +272,7 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Sourceror.parse_string(fixed)
-      issues = Credence.Pattern.NoExplicitMaxReduce.check(fixed_ast, [])
+      issues = NoExplicitMaxReduce.check(fixed_ast, [])
 
       assert issues == []
     end

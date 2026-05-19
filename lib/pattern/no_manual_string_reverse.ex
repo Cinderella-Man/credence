@@ -77,23 +77,14 @@ defmodule Credence.Pattern.NoManualStringReverse do
       # and String.graphemes().  Only fires when Enum.join has no
       # explicit separator (safe replacement).
       {:|>, _, [left, join]} = node ->
-        if remote_call?(join, :Enum, :join) and join_no_separator?(join) do
-          case left do
-            {:|>, _, [middle, reverse]} ->
-              if remote_call?(reverse, :Enum, :reverse) do
-                case graphemes_in_middle(middle) do
-                  {:ok, subject} -> fix_pipe_subject(subject)
-                  :error -> node
-                end
-              else
-                node
-              end
-
-            _ ->
-              node
-          end
+        with true <- remote_call?(join, :Enum, :join),
+             true <- join_no_separator?(join),
+             {:|>, _, [middle, reverse]} <- left,
+             true <- remote_call?(reverse, :Enum, :reverse),
+             {:ok, subject} <- graphemes_in_middle(middle) do
+          fix_pipe_subject(subject)
         else
-          node
+          _ -> node
         end
 
       # Nested: Enum.join(Enum.reverse(String.graphemes(s)))

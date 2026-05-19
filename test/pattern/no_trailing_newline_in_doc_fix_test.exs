@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoTrailingNewlineInDoc
+
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoTrailingNewlineInDoc, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoTrailingNewlineInDoc, code, [])
   end
 
   describe "strips trailing newline from single-line strings" do

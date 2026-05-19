@@ -232,10 +232,10 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
         first_idx = hd(sorted).index
         last_idx = List.last(sorted).index
 
-        if not variable_rebound?(statements, list_var, first_idx, last_idx) do
-          [%{list_var: list_var, entries: sorted}]
-        else
+        if variable_rebound?(statements, list_var, first_idx, last_idx) do
           []
+        else
+          [%{list_var: list_var, entries: sorted}]
         end
       else
         []
@@ -315,7 +315,7 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   defp build_issues(statements) do
     find_valid_groups(statements)
     |> Enum.map(fn %{list_var: list_var, entries: entries} ->
-      labels = entries |> Enum.map(& &1.label) |> Enum.join(" and ")
+      labels = Enum.map_join(entries, " and ", & &1.label)
 
       %Issue{
         rule: :no_redundant_list_traversal,
@@ -492,10 +492,10 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
         end
       end)
 
-    lhs = parts |> Enum.map(&"#{&1.var}") |> Enum.join(", ")
-    inits = parts |> Enum.map(& &1.init) |> Enum.join(", ")
-    accs = parts |> Enum.map(& &1.acc) |> Enum.join(", ")
-    updates = parts |> Enum.map(& &1.update) |> Enum.join(", ")
+    lhs = Enum.map_join(parts, ", ", &"#{&1.var}")
+    inits = Enum.map_join(parts, ", ", & &1.init)
+    accs = Enum.map_join(parts, ", ", & &1.acc)
+    updates = Enum.map_join(parts, ", ", & &1.update)
 
     Sourceror.parse_string!(
       "{#{lhs}} = Enum.reduce(#{list_var}, {#{inits}}, fn x, {#{accs}} -> {#{updates}} end)"

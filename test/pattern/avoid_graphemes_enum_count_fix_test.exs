@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.AvoidGraphemesEnumCount
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.AvoidGraphemesEnumCount.check(ast, [])
+    AvoidGraphemesEnumCount.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.AvoidGraphemesEnumCount, code, [])
+    Credence.RuleHelpers.apply_rule_fix(AvoidGraphemesEnumCount, code, [])
   end
 
   describe "no predicate → String.length" do

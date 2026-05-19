@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.UnnecessaryGraphemeChunkingTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.UnnecessaryGraphemeChunking
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.UnnecessaryGraphemeChunking.check(ast, [])
+    UnnecessaryGraphemeChunking.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.UnnecessaryGraphemeChunking, code, [])
+    Credence.RuleHelpers.apply_rule_fix(UnnecessaryGraphemeChunking, code, [])
   end
 
   # Macro.to_string may expand multi-arg calls across multiple lines.

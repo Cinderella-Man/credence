@@ -2,7 +2,6 @@ defmodule Credence.Semantic.MissingUseExUnitCaseFixTest do
   use ExUnit.Case
 
   alias Credence.Semantic.MissingUseExUnitCase
-
   # The diagnostic is passed to fix/2 but the rule doesn't use it
   # for positioning — it finds missing `use` via AST analysis.
   @diagnostic %{

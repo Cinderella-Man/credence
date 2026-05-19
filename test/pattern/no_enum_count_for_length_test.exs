@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoEnumCountForLengthTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoEnumCountForLength
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoEnumCountForLength.check(ast, [])
+    NoEnumCountForLength.check(ast, [])
   end
 
   describe "NoEnumCountForLength" do

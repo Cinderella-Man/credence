@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoLengthComparisonForEmpty
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoLengthComparisonForEmpty.check(ast, [])
+    NoLengthComparisonForEmpty.check(ast, [])
   end
 
   # ── flags equality ─────────────────────────────────────────────

@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoUnnecessaryCatchAllRaise
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoUnnecessaryCatchAllRaise.check(ast, [])
+    NoUnnecessaryCatchAllRaise.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoUnnecessaryCatchAllRaise, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoUnnecessaryCatchAllRaise, code, [])
   end
 
   defp normalize(str), do: String.trim_trailing(str, "\n")

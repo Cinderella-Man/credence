@@ -1,19 +1,21 @@
 defmodule Credence.Pattern.NoParamRebindingTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoParamRebinding
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoParamRebinding.check(ast, [])
+    NoParamRebinding.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoParamRebinding, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoParamRebinding, code, [])
   end
 
   defp fix_and_verify(code) do
     fixed = fix(code)
     ast = Sourceror.parse_string!(fixed)
-    issues = Credence.Pattern.NoParamRebinding.check(ast, [])
+    issues = NoParamRebinding.check(ast, [])
     {fixed, issues}
   end
 
@@ -67,7 +69,7 @@ defmodule Credence.Pattern.NoParamRebindingTest do
       """
 
       issues = check(code)
-      assert length(issues) >= 1
+      refute Enum.empty?(issues)
       issue = hd(issues)
       assert issue.message =~ "q"
       assert issue.meta.line != nil

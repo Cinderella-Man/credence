@@ -2,8 +2,9 @@ defmodule Credence.Syntax.FixStaleAccessModifierAnalyzeTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Syntax.FixStaleAccessModifier
 
-  defp analyze(code), do: Credence.Syntax.FixStaleAccessModifier.analyze(code)
+  defp analyze(code), do: FixStaleAccessModifier.analyze(code)
 
   # ── flags prefixed defs ────────────────────────────────────────
 

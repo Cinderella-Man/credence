@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoStringConcatInLoopTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoStringConcatInLoop
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoStringConcatInLoop.check(ast, [])
+    NoStringConcatInLoop.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoStringConcatInLoop, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoStringConcatInLoop, code, [])
   end
 
   defp normalize(code) do

@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoCondTwoClausesFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoCondTwoClauses
+
   defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoCondTwoClauses, code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(NoCondTwoClauses, code, [])
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 

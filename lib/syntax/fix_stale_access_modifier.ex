@@ -53,8 +53,7 @@ defmodule Credence.Syntax.FixStaleAccessModifier do
   def fix(source) do
     source
     |> String.split("\n")
-    |> Enum.map(&fix_line/1)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", &fix_line/1)
   end
 
   defp fix_line(line) do

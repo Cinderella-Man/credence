@@ -1,12 +1,14 @@
 defmodule Credence.Pattern.NoListFoldTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoListFold
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoListFold.check(ast, [])
+    NoListFold.check(ast, [])
   end
 
-  defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoListFold, code, [])
+  defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(NoListFold, code, [])
 
   describe "NoListFold" do
     test "detects List.foldl/3" do
@@ -254,7 +256,7 @@ defmodule Credence.Pattern.NoListFoldTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoListFold.check(ast, []) == []
+      assert NoListFold.check(ast, []) == []
     end
 
     test "fixed foldr produces no issues" do
@@ -264,7 +266,7 @@ defmodule Credence.Pattern.NoListFoldTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoListFold.check(ast, []) == []
+      assert NoListFold.check(ast, []) == []
     end
   end
 end

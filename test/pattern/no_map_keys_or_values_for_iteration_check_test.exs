@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoMapKeysOrValuesForIteration
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoMapKeysOrValuesForIteration.check(ast, [])
+    NoMapKeysOrValuesForIteration.check(ast, [])
   end
 
   describe "flags nested form" do

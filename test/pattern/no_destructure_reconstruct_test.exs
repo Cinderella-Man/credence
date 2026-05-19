@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoDestructureReconstructTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoDestructureReconstruct
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoDestructureReconstruct.check(ast, [])
+    NoDestructureReconstruct.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoDestructureReconstruct, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoDestructureReconstruct, code, [])
   end
 
   describe "NoDestructureReconstruct" do
@@ -484,7 +486,7 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert [] == Credence.Pattern.NoDestructureReconstruct.check(ast, [])
+      assert [] == NoDestructureReconstruct.check(ast, [])
     end
 
     test "round-trip: function head fix produces zero issues" do
@@ -498,7 +500,7 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert [] == Credence.Pattern.NoDestructureReconstruct.check(ast, [])
+      assert [] == NoDestructureReconstruct.check(ast, [])
     end
   end
 end

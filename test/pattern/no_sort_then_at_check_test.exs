@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoSortThenAt
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoSortThenAt.check(ast, [])
+    NoSortThenAt.check(ast, [])
   end
 
   # ── FLAGGED: atom direction + endpoint index ────────────────────────────

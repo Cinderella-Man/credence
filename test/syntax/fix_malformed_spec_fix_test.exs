@@ -1,12 +1,14 @@
 defmodule Credence.Syntax.FixMalformedSpecFixTest do
   use ExUnit.Case
 
+  alias Credence.Syntax.FixMalformedSpec
+
   defp analyze(code) do
-    Credence.Syntax.FixMalformedSpec.analyze(code)
+    FixMalformedSpec.analyze(code)
   end
 
   defp fix(code) do
-    Credence.Syntax.FixMalformedSpec.fix(code)
+    FixMalformedSpec.fix(code)
   end
 
   # ── simple types ───────────────────────────────────────────────

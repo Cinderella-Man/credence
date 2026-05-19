@@ -1,19 +1,23 @@
 defmodule Credence.Pattern.NoTakeWhileLengthCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoTakeWhileLengthCheck
+
+  alias NoTakeWhileLength
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoTakeWhileLengthCheck.check(ast, [])
+    NoTakeWhileLengthCheck.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoTakeWhileLengthCheck, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoTakeWhileLengthCheck, code, [])
   end
 
   defp check_fix(code) do
     fixed = fix(code)
     ast = Sourceror.parse_string!(fixed)
-    issues = Credence.Pattern.NoTakeWhileLengthCheck.check(ast, [])
+    issues = NoTakeWhileLengthCheck.check(ast, [])
     {fixed, issues}
   end
 

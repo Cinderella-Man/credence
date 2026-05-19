@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoRedundantEnumJoinSeparator
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoRedundantEnumJoinSeparator.check(ast, [])
+    NoRedundantEnumJoinSeparator.check(ast, [])
   end
 
   describe "flags Enum.join with empty string" do

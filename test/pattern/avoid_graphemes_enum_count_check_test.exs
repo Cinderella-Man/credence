@@ -2,10 +2,11 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.AvoidGraphemesEnumCount
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.AvoidGraphemesEnumCount.check(ast, [])
+    AvoidGraphemesEnumCount.check(ast, [])
   end
 
   describe "flags graphemes piped to Enum.count (no predicate)" do

@@ -94,8 +94,9 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
     |> Macro.postwalk(&replace_inline_minus_one/1)
   end
 
-  defp rewrite_block_or_pass({:__block__, meta, stmts})
-       when is_list(stmts) and length(stmts) > 0 do
+  defp rewrite_block_or_pass({:__block__, _meta, []} = node), do: node
+
+  defp rewrite_block_or_pass({:__block__, meta, stmts}) when is_list(stmts) do
     {:__block__, meta, rewrite_statements(stmts)}
   end
 

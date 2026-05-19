@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoExplicitMinReduceTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoExplicitMinReduce
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoExplicitMinReduce.check(ast, [])
+    NoExplicitMinReduce.check(ast, [])
   end
 
   defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoExplicitMinReduce, code, [])
+    do: Credence.RuleHelpers.apply_rule_fix(NoExplicitMinReduce, code, [])
 
   describe "NoExplicitMinReduce" do
     test "passes code that uses Enum.min/1 instead of reduce" do
@@ -223,7 +225,7 @@ defmodule Credence.Pattern.NoExplicitMinReduceTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoExplicitMinReduce.check(ast, []) == []
+      assert NoExplicitMinReduce.check(ast, []) == []
     end
   end
 end

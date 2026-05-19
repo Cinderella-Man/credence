@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoRedundantBinarySyntax
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoRedundantBinarySyntax.check(ast, [])
+    NoRedundantBinarySyntax.check(ast, [])
   end
 
   # ── flags single string literal in binary syntax ───────────────
@@ -36,7 +37,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
 
   describe "flags in various contexts" do
     test "inside a list" do
-      assert [%Issue{}, %Issue{}, %Issue{}] = check("[<<\"b\">>, <<\"a\">>, <<\"n\">>]")
+      assert [%Issue{}, %Issue{}, %Issue{}] = check(~s([<<"b">>, <<"a">>, <<"n">>]))
     end
 
     test "in assignment" do
@@ -90,7 +91,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
     end
 
     test "multiple string segments" do
-      assert check("<<\"a\", \"b\">>") == []
+      assert check(~s(<<"a", "b">>)) == []
     end
 
     test "pattern with rest" do

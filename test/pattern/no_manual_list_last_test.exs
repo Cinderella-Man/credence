@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoManualListLastTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoManualListLast
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoManualListLast.check(ast, [])
+    NoManualListLast.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualListLast, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoManualListLast, code, [])
   end
 
   describe "NoManualListLast" do

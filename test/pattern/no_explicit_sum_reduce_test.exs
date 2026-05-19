@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoExplicitSumReduceTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoExplicitSumReduce
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoExplicitSumReduce.check(ast, [])
+    NoExplicitSumReduce.check(ast, [])
   end
 
   defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoExplicitSumReduce, code, [])
+    do: Credence.RuleHelpers.apply_rule_fix(NoExplicitSumReduce, code, [])
 
   describe "NoExplicitSumReduce" do
     test "passes code that uses Enum.sum/1 instead of reduce" do
@@ -166,7 +168,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoExplicitSumReduce.check(ast, []) == []
+      assert NoExplicitSumReduce.check(ast, []) == []
     end
   end
 end

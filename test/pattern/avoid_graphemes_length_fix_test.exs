@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.AvoidGraphemesLength
+
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.AvoidGraphemesLength, code, [])
+    Credence.RuleHelpers.apply_rule_fix(AvoidGraphemesLength, code, [])
   end
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.AvoidGraphemesLength.check(ast, [])
+    AvoidGraphemesLength.check(ast, [])
   end
 
   describe "replaces with String.length" do

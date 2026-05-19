@@ -1,8 +1,10 @@
 defmodule Credence.Syntax.FixScientificNotationAnalyzeTest do
   use ExUnit.Case
 
+  alias Credence.Syntax.FixScientificNotation
+
   defp analyze(code) do
-    Credence.Syntax.FixScientificNotation.analyze(code)
+    FixScientificNotation.analyze(code)
   end
 
   describe "detects Python-style scientific notation" do

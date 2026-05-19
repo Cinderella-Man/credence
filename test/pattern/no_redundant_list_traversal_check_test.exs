@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoRedundantListTraversal
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoRedundantListTraversal.check(ast, [])
+    NoRedundantListTraversal.check(ast, [])
   end
 
   defp flagged?(code), do: check(code) != []

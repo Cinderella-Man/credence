@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoEnumDropNegativeTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoEnumDropNegative
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoEnumDropNegative.check(ast, [])
+    NoEnumDropNegative.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoEnumDropNegative, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoEnumDropNegative, code, [])
   end
 
   describe "NoEnumDropNegative check" do
@@ -257,7 +259,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      issues = Credence.Pattern.NoEnumDropNegative.check(ast, [])
+      issues = NoEnumDropNegative.check(ast, [])
       assert issues == []
     end
 
@@ -272,7 +274,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      issues = Credence.Pattern.NoEnumDropNegative.check(ast, [])
+      issues = NoEnumDropNegative.check(ast, [])
       assert issues == []
     end
   end

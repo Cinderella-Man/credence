@@ -1,10 +1,12 @@
 defmodule Credence.Pattern.NoDocFalseOnPrivateTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoDocFalseOnPrivate
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoDocFalseOnPrivate.check(ast, [])
+    NoDocFalseOnPrivate.check(ast, [])
   end
 
   describe "NoDocFalseOnPrivate" do

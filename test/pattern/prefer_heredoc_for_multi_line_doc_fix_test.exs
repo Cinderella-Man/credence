@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.PreferHeredocForMultiLineDoc
+
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferHeredocForMultiLineDoc, code, [])
+    Credence.RuleHelpers.apply_rule_fix(PreferHeredocForMultiLineDoc, code, [])
   end
 
   describe "fix/2 — conversions" do

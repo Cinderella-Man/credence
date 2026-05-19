@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoMissingRequireLogger
+
   defp fix(code) do
     result =
-      Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMissingRequireLogger, code, [])
+      Credence.RuleHelpers.apply_rule_fix(NoMissingRequireLogger, code, [])
 
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
@@ -66,7 +68,6 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       defmodule MyApp do
         alias MyApp.Repo
         alias MyApp.Schema
-
         def run do
           Logger.info("starting")
         end
@@ -77,7 +78,6 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       defmodule MyApp do
         alias MyApp.Repo
         alias MyApp.Schema
-
         require Logger
 
         def run do

@@ -67,14 +67,13 @@ defmodule Credence.Semantic.OutdentedHeredoc do
          {:ok, closing_idx, closing_indent} <- find_closing(lines, flagged_idx) do
       lines
       |> Enum.with_index()
-      |> Enum.map(fn {line, idx} ->
+      |> Enum.map_join("\n", fn {line, idx} ->
         if idx > opening_idx and idx < closing_idx do
           reindent_line(line, closing_indent)
         else
           line
         end
       end)
-      |> Enum.join("\n")
     else
       _ -> source
     end

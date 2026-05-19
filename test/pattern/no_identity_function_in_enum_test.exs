@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoIdentityFunctionInEnum
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoIdentityFunctionInEnum.check(ast, [])
+    NoIdentityFunctionInEnum.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIdentityFunctionInEnum, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoIdentityFunctionInEnum, code, [])
   end
 
   # ═══════════════════════════════════════════════════════════════════

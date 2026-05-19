@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoMapThenAggregateTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoMapThenAggregate
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoMapThenAggregate.check(ast, [])
+    NoMapThenAggregate.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapThenAggregate, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoMapThenAggregate, code, [])
   end
 
   describe "NoMapThenAggregate check" do

@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoLengthBasedIndexing
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoLengthBasedIndexing.check(ast, [])
+    NoLengthBasedIndexing.check(ast, [])
   end
 
   defp flagged?(code), do: check(code) != []

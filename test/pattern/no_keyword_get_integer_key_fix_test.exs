@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoKeywordGetIntegerKey
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoKeywordGetIntegerKey.check(ast, [])
+    NoKeywordGetIntegerKey.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoKeywordGetIntegerKey, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoKeywordGetIntegerKey, code, [])
   end
 
   # ── index -1 → List.last ──────────────────────────────────────

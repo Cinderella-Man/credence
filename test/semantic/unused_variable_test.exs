@@ -2,7 +2,6 @@ defmodule Credence.Semantic.UnusedVariableTest do
   use ExUnit.Case
 
   alias Credence.Semantic.UnusedVariable
-
   # ── Unit tests (rule logic with synthetic diagnostics) ──────────
 
   describe "match?/1" do

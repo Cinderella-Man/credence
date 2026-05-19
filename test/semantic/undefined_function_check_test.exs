@@ -2,7 +2,6 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
   use ExUnit.Case
 
   alias Credence.Semantic.UndefinedFunction
-
   defp warning(msg), do: %{severity: :warning, message: msg, position: {1, 1}}
   defp error(msg), do: %{severity: :error, message: msg, position: {1, 1}}
 

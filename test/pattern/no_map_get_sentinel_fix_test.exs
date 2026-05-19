@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoMapGetSentinelFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoMapGetSentinel
+
   defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapGetSentinel, code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(NoMapGetSentinel, code, [])
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 

@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoIsNilGuardCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoIsNilGuard
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoIsNilGuard.check(ast, [])
+    NoIsNilGuard.check(ast, [])
   end
 
   # ── flags sole is_nil guard ────────────────────────────────────

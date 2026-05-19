@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoListAppendInRecursionTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoListAppendInRecursion
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoListAppendInRecursion.check(ast, [])
+    NoListAppendInRecursion.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoListAppendInRecursion, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoListAppendInRecursion, code, [])
   end
 
   describe "NoListAppendInRecursion check" do
@@ -228,7 +230,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      issues = Credence.Pattern.NoListAppendInRecursion.check(ast, [])
+      issues = NoListAppendInRecursion.check(ast, [])
       assert issues == []
     end
   end

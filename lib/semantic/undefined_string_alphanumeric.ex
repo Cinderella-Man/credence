@@ -55,11 +55,10 @@ defmodule Credence.Semantic.UndefinedStringAlphanumeric do
     source
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.map(fn
+    |> Enum.map_join("\n", fn
       {line, ^line_no} -> replace_alphanumeric(line)
       {line, _} -> line
     end)
-    |> Enum.join("\n")
   end
 
   defp replace_alphanumeric(line) do

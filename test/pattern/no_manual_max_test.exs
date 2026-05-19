@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoManualMaxTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoManualMax
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoManualMax.check(ast, [])
+    NoManualMax.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualMax, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoManualMax, code, [])
     |> String.trim_trailing()
   end
 
@@ -429,7 +431,7 @@ defmodule Credence.Pattern.NoManualMaxTest do
       end
       '''
 
-      fixed = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualMax, source, [])
+      fixed = Credence.RuleHelpers.apply_rule_fix(NoManualMax, source, [])
 
       # The actual fix should happen
       assert fixed =~ "max("
@@ -458,7 +460,7 @@ defmodule Credence.Pattern.NoManualMaxTest do
       end
       '''
 
-      fixed = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualMax, source, [])
+      fixed = Credence.RuleHelpers.apply_rule_fix(NoManualMax, source, [])
 
       source_lines = String.split(source, "\n")
       fixed_lines = String.split(fixed, "\n")
@@ -497,7 +499,7 @@ defmodule Credence.Pattern.NoManualMaxTest do
       end
       '''
 
-      fixed = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualMax, source, [])
+      fixed = Credence.RuleHelpers.apply_rule_fix(NoManualMax, source, [])
 
       assert fixed =~ "# This is an important comment"
       assert fixed =~ "# that spans multiple lines"

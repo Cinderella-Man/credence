@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoRedundantBinarySyntax
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoRedundantBinarySyntax.check(ast, [])
+    NoRedundantBinarySyntax.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoRedundantBinarySyntax, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoRedundantBinarySyntax, code, [])
   end
 
   # ── single string literal ─────────────────────────────────────
@@ -38,11 +40,11 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
 
   describe "multiple on same line" do
     test "list of wrapped graphemes" do
-      assert fix("[<<\"b\">>, <<\"a\">>, <<\"n\">>]") == "[\"b\", \"a\", \"n\"]"
+      assert fix(~s([<<"b">>, <<"a">>, <<"n">>])) == ~s(["b", "a", "n"])
     end
 
     test "tuple of wrapped strings" do
-      assert fix("{<<\"x\">>, <<\"y\">>}") == "{\"x\", \"y\"}"
+      assert fix(~s({<<"x">>, <<"y">>})) == ~s({"x", "y"})
     end
   end
 

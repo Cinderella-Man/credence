@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoManualMinTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoManualMin
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoManualMin.check(ast, [])
+    NoManualMin.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualMin, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoManualMin, code, [])
   end
 
   describe "NoManualMin" do

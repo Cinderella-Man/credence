@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoMapGetSentinelCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoMapGetSentinel
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoMapGetSentinel.check(ast, [])
+    NoMapGetSentinel.check(ast, [])
   end
 
   defp flagged?(code), do: check(code) != []

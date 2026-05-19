@@ -107,10 +107,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCount do
 
   defp extract_graphemes_arg(_), do: :error
 
-  defp enum_count_no_pred?({{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, args})
-       when is_list(args),
-       do: length(args) == 0
-
+  defp enum_count_no_pred?({{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, []}), do: true
   defp enum_count_no_pred?(_), do: false
 
   defp immediate_graphemes?({:|>, _, [_, rhs]}), do: graphemes_call?(rhs)

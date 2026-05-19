@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoDoubleSortSameListTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoDoubleSortSameList
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoDoubleSortSameList.check(ast, [])
+    NoDoubleSortSameList.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoDoubleSortSameList, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoDoubleSortSameList, code, [])
   end
 
   describe "NoDoubleSortSameList" do
@@ -232,7 +234,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Sourceror.parse_string(fixed)
-      issues = Credence.Pattern.NoDoubleSortSameList.check(fixed_ast, [])
+      issues = NoDoubleSortSameList.check(fixed_ast, [])
 
       assert issues == []
     end

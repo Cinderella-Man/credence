@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoSortThenReverseFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoSortThenReverse
+
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoSortThenReverse, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoSortThenReverse, code, [])
   end
 
   # ── Atom direction: pipeline form ───────────────────────────────────────

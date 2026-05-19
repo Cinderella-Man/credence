@@ -237,22 +237,20 @@ defmodule Credence.Semantic.UndefinedFunction do
     source
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.map(fn
+    |> Enum.map_join("\n", fn
       {line, ^line_no} -> String.replace(line, old, new, global: false)
       {line, _} -> line
     end)
-    |> Enum.join("\n")
   end
 
   defp replace_all_on_line(source, line_no, old, new) do
     source
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.map(fn
+    |> Enum.map_join("\n", fn
       {line, ^line_no} -> String.replace(line, old, new)
       {line, _} -> line
     end)
-    |> Enum.join("\n")
   end
 
   defp replace_literal(source, line_no, mod, fun, text) do
@@ -299,11 +297,10 @@ defmodule Credence.Semantic.UndefinedFunction do
     source
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.map(fn
+    |> Enum.map_join("\n", fn
       {line, ^line_no} -> do_rename_add_arg(line, old_call, new_call, extra_arg)
       {line, _} -> line
     end)
-    |> Enum.join("\n")
   end
 
   defp do_rename_add_arg(line, old_call, new_call, extra_arg) do
@@ -341,11 +338,10 @@ defmodule Credence.Semantic.UndefinedFunction do
     source
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.map(fn
+    |> Enum.map_join("\n", fn
       {line, ^line_no} -> do_rename_negate_arg(line, old_call, new_call, arg_index)
       {line, _} -> line
     end)
-    |> Enum.join("\n")
   end
 
   defp do_rename_negate_arg(line, old_call, new_call, arg_index) do
@@ -399,22 +395,20 @@ defmodule Credence.Semantic.UndefinedFunction do
     source
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.map(fn
+    |> Enum.map_join("\n", fn
       {line, ^line_no} -> Regex.replace(pattern, line, replacement)
       {line, _} -> line
     end)
-    |> Enum.join("\n")
   end
 
   defp wrap_args_on_line(source, line_no, old_name, new_qualified) do
     source
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.map(fn
+    |> Enum.map_join("\n", fn
       {line, ^line_no} -> do_wrap_args(line, old_name, new_qualified)
       {line, _} -> line
     end)
-    |> Enum.join("\n")
   end
 
   defp do_wrap_args(line, old_name, new_qualified) do
@@ -446,11 +440,10 @@ defmodule Credence.Semantic.UndefinedFunction do
     source
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.map(fn
+    |> Enum.map_join("\n", fn
       {line, ^line_no} -> do_to_range(line, arity)
       {line, _} -> line
     end)
-    |> Enum.join("\n")
   end
 
   defp do_to_range(line, arity) do

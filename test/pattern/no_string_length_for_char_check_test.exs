@@ -1,14 +1,18 @@
 defmodule Credence.Pattern.NoStringLengthForCharCheckTest do
   use ExUnit.Case
+
+  alias Credence.Pattern.NoStringLengthForCharCheck
+
   alias Credence.Issue
+  alias NoStringLengthForChar
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoStringLengthForCharCheck.check(ast, [])
+    NoStringLengthForCharCheck.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoStringLengthForCharCheck, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoStringLengthForCharCheck, code, [])
   end
 
   describe "NoStringLengthForCharCheck" do

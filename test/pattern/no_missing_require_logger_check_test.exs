@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoMissingRequireLogger
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoMissingRequireLogger.check(ast, [])
+    NoMissingRequireLogger.check(ast, [])
   end
 
   defp flagged?(code), do: check(code) != []

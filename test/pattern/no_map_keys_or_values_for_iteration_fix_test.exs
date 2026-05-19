@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoMapKeysOrValuesForIteration
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoMapKeysOrValuesForIteration.check(ast, [])
+    NoMapKeysOrValuesForIteration.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMapKeysOrValuesForIteration, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoMapKeysOrValuesForIteration, code, [])
   end
 
   # Normalize via AST round-trip to ignore whitespace/formatting differences.

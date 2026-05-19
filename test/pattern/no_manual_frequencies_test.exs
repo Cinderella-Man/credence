@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoManualFrequenciesTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoManualFrequencies
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoManualFrequencies.check(ast, [])
+    NoManualFrequencies.check(ast, [])
   end
 
   defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualFrequencies, code, [])
+    do: Credence.RuleHelpers.apply_rule_fix(NoManualFrequencies, code, [])
 
   describe "NoManualFrequencies" do
     test "passes code using Enum.frequencies/1" do
@@ -192,7 +194,7 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoManualFrequencies.check(ast, []) == []
+      assert NoManualFrequencies.check(ast, []) == []
     end
   end
 end

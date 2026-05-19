@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoEagerWithIndexInReduce
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
+    NoEagerWithIndexInReduce.check(ast, [])
   end
 
   defp fix(code, opts \\ []) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoEagerWithIndexInReduce, code, opts)
+    Credence.RuleHelpers.apply_rule_fix(NoEagerWithIndexInReduce, code, opts)
   end
 
   describe "check/2" do
@@ -229,7 +231,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
+      assert [] == NoEagerWithIndexInReduce.check(ast, [])
     end
   end
 
@@ -373,7 +375,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
 
       fixed = fix(code, fix_strategy: :reduce)
       ast = Sourceror.parse_string!(fixed)
-      assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
+      assert [] == NoEagerWithIndexInReduce.check(ast, [])
     end
 
     test "round-trip: pipe form produces zero issues" do
@@ -389,7 +391,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
 
       fixed = fix(code, fix_strategy: :reduce)
       ast = Sourceror.parse_string!(fixed)
-      assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, [])
+      assert [] == NoEagerWithIndexInReduce.check(ast, [])
     end
   end
 
@@ -459,7 +461,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceTest do
         fixed = fix(code, fix_strategy: strategy)
         ast = Sourceror.parse_string!(fixed)
 
-        assert [] == Credence.Pattern.NoEagerWithIndexInReduce.check(ast, []),
+        assert [] == NoEagerWithIndexInReduce.check(ast, []),
                "Strategy #{strategy} left issues"
       end
     end

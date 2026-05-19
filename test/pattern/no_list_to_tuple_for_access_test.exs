@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoListToTupleForAccessTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoListToTupleForAccess
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoListToTupleForAccess.check(ast, [])
+    NoListToTupleForAccess.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoListToTupleForAccess, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoListToTupleForAccess, code, [])
   end
 
   defp assert_fix(input, expected) do

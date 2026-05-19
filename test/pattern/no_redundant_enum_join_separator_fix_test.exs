@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoRedundantEnumJoinSeparator
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoRedundantEnumJoinSeparator.check(ast, [])
+    NoRedundantEnumJoinSeparator.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoRedundantEnumJoinSeparator, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoRedundantEnumJoinSeparator, code, [])
   end
 
   defp assert_fix(input, expected) do

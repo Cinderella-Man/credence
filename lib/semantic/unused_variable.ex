@@ -59,10 +59,9 @@ defmodule Credence.Semantic.UnusedVariable do
     source
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.map(fn
+    |> Enum.map_join("\n", fn
       {line, ^line_no} -> String.replace(line, old, new, global: false)
       {line, _} -> line
     end)
-    |> Enum.join("\n")
   end
 end

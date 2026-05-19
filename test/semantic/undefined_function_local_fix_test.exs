@@ -2,6 +2,7 @@ defmodule Credence.Semantic.UndefinedFunction.LocalFixTest do
   use ExUnit.Case
 
   alias Credence.Semantic.UndefinedFunction
+  alias Local
 
   defp fix(source, message, line \\ 1) do
     UndefinedFunction.fix(source, %{severity: :error, message: message, position: {line, 1}})

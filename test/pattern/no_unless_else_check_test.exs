@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoUnlessElseCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoUnlessElse
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoUnlessElse.check(ast, [])
+    NoUnlessElse.check(ast, [])
   end
 
   defp flagged?(code), do: check(code) != []

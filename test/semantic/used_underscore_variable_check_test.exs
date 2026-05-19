@@ -93,7 +93,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableCheckTest do
 
       issues = Credence.Semantic.analyze(source)
       matched = Enum.filter(issues, &(&1.rule == :used_underscore_variable))
-      assert length(matched) >= 1
+      refute Enum.empty?(matched)
     end
 
     test "detects underscore variable used in body" do
@@ -107,7 +107,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableCheckTest do
 
       issues = Credence.Semantic.analyze(source)
       matched = Enum.filter(issues, &(&1.rule == :used_underscore_variable))
-      assert length(matched) >= 1
+      refute Enum.empty?(matched)
     end
 
     test "no issues when underscore variable is truly unused" do

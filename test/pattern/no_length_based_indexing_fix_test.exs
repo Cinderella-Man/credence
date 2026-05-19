@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoLengthBasedIndexing
+
   defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoLengthBasedIndexing, code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(NoLengthBasedIndexing, code, [])
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 

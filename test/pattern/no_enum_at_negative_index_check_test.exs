@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoEnumAtNegativeIndex
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoEnumAtNegativeIndex.check(ast, [])
+    NoEnumAtNegativeIndex.check(ast, [])
   end
 
   describe "flags negative literal indices" do

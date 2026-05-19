@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NonGroupedClauses
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NonGroupedClauses.check(ast, [])
+    NonGroupedClauses.check(ast, [])
   end
 
   describe "flags non-grouped clauses" do

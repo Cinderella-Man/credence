@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoNestedEnumOnSameEnumerable
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoNestedEnumOnSameEnumerable.check(ast, [])
+    NoNestedEnumOnSameEnumerable.check(ast, [])
   end
 
   defp fix(source) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoNestedEnumOnSameEnumerable, source, [])
+    Credence.RuleHelpers.apply_rule_fix(NoNestedEnumOnSameEnumerable, source, [])
   end
 
   describe "check/2" do

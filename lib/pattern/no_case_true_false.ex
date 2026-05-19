@@ -116,7 +116,9 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp maybe_rewrite_case({:case, meta, [subject, kw]} = node) when is_list(kw) do
     case extract_do_clauses(kw) do
       [clause_a, clause_b] ->
-        if not plain_variable?(subject) do
+        if plain_variable?(subject) do
+          node
+        else
           case rewrite_clauses(clause_a, clause_b) do
             {:ok, do_body, else_body} ->
               {:if, meta, [subject, [do: do_body, else: else_body]]}
@@ -124,8 +126,6 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
             :skip ->
               node
           end
-        else
-          node
         end
 
       _ ->

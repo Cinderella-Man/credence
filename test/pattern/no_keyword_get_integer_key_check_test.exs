@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoKeywordGetIntegerKey
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoKeywordGetIntegerKey.check(ast, [])
+    NoKeywordGetIntegerKey.check(ast, [])
   end
 
   # ── flags integer keys ─────────────────────────────────────────

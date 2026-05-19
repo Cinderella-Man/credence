@@ -2,10 +2,11 @@ defmodule Credence.Pattern.AvoidGraphemesLengthCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.AvoidGraphemesLength
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.AvoidGraphemesLength.check(ast, [])
+    AvoidGraphemesLength.check(ast, [])
   end
 
   describe "flags graphemes piped to length" do

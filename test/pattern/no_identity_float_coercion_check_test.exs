@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.NoIdentityFloatCoercionCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoIdentityFloatCoercion
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoIdentityFloatCoercion.check(ast, [])
+    NoIdentityFloatCoercion.check(ast, [])
   end
 
   defp flagged?(code), do: check(code) != []

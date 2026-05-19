@@ -40,8 +40,7 @@ defmodule Credence.Syntax.FixMalformedSpec do
   def fix(source) do
     source
     |> String.split("\n")
-    |> Enum.map(&fix_line/1)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", &fix_line/1)
   end
 
   defp malformed_spec?(line) do
@@ -59,7 +58,9 @@ defmodule Credence.Syntax.FixMalformedSpec do
   defp fix_line(line) do
     case extract_spec_parts(line) do
       {:ok, prefix, inner, after_close} ->
-        if not String.contains?(after_close, "::") do
+        if String.contains?(after_close, "::") do
+          line
+        else
           case find_last_separator(inner) do
             nil ->
               line
@@ -70,8 +71,6 @@ defmodule Credence.Syntax.FixMalformedSpec do
               return_type = String.trim_leading(return_part)
               "#{prefix}(#{params}) :: #{return_type}"
           end
-        else
-          line
         end
 
       :skip ->

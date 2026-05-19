@@ -1,20 +1,22 @@
 defmodule Credence.Pattern.PreferEnumReverseTwoTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.PreferEnumReverseTwo
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.PreferEnumReverseTwo.check(ast, [])
+    PreferEnumReverseTwo.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferEnumReverseTwo, code, [])
+    Credence.RuleHelpers.apply_rule_fix(PreferEnumReverseTwo, code, [])
   end
 
   defp assert_fixed(input) do
     result = fix(input)
 
     ast = Sourceror.parse_string!(result)
-    issues = Credence.Pattern.PreferEnumReverseTwo.check(ast, [])
+    issues = PreferEnumReverseTwo.check(ast, [])
 
     assert issues == [],
            "Expected no issues after fix, got: #{inspect(issues)}\nFixed code:\n#{result}"

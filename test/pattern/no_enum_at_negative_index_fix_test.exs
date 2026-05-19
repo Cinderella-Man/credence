@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoEnumAtNegativeIndex
+
   defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoEnumAtNegativeIndex, code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(NoEnumAtNegativeIndex, code, [])
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 

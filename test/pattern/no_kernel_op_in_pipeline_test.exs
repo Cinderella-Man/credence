@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoKernelOpInPipelineTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoKernelOpInPipeline
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoKernelOpInPipeline.check(ast, [])
+    NoKernelOpInPipeline.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoKernelOpInPipeline, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoKernelOpInPipeline, code, [])
   end
 
   # ═══════════════════════════════════════════════════════════════════

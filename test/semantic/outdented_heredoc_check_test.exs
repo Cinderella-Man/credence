@@ -95,7 +95,7 @@ defmodule Credence.Semantic.OutdentedHeredocCheckTest do
 
       issues = Credence.Semantic.analyze(source)
       outdented = Enum.filter(issues, &(&1.rule == :outdented_heredoc))
-      assert length(outdented) >= 1
+      refute Enum.empty?(outdented)
     end
 
     test "no issues when heredoc is properly indented" do

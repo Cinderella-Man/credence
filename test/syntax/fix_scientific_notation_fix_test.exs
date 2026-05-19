@@ -1,8 +1,10 @@
 defmodule Credence.Syntax.FixScientificNotationFixTest do
   use ExUnit.Case
 
+  alias Credence.Syntax.FixScientificNotation
+
   defp fix(code) do
-    Credence.Syntax.FixScientificNotation.fix(code)
+    FixScientificNotation.fix(code)
   end
 
   describe "fixes bare integer scientific notation" do

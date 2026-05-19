@@ -72,14 +72,13 @@ defmodule Credence.Semantic.UsedUnderscoreVariable do
 
     lines
     |> Enum.with_index()
-    |> Enum.map(fn {line, idx} ->
+    |> Enum.map_join("\n", fn {line, idx} ->
       if idx >= clause_start and idx <= clause_end do
         Regex.replace(pattern, line, new)
       else
         line
       end
     end)
-    |> Enum.join("\n")
   end
 
   # Find the def/defp line before and the matching end after the target line.

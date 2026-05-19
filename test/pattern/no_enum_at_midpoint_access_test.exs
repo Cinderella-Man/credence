@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoEnumAtMidpointAccess
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoEnumAtMidpointAccess.check(ast, [])
+    NoEnumAtMidpointAccess.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoEnumAtMidpointAccess, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoEnumAtMidpointAccess, code, [])
   end
 
   describe "detects non-recursive midpoint access patterns" do
@@ -431,7 +433,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Sourceror.parse_string(fixed)
-      assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
+      assert NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
 
     test "fixed code produces no check issues (piped)" do
@@ -446,7 +448,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Sourceror.parse_string(fixed)
-      assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
+      assert NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
 
     test "fixed code produces no check issues (inline midpoint)" do
@@ -460,7 +462,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Sourceror.parse_string(fixed)
-      assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
+      assert NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
 
     test "fixed code produces no check issues (multiple lists)" do
@@ -477,7 +479,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
 
       fixed = fix(code)
       {:ok, fixed_ast} = Sourceror.parse_string(fixed)
-      assert Credence.Pattern.NoEnumAtMidpointAccess.check(fixed_ast, []) == []
+      assert NoEnumAtMidpointAccess.check(fixed_ast, []) == []
     end
   end
 end

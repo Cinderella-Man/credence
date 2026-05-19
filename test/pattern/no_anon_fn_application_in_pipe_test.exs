@@ -1,10 +1,12 @@
 defmodule Credence.Pattern.NoAnonFnApplicationInPipeTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoAnonFnApplicationInPipe
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoAnonFnApplicationInPipe.check(ast, [])
+    NoAnonFnApplicationInPipe.check(ast, [])
   end
 
   describe "NoAnonFnApplicationInPipe" do

@@ -1,6 +1,9 @@
 defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoTrailingNewlineInDoc
+  alias Credence.Pattern.PreferHeredocForMultiLineDoc
+
   # Heredoc handling: Sourceror records the string delimiter (`"""` vs `"`)
   # in the `:__block__` metadata, so `check/2` can tell heredocs apart from
   # escape-string docs purely from the AST — no `:source` needed.
@@ -22,8 +25,8 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
 
       ast = Sourceror.parse_string!(code)
 
-      assert Credence.Pattern.PreferHeredocForMultiLineDoc.check(ast, []) == []
-      assert Credence.Pattern.PreferHeredocForMultiLineDoc.check(ast, source: code) == []
+      assert PreferHeredocForMultiLineDoc.check(ast, []) == []
+      assert PreferHeredocForMultiLineDoc.check(ast, source: code) == []
     end
 
     test "NoTrailingNewlineInDoc skips single-line heredoc" do
@@ -38,8 +41,8 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
 
       ast = Sourceror.parse_string!(code)
 
-      assert Credence.Pattern.NoTrailingNewlineInDoc.check(ast, []) == []
-      assert Credence.Pattern.NoTrailingNewlineInDoc.check(ast, source: code) == []
+      assert NoTrailingNewlineInDoc.check(ast, []) == []
+      assert NoTrailingNewlineInDoc.check(ast, source: code) == []
     end
   end
 
@@ -62,7 +65,7 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
 
       {fixed, applied} =
         Credence.Pattern.fix_with_trace(code,
-          rules: [Credence.Pattern.PreferHeredocForMultiLineDoc]
+          rules: [PreferHeredocForMultiLineDoc]
         )
 
       assert fixed == code
@@ -83,7 +86,7 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
 
       {fixed, applied} =
         Credence.Pattern.fix_with_trace(code,
-          rules: [Credence.Pattern.NoTrailingNewlineInDoc]
+          rules: [NoTrailingNewlineInDoc]
         )
 
       assert fixed == code
@@ -109,8 +112,8 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
       {fixed, applied} =
         Credence.Pattern.fix_with_trace(code,
           rules: [
-            Credence.Pattern.NoTrailingNewlineInDoc,
-            Credence.Pattern.PreferHeredocForMultiLineDoc
+            NoTrailingNewlineInDoc,
+            PreferHeredocForMultiLineDoc
           ]
         )
 
@@ -123,8 +126,8 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
 
       # Only NoTrailingNewlineInDoc should appear in applied
       applied_rules = Enum.map(applied, fn {rule, _} -> rule end)
-      assert Credence.Pattern.NoTrailingNewlineInDoc in applied_rules
-      refute Credence.Pattern.PreferHeredocForMultiLineDoc in applied_rules
+      assert NoTrailingNewlineInDoc in applied_rules
+      refute PreferHeredocForMultiLineDoc in applied_rules
     end
   end
 end

@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoIsPrefixForNonGuard
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoIsPrefixForNonGuard.check(ast, [])
+    NoIsPrefixForNonGuard.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIsPrefixForNonGuard, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoIsPrefixForNonGuard, code, [])
   end
 
   describe "check/2" do
@@ -407,7 +409,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
 
       fixed =
         Credence.RuleHelpers.apply_rule_fix(
-          Credence.Pattern.NoIsPrefixForNonGuard,
+          NoIsPrefixForNonGuard,
           code,
           auto_fix_public: false
         )
@@ -420,7 +422,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
       code = "defmodule Example do\n  def is_public(x), do: x\nend\n"
 
       fixed =
-        Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIsPrefixForNonGuard, code, [])
+        Credence.RuleHelpers.apply_rule_fix(NoIsPrefixForNonGuard, code, [])
 
       assert fixed =~ "def public?(x)"
     end

@@ -2,6 +2,7 @@ defmodule Credence.Semantic.UndefinedFunction.RangeFixTest do
   use ExUnit.Case
 
   alias Credence.Semantic.UndefinedFunction
+  alias Range
 
   defp fix(source, message, line \\ 1) do
     UndefinedFunction.fix(source, %{severity: :error, message: message, position: {line, 1}})

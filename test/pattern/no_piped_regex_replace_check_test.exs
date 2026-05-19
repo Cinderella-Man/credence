@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoPipedRegexReplace
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoPipedRegexReplace.check(ast, [])
+    NoPipedRegexReplace.check(ast, [])
   end
 
   describe "flags piped Regex.replace" do

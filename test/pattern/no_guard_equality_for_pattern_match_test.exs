@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoGuardEqualityForPatternMatchTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoGuardEqualityForPatternMatch
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoGuardEqualityForPatternMatch.check(ast, [])
+    NoGuardEqualityForPatternMatch.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoGuardEqualityForPatternMatch, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoGuardEqualityForPatternMatch, code, [])
   end
 
   # Compare fix result to expected code via AST to be formatting-agnostic
@@ -367,8 +369,8 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchTest do
 
     test "removes string guard and substitutes parameter" do
       assert_fix(
-        "def greet(name) when name == \"world\", do: \"hi\"",
-        "def greet(\"world\"), do: \"hi\""
+        ~s|def greet(name) when name == "world", do: "hi"|,
+        ~s|def greet("world"), do: "hi"|
       )
     end
 

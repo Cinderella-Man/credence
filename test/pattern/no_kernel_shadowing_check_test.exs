@@ -2,10 +2,11 @@ defmodule Credence.Pattern.NoKernelShadowingCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.NoKernelShadowing
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoKernelShadowing.check(ast, [])
+    NoKernelShadowing.check(ast, [])
   end
 
   describe "flags shadowing variables" do
@@ -25,7 +26,7 @@ defmodule Credence.Pattern.NoKernelShadowingCheckTest do
     end
 
     test "max and min together" do
-      assert length(check("{max, min} = {100, 0}")) >= 1
+      refute Enum.empty?(check("{max, min} = {100, 0}"))
     end
 
     test "hd in fn parameter" do

@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.FixDivRemTest do
   use ExUnit.Case
 
+  alias Credence.Syntax.FixDivRem
+
   describe "analyze/1" do
     test "detects infix div" do
       source = """
@@ -9,7 +11,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      issues = Credence.Syntax.FixDivRem.analyze(source)
+      issues = FixDivRem.analyze(source)
       assert length(issues) == 1
       assert hd(issues).rule == :infix_div
       assert hd(issues).message =~ "div"
@@ -22,7 +24,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      issues = Credence.Syntax.FixDivRem.analyze(source)
+      issues = FixDivRem.analyze(source)
       assert length(issues) == 1
       assert hd(issues).rule == :infix_rem
     end
@@ -36,7 +38,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      issues = Credence.Syntax.FixDivRem.analyze(source)
+      issues = FixDivRem.analyze(source)
       assert length(issues) == 1
     end
 
@@ -51,7 +53,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      issues = Credence.Syntax.FixDivRem.analyze(source)
+      issues = FixDivRem.analyze(source)
       assert length(issues) == 2
       rules = Enum.map(issues, & &1.rule) |> Enum.sort()
       assert rules == [:infix_div, :infix_rem]
@@ -65,7 +67,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert Credence.Syntax.FixDivRem.analyze(source) == []
+      assert FixDivRem.analyze(source) == []
     end
 
     test "no issues for pipe syntax" do
@@ -75,7 +77,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert Credence.Syntax.FixDivRem.analyze(source) == []
+      assert FixDivRem.analyze(source) == []
     end
 
     test "no issues for div in comments" do
@@ -86,21 +88,21 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert Credence.Syntax.FixDivRem.analyze(source) == []
+      assert FixDivRem.analyze(source) == []
     end
   end
 
   describe "fix/1" do
     test "fixes simple infix div" do
       source = "x = a div b\n"
-      fixed = Credence.Syntax.FixDivRem.fix(source)
+      fixed = FixDivRem.fix(source)
       assert fixed =~ "div(a, b)"
       refute fixed =~ "a div b"
     end
 
     test "fixes simple infix rem" do
       source = "x = a rem b\n"
-      fixed = Credence.Syntax.FixDivRem.fix(source)
+      fixed = FixDivRem.fix(source)
       assert fixed =~ "rem(a, b)"
       refute fixed =~ "a rem b"
     end
@@ -115,7 +117,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = Credence.Syntax.FixDivRem.fix(source)
+      fixed = FixDivRem.fix(source)
       assert fixed =~ "div(n, 2)"
       refute fixed =~ "n div 2"
     end
@@ -130,7 +132,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = Credence.Syntax.FixDivRem.fix(source)
+      fixed = FixDivRem.fix(source)
       assert fixed =~ "div(n * (n + 1), 2)"
       refute fixed =~ "div 2"
     end
@@ -146,7 +148,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = Credence.Syntax.FixDivRem.fix(source)
+      fixed = FixDivRem.fix(source)
       assert fixed =~ "div(a, b)"
       assert fixed =~ "rem(a, b)"
     end
@@ -158,7 +160,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert Credence.Syntax.FixDivRem.fix(source) == source
+      assert FixDivRem.fix(source) == source
     end
 
     test "does not modify pipe syntax" do
@@ -168,7 +170,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert Credence.Syntax.FixDivRem.fix(source) == source
+      assert FixDivRem.fix(source) == source
     end
 
     test "fixed code produces valid Elixir" do
@@ -180,7 +182,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = Credence.Syntax.FixDivRem.fix(source)
+      fixed = FixDivRem.fix(source)
       assert {:ok, _} = Sourceror.parse_string(fixed)
     end
   end

@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoIntegerToStringDigitsTest do
   use ExUnit.Case
+
   alias Credence.Issue
+  alias Credence.Pattern.NoIntegerToStringDigits
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoIntegerToStringDigits.check(ast, [])
+    NoIntegerToStringDigits.check(ast, [])
   end
 
   defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIntegerToStringDigits, code, [])
+    do: Credence.RuleHelpers.apply_rule_fix(NoIntegerToStringDigits, code, [])
 
   describe "NoIntegerToStringDigits" do
     test "passes code that uses Integer.digits/2" do
@@ -171,7 +173,7 @@ defmodule Credence.Pattern.NoIntegerToStringDigitsTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert Credence.Pattern.NoIntegerToStringDigits.check(ast, []) == []
+      assert NoIntegerToStringDigits.check(ast, []) == []
     end
   end
 end

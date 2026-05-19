@@ -1,8 +1,9 @@
 defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
   use ExUnit.Case
 
-  defp analyze(code), do: Credence.Syntax.FixStaleAccessModifier.analyze(code)
-  defp fix(code), do: Credence.Syntax.FixStaleAccessModifier.fix(code)
+  alias Credence.Syntax.FixStaleAccessModifier
+  defp analyze(code), do: FixStaleAccessModifier.analyze(code)
+  defp fix(code), do: FixStaleAccessModifier.fix(code)
 
   # ── garbled prefixes ───────────────────────────────────────────
 

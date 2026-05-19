@@ -1,9 +1,11 @@
 defmodule Credence.Pattern.PreferErlangFloatCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.PreferErlangFloat
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.PreferErlangFloat.check(ast, [])
+    PreferErlangFloat.check(ast, [])
   end
 
   defp flagged?(code), do: check(code) != []

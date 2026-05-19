@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoManualEnumUniqTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoManualEnumUniq
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoManualEnumUniq.check(ast, [])
+    NoManualEnumUniq.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualEnumUniq, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoManualEnumUniq, code, [])
   end
 
   describe "NoManualEnumUniq check" do
@@ -793,7 +795,7 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      assert [] == Credence.Pattern.NoManualEnumUniq.check(ast, [])
+      assert [] == NoManualEnumUniq.check(ast, [])
     end
   end
 end

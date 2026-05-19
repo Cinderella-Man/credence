@@ -1,8 +1,9 @@
 defmodule Credence.Syntax.FixPythonModuloFixTest do
   use ExUnit.Case
 
-  defp analyze(code), do: Credence.Syntax.FixPythonModulo.analyze(code)
-  defp fix(code), do: Credence.Syntax.FixPythonModulo.fix(code)
+  alias Credence.Syntax.FixPythonModulo
+  defp analyze(code), do: FixPythonModulo.analyze(code)
+  defp fix(code), do: FixPythonModulo.fix(code)
 
   # ═══════════════════════════════════════════════════════════════════
   # BASIC — identifier % integer

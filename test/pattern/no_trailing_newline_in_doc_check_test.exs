@@ -1,14 +1,16 @@
 defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoTrailingNewlineInDoc
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoTrailingNewlineInDoc.check(ast, [])
+    NoTrailingNewlineInDoc.check(ast, [])
   end
 
   defp check_with_source(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoTrailingNewlineInDoc.check(ast, source: code)
+    NoTrailingNewlineInDoc.check(ast, source: code)
   end
 
   describe "flags single-line docs with trailing newline" do

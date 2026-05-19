@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoCaseTrueFalse
+
   defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoCaseTrueFalse, code, [])
+    result = Credence.RuleHelpers.apply_rule_fix(NoCaseTrueFalse, code, [])
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 

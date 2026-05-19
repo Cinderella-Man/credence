@@ -1,6 +1,7 @@
 defmodule Credence.Semantic.UndefinedFunction.AddArgFixTest do
   use ExUnit.Case
 
+  alias AddArg
   alias Credence.Semantic.UndefinedFunction
 
   defp fix(source, message, line \\ 1) do

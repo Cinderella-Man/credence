@@ -1,6 +1,8 @@
 defmodule Credence.Pattern.NoSortThenAtKthLargestRegressionTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoSortThenAt
+
   describe "kth_largest from pipeline log (idx=3)" do
     test "Enum.sort(&>=/2) |> Enum.at(rank - 1) is NOT flagged (variable index)" do
       # This is the exact code pattern from the pipeline log that was
@@ -22,7 +24,7 @@ defmodule Credence.Pattern.NoSortThenAtKthLargestRegressionTest do
       """
 
       {:ok, ast} = Sourceror.parse_string(code)
-      issues = Credence.Pattern.NoSortThenAt.check(ast, [])
+      issues = NoSortThenAt.check(ast, [])
 
       assert issues == [],
              "Expected no issues for variable index (rank - 1), but got: #{inspect(issues)}"
@@ -36,7 +38,7 @@ defmodule Credence.Pattern.NoSortThenAtKthLargestRegressionTest do
       """
 
       {:ok, ast} = Sourceror.parse_string(code)
-      issues = Credence.Pattern.NoSortThenAt.check(ast, [])
+      issues = NoSortThenAt.check(ast, [])
 
       assert issues == [],
              "Expected no issues for variable index (k - 1), but got: #{inspect(issues)}"
@@ -50,10 +52,9 @@ defmodule Credence.Pattern.NoSortThenAtKthLargestRegressionTest do
       """
 
       {:ok, ast} = Sourceror.parse_string(code)
-      issues = Credence.Pattern.NoSortThenAt.check(ast, [])
+      issues = NoSortThenAt.check(ast, [])
 
-      assert length(issues) > 0,
-             "Expected literal 0 index to be flagged"
+      refute Enum.empty?(issues), "Expected literal 0 index to be flagged"
     end
   end
 end

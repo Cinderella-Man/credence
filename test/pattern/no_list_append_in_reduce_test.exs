@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoListAppendInReduceTest do
   use ExUnit.Case
 
+  alias Credence.Pattern.NoListAppendInReduce
+
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.NoListAppendInReduce.check(ast, [])
+    NoListAppendInReduce.check(ast, [])
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoListAppendInReduce, code, [])
+    Credence.RuleHelpers.apply_rule_fix(NoListAppendInReduce, code, [])
   end
 
   describe "NoListAppendInReduce check" do
@@ -260,7 +262,7 @@ defmodule Credence.Pattern.NoListAppendInReduceTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      issues = Credence.Pattern.NoListAppendInReduce.check(ast, [])
+      issues = NoListAppendInReduce.check(ast, [])
       assert issues == []
     end
 
@@ -277,7 +279,7 @@ defmodule Credence.Pattern.NoListAppendInReduceTest do
 
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
-      issues = Credence.Pattern.NoListAppendInReduce.check(ast, [])
+      issues = NoListAppendInReduce.check(ast, [])
       assert issues == []
     end
   end

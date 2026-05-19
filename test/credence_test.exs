@@ -1217,7 +1217,7 @@ defmodule CredenceTest do
 
       result = Credence.fix(input)
       assert is_list(result.applied_rules)
-      assert length(result.applied_rules) >= 1
+      refute Enum.empty?(result.applied_rules)
 
       {rule_mod, count} = hd(result.applied_rules)
       assert is_atom(rule_mod)

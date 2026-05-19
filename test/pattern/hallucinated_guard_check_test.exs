@@ -2,10 +2,11 @@ defmodule Credence.Pattern.HallucinatedGuardCheckTest do
   use ExUnit.Case
 
   alias Credence.Issue
+  alias Credence.Pattern.HallucinatedGuard
 
   defp check(code) do
     ast = Sourceror.parse_string!(code)
-    Credence.Pattern.HallucinatedGuard.check(ast, [])
+    HallucinatedGuard.check(ast, [])
   end
 
   describe "flags hallucinated guards" do
