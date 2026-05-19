@@ -51,8 +51,7 @@ defmodule Credence.Pattern.NoManualListLast do
   @impl true
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
-    normalized = RuleHelpers.normalize_sourceror_ast(ast)
-    matches = find_matching_functions(normalized)
+    matches = find_matching_functions(ast)
 
     if Enum.empty?(matches) do
       []
@@ -61,9 +60,7 @@ defmodule Credence.Pattern.NoManualListLast do
       match_set = MapSet.new(matches)
 
       RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
-        input
-        |> RuleHelpers.normalize_sourceror_ast()
-        |> transform_ast(match_set, match_names)
+        transform_ast(input, match_set, match_names)
       end)
     end
   end
@@ -185,14 +182,19 @@ defmodule Credence.Pattern.NoManualListLast do
       true -> []
     end
   end
+
   # FIX — recursive AST transformer
   #
-  # A custom recursive walker that:
-  #  • handles 2-tuples (keyword pairs like {:do, body})
+  # A custom recursive walker over Sourceror AST that:
+  #  • handles 2-tuples (keyword pairs like `{do_key, body}`)
   #  • skips function-definition name/pattern nodes so they
   #    are never confused with call sites
   #  • removes recursive clauses and replaces base clauses
-  #    with List.last/1 delegation
+  #    with `List.last/1` delegation
+  #
+  # Sourceror wraps literals in `{:__block__, meta, [val]}`; we leave those
+  # wrappers untouched and only act on real multi-statement `:__block__`
+  # nodes (2+ children) when collapsing deleted clauses.
   defp transform_ast(node, match_set, match_names) do
     case node do
       {:|>, pipe_meta, [lhs, {fn_name, call_meta, pipe_args}]}
@@ -208,6 +210,7 @@ defmodule Credence.Pattern.NoManualListLast do
              {fn_name, call_meta, pipe_args}
            ]}
         end
+
       {def_type, meta, [{fn_name, name_meta, args}, body]}
       when def_type in [:def, :defp] and is_atom(fn_name) ->
         if MapSet.member?(match_set, {fn_name, def_type}) do
@@ -223,7 +226,11 @@ defmodule Credence.Pattern.NoManualListLast do
           {def_type, meta, [{fn_name, name_meta, args}, new_body]}
         end
 
-      {:__block__, meta, body} ->
+      # Real multi-statement block — prune deleted clauses, collapse if
+      # only one statement remains. Single-child `:__block__` nodes are
+      # Sourceror literal wrappers and fall through to the generic
+      # 3-tuple recursion below, which leaves them intact.
+      {:__block__, meta, body} when is_list(body) and length(body) >= 2 ->
         new_body =
           body
           |> Enum.flat_map(fn elem ->
@@ -237,6 +244,7 @@ defmodule Credence.Pattern.NoManualListLast do
           [single] -> single
           _ -> {:__block__, meta, new_body}
         end
+
       {fn_name, meta, [arg]} when is_atom(fn_name) ->
         if MapSet.member?(match_names, fn_name) do
           transformed_arg = transform_ast(arg, match_set, match_names)
@@ -244,25 +252,29 @@ defmodule Credence.Pattern.NoManualListLast do
         else
           {fn_name, meta, [transform_ast(arg, match_set, match_names)]}
         end
+
       {tag, meta, args} when is_list(args) ->
         {tag, meta, Enum.map(args, &transform_ast(&1, match_set, match_names))}
 
       {left, right} ->
         {transform_ast(left, match_set, match_names),
          transform_ast(right, match_set, match_names)}
+
       list when is_list(list) ->
         Enum.map(list, &transform_ast(&1, match_set, match_names))
+
       other ->
         other
     end
   end
 
-  defp single_element_var_pattern?(pattern) do
-    case pattern do
-      [{var_name, _, ctx}] when is_atom(var_name) and is_atom(ctx) -> true
-      _ -> false
-    end
-  end
+  # Sourceror wraps the list literal pattern `[var]` as
+  # `{:__block__, _, [[{:var, _, ctx}]]}`.
+  defp single_element_var_pattern?({:__block__, _, [[{var_name, _, ctx}]]})
+       when is_atom(var_name) and is_atom(ctx),
+       do: true
+
+  defp single_element_var_pattern?(_), do: false
 
   defp make_list_last_def(def_type, meta, fn_name) do
     var = {:list, [], nil}

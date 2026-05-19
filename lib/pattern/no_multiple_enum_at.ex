@@ -77,20 +77,19 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
     source = Keyword.fetch!(opts, :source)
 
     RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
-      normalized = RuleHelpers.normalize_sourceror_ast(input)
-      {new_ast, _changed?} = apply_fixes(normalized)
+      {new_ast, _changed?} = apply_fixes(input)
       new_ast
     end)
   end
 
-  # Use Macro.prewalk (same traversal the check function relies on) so we
-  # visit every __block__ in the tree.  Children of a __block__ are visited
-  # *after* we attempt a fix on the block, which is fine because the only
-  # nodes we inspect (var = Enum.at(…)) are leaf-level assignments that
-  # never contain nested __block__ nodes.
+  # Walks the Sourceror AST looking for real multi-statement `:__block__`
+  # nodes (single-child blocks are Sourceror literal wrappers and are
+  # skipped). When a block contains bare `var = Enum.at(...)` assignments
+  # on the same source variable, replace them with a destructure pattern.
   defp apply_fixes(ast) do
     Macro.prewalk(ast, false, fn
-      {:__block__, meta, children}, changed? ->
+      {:__block__, meta, children}, changed?
+      when is_list(children) and length(children) >= 2 ->
         case fix_block(children) do
           {:changed, new_children} ->
             {{:__block__, meta, new_children}, true}
@@ -147,10 +146,11 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
 
   defp extract_enum_at_info(_), do: :error
 
-  # Used after `normalize_sourceror_ast/1` in the fix path, so integers
-  # are bare (the wrappers have been stripped).
-  defp normalize_index(n) when is_integer(n), do: {:ok, n}
-  defp normalize_index({:-, _, [n]}) when is_integer(n), do: {:ok, -n}
+  # Sourceror wraps integer literals in `{:__block__, _, [n]}`; negatives
+  # are `{:-, _, [{:__block__, _, [n]}]}` — unary minus over a wrapped
+  # positive.
+  defp normalize_index({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
+  defp normalize_index({:-, _, [{:__block__, _, [n]}]}) when is_integer(n), do: {:ok, -n}
   defp normalize_index(_), do: :error
 
   defp compute_fixes(groups) do

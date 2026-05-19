@@ -82,6 +82,7 @@ defmodule Credence.Pattern.RedundantListGuard do
         node
     end)
   end
+
   # GUARD SIMPLIFICATION
   #
   # Recursively walk a guard expression, removing every
@@ -165,6 +166,7 @@ defmodule Credence.Pattern.RedundantListGuard do
 
     Enum.uniq(vars)
   end
+
   # GUARD INSPECTION
   #
   # Walk the guard expression (which may be compound via `and` /

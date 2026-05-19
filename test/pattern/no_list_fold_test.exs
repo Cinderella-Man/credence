@@ -7,6 +7,7 @@ defmodule Credence.Pattern.NoListFoldTest do
   end
 
   defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoListFold, code, [])
+
   describe "NoListFold" do
     test "detects List.foldl/3" do
       code = """

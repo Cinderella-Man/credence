@@ -7,6 +7,7 @@ defmodule Credence.Pattern.NoIsNilGuardCheckTest do
     ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoIsNilGuard.check(ast, [])
   end
+
   # ── flags sole is_nil guard ────────────────────────────────────
 
   describe "flags sole is_nil guard" do

@@ -118,15 +118,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     source = Keyword.fetch!(opts, :source)
 
     Credence.RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
-      # The matchers below pattern-match against bare literals (`is_atom(s)`,
-      # integer indices, `{a, b}` 2-tuple captures). Sourceror wraps those
-      # in `{:__block__, meta, [v]}` to carry position info; normalize the
-      # input so the matchers see bare literals. `Sourceror.to_string/1`
-      # accepts the normalized form, and `patches_from_ast_transform`
-      # re-parses the rendered output to get a clean Sourceror AST for diffing.
-      input
-      |> Credence.RuleHelpers.normalize_sourceror_ast()
-      |> transform_ast()
+      transform_ast(input)
     end)
   end
 
@@ -209,10 +201,10 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
         on_first(rest, fn w -> {:ok, el(mk.(g, [ma, w]), ei(mfunc))} end)
 
       :sum ->
-        on_empty(rest, fn -> {:ok, mk.(:reduce, [ma, 0, rc(mfunc, :+)])} end)
+        on_empty(rest, fn -> {:ok, mk.(:reduce, [ma, wrap_int(0), rc(mfunc, :+)])} end)
 
       :product ->
-        on_empty(rest, fn -> {:ok, mk.(:reduce, [ma, 1, rc(mfunc, :*)])} end)
+        on_empty(rest, fn -> {:ok, mk.(:reduce, [ma, wrap_int(1), rc(mfunc, :*)])} end)
 
       :at ->
         case rest do
@@ -238,7 +230,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
       :join ->
         case rest do
-          [] -> {:ok, mk.(:map_join, [ma, "", ex(mfunc)])}
+          [] -> {:ok, mk.(:map_join, [ma, wrap_str(""), ex(mfunc)])}
           [sep] -> {:ok, mk.(:map_join, [ma, sep, ex(mfunc)])}
           _ -> :no
         end
@@ -256,7 +248,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
           [s] ->
             cond do
-              is_atom(s) ->
+              atom_literal?(s) ->
                 {:ok, mk.(:map, [mk.(:sort_by, [ma, ex(mfunc), s]), ex(mfunc)])}
 
               function?(s) ->
@@ -364,10 +356,10 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
         on_first(ea, fn w -> {:ok, pe_el(pm, mk.(g, [w]), ei(mfunc))} end)
 
       :sum ->
-        on_empty(ea, fn -> {:ok, mk.(:reduce, [0, rc(mfunc, :+)])} end)
+        on_empty(ea, fn -> {:ok, mk.(:reduce, [wrap_int(0), rc(mfunc, :+)])} end)
 
       :product ->
-        on_empty(ea, fn -> {:ok, mk.(:reduce, [1, rc(mfunc, :*)])} end)
+        on_empty(ea, fn -> {:ok, mk.(:reduce, [wrap_int(1), rc(mfunc, :*)])} end)
 
       :at ->
         case ea do
@@ -393,7 +385,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
       :join ->
         case ea do
-          [] -> {:ok, sn(:map_join, [ma, "", ex(mfunc)])}
+          [] -> {:ok, sn(:map_join, [ma, wrap_str(""), ex(mfunc)])}
           [sep] -> {:ok, sn(:map_join, [ma, sep, ex(mfunc)])}
           _ -> :no
         end
@@ -411,7 +403,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
           [s] ->
             cond do
-              is_atom(s) ->
+              atom_literal?(s) ->
                 {:ok, mk2.(mk.(:sort_by, [ex(mfunc), s]), :map, [ex(mfunc)])}
 
               function?(s) ->
@@ -471,7 +463,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       {:fn, _, _} = cb ->
         wrap_cb(cb)
 
-      {:&, _, [{:/, _, [_, 1]}]} = cb ->
+      {:&, _, [{:/, _, [_, {:__block__, _, [1]}]}]} = cb ->
         wrap_cb(cb)
 
       {:&, _, [_]} = cb ->
@@ -497,7 +489,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   end
 
   # &Mod.func/1 → fn {_k, x} -> Mod.func(x) end
-  defp wrap_cb({:&, cm, [{:/, _, [ref, 1]}]}) do
+  # Sourceror wraps the arity literal in `:__block__`.
+  defp wrap_cb({:&, cm, [{:/, _, [ref, {:__block__, _, [1]}]}]}) do
     var = {:x, [], nil}
     {:fn, cm, [{:->, [], [[df(var)], rebuild_call(ref, var)]}]}
   end
@@ -561,7 +554,11 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
   defp sorter_head(other, _mf), do: other
 
-  defp df(pattern), do: {{:_k, [], nil}, pattern}
+  # Sourceror wraps 2-tuples in `:__block__` to disambiguate them from
+  # `{atom, value}` keyword pairs. The destructure pattern `{_k, v}`
+  # must be wrapped here, otherwise `Sourceror.to_string/1` renders it
+  # as map-update syntax `_k => v`.
+  defp df(pattern), do: {:__block__, [], [{{:_k, [], nil}, pattern}]}
 
   defp rebuild_call({name, _meta, ctx}, arg) when is_atom(ctx) do
     {name, [], [arg]}
@@ -584,8 +581,12 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
   # Runtime check: is this node a fn or &func/1?
   defp function?({:fn, _, _}), do: true
-  defp function?({:&, _, [{:/, _, [_, 1]}]}), do: true
+  defp function?({:&, _, [{:/, _, [_, {:__block__, _, [1]}]}]}), do: true
   defp function?(_), do: false
+
+  # Sourceror wraps atom literals in `{:__block__, _, [atom]}`.
+  defp atom_literal?({:__block__, _, [a]}) when is_atom(a), do: true
+  defp atom_literal?(_), do: false
 
   # AST builders
 
@@ -602,14 +603,32 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
   defp pe_el(pm, mid, i), do: {:|>, pm, [mid, {:elem, [], [i]}]}
 
-  defp ei(:values), do: 1
-  defp ei(:keys), do: 0
+  defp ei(:values), do: wrap_int(1)
+  defp ei(:keys), do: wrap_int(0)
 
-  defp ex(:values), do: {:fn, [], [{:->, [], [[{{:_, [], nil}, {:v, [], nil}}], {:v, [], nil}]}]}
-  defp ex(:keys), do: {:fn, [], [{:->, [], [[{{:k, [], nil}, {:_, [], nil}}], {:k, [], nil}]}]}
+  # Sourceror's renderer expects literals wrapped in `:__block__` with
+  # source-representation metadata. Builders that mint fresh literals
+  # wrap them so the surrounding Sourceror-shaped AST stays consistent
+  # for `Sourceror.to_string/1`.
+  defp wrap_int(n) when is_integer(n),
+    do: {:__block__, [token: Integer.to_string(n)], [n]}
 
-  defp ev(:values), do: {{:_k, [], nil}, {:v, [], nil}}
-  defp ev(:keys), do: {{:k, [], nil}, {:_v, [], nil}}
+  defp wrap_str(s) when is_binary(s),
+    do: {:__block__, [delimiter: ~s(")], [s]}
+
+  # Sourceror wraps 2-tuples in `:__block__` (so `{a, b}` doesn't get
+  # rendered as map-update `a => b`). Builders that mint fresh tuple
+  # patterns wrap them for consistency.
+  defp ex(:values),
+    do: {:fn, [], [{:->, [], [[wrap_tuple({{:_, [], nil}, {:v, [], nil}})], {:v, [], nil}]}]}
+
+  defp ex(:keys),
+    do: {:fn, [], [{:->, [], [[wrap_tuple({{:k, [], nil}, {:_, [], nil}})], {:k, [], nil}]}]}
+
+  defp ev(:values), do: wrap_tuple({{:_k, [], nil}, {:v, [], nil}})
+  defp ev(:keys), do: wrap_tuple({{:k, [], nil}, {:_v, [], nil}})
+
+  defp wrap_tuple({_a, _b} = pair), do: {:__block__, [], [pair]}
 
   defp vv(:values), do: {:v, [], nil}
   defp vv(:keys), do: {:k, [], nil}

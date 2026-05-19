@@ -7,7 +7,8 @@ defmodule Credence.Pattern.NoManualMaxTest do
   end
 
   defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualMax, code, []) |> String.trim_trailing()
+    Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoManualMax, code, [])
+    |> String.trim_trailing()
   end
 
   defp ast_of(code) do

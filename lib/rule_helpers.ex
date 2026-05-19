@@ -97,16 +97,14 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
-  Normalizes an AST produced by `Sourceror.parse_string!/1` by stripping
-  the `{:__block__, meta, [value]}` wrappers that Sourceror puts around
-  literals and 2-tuples to carry position metadata.
+  Strips `Sourceror.parse_string!/1`'s `{:__block__, meta, [value]}`
+  wrappers around literals, atoms, 2-tuples, and lists — producing the
+  bare-literal shape that `Macro.to_string/1` expects for rendering.
 
-  Use this when a rule's matchers are simpler to write against bare-literal
-  shape — patterns like `{:==, _, [expr, 1]}` won't match Sourceror's
-  `{:==, _, [expr, {:__block__, _, [1]}]}` unless the AST is normalized
-  (or the matcher handles both shapes). Normalizing loses position info,
-  so it's best used to drive issue detection in `check/2` rather than
-  range-based patching in `fix_patches/2`.
+  Used by test helpers to canonicalize ASTs for structural comparison
+  (parse → normalize → `Macro.to_string` → string compare). Not used
+  by production rules — all rules pattern-match Sourceror's wrapped
+  form directly.
 
   Unwraps:
 
@@ -114,9 +112,6 @@ defmodule Credence.RuleHelpers do
   - Atoms: `{:__block__, _, [:do]}` → `:do`
   - 2-tuples: `{:__block__, _, [{a, b}]}` → `{a, b}`
   - Lists: `{:__block__, _, [[a, b]]}` → `[a, b]`
-
-  As a result, keyword blocks like `[{{:__block__, _, [:do]}, body}]`
-  become `[do: body]`, matching bare-keyword shape.
   """
   @spec normalize_sourceror_ast(Macro.t()) :: Macro.t()
   def normalize_sourceror_ast(ast) do
@@ -219,18 +214,14 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
-  Returns the value bound to `:do` in a keyword list.
-
-  Accepts both Sourceror's shape (`[{{:__block__, _, [:do]}, body}]`) and
-  the bare-keyword shape (`[do: body]`) produced by `normalize_sourceror_ast/1`
-  or by manually built AST templates.
+  Returns the value bound to `:do` in a Sourceror-shaped keyword list
+  (`[{{:__block__, _, [:do]}, body} | _]`).
 
   Returns `{:ok, body}` when present, `:error` otherwise.
   """
   @spec extract_do_body(list()) :: {:ok, term()} | :error
   def extract_do_body(kw) when is_list(kw) do
     Enum.find_value(kw, :error, fn
-      {:do, body} -> {:ok, body}
       {{:__block__, _, [:do]}, body} -> {:ok, body}
       _ -> nil
     end)
@@ -252,18 +243,16 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
-  Unwraps a list literal AST node, accepting both Sourceror's
-  `{:__block__, meta, [list]}` wrapper and a bare list — the latter
-  for callers walking an AST passed through `normalize_sourceror_ast/1`.
+  Unwraps a Sourceror list-literal node (`{:__block__, meta, [list]}`).
 
-  Returns `{:ok, elements, original_node}` where `original_node` is the
-  wrapper (for range/rewrap) when present, otherwise the bare list.
+  Returns `{:ok, elements, original_node}` — the second value is the
+  wrapper itself so the caller can pass it to `rewrap_list/2` later to
+  preserve bracket-position metadata on a rewrite.
   """
   @spec unwrap_list(term()) :: {:ok, list(), term()} | :error
   def unwrap_list({:__block__, _, [elements]} = node) when is_list(elements),
     do: {:ok, elements, node}
 
-  def unwrap_list(elements) when is_list(elements), do: {:ok, elements, elements}
   def unwrap_list(_), do: :error
 
   @doc """

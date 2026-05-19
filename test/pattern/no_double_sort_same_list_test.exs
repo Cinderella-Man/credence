@@ -133,6 +133,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListTest do
       assert check(code) == []
     end
   end
+
   describe "fix/2" do
     test "replaces desc sort with Enum.reverse of the asc binding" do
       code = """

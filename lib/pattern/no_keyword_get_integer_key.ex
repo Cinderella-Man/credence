@@ -88,9 +88,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   # Direct: Keyword.get(list, integer) — only when list is a simple var
   # (matches the legacy regex's `(\w+)` capture group).
-  defp detect_fix(
-         {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _meta, [list, key]} = node
-       ) do
+  defp detect_fix({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _meta, [list, key]} = node) do
     with {:ok, n} <- integer_value(key),
          {:ok, var} <- simple_var(list) do
       {:ok, %{range: Sourceror.get_range(node), change: direct_replacement(var, n)}}

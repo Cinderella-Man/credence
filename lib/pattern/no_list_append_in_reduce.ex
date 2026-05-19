@@ -84,6 +84,7 @@ defmodule Credence.Pattern.NoListAppendInReduce do
         node
     end)
   end
+
   # Check helpers
   defp check_lambda({:fn, _, [{:->, _, [params, body]}]}, meta, issues)
        when length(params) == 2 do

@@ -116,8 +116,8 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
   end
 
   defp replace_inline_minus_one(
-         {:|>, pipe_meta,
-          [lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [idx_node]}]} = node
+         {:|>, pipe_meta, [lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [idx_node]}]} =
+           node
        ) do
     case extract_negative_index(idx_node) do
       {:ok, -1} -> {:|>, pipe_meta, [lhs, list_last_pipe_call()]}
@@ -461,6 +461,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
   # Build `[a, b, ... | _]` AST
   defp build_cons_pattern(elems) do
     tail = {:_, [], nil}
+
     [{:|, [], [List.last(elems), tail]} | []]
     |> then(fn last_segment ->
       front = Enum.drop(elems, -1)

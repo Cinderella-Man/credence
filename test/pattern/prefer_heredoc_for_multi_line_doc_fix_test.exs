@@ -4,6 +4,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
   defp fix(code) do
     Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferHeredocForMultiLineDoc, code, [])
   end
+
   describe "fix/2 — conversions" do
     test "converts simple two-line @doc to heredoc" do
       code = """

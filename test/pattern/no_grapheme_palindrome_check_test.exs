@@ -7,7 +7,9 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
     Credence.Pattern.NoGraphemePalindromeCheck.check(ast, [])
   end
 
-  defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoGraphemePalindromeCheck, code, [])
+  defp fix(code),
+    do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoGraphemePalindromeCheck, code, [])
+
   describe "NoGraphemePalindromeCheck" do
     test "passes code that compares strings directly with String.reverse" do
       code = """

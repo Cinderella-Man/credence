@@ -75,9 +75,7 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerable do
     Macro.prewalk(ast, &maybe_wrap_outer_call/1)
   end
 
-  defp maybe_wrap_outer_call(
-         {{:., _, [{:__aliases__, _, [:Enum]}, func]}, _, [arg | _]} = node
-       )
+  defp maybe_wrap_outer_call({{:., _, [{:__aliases__, _, [:Enum]}, func]}, _, [arg | _]} = node)
        when func in @enum_funcs and func != :member? do
     with var when not is_nil(var) <- var_name(arg),
          true <- has_nested_member?(node, var) do

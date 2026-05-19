@@ -199,6 +199,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
       assert check(code) == []
     end
   end
+
   describe "fix/2" do
     test "renames simple def is_palindrome to palindrome?" do
       code = """
@@ -418,7 +419,8 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
     test "auto_fix_public defaults to true (renames both def and defp)" do
       code = "defmodule Example do\n  def is_public(x), do: x\nend\n"
 
-      fixed = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIsPrefixForNonGuard, code, [])
+      fixed =
+        Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoIsPrefixForNonGuard, code, [])
 
       assert fixed =~ "def public?(x)"
     end

@@ -7,6 +7,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
     ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoRedundantBinarySyntax.check(ast, [])
   end
+
   # ── flags single string literal in binary syntax ───────────────
 
   describe "flags single string literal in binary syntax" do

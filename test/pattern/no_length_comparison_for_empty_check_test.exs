@@ -7,6 +7,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyCheckTest do
     ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoLengthComparisonForEmpty.check(ast, [])
   end
+
   # ── flags equality ─────────────────────────────────────────────
 
   describe "flags equality" do

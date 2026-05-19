@@ -60,6 +60,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivate do
         node
     end)
   end
+
   # Matches @doc false in both standard AST and Sourceror AST.
   # Sourceror wraps literals in __block__, so `false` becomes
   # {:__block__, meta, [false]}.
@@ -83,6 +84,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivate do
   defp drop_redundant_doc_false([node | rest]) do
     [node | drop_redundant_doc_false(rest)]
   end
+
   defp build_issue(meta) do
     %Issue{
       rule: :no_doc_false_on_private,

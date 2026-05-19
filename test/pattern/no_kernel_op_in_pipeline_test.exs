@@ -9,6 +9,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineTest do
   defp fix(code) do
     Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoKernelOpInPipeline, code, [])
   end
+
   # ═══════════════════════════════════════════════════════════════════
   # CHECK TESTS
   # ═══════════════════════════════════════════════════════════════════

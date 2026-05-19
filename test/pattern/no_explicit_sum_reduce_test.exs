@@ -8,6 +8,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceTest do
 
   defp fix(code),
     do: Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoExplicitSumReduce, code, [])
+
   describe "NoExplicitSumReduce" do
     test "passes code that uses Enum.sum/1 instead of reduce" do
       code = """

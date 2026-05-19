@@ -51,6 +51,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
       end
     end)
   end
+
   # Pipeline detection
   # Matches: subject |> String.graphemes() |> Enum.chunk_every(n, 1, ...) |> Enum.map(join_fn)
   defp detect_fixable_pipeline(
@@ -146,6 +147,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
     |> Macro.to_string()
     |> String.contains?("Enum.join")
   end
+
   # Replacement builder
   # Builds: for i <- 0..(String.length(subject) - n), do: String.slice(subject, i, n)
   defp build_replacement(subject, n) do
@@ -160,6 +162,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
 
     {:for, [], [{:<-, [], [{:i, [], nil}, range]}, [do: body]]}
   end
+
   # Issue
   defp trigger_issue(node) do
     %Issue{

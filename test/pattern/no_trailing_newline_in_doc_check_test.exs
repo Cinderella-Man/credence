@@ -10,6 +10,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
     ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoTrailingNewlineInDoc.check(ast, source: code)
   end
+
   describe "flags single-line docs with trailing newline" do
     test "flags @doc with trailing newline" do
       code = """

@@ -47,9 +47,7 @@ defmodule Credence.Pattern do
   def fix_with_trace(code_string, opts \\ []) do
     all_rules = rules(opts)
 
-    Logger.debug(
-      "[credence_fix] starting pattern fix pipeline (#{length(all_rules)} rules)"
-    )
+    Logger.debug("[credence_fix] starting pattern fix pipeline (#{length(all_rules)} rules)")
 
     if RuleHelpers.compiles?(code_string) do
       run_fixable_rules(all_rules, code_string, opts)
@@ -119,9 +117,7 @@ defmodule Credence.Pattern do
         {source, applied}
 
       not RuleHelpers.compiles?(fixed) ->
-        Logger.warning(
-          "[credence_fix] #{name}: fix produced non-compiling output, reverting"
-        )
+        Logger.warning("[credence_fix] #{name}: fix produced non-compiling output, reverting")
 
         {source, [{rule, :reverted} | applied]}
 

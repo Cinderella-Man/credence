@@ -91,6 +91,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaise do
       change: ""
     }
   end
+
   # NODE MATCHING
   defp check_node({def_type, meta, [{fn_name, _, args}, body]})
        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do

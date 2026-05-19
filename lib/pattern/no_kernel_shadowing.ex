@@ -91,6 +91,7 @@ defmodule Credence.Pattern.NoKernelShadowing do
         node
     end)
   end
+
   defp extract_vars(ast, meta) do
     Macro.prewalk(ast, [], fn
       {name, var_meta, ctx} = node, acc

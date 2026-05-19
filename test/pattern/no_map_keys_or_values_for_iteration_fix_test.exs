@@ -18,6 +18,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   # with semantics.
   defp assert_fix(input, expected) do
     result = fix(input)
+
     assert norm(result) == norm(expected),
            "Fix mismatch.\nInput:    #{input}\nExpected: #{expected}\nGot:      #{result}"
   end

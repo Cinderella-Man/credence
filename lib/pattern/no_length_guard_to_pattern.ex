@@ -65,6 +65,7 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
         node
     end)
   end
+
   # Check helpers
   defp find_fixable_length(guard_ast, def_meta, acc) do
     {_ast, issues} =
@@ -120,6 +121,7 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
       meta: %{line: line}
     }
   end
+
   # Fix helpers
   defp try_fix_def(kind, meta, when_meta, call, guard, rest, original) do
     case extract_fixable_check(guard) do
@@ -141,6 +143,7 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
         original
     end
   end
+
   # length(var) > 0
   defp extract_fixable_check({:>, _, [{:length, _, [var]}, zero]}) do
     with {:ok, 0} <- extract_int(zero),
@@ -179,6 +182,7 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
   defp extract_fixable_check(_), do: :error
   defp extract_int({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
   defp extract_int(_), do: :error
+
   defp simple_var?({name, _, ctx}) when is_atom(name) and (is_nil(ctx) or is_atom(ctx)),
     do: true
 
@@ -186,6 +190,7 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
 
   defp same_var?({name, _, _}, {name, _, _}) when is_atom(name), do: true
   defp same_var?(_, _), do: false
+
   defp replace_param({func_name, func_meta, params}, var, pattern) do
     if Enum.any?(params, &same_var?(&1, var)) do
       new_params =
@@ -198,6 +203,7 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
       :error
     end
   end
+
   # [_ | _]
   defp build_match_pattern(:non_empty) do
     [{:|, [], [{:_, [], nil}, {:_, [], nil}]}]

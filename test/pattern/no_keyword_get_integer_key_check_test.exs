@@ -7,6 +7,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
     ast = Sourceror.parse_string!(code)
     Credence.Pattern.NoKeywordGetIntegerKey.check(ast, [])
   end
+
   # ── flags integer keys ─────────────────────────────────────────
 
   describe "flags integer keys" do

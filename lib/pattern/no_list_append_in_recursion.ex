@@ -57,6 +57,7 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
       RuleHelpers.patches_from_postwalk(ast, &apply_fix(&1, fixable))
     end
   end
+
   # Check
   defp check_clause(body, name, params, meta, issues) do
     if body_calls_self?(body, name) and direct_append_in_call?(body, name, params) do
@@ -77,6 +78,7 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
       issues
     end
   end
+
   # Fix — Pass 1: analysis
   defp analyze_functions(ast) do
     {_ast, by_fn} =
@@ -183,6 +185,7 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
         nil
     end
   end
+
   # Fix — Pass 2: apply transforms
   defp apply_fix(
          {kind, meta, [{:when, _, [{name, _, params}, _guard]} = when_clause, body_kw]} = node,
@@ -269,6 +272,7 @@ defmodule Credence.Pattern.NoListAppendInRecursion do
       {kind, meta, [call_or_when, body_kw]}
     end
   end
+
   # Shared helpers
   defp direct_append_in_call?(body, name, params) do
     last = last_expression(body)

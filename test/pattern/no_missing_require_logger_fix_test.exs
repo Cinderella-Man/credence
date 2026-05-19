@@ -2,7 +2,9 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
   use ExUnit.Case
 
   defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMissingRequireLogger, code, [])
+    result =
+      Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoMissingRequireLogger, code, [])
+
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 

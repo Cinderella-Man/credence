@@ -9,6 +9,7 @@ defmodule Credence.Pattern.NoEnumAtMidpointAccessTest do
   defp fix(code) do
     Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.NoEnumAtMidpointAccess, code, [])
   end
+
   describe "detects non-recursive midpoint access patterns" do
     test "flags Enum.at with mid from low + div(high - low, 2)" do
       code = """
