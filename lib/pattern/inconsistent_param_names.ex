@@ -119,6 +119,7 @@ defmodule Credence.Pattern.InconsistentParamNames do
   # Union of pinned positions across every clause in the group. If any one
   # clause encodes pattern-match equality at a position, that position is
   # excluded everywhere — both for detection and renaming.
+  @spec pinned_positions_across_clauses([[Macro.t()]]) :: MapSet.t(non_neg_integer())
   defp pinned_positions_across_clauses(args_lists) do
     Enum.reduce(args_lists, MapSet.new(), fn args, acc ->
       MapSet.union(acc, pinned_positions_in_clause(args))
@@ -128,6 +129,7 @@ defmodule Credence.Pattern.InconsistentParamNames do
   # Within one clause: collect every variable base name from each arg's
   # full pattern (including nested), then flag positions whose name set
   # intersects names that occur 2+ times total across all args.
+  @spec pinned_positions_in_clause([Macro.t()]) :: MapSet.t(non_neg_integer())
   defp pinned_positions_in_clause(args) do
     names_per_pos =
       args
@@ -136,22 +138,20 @@ defmodule Credence.Pattern.InconsistentParamNames do
 
     shared =
       names_per_pos
-      |> Enum.flat_map(fn {_, names} -> names end)
+      |> Enum.flat_map(fn {_idx, names} -> names end)
       |> Enum.frequencies()
-      |> Enum.filter(fn {_, count} -> count >= 2 end)
-      |> Enum.map(fn {name, _} -> name end)
-      |> MapSet.new()
-
-    if MapSet.size(shared) == 0 do
-      MapSet.new()
-    else
-      names_per_pos
-      |> Enum.filter(fn {_, names} ->
-        Enum.any?(names, &MapSet.member?(shared, &1))
+      |> Enum.reduce(MapSet.new(), fn
+        {name, count}, acc when count >= 2 -> MapSet.put(acc, name)
+        _, acc -> acc
       end)
-      |> Enum.map(fn {idx, _} -> idx end)
-      |> MapSet.new()
-    end
+
+    Enum.reduce(names_per_pos, MapSet.new(), fn {idx, names}, acc ->
+      if Enum.any?(names, &MapSet.member?(shared, &1)) do
+        MapSet.put(acc, idx)
+      else
+        acc
+      end
+    end)
   end
 
   defp collect_base_names_in_pattern(pattern) do
