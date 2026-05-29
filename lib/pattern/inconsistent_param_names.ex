@@ -28,6 +28,22 @@ defmodule Credence.Pattern.InconsistentParamNames do
 
   Bare `_` and non-variable patterns (literals, destructuring) at a
   given position cause that position to be skipped entirely.
+
+  ## Pattern-match equality between arguments
+
+  When the same variable name appears at multiple argument positions
+  within one clause — top-level or nested inside a tuple, list, map,
+  struct, or binary — Elixir enforces equality between those positions:
+
+      def validate(errors, q, ans, ans), do: errors  # 3rd arg must equal 4th
+      def lookup(id, %User{id: id}), do: id          # top-level arg must equal nested field
+
+  Such names are load-bearing. Renaming one occurrence breaks the
+  equality; renaming a free name in another clause to the same target
+  invents an equality that wasn't there. Whenever any clause in a
+  group has such an intra-clause name sharing, every position that
+  participates is skipped — for both detection and renaming — so the
+  rule never produces an unsafe fix.
   """
 
   use Credence.Pattern.Rule
@@ -73,26 +89,85 @@ defmodule Credence.Pattern.InconsistentParamNames do
     [{name, arity, _, _, def_type} | _] = clauses
     args_lists = Enum.map(clauses, fn {_, _, args, _, _} -> args end)
     meta = clauses |> hd() |> elem(3)
+    pinned = pinned_positions_across_clauses(args_lists)
 
     Enum.flat_map(0..(arity - 1), fn pos ->
-      base_names_at_pos =
-        args_lists
-        |> Enum.map(fn args -> Enum.at(args, pos) end)
-        |> Enum.map(&extract_base_name/1)
-
-      if Enum.any?(base_names_at_pos, &is_nil/1) do
-        # Bare `_`, pattern, or literal at this position in some clause — skip
+      if MapSet.member?(pinned, pos) do
         []
       else
-        unique_bases = Enum.uniq(base_names_at_pos)
+        base_names_at_pos =
+          args_lists
+          |> Enum.map(fn args -> Enum.at(args, pos) end)
+          |> Enum.map(&extract_base_name/1)
 
-        if length(unique_bases) > 1 do
-          [build_issue(def_type, name, arity, pos + 1, unique_bases, meta)]
-        else
+        if Enum.any?(base_names_at_pos, &is_nil/1) do
+          # Bare `_`, pattern, or literal at this position in some clause — skip
           []
+        else
+          unique_bases = Enum.uniq(base_names_at_pos)
+
+          if length(unique_bases) > 1 do
+            [build_issue(def_type, name, arity, pos + 1, unique_bases, meta)]
+          else
+            []
+          end
         end
       end
     end)
+  end
+
+  # Union of pinned positions across every clause in the group. If any one
+  # clause encodes pattern-match equality at a position, that position is
+  # excluded everywhere — both for detection and renaming.
+  defp pinned_positions_across_clauses(args_lists) do
+    Enum.reduce(args_lists, MapSet.new(), fn args, acc ->
+      MapSet.union(acc, pinned_positions_in_clause(args))
+    end)
+  end
+
+  # Within one clause: collect every variable base name from each arg's
+  # full pattern (including nested), then flag positions whose name set
+  # intersects names that occur 2+ times total across all args.
+  defp pinned_positions_in_clause(args) do
+    names_per_pos =
+      args
+      |> Enum.with_index()
+      |> Enum.map(fn {arg, idx} -> {idx, collect_base_names_in_pattern(arg)} end)
+
+    shared =
+      names_per_pos
+      |> Enum.flat_map(fn {_, names} -> names end)
+      |> Enum.frequencies()
+      |> Enum.filter(fn {_, count} -> count >= 2 end)
+      |> Enum.map(fn {name, _} -> name end)
+      |> MapSet.new()
+
+    if MapSet.size(shared) == 0 do
+      MapSet.new()
+    else
+      names_per_pos
+      |> Enum.filter(fn {_, names} ->
+        Enum.any?(names, &MapSet.member?(shared, &1))
+      end)
+      |> Enum.map(fn {idx, _} -> idx end)
+      |> MapSet.new()
+    end
+  end
+
+  defp collect_base_names_in_pattern(pattern) do
+    {_, names} =
+      Macro.prewalk(pattern, [], fn
+        {name, _, ctx} = node, acc when is_atom(name) and is_atom(ctx) ->
+          case base_name_of_atom(name) do
+            nil -> {node, acc}
+            base -> {node, [base | acc]}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
   end
 
   @impl true
@@ -153,8 +228,17 @@ defmodule Credence.Pattern.InconsistentParamNames do
 
   defp extract_fn_key(_), do: nil
 
-  defp fix_clause_group([first | rest]) do
-    canonical = canonical_base_names(first)
+  defp fix_clause_group([first | rest] = clauses) do
+    args_lists = Enum.map(clauses, &extract_args/1)
+    pinned = pinned_positions_across_clauses(args_lists)
+
+    canonical =
+      first
+      |> canonical_base_names()
+      |> Enum.with_index()
+      |> Enum.map(fn {name, idx} ->
+        if MapSet.member?(pinned, idx), do: nil, else: name
+      end)
 
     fixed_rest =
       Enum.map(rest, fn clause ->
