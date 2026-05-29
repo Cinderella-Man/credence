@@ -500,6 +500,96 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
   end
 
+  describe "flags inconsistency across attribute-annotated clauses" do
+    test "@impl true between handle_call clauses" do
+      code = """
+      defmodule Server do
+        @impl true
+        def handle_call(:get, _from, state), do: {:reply, state, state}
+
+        @impl true
+        def handle_call(:reset, _from, server_state), do: {:reply, :ok, server_state}
+      end
+      """
+
+      [%Issue{message: msg}] = check(code)
+      assert msg =~ "position 3"
+      assert msg =~ "state"
+      assert msg =~ "server_state"
+    end
+
+    test "@doc between clauses" do
+      code = """
+      defmodule Math do
+        @doc "positive"
+        def sign(n) when n > 0, do: 1
+
+        @doc "negative"
+        def sign(num) when num < 0, do: -1
+      end
+      """
+
+      [%Issue{message: msg}] = check(code)
+      assert msg =~ "position 1"
+    end
+
+    test "mixed @doc + @spec + @impl annotations" do
+      code = """
+      defmodule Mixed do
+        @doc "first"
+        @spec f(integer()) :: integer()
+        @impl true
+        def f(num), do: num + 1
+
+        @doc "second"
+        @impl true
+        def f(n) when n > 100, do: n * 2
+      end
+      """
+
+      [%Issue{message: msg}] = check(code)
+      assert msg =~ "position 1"
+    end
+  end
+
+  describe "does NOT flag with attributes when names are consistent" do
+    test "@impl + consistently named state across clauses" do
+      assert check("""
+             defmodule Server do
+               @impl true
+               def handle_call(:get, _from, state), do: {:reply, state, state}
+
+               @impl true
+               def handle_call(:reset, _from, state), do: {:reply, :ok, state}
+             end
+             """) == []
+    end
+
+    test "@impl-annotated clauses with pattern-match equality (pinning)" do
+      assert check("""
+             defmodule Pinned do
+               @impl true
+               def f(x, x), do: x
+
+               @impl true
+               def f(a, b), do: {a, b}
+             end
+             """) == []
+    end
+
+    test "separate callback functions (handle_call vs handle_cast) are not grouped" do
+      assert check("""
+             defmodule Two do
+               @impl true
+               def handle_call(_msg, _from, state), do: {:reply, :ok, state}
+
+               @impl true
+               def handle_cast(_msg, server), do: {:noreply, server}
+             end
+             """) == []
+    end
+  end
+
   describe "does NOT flag — real-world idiomatic patterns" do
     test "Phoenix-style handle_event with string discriminator" do
       assert check("""

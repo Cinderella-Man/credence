@@ -337,6 +337,160 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
     end
   end
 
+  describe "passes through module attributes between clauses" do
+    test "renames across @impl-annotated clauses" do
+      code = """
+      defmodule Server do
+        @impl true
+        def handle_call(:get, _from, state), do: {:reply, state, state}
+
+        @impl true
+        def handle_call(:reset, _from, server_state), do: {:reply, :ok, server_state}
+      end
+      """
+
+      expected = """
+      defmodule Server do
+        @impl true
+        def handle_call(:get, _from, state), do: {:reply, state, state}
+
+        @impl true
+        def handle_call(:reset, _from, state), do: {:reply, :ok, state}
+      end
+      """
+
+      assert fix(code) == expected
+    end
+
+    test "renames across @doc-annotated clauses" do
+      code = """
+      defmodule Math do
+        @doc "positive"
+        def sign(n) when n > 0, do: 1
+
+        @doc "negative"
+        def sign(num) when num < 0, do: -1
+      end
+      """
+
+      expected = """
+      defmodule Math do
+        @doc "positive"
+        def sign(n) when n > 0, do: 1
+
+        @doc "negative"
+        def sign(n) when n < 0, do: -1
+      end
+      """
+
+      assert fix(code) == expected
+    end
+
+    test "renames across @spec-annotated clauses (including the guard)" do
+      code = """
+      defmodule Lookup do
+        @spec find(map(), atom()) :: any()
+        def find(map, key), do: Map.get(map, key)
+
+        @spec find(list(), atom()) :: any()
+        def find(list, k) when is_list(list), do: Keyword.get(list, k)
+      end
+      """
+
+      expected = """
+      defmodule Lookup do
+        @spec find(map(), atom()) :: any()
+        def find(map, key), do: Map.get(map, key)
+
+        @spec find(list(), atom()) :: any()
+        def find(map, key) when is_list(map), do: Keyword.get(map, key)
+      end
+      """
+
+      assert fix(code) == expected
+    end
+
+    test "renames across mixed @doc + @spec + @impl annotations" do
+      code = """
+      defmodule Mixed do
+        @doc "first"
+        @spec f(integer()) :: integer()
+        @impl true
+        def f(num), do: num + 1
+
+        @doc "second"
+        @impl true
+        def f(n) when n > 100, do: n * 2
+      end
+      """
+
+      expected = """
+      defmodule Mixed do
+        @doc "first"
+        @spec f(integer()) :: integer()
+        @impl true
+        def f(num), do: num + 1
+
+        @doc "second"
+        @impl true
+        def f(num) when num > 100, do: num * 2
+      end
+      """
+
+      assert fix(code) == expected
+    end
+
+    test "@moduledoc at the top does not interfere with clause grouping below" do
+      code = """
+      defmodule Top do
+        @moduledoc "top"
+
+        def f(input, count), do: {input, count}
+        def f(data, n), do: {data, n}
+      end
+      """
+
+      expected = """
+      defmodule Top do
+        @moduledoc "top"
+
+        def f(input, count), do: {input, count}
+        def f(input, count), do: {input, count}
+      end
+      """
+
+      assert fix(code) == expected
+    end
+
+    test "separate callback functions are not grouped together" do
+      code = """
+      defmodule Two do
+        @impl true
+        def handle_call(_msg, _from, state), do: {:reply, :ok, state}
+
+        @impl true
+        def handle_cast(_msg, server), do: {:noreply, server}
+      end
+      """
+
+      assert fix(code) == code
+    end
+
+    test "pinning is still respected when attributes are present" do
+      code = """
+      defmodule Pinned do
+        @impl true
+        def f(x, x), do: x
+
+        @impl true
+        def f(a, b), do: {a, b}
+      end
+      """
+
+      assert fix(code) == code
+    end
+  end
+
   describe "round-trip" do
     test "fixed code produces zero issues (basic)" do
       code = """

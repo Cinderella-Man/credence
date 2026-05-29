@@ -204,14 +204,26 @@ defmodule Credence.Pattern.InconsistentParamNames do
             # Different function — flush old group, start new
             {flush_group(result, current_group), key, [stmt]}
 
+          current_key != nil and clause_passthrough?(stmt) ->
+            # Module attribute (e.g. `@impl`, `@doc`, `@spec`) between two
+            # clauses of the same function — keep the group alive and carry
+            # the attribute inside it. `fix_clause_group/1` walks the group
+            # and re-interleaves attributes at their original positions, so
+            # `@impl true` lines stay where the user put them.
+            {result, current_key, current_group ++ [stmt]}
+
           true ->
-            # Not a def/defp — flush any group, emit standalone
+            # Not a def/defp and not a passthrough attribute — flush any
+            # group and emit standalone.
             {flush_group(result, current_group) ++ [[stmt]], nil, []}
         end
       end)
 
     flush_group(result, group)
   end
+
+  defp clause_passthrough?({:@, _, _}), do: true
+  defp clause_passthrough?(_), do: false
 
   defp flush_group(result, []), do: result
   defp flush_group(result, group), do: result ++ [group]
@@ -228,24 +240,38 @@ defmodule Credence.Pattern.InconsistentParamNames do
 
   defp extract_fn_key(_), do: nil
 
-  defp fix_clause_group([first | rest] = clauses) do
-    args_lists = Enum.map(clauses, &extract_args/1)
-    pinned = pinned_positions_across_clauses(args_lists)
+  defp fix_clause_group(group) do
+    defs = Enum.filter(group, fn stmt -> extract_fn_key(stmt) != nil end)
 
-    canonical =
-      first
-      |> canonical_base_names()
-      |> Enum.with_index()
-      |> Enum.map(fn {name, idx} ->
-        if MapSet.member?(pinned, idx), do: nil, else: name
-      end)
+    if length(defs) < 2 do
+      group
+    else
+      [first | rest] = defs
+      args_lists = Enum.map(defs, &extract_args/1)
+      pinned = pinned_positions_across_clauses(args_lists)
 
-    fixed_rest =
-      Enum.map(rest, fn clause ->
-        rename_clause(clause, canonical)
-      end)
+      canonical =
+        first
+        |> canonical_base_names()
+        |> Enum.with_index()
+        |> Enum.map(fn {name, idx} ->
+          if MapSet.member?(pinned, idx), do: nil, else: name
+        end)
 
-    [first | fixed_rest]
+      renamed_defs = [first | Enum.map(rest, &rename_clause(&1, canonical))]
+
+      {result, _} =
+        Enum.reduce(group, {[], renamed_defs}, fn stmt, {acc, remaining} ->
+          if extract_fn_key(stmt) != nil do
+            [next_def | tail] = remaining
+            {[next_def | acc], tail}
+          else
+            {[stmt | acc], remaining}
+          end
+        end)
+
+      Enum.reverse(result)
+    end
   end
 
   defp canonical_base_names(clause) do
