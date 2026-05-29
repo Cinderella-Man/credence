@@ -117,7 +117,14 @@ defmodule Credence.Semantic do
   end
 
   defp apply_fixes_traced(source, diagnostics) do
-    Enum.reduce(diagnostics, {source, []}, fn diagnostic, {src, applied} ->
+    # Apply rightmost (highest-column) diagnostics first so column-aware
+    # rules don't see stale columns after an earlier fix mutates the
+    # line. Insertions / underscoring before a binding shift everything
+    # to the right of it; processing right-to-left keeps untouched
+    # columns valid for the rest of the pass.
+    diagnostics
+    |> Enum.sort_by(&position_sort_key/1, :desc)
+    |> Enum.reduce({source, []}, fn diagnostic, {src, applied} ->
       case find_matching_rule(diagnostic) do
         nil ->
           Logger.debug(
@@ -143,6 +150,17 @@ defmodule Credence.Semantic do
       end
     end)
   end
+
+  # Sort key for ordering diagnostics within a pass: `{line, col}` if
+  # both are present, `{line, 0}` if only the line is known, `{0, 0}`
+  # otherwise. Used with `:desc` so rightmost-on-line is applied first.
+  defp position_sort_key(%{position: {line, col}})
+       when is_integer(line) and is_integer(col),
+       do: {line, col}
+
+  defp position_sort_key(%{position: {line, _}}) when is_integer(line), do: {line, 0}
+  defp position_sort_key(%{position: line}) when is_integer(line), do: {line, 0}
+  defp position_sort_key(_), do: {0, 0}
 
   defp match_rules(diagnostic) do
     case find_matching_rule(diagnostic) do

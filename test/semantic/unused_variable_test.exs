@@ -74,7 +74,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       diag = %{
         severity: :warning,
         message: ~s(variable "extra" is unused),
-        position: {2, 10}
+        position: {2, 9}
       }
 
       fixed = UnusedVariable.fix(source, diag)
@@ -176,6 +176,300 @@ defmodule Credence.Semantic.UnusedVariableTest do
       issues = Credence.Semantic.analyze(source)
       unused = Enum.filter(issues, &(&1.rule == :unused_variable))
       assert unused == []
+    end
+  end
+
+  # ════════════════════════════════════════════════════════════════
+  # Regression: binding-name conflict on the same line
+  #
+  # The diagnostic's column points exactly at the unused binding. The
+  # fix MUST use it — a string-replace on the line will pick the first
+  # textual occurrence of the variable name, which may be a string key,
+  # atom key, function name, or alias that happens to contain those
+  # characters earlier on the line. Renaming the wrong one silently
+  # mangles unrelated code (and, for pattern keys, breaks runtime
+  # matching — the original GitHub report).
+  # ════════════════════════════════════════════════════════════════
+
+  describe "binding-name conflict on same line (REGRESSION)" do
+    test "string-keyed map, binding matches key (LiveView handle_event — original report)" do
+      source = """
+      defmodule LiveEvent do
+        def handle_event("move-to", %{"destination" => destination} = params, socket) do
+          IO.inspect(params)
+          {:noreply, socket}
+        end
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+
+      # The binding gets underscored:
+      assert fixed =~ ~s|"destination" => _destination|
+      # The string key MUST be preserved — otherwise the live-event
+      # payload key has been silently renamed.
+      refute fixed =~ ~s|"_destination"|
+    end
+
+    test "atom-keyed map, binding matches key" do
+      source = """
+      defmodule Atomic do
+        def get(%{foo: foo}), do: :ok
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+
+      assert fixed =~ "%{foo: _foo}"
+      # The atom key stays `foo:`, not `_foo:`.
+      refute fixed =~ "%{_foo:"
+    end
+
+    test "function name contains the binding name as a substring" do
+      source = """
+      defmodule Fns do
+        def destination_helper(destination), do: nil
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+
+      assert fixed =~ "def destination_helper(_destination)"
+      # The function name MUST NOT be sliced into `_destination_helper`.
+      refute fixed =~ "_destination_helper"
+    end
+
+    test "function name ENDS with the binding's letters" do
+      # The binding `x` first appears textually inside `index` (last
+      # letter). A naive string replace would split `index` → `inde_x`.
+      source = """
+      defmodule Ending do
+        def index(:a, x), do: :ok
+        def index(:b, x), do: x
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+
+      assert fixed =~ "def index(:a, _x), do: :ok"
+      refute fixed =~ "inde_x"
+    end
+  end
+
+  # ════════════════════════════════════════════════════════════════
+  # Common destructuring shapes — should fix cleanly with no special
+  # cases. These exist to lock in behaviour for everyday patterns and
+  # would silently regress if the fix logic was rewritten badly.
+  # ════════════════════════════════════════════════════════════════
+
+  describe "common destructuring shapes" do
+    test "nested tuple pattern with unused inner element" do
+      source = """
+      defmodule Nested do
+        def f({outer, inner}), do: outer
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      assert fixed =~ "{outer, _inner}"
+    end
+
+    test "list cons pattern with unused tail" do
+      source = """
+      defmodule Lst do
+        def f([head | tail]), do: head
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      assert fixed =~ "[head | _tail]"
+    end
+
+    test "lambda argument unused" do
+      source = """
+      defmodule Lam do
+        def f(list), do: Enum.map(list, fn x -> 1 end)
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      assert fixed =~ "fn _x -> 1 end"
+    end
+
+    test "multi-clause function — only the clause whose arg is unused gets touched" do
+      source = """
+      defmodule Multi do
+        def f(:a, x), do: :ok
+        def f(:b, x), do: x
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      assert fixed =~ "def f(:a, _x), do: :ok"
+      assert fixed =~ "def f(:b, x), do: x"
+    end
+
+    test "case clause with unused binding" do
+      source = """
+      defmodule CaseTest do
+        def f(x) do
+          case x do
+            {:ok, val} -> :ok
+            _ -> :error
+          end
+        end
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      assert fixed =~ "{:ok, _val} -> :ok"
+    end
+  end
+
+  # ════════════════════════════════════════════════════════════════
+  # Multiple unused bindings on a single line.
+  #
+  # Each diagnostic carries its own column. Applying them in arbitrary
+  # order would shift later columns by 1 per `_` insert, so the rule
+  # must either (a) sort same-line diagnostics right-to-left within
+  # one pass, or (b) lean on the pipeline's re-compile-between-passes
+  # to refresh columns.
+  # ════════════════════════════════════════════════════════════════
+
+  describe "multiple unused on same line" do
+    test "two unused in flat tuple — both underscored" do
+      source = """
+      defmodule Both do
+        def f do
+          {a, b} = {1, 2}
+          :ok
+        end
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      assert fixed =~ "{_a, _b} = {1, 2}"
+    end
+
+    test "three unused in nested pattern — all underscored, structure intact" do
+      source = """
+      defmodule Triple do
+        def f do
+          {a, {b, c}} = {1, {2, 3}}
+          :ok
+        end
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      assert fixed =~ "{_a, {_b, _c}} = {1, {2, 3}}"
+    end
+  end
+
+  # ════════════════════════════════════════════════════════════════
+  # Negative cases: nothing to fix because the compiler emits no
+  # warning. Pinning these protects against rule drift (e.g. a future
+  # regex change in `match?/1` accidentally firing on legitimate code).
+  # ════════════════════════════════════════════════════════════════
+
+  describe "should NOT trigger" do
+    test "variable used in the body — no warning" do
+      source = """
+      defmodule Used do
+        def f(x), do: x
+      end
+      """
+
+      issues = Credence.Semantic.analyze(source)
+      assert Enum.filter(issues, &(&1.rule == :unused_variable)) == []
+    end
+
+    test "variable used only in a guard — no warning" do
+      source = """
+      defmodule UsedGuard do
+        def f(x) when is_atom(x), do: :ok
+      end
+      """
+
+      issues = Credence.Semantic.analyze(source)
+      assert Enum.filter(issues, &(&1.rule == :unused_variable)) == []
+    end
+
+    test "bare `_` placeholder — no warning" do
+      source = """
+      defmodule BareU do
+        def f(_, b), do: b
+      end
+      """
+
+      issues = Credence.Semantic.analyze(source)
+      assert Enum.filter(issues, &(&1.rule == :unused_variable)) == []
+    end
+
+    test "intentional pattern-match equality (`x, x`) is not flagged" do
+      # `def f(x, x)` binds twice with an equality constraint; both
+      # are "used" in the sense that they participate in the match.
+      source = """
+      defmodule Eq do
+        def f(x, x), do: x
+      end
+      """
+
+      issues = Credence.Semantic.analyze(source)
+      assert Enum.filter(issues, &(&1.rule == :unused_variable)) == []
+    end
+  end
+
+  # ════════════════════════════════════════════════════════════════
+  # Safety guards on `fix/2`.
+  #
+  # When the diagnostic can't be applied unambiguously, the rule must
+  # refuse to mutate the source — silently changing the wrong identifier
+  # is far worse than leaving a warning visible.
+  # ════════════════════════════════════════════════════════════════
+
+  describe "fix/2 — safety guards" do
+    test "no column AND var name appears more than once on the line — skip" do
+      # Without column info, the rule can't tell which `foo` is the
+      # binding and which is the string key. Refusing to act is the
+      # only safe choice.
+      source = ~s|  %{"foo" => foo} = params\n|
+
+      diag = %{
+        severity: :warning,
+        message: ~s(variable "foo" is unused),
+        position: 1
+      }
+
+      assert UnusedVariable.fix(source, diag) == source
+    end
+
+    test "column points past the end of the line — skip" do
+      source = "x = 1\n"
+
+      diag = %{
+        severity: :warning,
+        message: ~s(variable "x" is unused),
+        position: {1, 100}
+      }
+
+      assert UnusedVariable.fix(source, diag) == source
+    end
+
+    test "text at the given column does not start with the var name — skip" do
+      # The var `x` exists in the source (at column 5), but the diagnostic
+      # claims it's at column 1 — which actually holds `y`. A naive
+      # first-match string replace would underscore the wrong `x`;
+      # respecting the column means we recognise the drift and skip.
+      source = "y = x\n"
+
+      diag = %{
+        severity: :warning,
+        message: ~s(variable "x" is unused),
+        position: {1, 1}
+      }
+
+      assert UnusedVariable.fix(source, diag) == source
     end
   end
 end

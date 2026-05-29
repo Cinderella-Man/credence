@@ -12,6 +12,21 @@ defmodule Credence.Semantic.UnusedVariable do
 
       # Fixed:
       {_current_sum, max_sum} = Enum.reduce(...)
+
+  ## How the fix locates the binding
+
+  The compiler diagnostic carries a `{line, col}` position pointing at
+  the *first character* of the unused binding (1-indexed). The fix
+  uses that column strictly:
+
+    * if `var_name` lives at that exact column with non-word characters
+      on both sides, insert `_` there;
+    * otherwise refuse to act — silently mangling the wrong identifier
+      is far worse than leaving the warning visible.
+
+  When the diagnostic carries only a line (no column), the fix falls
+  back to "rewrite only if `var_name` appears exactly once on the line
+  as a standalone identifier" — same safety principle.
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
@@ -34,13 +49,10 @@ defmodule Credence.Semantic.UnusedVariable do
 
   @impl true
   def fix(source, %{message: msg, position: position}) do
-    line_no = extract_line(position)
-    var_name = extract_variable_name(msg)
-
-    if line_no && var_name && not String.starts_with?(var_name, "_") do
-      replace_on_line(source, line_no, var_name, "_#{var_name}")
-    else
-      source
+    case extract_variable_name(msg) do
+      nil -> source
+      "_" <> _ -> source
+      var_name -> apply_underscore(source, var_name, position)
     end
   end
 
@@ -55,13 +67,98 @@ defmodule Credence.Semantic.UnusedVariable do
     end
   end
 
-  defp replace_on_line(source, line_no, old, new) do
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn
-      {line, ^line_no} -> String.replace(line, old, new, global: false)
-      {line, _} -> line
+  # Precise column → strict insert at the exact byte offset.
+  defp apply_underscore(source, var_name, {line_no, col})
+       when is_integer(line_no) and is_integer(col) do
+    rewrite_line(source, line_no, fn line ->
+      offset = col - 1
+
+      if at_standalone_token?(line, offset, var_name) do
+        insert_underscore_at(line, offset)
+      else
+        line
+      end
     end)
+  end
+
+  # Position with a non-integer column → treat as line-only.
+  defp apply_underscore(source, var_name, {line_no, _}) when is_integer(line_no),
+    do: rewrite_unambiguous(source, line_no, var_name)
+
+  # Bare integer position → fall back to unambiguous rewrite.
+  defp apply_underscore(source, var_name, line_no) when is_integer(line_no),
+    do: rewrite_unambiguous(source, line_no, var_name)
+
+  defp apply_underscore(source, _var_name, _position), do: source
+
+  # Insert `_` only if `var_name` appears exactly once on the line as
+  # a standalone identifier — protects against the bug class where
+  # the var name is also a substring of a string key, atom key, or
+  # function name on the same line.
+  defp rewrite_unambiguous(source, line_no, var_name) do
+    rewrite_line(source, line_no, fn line ->
+      case standalone_offsets(line, var_name) do
+        [single] -> insert_underscore_at(line, single)
+        _ -> line
+      end
+    end)
+  end
+
+  defp rewrite_line(source, line_no, fun) when is_integer(line_no) and line_no >= 1 do
+    lines = String.split(source, "\n")
+
+    case Enum.at(lines, line_no - 1) do
+      nil ->
+        source
+
+      line ->
+        case fun.(line) do
+          ^line ->
+            source
+
+          new_line ->
+            lines
+            |> List.replace_at(line_no - 1, new_line)
+            |> Enum.join("\n")
+        end
+    end
+  end
+
+  defp rewrite_line(source, _, _), do: source
+
+  defp at_standalone_token?(line, offset, name) do
+    name_size = byte_size(name)
+
+    offset >= 0 and
+      offset + name_size <= byte_size(line) and
+      binary_part(line, offset, name_size) == name and
+      not preceded_by_word_char?(line, offset) and
+      not followed_by_word_char?(line, offset + name_size)
+  end
+
+  defp insert_underscore_at(line, offset) do
+    prefix = binary_part(line, 0, offset)
+    suffix = binary_part(line, offset, byte_size(line) - offset)
+    prefix <> "_" <> suffix
+  end
+
+  defp preceded_by_word_char?(_line, 0), do: false
+
+  defp preceded_by_word_char?(line, offset),
+    do: word_char?(binary_part(line, offset - 1, 1))
+
+  defp followed_by_word_char?(line, offset) do
+    if offset < byte_size(line),
+      do: word_char?(binary_part(line, offset, 1)),
+      else: false
+  end
+
+  defp word_char?(<<c>>) when c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_, do: true
+  defp word_char?(_), do: false
+
+  defp standalone_offsets(line, name) do
+    ~r/\b#{Regex.escape(name)}\b/
+    |> Regex.scan(line, return: :index)
+    |> Enum.map(fn [{offset, _}] -> offset end)
   end
 end
