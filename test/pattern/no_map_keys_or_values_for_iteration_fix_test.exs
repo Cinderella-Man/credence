@@ -58,7 +58,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     test "Enum.any? with Map.keys" do
       assert_fix(
         "Enum.any?(Map.keys(m), fn k -> k > 0 end)",
-        "Enum.any?(m, fn {_k, k} -> k > 0 end)"
+        "Enum.any?(m, fn {k, _v} -> k > 0 end)"
       )
     end
 
@@ -79,7 +79,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     test "Enum.map with Map.keys" do
       assert_fix(
         "Enum.map(Map.keys(m), fn k -> to_string(k) end)",
-        "Enum.map(m, fn {_k, k} -> to_string(k) end)"
+        "Enum.map(m, fn {k, _v} -> to_string(k) end)"
       )
     end
 
@@ -141,14 +141,14 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     test "Map.keys |> Enum.map(fn)" do
       assert_fix(
         "Map.keys(map) |> Enum.map(fn k -> to_string(k) end)",
-        "Enum.map(map, fn {_k, k} -> to_string(k) end)"
+        "Enum.map(map, fn {k, _v} -> to_string(k) end)"
       )
     end
 
     test "Map.keys |> Enum.map(&func/1)" do
       assert_fix(
         "Map.keys(map) |> Enum.map(&to_string/1)",
-        "Enum.map(map, fn {_k, x} -> to_string(x) end)"
+        "Enum.map(map, fn {x, _v} -> to_string(x) end)"
       )
     end
 
@@ -175,7 +175,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     test "Enum.reduce with Map.keys" do
       assert_fix(
         "Enum.reduce(Map.keys(m), [], fn k, acc -> [to_string(k) | acc] end)",
-        "Enum.reduce(m, [], fn {_k, k}, acc -> [to_string(k) | acc] end)"
+        "Enum.reduce(m, [], fn {k, _v}, acc -> [to_string(k) | acc] end)"
       )
     end
 
@@ -321,7 +321,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     test "Enum.find(Map.keys(m), fn ...)" do
       assert_fix(
         "Enum.find(Map.keys(m), fn k -> k == :foo end)",
-        "case Enum.find(m, fn {_k, k} -> k == :foo end) do nil -> nil; {k, _v} -> k end"
+        "case Enum.find(m, fn {k, _v} -> k == :foo end) do nil -> nil; {k, _v} -> k end"
       )
     end
 
@@ -356,7 +356,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     test "pipe: Map.keys |> Enum.find" do
       assert_fix(
         "Map.keys(m) |> Enum.find(fn k -> k > 0 end)",
-        "case Enum.find(m, fn {_k, k} -> k > 0 end) do nil -> nil; {k, _v} -> k end"
+        "case Enum.find(m, fn {k, _v} -> k > 0 end) do nil -> nil; {k, _v} -> k end"
       )
     end
 
@@ -441,14 +441,14 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     test "Enum.filter(Map.keys(m), fn ...)" do
       assert_fix(
         "Enum.filter(Map.keys(m), fn k -> k > 0 end)",
-        "Enum.map(Enum.filter(m, fn {_k, k} -> k > 0 end), fn {k, _} -> k end)"
+        "Enum.map(Enum.filter(m, fn {k, _v} -> k > 0 end), fn {k, _} -> k end)"
       )
     end
 
     test "Enum.reject(Map.keys(m), fn ...)" do
       assert_fix(
         "Enum.reject(Map.keys(m), fn k -> k == :skip end)",
-        "Enum.map(Enum.reject(m, fn {_k, k} -> k == :skip end), fn {k, _} -> k end)"
+        "Enum.map(Enum.reject(m, fn {k, _v} -> k == :skip end), fn {k, _} -> k end)"
       )
     end
 
@@ -754,6 +754,191 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
 
       refute result =~ "Map.values"
       refute result =~ "Map.keys"
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════
+  # Map.keys — user variable MUST bind to the key (tuple position 1)
+  #
+  # Every callback that is a literal `fn` or simple `&capture` and is
+  # being applied over `Map.keys(m)` must, after rewrite, bind the
+  # user's variable to the FIRST element of the `{k, v}` pair. The
+  # placeholder for the discarded value goes in position 2 as `_v`.
+  #
+  # Bug history: previously the rule put the user's variable in
+  # position 2 (value position) for every mfunc, silently inverting
+  # the meaning of predicates and mappers over `Map.keys`.
+  # ═══════════════════════════════════════════════════════════════
+
+  describe "Map.keys callback wrapping — single-arg lambdas" do
+    test "Enum.all? with Map.keys" do
+      assert_fix(
+        "Enum.all?(Map.keys(m), fn k -> is_atom(k) end)",
+        "Enum.all?(m, fn {k, _v} -> is_atom(k) end)"
+      )
+    end
+
+    test "Enum.each with Map.keys" do
+      assert_fix(
+        "Enum.each(Map.keys(m), fn k -> IO.puts(k) end)",
+        "Enum.each(m, fn {k, _v} -> IO.puts(k) end)"
+      )
+    end
+
+    test "Enum.flat_map with Map.keys" do
+      assert_fix(
+        "Enum.flat_map(Map.keys(m), fn k -> [k, k] end)",
+        "Enum.flat_map(m, fn {k, _v} -> [k, k] end)"
+      )
+    end
+
+    test "Enum.count(Map.keys(m), predicate)" do
+      assert_fix(
+        "Enum.count(Map.keys(m), fn k -> k > 0 end)",
+        "Enum.count(m, fn {k, _v} -> k > 0 end)"
+      )
+    end
+
+    test "Enum.find_value with Map.keys" do
+      assert_fix(
+        "Enum.find_value(Map.keys(m), fn k -> if k > 0, do: k end)",
+        "Enum.find_value(m, fn {k, _v} -> if(k > 0, do: k) end)"
+      )
+    end
+
+    test "Enum.frequencies_by with Map.keys" do
+      assert_fix(
+        "Enum.frequencies_by(Map.keys(m), fn k -> rem(k, 2) end)",
+        "Enum.frequencies_by(m, fn {k, _v} -> rem(k, 2) end)"
+      )
+    end
+
+    test "Enum.group_by/3 with Map.keys wraps both callbacks" do
+      assert_fix(
+        "Enum.group_by(Map.keys(m), fn k -> rem(k, 2) end, fn k -> k * 2 end)",
+        "Enum.group_by(m, fn {k, _v} -> rem(k, 2) end, fn {k, _v} -> k * 2 end)"
+      )
+    end
+
+    test "Enum.max_by with Map.keys" do
+      assert_fix(
+        "Enum.max_by(Map.keys(m), fn k -> abs(k) end)",
+        "elem(Enum.max_by(m, fn {k, _v} -> abs(k) end), 0)"
+      )
+    end
+
+    test "Enum.min_by with Map.keys" do
+      assert_fix(
+        "Enum.min_by(Map.keys(m), fn k -> abs(k) end)",
+        "elem(Enum.min_by(m, fn {k, _v} -> abs(k) end), 0)"
+      )
+    end
+
+    test "Enum.uniq_by with Map.keys" do
+      assert_fix(
+        "Enum.uniq_by(Map.keys(m), fn k -> rem(k, 2) end)",
+        "Enum.map(Enum.uniq_by(m, fn {k, _v} -> rem(k, 2) end), fn {k, _} -> k end)"
+      )
+    end
+
+    test "Enum.dedup_by with Map.keys" do
+      assert_fix(
+        "Enum.dedup_by(Map.keys(m), fn k -> rem(k, 2) end)",
+        "Enum.map(Enum.dedup_by(m, fn {k, _v} -> rem(k, 2) end), fn {k, _} -> k end)"
+      )
+    end
+
+    test "Enum.take_while with Map.keys" do
+      assert_fix(
+        "Enum.take_while(Map.keys(m), fn k -> k > 0 end)",
+        "Enum.map(Enum.take_while(m, fn {k, _v} -> k > 0 end), fn {k, _} -> k end)"
+      )
+    end
+
+    test "Enum.drop_while with Map.keys" do
+      assert_fix(
+        "Enum.drop_while(Map.keys(m), fn k -> k < 0 end)",
+        "Enum.map(Enum.drop_while(m, fn {k, _v} -> k < 0 end), fn {k, _} -> k end)"
+      )
+    end
+
+    test "Enum.sort_by with Map.keys" do
+      assert_fix(
+        "Enum.sort_by(Map.keys(m), fn k -> k end)",
+        "Enum.map(Enum.sort_by(m, fn {k, _v} -> k end), fn {k, _} -> k end)"
+      )
+    end
+
+    test "Enum.reduce_while with Map.keys" do
+      assert_fix(
+        "Enum.reduce_while(Map.keys(m), 0, fn k, acc -> {:cont, acc + k} end)",
+        "Enum.reduce_while(m, 0, fn {k, _v}, acc -> {:cont, acc + k} end)"
+      )
+    end
+
+    test "Map.keys lambda with guard" do
+      assert_fix(
+        "Enum.all?(Map.keys(m), fn k when is_atom(k) -> true end)",
+        "Enum.all?(m, fn {k, _v} when is_atom(k) -> true end)"
+      )
+    end
+  end
+
+  describe "Map.keys callback wrapping — sort/2 comparators bind BOTH args to key" do
+    test "Enum.sort with comparator on Map.keys" do
+      assert_fix(
+        "Enum.sort(Map.keys(m), fn a, b -> a <= b end)",
+        "Enum.map(Enum.sort(m, fn {a, _v}, {b, _v} -> a <= b end), fn {k, _} -> k end)"
+      )
+    end
+  end
+
+  describe "Map.keys callback wrapping — captures" do
+    test "&Mod.func/1 capture on Enum.all? with Map.keys" do
+      assert_fix(
+        "Enum.all?(Map.keys(m), &is_atom/1)",
+        "Enum.all?(m, fn {x, _v} -> is_atom(x) end)"
+      )
+    end
+
+    test "&Mod.func/1 capture on Enum.map with Map.keys (nested form)" do
+      assert_fix(
+        "Enum.map(Map.keys(m), &to_string/1)",
+        "Enum.map(m, fn {x, _v} -> to_string(x) end)"
+      )
+    end
+
+    test "complex capture &(&1 * 2) on Map.keys" do
+      assert_fix(
+        "Enum.map(Map.keys(m), &(&1 * 2))",
+        "Enum.map(m, fn {x, _v} -> x * 2 end)"
+      )
+    end
+
+    test "complex piped capture &(&1 > 0) on Map.keys" do
+      assert_fix(
+        "m |> Map.keys() |> Enum.filter(&(&1 > 0))",
+        "Enum.map(Enum.filter(m, fn {x, _v} -> x > 0 end), fn {k, _} -> k end)"
+      )
+    end
+  end
+
+  describe "regression — user-reported bug (issue: Map.keys + Enum.reject capture)" do
+    # Original report:
+    #
+    #   invalid_fields =
+    #     fields
+    #     |> Map.keys()
+    #     |> Enum.reject(&(&1 in valid_field_names))
+    #
+    # The fix used to emit `fn {_k, x} -> x in valid_field_names end`,
+    # which rejects entries by VALUE instead of by KEY — silently
+    # inverting the meaning of `invalid_fields`.
+    test "fields |> Map.keys() |> Enum.reject(&(&1 in valid)) binds key correctly" do
+      assert_fix(
+        "fields |> Map.keys() |> Enum.reject(&(&1 in valid_field_names))",
+        "Enum.map(Enum.reject(fields, fn {x, _v} -> x in valid_field_names end), fn {k, _} -> k end)"
+      )
     end
   end
 
