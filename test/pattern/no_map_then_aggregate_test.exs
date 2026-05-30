@@ -218,6 +218,95 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
 
       assert check(code) == []
     end
+
+    test "detects Enum.map |> MapSet.new in pipeline" do
+      code = """
+      defmodule Bad do
+        def build_set(items) do
+          items
+          |> Enum.map(fn {_, v} -> v end)
+          |> MapSet.new()
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_map_then_aggregate
+      assert issue.message =~ "MapSet.new"
+      assert issue.message =~ "intermediate list"
+    end
+
+    test "detects Enum.map |> Map.new in pipeline" do
+      code = """
+      defmodule Bad do
+        def build_map(pairs) do
+          pairs
+          |> Enum.map(fn {k, v} -> {k, v * 2} end)
+          |> Map.new()
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_map_then_aggregate
+      assert issue.message =~ "Map.new"
+    end
+
+    test "detects direct nesting: MapSet.new(Enum.map(enum, f))" do
+      code = """
+      defmodule Bad do
+        def build_set(list) do
+          MapSet.new(Enum.map(list, &String.to_atom/1))
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.message =~ "MapSet.new"
+    end
+
+    test "detects direct nesting: Map.new(Enum.map(enum, f))" do
+      code = """
+      defmodule Bad do
+        def build_map(list) do
+          Map.new(Enum.map(list, fn x -> {x, x * 2} end))
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.message =~ "Map.new"
+    end
+
+    test "does not flag MapSet.new without Enum.map" do
+      code = """
+      defmodule Good do
+        def build_set(list), do: MapSet.new(list)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Map.new without Enum.map" do
+      code = """
+      defmodule Good do
+        def build_map(list), do: Map.new(list)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag MapSet.new with transform only (no map)" do
+      code = """
+      defmodule Good do
+        def build_set(list), do: MapSet.new(list, &String.to_atom/1)
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "NoMapThenAggregate fix" do
@@ -389,6 +478,75 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       """
 
       result = fix(code)
+      assert {:ok, _ast} = Sourceror.parse_string(result)
+    end
+
+    test "fixes Enum.map |> MapSet.new pipeline" do
+      code = """
+      items |> Enum.map(fn {_, v} -> v end) |> MapSet.new()
+      """
+
+      result = fix(code)
+      assert result =~ "MapSet.new"
+      assert result =~ "fn {_, v} -> v end"
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes Enum.map |> Map.new pipeline" do
+      code = """
+      pairs |> Enum.map(fn {k, v} -> {k, v * 2} end) |> Map.new()
+      """
+
+      result = fix(code)
+      assert result =~ "Map.new"
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes direct nesting: MapSet.new(Enum.map(enum, f))" do
+      code = """
+      MapSet.new(Enum.map(list, &String.to_atom/1))
+      """
+
+      result = fix(code)
+      assert result =~ "MapSet.new(list"
+      assert result =~ "String.to_atom"
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes direct nesting: Map.new(Enum.map(enum, f))" do
+      code = """
+      Map.new(Enum.map(list, fn x -> {x, x * 2} end))
+      """
+
+      result = fix(code)
+      assert result =~ "Map.new(list"
+      refute result =~ "Enum.map"
+    end
+
+    test "fixes three-step pipeline with constructor" do
+      code = """
+      edges
+      |> Enum.map(fn [_, dest] -> dest end)
+      |> MapSet.new()
+      """
+
+      result = fix(code)
+      assert result =~ "MapSet.new"
+      assert result =~ "fn [_, dest] -> dest end"
+      refute result =~ "Enum.map"
+      assert {:ok, _ast} = Sourceror.parse_string(result)
+    end
+
+    test "fixed MapSet.new code is valid Elixir" do
+      code = """
+      items
+      |> Enum.filter(&active?/1)
+      |> Enum.map(fn {_, v} -> v end)
+      |> MapSet.new()
+      """
+
+      result = fix(code)
+      assert result =~ "MapSet.new"
       assert {:ok, _ast} = Sourceror.parse_string(result)
     end
   end

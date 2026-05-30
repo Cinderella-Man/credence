@@ -1,7 +1,8 @@
 defmodule Credence.Pattern.NoMapThenAggregate do
   @moduledoc """
   Detects `Enum.map/2` immediately followed by a terminal aggregation
-  like `Enum.max/1`, `Enum.min/1`, or `Enum.sum/1`, which creates an
+  like `Enum.max/1`, `Enum.min/1`, `Enum.sum/1`, or a collection
+  constructor like `MapSet.new/1` or `Map.new/1`, which creates an
   unnecessary intermediate list.
 
   ## Why this matters
@@ -31,6 +32,8 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   - `Enum.max/1`
   - `Enum.min/1`
   - `Enum.sum/1`
+  - `MapSet.new/1`
+  - `Map.new/1`
 
   Both pipeline and direct-call nesting forms are detected.
   """
@@ -40,6 +43,7 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   alias Credence.Issue
 
   @aggregators [:max, :min, :sum]
+  @constructor_modules [:MapSet, :Map]
 
   @impl true
   def check(ast, _opts) do
@@ -122,6 +126,17 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     end
   end
 
+  defp build_patch({{:., _, [mod, :new]}, _, [inner]} = node) do
+    if constructor_module?(mod) and map_call?(inner) do
+      {_, _, map_fn_args} = inner
+      enum_source = hd(map_fn_args)
+      map_fn = hd(tl(map_fn_args))
+      emit_patch(node, build_constructor_ast(enum_source, map_fn, mod))
+    else
+      :skip
+    end
+  end
+
   defp build_patch(_), do: :skip
 
   # Returns the length of the longest line touched by the original
@@ -173,21 +188,41 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.with_index()
     |> Enum.find_value(fn {[first, second], idx} ->
-      if map_step?(first) and agg_step?(second) do
-        map_fn = extract_map_fn(first)
-        agg_fn = agg_fn_name(second)
-        before = Enum.take(steps, idx)
-        after_ = Enum.drop(steps, idx + 2)
+      cond do
+        map_step?(first) and agg_step?(second) ->
+          map_fn = extract_map_fn(first)
+          agg_fn = agg_fn_name(second)
+          before = Enum.take(steps, idx)
+          after_ = Enum.drop(steps, idx + 2)
 
-        reduce_call =
-          if before == [] do
-            enum_source = extract_map_source(first)
-            build_reduce(enum_source, map_fn, agg_fn)
-          else
-            build_reduce(nil, map_fn, agg_fn)
-          end
+          reduce_call =
+            if before == [] do
+              enum_source = extract_map_source(first)
+              build_reduce(enum_source, map_fn, agg_fn)
+            else
+              build_reduce(nil, map_fn, agg_fn)
+            end
 
-        rebuild_pipeline(before, reduce_call, after_)
+          rebuild_pipeline(before, reduce_call, after_)
+
+        map_step?(first) and constructor_step?(second) ->
+          map_fn = extract_map_fn(first)
+          constructor_mod = extract_constructor_mod(second)
+          before = Enum.take(steps, idx)
+          after_ = Enum.drop(steps, idx + 2)
+
+          constructor_call =
+            if before == [] do
+              enum_source = extract_map_source(first)
+              build_constructor_ast(enum_source, map_fn, constructor_mod)
+            else
+              build_constructor_ast(nil, map_fn, constructor_mod)
+            end
+
+          rebuild_pipeline(before, constructor_call, after_)
+
+        true ->
+          nil
       end
     end)
   end
@@ -219,6 +254,11 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
         {{:., [], [{:__aliases__, [], [:Enum]}, :reduce]}, [], args}
     end
+  end
+
+  defp build_constructor_ast(source, map_fn, mod) do
+    args = if source, do: [source, map_fn], else: [map_fn]
+    {{:., [], [mod, :new]}, [], args}
   end
 
   # Extracts the reduce parameter and mapped expression from the map function.
@@ -341,14 +381,29 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     end
   end
 
+  defp check_node({{:., meta, [mod, :new]}, _, [inner]}) do
+    if constructor_module?(mod) and map_call?(inner) do
+      {:ok, build_constructor_issue_from_mod(mod, meta)}
+    else
+      :error
+    end
+  end
+
   defp check_node(_), do: :error
 
   defp check_pipeline(steps, meta) do
     steps
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.find_value(fn [first, second] ->
-      if map_step?(first) and agg_step?(second) do
-        {:ok, build_issue(agg_fn_name(second), meta)}
+      cond do
+        map_step?(first) and agg_step?(second) ->
+          {:ok, build_issue(agg_fn_name(second), meta)}
+
+        map_step?(first) and constructor_step?(second) ->
+          {:ok, build_constructor_issue(second, meta)}
+
+        true ->
+          nil
       end
     end)
     |> case do
@@ -376,6 +431,17 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   defp agg_step?(_), do: false
 
   defp agg_fn_name({{:., _, [_, fn_name]}, _, _}), do: fn_name
+
+  defp constructor_module?({:__aliases__, _, [mod]}) when mod in @constructor_modules, do: true
+  defp constructor_module?(_), do: false
+
+  defp constructor_step?({{:., _, [mod, :new]}, _, args})
+       when is_list(args) and length(args) in [0, 1],
+       do: constructor_module?(mod)
+
+  defp constructor_step?(_), do: false
+
+  defp extract_constructor_mod({{:., _, [mod, :new]}, _, _}), do: mod
 
   defp extract_map_fn({{:., _, [_, :map]}, _, [fn_ref]}), do: fn_ref
   defp extract_map_fn({{:., _, [_, :map]}, _, [_, fn_ref]}), do: fn_ref
@@ -424,4 +490,20 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   defp build_message(:sum),
     do:
       "`Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`."
+
+  defp build_constructor_issue(step, meta) do
+    mod = extract_constructor_mod(step)
+    build_constructor_issue_from_mod(mod, meta)
+  end
+
+  defp build_constructor_issue_from_mod(mod, meta) do
+    {:__aliases__, _, [mod_name]} = mod
+
+    %Issue{
+      rule: :no_map_then_aggregate,
+      message:
+        "`Enum.map/2` piped into `#{mod_name}.new/1` creates an intermediate list. Use `#{mod_name}.new(enum, transform)` instead.",
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
 end
