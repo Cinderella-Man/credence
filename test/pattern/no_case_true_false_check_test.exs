@@ -138,6 +138,47 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # PIPED CASE — expr |> case do true/false end
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "flags piped case true/false" do
+    test "simple pipe into case true/false" do
+      assert flagged?("""
+             valid_digits?()
+             |> case do
+               true -> :ok
+               false -> :error
+             end
+             """)
+    end
+
+    test "pipe chain into case true/false" do
+      assert flagged?("""
+             number
+             |> Integer.digits()
+             |> valid_digits?()
+             |> case do
+               true -> :valid
+               false -> :invalid
+             end
+             """)
+    end
+
+    test "pipe into case with multi-line true body" do
+      assert flagged?("""
+             check(x)
+             |> case do
+               true ->
+                 value = process(x)
+                 {:ok, value}
+               false ->
+                 {:error, :failed}
+             end
+             """)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # NEGATIVE — must NOT flag
   # ═══════════════════════════════════════════════════════════════════
 

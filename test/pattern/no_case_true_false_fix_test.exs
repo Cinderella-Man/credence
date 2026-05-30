@@ -227,6 +227,76 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # PIPED CASE — expr |> case do true/false end
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "rewrites piped case true/false to if/else" do
+    test "simple pipe into case true/false" do
+      input = """
+      valid_digits?()
+      |> case do
+        true -> :ok
+        false -> :error
+      end
+      """
+
+      expected = """
+      if valid_digits?() do
+        :ok
+      else
+        :error
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "pipe chain into case true/false" do
+      input = """
+      number
+      |> Integer.digits()
+      |> valid_digits?()
+      |> case do
+        true -> rotated_number != number
+        false -> false
+      end
+      """
+
+      expected = """
+      if number
+         |> Integer.digits()
+         |> valid_digits?() do
+        rotated_number != number
+      else
+        false
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "pipe into case with flipped false/true" do
+      input = """
+      check(x)
+      |> case do
+        false -> :error
+        true -> :ok
+      end
+      """
+
+      expected = """
+      if check(x) do
+        :ok
+      else
+        :error
+      end
+      """
+
+      assert fix(input) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # SAFETY — must NOT touch
   # ═══════════════════════════════════════════════════════════════════
 
