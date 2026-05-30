@@ -1,14 +1,15 @@
 defmodule Credence.Pattern.NoManualEnumUniq do
   @moduledoc """
   Performance and idiomatic code rule: warns when `Enum.uniq/1` is manually
-  reimplemented using `Enum.reduce/3` and `MapSet`.
+  reimplemented using `Enum.reduce/3` and a set (`MapSet` or a plain `%{}`
+  map used as a set via `Map.has_key?`/`Map.put(_, _, true)`).
 
   Lists are deduplicated most efficiently using the built-in `Enum.uniq/1`
   or `Enum.uniq_by/2`, which are implemented natively.
 
   The fix also strips orphaned pipeline steps that were part of the manual
   pattern — specifically `|> elem(0)` / `|> elem(1)` (which extracted the
-  list from the `{list, MapSet}` accumulator) and `|> Enum.reverse()` (which
+  list from the `{list, set}` accumulator) and `|> Enum.reverse()` (which
   reversed the prepended list). Since `Enum.uniq/1` returns a plain list in
   insertion order, both steps become unnecessary after the replacement.
 
@@ -21,6 +22,16 @@ defmodule Credence.Pattern.NoManualEnumUniq do
           {MapSet.put(seen, item), [item | acc]}
         end
       end)
+
+      # same pattern with a plain map used as a set:
+      Enum.reduce(list, {[], %{}}, fn item, {acc, seen} ->
+        if Map.has_key?(seen, item) do
+          {acc, seen}
+        else
+          {acc ++ [item], Map.put(seen, item, true)}
+        end
+      end)
+      |> elem(0)
 
       # or in a pipeline with downstream tuple extraction:
       list
@@ -175,6 +186,8 @@ defmodule Credence.Pattern.NoManualEnumUniq do
   defp find_mapset_index(_), do: nil
 
   defp mapset_init?({{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, _}), do: true
+  # Plain map used as a set: %{ }
+  defp mapset_init?({:%{}, _, []}), do: true
   defp mapset_init?(_), do: false
 
   defp matches_dedup_lambda?({:fn, _, clauses}, ms_index) do
@@ -231,6 +244,11 @@ defmodule Credence.Pattern.NoManualEnumUniq do
   defp uses_mapset_member?(condition, seen_var, item_var) do
     case condition do
       {{:., _, [{:__aliases__, _, [:MapSet]}, :member?]}, _,
+       [{^seen_var, _, nil}, {^item_var, _, nil}]} ->
+        true
+
+      # Map.has_key?(seen, item) — plain map used as a set
+      {{:., _, [{:__aliases__, _, [:Map]}, :has_key?]}, _,
        [{^seen_var, _, nil}, {^item_var, _, nil}]} ->
         true
 

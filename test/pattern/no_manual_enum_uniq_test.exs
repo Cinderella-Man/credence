@@ -274,6 +274,61 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
       code = "Enum.uniq(list)"
       assert check(code) == []
     end
+
+    test "flags manual Enum.uniq using plain map as set" do
+      code = """
+      defmodule Solution do
+        def get_unique(list) do
+          list
+          |> Enum.reduce({[], %{}}, fn element, {unique_list, seen_map} ->
+            if Map.has_key?(seen_map, element) do
+              {unique_list, seen_map}
+            else
+              {unique_list ++ [element], Map.put(seen_map, element, true)}
+            end
+          end)
+          |> elem(0)
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "flags piped reduce with map-as-set and negated condition" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          list
+          |> Enum.reduce({[], %{}}, fn item, {acc, seen} ->
+            unless Map.has_key?(seen, item) do
+              {[item | acc], Map.put(seen, item, true)}
+            else
+              {acc, seen}
+            end
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "does not flag map used for non-dedup purposes" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          Enum.reduce(list, %{}, fn item, acc ->
+            Map.put(acc, item, item * 2)
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "NoManualEnumUniq fix" do
@@ -629,6 +684,55 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
       result = fix(code)
       assert result =~ "Enum.uniq"
       refute result =~ "Enum.reduce"
+    end
+
+    test "fixes manual Enum.uniq using plain map as set" do
+      code = """
+      defmodule Solution do
+        def get_unique(list) do
+          list
+          |> Enum.reduce({[], %{}}, fn element, {unique_list, seen_map} ->
+            if Map.has_key?(seen_map, element) do
+              {unique_list, seen_map}
+            else
+              {unique_list ++ [element], Map.put(seen_map, element, true)}
+            end
+          end)
+          |> elem(0)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq()"
+      assert result =~ "|>"
+      refute result =~ "Enum.reduce"
+      refute result =~ "elem(0)"
+    end
+
+    test "fixes map-as-set with unless and strips elem/reverse" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          list
+          |> Enum.reduce({[], %{}}, fn item, {acc, seen} ->
+            unless Map.has_key?(seen, item) do
+              {[item | acc], Map.put(seen, item, true)}
+            else
+              {acc, seen}
+            end
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq()"
+      refute result =~ "Enum.reduce"
+      refute result =~ "elem(0)"
+      refute result =~ "Enum.reverse"
     end
   end
 
