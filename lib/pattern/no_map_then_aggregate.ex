@@ -193,13 +193,13 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   end
 
   defp build_reduce(source, map_fn, agg_fn) do
-    el_var = {:el, [], Elixir}
+    {param, mapped_expr} = resolve_map_fn(map_fn)
 
     case agg_fn do
       :sum ->
         acc_var = {:acc, [], Elixir}
-        body = {:+, [], [acc_var, inline_call(map_fn, el_var)]}
-        reduce_fn = {:fn, [], [{:->, [], [[el_var, acc_var], body]}]}
+        body = {:+, [], [acc_var, mapped_expr]}
+        reduce_fn = {:fn, [], [{:->, [], [[param, acc_var], body]}]}
 
         args =
           if source do
@@ -212,13 +212,41 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
       agg when agg in [:max, :min] ->
         best_var = {:best, [], Elixir}
-        body = {agg, [], [inline_call(map_fn, el_var), best_var]}
-        reduce_fn = {:fn, [], [{:->, [], [[el_var, best_var], body]}]}
+        body = {agg, [], [mapped_expr, best_var]}
+        reduce_fn = {:fn, [], [{:->, [], [[param, best_var], body]}]}
 
         args = if source, do: [source, reduce_fn], else: [reduce_fn]
 
         {{:., [], [{:__aliases__, [], [:Enum]}, :reduce]}, [], args}
     end
+  end
+
+  # Extracts the reduce parameter and mapped expression from the map function.
+  #
+  # For simple variable lambdas (fn x -> x * 2 end), substitutes the variable
+  # with `el` and uses `el` as the reduce parameter.
+  #
+  # For destructuring lambdas (fn {a, b} -> body end), uses the pattern directly
+  # as the reduce parameter — avoids generating `(fn {a, b} -> ... end).(el)`.
+
+  # fn x -> body end (simple variable) → {el, body[x := el]}
+  defp resolve_map_fn({:fn, _, [{:->, _, [[{param, _, ctx}], body]}]})
+       when is_atom(param) and is_atom(ctx) do
+    el_var = {:el, [], Elixir}
+    {el_var, substitute(body, param, el_var)}
+  end
+
+  # fn pattern -> body end (destructuring) → {pattern, body}
+  defp resolve_map_fn({:fn, _, [{:->, _, [patterns, body]}]})
+       when is_list(patterns) and length(patterns) == 1 do
+    [pattern] = patterns
+    {pattern, body}
+  end
+
+  # &Mod.fun/1, &fun/1, etc. → {el, Mod.fun(el)} via inline_call
+  defp resolve_map_fn(map_fn) do
+    el_var = {:el, [], Elixir}
+    {el_var, inline_call(map_fn, el_var)}
   end
 
   #

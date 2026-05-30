@@ -323,6 +323,21 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       refute result =~ "Enum.map"
     end
 
+    test "fix with destructuring pattern uses pattern in reduce head, not fn application" do
+      code = """
+      map
+      |> Enum.map(fn {_key, count} -> div(count * (count - 1), 2) end)
+      |> Enum.sum()
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      # Should use pattern directly in reduce function head
+      assert result =~ "{_key, count}"
+      # Should NOT generate anonymous function application (fn ... end).(el)
+      refute result =~ "(fn", "Expected pattern in reduce head, got anonymous function application"
+    end
+
     test "fixes pipeline with capture syntax" do
       code = """
       strings |> Enum.map(&byte_size/1) |> Enum.sum()
