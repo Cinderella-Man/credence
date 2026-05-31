@@ -14,10 +14,9 @@ defmodule Credence.Syntax do
 
   @spec analyze(String.t(), keyword()) :: [Credence.Issue.t()]
   def analyze(source, _opts \\ []) do
-    case Sourceror.parse_string(source) do
-      {:ok, _ast} -> []
-      {:error, _} -> Enum.flat_map(rules(), & &1.analyze(source))
-    end
+    # Run syntax rules on all source — structural issues can exist even
+    # when the source parses (e.g. module attributes outside defmodule).
+    Enum.flat_map(rules(), & &1.analyze(source))
   end
 
   @spec fix(String.t(), keyword()) :: String.t()
@@ -42,8 +41,17 @@ defmodule Credence.Syntax do
 
     case Sourceror.parse_string(source) do
       {:ok, _ast} ->
-        Logger.debug("[credence_fix] syntax fix pipeline: source already parses, skipping")
-        {source, []}
+        # Source parses, but still run rules for structural fixes
+        # (e.g. module attributes outside module, stale access modifiers)
+        {fixed, applied} = apply_rules_traced(all_rules, source)
+
+        if fixed == source do
+          Logger.debug("[credence_fix] syntax fix pipeline: source already parses, no fixes needed")
+        else
+          Logger.debug("[credence_fix] syntax fix pipeline: applied structural fixes")
+        end
+
+        {fixed, applied}
 
       {:error, {meta, error_msg, token}} ->
         line = Keyword.get(meta, :line)
@@ -53,22 +61,7 @@ defmodule Credence.Syntax do
             "parse error at line #{line}: #{error_msg} near #{inspect(token)}"
         )
 
-        {fixed, applied} =
-          Enum.reduce(all_rules, {source, []}, fn rule, {src, applied} ->
-            name = RuleHelpers.rule_name(rule)
-            result = rule.fix(src)
-
-            if result == src do
-              {src, applied}
-            else
-              Logger.debug("[credence_fix] #{name}: fix produced a change")
-
-              RuleHelpers.log_diff(name, src, result)
-              {result, [{rule, 1} | applied]}
-            end
-          end)
-
-        applied = Enum.reverse(applied)
+        {fixed, applied} = apply_rules_traced(all_rules, source)
 
         # Verify fix actually helped
         case Sourceror.parse_string(fixed) do
@@ -93,6 +86,25 @@ defmodule Credence.Syntax do
 
         {fixed, applied}
     end
+  end
+
+  defp apply_rules_traced(all_rules, source) do
+    {fixed, applied} =
+      Enum.reduce(all_rules, {source, []}, fn rule, {src, applied} ->
+        name = RuleHelpers.rule_name(rule)
+        result = rule.fix(src)
+
+        if result == src do
+          {src, applied}
+        else
+          Logger.debug("[credence_fix] #{name}: fix produced a change")
+
+          RuleHelpers.log_diff(name, src, result)
+          {result, [{rule, 1} | applied]}
+        end
+      end)
+
+    {fixed, Enum.reverse(applied)}
   end
 
   defp rules do
