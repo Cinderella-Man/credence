@@ -125,6 +125,89 @@ defmodule Credence.Pattern.NoManualIntegerUndigitsTest do
 
       assert check(code) == []
     end
+
+    test "detects Enum.join() |> String.to_integer() in pipeline" do
+      code = """
+      defmodule BadJoinPipeline do
+        def to_number(digits) do
+          digits
+          |> Enum.join()
+          |> String.to_integer()
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_manual_integer_undigits
+    end
+
+    test "detects Enum.join(\"\") |> String.to_integer() in pipeline" do
+      code = """
+      defmodule BadJoinEmptySep do
+        def to_number(digits) do
+          digits
+          |> Enum.join("")
+          |> String.to_integer()
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "detects String.to_integer(Enum.join(list)) nested" do
+      code = """
+      defmodule BadJoinNested do
+        def to_number(digits) do
+          String.to_integer(Enum.join(digits))
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "detects String.to_integer(Enum.join(list, \"\")) nested" do
+      code = """
+      defmodule BadJoinNestedEmpty do
+        def to_number(digits) do
+          String.to_integer(Enum.join(digits, ""))
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "does NOT detect Enum.join with non-empty separator" do
+      code = """
+      defmodule GoodJoinSep do
+        def to_string(list) do
+          list
+          |> Enum.join(", ")
+          |> String.to_integer()
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does NOT detect Enum.join with non-empty separator (nested)" do
+      code = """
+      defmodule GoodJoinSepNested do
+        def to_string(list) do
+          String.to_integer(Enum.join(list, "-"))
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix" do
@@ -188,6 +271,71 @@ defmodule Credence.Pattern.NoManualIntegerUndigitsTest do
     test "round-trip: fixed code produces no issues" do
       code = """
       Enum.reduce(digits, 0, fn digit, acc -> acc * 2 + digit end)
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoManualIntegerUndigits.check(ast, []) == []
+    end
+
+    test "replaces Enum.join() |> String.to_integer() with Integer.undigits()" do
+      code = """
+      digits
+      |> Enum.join()
+      |> String.to_integer()
+      """
+
+      result = fix(code)
+      assert result =~ "Integer.undigits()"
+      assert result =~ "digits"
+      refute result =~ "Enum.join"
+      refute result =~ "String.to_integer"
+    end
+
+    test "replaces String.to_integer(Enum.join(list)) with Integer.undigits(list)" do
+      code = """
+      String.to_integer(Enum.join(digits))
+      """
+
+      result = fix(code)
+      assert result =~ "Integer.undigits(digits)"
+      refute result =~ "Enum.join"
+      refute result =~ "String.to_integer"
+    end
+
+    test "replaces Enum.join(list, \"\") |> String.to_integer() with Integer.undigits(list)" do
+      code = """
+      digits
+      |> Enum.join("")
+      |> String.to_integer()
+      """
+
+      result = fix(code)
+      assert result =~ "Integer.undigits()"
+      assert result =~ "digits"
+      refute result =~ "Enum.join"
+      refute result =~ "String.to_integer"
+    end
+
+    test "replaces String.to_integer(Enum.join(list, \"\")) with Integer.undigits(list)" do
+      code = """
+      String.to_integer(Enum.join(digits, ""))
+      """
+
+      result = fix(code)
+      assert result =~ "Integer.undigits(digits)"
+      refute result =~ "Enum.join"
+    end
+
+    test "join pattern round-trip: fixed code produces no issues" do
+      code = """
+      defmodule M do
+        def to_number(digits) do
+          digits
+          |> Enum.join()
+          |> String.to_integer()
+        end
+      end
       """
 
       fixed = fix(code)
