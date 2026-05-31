@@ -61,6 +61,52 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       assert issue.message =~ "Enum.sum"
     end
 
+    test "detects Enum.map |> Enum.max_by in pipeline" do
+      code = """
+      defmodule Bad do
+        def row_with_most_ones(matrix) do
+          matrix
+          |> Enum.with_index()
+          |> Enum.map(fn {row, index} -> {index, Enum.sum(row)} end)
+          |> Enum.max_by(fn {_index, count} -> count end)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_map_then_aggregate
+      assert issue.message =~ "Enum.map"
+      assert issue.message =~ "Enum.max_by"
+    end
+
+    test "detects Enum.map |> Enum.min_by in pipeline" do
+      code = """
+      defmodule Bad do
+        def cheapest(items) do
+          items
+          |> Enum.map(fn item -> {item, item.price * item.qty} end)
+          |> Enum.min_by(fn {_, total} -> total end)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.message =~ "Enum.min_by"
+    end
+
+    test "detects direct nesting: Enum.max_by(Enum.map(enum, f), g)" do
+      code = """
+      defmodule Bad do
+        def biggest_by_length(list) do
+          Enum.max_by(Enum.map(list, &String.length/1), fn len -> len end)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.message =~ "Enum.max_by"
+    end
+
     test "detects two-step pipeline: Enum.map(list, f) |> Enum.max()" do
       code = """
       defmodule Bad do
@@ -146,6 +192,26 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       code = """
       defmodule Good do
         def biggest(list), do: Enum.max(list)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Enum.max_by without Enum.map" do
+      code = """
+      defmodule Good do
+        def longest(strings), do: Enum.max_by(strings, &String.length/1)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Enum.min_by without Enum.map" do
+      code = """
+      defmodule Good do
+        def shortest(strings), do: Enum.min_by(strings, &String.length/1)
       end
       """
 
@@ -436,6 +502,31 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       assert result =~ "Enum.reduce"
       assert result =~ "byte_size(el)"
       refute result =~ "Enum.map"
+    end
+
+    test "Enum.map |> Enum.max_by is check-only (no auto-fix)" do
+      code = """
+      matrix
+      |> Enum.with_index()
+      |> Enum.map(fn {row, index} -> {index, Enum.sum(row)} end)
+      |> Enum.max_by(fn {_index, count} -> count end)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.max_by"
+    end
+
+    test "Enum.map |> Enum.min_by is check-only (no auto-fix)" do
+      code = """
+      items
+      |> Enum.map(fn item -> {item, item.price} end)
+      |> Enum.min_by(fn {_, price} -> price end)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.min_by"
     end
 
     test "fix does not modify code without map-aggregate pattern" do

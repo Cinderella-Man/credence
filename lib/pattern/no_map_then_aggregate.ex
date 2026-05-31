@@ -42,7 +42,7 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
   alias Credence.Issue
 
-  @aggregators [:max, :min, :sum]
+  @aggregators [:max, :min, :sum, :max_by, :min_by]
   @constructor_modules [:MapSet, :Map]
 
   @impl true
@@ -190,20 +190,25 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     |> Enum.find_value(fn {[first, second], idx} ->
       cond do
         map_step?(first) and agg_step?(second) ->
-          map_fn = extract_map_fn(first)
           agg_fn = agg_fn_name(second)
-          before = Enum.take(steps, idx)
-          after_ = Enum.drop(steps, idx + 2)
 
-          reduce_call =
-            if before == [] do
-              enum_source = extract_map_source(first)
-              build_reduce(enum_source, map_fn, agg_fn)
-            else
-              build_reduce(nil, map_fn, agg_fn)
-            end
+          if agg_fn in [:max_by, :min_by] do
+            nil
+          else
+            map_fn = extract_map_fn(first)
+            before = Enum.take(steps, idx)
+            after_ = Enum.drop(steps, idx + 2)
 
-          rebuild_pipeline(before, reduce_call, after_)
+            reduce_call =
+              if before == [] do
+                enum_source = extract_map_source(first)
+                build_reduce(enum_source, map_fn, agg_fn)
+              else
+                build_reduce(nil, map_fn, agg_fn)
+              end
+
+            rebuild_pipeline(before, reduce_call, after_)
+          end
 
         map_step?(first) and constructor_step?(second) ->
           map_fn = extract_map_fn(first)
@@ -372,6 +377,16 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     check_pipeline(pipeline, meta)
   end
 
+  # 2-arg form: Enum.max_by(Enum.map(enum, f), g) / Enum.min_by(…)
+  defp check_node({{:., meta, [mod, agg_fn]}, _, [inner, _selector]})
+       when agg_fn in [:max_by, :min_by] do
+    if enum_module?(mod) and map_call?(inner) do
+      {:ok, build_issue(agg_fn, meta)}
+    else
+      :error
+    end
+  end
+
   defp check_node({{:., meta, [mod, agg_fn]}, _, [inner]})
        when agg_fn in @aggregators do
     if enum_module?(mod) and map_call?(inner) do
@@ -490,6 +505,14 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   defp build_message(:sum),
     do:
       "`Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`."
+
+  defp build_message(:max_by),
+    do:
+      "`Enum.map/2` piped into `Enum.max_by/2` creates an intermediate list. Use `Enum.max_by/2` directly on the source enumerable instead."
+
+  defp build_message(:min_by),
+    do:
+      "`Enum.map/2` piped into `Enum.min_by/2` creates an intermediate list. Use `Enum.min_by/2` directly on the source enumerable instead."
 
   defp build_constructor_issue(step, meta) do
     mod = extract_constructor_mod(step)
