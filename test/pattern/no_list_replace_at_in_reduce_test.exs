@@ -81,6 +81,94 @@ defmodule Credence.Pattern.NoListReplaceAtInReduceTest do
       assert length(issues) == 1
     end
 
+    test "flags List.update_at on accumulator in Enum.reduce" do
+      code = """
+      defmodule Bad do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            List.update_at(acc, i, fn _ -> i * 2 end)
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+      assert hd(issues).message =~ "List.update_at"
+    end
+
+    test "flags piped List.update_at on accumulator in Enum.reduce" do
+      code = """
+      defmodule Bad do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            acc |> List.update_at(i, fn _ -> i * 2 end)
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+    end
+
+    test "flags List.update_at on accumulator in for reduce" do
+      code = """
+      defmodule Bad do
+        def update(table) do
+          for i <- 1..3, reduce: table do
+            table ->
+              List.update_at(table, i, fn _ -> i * 2 end)
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+      assert hd(issues).message =~ "List.update_at"
+    end
+
+    test "flags List.replace_at on accumulator in for reduce" do
+      code = """
+      defmodule Bad do
+        def update(table) do
+          for i <- 1..3, reduce: table do
+            table ->
+              List.replace_at(table, i, i * 2)
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+      assert hd(issues).message =~ "List.replace_at"
+    end
+
+    test "flags nested List.update_at on accumulator in for reduce" do
+      code = """
+      defmodule Bad do
+        def update(table) do
+          for i <- 1..3, reduce: table do
+            table ->
+              List.update_at(table, i, fn row ->
+                List.update_at(row, 0, fn _ -> i end)
+              end)
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) >= 1
+      assert Enum.all?(issues, &(&1.rule == :no_list_replace_at_in_reduce))
+    end
+
     # --- NEGATIVE CASES ---
 
     test "does not flag List.replace_at on a different variable" do
@@ -157,6 +245,47 @@ defmodule Credence.Pattern.NoListReplaceAtInReduceTest do
       defmodule Good do
         def update(list) do
           Enum.map(list, fn x -> List.replace_at(x, 0, 42) end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag List.update_at on non-accumulator variable" do
+      code = """
+      defmodule Good do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            other = [1, 2, 3]
+            List.update_at(other, 0, fn _ -> 42 end)
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag List.update_at outside of reduce" do
+      code = """
+      defmodule Good do
+        def update(list) do
+          List.update_at(list, 0, fn _ -> 42 end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Map.put on accumulator in for reduce" do
+      code = """
+      defmodule Good do
+        def update(map) do
+          for i <- 1..3, reduce: map do
+            acc -> Map.put(acc, i, i * 2)
+          end
         end
       end
       """
