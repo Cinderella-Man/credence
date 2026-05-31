@@ -1,8 +1,10 @@
 defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
   @moduledoc """
   Flags `if var == [], do: default, else: Enum.min(var)` (and `Enum.max`),
-  and the equivalent `case` form:
-  `case var do [] -> default; v -> Enum.min(v) end`.
+  the equivalent `case` form:
+  `case var do [] -> default; v -> Enum.min(v) end`,
+  and the `Enum.empty?/1` variant:
+  `if Enum.empty?(var), do: default, else: Enum.min(var)`.
 
   Prefer `Enum.min(var, fn -> default end)` with the `empty_fallback` parameter.
   """
@@ -19,7 +21,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
             issue = %Issue{
               rule: :no_if_empty_for_enum_min_max,
               message:
-                "Prefer #{match.enum_fn}/#{match.arity} with empty_fallback instead of `if var == []` guard.",
+                "Prefer #{match.enum_fn}/#{match.arity} with empty_fallback instead of `if` empty-list guard.",
               meta: %{line: Keyword.get(meta, :line)}
             }
 
@@ -128,11 +130,15 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
 
   # Detect `if var == [], do: default, else: Enum.min(var)` or Enum.max(var)
   # Also detects `if var != [], do: Enum.min(var), else: default`
+  # Also detects `if Enum.empty?(var), do: default, else: Enum.min(var)`
+  # Also detects `if !Enum.empty?(var), do: Enum.min(var), else: default`
   defp detect_empty_guard(condition, opts) do
     with {:ok, do_expr} <- fetch_kw_value(opts, :do),
          {:ok, else_expr} <- fetch_kw_value(opts, :else) do
       detect_eq_empty(condition, do_expr, else_expr) ||
-        detect_neq_empty(condition, do_expr, else_expr)
+        detect_neq_empty(condition, do_expr, else_expr) ||
+        detect_enum_empty(condition, do_expr, else_expr) ||
+        detect_negated_enum_empty(condition, do_expr, else_expr)
     else
       _ -> nil
     end
@@ -167,6 +173,45 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
   end
 
   defp detect_neq_empty(_, _, _), do: nil
+
+  # `if Enum.empty?(var), do: default, else: Enum.min(var)`
+  defp detect_enum_empty(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :empty?]}, _, [var]},
+         default,
+         enum_call
+       ) do
+    case enum_min_max_call(enum_call, var) do
+      {enum_fn, matched_var, arity} ->
+        %{var: matched_var, default: default, enum_fn: enum_fn, arity: arity}
+
+      nil ->
+        nil
+    end
+  end
+
+  defp detect_enum_empty(_, _, _), do: nil
+
+  # `if !Enum.empty?(var), do: Enum.min(var), else: default`
+  # `if not Enum.empty?(var), do: Enum.min(var), else: default`
+  defp detect_negated_enum_empty(
+         {neg, _,
+          [
+            {{:., _, [{:__aliases__, _, [:Enum]}, :empty?]}, _, [var]}
+          ]},
+         enum_call,
+         default
+       )
+       when neg in [:!, :not] do
+    case enum_min_max_call(enum_call, var) do
+      {enum_fn, matched_var, arity} ->
+        %{var: matched_var, default: default, enum_fn: enum_fn, arity: arity}
+
+      nil ->
+        nil
+    end
+  end
+
+  defp detect_negated_enum_empty(_, _, _), do: nil
 
   # Extract clauses from case expression keyword list
   # Handles both plain [do: clauses] and Sourceror-wrapped [{{:__block__, _, [:do]}, clauses}]

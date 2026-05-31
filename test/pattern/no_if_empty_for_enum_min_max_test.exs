@@ -89,6 +89,59 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxTest do
       assert check(code) == []
     end
 
+    test "detects if Enum.empty?(var) then default else Enum.min(var)" do
+      code = """
+      defmodule Bad do
+        def run(lengths) do
+          if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_if_empty_for_enum_min_max
+    end
+
+    test "detects if Enum.empty?(var) then default else Enum.max(var)" do
+      code = """
+      defmodule Bad do
+        def run(lengths) do
+          if Enum.empty?(lengths), do: -1, else: Enum.max(lengths)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "detects if !Enum.empty?(var) then Enum.min(var) else default" do
+      code = """
+      defmodule Bad do
+        def run(lengths) do
+          if !Enum.empty?(lengths), do: Enum.min(lengths), else: 0
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "detects if not Enum.empty?(var) then Enum.max(var) else default" do
+      code = """
+      defmodule Bad do
+        def run(lengths) do
+          if not Enum.empty?(lengths), do: Enum.max(lengths), else: -1
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
     test "does NOT fire when condition is not empty list check" do
       code = """
       defmodule Good do
@@ -253,9 +306,59 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxTest do
       refute result =~ "fn ->"
     end
 
+    test "rewrites if Enum.empty?(var) then 0 else Enum.min(var) to Enum.min/2" do
+      code = """
+      if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.min(lengths, fn -> 0 end)"
+      refute result =~ "if"
+    end
+
+    test "rewrites if !Enum.empty?(var) then Enum.max(var) else default" do
+      code = """
+      if !Enum.empty?(lengths), do: Enum.max(lengths), else: -1
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.max(lengths, fn -> -1 end)"
+      refute result =~ "if"
+    end
+
+    test "rewrites if not Enum.empty?(var) then Enum.min(var) else default" do
+      code = """
+      if not Enum.empty?(lengths), do: Enum.min(lengths), else: 0
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.min(lengths, fn -> 0 end)"
+      refute result =~ "if"
+    end
+
     test "round-trip: fixed code produces no issues" do
       code = """
       if lengths == [], do: 0, else: Enum.min(lengths)
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoIfEmptyForEnumMinMax.check(ast, []) == []
+    end
+
+    test "round-trip: fixed Enum.empty? code produces no issues" do
+      code = """
+      if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoIfEmptyForEnumMinMax.check(ast, []) == []
+    end
+
+    test "round-trip: fixed negated Enum.empty? code produces no issues" do
+      code = """
+      if !Enum.empty?(lengths), do: Enum.max(lengths), else: -1
       """
 
       fixed = fix(code)
