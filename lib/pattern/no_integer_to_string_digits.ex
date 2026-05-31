@@ -1,20 +1,24 @@
 defmodule Credence.Pattern.NoIntegerToStringDigits do
   @moduledoc """
   Performance rule: Detects converting an integer to a string representation
-  in a given base and then to a charlist, when `Integer.digits/2` can extract
-  the digits directly as a list of integers.
+  in a given base and then to a charlist or graphemes, when `Integer.digits/2`
+  can extract the digits directly as a list of integers.
 
-  The string conversion creates an intermediate binary and then a charlist,
-  both of which are unnecessary allocations when you just need the digits.
+  The string conversion creates an intermediate binary and then a charlist
+  or list of single-character strings, both of which are unnecessary
+  allocations when you just need the digits.
 
   ## Bad
 
       String.to_charlist(Integer.to_string(number, 2))
       Integer.to_string(number, 2) |> String.to_charlist()
+      String.graphemes(Integer.to_string(number))
+      Integer.to_string(number) |> String.graphemes()
 
   ## Good
 
       Integer.digits(number, 2)
+      Integer.digits(number)
   """
 
   use Credence.Pattern.Rule
@@ -60,6 +64,27 @@ defmodule Credence.Pattern.NoIntegerToStringDigits do
        ]} ->
         integer_digits_call([n | pipe_args])
 
+      # Nested: String.graphemes(Integer.to_string(n, base))
+      {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _,
+       [{{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, int_args}]} ->
+        integer_digits_call(int_args)
+
+      # Piped 2-step: Integer.to_string(n, base) |> String.graphemes()
+      {:|>, _,
+       [
+         {{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, int_args},
+         {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}
+       ]} ->
+        integer_digits_call(int_args)
+
+      # Piped 3-step: n |> Integer.to_string(base) |> String.graphemes()
+      {:|>, _,
+       [
+         {:|>, _, [n, {{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, pipe_args}]},
+         {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}
+       ]} ->
+        integer_digits_call([n | pipe_args])
+
       node ->
         node
     end)
@@ -96,6 +121,33 @@ defmodule Credence.Pattern.NoIntegerToStringDigits do
        ),
        do: true
 
+  # Nested: String.graphemes(Integer.to_string(n, base))
+  defp flagged?(
+         {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _,
+          [{{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, _args}]}
+       ),
+       do: true
+
+  # Piped 2-step: Integer.to_string(n, base) |> String.graphemes()
+  defp flagged?(
+         {:|>, _,
+          [
+            {{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, _args},
+            {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}
+          ]}
+       ),
+       do: true
+
+  # Piped 3-step: n |> Integer.to_string(base) |> String.graphemes()
+  defp flagged?(
+         {:|>, _,
+          [
+            {:|>, _, [_, {{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, _}]},
+            {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}
+          ]}
+       ),
+       do: true
+
   defp flagged?(_), do: false
 
   defp extract_meta({{:., _, _}, meta, _}), do: meta
@@ -106,7 +158,7 @@ defmodule Credence.Pattern.NoIntegerToStringDigits do
     %Issue{
       rule: :no_integer_to_string_digits,
       message:
-        "Avoid `Integer.to_string/2 |> String.to_charlist/1` to extract digits. " <>
+        "Avoid `Integer.to_string/2 |> String.to_charlist/1` or `String.graphemes/1` to extract digits. " <>
           "Use `Integer.digits/2` instead — it produces the digit list directly without intermediate string allocation.",
       meta: %{line: Keyword.get(meta, :line)}
     }
