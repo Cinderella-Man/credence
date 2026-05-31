@@ -30,10 +30,10 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
             {node, issues}
           end
 
-        {:case, meta, [_subject, clause_kw]} = node, issues ->
+        {:case, meta, [subject, clause_kw]} = node, issues ->
           case extract_case_clauses(clause_kw) do
             {:ok, clauses} ->
-              case detect_case_empty_min_max(clauses) do
+              case detect_case_empty_min_max(clauses, subject) do
                 %{enum_fn: enum_fn} ->
                   issue = %Issue{
                     rule: :no_if_empty_for_enum_min_max,
@@ -96,7 +96,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
       {:case, _meta, [subject, clause_kw]} = node ->
         case extract_case_clauses(clause_kw) do
           {:ok, clauses} ->
-            case detect_case_empty_min_max(clauses) do
+            case detect_case_empty_min_max(clauses, subject) do
               %{default: default, enum_fn: enum_fn} ->
                 build_enum_call(enum_fn, subject, default)
 
@@ -220,18 +220,21 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
   defp extract_case_clauses(_), do: :error
 
   # Detect `case var do [] -> default; v -> Enum.min(v) end` (or Enum.max)
-  defp detect_case_empty_min_max(clauses) when length(clauses) == 2 do
+  # Also handles `case var do [] -> default; _ -> Enum.min(var) end` (wildcard)
+  defp detect_case_empty_min_max(clauses, subject \\ nil)
+
+  defp detect_case_empty_min_max(clauses, subject) when length(clauses) == 2 do
     [clause1, clause2] = clauses
 
     with {:empty, default} <- classify_case_clause(clause1),
          {:var, var, enum_call} <- classify_case_clause(clause2),
-         {enum_fn, _, _} <- enum_min_max_call(enum_call, var) do
+         {enum_fn, _, _} <- resolve_enum_min_max(enum_call, var, subject) do
       %{default: default, enum_fn: enum_fn}
     else
       _ ->
         with {:empty, default} <- classify_case_clause(clause2),
              {:var, var, enum_call} <- classify_case_clause(clause1),
-             {enum_fn, _, _} <- enum_min_max_call(enum_call, var) do
+             {enum_fn, _, _} <- resolve_enum_min_max(enum_call, var, subject) do
           %{default: default, enum_fn: enum_fn}
         else
           _ -> nil
@@ -239,7 +242,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
     end
   end
 
-  defp detect_case_empty_min_max(_), do: nil
+  defp detect_case_empty_min_max(_, _), do: nil
 
   defp classify_case_clause({:->, _, [[], default]}), do: {:empty, default}
 
@@ -256,6 +259,15 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
   defp empty_list_literal?([]), do: true
   defp empty_list_literal?({:__block__, _, [[]]}), do: true
   defp empty_list_literal?(_), do: false
+
+  # Wildcard _: compare enum call arg against case subject instead
+  defp resolve_enum_min_max(enum_call, {:_, _, _}, subject) when subject != nil do
+    enum_min_max_call(enum_call, subject)
+  end
+
+  defp resolve_enum_min_max(enum_call, var, _subject) do
+    enum_min_max_call(enum_call, var)
+  end
 
   # Match `Enum.min(var)` or `Enum.max(var)` and verify it uses the same var
   defp enum_min_max_call({{:., _, [{:__aliases__, _, [:Enum]}, fn_name]}, _, [arg]}, var)

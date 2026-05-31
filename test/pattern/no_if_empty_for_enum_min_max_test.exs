@@ -263,6 +263,70 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxTest do
 
       assert check(code) == []
     end
+
+    test "detects case with wildcard _ using subject in Enum.max" do
+      code = """
+      defmodule Bad do
+        def run(primes) do
+          case primes do
+            [] -> nil
+            _ -> Enum.max(primes)
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_if_empty_for_enum_min_max
+    end
+
+    test "detects case with wildcard _ using subject in Enum.min" do
+      code = """
+      defmodule Bad do
+        def run(items) do
+          case items do
+            [] -> 0
+            _ -> Enum.min(items)
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "detects case with wildcard _ in reversed clause order" do
+      code = """
+      defmodule Bad do
+        def run(primes) do
+          case primes do
+            _ -> Enum.max(primes)
+            [] -> nil
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "does NOT fire on case wildcard _ with different variable in Enum call" do
+      code = """
+      defmodule Good do
+        def run(primes, other) do
+          case primes do
+            [] -> nil
+            _ -> Enum.max(other)
+          end
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix" do
@@ -397,6 +461,45 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxTest do
       case lengths do
         [] -> -1
         filtered -> Enum.max(filtered)
+      end
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoIfEmptyForEnumMinMax.check(ast, []) == []
+    end
+
+    test "rewrites case with wildcard _ to Enum.max/2" do
+      code = """
+      case primes do
+        [] -> nil
+        _ -> Enum.max(primes)
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.max(primes, fn -> nil end)"
+      refute result =~ "case"
+    end
+
+    test "rewrites case with wildcard _ to Enum.min/2" do
+      code = """
+      case items do
+        [] -> 0
+        _ -> Enum.min(items)
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.min(items, fn -> 0 end)"
+      refute result =~ "case"
+    end
+
+    test "round-trip: fixed wildcard case code produces no issues" do
+      code = """
+      case primes do
+        [] -> nil
+        _ -> Enum.max(primes)
       end
       """
 
