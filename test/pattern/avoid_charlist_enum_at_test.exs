@@ -101,6 +101,22 @@ defmodule Credence.Pattern.AvoidCharlistEnumAtTest do
       assert hd(issues).rule == :avoid_charlist_enum_at
     end
 
+    test "detects Enum.at on charlist from multi-step pipe" do
+      code = """
+      defmodule Bad do
+        def check(s, i, j) do
+          chars = s |> String.to_charlist() |> some_transform()
+          Enum.at(chars, i) == Enum.at(chars, j)
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 2
+      assert Enum.all?(issues, &(&1.rule == :avoid_charlist_enum_at))
+    end
+
     test "does not fire on String.graphemes variable" do
       code = """
       defmodule Good do

@@ -75,9 +75,7 @@ defmodule Credence.Pattern.AvoidCharlistEnumAt do
     {_ast, vars} =
       Macro.prewalk(ast, MapSet.new(), fn
         {:=, _, [{var_name, _, nil}, rhs]} = node, acc when is_atom(var_name) ->
-          terminal = rightmost(rhs)
-
-          if to_charlist_call?(terminal) do
+          if pipe_contains_to_charlist?(rhs) do
             {node, MapSet.put(acc, var_name)}
           else
             {node, acc}
@@ -90,8 +88,11 @@ defmodule Credence.Pattern.AvoidCharlistEnumAt do
     vars
   end
 
-  defp rightmost({:|>, _, [_, right]}), do: rightmost(right)
-  defp rightmost(other), do: other
+  defp pipe_contains_to_charlist?({:|>, _, [left, right]}) do
+    to_charlist_call?(right) || pipe_contains_to_charlist?(left)
+  end
+
+  defp pipe_contains_to_charlist?(other), do: to_charlist_call?(other)
 
   defp to_charlist_call?({{:., _, [{:__aliases__, _, [:String]}, :to_charlist]}, _, args})
        when is_list(args),
