@@ -65,6 +65,14 @@ defmodule Credence.Pattern.NoExplicitSumReduce do
     explicit_sum?(body, v1, v2)
   end
 
+  # Capture syntax: Enum.reduce(enum, 0, &+/2)
+  defp sum_reduce_body?([
+         _enum,
+         _acc,
+         {:&, _, [{:/, _, [{:+, _, _}, _arity]}]}
+       ]),
+       do: true
+
   defp sum_reduce_body?(_), do: false
 
   defp explicit_sum?({:__block__, _, [body]}, v1, v2), do: explicit_sum?(body, v1, v2)

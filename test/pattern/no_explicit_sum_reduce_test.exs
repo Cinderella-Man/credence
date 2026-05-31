@@ -53,6 +53,21 @@ defmodule Credence.Pattern.NoExplicitSumReduceTest do
       assert hd(issues).rule == :no_explicit_sum_reduce
     end
 
+    test "detects &+/2 capture syntax" do
+      code = """
+      defmodule BadCapture do
+        def sum_value(list) do
+          Enum.reduce(list, 0, &+/2)
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_explicit_sum_reduce
+    end
+
     test "does NOT detect map-based reductions" do
       code = """
       defmodule GoodMapReduce do
@@ -125,6 +140,16 @@ defmodule Credence.Pattern.NoExplicitSumReduceTest do
       refute result =~ "Enum.reduce"
     end
 
+    test "replaces &+/2 capture with Enum.sum/1" do
+      code = """
+      Enum.reduce(list, 0, &+/2)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.sum(list)"
+      refute result =~ "Enum.reduce"
+    end
+
     test "handles reversed operand order" do
       code = """
       Enum.reduce(list, 0, fn x, acc -> x + acc end)
@@ -164,6 +189,16 @@ defmodule Credence.Pattern.NoExplicitSumReduceTest do
     test "round-trip: fixed code produces no issues" do
       code = """
       Enum.reduce(list, 0, fn x, acc -> x + acc end)
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoExplicitSumReduce.check(ast, []) == []
+    end
+
+    test "round-trip: &+/2 capture fix produces no issues" do
+      code = """
+      Enum.reduce(list, 0, &+/2)
       """
 
       fixed = fix(code)

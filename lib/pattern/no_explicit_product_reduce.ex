@@ -64,6 +64,14 @@ defmodule Credence.Pattern.NoExplicitProductReduce do
     explicit_product?(body, v1, v2)
   end
 
+  # Capture syntax: Enum.reduce(enum, 1, &*/2)
+  defp product_reduce_body?([
+         _enum,
+         {:__block__, _, [1]},
+         {:&, _, [{:/, _, [{:*, _, _}, _arity]}]}
+       ]),
+       do: true
+
   defp product_reduce_body?(_), do: false
 
   defp explicit_product?({:__block__, _, [body]}, v1, v2), do: explicit_product?(body, v1, v2)

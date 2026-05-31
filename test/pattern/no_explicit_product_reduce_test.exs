@@ -41,6 +41,21 @@ defmodule Credence.Pattern.NoExplicitProductReduceTest do
       assert hd(issues).rule == :no_explicit_product_reduce
     end
 
+    test "detects &*/2 capture syntax" do
+      code = """
+      defmodule BadCapture do
+        def prod_value(list) do
+          Enum.reduce(list, 1, &*/2)
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_explicit_product_reduce
+    end
+
     test "detects acc * x pattern (reversed operand order)" do
       code = """
       defmodule BadMultiplyReversed do
@@ -140,6 +155,16 @@ defmodule Credence.Pattern.NoExplicitProductReduceTest do
       refute result =~ "Enum.reduce"
     end
 
+    test "replaces &*/2 capture with Enum.product/1" do
+      code = """
+      Enum.reduce(list, 1, &*/2)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.product(list)"
+      refute result =~ "Enum.reduce"
+    end
+
     test "handles reversed operand order" do
       code = """
       Enum.reduce(list, 1, fn x, acc -> x * acc end)
@@ -179,6 +204,16 @@ defmodule Credence.Pattern.NoExplicitProductReduceTest do
     test "round-trip: fixed code produces no issues" do
       code = """
       Enum.reduce(list, 1, fn x, acc -> x * acc end)
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoExplicitProductReduce.check(ast, []) == []
+    end
+
+    test "round-trip: &*/2 capture fix produces no issues" do
+      code = """
+      Enum.reduce(list, 1, &*/2)
       """
 
       fixed = fix(code)
