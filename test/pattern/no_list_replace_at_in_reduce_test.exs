@@ -169,6 +169,130 @@ defmodule Credence.Pattern.NoListReplaceAtInReduceTest do
       assert Enum.all?(issues, &(&1.rule == :no_list_replace_at_in_reduce))
     end
 
+    test "flags List.replace_at inside defp helper called from reduce" do
+      code = """
+      defmodule Bad do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            update_cell(acc, i, i * 2)
+          end)
+        end
+
+        defp update_cell(list, idx, value) do
+          List.replace_at(list, idx, value)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+      assert hd(issues).message =~ "List.replace_at"
+    end
+
+    test "flags piped List.replace_at inside defp helper called from reduce" do
+      code = """
+      defmodule Bad do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            update_cell(acc, i, i * 2)
+          end)
+        end
+
+        defp update_cell(list, idx, value) do
+          list |> List.replace_at(idx, value)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+    end
+
+    test "flags List.update_at inside defp helper called from reduce" do
+      code = """
+      defmodule Bad do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            update_cell(acc, i, i * 2)
+          end)
+        end
+
+        defp update_cell(list, idx, value) do
+          List.update_at(list, idx, fn _ -> value end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+      assert hd(issues).message =~ "List.update_at"
+    end
+
+    test "flags nested List.replace_at inside defp helper called from reduce" do
+      code = """
+      defmodule Bad do
+        def update(dp) do
+          Enum.reduce(0..5, dp, fn i, dp ->
+            update_dp(dp, i, i * 2)
+          end)
+        end
+
+        defp update_dp(table, i, value) do
+          row = Enum.at(table, i)
+          new_row = List.replace_at(row, 0, value)
+          List.replace_at(table, i, new_row)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+    end
+
+    test "flags piped helper call: acc |> helper(...)" do
+      code = """
+      defmodule Bad do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            acc |> update_cell(i, i * 2)
+          end)
+        end
+
+        defp update_cell(list, idx, value) do
+          List.replace_at(list, idx, value)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+    end
+
+    test "flags helper called from for reduce" do
+      code = """
+      defmodule Bad do
+        def update(list) do
+          for i <- 1..3, reduce: list do
+            acc -> update_cell(acc, i, i * 2)
+          end
+        end
+
+        defp update_cell(list, idx, value) do
+          List.replace_at(list, idx, value)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_replace_at_in_reduce
+    end
+
     # --- NEGATIVE CASES ---
 
     test "does not flag List.replace_at on a different variable" do
@@ -286,6 +410,78 @@ defmodule Credence.Pattern.NoListReplaceAtInReduceTest do
           for i <- 1..3, reduce: map do
             acc -> Map.put(acc, i, i * 2)
           end
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag helper function that does not use List.replace_at" do
+      code = """
+      defmodule Good do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            log_value(acc, i)
+          end)
+        end
+
+        defp log_value(list, idx) do
+          IO.puts(Enum.at(list, idx))
+          list
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag helper function with List.replace_at on non-first param" do
+      code = """
+      defmodule Good do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            transform(acc, i, [1, 2, 3])
+          end)
+        end
+
+        defp transform(list, idx, items) do
+          _unused = List.replace_at(items, 0, idx)
+          list
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag helper called with accumulator as non-first arg" do
+      code = """
+      defmodule Good do
+        def update(list) do
+          Enum.reduce(0..5, list, fn i, acc ->
+            transform(i, acc)
+          end)
+        end
+
+        defp transform(idx, list) do
+          List.replace_at(list, idx, 0)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag helper function called outside of reduce" do
+      code = """
+      defmodule Good do
+        def update(list) do
+          update_cell(list, 0, 42)
+        end
+
+        defp update_cell(list, idx, value) do
+          List.replace_at(list, idx, value)
         end
       end
       """
