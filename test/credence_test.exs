@@ -25,6 +25,22 @@ defmodule CredenceTest do
     end
   end
 
+  defp assert_has_issues(expected_rule, code) do
+    result = Credence.analyze(code)
+    rules_triggered = Enum.map(result.issues, & &1.rule) |> Enum.uniq()
+
+    if expected_rule in rules_triggered do
+      assert true
+    else
+      flunk(
+        "Expected rule #{expected_rule} but got: #{inspect(rules_triggered)}\n" <>
+          Enum.map_join(result.issues, "\n", fn i ->
+            "  [#{i.rule}: #{i.message} (line #{i.meta[:line]})"
+          end)
+      )
+    end
+  end
+
   describe "analyze works" do
     test "prepend + reverse pattern in reduce" do
       assert_clean("""
@@ -39,7 +55,7 @@ defmodule CredenceTest do
     end
 
     test "Enum.map, filter, and pipe chains" do
-      assert_clean("""
+      assert_has_issues(:no_filter_then_map, """
       defmodule DataPipeline do
         def process(records) do
           records
