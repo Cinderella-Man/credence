@@ -60,9 +60,9 @@ defmodule Credence.Syntax.FixModuleAttrOutsideModuleAnalyzeTest do
       assert analyze(code) == []
     end
 
-    test "no defmodule" do
+    test "no defmodule but has attrs" do
       code = "@moduledoc \"doc\"\ndef foo, do: :ok\n"
-      assert analyze(code) == []
+      assert [%Issue{}] = analyze(code)
     end
 
     test "module attribute after defmodule (inside)" do

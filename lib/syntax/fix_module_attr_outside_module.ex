@@ -1,15 +1,19 @@
 defmodule Credence.Syntax.FixModuleAttrOutsideModule do
   @moduledoc """
-  Fixes module attributes that appear before the `defmodule` declaration.
+  Fixes module attributes that appear outside a `defmodule` block.
 
   LLMs sometimes output `@moduledoc`, `@doc`, `@spec`, `@type`, and other
-  module attributes at the file's top level — before the `defmodule` block.
-  This causes a compile error:
+  module attributes at the file's top level — either before a `defmodule`
+  block, or with no `defmodule` wrapper at all. This causes a compile error:
 
       cannot invoke @/1 outside module
 
-  The rule detects module attributes that precede the first `defmodule` and
-  moves them inside the module block, matching the indentation of the body.
+  Two cases are handled:
+
+  1. **Attrs before `defmodule`** — moves them inside the module block,
+     matching the indentation of the body.
+  2. **No `defmodule` at all** — wraps the entire content in
+     `defmodule Solution do ... end`.
 
   Handles multi-line heredoc attributes (`@moduledoc """..."""`).
   """
@@ -28,7 +32,11 @@ defmodule Credence.Syntax.FixModuleAttrOutsideModule do
 
     case find_defmodule_idx(lines) do
       nil ->
-        []
+        if Enum.any?(lines, &attr_line?/1) do
+          [build_issue()]
+        else
+          []
+        end
 
       defmodule_idx ->
         before = Enum.take(lines, defmodule_idx)
@@ -47,7 +55,11 @@ defmodule Credence.Syntax.FixModuleAttrOutsideModule do
 
     case find_defmodule_idx(lines) do
       nil ->
-        source
+        if Enum.any?(lines, &attr_line?/1) do
+          wrap_in_defmodule(lines)
+        else
+          source
+        end
 
       defmodule_idx ->
         {before, from_defmodule} = Enum.split(lines, defmodule_idx)
@@ -67,6 +79,18 @@ defmodule Credence.Syntax.FixModuleAttrOutsideModule do
   end
 
   # ── helpers ──────────────────────────────────────────────────────
+
+  # When there is no `defmodule` at all but there are module attributes
+  # at the top level, wrap everything in `defmodule Solution do ... end`.
+  defp wrap_in_defmodule(lines) do
+    # Strip trailing empty lines to avoid blank line before `end`
+    trimmed = Enum.reverse(lines) |> Enum.drop_while(&(String.trim(&1) == "")) |> Enum.reverse()
+    indent = "  "
+    indented = indent_block(trimmed, indent)
+    (["defmodule Solution do"] ++ indented ++ ["end"])
+    |> Enum.join("\n")
+    |> Kernel.<>("\n")
+  end
 
   defp find_defmodule_idx(lines) do
     Enum.find_index(lines, &Regex.match?(~r/^\s*defmodule\s/, &1))

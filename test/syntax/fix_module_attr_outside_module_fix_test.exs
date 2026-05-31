@@ -108,6 +108,37 @@ defmodule Credence.Syntax.FixModuleAttrOutsideModuleFixTest do
     end
   end
 
+  # ── bare code without defmodule ────────────────────────────────
+
+  describe "bare code without defmodule" do
+    test "wraps @doc + @spec + def in defmodule Solution" do
+      code = "@doc \"some doc\"\n@spec foo() :: :ok\ndef foo, do: :ok\n"
+      result = fix(code)
+      assert result =~ "defmodule Solution do\n  @doc"
+      assert result =~ "  @spec foo() :: :ok"
+      assert result =~ "  def foo, do: :ok\nend\n"
+    end
+
+    test "wraps heredoc @doc with def in defmodule Solution" do
+      code = "@doc \"\"\"\nGiven a non-negative integer n.\n\"\"\"\n@spec foo(non_neg_integer()) :: non_neg_integer()\ndef foo(0), do: 1\ndef foo(n), do: n\n"
+      result = fix(code)
+      assert result =~ "defmodule Solution do\n  @doc \"\"\""
+      assert result =~ "  Given a non-negative integer n.\n  \"\"\""
+      assert result =~ "  @spec foo(non_neg_integer()) :: non_neg_integer()"
+      assert result =~ "  def foo(0), do: 1"
+    end
+
+    test "does not wrap code with no module attributes" do
+      code = "def foo, do: :ok\n"
+      assert fix(code) == code
+    end
+
+    test "round-trip: fixed bare code produces zero analyze issues" do
+      code = ~s(@doc "some doc"\ndef foo, do: :ok\n)
+      assert analyze(fix(code)) == []
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "no-ops" do
@@ -116,9 +147,11 @@ defmodule Credence.Syntax.FixModuleAttrOutsideModuleFixTest do
       assert fix(code) == code
     end
 
-    test "no defmodule" do
+    test "no defmodule wraps in defmodule Solution" do
       code = "@moduledoc \"doc\"\ndef foo, do: :ok\n"
-      assert fix(code) == code
+      result = fix(code)
+      assert result =~ "defmodule Solution do\n  @moduledoc"
+      assert result =~ "  def foo, do: :ok\nend\n"
     end
 
     test "no module attributes" do
