@@ -57,13 +57,36 @@ defmodule Credence.Syntax.FixDivRem do
 
   defp fix_line(line) do
     Enum.reduce(@operators, line, fn op, current ->
-      if infix_use?(current, op) do
+      if infix_use?(current, op) and not infix_in_capture?(current, op) do
         rewrite_infix(current, op)
       else
         current
       end
     end)
   end
+
+  # Returns true if the infix usage of `op` is inside a capture &(...)
+  # The regex-based rewrite cannot handle capture context correctly,
+  # so we skip the fix in that case (the issue is still reported by analyze).
+  defp infix_in_capture?(line, op) do
+    case Regex.run(~r/\s+#{op}\s+/, line, return: :index) do
+      [{pos, _len}] ->
+        prefix = String.slice(line, 0, pos)
+        in_capture?(prefix)
+
+      _ ->
+        false
+    end
+  end
+
+  defp in_capture?(prefix), do: do_in_capture?(prefix, [])
+
+  defp do_in_capture?("", stack), do: :capture in stack
+  defp do_in_capture?(<<?&, ?(, rest::binary>>, stack), do: do_in_capture?(rest, [:capture | stack])
+  defp do_in_capture?(<<?(, rest::binary>>, stack), do: do_in_capture?(rest, [:regular | stack])
+  defp do_in_capture?(<<?), rest::binary>>, [_ | stack]), do: do_in_capture?(rest, stack)
+  defp do_in_capture?(<<?), _rest::binary>>, []), do: do_in_capture?([], [])
+  defp do_in_capture?(<<_, rest::binary>>, stack), do: do_in_capture?(rest, stack)
 
   # Rewrites `prefix left_expr div right_expr` → `prefix div(left_expr, right_expr)`
   #
