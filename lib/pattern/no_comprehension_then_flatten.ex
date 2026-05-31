@@ -16,6 +16,9 @@ defmodule Credence.Pattern.NoComprehensionThenFlatten do
 
       List.flatten(for x <- list, do: f(x))
 
+      rows = for i <- 1..n, do: for j <- 1..m, do: f(i, j)
+      rows |> List.flatten()
+
   ## Good
 
       Enum.flat_map(1..n, fn divisor ->
@@ -28,6 +31,13 @@ defmodule Credence.Pattern.NoComprehensionThenFlatten do
 
   @impl true
   def check(ast, _opts) do
+    direct = check_direct(ast)
+    indirect = check_indirect(ast)
+    Enum.reverse(direct ++ indirect)
+  end
+
+  # Catches direct `for |> List.flatten()` and `List.flatten(for ...)`.
+  defp check_direct(ast) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         # Piped: for ... do ... end |> List.flatten()
@@ -59,7 +69,63 @@ defmodule Credence.Pattern.NoComprehensionThenFlatten do
           {node, acc}
       end)
 
-    Enum.reverse(issues)
+    issues
+  end
+
+  # Catches the pattern where a `for` comprehension is bound to a variable
+  # and that variable is subsequently piped to `List.flatten/1` in the same
+  # block:
+  #
+  #     rows = for i <- 1..n, do: for j <- 1..m, do: f(i, j)
+  #     rows |> List.flatten()
+  #
+  defp check_indirect(ast) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        {:__block__, _, body} = node, acc when is_list(body) ->
+          for_bindings =
+            Enum.reduce(body, %{}, fn
+              {:=, _, [{var_name, _, _}, {:for, _, _} = for_node]}, bindings
+              when is_atom(var_name) ->
+                if comprehension_mapped?(for_node),
+                  do: Map.put(bindings, var_name, for_node),
+                  else: bindings
+
+              _, bindings ->
+                bindings
+            end)
+
+          pipe_issues =
+            if map_size(for_bindings) > 0 do
+              {_walked, found} =
+                Macro.prewalk(body, [], fn
+                  {:|>, _,
+                   [
+                     {var_name, _, _},
+                     {{:., _, [{:__aliases__, _, [:List]}, :flatten]}, flatten_meta, []}
+                   ]} = node,
+                  issues
+                  when is_atom(var_name) ->
+                    if Map.has_key?(for_bindings, var_name),
+                      do: {node, [build_issue(flatten_meta) | issues]},
+                      else: {node, issues}
+
+                  node, issues ->
+                    {node, issues}
+                end)
+
+              found
+            else
+              []
+            end
+
+          {node, pipe_issues ++ acc}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    issues
   end
 
   @impl true

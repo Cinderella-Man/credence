@@ -67,6 +67,30 @@ defmodule Credence.Pattern.NoComprehensionThenFlattenTest do
     end
   end
 
+  describe "flags for comprehension assigned to variable then piped to List.flatten" do
+    test "variable bound to for then piped" do
+      assert flagged?("""
+             def flat(list) do
+               rows = for x <- list, do: [x, x + 1]
+               rows |> List.flatten()
+             end
+             """)
+    end
+
+    test "variable bound to nested for then piped with more operations" do
+      assert flagged?("""
+             def decode(text, rows) do
+               matrix =
+                 for row <- 0..(rows - 1) do
+                   for col <- 0..5, do: String.at(text, col * rows + row)
+                 end
+
+               matrix |> List.flatten() |> Enum.join()
+             end
+             """)
+    end
+  end
+
   # ═══════════════════════════════════════════════════════════════════
   # NEGATIVE — must NOT flag
   # ═══════════════════════════════════════════════════════════════════
@@ -92,6 +116,30 @@ defmodule Credence.Pattern.NoComprehensionThenFlattenTest do
                  {x, x * 2}
                end
                |> List.flatten()
+             end
+             """)
+    end
+  end
+
+  describe "does not flag variable-bound for with :reduce piped to List.flatten" do
+    test "reduce comprehension bound then piped" do
+      assert clean?("""
+             def sum_even(list) do
+               result = for x <- list, rem(x, 2) == 0, reduce: 0 do
+                 acc -> acc + x
+               end
+               result |> List.flatten()
+             end
+             """)
+    end
+  end
+
+  describe "does not flag variable-bound for when not piped to List.flatten" do
+    test "variable used with other operations" do
+      assert clean?("""
+             def go(list) do
+               rows = for x <- list, do: [x, x + 1]
+               Enum.map(rows, &Enum.sum/1)
              end
              """)
     end
