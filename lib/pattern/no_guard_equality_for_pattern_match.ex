@@ -5,7 +5,8 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   be clearer and more idiomatic.
 
   This only flags simple `var == literal` comparisons where `var` is one of
-  the function's parameters and `literal` is an integer, atom, or string.
+  the function's parameters and `literal` is an integer, atom, string, or
+  the empty list `[]`.
 
   ## Bad
 
@@ -143,6 +144,9 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   defp fixable_literal({:__block__, _, [literal]})
        when is_integer(literal) or is_atom(literal) or is_binary(literal),
        do: {:ok, literal}
+
+  # Empty list `[]` is a simple literal suitable for pattern matching.
+  defp fixable_literal({:__block__, _, [[]]}), do: {:ok, []}
 
   defp fixable_literal(_), do: :error
 

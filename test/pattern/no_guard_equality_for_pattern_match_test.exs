@@ -288,6 +288,20 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchTest do
       assert Enum.any?(messages, &(&1 =~ "k == 3"))
     end
 
+    test "detects when var == empty list in guard" do
+      code = """
+      defmodule EmptyListGuard do
+        def check(list) when list == [], do: :empty
+        def check(list), do: hd(list)
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      assert hd(issues).message =~ "[]"
+    end
+
     test "does not flag comparison to composite types" do
       code = """
       defmodule CompositeGuard do
@@ -492,6 +506,17 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchTest do
 
     test "does not modify comparison to composite types" do
       assert_fix_unchanged("def check(n) when n == %{a: 1}, do: :ok")
+    end
+
+    test "removes empty list guard and substitutes parameter" do
+      assert_fix(
+        "def check(list) when list == [], do: :empty",
+        "def check([]), do: :empty"
+      )
+    end
+
+    test "does not modify empty list guard when var referenced in body" do
+      assert_fix_unchanged("def check(list) when list == [], do: list")
     end
   end
 end
