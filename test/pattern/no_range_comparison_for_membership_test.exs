@@ -176,5 +176,19 @@ defmodule Credence.Pattern.NoRangeComparisonForMembershipTest do
       ast = Sourceror.parse_string!(fixed)
       assert NoRangeComparisonForMembership.check(ast, []) == []
     end
+
+    test "preserves character literals in rewrite" do
+      code = """
+      defmodule M do
+        def lowercase?(char) do
+          char >= ?a and char <= ?z
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "?a..?z"
+      refute result =~ "97..122"
+    end
   end
 end

@@ -32,7 +32,7 @@ defmodule Credence.Pattern.NoRangeComparisonForMembership do
       Macro.prewalk(ast, [], fn
         node, acc ->
           case detect_range_comparison(node) do
-            {:ok, _var, _low, _high} ->
+            {:ok, _var, _low_node, _high_node} ->
               meta = elem(node, 1) || []
               {node, [build_issue(meta) | acc]}
 
@@ -48,9 +48,9 @@ defmodule Credence.Pattern.NoRangeComparisonForMembership do
   def fix_patches(ast, _opts) do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
       case detect_range_comparison(node) do
-        {:ok, var, low, high} ->
+        {:ok, var, low_node, high_node} ->
           meta = elem(node, 1) || []
-          {:in, meta, [var, {:.., meta, [low, high]}]}
+          {:in, meta, [var, {:.., meta, [low_node, high_node]}]}
 
         :skip ->
           node
@@ -69,7 +69,7 @@ defmodule Credence.Pattern.NoRangeComparisonForMembership do
     with {:ok, low} <- unwrap_integer(low_block),
          {:ok, high} <- unwrap_integer(high_block),
          true <- low <= high and same_var?(var_a, var_b) do
-      {:ok, var_a, low, high}
+      {:ok, var_a, low_block, high_block}
     else
       _ -> :skip
     end
@@ -86,7 +86,7 @@ defmodule Credence.Pattern.NoRangeComparisonForMembership do
     with {:ok, low} <- unwrap_integer(low_block),
          {:ok, high} <- unwrap_integer(high_block),
          true <- low <= high and same_var?(var_a, var_b) do
-      {:ok, var_a, low, high}
+      {:ok, var_a, low_block, high_block}
     else
       _ -> :skip
     end
@@ -103,7 +103,7 @@ defmodule Credence.Pattern.NoRangeComparisonForMembership do
     with {:ok, low} <- unwrap_integer(low_block),
          {:ok, high} <- unwrap_integer(high_block),
          true <- low <= high and same_var?(var_a, var_b) do
-      {:ok, var_a, low, high}
+      {:ok, var_a, low_block, high_block}
     else
       _ -> :skip
     end
@@ -120,7 +120,7 @@ defmodule Credence.Pattern.NoRangeComparisonForMembership do
     with {:ok, low} <- unwrap_integer(low_block),
          {:ok, high} <- unwrap_integer(high_block),
          true <- low <= high and same_var?(var_a, var_b) do
-      {:ok, var_a, low, high}
+      {:ok, var_a, low_block, high_block}
     else
       _ -> :skip
     end
