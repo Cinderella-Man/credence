@@ -118,6 +118,50 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
 
       assert length(check(code)) == 2
     end
+
+    test "comparison in do body with else false" do
+      assert flagged?("""
+             def check(x, y) do
+               if x > 0 do
+                 y == 1
+               else
+                 false
+               end
+             end
+             """)
+    end
+
+    test "boolean operator in do body with else false" do
+      assert flagged?("""
+             def check(x, a, b) do
+               if x > 0 do
+                 a and b
+               else
+                 false
+               end
+             end
+             """)
+    end
+
+    test "not expression in do body with else false" do
+      assert flagged?("""
+             def check(x, y) do
+               if x > 0 do
+                 not y
+               else
+                 false
+               end
+             end
+             """)
+    end
+
+    test "inline comparison form" do
+      assert flagged?("""
+             def check(x, y) do
+               if x > 0, do: y == 1, else: false
+             end
+             """)
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -156,6 +200,42 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
                  "yes"
                else
                  "no"
+               end
+             end
+             """)
+    end
+
+    test "comparison in do body but non-false else" do
+      assert clean?("""
+             def run(x, y) do
+               if x > 0 do
+                 y == 1
+               else
+                 true
+               end
+             end
+             """)
+    end
+
+    test "function call in do body with else false — not flagged (may not return bool)" do
+      assert clean?("""
+             def run(x) do
+               if x > 0 do
+                 some_check(x)
+               else
+                 false
+               end
+             end
+             """)
+    end
+
+    test "arithmetic in do body with else false — not flagged" do
+      assert clean?("""
+             def run(x, y) do
+               if x > 0 do
+                 y + 1
+               else
+                 false
                end
              end
              """)

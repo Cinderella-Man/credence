@@ -1,19 +1,22 @@
 defmodule Credence.Pattern.NoIfTrueFalse do
   @moduledoc """
-  Detects `if condition do true else false end` that should be just `condition`.
+  Detects redundant `if/else` wrappers around boolean expressions.
 
   LLMs frequently emit this redundant boolean wrapper when the condition
   already evaluates to a boolean. An `if` whose `do` branch returns `true`
   and whose `else` branch returns `false` (or a wildcard default) is
   semantically identical to the condition itself.
 
-  Also catches the piped variant: `condition |> if(do: true, else: false)`.
+  Also catches the generalised form where the `do` branch is a comparison
+  or boolean operator (not just the literal `true`) and the `else` branch
+  is `false` — these can be collapsed with `and`.
 
   ## Detected patterns
 
       if condition do true else false end
       if condition, do: true, else: false
-      if condition do true; else: false end
+      if condition do a == b else false end
+      if condition do a and b else false end
 
   ## Bad
 
@@ -23,13 +26,23 @@ defmodule Credence.Pattern.NoIfTrueFalse do
         false
       end
 
+      if x > 0 do
+        y == 1
+      else
+        false
+      end
+
   ## Good
 
       match?([_, _, _, _], parts) and Enum.all?(parts, &valid?/1)
 
+      x > 0 and y == 1
+
   ## Auto-fix
 
-  Replaces the entire `if/else` with the condition expression.
+  - `if cond do true else false end` → `cond`
+  - `if cond do expr else false end` → `cond and expr` (when `expr` is a
+    comparison or boolean operator)
   """
 
   use Credence.Pattern.Rule
@@ -58,20 +71,29 @@ defmodule Credence.Pattern.NoIfTrueFalse do
     Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
   end
 
-  # Checks if an if's clause list is do: true, else: false (or vice versa).
-  defp redundant_boolean_if?(clauses) when is_list(clauses) do
+  # Classifies an if's clause list:
+  #   :true_false — do: true, else: false  (replace with condition)
+  #   :expr_false — do: <bool-expr>, else: false  (replace with condition and expr)
+  #   :other      — not a redundant boolean if
+  defp classify_if(clauses) when is_list(clauses) do
     do_body = extract_clause(clauses, :do)
     else_body = extract_clause(clauses, :else)
 
-    # Only match do: true, else: false. The reversed case (do: false, else: true)
-    # would require negating the condition, which is complex and error-prone.
-    case {normalize_bool(do_body), normalize_bool(else_body)} do
-      {true, false} -> true
-      _ -> false
+    cond do
+      normalize_bool(do_body) == true and normalize_bool(else_body) == false ->
+        :true_false
+
+      normalize_bool(else_body) == false and boolean_expr?(do_body) ->
+        :expr_false
+
+      true ->
+        :other
     end
   end
 
-  defp redundant_boolean_if?(_), do: false
+  defp classify_if(_), do: :other
+
+  defp redundant_boolean_if?(clauses), do: classify_if(clauses) != :other
 
   # Extracts the body for a given clause key (:do or :else).
   defp extract_clause(clauses, key) do
@@ -88,23 +110,40 @@ defmodule Credence.Pattern.NoIfTrueFalse do
   defp normalize_bool({:__block__, _, [false]}), do: false
   defp normalize_bool(_), do: :other
 
-  # Rewrites `if condition do true else false end` to just `condition`.
+  # Rewrites redundant boolean ifs to their collapsed form.
   defp maybe_rewrite({:if, _meta, [condition, clauses]} = node) when is_list(clauses) do
-    if redundant_boolean_if?(clauses) do
-      condition
-    else
-      node
+    case classify_if(clauses) do
+      :true_false ->
+        condition
+
+      :expr_false ->
+        do_body = extract_clause(clauses, :do)
+        {:and, [], [condition, do_body]}
+
+      :other ->
+        node
     end
   end
 
   defp maybe_rewrite(node), do: node
 
+  # Returns true when the expression is a comparison or boolean operator —
+  # safe to use as a boolean in `cond and expr`.
+  defp boolean_expr?({:__block__, _, [expr]}), do: boolean_expr?(expr)
+
+  defp boolean_expr?({op, _, [_, _]})
+       when op in [:==, :!=, :<, :>, :<=, :>=, :===, :!==, :and, :or],
+       do: true
+
+  defp boolean_expr?({:not, _, [_]}), do: true
+  defp boolean_expr?(_), do: false
+
   defp build_issue(meta) do
     %Issue{
       rule: :no_if_true_false,
       message:
-        "`if condition do true else false end` is redundant. " <>
-          "Use the condition directly — it already returns a boolean.",
+        "`if condition do <boolean> else false end` is redundant. " <>
+          "Use the condition directly (or `condition and expr`) — both sides already return a boolean.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

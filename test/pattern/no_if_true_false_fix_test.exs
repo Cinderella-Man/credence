@@ -85,6 +85,116 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # GENERALISED FIXES — if...comparison...else...false → condition and expr
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "redundant boolean if with comparison to condition and expr" do
+    test "comparison in do body" do
+      input = """
+      def check(x, y) do
+        if x > 0 do
+          y == 1
+        else
+          false
+        end
+      end
+      """
+
+      expected = """
+      def check(x, y) do
+        x > 0 and y == 1
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "boolean and in do body" do
+      input = """
+      def check(x, a, b) do
+        if x > 0 do
+          a and b
+        else
+          false
+        end
+      end
+      """
+
+      expected = """
+      def check(x, a, b) do
+        x > 0 and (a and b)
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "not expression in do body" do
+      input = """
+      def check(x, y) do
+        if x > 0 do
+          not y
+        else
+          false
+        end
+      end
+      """
+
+      expected = """
+      def check(x, y) do
+        x > 0 and not y
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "inline comparison form" do
+      input = """
+      def check(x, y) do
+        if x > 0, do: y == 1, else: false
+      end
+      """
+
+      expected = """
+      def check(x, y) do
+        x > 0 and y == 1
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "comparison in do body with non-false else — NOT fixed" do
+      input = """
+      def run(x, y) do
+        if x > 0 do
+          y == 1
+        else
+          true
+        end
+      end
+      """
+
+      assert fix(input) == input
+    end
+
+    test "function call in do body with else false — NOT fixed" do
+      input = """
+      def run(x) do
+        if x > 0 do
+          some_check(x)
+        else
+          false
+        end
+      end
+      """
+
+      assert fix(input) == input
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # CONTEXT — inside modules, with surrounding code
   # ═══════════════════════════════════════════════════════════════════
 
