@@ -257,6 +257,113 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
 
       assert check(code) == []
     end
+
+    # ---- Cons pattern cases ----
+
+    test "detects cons pattern reconstruction in function head" do
+      code = """
+      defmodule Bad do
+        defp advance([h | t], list2) when h < 0 do
+          advance(t, [h | t])
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) >= 1
+      cons_issue = Enum.find(issues, &(&1.message =~ "Cons"))
+      assert cons_issue
+      assert cons_issue.message =~ "h"
+      assert cons_issue.message =~ "t"
+    end
+
+    test "detects cons pattern reconstruction in case branch" do
+      code = """
+      defmodule Bad do
+        def process(data) do
+          case data do
+            [h | t] -> wrapper([h | t])
+            _ -> :error
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) >= 1
+      cons_issue = Enum.find(issues, &(&1.message =~ "Cons"))
+      assert cons_issue
+      assert cons_issue.message =~ "h"
+      assert cons_issue.message =~ "t"
+    end
+
+    test "detects multiple cons pattern reconstructions in one function" do
+      code = """
+      defmodule Bad do
+        defp merge([h1 | t1], [h2 | t2]) when h1 < h2 do
+          [h1 | merge(t1, [h2 | t2])]
+        end
+      end
+      """
+
+      issues = check(code)
+      cons_issues = Enum.filter(issues, &(&1.message =~ "Cons"))
+      # [h2 | t2] is reconstructed
+      assert length(cons_issues) >= 1
+      assert Enum.any?(cons_issues, &(&1.message =~ "h2"))
+    end
+
+    # ---- Cons pattern negative cases ----
+
+    test "does not flag cons when head is used individually" do
+      code = """
+      defmodule Good do
+        defp process([h | t]) do
+          IO.puts(h)
+          process(t)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag cons with different reconstruction" do
+      code = """
+      defmodule Good do
+        defp transform([h | t]) do
+          [transform(h) | t]
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag cons with underscore prefix" do
+      code = """
+      defmodule Good do
+        defp skip([_h | t]) do
+          wrapper([_h | t])
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag cons when tail is used individually" do
+      code = """
+      defmodule Good do
+        defp process([h | t]) do
+          result = hd(t)
+          {h, result}
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix/2 — case branches" do
@@ -415,6 +522,75 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
       # x and z are used individually, y is not
       assert result =~ ~r/\[x, _, z\] = items/
       assert result =~ "Enum.sum(items"
+    end
+  end
+
+  describe "fix/2 — cons patterns" do
+    test "fixes cons pattern reconstruction in function head" do
+      code = """
+      defmodule Bad do
+        defp advance([h | t], list2) when h < 0 do
+          advance(t, [h | t])
+        end
+      end
+      """
+
+      result = fix(code)
+
+      # Both h (guard) and t (body) are used individually,
+      # so pattern stays but gets bound as a whole
+      assert result =~ "[h | t] = list"
+      # Body should use bound variable, not reconstructed cons
+      assert result =~ "advance(t, list)"
+    end
+
+    test "fixes cons pattern keeping individually-used head" do
+      code = """
+      defmodule Bad do
+        defp process([h | t]) when is_integer(h) do
+          IO.puts(h)
+          wrapper([h | t])
+        end
+      end
+      """
+
+      result = fix(code)
+
+      # h is used individually, so it stays; t is only in reconstruction
+      assert result =~ "= list"
+      assert result =~ "IO.puts(h)"
+      assert result =~ "wrapper(list)"
+    end
+
+    test "round-trip: fixed cons code produces zero issues" do
+      code = """
+      defmodule Bad do
+        defp advance([h | t], list2) when h < 0 do
+          advance(t, [h | t])
+        end
+      end
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert [] == NoDestructureReconstruct.check(ast, [])
+    end
+
+    test "round-trip: cons case branch fix produces zero issues" do
+      code = """
+      defmodule Bad do
+        def process(data) do
+          case data do
+            [h | t] -> wrapper([h | t])
+            _ -> :error
+          end
+        end
+      end
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert [] == NoDestructureReconstruct.check(ast, [])
     end
   end
 

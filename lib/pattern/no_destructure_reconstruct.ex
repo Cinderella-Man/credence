@@ -86,17 +86,33 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   defp check_node(_), do: :error
 
   defp check_pattern_body(pattern, body, meta) do
-    case extract_var_names(pattern) do
-      {:ok, var_names} when length(var_names) >= 2 ->
-        if body_contains_same_list?(body, var_names) do
-          [build_issue(var_names, meta)]
-        else
-          []
-        end
+    list_issues =
+      case extract_var_names(pattern) do
+        {:ok, var_names} when length(var_names) >= 2 ->
+          if body_contains_same_list?(body, var_names) do
+            [build_issue(var_names, meta)]
+          else
+            []
+          end
 
-      _ ->
-        []
-    end
+        _ ->
+          []
+      end
+
+    cons_issues =
+      case extract_cons_names(pattern) do
+        {:ok, head_name, tail_name} ->
+          if body_contains_same_cons?(body, head_name, tail_name) do
+            [build_cons_issue(head_name, tail_name, meta)]
+          else
+            []
+          end
+
+        _ ->
+          []
+      end
+
+    list_issues ++ cons_issues
   end
 
   @impl true
@@ -165,6 +181,13 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   defp fix_case_clause(other), do: other
 
   defp fix_pattern_body(pattern, body, extra_ast \\ nil) do
+    case fix_list_pattern_body(pattern, body, extra_ast) do
+      {:fixed, _, _} = result -> result
+      :no_fix -> fix_cons_pattern_body(pattern, body, extra_ast)
+    end
+  end
+
+  defp fix_list_pattern_body(pattern, body, extra_ast) do
     with {:ok, elements, list_node} <- RuleHelpers.unwrap_list(pattern),
          {:ok, var_names} when length(var_names) >= 2 <- extract_names_from_elements(elements),
          true <- body_contains_same_list?(body, var_names) do
@@ -190,6 +213,53 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
     else
       _ -> :no_fix
     end
+  end
+
+  defp fix_cons_pattern_body(pattern, body, extra_ast) do
+    with {:ok, {h_name, _, h_ctx} = head, {t_name, _, t_ctx} = tail} <- extract_cons_vars(pattern),
+         true <- is_atom(h_name) and is_atom(t_name),
+         true <- (is_nil(h_ctx) or is_atom(h_ctx)) and (is_nil(t_ctx) or is_atom(t_ctx)),
+         false <- String.starts_with?(Atom.to_string(h_name), "_"),
+         false <- String.starts_with?(Atom.to_string(t_name), "_"),
+         true <- body_contains_same_cons?(body, h_name, t_name) do
+      binding_var = {:list, [], nil}
+      new_body = replace_reconstructed_cons(body, h_name, t_name, binding_var)
+
+      used = collect_variable_names(new_body)
+
+      used =
+        if extra_ast, do: MapSet.union(used, collect_variable_names(extra_ast)), else: used
+
+      head_used = MapSet.member?(used, h_name)
+      tail_used = MapSet.member?(used, t_name)
+
+      new_head = if(head_used, do: head, else: {:_, [], nil})
+      new_tail = if(tail_used, do: tail, else: {:_, [], nil})
+
+      # Wrap in Sourceror list syntax so it renders as [h | _] not (h | _)
+      new_cons = {:__block__, [], [[{:|, [], [new_head, new_tail]}]]}
+
+      {:fixed, {:=, [], [new_cons, binding_var]}, new_body}
+    else
+      _ -> :no_fix
+    end
+  end
+
+  defp replace_reconstructed_cons(body, head_name, tail_name, replacement) do
+    Macro.prewalk(body, fn
+      {:|, _, [{h, _, h_ctx}, {t, _, t_ctx}]} = node
+      when is_atom(h) and is_atom(t) and (is_nil(h_ctx) or is_atom(h_ctx)) and
+             (is_nil(t_ctx) or is_atom(t_ctx)) ->
+        if h == head_name and t == tail_name, do: replacement, else: node
+
+      {:__block__, _, [[{:|, _, [{h, _, h_ctx}, {t, _, t_ctx}]}]]} = node
+      when is_atom(h) and is_atom(t) and (is_nil(h_ctx) or is_atom(h_ctx)) and
+             (is_nil(t_ctx) or is_atom(t_ctx)) ->
+        if h == head_name and t == tail_name, do: replacement, else: node
+
+      node ->
+        node
+    end)
   end
 
   defp replace_reconstructed_list(body, target_var_names, replacement) do
@@ -264,6 +334,73 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   end
 
   defp extract_names_from_elements(_), do: :error
+
+  # Cons pattern helpers
+
+  defp extract_cons_names(pattern) do
+    with {:ok, {h_name, _, h_ctx}, {t_name, _, t_ctx}} <- extract_cons_vars(pattern),
+         true <- is_atom(h_name) and is_atom(t_name),
+         true <- (is_nil(h_ctx) or is_atom(h_ctx)) and (is_nil(t_ctx) or is_atom(t_ctx)),
+         false <- String.starts_with?(Atom.to_string(h_name), "_"),
+         false <- String.starts_with?(Atom.to_string(t_name), "_") do
+      {:ok, h_name, t_name}
+    else
+      _ -> :error
+    end
+  end
+
+  defp extract_cons_vars({:|, _, [head, tail]}), do: {:ok, head, tail}
+
+  defp extract_cons_vars({:__block__, _, [[{:|, _, [head, tail]}]]}),
+    do: {:ok, head, tail}
+
+  defp extract_cons_vars(_), do: :error
+
+  defp body_contains_same_cons?(body, head_name, tail_name) do
+    {_, found} =
+      Macro.prewalk(body, false, fn
+        node, true ->
+          {node, true}
+
+        node, false ->
+          {node, cons_match?(node, head_name, tail_name)}
+      end)
+
+    found
+  end
+
+  defp cons_match?({:|, _, [{h, _, h_ctx}, {t, _, t_ctx}]}, head_name, tail_name)
+       when is_atom(h) and is_atom(t) and (is_nil(h_ctx) or is_atom(h_ctx)) and
+              (is_nil(t_ctx) or is_atom(t_ctx)) do
+    h == head_name and t == tail_name
+  end
+
+  defp cons_match?(
+         {:__block__, _, [[{:|, _, [{h, _, h_ctx}, {t, _, t_ctx}]}]]},
+         head_name,
+         tail_name
+       )
+       when is_atom(h) and is_atom(t) and (is_nil(h_ctx) or is_atom(h_ctx)) and
+              (is_nil(t_ctx) or is_atom(t_ctx)) do
+    h == head_name and t == tail_name
+  end
+
+  defp cons_match?(_, _, _), do: false
+
+  defp build_cons_issue(head_name, tail_name, meta) do
+    %Issue{
+      rule: :no_destructure_reconstruct,
+      message: """
+      Cons `[#{head_name} | #{tail_name}]` is destructured and then reassembled \
+      into the same cons.
+
+      Bind the list as a whole and use a binding:
+
+          [_ | _] = list\
+      """,
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
 
   defp build_issue(var_names, meta) do
     vars_str = Enum.map_join(var_names, ", ", &to_string/1)
