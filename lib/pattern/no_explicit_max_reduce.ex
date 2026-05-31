@@ -85,16 +85,55 @@ defmodule Credence.Pattern.NoExplicitMaxReduce do
   # of the transformed values.
   defp explicit_max?({:max, _, [left, right]}), do: simple_var?(left) and simple_var?(right)
 
-  # Match `if >` (ignoring strict keyword list length to account for AST metadata)
-  defp explicit_max?({:if, _, [{:>, _, [left, right]}, _opts]}),
-    do: simple_var?(left) and simple_var?(right)
+  # Match `if a > b do a else b end` — the do/else branches must return
+  # the same simple variables that are compared (otherwise it's not a max).
+  defp explicit_max?({:if, _, [{:>, _, [left, right]}, opts]}) do
+    simple_var?(left) and simple_var?(right) and
+      returns_compared_vars?(opts, left, right)
+  end
 
-  # Match `if >=`
-  defp explicit_max?({:if, _, [{:>=, _, [left, right]}, _opts]}),
-    do: simple_var?(left) and simple_var?(right)
+  # Match `if a >= b do a else b end`
+  defp explicit_max?({:if, _, [{:>=, _, [left, right]}, opts]}) do
+    simple_var?(left) and simple_var?(right) and
+      returns_compared_vars?(opts, left, right)
+  end
 
   # Fallback
   defp explicit_max?(_), do: false
+
+  # Verify the if-branches return the compared variables (not tuples, calls, etc.).
+  # Sourceror represents if-clauses as [{{:__block__, _, [:do]}, body}, ...].
+  defp returns_compared_vars?(clauses, left, right) when is_list(clauses) do
+    then_expr = extract_if_clause(clauses, :do)
+    else_expr = extract_if_clause(clauses, :else)
+    var_names = compared_var_names(left, right)
+    then_expr != nil and else_expr != nil and
+      returns_simple_var?(then_expr, var_names) and
+      returns_simple_var?(else_expr, var_names)
+  end
+
+  defp extract_if_clause(clauses, key) do
+    # Sourceror format: [{{:__block__, _, [:do]}, body}, ...]
+    Enum.find_value(clauses, fn
+      {{:__block__, _, [^key]}, body} -> body
+      _ -> nil
+    end)
+    # Fallback: keyword list format [do: body, ...]
+    |> Kernel.||(Keyword.get(clauses, key))
+  end
+
+  defp returns_simple_var?({:__block__, _, [expr]} = _block, var_names),
+    do: returns_simple_var?(expr, var_names)
+
+  defp returns_simple_var?({name, _, ctx}, var_names)
+       when is_atom(name) and is_atom(ctx),
+       do: MapSet.member?(var_names, name)
+
+  defp returns_simple_var?(_, _), do: false
+
+  defp compared_var_names({left_name, _, _}, {right_name, _, _})
+       when is_atom(left_name) and is_atom(right_name),
+       do: MapSet.new([left_name, right_name])
 
   # A simple variable reference is an atom name with an atom context
   # (no function calls, field accesses, or other compound expressions).

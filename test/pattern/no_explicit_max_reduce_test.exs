@@ -180,6 +180,42 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
       assert check(code) == []
     end
 
+    test "does NOT detect if >= returning tuples (stateful reducer)" do
+      code = """
+      defmodule GoodStatefulIfReduce do
+        def process(list) do
+          Enum.reduce(list, {0, nil}, fn [entry, exit], {cameras, last_camera} ->
+            if last_camera >= entry do
+              {cameras, last_camera}
+            else
+              {cameras + 1, exit}
+            end
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does NOT detect if > returning non-compared values" do
+      code = """
+      defmodule GoodIfNonMax do
+        def track(list) do
+          Enum.reduce(list, {0, 0}, fn x, {sum, max_val} ->
+            if x > max_val do
+              {sum + x, x}
+            else
+              {sum + x, max_val}
+            end
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
     test "ignores unrelated comparison operators outside reduce" do
       code = """
       defmodule NoReduce do
