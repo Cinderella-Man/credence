@@ -174,6 +174,66 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       assert issue.message =~ "Enum.sum"
     end
 
+    test "detects Enum.map |> Enum.max with default in pipeline" do
+      code = """
+      defmodule Bad do
+        def biggest(list) do
+          list
+          |> Enum.map(&String.length/1)
+          |> Enum.max(0)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_map_then_aggregate
+      assert issue.message =~ "Enum.max"
+    end
+
+    test "detects Enum.map |> Enum.min with default in pipeline" do
+      code = """
+      defmodule Bad do
+        def smallest(list) do
+          list
+          |> Enum.map(&String.length/1)
+          |> Enum.min(0)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_map_then_aggregate
+      assert issue.message =~ "Enum.min"
+    end
+
+    test "detects direct nesting with default: Enum.max(Enum.map(enum, f), default)" do
+      code = """
+      defmodule Bad do
+        def biggest(list) do
+          Enum.max(Enum.map(list, &String.length/1), 0)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_map_then_aggregate
+      assert issue.message =~ "Enum.max"
+    end
+
+    test "detects direct nesting with default: Enum.min(Enum.map(enum, f), default)" do
+      code = """
+      defmodule Bad do
+        def smallest(list) do
+          Enum.min(Enum.map(list, &String.length/1), 0)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_map_then_aggregate
+      assert issue.message =~ "Enum.min"
+    end
+
     # ---- Negative cases ----
 
     test "does not flag Enum.map without aggregation" do
@@ -538,6 +598,39 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       {:ok, original_ast} = Sourceror.parse_string(code)
       {:ok, fixed_ast} = Sourceror.parse_string(result)
       assert original_ast == fixed_ast
+    end
+
+    test "Enum.map |> Enum.max(default) is check-only (no auto-fix)" do
+      code = """
+      list |> Enum.map(&String.length/1) |> Enum.max(0)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.max(0)"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "Enum.map |> Enum.min(default) is check-only (no auto-fix)" do
+      code = """
+      list |> Enum.map(&String.length/1) |> Enum.min(0)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.min(0)"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "Enum.max(Enum.map(enum, f), default) is check-only (no auto-fix)" do
+      code = """
+      Enum.max(Enum.map(list, &String.length/1), 0)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.max"
+      refute result =~ "Enum.reduce"
     end
 
     test "fixed code is valid Elixir" do

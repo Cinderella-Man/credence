@@ -195,9 +195,15 @@ defmodule Credence.Pattern.NoMapThenAggregate do
           if agg_fn in [:max_by, :min_by] do
             nil
           else
-            map_fn = extract_map_fn(first)
-            before = Enum.take(steps, idx)
-            after_ = Enum.drop(steps, idx + 2)
+            # Enum.max(default) / Enum.min(default): the default cannot safely
+            # serve as a reduce accumulator (it may dominate the comparison for
+            # non-empty lists). Flag the issue but skip the auto-fix.
+            if agg_fn in [:max, :min] and agg_has_default?(second) do
+              nil
+            else
+              map_fn = extract_map_fn(first)
+              before = Enum.take(steps, idx)
+              after_ = Enum.drop(steps, idx + 2)
 
             reduce_call =
               if before == [] do
@@ -208,6 +214,7 @@ defmodule Credence.Pattern.NoMapThenAggregate do
               end
 
             rebuild_pipeline(before, reduce_call, after_)
+            end
           end
 
         map_step?(first) and constructor_step?(second) ->
@@ -387,6 +394,16 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     end
   end
 
+  # 2-arg form: Enum.max(Enum.map(enum, f), default) / Enum.min(…)
+  defp check_node({{:., meta, [mod, agg_fn]}, _, [inner, _default]})
+       when agg_fn in [:max, :min] do
+    if enum_module?(mod) and map_call?(inner) do
+      {:ok, build_issue(agg_fn, meta)}
+    else
+      :error
+    end
+  end
+
   defp check_node({{:., meta, [mod, agg_fn]}, _, [inner]})
        when agg_fn in @aggregators do
     if enum_module?(mod) and map_call?(inner) do
@@ -446,6 +463,9 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   defp agg_step?(_), do: false
 
   defp agg_fn_name({{:., _, [_, fn_name]}, _, _}), do: fn_name
+
+  defp agg_has_default?({{:., _, [_, _]}, _, args}) when length(args) == 1, do: true
+  defp agg_has_default?(_), do: false
 
   defp constructor_module?({:__aliases__, _, [mod]}) when mod in @constructor_modules, do: true
   defp constructor_module?(_), do: false
