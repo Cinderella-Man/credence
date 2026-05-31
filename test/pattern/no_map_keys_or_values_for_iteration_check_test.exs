@@ -43,11 +43,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
   end
 
   describe "flags pipe form" do
-    test "Map.values(m) |> Enum.max()" do
-      assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
-               check("Map.values(map) |> Enum.max()")
-    end
-
     test "Map.keys(m) |> Enum.map(&to_string/1)" do
       assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
                check("Map.keys(map) |> Enum.map(&to_string/1)")
@@ -55,9 +50,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
   end
 
   describe "flags triple-pipe form" do
-    test "map |> Map.values() |> Enum.max()" do
+    test "map |> Map.values() |> Enum.count()" do
       assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
-               check("map |> Map.values() |> Enum.max()")
+               check("map |> Map.values() |> Enum.count()")
     end
   end
 
@@ -76,6 +71,22 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
 
     test "unfixable Enum function" do
       assert check("Enum.chunk_every(Map.values(m), 2)") == []
+    end
+
+    test "Map.values |> Enum.max — already idiomatic" do
+      assert check("Map.values(map) |> Enum.max()") == []
+    end
+
+    test "Map.values |> Enum.min — already idiomatic" do
+      assert check("Map.values(map) |> Enum.min()") == []
+    end
+
+    test "Enum.max(Map.values(m)) — already idiomatic" do
+      assert check("Enum.max(Map.values(m))") == []
+    end
+
+    test "Map.keys |> Enum.max — already idiomatic" do
+      assert check("Map.keys(map) |> Enum.max()") == []
     end
   end
 

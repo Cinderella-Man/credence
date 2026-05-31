@@ -13,10 +13,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       Enum.all?(Map.values(degrees), fn v -> v == 0 end)
       → Enum.all?(degrees, fn {_k, v} -> v == 0 end)
 
-      # max/min → max_by/min_by + elem
-      Enum.max(Map.values(m))
-      → Enum.max_by(m, fn {_k, v} -> v end) |> elem(1)
-
       # sum/product → reduce
       Enum.sum(Map.values(m))
       → Enum.reduce(m, 0, fn {_k, v}, acc -> acc + v end)
@@ -69,7 +65,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   @fixable_funcs ~w(
     all? any? count each map flat_map frequencies_by find_value
     reduce reduce_while
-    max min max_by min_by
+    max_by min_by
     sum product
     at find random empty?
     join
@@ -212,24 +208,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
           [] -> {:ok, enum.(:count, [map_expr])}
           [cb | _] -> if function?(cb), do: {:ok, enum.(:count, [map_expr, cb])}, else: :no
         end
-
-      :max ->
-        on_empty(enum_args, fn ->
-          {:ok,
-           elem_call(
-             enum.(:max_by, [map_expr, extractor_lambda(map_fn)]),
-             key_or_value_index(map_fn)
-           )}
-        end)
-
-      :min ->
-        on_empty(enum_args, fn ->
-          {:ok,
-           elem_call(
-             enum.(:min_by, [map_expr, extractor_lambda(map_fn)]),
-             key_or_value_index(map_fn)
-           )}
-        end)
 
       f when f in [:max_by, :min_by] ->
         on_first(enum_args, fn cb ->
@@ -389,26 +367,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
           [] -> {:ok, enum.(:count, [])}
           [cb | _] -> if function?(cb), do: {:ok, enum.(:count, [cb])}, else: :no
         end
-
-      :max ->
-        on_empty(enum_args, fn ->
-          {:ok,
-           pipe_into_elem(
-             pipe_meta,
-             enum.(:max_by, [extractor_lambda(map_fn)]),
-             key_or_value_index(map_fn)
-           )}
-        end)
-
-      :min ->
-        on_empty(enum_args, fn ->
-          {:ok,
-           pipe_into_elem(
-             pipe_meta,
-             enum.(:min_by, [extractor_lambda(map_fn)]),
-             key_or_value_index(map_fn)
-           )}
-        end)
 
       f when f in [:max_by, :min_by] ->
         on_first(enum_args, fn cb ->

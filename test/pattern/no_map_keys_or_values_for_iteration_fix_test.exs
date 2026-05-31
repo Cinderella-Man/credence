@@ -228,21 +228,25 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   # max / min → max_by / min_by + elem
   # ═══════════════════════════════════════════════════════════════
 
-  describe "max / min" do
-    test "Enum.max(Map.values(m))" do
-      assert_fix(
-        "Enum.max(Map.values(m))",
-        "elem(Enum.max_by(m, fn {_, v} -> v end), 1)"
-      )
+  describe "max / min — no fix (already idiomatic)" do
+    test "Enum.max(Map.values(m)) — not flagged" do
+      assert check("Enum.max(Map.values(m))") == []
     end
 
-    test "Enum.min(Map.keys(m))" do
-      assert_fix(
-        "Enum.min(Map.keys(m))",
-        "elem(Enum.min_by(m, fn {k, _} -> k end), 0)"
-      )
+    test "Enum.min(Map.keys(m)) — not flagged" do
+      assert check("Enum.min(Map.keys(m))") == []
     end
 
+    test "pipe: Map.values |> Enum.max() — not flagged" do
+      assert check("Map.values(map) |> Enum.max()") == []
+    end
+
+    test "triple pipe: map |> Map.values() |> Enum.max() — not flagged" do
+      assert check("map |> Map.values() |> Enum.max()") == []
+    end
+  end
+
+  describe "max_by / min_by with callback" do
     test "Enum.max_by with callback" do
       assert_fix(
         "Enum.max_by(Map.values(m), fn v -> v * 2 end)",
@@ -254,20 +258,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       assert_fix(
         "Enum.min_by(Map.values(m), fn v -> abs(v) end)",
         "elem(Enum.min_by(m, fn {_k, v} -> abs(v) end), 1)"
-      )
-    end
-
-    test "pipe: Map.values |> Enum.max()" do
-      assert_fix(
-        "Map.values(map) |> Enum.max()",
-        "Enum.max_by(map, fn {_, v} -> v end) |> elem(1)"
-      )
-    end
-
-    test "triple pipe: map |> Map.values() |> Enum.max()" do
-      assert_fix(
-        "map |> Map.values() |> Enum.max()",
-        "Enum.max_by(map, fn {_, v} -> v end) |> elem(1)"
       )
     end
   end
