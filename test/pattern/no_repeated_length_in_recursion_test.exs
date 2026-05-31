@@ -43,7 +43,30 @@ defmodule Credence.Pattern.NoRepeatedLengthInRecursionTest do
 
       [issue] = check(code)
       assert issue.rule == :no_repeated_length_in_recursion
-      assert issue.message =~ "length(list)"
+      assert issue.message =~ "Enum.count(list)"
+    end
+
+    test "detects byte_size(param) inside recursive function with unchanged param" do
+      code = """
+      defmodule Bad do
+        defp do_count(string, sub_string, index, count) do
+          sub_len = byte_size(sub_string)
+          string_len = byte_size(string)
+
+          if index + sub_len > string_len do
+            count
+          else
+            do_count(string, sub_string, index + 1, count + 1)
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 2
+      assert Enum.all?(issues, &(&1.rule == :no_repeated_length_in_recursion))
+      assert Enum.any?(issues, &(&1.message =~ "byte_size(string)"))
+      assert Enum.any?(issues, &(&1.message =~ "byte_size(sub_string)"))
     end
 
     test "detects piped Enum.count(param) inside recursive function" do
@@ -99,6 +122,20 @@ defmodule Credence.Pattern.NoRepeatedLengthInRecursionTest do
           len = length(list)
           [_ | tail] = list
           process(tail, acc + len)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag byte_size(param) when param changes in recursive call" do
+      code = """
+      defmodule Good do
+        defp process(binary, acc) do
+          size = byte_size(binary)
+          <<_, rest::binary>> = binary
+          process(rest, acc + size)
         end
       end
       """
