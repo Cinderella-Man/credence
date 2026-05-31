@@ -142,6 +142,13 @@ defmodule Credence.Pattern.NoManualEnumUniq do
       {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [inner]} ->
         if fresh_uniq_call?(inner), do: inner, else: node
 
+      # {var, _} = Enum.uniq(list); Enum.reverse(var) → Enum.uniq(list)
+      {:__block__, _block_meta, stmts} when length(stmts) >= 2 ->
+        case fix_uniq_tuple_block(stmts) do
+          nil -> node
+          single_node -> single_node
+        end
+
       other ->
         other
     end
@@ -162,6 +169,71 @@ defmodule Credence.Pattern.NoManualEnumUniq do
 
   defp ends_with_fresh_uniq?({:|>, _, [_, right]}), do: fresh_uniq_call?(right)
   defp ends_with_fresh_uniq?(node), do: fresh_uniq_call?(node)
+
+  defp reverse_of_var?(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var_name, _, nil}]},
+         {var_name, _, nil}
+       ),
+       do: true
+
+  defp reverse_of_var?(
+         {:|>, _, [{var_name, _, nil}, {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, []}]},
+         {var_name, _, nil}
+       ),
+       do: true
+
+  defp reverse_of_var?(_, _), do: false
+
+  defp strip_fresh_tag({{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :uniq]}, meta, args}) do
+    clean_meta = Keyword.delete(meta, :__credence_fresh_uniq__)
+    {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :uniq]}, clean_meta, args}
+  end
+
+  # Looks for {var, _} = tagged_uniq / {_, var} = tagged_uniq followed by
+  # Enum.reverse(var), and collapses both into just the untagged Enum.uniq call.
+  defp fix_uniq_tuple_block(stmts) do
+    Enum.with_index(stmts)
+    |> Enum.find_value(fn {stmt, idx} ->
+      with {:ok, var, tagged} <- extract_uniq_tuple_assign(stmt) do
+        if fresh_uniq_call?(tagged),
+          do: remove_reverse_and_replace(stmts, idx, var, tagged)
+      end
+    end)
+  end
+
+  # Standard 3-tuple form: {var, _} = tagged
+  defp extract_uniq_tuple_assign({:=, _, [{:{}, _, [var, {:_, _, nil}]}, tagged]}),
+    do: {:ok, var, tagged}
+
+  # Standard 3-tuple form: {_, var} = tagged
+  defp extract_uniq_tuple_assign({:=, _, [{:{}, _, [{:_, _, nil}, var]}, tagged]}),
+    do: {:ok, var, tagged}
+
+  # Sourceror 2-tuple wrapper: {var, _} = tagged
+  defp extract_uniq_tuple_assign({:=, _, [{:__block__, _, [{var, {:_, _, nil}}]}, tagged]}),
+    do: {:ok, var, tagged}
+
+  # Sourceror 2-tuple wrapper: {_, var} = tagged
+  defp extract_uniq_tuple_assign({:=, _, [{:__block__, _, [{{:_, _, nil}, var}]}, tagged]}),
+    do: {:ok, var, tagged}
+
+  defp extract_uniq_tuple_assign(_), do: nil
+
+  defp remove_reverse_and_replace(stmts, assign_idx, var, tagged) do
+    Enum.with_index(stmts)
+    |> Enum.find_value(fn {s, idx} ->
+      if idx != assign_idx && reverse_of_var?(s, var) do
+        untagged = strip_fresh_tag(tagged)
+        stmts
+        |> List.replace_at(assign_idx, untagged)
+        |> List.delete_at(idx)
+        |> case do
+          [single] -> single
+          multiple -> {:__block__, [], multiple}
+        end
+      end
+    end)
+  end
 
   defp manual_uniq?(init_acc, fun) do
     case find_mapset_index(init_acc) do

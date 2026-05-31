@@ -710,6 +710,81 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
       refute result =~ "elem(0)"
     end
 
+    test "fixes tuple-destructured reduce with Enum.reverse on next line" do
+      code = """
+      defmodule Solution do
+        def unique_strings(strings) do
+          {result, _} =
+            Enum.reduce(strings, {[], MapSet.new()}, fn item, {acc, seen} ->
+              if MapSet.member?(seen, item) do
+                {acc, seen}
+              else
+                {[item | acc], MapSet.put(seen, item)}
+              end
+            end)
+
+          Enum.reverse(result)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq(strings)"
+      refute result =~ "Enum.reduce"
+      refute result =~ "Enum.reverse"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes tuple-destructured reduce with MapSet first and Enum.reverse" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          {_, result} =
+            Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
+              if MapSet.member?(seen, item) do
+                {seen, acc}
+              else
+                {MapSet.put(seen, item), [item | acc]}
+              end
+            end)
+
+          Enum.reverse(result)
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq(list)"
+      refute result =~ "Enum.reduce"
+      refute result =~ "Enum.reverse"
+      refute result =~ "MapSet"
+    end
+
+    test "fixes tuple-destructured reduce with piped Enum.reverse" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          {result, _} =
+            Enum.reduce(list, {[], MapSet.new()}, fn item, {acc, seen} ->
+              if MapSet.member?(seen, item) do
+                {acc, seen}
+              else
+                {[item | acc], MapSet.put(seen, item)}
+              end
+            end)
+
+          result |> Enum.reverse()
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.uniq(list)"
+      refute result =~ "Enum.reduce"
+      refute result =~ "Enum.reverse"
+      refute result =~ "MapSet"
+    end
+
     test "fixes map-as-set with unless and strips elem/reverse" do
       code = """
       defmodule Example do
