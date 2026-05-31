@@ -1,0 +1,160 @@
+defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
+  use ExUnit.Case
+
+  alias Credence.Issue
+  alias Credence.Pattern.NoFilterThenFirst
+
+  defp check(code) do
+    ast = Sourceror.parse_string!(code)
+    NoFilterThenFirst.check(ast, [])
+  end
+
+  # ── FLAGGED: pipeline forms ─────────────────────────────────────────────
+
+  describe "flags pipeline filter |> Enum.at(0)" do
+    test "flags Enum.filter |> Enum.at(0)" do
+      code = """
+      defmodule M do
+        def first_even(nums), do: Enum.filter(nums, &even?/1) |> Enum.at(0)
+      end
+      """
+
+      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+    end
+
+    test "flags Stream.filter |> Enum.at(0)" do
+      code = """
+      defmodule M do
+        def first_even(nums), do: Stream.filter(nums, &even?/1) |> Enum.at(0)
+      end
+      """
+
+      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+    end
+
+    test "flags with predicate function reference" do
+      code = """
+      defmodule M do
+        def first_palindrome(nums) do
+          nums
+          |> Stream.filter(&palindrome?/1)
+          |> Enum.at(0)
+        end
+      end
+      """
+
+      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+    end
+
+    test "flags inside longer pipeline" do
+      code = """
+      defmodule M do
+        def first_even(n) do
+          1
+          |> Stream.iterate(&(&1 + 1))
+          |> Stream.filter(&even?/1)
+          |> Enum.at(0)
+        end
+      end
+      """
+
+      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+    end
+  end
+
+  # ── FLAGGED: nested forms ──────────────────────────────────────────────
+
+  describe "flags nested Enum.at(Enum.filter(...), 0)" do
+    test "flags nested Enum.filter" do
+      code = """
+      defmodule M do
+        def first_even(nums), do: Enum.at(Enum.filter(nums, &even?/1), 0)
+      end
+      """
+
+      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+    end
+
+    test "flags nested Stream.filter" do
+      code = """
+      defmodule M do
+        def first_even(nums), do: Enum.at(Stream.filter(nums, &even?/1), 0)
+      end
+      """
+
+      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+    end
+  end
+
+  # ── NOT FLAGGED: wrong index ───────────────────────────────────────────
+
+  describe "does NOT flag non-zero indexes" do
+    test "does not flag Enum.filter |> Enum.at(1)" do
+      code = """
+      defmodule M do
+        def second_even(nums), do: Enum.filter(nums, &even?/1) |> Enum.at(1)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Enum.filter |> Enum.at(-1)" do
+      code = """
+      defmodule M do
+        def last_even(nums), do: Enum.filter(nums, &even?/1) |> Enum.at(-1)
+      end
+      """
+
+      assert check(code) == []
+    end
+  end
+
+  # ── NOT FLAGGED: default arg ───────────────────────────────────────────
+
+  describe "does NOT flag Enum.at with default" do
+    test "does not flag Enum.filter |> Enum.at(0, :none)" do
+      code = """
+      defmodule M do
+        def first_even(nums), do: Enum.filter(nums, &even?/1) |> Enum.at(0, :none)
+      end
+      """
+
+      assert check(code) == []
+    end
+  end
+
+  # ── NOT FLAGGED: already idiomatic ─────────────────────────────────────
+
+  describe "does NOT flag already idiomatic code" do
+    test "does not flag Enum.find" do
+      code = """
+      defmodule M do
+        def first_even(nums), do: Enum.find(nums, &even?/1)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag plain Enum.filter without at(0)" do
+      code = """
+      defmodule M do
+        def evens(nums), do: Enum.filter(nums, &even?/1)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag plain Enum.at without filter" do
+      code = """
+      defmodule M do
+        def get_first(nums), do: Enum.at(nums, 0)
+      end
+      """
+
+      assert check(code) == []
+    end
+  end
+end
