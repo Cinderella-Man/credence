@@ -52,15 +52,64 @@ defmodule Credence.Pattern.NoExplicitMinReduce do
   defp reduce_call?({{:., _, [:Enum, :reduce]}, _, _}), do: true
   defp reduce_call?(_), do: false
 
-  defp min_reduce_body?([_enum, _acc, {:fn, _, [{:->, _, [_args, body]}]}]) do
-    explicit_min?(body)
+  defp min_reduce_body?([_enum, _acc, {:fn, _, [{:->, _, [args, body]}]}]) do
+    case List.last(args) do
+      {acc_name, _, _} when is_atom(acc_name) -> explicit_min?(body, acc_name)
+      _ -> false
+    end
   end
 
   defp min_reduce_body?(_), do: false
 
-  defp explicit_min?({:__block__, _, [body]}), do: explicit_min?(body)
-  defp explicit_min?({:min, _, [_, _]}), do: true
-  defp explicit_min?({:if, _, [{:<, _, [_, _]}, _opts]}), do: true
-  defp explicit_min?({:if, _, [{:<=, _, [_, _]}, _opts]}), do: true
-  defp explicit_min?(_), do: false
+  defp explicit_min?({:__block__, _, [_ | _] = exprs}, acc_name) do
+    explicit_min?(List.last(exprs), acc_name)
+  end
+
+  defp explicit_min?({:min, _, [a, b]}, acc_name) do
+    var_name?(a, acc_name) or var_name?(b, acc_name)
+  end
+
+  defp explicit_min?({:if, _, [{:<, _, [a, b]}, opts]}, acc_name) do
+    (var_name?(a, acc_name) or var_name?(b, acc_name)) and min_if_branches?(opts, a, b)
+  end
+
+  defp explicit_min?({:if, _, [{:<=, _, [a, b]}, opts]}, acc_name) do
+    (var_name?(a, acc_name) or var_name?(b, acc_name)) and min_if_branches?(opts, a, b)
+  end
+
+  defp explicit_min?(_, _), do: false
+
+  defp min_if_branches?(opts, a, b) when is_list(opts) do
+    with {:ok, do_expr} <- fetch_kw_value(opts, :do),
+         {:ok, else_expr} <- fetch_kw_value(opts, :else) do
+      (var_match?(do_expr, a) and var_match?(else_expr, b)) or
+        (var_match?(do_expr, b) and var_match?(else_expr, a))
+    else
+      _ -> false
+    end
+  end
+
+  defp min_if_branches?(_, _, _), do: false
+
+  # Sourceror wraps keyword keys as {{:__block__, _, [:key]}, value}
+  defp fetch_kw_value(opts, key) do
+    case Keyword.get(opts, key) do
+      nil ->
+        Enum.find_value(opts, :error, fn
+          {{:__block__, _, [^key]}, value} -> {:ok, value}
+          _ -> nil
+        end)
+
+      value ->
+        {:ok, value}
+    end
+  end
+
+  defp var_name?({name, _, _}, target) when is_atom(name), do: name == target
+  defp var_name?(_, _), do: false
+
+  defp var_match?({name, _, _}, {target_name, _, _}) when is_atom(name) and is_atom(target_name),
+    do: name == target_name
+
+  defp var_match?(_, _), do: false
 end

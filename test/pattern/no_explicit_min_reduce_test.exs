@@ -166,6 +166,49 @@ defmodule Credence.Pattern.NoExplicitMinReduceTest do
 
       assert check(code) == []
     end
+
+    test "does NOT flag min used inside reduce body where accumulator is not in comparison" do
+      code = """
+      defmodule DPCoinChange do
+        def coinchange(coins, amount) do
+          dp = :array.new(amount + 1, default: amount + 1)
+
+          Enum.reduce(1..amount, dp, fn current_amount, dp ->
+            Enum.reduce(coins, dp, fn coin, dp ->
+              if coin <= current_amount do
+                prev = :array.get(current_amount - coin, dp)
+                updated = prev + 1
+                current = :array.get(current_amount, dp)
+                :array.set(current_amount, min(current, updated), dp)
+              else
+                dp
+              end
+            end)
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does NOT flag if comparison that does not involve accumulator" do
+      code = """
+      defmodule FilterReduce do
+        def process(list, threshold) do
+          Enum.reduce(list, 0, fn x, acc ->
+            if x <= threshold do
+              x + acc
+            else
+              acc
+            end
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix" do
