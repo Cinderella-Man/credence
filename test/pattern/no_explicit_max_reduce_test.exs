@@ -152,6 +152,34 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
       assert length(issues) == 2
     end
 
+    test "does NOT detect max-reduce with transformation (e.g. length)" do
+      code = """
+      defmodule GoodMaxTransform do
+        def max_length(lists) do
+          Enum.reduce(lists, 0, fn sub, acc ->
+            max(acc, length(sub))
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does NOT detect if-greater with transformation" do
+      code = """
+      defmodule GoodIfTransform do
+        def max_length(lists) do
+          Enum.reduce(lists, 0, fn sub, acc ->
+            if length(sub) > acc, do: length(sub), else: acc
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
     test "ignores unrelated comparison operators outside reduce" do
       code = """
       defmodule NoReduce do

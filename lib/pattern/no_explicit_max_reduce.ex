@@ -78,15 +78,26 @@ defmodule Credence.Pattern.NoExplicitMaxReduce do
   # Safely unwrap single-expression blocks (added by formatter/parser occasionally)
   defp explicit_max?({:__block__, _, [body]}), do: explicit_max?(body)
 
-  # Match unqualified Kernel.max/2 calls
-  defp explicit_max?({:max, _, [_, _]}), do: true
+  # Match unqualified Kernel.max/2 calls — only when BOTH arguments are
+  # simple variable references.  If either arg is a function call or other
+  # expression (e.g. `max(acc, length(el))`), rewriting to `Enum.max(enum)`
+  # would be semantically incorrect because it compares raw elements instead
+  # of the transformed values.
+  defp explicit_max?({:max, _, [left, right]}), do: simple_var?(left) and simple_var?(right)
 
   # Match `if >` (ignoring strict keyword list length to account for AST metadata)
-  defp explicit_max?({:if, _, [{:>, _, [_, _]}, _opts]}), do: true
+  defp explicit_max?({:if, _, [{:>, _, [left, right]}, _opts]}),
+    do: simple_var?(left) and simple_var?(right)
 
   # Match `if >=`
-  defp explicit_max?({:if, _, [{:>=, _, [_, _]}, _opts]}), do: true
+  defp explicit_max?({:if, _, [{:>=, _, [left, right]}, _opts]}),
+    do: simple_var?(left) and simple_var?(right)
 
   # Fallback
   defp explicit_max?(_), do: false
+
+  # A simple variable reference is an atom name with an atom context
+  # (no function calls, field accesses, or other compound expressions).
+  defp simple_var?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
+  defp simple_var?(_), do: false
 end
