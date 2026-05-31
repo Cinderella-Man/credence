@@ -116,13 +116,18 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
   defp build_patch({{:., _, [mod, agg_fn]}, _, [inner]} = node)
        when agg_fn in @aggregators do
-    if enum_module?(mod) and map_call?(inner) do
-      {_, _, map_fn_args} = inner
-      enum_source = hd(map_fn_args)
-      map_fn = hd(tl(map_fn_args))
-      emit_patch(node, build_reduce(enum_source, map_fn, agg_fn))
-    else
+    # max/min: check-only (no auto-fix) — same reason as in fix_pipeline.
+    if agg_fn in [:max, :min] do
       :skip
+    else
+      if enum_module?(mod) and map_call?(inner) do
+        {_, _, map_fn_args} = inner
+        enum_source = hd(map_fn_args)
+        map_fn = hd(tl(map_fn_args))
+        emit_patch(node, build_reduce(enum_source, map_fn, agg_fn))
+      else
+        :skip
+      end
     end
   end
 
@@ -192,18 +197,18 @@ defmodule Credence.Pattern.NoMapThenAggregate do
         map_step?(first) and agg_step?(second) ->
           agg_fn = agg_fn_name(second)
 
-          if agg_fn in [:max_by, :min_by] do
+          # max/min/max_by/min_by: no safe universal initial value for a
+          # reduce accumulator — Enum.reduce/2 uses the raw first element
+          # as accumulator, which breaks when the map function changes the
+          # element type (e.g. &Enum.sum/1 produces integers, but the
+          # accumulator starts as a list).  Flag the issue but skip the
+          # auto-fix; only :sum can safely use Enum.reduce/3 with 0.
+          if agg_fn in [:max_by, :min_by, :max, :min] do
             nil
           else
-            # Enum.max(default) / Enum.min(default): the default cannot safely
-            # serve as a reduce accumulator (it may dominate the comparison for
-            # non-empty lists). Flag the issue but skip the auto-fix.
-            if agg_fn in [:max, :min] and agg_has_default?(second) do
-              nil
-            else
-              map_fn = extract_map_fn(first)
-              before = Enum.take(steps, idx)
-              after_ = Enum.drop(steps, idx + 2)
+            map_fn = extract_map_fn(first)
+            before = Enum.take(steps, idx)
+            after_ = Enum.drop(steps, idx + 2)
 
             reduce_call =
               if before == [] do
@@ -214,7 +219,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
               end
 
             rebuild_pipeline(before, reduce_call, after_)
-            end
           end
 
         map_step?(first) and constructor_step?(second) ->
@@ -463,9 +467,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   defp agg_step?(_), do: false
 
   defp agg_fn_name({{:., _, [_, fn_name]}, _, _}), do: fn_name
-
-  defp agg_has_default?({{:., _, [_, _]}, _, args}) when length(args) == 1, do: true
-  defp agg_has_default?(_), do: false
 
   defp constructor_module?({:__aliases__, _, [mod]}) when mod in @constructor_modules, do: true
   defp constructor_module?(_), do: false
