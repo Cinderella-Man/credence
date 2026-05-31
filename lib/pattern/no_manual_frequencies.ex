@@ -29,7 +29,7 @@ defmodule Credence.Pattern.NoManualFrequencies do
         {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [_list, {:%{}, _, []}, body]} =
             node,
         issues ->
-          if body_has_map_update?(body) do
+          if is_simple_frequency_fn?(body) do
             {node, [build_issue(meta) | issues]}
           else
             {node, issues}
@@ -42,7 +42,7 @@ defmodule Credence.Pattern.NoManualFrequencies do
            {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [{:%{}, _, []}, body]}
          ]} = node,
         issues ->
-          if body_has_map_update?(body) do
+          if is_simple_frequency_fn?(body) do
             {node, [build_issue(meta) | issues]}
           else
             {node, issues}
@@ -64,7 +64,7 @@ defmodule Credence.Pattern.NoManualFrequencies do
          list,
          {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [{:%{}, _, []}, body]}
        ]} = node ->
-        if body_has_map_update?(body) do
+        if is_simple_frequency_fn?(body) do
           enum_frequencies_call(list)
         else
           node
@@ -72,7 +72,7 @@ defmodule Credence.Pattern.NoManualFrequencies do
 
       # Direct: Enum.reduce(list, %{}, fn ... end) → Enum.frequencies(list)
       {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [list, {:%{}, _, []}, body]} = node ->
-        if body_has_map_update?(body) do
+        if is_simple_frequency_fn?(body) do
           enum_frequencies_call(list)
         else
           node
@@ -91,17 +91,39 @@ defmodule Credence.Pattern.NoManualFrequencies do
   defp unwrap_literal({:__block__, _, [val]}), do: val
   defp unwrap_literal(val), do: val
 
-  defp body_has_map_update?(body) do
-    {_ast, found} =
-      Macro.prewalk(body, false, fn
-        # Map.update(acc, key, 1, increment_fn) — the `1` default is the
-        # hallmark of frequency counting.
-        {{:., _, [{:__aliases__, _, [:Map]}, :update]}, _, [_, _, default, _]} = node, _ ->
-          if unwrap_literal(default) == 1, do: {node, true}, else: {node, false}
+  # Verifies the fn is a simple frequency-counting function:
+  # 1. The Map.update key must be the reduce's element parameter (not a derived value)
+  # 2. No conditional logic wrapping the Map.update (would mean filtered counts)
+  defp is_simple_frequency_fn?(fn_expr) do
+    case fn_expr do
+      {:fn, _, [{:->, _, [params, body_block]}]} when length(params) == 2 ->
+        element_param = hd(params)
+        has_matching_map_update?(body_block, element_param) and not has_conditional?(body_block)
 
-        # Map.update!(acc, key, increment_fn)
-        {{:., _, [{:__aliases__, _, [:Map]}, :update!]}, _, [_, _, _]} = node, _ ->
-          {node, true}
+      _ ->
+        false
+    end
+  end
+
+  defp has_matching_map_update?(body_block, expected_key) do
+    {_ast, found} =
+      Macro.prewalk(body_block, false, fn
+        # Map.update(acc, key, 1, increment_fn) — the `1` default is the
+        # hallmark of frequency counting. Key must match the element param.
+        {{:., _, [{:__aliases__, _, [:Map]}, :update]}, _, [_, key, default, _]} = node, _ ->
+          if unwrap_literal(default) == 1 and keys_match?(key, expected_key) do
+            {node, true}
+          else
+            {node, false}
+          end
+
+        # Map.update!(acc, key, increment_fn) — key must match the element param.
+        {{:., _, [{:__aliases__, _, [:Map]}, :update!]}, _, [_, key, _]} = node, _ ->
+          if keys_match?(key, expected_key) do
+            {node, true}
+          else
+            {node, false}
+          end
 
         node, acc ->
           {node, acc}
@@ -109,6 +131,27 @@ defmodule Credence.Pattern.NoManualFrequencies do
 
     found
   end
+
+  defp has_conditional?(body_block) do
+    {_ast, found} =
+      Macro.prewalk(body_block, false, fn
+        {:if, _, _} = node, _ -> {node, true}
+        {:case, _, _} = node, _ -> {node, true}
+        {:cond, _, _} = node, _ -> {node, true}
+        {:unless, _, _} = node, _ -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
+  end
+
+  defp keys_match?(key_ast, param_ast) do
+    extract_var_name(key_ast) == extract_var_name(param_ast) and extract_var_name(key_ast) != nil
+  end
+
+  defp extract_var_name({:__block__, _, [val]}), do: extract_var_name(val)
+  defp extract_var_name({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: name
+  defp extract_var_name(_), do: nil
 
   defp build_issue(meta) do
     %Issue{

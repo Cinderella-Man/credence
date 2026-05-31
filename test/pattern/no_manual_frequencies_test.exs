@@ -13,6 +13,41 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
     do: Credence.RuleHelpers.apply_rule_fix(NoManualFrequencies, code, [])
 
   describe "NoManualFrequencies" do
+    test "passes when reduce derives a different key from the element" do
+      code = """
+      defmodule NotFreq do
+        def count_substrings(s, min_size) do
+          limit = String.length(s) - min_size
+
+          Enum.reduce(0..limit, %{}, fn start, freq_map ->
+            substring = String.slice(s, start, min_size)
+            Map.update(freq_map, substring, 1, &(&1 + 1))
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "passes when reduce has conditional Map.update" do
+      code = """
+      defmodule FilteredFreq do
+        def count_valid(list) do
+          Enum.reduce(list, %{}, fn x, acc ->
+            if valid?(x) do
+              Map.update(acc, x, 1, &(&1 + 1))
+            else
+              acc
+            end
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
     test "passes code using Enum.frequencies/1" do
       code = """
       defmodule Good do
