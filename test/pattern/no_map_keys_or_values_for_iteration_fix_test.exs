@@ -471,54 +471,35 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   # sort (exercises both ex() fix and sort double-wrap fix)
   # ═══════════════════════════════════════════════════════════════
 
-  describe "sort" do
-    test "Enum.sort(Map.values(m))" do
-      assert_fix(
-        "Enum.sort(Map.values(m))",
-        "Enum.map(Enum.sort_by(m, fn {_, v} -> v end), fn {_, v} -> v end)"
-      )
+  describe "sort — no rewrite (original is already idiomatic)" do
+    test "Enum.sort(Map.values(m)) is left unchanged" do
+      code = "Enum.sort(Map.values(m))"
+      assert fix(code) =~ "Map.values"
     end
 
-    test "Enum.sort with :desc" do
-      assert_fix(
-        "Enum.sort(Map.values(m), :desc)",
-        "Enum.map(Enum.sort_by(m, fn {_, v} -> v end, :desc), fn {_, v} -> v end)"
-      )
+    test "Enum.sort(Map.keys(m)) is left unchanged" do
+      code = "Enum.sort(Map.keys(m))"
+      assert fix(code) =~ "Map.keys"
     end
 
-    test "Enum.sort with :asc" do
-      assert_fix(
-        "Enum.sort(Map.values(m), :asc)",
-        "Enum.map(Enum.sort_by(m, fn {_, v} -> v end, :asc), fn {_, v} -> v end)"
-      )
+    test "Map.keys |> Enum.sort() is left unchanged" do
+      code = "Map.keys(map) |> Enum.sort()"
+      assert fix(code) =~ "Map.keys"
     end
 
-    test "Enum.sort with comparator lambda" do
-      assert_fix(
-        "Enum.sort(Map.values(m), fn a, b -> a <= b end)",
-        "Enum.map(Enum.sort(m, fn {_k, a}, {_k, b} -> a <= b end), fn {_, v} -> v end)"
-      )
+    test "Map.values |> Enum.sort(:desc) is left unchanged" do
+      code = "Map.values(map) |> Enum.sort(:desc)"
+      assert fix(code) =~ "Map.values"
     end
 
-    test "Enum.sort_by with callback" do
-      assert_fix(
-        "Enum.sort_by(Map.values(m), fn v -> v end)",
-        "Enum.map(Enum.sort_by(m, fn {_k, v} -> v end), fn {_, v} -> v end)"
-      )
+    test "Enum.sort with comparator lambda is left unchanged" do
+      code = "Enum.sort(Map.values(m), fn a, b -> a <= b end)"
+      assert fix(code) =~ "Map.values"
     end
 
-    test "pipe: Map.values |> Enum.sort()" do
-      assert_fix(
-        "Map.values(map) |> Enum.sort()",
-        "Enum.map(Enum.sort_by(map, fn {_, v} -> v end), fn {_, v} -> v end)"
-      )
-    end
-
-    test "pipe: Map.values |> Enum.sort(:desc)" do
-      assert_fix(
-        "Map.values(map) |> Enum.sort(:desc)",
-        "Enum.map(Enum.sort_by(map, fn {_, v} -> v end, :desc), fn {_, v} -> v end)"
-      )
+    test "Enum.sort_by(Map.keys(m), ...) is left unchanged" do
+      code = "Enum.sort_by(Map.keys(m), fn k -> k end)"
+      assert fix(code) =~ "Map.keys"
     end
   end
 
@@ -862,11 +843,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       )
     end
 
-    test "Enum.sort_by with Map.keys" do
-      assert_fix(
-        "Enum.sort_by(Map.keys(m), fn k -> k end)",
-        "Enum.map(Enum.sort_by(m, fn {k, _v} -> k end), fn {k, _} -> k end)"
-      )
+    test "Enum.sort_by with Map.keys is left unchanged" do
+      code = "Enum.sort_by(Map.keys(m), fn k -> k end)"
+      assert fix(code) =~ "Map.keys"
     end
 
     test "Enum.reduce_while with Map.keys" do
@@ -884,12 +863,10 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     end
   end
 
-  describe "Map.keys callback wrapping — sort/2 comparators bind BOTH args to key" do
-    test "Enum.sort with comparator on Map.keys" do
-      assert_fix(
-        "Enum.sort(Map.keys(m), fn a, b -> a <= b end)",
-        "Enum.map(Enum.sort(m, fn {a, _v}, {b, _v} -> a <= b end), fn {k, _} -> k end)"
-      )
+  describe "Map.keys callback wrapping — sort/2 not rewritten" do
+    test "Enum.sort with comparator on Map.keys is left unchanged" do
+      code = "Enum.sort(Map.keys(m), fn a, b -> a <= b end)"
+      assert fix(code) =~ "Map.keys"
     end
   end
 
@@ -967,8 +944,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       defmodule Example do
         def a(m), do: Enum.all?(Map.values(m), fn v -> v == 0 end)
         def b(m), do: Enum.filter(Map.values(m), fn v -> v > 0 end)
-        def c(m), do: Enum.sort(Map.values(m))
-        def d(m), do: Map.keys(m) |> Enum.join()
+        def c(m), do: Map.keys(m) |> Enum.join()
       end
       """
 

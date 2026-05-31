@@ -74,7 +74,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     at find random empty?
     join
     filter reject
-    sort sort_by
     uniq uniq_by dedup dedup_by
     take drop take_while drop_while
     reverse sample shuffle slice
@@ -193,19 +192,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
     # 1) Wrap any single-arg callbacks in enum_args so the user's
     #    variable binds to the correct slot of the `{k, v}` pair.
-    orig_args = enum_args
     enum_args = wrap_fns(enum_args, map_fn)
-
-    # 2) For sort/2 with a lambda comparator, use the original (unwrapped)
-    #    callback — wrap_sort does its own two-arg destructuring.
-    enum_args =
-      case {enum_fn, orig_args} do
-        {:sort, [comparator]} ->
-          if function?(comparator), do: [wrap_sort(comparator, map_fn)], else: enum_args
-
-        _ ->
-          enum_args
-      end
 
     case enum_fn do
       f when f in [:all?, :any?, :each, :map, :flat_map, :frequencies_by, :find_value] ->
@@ -312,50 +299,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
           {:ok, enum.(:map, [enum.(f, [map_expr, cb]), extractor_lambda(map_fn)])}
         end)
 
-      :sort ->
-        case enum_args do
-          [] ->
-            {:ok,
-             enum.(:map, [
-               enum.(:sort_by, [map_expr, extractor_lambda(map_fn)]),
-               extractor_lambda(map_fn)
-             ])}
-
-          [comparator] ->
-            cond do
-              atom_literal?(comparator) ->
-                {:ok,
-                 enum.(:map, [
-                   enum.(:sort_by, [map_expr, extractor_lambda(map_fn), comparator]),
-                   extractor_lambda(map_fn)
-                 ])}
-
-              function?(comparator) ->
-                {:ok,
-                 enum.(:map, [
-                   enum.(:sort, [map_expr, comparator]),
-                   extractor_lambda(map_fn)
-                 ])}
-
-              true ->
-                :no
-            end
-
-          _ ->
-            :no
-        end
-
-      :sort_by ->
-        on_first(enum_args, fn cb ->
-          opts = tl(enum_args)
-
-          {:ok,
-           enum.(:map, [
-             enum.(:sort_by, [map_expr, cb | opts]),
-             extractor_lambda(map_fn)
-           ])}
-        end)
-
       f when f in [:uniq, :dedup] ->
         on_empty(enum_args, fn ->
           by_fn = if f == :uniq, do: :uniq_by, else: :dedup_by
@@ -429,19 +372,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
     # 1) Wrap any single-arg callbacks so the user's variable binds
     #    to the correct slot of the `{k, v}` pair.
-    orig_args = enum_args
     enum_args = wrap_fns(enum_args, map_fn)
-
-    # 2) For sort/2 with a lambda comparator, use the original (unwrapped)
-    #    callback — wrap_sort does its own two-arg destructuring.
-    enum_args =
-      case {enum_fn, orig_args} do
-        {:sort, [comparator]} ->
-          if function?(comparator), do: [wrap_sort(comparator, map_fn)], else: enum_args
-
-        _ ->
-          enum_args
-      end
 
     case enum_fn do
       f when f in [:all?, :any?, :each, :map, :flat_map, :frequencies_by, :find_value] ->
@@ -541,54 +472,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       f when f in [:filter, :reject] ->
         on_first(enum_args, fn cb ->
           {:ok, chain.(enum.(f, [cb]), :map, [extractor_lambda(map_fn)])}
-        end)
-
-      :sort ->
-        case enum_args do
-          [] ->
-            {:ok,
-             chain.(
-               enum.(:sort_by, [extractor_lambda(map_fn)]),
-               :map,
-               [extractor_lambda(map_fn)]
-             )}
-
-          [comparator] ->
-            cond do
-              atom_literal?(comparator) ->
-                {:ok,
-                 chain.(
-                   enum.(:sort_by, [extractor_lambda(map_fn), comparator]),
-                   :map,
-                   [extractor_lambda(map_fn)]
-                 )}
-
-              function?(comparator) ->
-                {:ok,
-                 chain.(
-                   enum.(:sort, [comparator]),
-                   :map,
-                   [extractor_lambda(map_fn)]
-                 )}
-
-              true ->
-                :no
-            end
-
-          _ ->
-            :no
-        end
-
-      :sort_by ->
-        on_first(enum_args, fn cb ->
-          opts = tl(enum_args)
-
-          {:ok,
-           chain.(
-             enum.(:sort_by, [cb | opts]),
-             :map,
-             [extractor_lambda(map_fn)]
-           )}
         end)
 
       f when f in [:uniq, :dedup] ->
@@ -717,18 +600,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     found
   end
 
-  # `fn a, b -> body`  →  `fn {a, _v}, {b, _v} -> body`  for :keys
-  #                    →  `fn {_k, a}, {_k, b} -> body`  for :values
-  # Used for the comparator arg of `Enum.sort/2`.
-  defp wrap_sort({:fn, fn_meta, clauses}, map_fn) do
-    rewritten =
-      Enum.map(clauses, fn {:->, arrow_meta, [head, body]} ->
-        {:->, arrow_meta, [sorter_head(head, map_fn), body]}
-      end)
-
-    {:fn, fn_meta, rewritten}
-  end
-
   # Destructures the first parameter of a lambda clause head, preserving
   # any `when` guard and leaving extra parameters alone (e.g. the `acc`
   # of `Enum.reduce/3`).
@@ -741,18 +612,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   end
 
   defp destructure_head([], _map_fn), do: []
-
-  # Like `destructure_head/2`, but destructures BOTH arguments — used
-  # for 2-arg sort comparators.
-  defp sorter_head([{:when, when_meta, [p1, guard]}, p2 | rest], map_fn) do
-    [{:when, when_meta, [kv_pattern(p1, map_fn), guard]}, kv_pattern(p2, map_fn) | rest]
-  end
-
-  defp sorter_head([p1, p2 | rest], map_fn) do
-    [kv_pattern(p1, map_fn), kv_pattern(p2, map_fn) | rest]
-  end
-
-  defp sorter_head(other, _map_fn), do: other
 
   # Returns the `{k, v}` tuple pattern that binds `user_pattern` to the
   # correct slot of a key-value pair:
@@ -802,10 +661,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   defp function?({:fn, _, _}), do: true
   defp function?({:&, _, [{:/, _, [_, {:__block__, _, [1]}]}]}), do: true
   defp function?(_), do: false
-
-  # Sourceror wraps atom literals in `{:__block__, _, [atom]}`.
-  defp atom_literal?({:__block__, _, [a]}) when is_atom(a), do: true
-  defp atom_literal?(_), do: false
 
   # ════════════════════════════════════════════════════════════════
   # AST builders
