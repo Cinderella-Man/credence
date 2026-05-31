@@ -777,8 +777,8 @@ defmodule CredenceTest do
     test "Enum.into — collect into any collectable" do
       assert_clean("""
       defmodule Transformer do
-        def invert(map) do
-          Enum.into(map, %{}, fn {key, value} -> {value, key} end)
+        def invert(map, acc) do
+          Enum.into(map, acc, fn {key, value} -> {value, key} end)
         end
       end
       """)
