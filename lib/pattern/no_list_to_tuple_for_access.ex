@@ -28,6 +28,11 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
   canonical Elixir idiom for O(1) random access during iteration.
   Rewriting that `elem` to `Enum.at` would turn O(m + n) into O(m × n).
   The rule recognises this shape and refuses to flag (or auto-fix) it.
+
+  The same exemption applies when the `List.to_tuple` binding is in a
+  `def` and the `elem` access is in a nested `defp` (the typical shape
+  for recursive helpers). This is the pattern recommended by
+  `no_enum_at_in_recursion`.
   """
 
   use Credence.Pattern.Rule
@@ -209,10 +214,12 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
   # position so two siblings with the same shape don't collide.
   defp enter_scope({:fn, meta, _}, stack), do: [{:fn, meta_id(meta)} | stack]
   defp enter_scope({:for, meta, _}, stack), do: [{:for, meta_id(meta)} | stack]
+  defp enter_scope({:defp, meta, _}, stack), do: [{:defp, meta_id(meta)} | stack]
   defp enter_scope(_, stack), do: stack
 
   defp exit_scope({:fn, _, _}, [_ | rest]), do: rest
   defp exit_scope({:for, _, _}, [_ | rest]), do: rest
+  defp exit_scope({:defp, _, _}, [_ | rest]), do: rest
   defp exit_scope(_, stack), do: stack
 
   defp meta_id(meta), do: {Keyword.get(meta, :line), Keyword.get(meta, :column)}
@@ -224,7 +231,10 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
     blen = length(binding_scope)
     rlen = length(reader_scope)
 
-    rlen > blen and Enum.drop(reader_scope, rlen - blen) == binding_scope
+    # Suffix check: binding in a parent scope, reader in a nested fn/for
+    (rlen > blen and Enum.drop(reader_scope, rlen - blen) == binding_scope) or
+      # Prefix check: binding in a def, reader in a nested defp (recursive helper)
+      (blen > rlen and Enum.drop(binding_scope, blen - rlen) == reader_scope)
   end
 
   defp extract_tuple_source({{:., _, [{:__aliases__, _, [:List]}, :to_tuple]}, _, [source]}),

@@ -397,6 +397,31 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
       assert check(input) == []
     end
 
+    test "does not flag List.to_tuple + elem in recursive defp helpers" do
+      input = """
+      defmodule SlidingWindow do
+        def run(nums, k) do
+          tuple = List.to_tuple(nums)
+          n = tuple_size(tuple)
+          do_slide(tuple, k, 0, 0, 0, 0, n)
+        end
+
+        defp do_slide(_tuple, _k, _left, right, _zeros, max, n) when right >= n do
+          max
+        end
+
+        defp do_slide(tuple, k, left, right, zeros, max, n) do
+          current = elem(tuple, right)
+          new_zeros = if current == 0, do: zeros + 1, else: zeros
+          do_slide(tuple, k, left, right + 1, new_zeros, max, n)
+        end
+      end
+      """
+
+      assert check(input) == []
+      assert fix(input) == input
+    end
+
     test "removes the dead List.to_tuple binding when its only reader is a fixed elem call" do
       assert_fix(
         """
