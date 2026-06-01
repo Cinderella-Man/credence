@@ -386,6 +386,128 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
 
       assert check(code) == []
     end
+
+    # ---- Binary pattern cases ----
+
+    test "detects binary destructure-reconstruct in function head" do
+      code = """
+      defmodule Bad do
+        def min_substring_length(<<char, rest::binary>>) do
+          string = <<char, rest::binary>>
+          String.length(string)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_destructure_reconstruct
+      assert issue.message =~ "Binary"
+      assert issue.message =~ "char"
+      assert issue.message =~ "rest"
+      assert issue.message =~ "reassembled"
+    end
+
+    test "detects binary destructure-reconstruct in case branch" do
+      code = """
+      defmodule Bad do
+        def process(data) do
+          case data do
+            <<a, b, rest::binary>> ->
+              x = <<a, b, rest::binary>>
+              {:ok, x}
+          end
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_destructure_reconstruct
+      assert issue.message =~ "Binary"
+      assert issue.message =~ "a"
+      assert issue.message =~ "rest"
+    end
+
+    test "detects binary destructure-reconstruct with typed segments" do
+      code = """
+      defmodule Bad do
+        def parse(<<len::16, rest::binary>>) do
+          data = <<len::16, rest::binary>>
+          {len, data}
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_destructure_reconstruct
+      assert issue.message =~ "Binary"
+    end
+
+    # ---- Binary pattern negative cases ----
+
+    test "does not flag binary when variables are used individually" do
+      code = """
+      defmodule Good do
+        def process(<<header, rest::binary>>) do
+          IO.puts(header)
+          process_data(rest)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag single-segment binary pattern" do
+      code = """
+      defmodule Good do
+        def wrap(<<x>>) do
+          data = <<x>>
+          {:ok, data}
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag binary with underscore-prefixed variables" do
+      code = """
+      defmodule Good do
+        def skip(<<_head, rest::binary>>) do
+          data = <<_head, rest::binary>>
+          {:ok, data}
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag binary with literal segment" do
+      code = """
+      defmodule Good do
+        def check(<<0, rest::binary>>) do
+          data = <<0, rest::binary>>
+          {:ok, data}
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag binary when segment order differs" do
+      code = """
+      defmodule Good do
+        def swap(<<a, b>>) do
+          data = <<b, a>>
+          {:ok, data}
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix/2 — case branches" do
@@ -638,6 +760,100 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
       # Original code should be preserved
       assert result =~ "[c1 | rest1]"
       assert result =~ "[c2 | rest2]"
+    end
+  end
+
+  describe "fix/2 — binary patterns" do
+    test "fixes binary destructure-reconstruct in function head" do
+      code = """
+      defmodule Bad do
+        def min_substring_length(<<char, rest::binary>>) do
+          string = <<char, rest::binary>>
+          String.length(string)
+        end
+      end
+      """
+
+      result = fix(code)
+
+      # Should have = string binding on the pattern
+      assert result =~ "= string"
+      # The body should use string directly
+      assert result =~ "String.length(string)"
+      # char and rest unused → replaced with _ in pattern
+      assert result =~ "<<_,"
+    end
+
+    test "fixes binary destructure-reconstruct in case branch" do
+      code = """
+      defmodule Bad do
+        def process(data) do
+          case data do
+            <<a, rest::binary>> ->
+              x = <<a, rest::binary>>
+              {:ok, x}
+          end
+        end
+      end
+      """
+
+      result = fix(code)
+
+      assert result =~ "= string"
+      assert result =~ "{:ok, x}"
+    end
+
+    test "fixes binary keeping individually-used segment" do
+      code = """
+      defmodule Bad do
+        def parse(<<header, rest::binary>>) do
+          data = <<header, rest::binary>>
+          IO.puts(header)
+          process_data(data)
+        end
+      end
+      """
+
+      result = fix(code)
+
+      # header is used individually, so it stays in the pattern
+      assert result =~ "header"
+      assert result =~ "IO.puts(header)"
+      # rest is only in reconstruction → underscored
+      assert result =~ "= string"
+    end
+
+    test "round-trip: fixed binary code produces zero issues" do
+      code = """
+      defmodule Bad do
+        def min_substring_length(<<char, rest::binary>>) do
+          string = <<char, rest::binary>>
+          String.length(string)
+        end
+      end
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert [] == NoDestructureReconstruct.check(ast, [])
+    end
+
+    test "round-trip: fixed binary case branch produces zero issues" do
+      code = """
+      defmodule Bad do
+        def process(data) do
+          case data do
+            <<a, rest::binary>> ->
+              x = <<a, rest::binary>>
+              {:ok, x}
+          end
+        end
+      end
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert [] == NoDestructureReconstruct.check(ast, [])
     end
   end
 

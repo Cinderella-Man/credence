@@ -1,7 +1,8 @@
 defmodule Credence.Pattern.NoDestructureReconstruct do
   @moduledoc """
-  Detects patterns where a list is destructured into individual variables
-  and then immediately reassembled into the same list.
+  Detects patterns where a list, cons, or binary is destructured into
+  individual variables and then immediately reassembled into the same
+  structure.
 
   ## Why this matters
 
@@ -22,18 +23,38 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
           Enum.all?(parts, &valid_octet?/1)
       end
 
+  Similarly for binaries — LLMs destructure a binary into segments only
+  to reconstruct the same binary:
+
+      # Flagged — binary destructure then reconstruct
+      def process(<<char, rest::binary>>) do
+        string = <<char, rest::binary>>
+        String.length(string)
+      end
+
+      # Idiomatic — bind as a whole
+      def process(<<_, _::binary>> = string) do
+        String.length(string)
+      end
+
   ## Auto-fix strategy
 
-  1. Bind the whole list with `= items` on the pattern
-  2. Replace the reconstructed list `[a, b, c]` in the body with `items`
-  3. Check which individual variables are still used elsewhere in the
-     body — replace unused ones with `_` in the pattern
+  **Lists:** bind the whole list with `= items` on the pattern, replace
+  the reconstructed list `[a, b, c]` in the body with `items`, and
+  replace unused variables with `_` in the pattern.
+
+  **Binaries:** bind the whole binary with `= string` on the pattern,
+  replace the reconstructed binary in the body with `string`, and
+  replace unused segment variables with `_` in the pattern.
 
   ## Flagged patterns
 
-  A list pattern `[a, b, c, ...]` in a `case` branch or function head
-  where the body contains a list literal `[a, b, c, ...]` with the
-  exact same variables in the same order.
+  - A list pattern `[a, b, c, ...]` in a `case` branch or function head
+    where the body contains a list literal `[a, b, c, ...]` with the
+    exact same variables in the same order.
+  - A cons pattern `[h | t]` where the body reconstructs the same cons.
+  - A binary pattern `<<a, rest::binary>>` where the body reconstructs
+    the same binary using the same segment variables.
 
   Only flagged when the pattern contains 2 or more simple variables
   (not literals, patterns, or underscore-prefixed names).
@@ -114,7 +135,20 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
           []
       end
 
-    list_issues ++ cons_issues
+    binary_issues =
+      case extract_binary_segment_names(pattern) do
+        {:ok, var_names} when length(var_names) >= 2 ->
+          if body_contains_same_binary?(body, var_names) do
+            [build_binary_issue(var_names, meta)]
+          else
+            []
+          end
+
+        _ ->
+          []
+      end
+
+    list_issues ++ cons_issues ++ binary_issues
   end
 
   @impl true
@@ -207,7 +241,12 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   defp fix_pattern_body(pattern, body, extra_ast \\ nil) do
     case fix_list_pattern_body(pattern, body, extra_ast) do
       {:fixed, _, _} = result -> result
-      :no_fix -> fix_cons_pattern_body(pattern, body, extra_ast)
+
+      :no_fix ->
+        case fix_cons_pattern_body(pattern, body, extra_ast) do
+          {:fixed, _, _} = result -> result
+          :no_fix -> fix_binary_pattern_body(pattern, body, extra_ast)
+        end
     end
   end
 
@@ -469,5 +508,128 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
       """,
       meta: %{line: Keyword.get(meta, :line)}
     }
+  end
+
+  # ---- Binary pattern helpers ----
+
+  defp extract_binary_segment_names({:<<>>, _, segments}) when is_list(segments) do
+    do_extract_binary_segment_names(segments)
+  end
+
+  defp extract_binary_segment_names({:__block__, _, [{:<<>>, _, segments}]})
+       when is_list(segments) do
+    do_extract_binary_segment_names(segments)
+  end
+
+  defp extract_binary_segment_names(_), do: :error
+
+  defp do_extract_binary_segment_names(segments) do
+    names =
+      Enum.map(segments, fn
+        {name, _, ctx} when is_atom(name) and is_atom(ctx) ->
+          str = Atom.to_string(name)
+          if String.starts_with?(str, "_"), do: :skip, else: name
+
+        {:"::", _, [{name, _, ctx} | _rest]} when is_atom(name) and is_atom(ctx) ->
+          str = Atom.to_string(name)
+          if String.starts_with?(str, "_"), do: :skip, else: name
+
+        _ ->
+          :skip
+      end)
+
+    if Enum.any?(names, &(&1 == :skip)), do: :error, else: {:ok, names}
+  end
+
+  defp body_contains_same_binary?(body, target_var_names) do
+    {_, found} =
+      Macro.prewalk(body, false, fn
+        node, true ->
+          {node, true}
+
+        node, false ->
+          case extract_binary_segment_names(node) do
+            {:ok, ^target_var_names} -> {node, true}
+            _ -> {node, false}
+          end
+      end)
+
+    found
+  end
+
+  defp build_binary_issue(var_names, meta) do
+    vars_str = Enum.map_join(var_names, ", ", &to_string/1)
+
+    %Issue{
+      rule: :no_destructure_reconstruct,
+      message: """
+      Binary `<<#{vars_str}>>` is destructured and then reassembled \
+      into the same binary.
+
+      Use a plain parameter binding instead of destructuring and \
+      reconstructing the binary.\
+      """,
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
+
+  defp fix_binary_pattern_body(pattern, body, extra_ast) do
+    with {:ok, var_names} when length(var_names) >= 2 <-
+           extract_binary_segment_names(pattern),
+         true <- body_contains_same_binary?(body, var_names) do
+      binding_var = {:string, [], nil}
+      new_body = replace_reconstructed_binary(body, var_names, binding_var)
+
+      used = collect_variable_names(new_body)
+
+      used =
+        if extra_ast, do: MapSet.union(used, collect_variable_names(extra_ast)), else: used
+
+      {:<<>>, bin_meta, segments} = pattern
+
+      new_segments =
+        Enum.map(segments, fn
+          {name, meta, ctx} = node when is_atom(name) and is_atom(ctx) ->
+            str = Atom.to_string(name)
+            if String.starts_with?(str, "_") or MapSet.member?(used, name),
+              do: node,
+              else: {:_, meta, ctx}
+
+          {:"::", meta, [{name, nmeta, nctx} | rest] = seg} when is_atom(name) and
+                                                                    is_atom(nctx) ->
+            str = Atom.to_string(name)
+
+            if String.starts_with?(str, "_") or MapSet.member?(used, name),
+              do: {:"::", meta, seg},
+              else: {:"::", meta, [{:_, nmeta, nctx} | rest]}
+
+          other ->
+            other
+        end)
+
+      new_pattern = {:<<>>, bin_meta, new_segments}
+      {:fixed, {:=, [], [new_pattern, binding_var]}, new_body}
+    else
+      _ -> :no_fix
+    end
+  end
+
+  defp replace_reconstructed_binary(body, target_var_names, replacement) do
+    Macro.prewalk(body, fn
+      {:<<>>, _, _} = node ->
+        case extract_binary_segment_names(node) do
+          {:ok, ^target_var_names} -> replacement
+          _ -> node
+        end
+
+      {:__block__, _, [{:<<>>, _, _} = inner]} = node ->
+        case extract_binary_segment_names(inner) do
+          {:ok, ^target_var_names} -> replacement
+          _ -> node
+        end
+
+      node ->
+        node
+    end)
   end
 end
