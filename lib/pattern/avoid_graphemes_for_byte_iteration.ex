@@ -1,26 +1,35 @@
 defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
   @moduledoc """
   Check-only rule: Detects `String.graphemes/1` piped into `Enum.all?/2`,
-  `Enum.any?/2`, or `Enum.each/2`.
+  `Enum.any?/2`, or `Enum.each/2` where the predicate **clearly** operates
+  on integer codepoints.
 
   `String.graphemes/1` splits into grapheme strings — each a single-char
-  binary. When the predicate only needs to inspect byte values (e.g. range
-  guards), `String.to_charlist/1` is more direct: it yields integers
-  without the intermediate binary wrapping.
+  binary. When the predicate uses integer/byte-value comparisons (e.g.
+  char literals like `?A`, range guards), `String.to_charlist/1` is more
+  direct: it yields integers without the intermediate binary wrapping.
 
-  This rule is check-only because rewriting the predicate from
-  binary-matching to integer-matching cannot be done reliably in the
-  general case.
+  This rule only fires when the predicate contains **visible integer
+  comparisons** (char literals, integer ranges). It does NOT fire for:
+  - Opaque function captures (`&func/1`) — cannot verify the predicate
+    expects integers vs strings.
+  - String/regex operations — the predicate needs grapheme strings.
+
+  This avoids contradictions with `avoid_charlist_for_iteration`, which
+  recommends graphemes for general iteration.
 
   ## Bad
 
+      string |> String.graphemes() |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)
+      string |> String.graphemes() |> Enum.any?(fn c -> c in ?A..?Z end)
+
+  ## Good (not flagged — opaque capture, can't verify)
+
       string |> String.graphemes() |> Enum.all?(&hex_digit?/1)
-      string |> String.graphemes() |> Enum.any?(&(?0 <= &1 and &1 <= ?9))
 
-  ## Good
+  ## Good (use Regex.match? directly — no iteration needed)
 
-      string |> String.to_charlist() |> Enum.all?(&hex_digit?/1)
-      String.to_charlist(string) |> Enum.all?(&hex_digit?/1)
+      Regex.match?(~r/[^a-zA-Z0-9]/, string)
   """
 
   use Credence.Pattern.Rule
@@ -32,7 +41,8 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
       Macro.prewalk(ast, [], fn
         # Pipe: ... |> String.graphemes() |> Enum.all?(pred)
         {:|>, meta, [lhs, rhs]} = node, issues ->
-          if iteration_call?(rhs) and immediate_graphemes?(lhs) do
+          if iteration_call?(rhs) and immediate_graphemes?(lhs) and
+               predicate_expects_integers?(rhs) do
             {node, [build_issue(meta) | issues]}
           else
             {node, issues}
@@ -64,22 +74,90 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
 
   defp graphemes_call?(_), do: false
 
+  # Check if the predicate in Enum.all?/any?/each expects integer codepoints.
+  # Only returns true when we can VERIFY integer comparisons in the predicate.
+  # Opaque captures (&func/1) return false — we can't tell what they expect.
+  defp predicate_expects_integers?(
+         {{:., _, [{:__aliases__, _, [:Enum]}, _]}, _, [pred]}
+       ) do
+    case pred do
+      # Opaque capture: &func/1 or &Mod.func/1 — can't verify
+      {:&, _, [{:/, _, _}]} ->
+        false
+
+      # Inline body (anonymous fn or capture with body) — check for integer comparisons
+      _ ->
+        predicate_body_has_integer_comparison?(pred) and
+          not predicate_uses_binary_matching?(pred)
+    end
+  end
+
+  defp predicate_expects_integers?(_), do: false
+
+  # Walk predicate AST looking for comparisons with integer literals (char values).
+  # Handles both bare integers and Sourceror-wrapped {:__block__, _, [int]}.
+  defp predicate_body_has_integer_comparison?(ast) do
+    {_, found} =
+      Macro.prewalk(ast, false, fn
+        _node, true = acc ->
+          {nil, acc}
+
+        # Comparison operators with at least one integer operand
+        {op, _, [left, right]} = node, acc when op in [:>=, :<=, :>, :<, :==, :!=] ->
+          {node, acc or integer_literal?(left) or integer_literal?(right)}
+
+        # Range with integer endpoints (e.g. ?0..?9)
+        {:"..", _, [left, right]} = node, acc ->
+          {node, acc or (integer_literal?(left) and integer_literal?(right))}
+
+        # in/2 with range (e.g. c in ?A..?Z)
+        {:in, _, [_, {:"..", _, [left, right]}]} = node, acc ->
+          {node, acc or (integer_literal?(left) and integer_literal?(right))}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found
+  end
+
+  defp integer_literal?(n) when is_integer(n), do: true
+  defp integer_literal?({:__block__, _, [n]}) when is_integer(n), do: true
+  defp integer_literal?(_), do: false
+
+  # Detect binary pattern matching (<<...>>) in the predicate — this means
+  # the predicate expects binary/grapheme inputs, not integers.
+  defp predicate_uses_binary_matching?(ast) do
+    {_, found} =
+      Macro.prewalk(ast, false, fn
+        _node, true = acc ->
+          {nil, acc}
+
+        {:<<>>, _, _} = node, _ ->
+          {node, true}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found
+  end
+
   defp build_issue(meta) do
     %Issue{
       rule: :avoid_graphemes_for_byte_iteration,
       message: """
-      `String.graphemes/1` produces single-char binaries, but `Enum.all?/2`, \
-      `Enum.any?/2`, and `Enum.each/2` only consume values — they don't need \
-      binary graphemes. `String.to_charlist/1` yields integers directly and \
-      avoids the intermediate binary wrapping.
+      `String.graphemes/1` produces single-char binaries, but the predicate \
+      uses integer/byte-value comparisons. `String.to_charlist/1` yields \
+      integers directly and avoids the intermediate binary wrapping.
 
       Replace `String.graphemes/1` with `String.to_charlist/1`:
 
           # Before (creates binary graphemes):
-          string |> String.graphemes() |> Enum.all?(&valid?/1)
+          string |> String.graphemes() |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)
 
           # After (yields integers directly):
-          string |> String.to_charlist() |> Enum.all?(&valid?/1)
+          string |> String.to_charlist() |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)
       """,
       meta: %{line: Keyword.get(meta, :line)}
     }

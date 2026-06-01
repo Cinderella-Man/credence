@@ -9,38 +9,42 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
     AvoidGraphemesForByteIteration.check(ast, [])
   end
 
-  describe "flags graphemes piped to Enum.all?/2" do
-    test "three-step pipe with capture" do
-      code = "string |> String.graphemes() |> Enum.all?(&hex_char?/1)"
-      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
-    end
-
-    test "two-step pipe with capture" do
-      code = "String.graphemes(str) |> Enum.all?(&hex_char?/1)"
-      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
-    end
-
-    test "three-step pipe with anonymous function" do
-      code = """
-      string
-      |> String.graphemes()
-      |> Enum.all?(fn c -> c >= "0" and c <= "9" end)
-      """
+  describe "flags graphemes piped to Enum.all?/2 with integer predicate" do
+    test "three-step pipe with inline integer comparison" do
+      code =
+        "string |> String.graphemes() |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)"
 
       assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
     end
-  end
 
-  describe "flags graphemes piped to Enum.any?/2" do
-    test "three-step pipe" do
-      code = "string |> String.graphemes() |> Enum.any?(&invalid?/1)"
+    test "two-step pipe with inline integer comparison" do
+      code = "String.graphemes(str) |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)"
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+
+    test "three-step pipe with range in predicate" do
+      code = "string |> String.graphemes() |> Enum.all?(fn c -> c in ?0..?9 end)"
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+
+    test "capture with inline integer comparison" do
+      code = "string |> String.graphemes() |> Enum.all?(&(&1 >= ?0 and &1 <= ?9))"
       assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
     end
   end
 
-  describe "flags graphemes piped to Enum.each/2" do
-    test "three-step pipe" do
-      code = "string |> String.graphemes() |> Enum.each(&IO.puts/1)"
+  describe "flags graphemes piped to Enum.any?/2 with integer predicate" do
+    test "three-step pipe with inline integer comparison" do
+      code = "string |> String.graphemes() |> Enum.any?(fn c -> c >= ?A and c <= ?Z end)"
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+  end
+
+  describe "flags graphemes piped to Enum.each/2 with integer predicate" do
+    test "three-step pipe with inline integer comparison" do
+      code =
+        "string |> String.graphemes() |> Enum.each(fn c -> IO.puts(c >= ?0) end)"
+
       assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
     end
   end
@@ -52,7 +56,7 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
       |> String.trim()
       |> String.downcase()
       |> String.graphemes()
-      |> Enum.all?(&valid?/1)
+      |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)
       """
 
       assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
@@ -63,8 +67,8 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
     test "two violations in same module" do
       code = """
       defmodule Example do
-        def a(s), do: String.graphemes(s) |> Enum.all?(&valid?/1)
-        def b(s), do: s |> String.graphemes() |> Enum.any?(&invalid?/1)
+        def a(s), do: String.graphemes(s) |> Enum.all?(fn c -> c >= ?0 end)
+        def b(s), do: s |> String.graphemes() |> Enum.any?(fn c -> c in ?A..?Z end)
       end
       """
 
@@ -73,6 +77,48 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
   end
 
   describe "does NOT flag" do
+    test "opaque capture — cannot verify predicate expects integers" do
+      code = "string |> String.graphemes() |> Enum.all?(&hex_char?/1)"
+      assert check(code) == []
+    end
+
+    test "opaque capture with any?" do
+      code = "string |> String.graphemes() |> Enum.any?(&invalid?/1)"
+      assert check(code) == []
+    end
+
+    test "opaque capture with each" do
+      code = "string |> String.graphemes() |> Enum.each(&IO.puts/1)"
+      assert check(code) == []
+    end
+
+    test "predicate with string comparisons (not integer)" do
+      code = """
+      string
+      |> String.graphemes()
+      |> Enum.all?(fn c -> c >= "0" and c <= "9" end)
+      """
+
+      assert check(code) == []
+    end
+
+    test "predicate using regex (needs strings)" do
+      code =
+        "string |> String.graphemes() |> Enum.any?(&String.match?(&1, ~r/[a-z]/))"
+
+      assert check(code) == []
+    end
+
+    test "predicate with binary pattern matching" do
+      code = """
+      string
+      |> String.graphemes()
+      |> Enum.any?(fn <<c>> when c >= ?A and c <= ?Z -> true; _ -> false end)
+      """
+
+      assert check(code) == []
+    end
+
     test "String.to_charlist piped to Enum.all?" do
       code = "String.to_charlist(str) |> Enum.all?(&valid?/1)"
       assert check(code) == []
@@ -118,6 +164,17 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
 
     test "Enum.count/1 on graphemes is not flagged" do
       code = "str |> String.graphemes() |> Enum.count()"
+      assert check(code) == []
+    end
+
+    test "longer pipeline with opaque capture" do
+      code = """
+      str
+      |> String.trim()
+      |> String.graphemes()
+      |> Enum.all?(&valid?/1)
+      """
+
       assert check(code) == []
     end
   end
