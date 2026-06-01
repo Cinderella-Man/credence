@@ -80,9 +80,9 @@ defmodule Credence.Syntax.FixPythonFloorDiv do
 
   defp comment_line?(line), do: Regex.match?(~r/^\s*#/, line)
 
-  # Elixir range step syntax: `first..last//step` (e.g. `0..-2//1`, `1..10//2`)
+  # Elixir range step syntax: `first..last//step` (e.g. `0..-2//1`, `1..10//2`, `n..m//-1`)
   # The `//` is part of the range operator, not Python floor division.
-  @range_step_pattern ~r/\.\.[\d\-]*\/\//
+  @range_step_pattern ~r/\.\.[\w\-]*\/\//
   defp range_step_syntax?(line), do: Regex.match?(@range_step_pattern, line)
 
   # `Kernel.//` → `div` — works for both pipe and standalone contexts:

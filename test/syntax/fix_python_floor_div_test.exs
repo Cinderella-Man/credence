@@ -117,6 +117,26 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
 
       assert FixPythonFloorDiv.analyze(source) == []
     end
+
+    test "no issues for Elixir range step syntax with variable upper bound n..m//-1" do
+      source = """
+      defmodule Example do
+        def countdown(n, m), do: Enum.to_list(n..m//-1)
+      end
+      """
+
+      assert FixPythonFloorDiv.analyze(source) == []
+    end
+
+    test "no issues for Elixir range step syntax with long variable names i..low_bound//-1" do
+      source = """
+      defmodule Example do
+        def reverse(low_bound, i), do: Enum.reduce(i..low_bound//-1, 0, fn x, acc -> x + acc end)
+      end
+      """
+
+      assert FixPythonFloorDiv.analyze(source) == []
+    end
   end
 
   describe "fix/1" do
@@ -220,6 +240,16 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
 
     test "does not modify range step syntax with positive step" do
       source = "evens = Enum.to_list(1..10//2)\n"
+      assert FixPythonFloorDiv.fix(source) == source
+    end
+
+    test "does not modify range step syntax with variable bounds" do
+      source = "Enum.reduce(n..m//-1, 0, fn i, acc -> i + acc end)\n"
+      assert FixPythonFloorDiv.fix(source) == source
+    end
+
+    test "does not modify range step syntax with long variable names" do
+      source = "Enum.reduce(i..low_bound//-1, current_best, fn j, inner_best -> j end)\n"
       assert FixPythonFloorDiv.fix(source) == source
     end
   end
