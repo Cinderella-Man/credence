@@ -105,9 +105,10 @@ defmodule Credence.FixShowcaseTest do
 
     # ── Collection operations ─────────────────────────────────────
 
-    test "fuses Enum.map |> Enum.sum into Enum.reduce", %{result: %{code: code}} do
-      assert code =~ "Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)"
+    test "fuses Enum.map |> Enum.sum into Enum.sum_by", %{result: %{code: code}} do
+      assert code =~ "Enum.sum_by(words, fn el -> String.length(el) end)"
       refute code =~ "Enum.map(words, fn w -> String.length(w) end) |> Enum.sum()"
+      refute code =~ "Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)"
     end
 
     test "does not replace frequency reduce with derived key", %{result: %{code: code}} do

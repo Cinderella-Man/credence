@@ -1166,7 +1166,7 @@ defmodule CredenceTest do
           else
             char_count = String.length(text)
 
-            total_length = Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)
+            total_length = Enum.sum_by(words, fn el -> String.length(el) end)
             avg_length = total_length / length(words)
 
             frequencies =
