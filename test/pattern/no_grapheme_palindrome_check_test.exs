@@ -111,6 +111,25 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
 
       assert check(code) == []
     end
+
+    test "ignores when decompose var is used for other purposes besides palindrome check" do
+      code = """
+      defmodule SafeGraphemes do
+        def check(s) do
+          graphemes = String.graphemes(s)
+
+          if not Enum.all?(graphemes, &only_alpha?/1) or
+               not (graphemes == Enum.reverse(graphemes)) do
+            false
+          else
+            true
+          end
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix" do
@@ -202,6 +221,26 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
       assert NoGraphemePalindromeCheck.check(ast, []) == []
+    end
+
+    test "does not strip graphemes when variable is used elsewhere" do
+      code = """
+      defmodule M do
+        def check(s) do
+          graphemes = String.graphemes(s)
+
+          if not Enum.all?(graphemes, &only_alpha?/1) or
+               not (graphemes == Enum.reverse(graphemes)) do
+            false
+          else
+            true
+          end
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "String.graphemes"
     end
   end
 end

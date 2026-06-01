@@ -36,55 +36,63 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
     if MapSet.size(decompose_vars) == 0 do
       []
     else
-      # Pass 2: find `var == Enum.reverse(var)` where var is in decompose_vars
-      {_ast, issues} =
-        Macro.prewalk(ast, [], fn
-          # var == Enum.reverse(var)
-          {:==, meta,
-           [
-             {var_name, _, nil},
-             {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var_name, _, nil}]}
-           ]} = node,
-          acc
-          when is_atom(var_name) ->
-            if MapSet.member?(decompose_vars, var_name) do
-              {node, [build_issue(meta) | acc]}
-            else
+      # Only keep vars that are NOT used outside the assignment and palindrome check
+      safe_vars = filter_solely_palindrome_vars(decompose_vars, ast)
+
+      if MapSet.size(safe_vars) == 0 do
+        []
+      else
+        # Pass 2: find `var == Enum.reverse(var)` where var is in safe_vars
+        {_ast, issues} =
+          Macro.prewalk(ast, [], fn
+            # var == Enum.reverse(var)
+            {:==, meta,
+             [
+               {var_name, _, nil},
+               {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var_name, _, nil}]}
+             ]} = node,
+            acc
+            when is_atom(var_name) ->
+              if MapSet.member?(safe_vars, var_name) do
+                {node, [build_issue(meta) | acc]}
+              else
+                {node, acc}
+              end
+
+            # Enum.reverse(var) == var (reversed comparison)
+            {:==, meta,
+             [
+               {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var_name, _, nil}]},
+               {var_name, _, nil}
+             ]} = node,
+            acc
+            when is_atom(var_name) ->
+              if MapSet.member?(safe_vars, var_name) do
+                {node, [build_issue(meta) | acc]}
+              else
+                {node, acc}
+              end
+
+            node, acc ->
               {node, acc}
-            end
+          end)
 
-          # Enum.reverse(var) == var (reversed comparison)
-          {:==, meta,
-           [
-             {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var_name, _, nil}]},
-             {var_name, _, nil}
-           ]} = node,
-          acc
-          when is_atom(var_name) ->
-            if MapSet.member?(decompose_vars, var_name) do
-              {node, [build_issue(meta) | acc]}
-            else
-              {node, acc}
-            end
-
-          node, acc ->
-            {node, acc}
-        end)
-
-      Enum.reverse(issues)
+        Enum.reverse(issues)
+      end
     end
   end
 
   @impl true
   def fix_patches(ast, _opts) do
     decompose_vars = collect_decompose_vars(ast)
+    safe_vars = filter_solely_palindrome_vars(decompose_vars, ast)
 
-    if MapSet.size(decompose_vars) == 0 do
+    if MapSet.size(safe_vars) == 0 do
       []
     else
       RuleHelpers.patches_from_postwalk(ast, fn
         {:=, meta, [{var_name, _, nil} = lhs, rhs]} when is_atom(var_name) ->
-          if MapSet.member?(decompose_vars, var_name) do
+          if MapSet.member?(safe_vars, var_name) do
             {:=, meta, [lhs, strip_decomposition(rhs)]}
           else
             {:=, meta, [lhs, rhs]}
@@ -93,8 +101,8 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
         {:==, meta, [lhs, rhs]} ->
           {:==, meta,
            [
-             maybe_replace_reverse(lhs, decompose_vars),
-             maybe_replace_reverse(rhs, decompose_vars)
+             maybe_replace_reverse(lhs, safe_vars),
+             maybe_replace_reverse(rhs, safe_vars)
            ]}
 
         node ->
@@ -134,6 +142,71 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
   end
 
   defp maybe_replace_reverse(node, _decompose_vars), do: node
+
+  # Filter decompose_vars to only those used EXCLUSIVELY in the assignment and
+  # the palindrome comparison. If the variable is used elsewhere (e.g. Enum.all?),
+  # the decomposition is necessary and the rule must not fire.
+  #
+  # Uses a manual recursive walk (not Macro.prewalk) so we can skip children
+  # of palindrome `==` nodes — prewalk would still descend into them.
+  defp filter_solely_palindrome_vars(decompose_vars, ast) do
+    if MapSet.size(decompose_vars) == 0 do
+      decompose_vars
+    else
+      extra = collect_extra_refs(decompose_vars, ast, MapSet.new())
+      MapSet.difference(decompose_vars, extra)
+    end
+  end
+
+  defp collect_extra_refs(vars, node, acc) when is_list(node) do
+    Enum.reduce(node, acc, fn child, a -> collect_extra_refs(vars, child, a) end)
+  end
+
+  defp collect_extra_refs(vars, node, acc) when is_tuple(node) do
+    case node do
+      # Assignment binding — skip LHS (it's the definition), walk RHS
+      {:=, _, [{var_name, _, nil}, rhs]} when is_atom(var_name) ->
+        if MapSet.member?(vars, var_name),
+          do: collect_extra_refs(vars, rhs, acc),
+          else: walk_children(vars, node, acc)
+
+      # Palindrome comparison: var == Enum.reverse(var) — skip entirely
+      {:==, _,
+       [
+         {var_name, _, nil},
+         {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var_name2, _, nil}]}
+       ]}
+      when is_atom(var_name) and is_atom(var_name2) and var_name == var_name2 ->
+        if MapSet.member?(vars, var_name), do: acc, else: walk_children(vars, node, acc)
+
+      # Reversed: Enum.reverse(var) == var — skip entirely
+      {:==, _,
+       [
+         {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var_name2, _, nil}]},
+         {var_name, _, nil}
+       ]}
+      when is_atom(var_name) and is_atom(var_name2) and var_name == var_name2 ->
+        if MapSet.member?(vars, var_name), do: acc, else: walk_children(vars, node, acc)
+
+      # Reference to a decompose var in any other context
+      {var_name, _, nil} when is_atom(var_name) ->
+        if MapSet.member?(vars, var_name),
+          do: MapSet.put(acc, var_name),
+          else: acc
+
+      # Any other node — walk children
+      _ ->
+        walk_children(vars, node, acc)
+    end
+  end
+
+  defp collect_extra_refs(_vars, _node, acc), do: acc
+
+  defp walk_children(vars, node, acc) do
+    node
+    |> Tuple.to_list()
+    |> Enum.reduce(acc, fn child, a -> collect_extra_refs(vars, child, a) end)
+  end
 
   # Collect variables bound to an expression ending in String.graphemes/to_charlist
   defp collect_decompose_vars(ast) do
