@@ -160,6 +160,43 @@ defmodule Credence.Syntax.FixModuleAttrOutsideModuleFixTest do
     end
   end
 
+  # ── duplicate attrs ──────────────────────────────────────────────
+
+  describe "duplicate attrs inside module" do
+    test "removes existing @doc inside when moving @doc from outside" do
+      code =
+        "@doc \"\"\"\nThe real doc.\n\"\"\"\ndefmodule Solution do\n  @doc false\n  def foo, do: :ok\nend\n"
+
+      result = fix(code)
+
+      # Should have only one @doc (the heredoc one from outside), not the @doc false
+      assert result =~ "@doc \"\"\"\n  The real doc.\n  \"\"\""
+      refute result =~ "@doc false"
+    end
+
+    test "removes existing @spec inside when moving @spec from outside" do
+      code =
+        "@spec foo() :: :ok\ndefmodule Foo do\n  @spec foo() :: :ok\n  def foo, do: :ok\nend\n"
+
+      result = fix(code)
+
+      # Only one @spec should remain
+      assert result =~ "  @spec foo() :: :ok"
+      # Count occurrences — should be exactly 1
+      assert length(String.split(result, "@spec foo()")) == 2
+    end
+
+    test "does not remove different attr names" do
+      code =
+        "@doc \"the doc\"\ndefmodule Foo do\n  @spec foo() :: :ok\n  def foo, do: :ok\nend\n"
+
+      result = fix(code)
+
+      assert result =~ "@doc \"the doc\""
+      assert result =~ "@spec foo() :: :ok"
+    end
+  end
+
   # ── round-trip ─────────────────────────────────────────────────
 
   describe "round-trip" do

@@ -72,7 +72,11 @@ defmodule Credence.Syntax.FixModuleAttrOutsideModule do
           indented = indent_block(attr_lines, indent)
           [defmodule_line | remaining] = from_defmodule
 
-          (rest_before ++ [defmodule_line] ++ indented ++ remaining)
+          # Remove duplicate attrs already inside the module body
+          moved_names = attr_names(attr_lines)
+          deduped = remove_duplicate_attrs(remaining, moved_names, indent)
+
+          (rest_before ++ [defmodule_line] ++ indented ++ deduped)
           |> Enum.join("\n")
         end
     end
@@ -150,6 +154,65 @@ defmodule Credence.Syntax.FixModuleAttrOutsideModule do
   defp attr_line?(line) do
     trimmed = if is_binary(line), do: String.trim(line), else: line
     Enum.any?(@known_attrs, fn attr -> String.starts_with?(trimmed, "@#{attr} ") end)
+  end
+
+  # Extract the set of attr names from lines being moved (e.g. ["doc", "spec"])
+  defp attr_names(lines) do
+    lines
+    |> Enum.map(fn line ->
+      trimmed = String.trim(line)
+      Enum.find_value(@known_attrs, fn attr ->
+        if String.starts_with?(trimmed, "@#{attr} "), do: attr
+      end)
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> MapSet.new()
+  end
+
+  # Remove lines inside the module body that define attrs with the same names
+  # as the ones being moved from outside. This prevents duplicate @doc, @spec, etc.
+  defp remove_duplicate_attrs(body_lines, moved_names, _indent) do
+    if MapSet.size(moved_names) == 0 do
+      body_lines
+    else
+      do_remove_duplicates(body_lines, moved_names, false, [])
+    end
+  end
+
+  # Finished scanning — reverse accumulated lines
+  defp do_remove_duplicates([], _moved, _in_heredoc, acc), do: Enum.reverse(acc)
+
+  # Inside a heredoc body — skip until closing """
+  defp do_remove_duplicates([line | rest], moved, true, acc) do
+    if String.trim(line) == ~s(""") do
+      do_remove_duplicates(rest, moved, false, [line | acc])
+    else
+      do_remove_duplicates(rest, moved, true, acc)
+    end
+  end
+
+  # Outside heredoc — check if this line is a duplicate attr
+  defp do_remove_duplicates([line | rest], moved, false, acc) do
+    trimmed = String.trim(line)
+
+    cond do
+      # Duplicate attr line (e.g. @doc false when we're moving @doc from outside)
+      attr_line?(trimmed) and attr_name_matches?(trimmed, moved) ->
+        # Skip this line and any following heredoc body
+        if heredoc_open?(line) do
+          do_remove_duplicates(rest, moved, true, acc)
+        else
+          do_remove_duplicates(rest, moved, false, acc)
+        end
+
+      # Non-duplicate line — keep it
+      true ->
+        do_remove_duplicates(rest, moved, false, [line | acc])
+    end
+  end
+
+  defp attr_name_matches?(trimmed, moved_names) do
+    Enum.any?(moved_names, fn attr -> String.starts_with?(trimmed, "@#{attr} ") end)
   end
 
   defp heredoc_open?(line) do
