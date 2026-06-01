@@ -42,6 +42,31 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateFixTest do
       assert fix(~s[Enum.count(String.graphemes(str), &(&1 === "a"))]) ==
                ~s[String.count(str, "a")]
     end
+
+    test "sum_by counting fn in nested call" do
+      assert fix(~s[Enum.sum_by(String.graphemes(str), fn "1" -> 1; _ -> 0 end)]) ==
+               ~s[String.count(str, "1")]
+    end
+
+    test "sum_by counting fn in two-step pipe" do
+      assert fix(~s[String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)]) ==
+               ~s[String.count(str, "1")]
+    end
+
+    test "sum_by counting fn in three-step pipe" do
+      assert fix(~s[str |> String.graphemes() |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)]) ==
+               ~s[String.count(str, "1")]
+    end
+
+    test "sum_by counting fn keeps upstream pipeline" do
+      assert fix(~s[str |> String.trim() |> String.graphemes() |> Enum.sum_by(fn "a" -> 1; _ -> 0 end)]) ==
+               ~s[str |> String.trim() |> String.count("a")]
+    end
+
+    test "sum_by counting fn with variable catch-all" do
+      assert fix(~s[String.graphemes(str) |> Enum.sum_by(fn "x" -> 1; _rest -> 0 end)]) ==
+               ~s[String.count(str, "x")]
+    end
   end
 
   describe "no-ops" do
@@ -64,6 +89,21 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateFixTest do
       code = ~s[Enum.count(String.graphemes(str), &(&1 == var))]
       assert fix(code) == code
     end
+
+    test "sum_by on non-graphemes unchanged" do
+      code = ~s[Enum.sum_by(list, fn "1" -> 1; _ -> 0 end)]
+      assert fix(code) == code
+    end
+
+    test "sum_by with non-counting function unchanged" do
+      code = ~s[String.graphemes(str) |> Enum.sum_by(fn x -> x end)]
+      assert fix(code) == code
+    end
+
+    test "sum_by with non-1/0 returns unchanged" do
+      code = ~s[String.graphemes(str) |> Enum.sum_by(fn "1" -> 2; _ -> 0 end)]
+      assert fix(code) == code
+    end
   end
 
   describe "round-trip" do
@@ -73,6 +113,8 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateFixTest do
         def a(s), do: String.graphemes(s) |> Enum.count(&(&1 == "1"))
         def b(s), do: Enum.count(String.graphemes(s), &(&1 == "1"))
         def c(s), do: s |> String.graphemes() |> Enum.count(&(&1 == "1"))
+        def d(s), do: String.graphemes(s) |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)
+        def e(s), do: Enum.sum_by(String.graphemes(s), fn "1" -> 1; _ -> 0 end)
       end
       """
 
@@ -84,6 +126,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateFixTest do
       defmodule Example do
         def a(s), do: String.graphemes(s) |> Enum.count(&(&1 == "1"))
         def b(s), do: s |> String.trim() |> String.graphemes() |> Enum.count(&(&1 == "1"))
+        def c(s), do: String.graphemes(s) |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)
       end
       """
 

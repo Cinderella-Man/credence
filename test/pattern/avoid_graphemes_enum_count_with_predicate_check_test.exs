@@ -62,6 +62,37 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
 
       assert length(check(code)) == 2
     end
+
+    test "sum_by counting fn in two-step pipe" do
+      code = ~s[String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)]
+      assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] = check(code)
+    end
+
+    test "sum_by counting fn in three-step pipe" do
+      code = ~s[str |> String.graphemes() |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)]
+      assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] = check(code)
+    end
+
+    test "sum_by counting fn in nested call" do
+      code = ~s[Enum.sum_by(String.graphemes(str), fn "1" -> 1; _ -> 0 end)]
+      assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] = check(code)
+    end
+
+    test "sum_by counting fn with variable catch-all" do
+      code = ~s[String.graphemes(str) |> Enum.sum_by(fn "a" -> 1; _x -> 0 end)]
+      assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] = check(code)
+    end
+
+    test "sum_by counting fn in longer pipeline" do
+      code = """
+      str
+      |> String.trim()
+      |> String.graphemes()
+      |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)
+      """
+
+      assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] = check(code)
+    end
   end
 
   describe "does NOT flag" do
@@ -115,6 +146,27 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
 
     test "Enum.count/2 with non-capture function" do
       assert check(~s[Enum.count(String.graphemes(str), fn c -> String.contains?(c, "1") end)]) == []
+    end
+
+    test "Enum.sum_by on non-graphemes" do
+      assert check(~s[Enum.sum_by(list, fn "1" -> 1; _ -> 0 end)]) == []
+    end
+
+    test "sum_by with non-counting function" do
+      assert check(~s[String.graphemes(str) |> Enum.sum_by(fn x -> x end)]) == []
+    end
+
+    test "sum_by with 3 clauses" do
+      code = ~s[String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; "0" -> 0; _ -> 0 end)]
+      assert check(code) == []
+    end
+
+    test "sum_by with non-literal match" do
+      assert check(~s[String.graphemes(str) |> Enum.sum_by(fn x when x == "1" -> 1; _ -> 0 end)]) == []
+    end
+
+    test "sum_by with non-1/0 return values" do
+      assert check(~s[String.graphemes(str) |> Enum.sum_by(fn "1" -> 2; _ -> 0 end)]) == []
     end
   end
 end

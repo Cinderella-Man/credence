@@ -1,7 +1,7 @@
 defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicate do
   @moduledoc """
-  Performance rule: Detects `Enum.count/2` with an equality predicate on the
-  result of `String.graphemes/1`.
+  Performance rule: Detects `Enum.count/2` with an equality predicate or
+  `Enum.sum_by/2` with a counting function on the result of `String.graphemes/1`.
 
   Splitting a string into a grapheme list just to count occurrences of a
   specific character is wasteful. `String.count/2` performs the same count
@@ -12,6 +12,9 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicate do
       String.graphemes(str) |> Enum.count(&(&1 == "1"))
       Enum.count(String.graphemes(str), &(&1 == "1"))
       str |> String.graphemes() |> Enum.count(fn c -> c == "1" end)
+
+      String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)
+      Enum.sum_by(String.graphemes(str), fn "1" -> 1; _ -> 0 end)
 
   ## Good
 
@@ -32,12 +35,28 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicate do
                true <- immediate_graphemes?(lhs) do
             {node, [build_issue(meta) | issues]}
           else
-            _ -> {node, issues}
+            _ ->
+              # Pipe form: ... |> Enum.sum_by(fn literal -> 1; _ -> 0 end)
+              with {:ok, _literal} <- extract_sum_by_counting_literal(rhs),
+                   true <- immediate_graphemes?(lhs) do
+                {node, [build_issue(meta) | issues]}
+              else
+                _ -> {node, issues}
+              end
           end
 
         # Direct: Enum.count(String.graphemes(...), predicate)
         {{:., meta, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg, pred]} = node, issues ->
           with {:ok, _literal} <- equality_literal(pred),
+               true <- graphemes_call?(arg) do
+            {node, [build_issue(meta) | issues]}
+          else
+            _ -> {node, issues}
+          end
+
+        # Direct: Enum.sum_by(String.graphemes(...), fn literal -> 1; _ -> 0 end)
+        {{:., meta, [{:__aliases__, _, [:Enum]}, :sum_by]}, _, [arg, fn_ast]} = node, issues ->
+          with {:ok, _literal} <- sum_by_counting_literal(fn_ast),
                true <- graphemes_call?(arg) do
             {node, [build_issue(meta) | issues]}
           else
@@ -60,12 +79,28 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicate do
              true <- immediate_graphemes?(lhs) do
           fix_pipe(lhs, literal)
         else
-          _ -> node
+          _ ->
+            # Pipe: ... |> String.graphemes() |> Enum.sum_by(fn literal -> 1; _ -> 0 end)
+            with {:ok, literal} <- extract_sum_by_counting_literal(rhs),
+                 true <- immediate_graphemes?(lhs) do
+              fix_pipe(lhs, literal)
+            else
+              _ -> node
+            end
         end
 
       # Direct: Enum.count(String.graphemes(x), pred)
       {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg, pred]} = node ->
         with {:ok, literal} <- equality_literal(pred),
+             {:ok, subject} <- extract_graphemes_arg(arg) do
+          string_count_call(subject, literal)
+        else
+          _ -> node
+        end
+
+      # Direct: Enum.sum_by(String.graphemes(x), fn literal -> 1; _ -> 0 end)
+      {{:., _, [{:__aliases__, _, [:Enum]}, :sum_by]}, _, [arg, fn_ast]} = node ->
+        with {:ok, literal} <- sum_by_counting_literal(fn_ast),
              {:ok, subject} <- extract_graphemes_arg(arg) do
           string_count_call(subject, literal)
         else
@@ -116,6 +151,39 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicate do
   end
 
   defp extract_enum_count_pred_literal(_), do: :error
+
+  # Extract literal from Enum.sum_by/2 in a pipe (only fn arg present)
+  defp extract_sum_by_counting_literal(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :sum_by]}, _, [fn_ast]}
+       ) do
+    sum_by_counting_literal(fn_ast)
+  end
+
+  defp extract_sum_by_counting_literal(_), do: :error
+
+  # Match fn literal -> 1; _ -> 0 end (two-clause counting function)
+  defp sum_by_counting_literal(
+         {:fn, _,
+          [
+            {:->, _, [[{:__block__, _, [literal]}], {:__block__, _, [1]}]},
+            {:->, _, [[{:_, _, _}], {:__block__, _, [0]}]}
+          ]}
+       )
+       when is_binary(literal),
+       do: {:ok, literal}
+
+  # Same but with variable instead of underscore in catch-all
+  defp sum_by_counting_literal(
+         {:fn, _,
+          [
+            {:->, _, [[{:__block__, _, [literal]}], {:__block__, _, [1]}]},
+            {:->, _, [[{_var, _, _}], {:__block__, _, [0]}]}
+          ]}
+       )
+       when is_binary(literal),
+       do: {:ok, literal}
+
+  defp sum_by_counting_literal(_), do: :error
 
   # Match &(&1 == literal) or &(&1 === literal)
   defp equality_literal({:&, _, [{op, _, [{:&, _, [1]}, {:__block__, _, [literal]}]}]})
