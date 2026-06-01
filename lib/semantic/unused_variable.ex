@@ -74,7 +74,7 @@ defmodule Credence.Semantic.UnusedVariable do
       offset = col - 1
 
       if at_standalone_token?(line, offset, var_name) do
-        insert_underscore_at(line, offset)
+        insert_underscore_at(line, offset, var_name)
       else
         line
       end
@@ -98,7 +98,7 @@ defmodule Credence.Semantic.UnusedVariable do
   defp rewrite_unambiguous(source, line_no, var_name) do
     rewrite_line(source, line_no, fn line ->
       case standalone_offsets(line, var_name) do
-        [single] -> insert_underscore_at(line, single)
+        [single] -> insert_underscore_at(line, single, var_name)
         _ -> line
       end
     end)
@@ -136,10 +136,48 @@ defmodule Credence.Semantic.UnusedVariable do
       not followed_by_word_char?(line, offset + name_size)
   end
 
-  defp insert_underscore_at(line, offset) do
-    prefix = binary_part(line, 0, offset)
-    suffix = binary_part(line, offset, byte_size(line) - offset)
-    prefix <> "_" <> suffix
+  # Insert `_` before the token at `offset`.  When `var_name` is given,
+  # checks whether `_varname` already exists elsewhere on the line; if
+  # so, replaces the token with bare `_` instead (avoids "underscored
+  # variable appears more than once" warnings).
+  defp insert_underscore_at(line, offset, var_name) do
+    underscored = "_" <> var_name
+
+    if already_has_underscored?(line, offset, underscored) do
+      # Replace the token with `_` instead of prepending `_`
+      prefix = binary_part(line, 0, offset)
+
+      suffix =
+        binary_part(line, offset + byte_size(var_name), byte_size(line) - offset - byte_size(var_name))
+
+      prefix <> "_" <> suffix
+    else
+      prefix = binary_part(line, 0, offset)
+      suffix = binary_part(line, offset, byte_size(line) - offset)
+      prefix <> "_" <> suffix
+    end
+  end
+
+  # Returns true if `underscored` (e.g. `_last`) already exists as a
+  # standalone token on the line at a position OTHER than `offset`
+  # (where the un-prefixed variable currently sits).
+  defp already_has_underscored?(line, offset, underscored) do
+    underscored_size = byte_size(underscored)
+
+    # Walk through the line looking for standalone occurrences of `_name`
+    # that are NOT at `offset` (where `name` currently sits, which will
+    # become `_name` after the fix).
+    Stream.iterate(0, &(&1 + 1))
+    |> Stream.take_while(&(&1 <= byte_size(line) - underscored_size))
+    |> Enum.any?(fn pos ->
+      binary_part(line, pos, underscored_size) == underscored and
+        not preceded_by_word_char?(line, pos) and
+        not followed_by_word_char?(line, pos + underscored_size) and
+        # Skip the position where `name` currently lives — that's the
+        # one we're about to change, so it doesn't count as "already
+        # existing."
+        pos != offset
+    end)
   end
 
   defp preceded_by_word_char?(_line, 0), do: false

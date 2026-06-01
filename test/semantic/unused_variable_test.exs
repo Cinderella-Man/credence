@@ -428,6 +428,54 @@ defmodule Credence.Semantic.UnusedVariableTest do
   # is far worse than leaving a warning visible.
   # ════════════════════════════════════════════════════════════════
 
+  # ════════════════════════════════════════════════════════════════
+  # Collision guard: when `_varname` already exists on the line, the
+  # fix must use `_` (bare wildcard) instead of `_varname` to avoid
+  # "underscored variable appears more than once" warnings.
+  # ════════════════════════════════════════════════════════════════
+
+  describe "_varname collision guard" do
+    test "uses bare _ when _varname already exists on the same line" do
+      source = """
+      defmodule Collision1 do
+        defp init_middle([_last], last), do: []
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      # Should become `_` not `_last` (which would appear twice)
+      assert fixed =~ "defp init_middle([_last], _), do: []"
+      refute fixed =~ ~r/_last.*_last/
+    end
+
+    test "uses _varname normally when no collision exists" do
+      source = """
+      defmodule NoCollision do
+        defp init_middle([head], last), do: head
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      # No collision, so normal `_last` prefix is fine
+      assert fixed =~ "_last"
+    end
+
+    test "column-based path also guards against collision" do
+      source = """
+      defmodule Collision2 do
+        def f do
+          [_x, x] = [1, 2]
+          :ok
+        end
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      assert fixed =~ "[_x, _]"
+      refute fixed =~ "[_x, _x]"
+    end
+  end
+
   describe "fix/2 — safety guards" do
     test "no column AND var name appears more than once on the line — skip" do
       # Without column info, the rule can't tell which `foo` is the
