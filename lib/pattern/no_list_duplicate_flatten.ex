@@ -1,13 +1,13 @@
 defmodule Credence.Pattern.NoListDuplicateFlatten do
   @moduledoc """
-  Detects `List.duplicate(list, n) |> List.flatten()` and suggests
-  `Enum.flat_map/2` instead.
+  Detects `List.duplicate(list, n) |> List.flatten()` (or `Enum.concat`)
+  and suggests `Enum.flat_map/2` instead.
 
   LLMs frequently produce this two-step pattern when they need to
   "tile" or "repeat" a list: first `List.duplicate/2` to create a
-  list of copies, then `List.flatten/1` to merge them. `Enum.flat_map/2`
-  does the same work in a single pass and is the idiomatic Elixir idiom
-  for flat-mapping over a range.
+  list of copies, then `List.flatten/1` or `Enum.concat/1` to merge them.
+  `Enum.flat_map/2` does the same work in a single pass and is the idiomatic
+  Elixir idiom for flat-mapping over a range.
 
   ## Bad
 
@@ -16,6 +16,12 @@ defmodule Credence.Pattern.NoListDuplicateFlatten do
       |> List.flatten()
 
       List.flatten(List.duplicate(list, 3))
+
+      chars
+      |> List.duplicate(repetitions)
+      |> Enum.concat()
+
+      Enum.concat(List.duplicate(list, 3))
 
   ## Good
 
@@ -43,6 +49,23 @@ defmodule Credence.Pattern.NoListDuplicateFlatten do
 
         # Nested: List.flatten(List.duplicate(list, n))
         {{:., _, [{:__aliases__, _, [:List]}, :flatten]}, _,
+         [
+           {{:., _, [{:__aliases__, _, [:List]}, :duplicate]}, dup_meta, _}
+         ]} = node,
+        acc ->
+          {node, [build_issue(dup_meta) | acc]}
+
+        # Piped: list |> List.duplicate(n) |> Enum.concat()
+        {:|>, _,
+         [
+           {:|>, _, [_list, {{:., _, [{:__aliases__, _, [:List]}, :duplicate]}, dup_meta, _}]},
+           {{:., _, [{:__aliases__, _, [:Enum]}, :concat]}, _, []}
+         ]} = node,
+        acc ->
+          {node, [build_issue(dup_meta) | acc]}
+
+        # Nested: Enum.concat(List.duplicate(list, n))
+        {{:., _, [{:__aliases__, _, [:Enum]}, :concat]}, _,
          [
            {{:., _, [{:__aliases__, _, [:List]}, :duplicate]}, dup_meta, _}
          ]} = node,
@@ -82,6 +105,27 @@ defmodule Credence.Pattern.NoListDuplicateFlatten do
     flat_map_ast(list, n)
   end
 
+  # Piped: list |> List.duplicate(n) |> Enum.concat()
+  defp rewrite(
+         {:|>, _,
+          [
+            {:|>, _, [list, {{:., _, [{:__aliases__, _, [:List]}, :duplicate]}, _, [n]}]},
+            {{:., _, [{:__aliases__, _, [:Enum]}, :concat]}, _, []}
+          ]}
+       ) do
+    flat_map_ast(list, n)
+  end
+
+  # Nested: Enum.concat(List.duplicate(list, n))
+  defp rewrite(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :concat]}, _,
+          [
+            {{:., _, [{:__aliases__, _, [:List]}, :duplicate]}, _, [list, n]}
+          ]}
+       ) do
+    flat_map_ast(list, n)
+  end
+
   defp rewrite(node), do: node
 
   defp flat_map_ast(list, n) do
@@ -96,8 +140,8 @@ defmodule Credence.Pattern.NoListDuplicateFlatten do
     %Issue{
       rule: :no_list_duplicate_flatten,
       message:
-        "`List.duplicate/2 |> List.flatten/1` does two passes " <>
-          "when `Enum.flat_map/2` does the same in one.\n\n" <>
+        "`List.duplicate/2` piped into `List.flatten/1` or `Enum.concat/1` " <>
+          "does two passes when `Enum.flat_map/2` does the same in one.\n\n" <>
           "Simplify:\n\n" <>
           "    Enum.flat_map(1..n, fn _ -> list end)",
       meta: %{line: Keyword.get(meta, :line)}

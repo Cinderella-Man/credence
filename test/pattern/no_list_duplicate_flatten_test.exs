@@ -76,6 +76,46 @@ defmodule Credence.Pattern.NoListDuplicateFlattenTest do
     end
   end
 
+  describe "flags List.duplicate |> Enum.concat in pipe" do
+    test "basic piped form" do
+      assert flagged?("""
+             def tile(list, n) do
+               list
+               |> List.duplicate(n)
+               |> Enum.concat()
+             end
+             """)
+    end
+
+    test "with variable for repetitions" do
+      assert flagged?("""
+             def repeat(chars, times) do
+               chars
+               |> List.duplicate(times)
+               |> Enum.concat()
+             end
+             """)
+    end
+  end
+
+  describe "flags Enum.concat(List.duplicate(...)) nested form" do
+    test "basic nested form" do
+      assert flagged?("""
+             def tile(list, n) do
+               Enum.concat(List.duplicate(list, n))
+             end
+             """)
+    end
+
+    test "nested with integer literal" do
+      assert flagged?("""
+             def triple(list) do
+               Enum.concat(List.duplicate(list, 3))
+             end
+             """)
+    end
+  end
+
   # ═══════════════════════════════════════════════════════════════════
   # NEGATIVE — must NOT flag
   # ═══════════════════════════════════════════════════════════════════
@@ -103,6 +143,24 @@ defmodule Credence.Pattern.NoListDuplicateFlattenTest do
       assert clean?("""
              def flat(lists) do
                List.flatten(Enum.map(lists, &process/1))
+             end
+             """)
+    end
+  end
+
+  describe "does not flag Enum.concat without List.duplicate" do
+    test "standalone Enum.concat" do
+      assert clean?("""
+             def concat(lists) do
+               Enum.concat(lists)
+             end
+             """)
+    end
+
+    test "concat of two lists" do
+      assert clean?("""
+             def join(a, b) do
+               Enum.concat(a, b)
              end
              """)
     end
