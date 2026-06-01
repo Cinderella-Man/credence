@@ -266,33 +266,21 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   # sum / product → reduce
   # ═══════════════════════════════════════════════════════════════
 
-  describe "sum / product" do
-    test "Enum.sum(Map.values(m))" do
-      assert_fix(
-        "Enum.sum(Map.values(m))",
-        "Enum.reduce(m, 0, fn {_k, v}, acc -> acc + v end)"
-      )
+  describe "sum / product — no fix (already idiomatic)" do
+    test "Enum.sum(Map.values(m)) — not flagged" do
+      assert check("Enum.sum(Map.values(m))") == []
     end
 
-    test "Enum.product(Map.keys(m))" do
-      assert_fix(
-        "Enum.product(Map.keys(m))",
-        "Enum.reduce(m, 1, fn {k, _v}, acc -> acc * k end)"
-      )
+    test "Enum.product(Map.keys(m)) — not flagged" do
+      assert check("Enum.product(Map.keys(m))") == []
     end
 
-    test "pipe: Map.values |> Enum.sum()" do
-      assert_fix(
-        "Map.values(map) |> Enum.sum()",
-        "Enum.reduce(map, 0, fn {_k, v}, acc -> acc + v end)"
-      )
+    test "pipe: Map.values |> Enum.sum() — not flagged" do
+      assert check("Map.values(map) |> Enum.sum()") == []
     end
 
-    test "triple pipe: map |> Map.values() |> Enum.sum()" do
-      assert_fix(
-        "map |> Map.values() |> Enum.sum()",
-        "Enum.reduce(map, 0, fn {_k, v}, acc -> acc + v end)"
-      )
+    test "triple pipe: map |> Map.values() |> Enum.sum() — not flagged" do
+      assert check("map |> Map.values() |> Enum.sum()") == []
     end
   end
 
@@ -698,14 +686,14 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
         defmodule Example do
           def f(m), do: Enum.all?(Map.values(m), fn v -> v == 0 end)
           def g(m), do: Enum.count(Map.keys(m))
-          def h(m), do: Enum.sum(Map.values(m))
+          def h(m), do: Enum.filter(Map.values(m), fn v -> v > 0 end)
         end
         """,
         """
         defmodule Example do
           def f(m), do: Enum.all?(m, fn {_k, v} -> v == 0 end)
           def g(m), do: Enum.count(m)
-          def h(m), do: Enum.reduce(m, 0, fn {_k, v}, acc -> acc + v end)
+          def h(m), do: Enum.map(Enum.filter(m, fn {_k, v} -> v > 0 end), fn {_, v} -> v end)
         end
         """
       )
@@ -919,10 +907,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       defmodule Example do
         def a(m), do: Enum.all?(Map.values(m), fn v -> v == 0 end)
         def b(m), do: Enum.count(Map.values(m))
-        def c(m), do: Enum.sum(Map.values(m))
-        def d(m), do: Enum.filter(Map.values(m), fn v -> v > 0 end)
-        def e(m), do: Map.values(m) |> Enum.max()
-        def f(m), do: Enum.join(Map.values(m))
+        def c(m), do: Enum.filter(Map.values(m), fn v -> v > 0 end)
+        def d(m), do: Map.values(m) |> Enum.max()
+        def e(m), do: Enum.join(Map.values(m))
       end
       """
 

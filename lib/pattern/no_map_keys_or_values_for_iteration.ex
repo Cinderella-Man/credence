@@ -13,10 +13,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       Enum.all?(Map.values(degrees), fn v -> v == 0 end)
       → Enum.all?(degrees, fn {_k, v} -> v == 0 end)
 
-      # sum/product → reduce
-      Enum.sum(Map.values(m))
-      → Enum.reduce(m, 0, fn {_k, v}, acc -> acc + v end)
-
       # find/at → case expression
       Enum.find(Map.values(m), fn v -> v > 0 end)
       → case Enum.find(m, fn {_k, v} -> v > 0 end) do
@@ -28,9 +24,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       → m |> Enum.filter(fn {k, _v} -> k > 0 end)
         |> Enum.map(fn {k, _v} -> k end)
 
-  Functions returning complex structures (`chunk_every`, `zip`, `split`,
-  `with_index`, `scan`, `tally`, etc.) cannot be safely auto-fixed and
-  are handled by `NoMapKeysOrValuesForRawIteration`.
+  `Enum.sum`, `Enum.product`, `Enum.max`, and `Enum.min` with
+  `Map.values`/`Map.keys` are already idiomatic and not flagged.
 
   ## Bad
       Enum.all?(Map.values(degrees), fn v -> v == 0 end)
@@ -38,6 +33,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   ## Good
       Enum.all?(degrees, fn {_k, v} -> v == 0 end)
       Enum.map(map, fn {k, _v} -> to_string(k) end)
+      Map.values(map) |> Enum.sum()       # already idiomatic
+      Enum.max(Map.values(m))              # already idiomatic
 
   ## Glossary (terms used throughout this module)
 
@@ -66,7 +63,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     all? any? count each map flat_map frequencies_by find_value
     reduce reduce_while
     max_by min_by
-    sum product
     at find random empty?
     join
     filter reject

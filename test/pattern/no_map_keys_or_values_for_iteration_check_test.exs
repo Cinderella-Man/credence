@@ -15,11 +15,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
                check("Enum.all?(Map.values(degrees), fn v -> v == 0 end)")
     end
 
-    test "Enum.sum(Map.values(m))" do
-      assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
-               check("Enum.sum(Map.values(m))")
-    end
-
     test "Enum.filter(Map.values(m), ...)" do
       assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
                check("Enum.filter(Map.values(m), fn v -> v > 0 end)")
@@ -87,6 +82,22 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
 
     test "Map.keys |> Enum.max — already idiomatic" do
       assert check("Map.keys(map) |> Enum.max()") == []
+    end
+
+    test "Enum.sum(Map.values(m)) — already idiomatic" do
+      assert check("Enum.sum(Map.values(m))") == []
+    end
+
+    test "Map.values |> Enum.sum() — already idiomatic" do
+      assert check("Map.values(map) |> Enum.sum()") == []
+    end
+
+    test "Enum.product(Map.keys(m)) — already idiomatic" do
+      assert check("Enum.product(Map.keys(m))") == []
+    end
+
+    test "map |> Map.values() |> Enum.sum() — already idiomatic" do
+      assert check("map |> Map.values() |> Enum.sum()") == []
     end
   end
 
