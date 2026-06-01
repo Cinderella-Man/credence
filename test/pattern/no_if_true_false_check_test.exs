@@ -60,13 +60,49 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
              """)
     end
 
-    test "reversed boolean branches (false/true) — NOT flagged, would need negation" do
-      assert clean?("""
+    test "reversed boolean branches (false/true)" do
+      assert flagged?("""
              def check(x) do
                if x > 0 do
                  false
                else
                  true
+               end
+             end
+             """)
+    end
+
+    test "comparison in do body with else true" do
+      assert flagged?("""
+             def run(x, y) do
+               if x > 0 do
+                 y == 1
+               else
+                 true
+               end
+             end
+             """)
+    end
+
+    test "false in do body with comparison in else" do
+      assert flagged?("""
+             def run(x, y) do
+               if x > 0 do
+                 false
+               else
+                 y == 1
+               end
+             end
+             """)
+    end
+
+    test "true in do body with comparison in else" do
+      assert flagged?("""
+             def run(x, y) do
+               if x > 0 do
+                 true
+               else
+                 y == 1
                end
              end
              """)
@@ -162,6 +198,28 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
              end
              """)
     end
+
+    test "nested boolean ifs — flags both" do
+      code = """
+      def check_leap_year(year) do
+        rem_four = rem(year, 4)
+        rem_hundred = rem(year, 100)
+        rem_four_hundred = rem(year, 400)
+
+        if rem_four == 0 do
+          if rem_hundred == 0 do
+            rem_four_hundred == 0
+          else
+            true
+          end
+        else
+          false
+        end
+      end
+      """
+
+      assert length(check(code)) == 2
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -205,13 +263,13 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
              """)
     end
 
-    test "comparison in do body but non-false else" do
+    test "comparison in do body with non-boolean else" do
       assert clean?("""
              def run(x, y) do
                if x > 0 do
                  y == 1
                else
-                 true
+                 :ok
                end
              end
              """)

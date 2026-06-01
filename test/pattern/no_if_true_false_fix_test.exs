@@ -69,7 +69,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       assert fix(input) == expected
     end
 
-    test "reversed branches (false/true) — NOT fixed, would need negation" do
+    test "reversed branches (false/true) — negated" do
       input = """
       def check(x) do
         if x > 0 do
@@ -80,7 +80,13 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      expected = """
+      def check(x) do
+        not (x > 0)
+      end
+      """
+
+      assert fix(input) == expected
     end
   end
 
@@ -165,7 +171,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       assert fix(input) == expected
     end
 
-    test "comparison in do body with non-false else — NOT fixed" do
+    test "comparison in do body with else true" do
       input = """
       def run(x, y) do
         if x > 0 do
@@ -176,7 +182,53 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      expected = """
+      def run(x, y) do
+        not (x > 0) or y == 1
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "false in do body with comparison in else" do
+      input = """
+      def run(x, y) do
+        if x > 0 do
+          false
+        else
+          y == 1
+        end
+      end
+      """
+
+      expected = """
+      def run(x, y) do
+        not (x > 0) and y == 1
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "true in do body with comparison in else" do
+      input = """
+      def run(x, y) do
+        if x > 0 do
+          true
+        else
+          y == 1
+        end
+      end
+      """
+
+      expected = """
+      def run(x, y) do
+        x > 0 or y == 1
+      end
+      """
+
+      assert fix(input) == expected
     end
 
     test "function call in do body with else false — NOT fixed" do
@@ -261,6 +313,44 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       def run(x) do
         result = x > 0
         result
+      end
+      """
+
+      assert fix(input) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # NESTED BOOLEAN IFS — leap year pattern
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fixes nested boolean ifs" do
+    test "leap year pattern" do
+      input = """
+      def check_leap_year(year) do
+        rem_four = rem(year, 4)
+        rem_hundred = rem(year, 100)
+        rem_four_hundred = rem(year, 400)
+
+        if rem_four == 0 do
+          if rem_hundred == 0 do
+            rem_four_hundred == 0
+          else
+            true
+          end
+        else
+          false
+        end
+      end
+      """
+
+      expected = """
+      def check_leap_year(year) do
+        rem_four = rem(year, 4)
+        rem_hundred = rem(year, 100)
+        rem_four_hundred = rem(year, 400)
+
+        rem_four == 0 and (not (rem_hundred == 0) or rem_four_hundred == 0)
       end
       """
 
