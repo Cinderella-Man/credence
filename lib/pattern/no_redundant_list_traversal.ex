@@ -221,6 +221,9 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
 
   # Groups entries by list variable and returns only valid groups:
   # 2+ distinct aggregate types, no rebinding between first and last.
+  # Skips groups where all entries are inline calls in the same statement —
+  # e.g. `Enum.sum(x) / length(x)` is a natural compound expression, not a
+  # redundancy worth merging into a manual reduce.
   defp find_valid_groups(statements) do
     scan_all_calls(statements)
     |> Enum.group_by(& &1.list_var)
@@ -232,7 +235,8 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
         first_idx = hd(sorted).index
         last_idx = List.last(sorted).index
 
-        if variable_rebound?(statements, list_var, first_idx, last_idx) do
+        if all_inline_same_statement?(sorted) or
+             variable_rebound?(statements, list_var, first_idx, last_idx) do
           []
         else
           [%{list_var: list_var, entries: sorted}]
@@ -241,6 +245,15 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
         []
       end
     end)
+  end
+
+  # Returns true when every entry is an inline call (not a bare assignment)
+  # and they all share the same statement index. Such pairs are part of a
+  # single natural expression (e.g. `avg = Enum.sum(x) / length(x)`) and
+  # should not be flagged or merged.
+  defp all_inline_same_statement?(entries) do
+    Enum.all?(entries, &(&1.mode == :inline)) and
+      (entries |> Enum.map(& &1.index) |> Enum.uniq() |> length()) == 1
   end
 
   # length(var) — Kernel BIF

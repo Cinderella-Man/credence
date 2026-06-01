@@ -187,6 +187,52 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
   # SAFETY — must NOT modify
   # ═══════════════════════════════════════════════════════════════════
 
+  describe "does not modify inline calls in the same expression" do
+    test "Enum.sum + length for average" do
+      input = """
+      def run(numbers) do
+        average = Enum.sum(numbers) / length(numbers)
+        Enum.filter(numbers, &(&1 >= average))
+      end
+      """
+
+      assert fix(input) == input
+    end
+
+    test "Enum.sum + Enum.count for average" do
+      input = """
+      def run(numbers) do
+        average = Enum.sum(numbers) / Enum.count(numbers)
+        average
+      end
+      """
+
+      assert fix(input) == input
+    end
+
+    test "Enum.min + Enum.max in same expression" do
+      input = """
+      def run(numbers) do
+        diff = Enum.max(numbers) - Enum.min(numbers)
+        diff
+      end
+      """
+
+      assert fix(input) == input
+    end
+
+    test "Enum.sum + length added together" do
+      input = """
+      def run(numbers) do
+        result = Enum.sum(numbers) + length(numbers)
+        result
+      end
+      """
+
+      assert fix(input) == input
+    end
+  end
+
   describe "does not modify when variables differ" do
     test "length on a, sum on b" do
       input = """
