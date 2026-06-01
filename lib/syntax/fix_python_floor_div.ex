@@ -19,6 +19,7 @@ defmodule Credence.Syntax.FixPythonFloorDiv do
       # // in comments          — comment lines are skipped
       ~r/pattern//flags         — regex with `//` after pattern
       Kernel./(a, b)            — single `/` is float division
+      Enum.slice(list, 0..-2//1) — Elixir range step syntax `first..last//step`
 
   ## Bad
 
@@ -55,7 +56,7 @@ defmodule Credence.Syntax.FixPythonFloorDiv do
         Regex.match?(@kernel_pattern, line) ->
           [build_issue(line_no)]
 
-        Regex.match?(@infix_pattern, line) ->
+        not range_step_syntax?(line) and Regex.match?(@infix_pattern, line) ->
           [build_issue(line_no)]
 
         true ->
@@ -69,7 +70,7 @@ defmodule Credence.Syntax.FixPythonFloorDiv do
     source
     |> String.split("\n")
     |> Enum.map_join("\n", fn line ->
-      if comment_line?(line) do
+      if comment_line?(line) or range_step_syntax?(line) do
         line
       else
         line |> fix_kernel_pattern() |> fix_infix_pattern()
@@ -78,6 +79,11 @@ defmodule Credence.Syntax.FixPythonFloorDiv do
   end
 
   defp comment_line?(line), do: Regex.match?(~r/^\s*#/, line)
+
+  # Elixir range step syntax: `first..last//step` (e.g. `0..-2//1`, `1..10//2`)
+  # The `//` is part of the range operator, not Python floor division.
+  @range_step_pattern ~r/\.\.[\d\-]*\/\//
+  defp range_step_syntax?(line), do: Regex.match?(@range_step_pattern, line)
 
   # `Kernel.//` → `div` — works for both pipe and standalone contexts:
   #   `|> Kernel.//(k)` → `|> div(k)`

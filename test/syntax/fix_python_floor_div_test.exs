@@ -97,6 +97,26 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
 
       assert FixPythonFloorDiv.analyze(source) == []
     end
+
+    test "no issues for Elixir range step syntax 0..-2//1" do
+      source = """
+      defmodule Example do
+        def middle(list), do: Enum.slice(list, 0..-2//1)
+      end
+      """
+
+      assert FixPythonFloorDiv.analyze(source) == []
+    end
+
+    test "no issues for Elixir range step syntax 1..10//2" do
+      source = """
+      defmodule Example do
+        def evens(n), do: Enum.to_list(1..n//2)
+      end
+      """
+
+      assert FixPythonFloorDiv.analyze(source) == []
+    end
   end
 
   describe "fix/1" do
@@ -191,6 +211,16 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       refute fixed =~ "Kernel.//"
       # Kernel.* should NOT be touched by this rule
       assert fixed =~ "Kernel.*(n - k + 1)"
+    end
+
+    test "does not modify Elixir range step syntax" do
+      source = "middle = Enum.slice(list, 0..-2//1)\n"
+      assert FixPythonFloorDiv.fix(source) == source
+    end
+
+    test "does not modify range step syntax with positive step" do
+      source = "evens = Enum.to_list(1..10//2)\n"
+      assert FixPythonFloorDiv.fix(source) == source
     end
   end
 end
