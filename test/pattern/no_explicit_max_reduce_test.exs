@@ -340,5 +340,37 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
 
       assert issues == []
     end
+
+    test "fix includes variable accumulator via cons (e.g. head | tail pattern)" do
+      code = """
+      defmodule VarAcc do
+        def max_value([head | tail]) do
+          Enum.reduce(tail, head, fn item, current_max ->
+            if item > current_max, do: item, else: current_max
+          end)
+        end
+      end
+      """
+
+      result = fix(code)
+
+      # Must include head in the max — Enum.max([head | tail]), NOT Enum.max(tail)
+      assert result =~ "Enum.max([head | tail])"
+      refute result =~ "Enum.max(tail)"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "fix uses Enum.max(enum) when acc is a literal sentinel" do
+      code = """
+      Enum.reduce(list, 0, fn x, acc ->
+        if x > acc, do: x, else: acc
+      end)
+      """
+
+      result = fix(code)
+
+      assert result =~ "Enum.max(list)"
+      refute result =~ "Enum.reduce"
+    end
   end
 end

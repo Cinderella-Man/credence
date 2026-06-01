@@ -46,8 +46,16 @@ defmodule Credence.Pattern.NoExplicitMaxReduce do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {{:., _, _}, _, args} = node ->
         if reduce_call?(node) and max_reduce_body?(args) do
-          [enum | _] = args
-          enum_max_call(enum)
+          [enum, acc | _] = args
+
+          if simple_var?(acc) do
+            # acc is a variable (e.g. `head` from a pattern match) —
+            # include it: Enum.max([acc | enum])
+            enum_max_with_acc_call(acc, enum)
+          else
+            # acc is a literal sentinel (e.g. 0) — Enum.max(enum) suffices
+            enum_max_call(enum)
+          end
         else
           node
         end
@@ -59,6 +67,10 @@ defmodule Credence.Pattern.NoExplicitMaxReduce do
 
   defp enum_max_call(enum) do
     {{:., [], [{:__aliases__, [], [:Enum]}, :max]}, [], [enum]}
+  end
+
+  defp enum_max_with_acc_call(acc, enum) do
+    {{:., [], [{:__aliases__, [], [:Enum]}, :max]}, [], [[{:|, [], [acc, enum]}]]}
   end
 
   defp reduce_call?({{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, _}), do: true
