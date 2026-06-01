@@ -201,9 +201,9 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
 
     Enum.map(params, fn
       {name, meta, context} when is_atom(name) and is_atom(context) ->
-        case Map.get(match_map, name) do
-          nil -> {name, meta, context}
-          literal -> literal
+        case Map.fetch(match_map, name) do
+          {:ok, literal} -> literal
+          :error -> {name, meta, context}
         end
 
       other ->

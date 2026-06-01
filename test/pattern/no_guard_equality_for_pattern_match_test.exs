@@ -518,5 +518,53 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchTest do
     test "does not modify empty list guard when var referenced in body" do
       assert_fix_unchanged("def check(list) when list == [], do: list")
     end
+
+    test "fixes nil literal guard by substituting nil in pattern" do
+      code = """
+      defmodule NilGuardFix do
+        def check(val) when val == nil do
+          :empty
+        end
+
+        def check(val), do: val
+      end
+      """
+
+      expected = """
+      defmodule NilGuardFix do
+        def check(nil) do
+          :empty
+        end
+
+        def check(val), do: val
+      end
+      """
+
+      assert_fix(code, expected)
+    end
+
+    test "fixes nil literal guard in defp" do
+      code = """
+      defmodule NilGuardDefp do
+        defp handle(result) when result == nil do
+          :error
+        end
+
+        defp handle(result), do: {:ok, result}
+      end
+      """
+
+      expected = """
+      defmodule NilGuardDefp do
+        defp handle(nil) do
+          :error
+        end
+
+        defp handle(result), do: {:ok, result}
+      end
+      """
+
+      assert_fix(code, expected)
+    end
   end
 end
