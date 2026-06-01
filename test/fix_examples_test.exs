@@ -173,8 +173,9 @@ defmodule Credence.FixExamplesTest do
       refute code =~ ~S|functions.\n"|
     end
 
-    test "simplifies Enum.map identity |> Enum.sum", %{result: %{code: code}} do
-      refute code =~ "Enum.map(nums, fn n -> n end)"
+    test "Enum.map identity |> Enum.sum is check-only", %{result: %{code: code}} do
+      # Enum.sum aggregation is check-only — no auto-fix applied
+      assert code =~ "Enum.sum()"
     end
   end
 

@@ -116,8 +116,8 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
   defp build_patch({{:., _, [mod, agg_fn]}, _, [inner]} = node)
        when agg_fn in @aggregators do
-    # max/min: check-only (no auto-fix) — same reason as in fix_pipeline.
-    if agg_fn in [:max, :min] do
+    # max/min/sum: check-only (no auto-fix) — same reason as in fix_pipeline.
+    if agg_fn in [:max, :min, :sum] do
       :skip
     else
       if enum_module?(mod) and map_call?(inner) do
@@ -201,9 +201,13 @@ defmodule Credence.Pattern.NoMapThenAggregate do
           # reduce accumulator — Enum.reduce/2 uses the raw first element
           # as accumulator, which breaks when the map function changes the
           # element type (e.g. &Enum.sum/1 produces integers, but the
-          # accumulator starts as a list).  Flag the issue but skip the
-          # auto-fix; only :sum can safely use Enum.reduce/3 with 0.
-          if agg_fn in [:max_by, :min_by, :max, :min] do
+          # accumulator starts as a list).
+          #
+          # :sum has a safe initial value (0), but the auto-fix trades
+          # readability for a micro-optimization — `Enum.map(f) |> Enum.sum()`
+          # is idiomatic Elixir that clearly separates transformation from
+          # aggregation.  Flag the issue but skip the auto-fix.
+          if agg_fn in [:max_by, :min_by, :max, :min, :sum] do
             nil
           else
             map_fn = extract_map_fn(first)

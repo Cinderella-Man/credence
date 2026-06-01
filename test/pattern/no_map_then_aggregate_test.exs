@@ -465,18 +465,15 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       refute result =~ "Enum.reduce"
     end
 
-    test "fixes basic pipeline: Enum.map |> Enum.sum" do
+    test "Enum.map |> Enum.sum is check-only (no auto-fix)" do
       code = """
       list |> Enum.map(&byte_size/1) |> Enum.sum()
       """
 
       result = fix(code)
-      assert result =~ "Enum.reduce"
-      assert result =~ "0"
-      assert result =~ "acc"
-      assert result =~ "+"
-      assert result =~ "byte_size(el)"
-      refute result =~ "Enum.map"
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.sum()"
+      refute result =~ "Enum.reduce"
     end
 
     test "Enum.map |> Enum.max with preceding step is check-only (no auto-fix)" do
@@ -516,17 +513,15 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       refute result =~ "Enum.reduce"
     end
 
-    test "fixes direct nesting: Enum.sum(Enum.map(enum, f))" do
+    test "Enum.sum(Enum.map(enum, f)) is check-only (no auto-fix)" do
       code = """
       Enum.sum(Enum.map(list, fn x -> x * x end))
       """
 
       result = fix(code)
-      assert result =~ "Enum.reduce(list"
-      assert result =~ "0"
-      assert result =~ "+"
-      assert result =~ "el * el"
-      refute result =~ "Enum.sum(Enum.map"
+      assert result =~ "Enum.sum"
+      assert result =~ "Enum.map"
+      refute result =~ "Enum.reduce"
     end
 
     test "Enum.map |> Enum.max with anonymous function is check-only (no auto-fix)" do
@@ -542,7 +537,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       refute result =~ "Enum.reduce"
     end
 
-    test "fix with destructuring pattern uses pattern in reduce head, not fn application" do
+    test "Enum.map with destructuring |> Enum.sum is check-only (no auto-fix)" do
       code = """
       map
       |> Enum.map(fn {_key, count} -> div(count * (count - 1), 2) end)
@@ -550,22 +545,20 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       """
 
       result = fix(code)
-      assert result =~ "Enum.reduce"
-      # Should use pattern directly in reduce function head
-      assert result =~ "{_key, count}"
-      # Should NOT generate anonymous function application (fn ... end).(el)
-      refute result =~ "(fn", "Expected pattern in reduce head, got anonymous function application"
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.sum()"
+      refute result =~ "Enum.reduce"
     end
 
-    test "fixes pipeline with capture syntax" do
+    test "Enum.map with capture |> Enum.sum is check-only (no auto-fix)" do
       code = """
       strings |> Enum.map(&byte_size/1) |> Enum.sum()
       """
 
       result = fix(code)
-      assert result =~ "Enum.reduce"
-      assert result =~ "byte_size(el)"
-      refute result =~ "Enum.map"
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.sum()"
+      refute result =~ "Enum.reduce"
     end
 
     test "Enum.map |> Enum.max_by is check-only (no auto-fix)" do
@@ -675,7 +668,7 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       assert {:ok, _ast} = Sourceror.parse_string(result)
     end
 
-    test "fixed sum code is valid Elixir" do
+    test "Enum.map |> Enum.sum is check-only — sum preserved" do
       code = """
       shapes
       |> Enum.map(&area/1)
@@ -683,15 +676,23 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       """
 
       result = fix(code)
+      # Check-only: fix returns original code unchanged
+      assert result =~ "Enum.map"
+      assert result =~ "Enum.sum()"
+      refute result =~ "Enum.reduce"
       assert {:ok, _ast} = Sourceror.parse_string(result)
     end
 
-    test "fixed anonymous function code is valid Elixir" do
+    test "Enum.sum(Enum.map) is check-only — sum preserved" do
       code = """
       Enum.sum(Enum.map(list, fn x -> x * x end))
       """
 
       result = fix(code)
+      # Check-only: fix returns original code unchanged
+      assert result =~ "Enum.sum"
+      assert result =~ "Enum.map"
+      refute result =~ "Enum.reduce"
       assert {:ok, _ast} = Sourceror.parse_string(result)
     end
 
@@ -769,15 +770,15 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
     test "preserves surrounding code byte-identically outside the change site" do
       input = """
       defmodule Test do
-        def compute(items, dim) do
-          weighted =
+        def build_set(items, dim) do
+          result =
             items
             |> Enum.map(fn item ->
               Enum.at(item.weights, dim, 0)
             end)
-            |> Enum.sum()
+            |> MapSet.new()
 
-          {:ok, weighted}
+          {:ok, result}
         end
       end
       """
@@ -785,10 +786,10 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       output = fix(input)
 
       assert output =~ "defmodule Test do\n"
-      assert output =~ "  def compute(items, dim) do\n"
-      assert output =~ "    weighted =\n"
+      assert output =~ "  def build_set(items, dim) do\n"
+      assert output =~ "    result =\n"
       # Blank line and return-tuple line untouched.
-      assert output =~ "\n\n    {:ok, weighted}\n"
+      assert output =~ "\n\n    {:ok, result}\n"
       assert output =~ "  end\nend\n"
       assert {:ok, _} = Sourceror.parse_string(output)
     end
@@ -796,63 +797,64 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
     test "keeps the replacement multi-line when the original pipeline was multi-line" do
       input = """
       defmodule Test do
-        def compute(items, dim) do
+        def build_set(items, dim) do
           items
           |> Enum.map(fn item -> Enum.at(item.weights, dim, 0) end)
-          |> Enum.sum()
+          |> MapSet.new()
         end
       end
       """
 
       output = fix(input)
 
-      # The fn body should not collapse onto the same line as `fn el, acc ->`.
-      refute output =~ ~r/fn el, acc -> [^\n]*end\)/,
-             "fn body collapsed to one line — expected newline after `->`:\n#{output}"
-
-      assert output =~ "|> Enum.reduce("
+      assert output =~ "MapSet.new(fn item ->"
+      refute output =~ "Enum.map"
       assert {:ok, _} = Sourceror.parse_string(output)
     end
   end
 
-  describe "NoMapThenAggregate fix — closure-parameter substitution (issue: c.delivery survives)" do
-    test "substitutes closure parameter through a dot-access in the body" do
+  describe "NoMapThenAggregate fix — Enum.sum is check-only (no reduce rewrite)" do
+    test "Enum.map |> Enum.sum with dot-access is check-only" do
       input = """
       clients |> Enum.map(fn c -> Enum.at(c.delivery, dim, 0) end) |> Enum.sum()
       """
 
       output = fix(input)
 
+      # Check-only: code unchanged
+      assert output =~ "Enum.map"
+      assert output =~ "Enum.sum()"
+      refute output =~ "Enum.reduce"
       assert {:ok, _} = Sourceror.parse_string(output)
-      refute output =~ ~r/\bc\.delivery\b/
-      assert output =~ ~r/\bel\.delivery\b/
     end
 
-    test "substitutes closure parameter through a chained dot-access (r.inner.field)" do
+    test "Enum.map |> Enum.sum with chained dot-access is check-only" do
       input = """
       records |> Enum.map(fn r -> r.inner.field end) |> Enum.sum()
       """
 
       output = fix(input)
 
+      assert output =~ "Enum.map"
+      assert output =~ "Enum.sum()"
+      refute output =~ "Enum.reduce"
       assert {:ok, _} = Sourceror.parse_string(output)
-      refute output =~ ~r/\br\.inner\b/
-      assert output =~ ~r/\bel\.inner\.field\b/
     end
 
-    test "substitutes closure parameter inside a remote-call argument" do
+    test "Enum.map |> Enum.sum with remote-call argument is check-only" do
       input = """
       strings |> Enum.map(fn s -> String.length(s) end) |> Enum.sum()
       """
 
       output = fix(input)
 
+      assert output =~ "Enum.map"
+      assert output =~ "Enum.sum()"
+      refute output =~ "Enum.reduce"
       assert {:ok, _} = Sourceror.parse_string(output)
-      assert output =~ ~r/\bString\.length\(el\)/
-      refute output =~ ~r/\bString\.length\(s\)/
     end
 
-    test "full module repro from the GitHub issue compiles" do
+    test "full module with Enum.sum is check-only" do
       input = """
       defmodule Test do
         def calc(clients, dim) do
@@ -865,8 +867,10 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
 
       output = fix(input)
 
+      assert output =~ "Enum.map"
+      assert output =~ "Enum.sum()"
+      refute output =~ "Enum.reduce"
       assert {:ok, _} = Sourceror.parse_string(output)
-      refute output =~ ~r/\bc\.delivery\b/
     end
   end
 end

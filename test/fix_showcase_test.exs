@@ -105,10 +105,12 @@ defmodule Credence.FixShowcaseTest do
 
     # ── Collection operations ─────────────────────────────────────
 
-    test "fuses Enum.map |> Enum.sum into Enum.sum_by", %{result: %{code: code}} do
-      assert code =~ "Enum.sum_by(words, fn el -> String.length(el) end)"
-      refute code =~ "Enum.map(words, fn w -> String.length(w) end) |> Enum.sum()"
-      refute code =~ "Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)"
+    test "Enum.map |> Enum.sum is check-only (no rewrite)", %{result: %{code: code}} do
+      # Enum.sum aggregation is check-only — the map |> sum form is idiomatic
+      assert code =~ "Enum.map(words, fn w -> String.length(w) end) |> Enum.sum()"
+      refute code =~ "Enum.sum_by"
+      # Should not have a sum-related reduce (acc + String.length(el))
+      refute code =~ "acc + String.length"
     end
 
     test "does not replace frequency reduce with derived key", %{result: %{code: code}} do
@@ -178,10 +180,11 @@ defmodule Credence.FixShowcaseTest do
     test "no issues remain after fix", %{result: %{issues: issues}} do
       # Project stance: every rule either auto-fixes its anti-pattern
       # or it doesn't exist. After running `Credence.fix/2`, no
-      # outstanding issues should remain. (The unfixable companion
-      # rules that previously reported residual cases have been
-      # archived to `docs/unfixable_rules/`.)
-      assert issues |> Enum.map(& &1.rule) |> Enum.sort() == []
+      # outstanding issues should remain — except check-only rules
+      # that flag patterns without auto-fixing (e.g. :no_map_then_aggregate
+      # for Enum.sum, where the map |> sum form is idiomatic).
+      remaining = issues |> Enum.map(& &1.rule) |> Enum.sort()
+      assert remaining == [:no_map_then_aggregate]
     end
 
     # ── Sanity ────────────────────────────────────────────────────
