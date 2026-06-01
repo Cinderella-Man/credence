@@ -220,6 +220,78 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
 
       assert length(check(code)) == 2
     end
+
+    test "true in do with Enum.all? in else" do
+      assert flagged?("""
+             def check(list) do
+               if list == [] do
+                 true
+               else
+                 Enum.all?(list, &valid?/1)
+               end
+             end
+             """)
+    end
+
+    test "Enum.any? in do with else false" do
+      assert flagged?("""
+             def check(list) do
+               if list == [] do
+                 Enum.any?(list, &positive?/1)
+               else
+                 false
+               end
+             end
+             """)
+    end
+
+    test "Enum.empty? in do with else true" do
+      assert flagged?("""
+             def check(map) do
+               if map == %{} do
+                 Enum.empty?(map)
+               else
+                 true
+               end
+             end
+             """)
+    end
+
+    test "is_nil in do with else false" do
+      assert flagged?("""
+             def check(x) do
+               if x > 0 do
+                 is_nil(x)
+               else
+                 false
+               end
+             end
+             """)
+    end
+
+    test "match? in do with else false" do
+      assert flagged?("""
+             def check(x) do
+               if x > 0 do
+                 match?({:ok, _}, x)
+               else
+                 false
+               end
+             end
+             """)
+    end
+
+    test "piped Enum.all? in else" do
+      assert flagged?("""
+             def check(list) do
+               if list == [] do
+                 true
+               else
+                 list |> Enum.all?(&valid?/1)
+               end
+             end
+             """)
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════

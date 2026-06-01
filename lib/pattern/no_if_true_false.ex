@@ -175,10 +175,23 @@ defmodule Credence.Pattern.NoIfTrueFalse do
   defp boolean_expr?({:__block__, _, [expr]}), do: boolean_expr?(expr)
 
   defp boolean_expr?({op, _, [_, _]})
-       when op in [:==, :!=, :<, :>, :<=, :>=, :===, :!==, :and, :or],
+       when op in [:==, :!=, :<, :>, :<=, :>=, :===, :!==, :and, :or, :match?],
        do: true
 
   defp boolean_expr?({:not, _, [_]}), do: true
+
+  # Kernel type-check predicates (is_nil, is_list, etc.)
+  defp boolean_expr?({:is_nil, _, [_]}), do: true
+
+  # Boolean-returning Enum functions — always return true/false.
+  defp boolean_expr?({{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _})
+       when fun in [:all?, :any?, :empty?],
+       do: true
+
+  # Piped form: value |> Enum.all?(...), etc.
+  defp boolean_expr?({:|>, _, [_, {{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _}]})
+       when fun in [:all?, :any?, :empty?],
+       do: true
 
   # An if/else with all-boolean branches is itself a boolean expression.
   defp boolean_expr?({:if, _, [_condition, clauses]}) when is_list(clauses) do

@@ -231,6 +231,86 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       assert fix(input) == expected
     end
 
+    test "true in do body with Enum.all? in else" do
+      input = """
+      def check(list) do
+        if list == [] do
+          true
+        else
+          Enum.all?(list, &valid?/1)
+        end
+      end
+      """
+
+      expected = """
+      def check(list) do
+        list == [] or Enum.all?(list, &valid?/1)
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "Enum.any? in do body with else false" do
+      input = """
+      def check(list) do
+        if list == [] do
+          Enum.any?(list, &positive?/1)
+        else
+          false
+        end
+      end
+      """
+
+      expected = """
+      def check(list) do
+        list == [] and Enum.any?(list, &positive?/1)
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "is_nil in do body with else false" do
+      input = """
+      def check(x) do
+        if x > 0 do
+          is_nil(x)
+        else
+          false
+        end
+      end
+      """
+
+      expected = """
+      def check(x) do
+        x > 0 and is_nil(x)
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "match? in do body with else false" do
+      input = """
+      def check(x) do
+        if x > 0 do
+          match?({:ok, _}, x)
+        else
+          false
+        end
+      end
+      """
+
+      expected = """
+      def check(x) do
+        x > 0 and match?({:ok, _}, x)
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
     test "function call in do body with else false — NOT fixed" do
       input = """
       def run(x) do
