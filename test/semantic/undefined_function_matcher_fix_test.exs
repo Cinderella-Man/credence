@@ -130,214 +130,45 @@ defmodule Credence.Semantic.UndefinedFunction.MatcherFixTest do
   end
 
   # ╔═══════════════════════════════════════════════════════════════╗
-  # ║  LOCAL — FunctionMatcher fallback                            ║
+  # ║  LOCAL — no FunctionMatcher fallback (too dangerous)         ║
   # ╚═══════════════════════════════════════════════════════════════╝
 
-  describe "local: FunctionMatcher — missing ? suffix" do
-    test "palindrome → palindrome?" do
+  describe "local: no FunctionMatcher fallback" do
+    test "does NOT replace list_to_tuple with enclosing function (recursion bug)" do
       source = """
-      defmodule PalindromeChecker do
-        def palindrome?(text), do: text == String.reverse(text)
-        def run(text), do: palindrome(text)
+      defmodule Solution do
+        def findmaxinrotatedlist(list) do
+          tuple = list_to_tuple(list)
+          do_find_max(tuple, 0, tuple_size(tuple) - 1)
+        end
+
+        defp do_find_max(tuple, low, high) when low == high, do: elem(tuple, low)
+        defp do_find_max(tuple, low, high), do: do_find_max(tuple, low + 1, high)
       end
       """
 
-      expected = """
-      defmodule PalindromeChecker do
-        def palindrome?(text), do: text == String.reverse(text)
-        def run(text), do: palindrome?(text)
-      end
-      """
-
-      assert fix_local(
-               source,
-               "undefined function palindrome/1 (expected PalindromeChecker to define such a function or for it to be imported, but none are available)",
-               3
-             ) == expected
+      # Must NOT rewrite list_to_tuple → findmaxinrotatedlist (infinite recursion)
+      assert fix_local(source, "undefined function list_to_tuple/1", 3) == source
     end
 
-    test "even → even?" do
-      source = """
-      defmodule Math do
-        def even?(n), do: rem(n, 2) == 0
-        def check(n), do: even(n)
-      end
-      """
-
-      expected = """
-      defmodule Math do
-        def even?(n), do: rem(n, 2) == 0
-        def check(n), do: even?(n)
-      end
-      """
-
-      assert fix_local(
-               source,
-               "undefined function even/1 (expected Math to define such a function or for it to be imported, but none are available)",
-               3
-             ) == expected
-    end
-  end
-
-  describe "local: FunctionMatcher — __ demangle" do
-    test "perfect__ → perfect?" do
-      source = """
-      defmodule PerfectNumbers do
-        def perfect?(n), do: n == 6
-        def check(n), do: perfect__(n)
-      end
-      """
-
-      expected = """
-      defmodule PerfectNumbers do
-        def perfect?(n), do: n == 6
-        def check(n), do: perfect?(n)
-      end
-      """
-
-      assert fix_local(
-               source,
-               "undefined function perfect__/1 (expected PerfectNumbers to define such a function or for it to be imported, but none are available)",
-               3
-             ) == expected
-    end
-  end
-
-  describe "local: FunctionMatcher — prefix/substring" do
-    test "fibonacci → fib" do
-      source = """
-      defmodule Fibonacci do
-        def fib(0), do: 0
-        def fib(1), do: 1
-        def fib(n), do: fib(n - 1) + fib(n - 2)
-        def run(n), do: fibonacci(n)
-      end
-      """
-
-      expected = """
-      defmodule Fibonacci do
-        def fib(0), do: 0
-        def fib(1), do: 1
-        def fib(n), do: fib(n - 1) + fib(n - 2)
-        def run(n), do: fib(n)
-      end
-      """
-
-      assert fix_local(
-               source,
-               "undefined function fibonacci/1 (expected Fibonacci to define such a function or for it to be imported, but none are available)",
-               5
-             ) == expected
-    end
-  end
-
-  describe "local: FunctionMatcher — sole candidate" do
-    test "picks the only arity-matching function" do
+    test "unknown local function with module hint is left unchanged" do
       source = """
       defmodule Calculator do
         def compute(n), do: n * 2
-        def add(a, b), do: a + b
         def run(n), do: calculate(n)
-      end
-      """
-
-      expected = """
-      defmodule Calculator do
-        def compute(n), do: n * 2
-        def add(a, b), do: a + b
-        def run(n), do: compute(n)
       end
       """
 
       assert fix_local(
                source,
                "undefined function calculate/1 (expected Calculator to define such a function or for it to be imported, but none are available)",
-               4
-             ) == expected
-    end
-  end
-
-  describe "local: FunctionMatcher — no candidates" do
-    test "no matching-arity functions" do
-      source = """
-      defmodule Worker do
-        def process(a, b), do: a + b
-        def run, do: compute(42)
-      end
-      """
-
-      assert fix_local(
-               source,
-               "undefined function compute/1 (expected Worker to define such a function or for it to be imported, but none are available)",
                3
-             ) == source
-    end
-
-    test "module not found" do
-      source = """
-      defmodule Other do
-        def run, do: something(1)
-      end
-      """
-
-      assert fix_local(
-               source,
-               "undefined function something/1 (expected Missing to define such a function or for it to be imported, but none are available)",
-               2
              ) == source
     end
 
     test "module name not in error message" do
       source = "fibonacci(5)"
       assert fix_local(source, "undefined function fibonacci/1", 1) == source
-    end
-  end
-
-  describe "local: FunctionMatcher — includes defp" do
-    test "finds defp functions for local calls" do
-      source = """
-      defmodule Worker do
-        defp helper(x), do: x * 2
-        def run(x), do: help(x)
-      end
-      """
-
-      expected = """
-      defmodule Worker do
-        defp helper(x), do: x * 2
-        def run(x), do: helper(x)
-      end
-      """
-
-      assert fix_local(
-               source,
-               "undefined function help/1 (expected Worker to define such a function or for it to be imported, but none are available)",
-               3
-             ) == expected
-    end
-  end
-
-  describe "local: FunctionMatcher — priority" do
-    test "known replacement takes priority" do
-      source = """
-      defmodule Example do
-        def compute(list), do: list
-        def run(list), do: max(list)
-      end
-      """
-
-      expected = """
-      defmodule Example do
-        def compute(list), do: list
-        def run(list), do: Enum.max(list)
-      end
-      """
-
-      assert fix_local(
-               source,
-               "undefined function max/1 (expected MyModule to define such a function or for it to be imported, but none are available)",
-               3
-             ) == expected
     end
   end
 end
