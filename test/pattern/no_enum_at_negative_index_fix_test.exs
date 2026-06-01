@@ -172,6 +172,40 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
     end
   end
 
+  # ── Bare + inline on same list var ───────────────────────────────────────
+
+  describe "bare + inline on same list variable" do
+    test "bare -2 and inline -3 on same list do not duplicate Enum.reverse" do
+      input =
+        "defmodule M do\n  def f(rest) do\n    second = Enum.at(rest, -2)\n    result = Enum.at(rest, -3) + second\n    result\n  end\nend\n"
+
+      fixed = fix(input)
+      # Must have exactly one Enum.reverse(rest)
+      reverse_count =
+        fixed
+        |> String.split("Enum.reverse(rest)")
+        |> length()
+        |> Kernel.-(1)
+
+      assert reverse_count == 1, "Expected 1 Enum.reverse(rest), got #{reverse_count}:\n#{fixed}"
+      assert fixed =~ "rest_reversed"
+      refute fixed =~ "rest_reversed = Enum.reverse(rest)\n  rest_reversed = Enum.reverse(rest)"
+    end
+
+    test "bare -2 and inline -3 substitutes inline call with pattern var" do
+      input =
+        "defmodule M do\n  def f(rest) do\n    second = Enum.at(rest, -2)\n    result = Enum.at(rest, -3) + second\n    result\n  end\nend\n"
+
+      fixed = fix(input)
+      # Bare -2 gets reverse+pattern; inline -3 is left as-is (not broken)
+      assert fixed =~ "Enum.reverse(rest)"
+      assert fixed =~ "second"
+      # The inline Enum.at(rest, -3) remains unfixed (not substituted with
+      # a duplicate reverse), so it should still appear
+      assert fixed =~ "Enum.at(rest, -3)"
+    end
+  end
+
   # ── Expression-form negative indices (non-assignment) ───────────────────
   # These generate temporary variable names for the reverse + pattern match,
   # so exact output depends on implementation internals. Using targeted

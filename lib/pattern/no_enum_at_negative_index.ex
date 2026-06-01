@@ -145,11 +145,13 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
       |> Map.values()
       |> Enum.map(&Enum.sort_by(&1, fn e -> e.stmt_idx end))
 
-    {bare_actions, bare_handled} = plan_bare_actions(bare_groups)
+    {bare_actions, bare_handled, bare_reversed_vars} = plan_bare_actions(bare_groups)
 
     # Statements not consumed by bare-grouping: scan for inline `-N>1`
-    # calls that need block-level prepends.
-    inline_plan = plan_inline_actions(indexed, bare_handled)
+    # calls that need block-level prepends. Skip list variables already
+    # reversed by bare-group actions to avoid generating duplicate
+    # `Enum.reverse/1` calls.
+    inline_plan = plan_inline_actions(indexed, bare_handled, bare_reversed_vars)
 
     apply_plan(stmts, bare_actions, inline_plan)
   end
@@ -205,11 +207,12 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
   #   multi or non-(-1) with unique LHS vars: replace first stmt with
   #     [reverse, pattern], delete the others
   defp plan_bare_actions(groups) do
-    Enum.reduce(groups, {%{}, MapSet.new()}, fn entries, {actions, handled} ->
+    Enum.reduce(groups, {%{}, MapSet.new(), MapSet.new()}, fn entries,
+                                                              {actions, handled, reversed_vars} ->
       case bare_group_action(entries) do
         {:list_last, entry} ->
           {Map.put(actions, entry.stmt_idx, {:replace, [list_last_assign(entry)]}),
-           MapSet.put(handled, entry.stmt_idx)}
+           MapSet.put(handled, entry.stmt_idx), reversed_vars}
 
         {:reverse_pattern, first, others, list_var, pattern_elems} ->
           first_repl = reverse_and_pattern(list_var, pattern_elems)
@@ -221,10 +224,11 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
            MapSet.union(
              handled,
              MapSet.new([first.stmt_idx | Enum.map(others, & &1.stmt_idx)])
-           )}
+           ),
+           MapSet.put(reversed_vars, list_var)}
 
         :skip ->
-          {actions, handled}
+          {actions, handled, reversed_vars}
       end
     end)
   end
@@ -258,7 +262,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
   # Inline-call planning: walk each remaining statement for `Enum.at(var, -N)`
   # calls (any -N including -1) and prepend `reversed = Enum.reverse(var)` +
   # destructure, then substitute calls with the new variable references.
-  defp plan_inline_actions(indexed, bare_handled) do
+  defp plan_inline_actions(indexed, bare_handled, bare_reversed_vars) do
     Enum.flat_map(indexed, fn {stmt, idx} ->
       if MapSet.member?(bare_handled, idx) do
         []
@@ -268,7 +272,18 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
             []
 
           calls ->
-            [{idx, plan_inline_for_statement(stmt, calls)}]
+            # Skip calls for list variables already reversed by bare-group
+            # actions — generating a second Enum.reverse would duplicate the
+            # binding and break compilation.
+            calls =
+              Enum.reject(calls, fn c ->
+                MapSet.member?(bare_reversed_vars, c.list_var)
+              end)
+
+            case calls do
+              [] -> []
+              _ -> [{idx, plan_inline_for_statement(stmt, calls)}]
+            end
         end
       end
     end)
