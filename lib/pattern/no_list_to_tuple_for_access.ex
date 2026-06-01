@@ -52,12 +52,14 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
       readers = collect_elem_readers(ast, bindings)
       defp_names = collect_defp_names(ast)
 
-      Enum.flat_map(bindings, fn {var, _info} ->
+      Enum.flat_map(bindings, fn {var, info} ->
         case Map.get(readers, var, []) do
           [] ->
             []
 
           var_readers ->
+            recursive_meta_ids = collect_recursive_defp_meta_ids(ast)
+
             cond do
               # All-or-some-in-loop: the pattern is the recommended idiom
               # for O(1) random access during iteration. Don't nag.
@@ -68,6 +70,13 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
               # O(1) recursive access (the pattern no_enum_at_in_recursion
               # recommends). Don't flag the one-shot elem call.
               passed_to_defp?(ast, var, defp_names) ->
+                []
+
+              # The binding is inside a recursive defp — the tuple creation
+              # + elem pattern is effectively "in a loop" because the function
+              # calls itself. Converting to Enum.at would turn O(1) access
+              # into O(n). Don't flag it.
+              scope_contains_recursive_defp?(info.scope, recursive_meta_ids) ->
                 []
 
               true ->
@@ -87,7 +96,8 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
     else
       readers = collect_elem_readers(ast, bindings)
       defp_names = collect_defp_names(ast)
-      {elem_patches, removable_bindings} = decide_patches(bindings, readers, ast, defp_names)
+      recursive_meta_ids = collect_recursive_defp_meta_ids(ast)
+      {elem_patches, removable_bindings} = decide_patches(bindings, readers, ast, defp_names, recursive_meta_ids)
 
       binding_patches = Enum.map(removable_bindings, &binding_removal_patch/1)
       elem_patches ++ binding_patches
@@ -164,7 +174,7 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
 
   defp maybe_record_elem(_, _, _, readers), do: readers
 
-  defp decide_patches(bindings, readers, ast, defp_names) do
+  defp decide_patches(bindings, readers, ast, defp_names, recursive_meta_ids) do
     Enum.reduce(bindings, {[], []}, fn {var, binding_info}, {patches, removable} ->
       var_readers = Map.get(readers, var, [])
 
@@ -178,6 +188,10 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
 
         passed_to_defp?(ast, var, defp_names) ->
           # Tuple is passed to a local defp for recursive O(1) access.
+          {patches, removable}
+
+        scope_contains_recursive_defp?(binding_info.scope, recursive_meta_ids) ->
+          # Binding is inside a recursive defp — preserve O(1) tuple access.
           {patches, removable}
 
         true ->
@@ -306,6 +320,54 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
        do: {:ok, source}
 
   defp extract_tuple_source(_), do: :error
+
+  # Returns true if the scope contains a recursive defp (one that calls itself).
+  defp scope_contains_recursive_defp?(scope, recursive_meta_ids) do
+    Enum.any?(scope, fn
+      {:defp, meta_id} -> MapSet.member?(recursive_meta_ids, meta_id)
+      _ -> false
+    end)
+  end
+
+  # Collects meta_ids of all defp definitions that call themselves.
+  defp collect_recursive_defp_meta_ids(ast) do
+    ast
+    |> collect_defp_defs_with_meta()
+    |> Enum.filter(fn {name, arity, _meta_id} -> defp_calls_self?(ast, name, arity) end)
+    |> Enum.map(fn {_name, _arity, meta_id} -> meta_id end)
+    |> MapSet.new()
+  end
+
+  defp collect_defp_defs_with_meta(ast) do
+    {_, defs} =
+      Macro.prewalk(ast, [], fn
+        {:defp, meta, [{name, _, args} | _]} = node, acc
+        when is_atom(name) and is_list(args) ->
+          {node, [{name, length(args), meta_id(meta)} | acc]}
+
+        {:defp, meta, [{:when, _, [{name, _, args} | _]} | _]} = node, acc
+        when is_atom(name) and is_list(args) ->
+          {node, [{name, length(args), meta_id(meta)} | acc]}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    defs
+  end
+
+  defp defp_calls_self?(ast, name, arity) do
+    {_, found} =
+      Macro.prewalk(ast, false, fn
+        {^name, _, args} = node, _acc when is_list(args) and length(args) == arity ->
+          {node, true}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found
+  end
 
   defp build_issue(var, {:elem, meta, _}) do
     %Issue{

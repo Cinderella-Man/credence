@@ -522,6 +522,32 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
       assert fix(input) == input
     end
 
+    test "does not flag List.to_tuple + elem inside a recursive defp" do
+      input = """
+      defmodule PalindromeCheck do
+        def palindrome?(str) do
+          chars = String.graphemes(str)
+          do_palindrome_check(chars, 0, length(chars) - 1)
+        end
+
+        defp do_palindrome_check(_chars, left, right) when left >= right, do: true
+
+        defp do_palindrome_check(chars, left, right) do
+          chars_tuple = List.to_tuple(chars)
+
+          if elem(chars_tuple, left) == elem(chars_tuple, right) do
+            do_palindrome_check(chars, left + 1, right - 1)
+          else
+            false
+          end
+        end
+      end
+      """
+
+      assert check(input) == []
+      assert fix(input) == input
+    end
+
     test "still flags tuple not passed to any local defp" do
       code = """
       defmodule Example do
