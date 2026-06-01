@@ -6,6 +6,9 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
   This pattern creates an unnecessary intermediate list. Use `String.reverse/1`
   and compare strings directly instead.
 
+  Detects `String.graphemes/1` or `String.to_charlist/1` at any position in a
+  pipe chain — including mid-pipe when followed by `Enum.filter` or similar.
+
   ## Bad
 
       graphemes = String.graphemes(s)
@@ -16,6 +19,9 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
 
       normalized = s |> String.downcase() |> String.graphemes()
       normalized == Enum.reverse(normalized)
+
+      cleaned = s |> String.downcase() |> String.graphemes() |> Enum.filter(fn c -> ... end)
+      cleaned == Enum.reverse(cleaned)
 
   ## Good
 
@@ -33,13 +39,13 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
     # String.graphemes/1 or String.to_charlist/1
     decompose_vars = collect_decompose_vars(ast)
 
-    if MapSet.size(decompose_vars) == 0 do
+    if map_size(decompose_vars) == 0 do
       []
     else
       # Only keep vars that are NOT used outside the assignment and palindrome check
       safe_vars = filter_solely_palindrome_vars(decompose_vars, ast)
 
-      if MapSet.size(safe_vars) == 0 do
+      if map_size(safe_vars) == 0 do
         []
       else
         # Pass 2: find `var == Enum.reverse(var)` where var is in safe_vars
@@ -53,7 +59,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
              ]} = node,
             acc
             when is_atom(var_name) ->
-              if MapSet.member?(safe_vars, var_name) do
+              if Map.has_key?(safe_vars, var_name) do
                 {node, [build_issue(meta) | acc]}
               else
                 {node, acc}
@@ -67,7 +73,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
              ]} = node,
             acc
             when is_atom(var_name) ->
-              if MapSet.member?(safe_vars, var_name) do
+              if Map.has_key?(safe_vars, var_name) do
                 {node, [build_issue(meta) | acc]}
               else
                 {node, acc}
@@ -87,12 +93,20 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
     decompose_vars = collect_decompose_vars(ast)
     safe_vars = filter_solely_palindrome_vars(decompose_vars, ast)
 
-    if MapSet.size(safe_vars) == 0 do
+    # Only auto-fix when graphemes is the terminal pipe call.
+    # Non-terminal graphemes (e.g. followed by Enum.filter) require coordinated
+    # rewrites that are too complex for auto-fix — those are check-only.
+    terminal_var_names =
+      safe_vars
+      |> Enum.filter(fn {_, v} -> v == :terminal end)
+      |> MapSet.new(fn {k, _} -> k end)
+
+    if MapSet.size(terminal_var_names) == 0 do
       []
     else
       RuleHelpers.patches_from_postwalk(ast, fn
         {:=, meta, [{var_name, _, nil} = lhs, rhs]} when is_atom(var_name) ->
-          if MapSet.member?(safe_vars, var_name) do
+          if MapSet.member?(terminal_var_names, var_name) do
             {:=, meta, [lhs, strip_decomposition(rhs)]}
           else
             {:=, meta, [lhs, rhs]}
@@ -101,8 +115,8 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
         {:==, meta, [lhs, rhs]} ->
           {:==, meta,
            [
-             maybe_replace_reverse(lhs, safe_vars),
-             maybe_replace_reverse(rhs, safe_vars)
+             maybe_replace_reverse(lhs, terminal_var_names),
+             maybe_replace_reverse(rhs, terminal_var_names)
            ]}
 
         node ->
@@ -150,11 +164,11 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
   # Uses a manual recursive walk (not Macro.prewalk) so we can skip children
   # of palindrome `==` nodes — prewalk would still descend into them.
   defp filter_solely_palindrome_vars(decompose_vars, ast) do
-    if MapSet.size(decompose_vars) == 0 do
+    if map_size(decompose_vars) == 0 do
       decompose_vars
     else
       extra = collect_extra_refs(decompose_vars, ast, MapSet.new())
-      MapSet.difference(decompose_vars, extra)
+      Map.drop(decompose_vars, MapSet.to_list(extra))
     end
   end
 
@@ -166,7 +180,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
     case node do
       # Assignment binding — skip LHS (it's the definition), walk RHS
       {:=, _, [{var_name, _, nil}, rhs]} when is_atom(var_name) ->
-        if MapSet.member?(vars, var_name),
+        if Map.has_key?(vars, var_name),
           do: collect_extra_refs(vars, rhs, acc),
           else: walk_children(vars, node, acc)
 
@@ -177,7 +191,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
          {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{var_name2, _, nil}]}
        ]}
       when is_atom(var_name) and is_atom(var_name2) and var_name == var_name2 ->
-        if MapSet.member?(vars, var_name), do: acc, else: walk_children(vars, node, acc)
+        if Map.has_key?(vars, var_name), do: acc, else: walk_children(vars, node, acc)
 
       # Reversed: Enum.reverse(var) == var — skip entirely
       {:==, _,
@@ -186,11 +200,11 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
          {var_name, _, nil}
        ]}
       when is_atom(var_name) and is_atom(var_name2) and var_name == var_name2 ->
-        if MapSet.member?(vars, var_name), do: acc, else: walk_children(vars, node, acc)
+        if Map.has_key?(vars, var_name), do: acc, else: walk_children(vars, node, acc)
 
       # Reference to a decompose var in any other context
       {var_name, _, nil} when is_atom(var_name) ->
-        if MapSet.member?(vars, var_name),
+        if Map.has_key?(vars, var_name),
           do: MapSet.put(acc, var_name),
           else: acc
 
@@ -208,17 +222,24 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
     |> Enum.reduce(acc, fn child, a -> collect_extra_refs(vars, child, a) end)
   end
 
-  # Collect variables bound to an expression ending in String.graphemes/to_charlist
+  # Collect variables bound to an expression containing String.graphemes/to_charlist.
+  # Returns %{var_name => :terminal} when graphemes is the rightmost pipe call,
+  # or %{var_name => :non_terminal} when graphemes appears earlier in the chain.
   defp collect_decompose_vars(ast) do
     {_ast, vars} =
-      Macro.prewalk(ast, MapSet.new(), fn
+      Macro.prewalk(ast, %{}, fn
         {:=, _, [{var_name, _, nil}, rhs]} = node, acc when is_atom(var_name) ->
           terminal = rightmost(rhs)
 
-          if decomposition_call?(terminal) do
-            {node, MapSet.put(acc, var_name)}
-          else
-            {node, acc}
+          cond do
+            decomposition_call?(terminal) ->
+              {node, Map.put(acc, var_name, :terminal)}
+
+            has_decomposition_in_chain?(rhs) ->
+              {node, Map.put(acc, var_name, :non_terminal)}
+
+            true ->
+              {node, acc}
           end
 
         node, acc ->
@@ -239,6 +260,13 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
       node
     )
   end
+
+  # Returns true if String.graphemes/to_charlist appears anywhere in the pipe chain.
+  defp has_decomposition_in_chain?({:|>, _, [left, right]}) do
+    decomposition_call?(right) or has_decomposition_in_chain?(left)
+  end
+
+  defp has_decomposition_in_chain?(node), do: decomposition_call?(node)
 
   defp build_issue(meta) do
     %Issue{
