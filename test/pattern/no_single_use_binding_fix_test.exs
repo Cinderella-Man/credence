@@ -85,6 +85,46 @@ defmodule Credence.Pattern.NoSingleUseBindingFixTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # FIX — inlines simple variable alias
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fixes simple variable alias" do
+    test "inlines alias used in function call" do
+      input = """
+      def run(list, char) do
+        target = char
+        do_count(list, target, 0, 0)
+      end
+      """
+
+      expected = """
+      def run(list, char) do
+        do_count(list, char, 0, 0)
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "inlines alias used in arithmetic" do
+      input = """
+      def run(x) do
+        y = x
+        y + 1
+      end
+      """
+
+      expected = """
+      def run(x) do
+        x + 1
+      end
+      """
+
+      assert fix(input) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # FIX — handles multiple single-use bindings across functions
   # ═══════════════════════════════════════════════════════════════════
 

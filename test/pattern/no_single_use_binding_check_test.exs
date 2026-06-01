@@ -87,10 +87,52 @@ defmodule Credence.Pattern.NoSingleUseBindingCheckTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # SHOULD NOT FLAG — non-operator expressions
+  # SHOULD FLAG — simple variable alias used once
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "does not flag when next expression is not comparison/boolean" do
+  describe "flags simple variable alias used once" do
+    test "alias used in function call" do
+      assert flagged?("""
+             def run(list, char) do
+               target = char
+               do_count(list, target, 0, 0)
+             end
+             """)
+    end
+
+    test "alias used in arithmetic" do
+      assert flagged?("""
+             def run(x) do
+               y = x
+               y + 1
+             end
+             """)
+    end
+
+    test "alias used in pipe" do
+      assert flagged?("""
+             def run(list) do
+               data = list
+               data |> Enum.map(&process/1)
+             end
+             """)
+    end
+
+    test "alias used in string interpolation" do
+      assert flagged?("""
+             def run(name) do
+               label = name
+               "Hello, \#{label}"
+             end
+             """)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # SHOULD NOT FLAG — non-operator expressions (RHS is not a simple var)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "does not flag when next expression is not comparison/boolean and RHS is not a simple var" do
     test "function call argument" do
       assert clean?("""
              def run(list) do

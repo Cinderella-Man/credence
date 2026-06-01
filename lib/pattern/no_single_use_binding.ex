@@ -1,13 +1,15 @@
 defmodule Credence.Pattern.NoSingleUseBinding do
   @moduledoc """
-  Detects a variable that is assigned and then used exactly once as an
-  operand of a comparison or boolean operator in the immediately following
-  expression.
+  Detects a variable that is assigned and then used exactly once in the
+  immediately following expression, where the binding adds no value and
+  can be inlined.
 
   This is a common LLM verbosity pattern where the intermediate binding
-  adds no value and can be inlined into the expression.
+  is redundant — either because the next expression is a comparison or
+  boolean operator, or because the RHS is itself a simple variable
+  (a pointless alias).
 
-  ## Example
+  ## Example — comparison context
 
       # Bad
       gcd = Integer.gcd(a, b)
@@ -16,17 +18,26 @@ defmodule Credence.Pattern.NoSingleUseBinding do
       # Good
       Integer.gcd(a, b) == 1
 
+  ## Example — simple variable alias
+
+      # Bad
+      target = char
+      do_count(list, target, 0)
+
+      # Good
+      do_count(list, char, 0)
+
   ## Scope
 
-  Only flags when:
+  Flags when ALL of these hold:
   - The assignment is a simple `var = expr` (not a pattern match).
   - The variable appears exactly once in the next statement.
-  - The next statement is a comparison (`==`, `!=`, `>`, `<`, etc.) or
-    boolean (`and`, `or`, `&&`, `||`) operator expression.
   - The next statement is NOT just the variable itself (handled by
     `no_redundant_assignment`).
   - The next statement is NOT a control-flow expression (`if`, `case`,
     `cond`, `with`, `try`, `for`, `receive`).
+  - EITHER the next statement is a comparison/boolean operator expression,
+    OR the RHS is a simple variable (aliasing).
 
   ## Auto-fix
 
@@ -73,7 +84,7 @@ defmodule Credence.Pattern.NoSingleUseBinding do
 
   defp check_pairs(_), do: []
 
-  defp check_pair([{:=, meta, [{name, _, ctx}, _rhs]}, next_stmt])
+  defp check_pair([{:=, meta, [{name, _, ctx}, rhs]}, next_stmt])
        when is_atom(name) and is_atom(ctx) and name != :_ do
     cond do
       variable_only?(next_stmt, name) ->
@@ -82,16 +93,24 @@ defmodule Credence.Pattern.NoSingleUseBinding do
       control_flow?(next_stmt) ->
         []
 
-      not operator_expression?(next_stmt) ->
-        []
-
-      count_var(name, ctx, next_stmt) == 1 ->
+      operator_expression?(next_stmt) and count_var(name, ctx, next_stmt) == 1 ->
         [
           %Issue{
             rule: :no_single_use_binding,
             message:
               "Variable `#{name}` is bound and used only once in the next expression. " <>
                 "Consider inlining the expression directly.",
+            meta: %{line: Keyword.get(meta, :line)}
+          }
+        ]
+
+      simple_var_rhs?(rhs) and count_var(name, ctx, next_stmt) == 1 ->
+        [
+          %Issue{
+            rule: :no_single_use_binding,
+            message:
+              "Variable `#{name}` is bound to another variable and used only once. " <>
+                "Consider using the original variable directly.",
             meta: %{line: Keyword.get(meta, :line)}
           }
         ]
@@ -135,7 +154,7 @@ defmodule Credence.Pattern.NoSingleUseBinding do
       when is_atom(name) and is_atom(ctx) and name != :_ ->
         if not variable_only?(next_stmt, name) and
              not control_flow?(next_stmt) and
-             operator_expression?(next_stmt) and
+             (operator_expression?(next_stmt) or simple_var_rhs?(rhs)) and
              count_var(name, ctx, next_stmt) == 1 do
           new_next = replace_var(name, ctx, rhs, next_stmt)
           {before_pair, [_assign, _ | rest]} = Enum.split(statements, index)
@@ -153,6 +172,14 @@ defmodule Credence.Pattern.NoSingleUseBinding do
 
   defp variable_only?({name, _, _}, name), do: true
   defp variable_only?(_, _), do: false
+
+  defp simple_var_rhs?({:__block__, _, [inner]}), do: simple_var_rhs?(inner)
+
+  defp simple_var_rhs?({name, _, ctx})
+       when is_atom(name) and is_atom(ctx) and name != :_,
+       do: true
+
+  defp simple_var_rhs?(_), do: false
 
   defp control_flow?({head, _, _}) when head in @control_flow_heads, do: true
   defp control_flow?(_), do: false
