@@ -316,6 +316,102 @@ defmodule Credence.Pattern.NoManualEnumUniqTest do
       assert length(check(code)) == 1
     end
 
+    test "flags manual uniq using Map.get as truthiness check" do
+      code = """
+      defmodule Solution do
+        def get_unique(list) do
+          list
+          |> Enum.reduce({[], %{}}, fn element, {result, seen} ->
+            if Map.get(seen, element) do
+              {result, seen}
+            else
+              {[element | result], Map.put(seen, element, true)}
+            end
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "flags manual uniq using Map.get with default as truthiness check" do
+      code = """
+      defmodule Solution do
+        def get_unique(list) do
+          list
+          |> Enum.reduce({[], %{}}, fn element, {result, seen} ->
+            if Map.get(seen, element, false) do
+              {result, seen}
+            else
+              {[element | result], Map.put(seen, element, true)}
+            end
+          end)
+          |> elem(0)
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "does not flag Map.get membership nested inside filter conditional" do
+      # This is a combined filter+dedup pattern — the dedup check is nested
+      # inside a filter predicate. Auto-fixing would lose the filter logic.
+      code = """
+      defmodule Solution do
+        def repeating(list, counts) do
+          list
+          |> Enum.reduce({[], %{}}, fn element, {result, seen} ->
+            case Map.get(counts, element) do
+              count when count > 1 ->
+                if Map.get(seen, element) do
+                  {result, Map.put(seen, element, true)}
+                else
+                  {[element | result], Map.put(seen, element, true)}
+                end
+
+              _ ->
+                {result, seen}
+            end
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Map.has_key? nested inside filter conditional" do
+      code = """
+      defmodule Solution do
+        def repeating(list, counts) do
+          list
+          |> Enum.reduce({[], %{}}, fn element, {result, seen} ->
+            case Map.get(counts, element) do
+              count when count > 1 ->
+                if Map.has_key?(seen, element) do
+                  {result, seen}
+                else
+                  {[element | result], Map.put(seen, element, true)}
+                end
+
+              _ ->
+                {result, seen}
+            end
+          end)
+          |> elem(0)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
     test "does not flag map used for non-dedup purposes" do
       code = """
       defmodule Example do

@@ -296,22 +296,22 @@ defmodule Credence.Pattern.NoManualEnumUniq do
 
   defp get_var_name_at_index(_, _), do: nil
 
+  # Only detect membership checks at the TOP LEVEL of the fn body.
+  # Using prewalk would also match membership checks nested inside other
+  # conditionals (e.g. a filter+dedup pattern), which the auto-fix cannot
+  # safely handle — the fix would discard the outer filtering logic.
   defp conditional_dedup?(body, seen_var, item_var) do
-    {_, found?} =
-      Macro.prewalk(body, false, fn
-        {type, _, [condition | _]} = node, acc when type in [:if, :unless, :case] ->
-          if uses_mapset_member?(condition, seen_var, item_var) do
-            {node, true}
-          else
-            {node, acc}
-          end
+    case unwrap_single_block(body) do
+      {type, _, [condition | _]} when type in [:if, :unless, :case] ->
+        uses_mapset_member?(condition, seen_var, item_var)
 
-        node, acc ->
-          {node, acc}
-      end)
-
-    found?
+      _ ->
+        false
+    end
   end
+
+  defp unwrap_single_block({:__block__, _, [single]}), do: unwrap_single_block(single)
+  defp unwrap_single_block(node), do: node
 
   defp uses_mapset_member?(condition, seen_var, item_var) do
     case condition do
@@ -322,6 +322,17 @@ defmodule Credence.Pattern.NoManualEnumUniq do
       # Map.has_key?(seen, item) — plain map used as a set
       {{:., _, [{:__aliases__, _, [:Map]}, :has_key?]}, _,
        [{^seen_var, _, nil}, {^item_var, _, nil}]} ->
+        true
+
+      # Map.get(seen, item) — truthiness check, equivalent to has_key? when
+      # the map stores boolean `true` values (i.e. used as a set)
+      {{:., _, [{:__aliases__, _, [:Map]}, :get]}, _,
+       [{^seen_var, _, nil}, {^item_var, _, nil}]} ->
+        true
+
+      # Map.get(seen, item, default) — 3-arg form, same reasoning
+      {{:., _, [{:__aliases__, _, [:Map]}, :get]}, _,
+       [{^seen_var, _, nil}, {^item_var, _, nil}, _default]} ->
         true
 
       {op, _, [inner]} when op in [:!, :not] ->
