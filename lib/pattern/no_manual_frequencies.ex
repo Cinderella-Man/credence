@@ -6,6 +6,16 @@ defmodule Credence.Pattern.NoManualFrequencies do
   `Enum.frequencies/1` (available since Elixir 1.10) does exactly this in a
   single, optimized call.
 
+  Also detects derived-key frequency counting where a local variable is used
+  as the Map.update key instead of the element parameter:
+
+      Enum.reduce(list, %{}, fn x, acc ->
+        key = transform(x)
+        Map.update(acc, key, 1, &(&1 + 1))
+      end)
+
+  This can be replaced with `Enum.frequencies_by/2` (Elixir 1.13+).
+
   ## Bad
 
       list
@@ -13,9 +23,17 @@ defmodule Credence.Pattern.NoManualFrequencies do
         Map.update(counts, item, 1, &(&1 + 1))
       end)
 
+      list
+      |> Enum.reduce(%{}, fn item, counts ->
+        key = transform(item)
+        Map.update(counts, key, 1, &(&1 + 1))
+      end)
+
   ## Good
 
       Enum.frequencies(list)
+
+      Enum.frequencies_by(list, fn item -> transform(item) end)
   """
 
   use Credence.Pattern.Rule
@@ -29,10 +47,15 @@ defmodule Credence.Pattern.NoManualFrequencies do
         {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [_list, {:%{}, _, []}, body]} =
             node,
         issues ->
-          if is_simple_frequency_fn?(body) do
-            {node, [build_issue(meta) | issues]}
-          else
-            {node, issues}
+          cond do
+            is_simple_frequency_fn?(body) ->
+              {node, [build_issue(meta, :frequencies) | issues]}
+
+            is_frequencies_by_fn?(body) ->
+              {node, [build_issue(meta, :frequencies_by) | issues]}
+
+            true ->
+              {node, issues}
           end
 
         # Piped: list |> Enum.reduce(%{}, fn ... -> Map.update(...) end)
@@ -42,10 +65,15 @@ defmodule Credence.Pattern.NoManualFrequencies do
            {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [{:%{}, _, []}, body]}
          ]} = node,
         issues ->
-          if is_simple_frequency_fn?(body) do
-            {node, [build_issue(meta) | issues]}
-          else
-            {node, issues}
+          cond do
+            is_simple_frequency_fn?(body) ->
+              {node, [build_issue(meta, :frequencies) | issues]}
+
+            is_frequencies_by_fn?(body) ->
+              {node, [build_issue(meta, :frequencies_by) | issues]}
+
+            true ->
+              {node, issues}
           end
 
         node, issues ->
@@ -58,24 +86,34 @@ defmodule Credence.Pattern.NoManualFrequencies do
   @impl true
   def fix_patches(ast, _opts) do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      # Piped: list |> Enum.reduce(%{}, fn ... end) → Enum.frequencies(list)
+      # Piped: list |> Enum.reduce(%{}, fn ... end)
       {:|>, _,
        [
          list,
          {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [{:%{}, _, []}, body]}
        ]} = node ->
-        if is_simple_frequency_fn?(body) do
-          enum_frequencies_call(list)
-        else
-          node
+        cond do
+          is_simple_frequency_fn?(body) ->
+            enum_frequencies_call(list)
+
+          true ->
+            case frequencies_by_fix(list, body) do
+              nil -> node
+              fixed -> fixed
+            end
         end
 
-      # Direct: Enum.reduce(list, %{}, fn ... end) → Enum.frequencies(list)
+      # Direct: Enum.reduce(list, %{}, fn ... end)
       {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [list, {:%{}, _, []}, body]} = node ->
-        if is_simple_frequency_fn?(body) do
-          enum_frequencies_call(list)
-        else
-          node
+        cond do
+          is_simple_frequency_fn?(body) ->
+            enum_frequencies_call(list)
+
+          true ->
+            case frequencies_by_fix(list, body) do
+              nil -> node
+              fixed -> fixed
+            end
         end
 
       node ->
@@ -85,6 +123,86 @@ defmodule Credence.Pattern.NoManualFrequencies do
 
   defp enum_frequencies_call(enum) do
     {{:., [], [{:__aliases__, [], [:Enum]}, :frequencies]}, [], [enum]}
+  end
+
+  defp frequencies_by_fix(list, body) do
+    case body do
+      {:fn, _, [{:->, _, [params, body_block]}]} when length(params) == 2 ->
+        element_param = hd(params)
+
+        case body_block do
+          {:__block__, _, [binding, map_update]} ->
+            if is_derived_frequency_binding?(binding, map_update, element_param) and
+                 not has_conditional?(body_block) do
+              {:=, _, [_var, derivation_expr]} = binding
+              clean_expr = unwrap_literal(derivation_expr)
+              transform_fn = {:fn, [], [{:->, [], [[element_param], clean_expr]}]}
+
+              {{:., [], [{:__aliases__, [], [:Enum]}, :frequencies_by]}, [],
+               [list, transform_fn]}
+            end
+
+          _ ->
+            nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp is_frequencies_by_fn?(fn_expr) do
+    case fn_expr do
+      {:fn, _, [{:->, _, [params, {:__block__, _, [binding, map_update]} = body_block]}]}
+      when length(params) == 2 ->
+        element_param = hd(params)
+
+        is_derived_frequency_binding?(binding, map_update, element_param) and
+          not has_conditional?(body_block)
+
+      _ ->
+        false
+    end
+  end
+
+  defp is_derived_frequency_binding?(binding, map_update, element_param) do
+    case binding do
+      {:=, _, [{var_name, _, nil}, expr]} when is_atom(var_name) ->
+        references_param?(expr, element_param) and
+          is_frequency_map_update_with_var?(map_update, var_name)
+
+      _ ->
+        false
+    end
+  end
+
+  defp is_frequency_map_update_with_var?(ast, var_name) do
+    case ast do
+      {{:., _, [{:__aliases__, _, [:Map]}, :update]}, _, [_, key, default, _]} ->
+        unwrap_literal(default) == 1 and extract_var_name(key) == var_name
+
+      {{:., _, [{:__aliases__, _, [:Map]}, :update!]}, _, [_, key, _]} ->
+        extract_var_name(key) == var_name
+
+      _ ->
+        false
+    end
+  end
+
+  defp references_param?(ast, param) do
+    param_name = extract_var_name(param)
+
+    {_ast, found} =
+      Macro.prewalk(ast, false, fn
+        node, acc ->
+          if extract_var_name(node) == param_name do
+            {node, true}
+          else
+            {node, acc}
+          end
+      end)
+
+    found
   end
 
   # Sourceror wraps literals in {:__block__, _, [value]}
@@ -153,12 +271,21 @@ defmodule Credence.Pattern.NoManualFrequencies do
   defp extract_var_name({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: name
   defp extract_var_name(_), do: nil
 
-  defp build_issue(meta) do
+  defp build_issue(meta, variant) do
+    message =
+      case variant do
+        :frequencies ->
+          "Manual frequency counting with `Enum.reduce/3` + `Map.update/4` and an empty map " <>
+            "can be replaced with `Enum.frequencies/1`, which is clearer and optimized."
+
+        :frequencies_by ->
+          "Manual frequency counting with a derived key using `Enum.reduce/3` + `Map.update/4` " <>
+            "can be replaced with `Enum.frequencies_by/2`, which is clearer and optimized."
+      end
+
     %Issue{
       rule: :no_manual_frequencies,
-      message:
-        "Manual frequency counting with `Enum.reduce/3` + `Map.update/4` and an empty map " <>
-          "can be replaced with `Enum.frequencies/1`, which is clearer and optimized.",
+      message: message,
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

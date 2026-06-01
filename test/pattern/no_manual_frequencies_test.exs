@@ -13,7 +13,7 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
     do: Credence.RuleHelpers.apply_rule_fix(NoManualFrequencies, code, [])
 
   describe "NoManualFrequencies" do
-    test "passes when reduce derives a different key from the element" do
+    test "detects derived-key frequency counting (Enum.frequencies_by)" do
       code = """
       defmodule NotFreq do
         def count_substrings(s, min_size) do
@@ -27,7 +27,10 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
       end
       """
 
-      assert check(code) == []
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_manual_frequencies
+      assert hd(issues).message =~ "Enum.frequencies_by"
     end
 
     test "passes when reduce has conditional Map.update" do
@@ -162,6 +165,60 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
 
       assert length(issues) == 1
     end
+
+    test "detects piped derived-key frequency counting" do
+      code = """
+      defmodule DerivedKey do
+        def count_by_transform(list) do
+          list
+          |> Enum.reduce(%{}, fn item, acc ->
+            key = transform(item)
+            Map.update(acc, key, 1, &(&1 + 1))
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).message =~ "Enum.frequencies_by"
+    end
+
+    test "passes when derived-key reduce has conditional" do
+      code = """
+      defmodule FilteredDerived do
+        def count(list) do
+          Enum.reduce(list, %{}, fn item, acc ->
+            key = transform(item)
+
+            if valid?(key) do
+              Map.update(acc, key, 1, &(&1 + 1))
+            else
+              acc
+            end
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "passes when body has more than two expressions" do
+      code = """
+      defmodule MultiExpr do
+        def count(list) do
+          Enum.reduce(list, %{}, fn item, acc ->
+            key = transform(item)
+            IO.puts(key)
+            Map.update(acc, key, 1, &(&1 + 1))
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix" do
@@ -230,6 +287,62 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
       assert NoManualFrequencies.check(ast, []) == []
+    end
+
+    test "replaces derived-key reduce with Enum.frequencies_by" do
+      code = """
+      Enum.reduce(list, %{}, fn item, acc ->
+        key = transform(item)
+        Map.update(acc, key, 1, &(&1 + 1))
+      end)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.frequencies_by"
+      assert result =~ "fn item -> transform(item) end"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "replaces piped derived-key reduce with Enum.frequencies_by" do
+      code = """
+      list |> Enum.reduce(%{}, fn item, acc ->
+        key = transform(item)
+        Map.update(acc, key, 1, &(&1 + 1))
+      end)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.frequencies_by"
+      assert result =~ "fn item -> transform(item) end"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "round-trip: derived-key fix produces no issues" do
+      code = """
+      Enum.reduce(list, %{}, fn item, acc ->
+        key = transform(item)
+        Map.update(acc, key, 1, &(&1 + 1))
+      end)
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoManualFrequencies.check(ast, []) == []
+    end
+
+    test "replaces derived-key reduce with pipe expression" do
+      code = """
+      1..n |> Enum.reduce(%{}, fn num, acc ->
+        digit_sum = num |> Integer.digits() |> Enum.sum()
+        Map.update(acc, digit_sum, 1, &(&1 + 1))
+      end)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.frequencies_by"
+      assert result =~ "Integer.digits"
+      assert result =~ "Enum.sum"
+      refute result =~ "Enum.reduce"
     end
   end
 end
