@@ -517,11 +517,11 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
   defp build_message(:max),
     do:
-      "`Enum.map/2` piped into `Enum.max/1` creates an intermediate list. Fuse into `Enum.reduce(enum, fn el, best -> max(f(el), best) end)`."
+      "`Enum.map/2` piped into `Enum.max/1` creates an intermediate list. Use `Enum.reduce/3` with `max/2` for a single-pass approach."
 
   defp build_message(:min),
     do:
-      "`Enum.map/2` piped into `Enum.min/1` creates an intermediate list. Fuse into `Enum.reduce(enum, fn el, best -> min(f(el), best) end)`."
+      "`Enum.map/2` piped into `Enum.min/1` creates an intermediate list. Use `Enum.reduce/3` with `min/2` for a single-pass approach."
 
   defp build_message(:sum),
     do:

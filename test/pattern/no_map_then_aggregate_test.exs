@@ -29,6 +29,11 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       assert issue.rule == :no_map_then_aggregate
       assert issue.message =~ "Enum.map"
       assert issue.message =~ "Enum.max"
+      # Message must NOT suggest unsafe Enum.reduce/2 (no initial value).
+      # The accumulator would start as the raw first element, breaking when
+      # the map function changes the element type.
+      refute issue.message =~ "Enum.reduce(enum, fn",
+             "Message must not suggest Enum.reduce/2 — use Enum.reduce/3 instead"
     end
 
     test "detects Enum.map |> Enum.min in pipeline" do
@@ -44,6 +49,8 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
 
       [issue] = check(code)
       assert issue.message =~ "Enum.min"
+      refute issue.message =~ "Enum.reduce(enum, fn",
+             "Message must not suggest Enum.reduce/2 — use Enum.reduce/3 instead"
     end
 
     test "detects Enum.map |> Enum.sum in pipeline" do
