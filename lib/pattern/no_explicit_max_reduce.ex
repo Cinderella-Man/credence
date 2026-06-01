@@ -1,13 +1,21 @@
 defmodule Credence.Pattern.NoExplicitMaxReduce do
   @moduledoc """
-  Strict semantic rule: Flags ONLY explicit max-reduction patterns inside `Enum.reduce/3`.
+  Strict semantic rule: Flags explicit max-reduction patterns inside `Enum.reduce/3`.
 
   This rule does NOT perform heuristic detection. It only matches cases where
   the reduce body clearly implements a max/argmax operation using:
 
-  - `max(a, b)`
-  - `if a > acc do ... else ...`
-  - `if a >= acc do ... else ...`
+  - `max(a, b)` → auto-fix to `Enum.max/1`
+  - `if a > acc do a else acc end` → auto-fix to `Enum.max/1`
+  - `if a >= acc do a else acc end` → auto-fix to `Enum.max/1`
+
+  Also detects max-by patterns (check-only, no auto-fix):
+
+  - `if f(a) > f(b) do a else b end` → flagged, use `Enum.max_by/2`
+  - `if f(a) >= f(b) do a else b end` → flagged, use `Enum.max_by/2`
+
+  where the same function `f` is applied to both sides of the comparison
+  and the branches return the original elements.
 
   Any deviation (tuple state, maps, pipelines, multiple expressions, etc.)
   will NOT be flagged.
@@ -22,16 +30,28 @@ defmodule Credence.Pattern.NoExplicitMaxReduce do
       Macro.prewalk(ast, [], fn
         # MATCH ALL Enum.reduce variants safely
         {{:., _, _}, meta, args} = node, issues ->
-          if reduce_call?(node) and max_reduce_body?(args) do
-            issue = %Issue{
-              rule: :no_explicit_max_reduce,
-              message: "Explicit max-reduction detected. Prefer Enum.max/1 or Enum.max_by/2.",
-              meta: %{line: Keyword.get(meta, :line)}
-            }
+          case reduce_call?(node) && reduce_body_type?(args) do
+            :max ->
+              issue = %Issue{
+                rule: :no_explicit_max_reduce,
+                message: "Explicit max-reduction detected. Prefer Enum.max/1 or Enum.max_by/2.",
+                meta: %{line: Keyword.get(meta, :line)}
+              }
 
-            {node, [issue | issues]}
-          else
-            {node, issues}
+              {node, [issue | issues]}
+
+            :max_by ->
+              issue = %Issue{
+                rule: :no_explicit_max_reduce,
+                message:
+                  "Explicit max-by reduction detected. Prefer Enum.max_by/2 or Enum.max_by/3.",
+                meta: %{line: Keyword.get(meta, :line)}
+              }
+
+              {node, [issue | issues]}
+
+            _ ->
+              {node, issues}
           end
 
         node, issues ->
@@ -45,7 +65,7 @@ defmodule Credence.Pattern.NoExplicitMaxReduce do
   def fix_patches(ast, _opts) do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {{:., _, _}, _, args} = node ->
-        if reduce_call?(node) and max_reduce_body?(args) do
+        if reduce_call?(node) and reduce_body_type?(args) == :max do
           [enum, acc | _] = args
 
           if simple_var?(acc) do
@@ -77,15 +97,19 @@ defmodule Credence.Pattern.NoExplicitMaxReduce do
   defp reduce_call?({{:., _, [:Enum, :reduce]}, _, _}), do: true
   defp reduce_call?(_), do: false
 
-  defp max_reduce_body?([
+  defp reduce_body_type?([
          _enum,
          _acc,
          {:fn, _, [{:->, _, [_args, body]}]}
        ]) do
-    explicit_max?(body)
+    cond do
+      explicit_max?(body) -> :max
+      explicit_max_by?(body) -> :max_by
+      true -> false
+    end
   end
 
-  defp max_reduce_body?(_), do: false
+  defp reduce_body_type?(_), do: false
 
   # Safely unwrap single-expression blocks (added by formatter/parser occasionally)
   defp explicit_max?({:__block__, _, [body]}), do: explicit_max?(body)
@@ -112,6 +136,57 @@ defmodule Credence.Pattern.NoExplicitMaxReduce do
 
   # Fallback
   defp explicit_max?(_), do: false
+
+  # --- max_by detection (check-only, no auto-fix) ---
+
+  # Safely unwrap single-expression blocks
+  defp explicit_max_by?({:__block__, _, [body]}), do: explicit_max_by?(body)
+
+  # Match `if f(a) > f(b) do a else b end` where f is the same on both sides
+  defp explicit_max_by?({:if, _, [{:>, _, [left, right]}, opts]}) do
+    max_by_pattern?(left, right, opts)
+  end
+
+  # Match `if f(a) >= f(b) do a else b end`
+  defp explicit_max_by?({:if, _, [{:>=, _, [left, right]}, opts]}) do
+    max_by_pattern?(left, right, opts)
+  end
+
+  defp explicit_max_by?(_), do: false
+
+  defp max_by_pattern?(left, right, opts) do
+    function_call_with_simple_arg?(left) and
+      function_call_with_simple_arg?(right) and
+      same_function?(left, right) and
+      returns_compared_vars?(opts, function_call_arg(left), function_call_arg(right))
+  end
+
+  # A function call with exactly one argument that is a simple variable.
+  # Handles both qualified (String.length(x)) and unqualified (length(x)) calls.
+  defp function_call_with_simple_arg?({{:., _, [{:__aliases__, _, _}, _]}, _, [arg]}),
+    do: simple_var?(arg)
+
+  defp function_call_with_simple_arg?({fun, _, [arg]}) when is_atom(fun),
+    do: simple_var?(arg)
+
+  defp function_call_with_simple_arg?(_), do: false
+
+  # Check that two function calls invoke the same function.
+  defp same_function?(
+         {{:., _, [{:__aliases__, _, mod1}, fun1]}, _, _},
+         {{:., _, [{:__aliases__, _, mod2}, fun2]}, _, _}
+       ),
+       do: mod1 == mod2 and fun1 == fun2
+
+  defp same_function?({fun1, _, _}, {fun2, _, _})
+       when is_atom(fun1) and is_atom(fun2),
+       do: fun1 == fun2
+
+  defp same_function?(_, _), do: false
+
+  # Extract the argument from a function call node.
+  defp function_call_arg({{:., _, _}, _, [arg]}), do: arg
+  defp function_call_arg({_, _, [arg]}), do: arg
 
   # Verify the if-branches return the compared variables (not tuples, calls, etc.).
   # Sourceror represents if-clauses as [{{:__block__, _, [:do]}, body}, ...].

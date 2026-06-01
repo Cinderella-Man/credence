@@ -152,6 +152,82 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
       assert length(issues) == 2
     end
 
+    test "detects max-by pattern with same function on both sides" do
+      code = """
+      defmodule BadMaxByReduce do
+        def max_length(strings) do
+          Enum.reduce(strings, "", fn str, longest ->
+            if String.length(str) > String.length(longest), do: str, else: longest
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_explicit_max_reduce
+      assert hd(issues).message =~ "max-by"
+    end
+
+    test "detects max-by pattern with >= operator" do
+      code = """
+      defmodule BadMaxByReduceEq do
+        def max_length(strings) do
+          Enum.reduce(strings, "", fn str, longest ->
+            if String.length(str) >= String.length(longest), do: str, else: longest
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).message =~ "max-by"
+    end
+
+    test "detects max-by with unqualified function calls" do
+      code = """
+      defmodule BadMaxByUnqual do
+        def max_length(lists) do
+          Enum.reduce(lists, [], fn sub, longest ->
+            if length(sub) > length(longest), do: sub, else: longest
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "does NOT detect max-by with different functions on each side" do
+      code = """
+      defmodule GoodDiffFns do
+        def process(list) do
+          Enum.reduce(list, "", fn str, acc ->
+            if String.length(str) > byte_size(acc), do: str, else: acc
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does NOT detect max-by when one side is not a function call" do
+      code = """
+      defmodule GoodOneSideVar do
+        def process(list) do
+          Enum.reduce(list, 0, fn str, acc ->
+            if String.length(str) > acc, do: String.length(str), else: acc
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
     test "does NOT detect max-reduce with transformation (e.g. length)" do
       code = """
       defmodule GoodMaxTransform do
@@ -358,6 +434,18 @@ defmodule Credence.Pattern.NoExplicitMaxReduceTest do
       assert result =~ "Enum.max([head | tail])"
       refute result =~ "Enum.max(tail)"
       refute result =~ "Enum.reduce"
+    end
+
+    test "does not fix max-by pattern (check-only)" do
+      code = """
+      Enum.reduce(strings, "", fn str, longest ->
+        if String.length(str) > String.length(longest), do: str, else: longest
+      end)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.reduce"
+      refute result =~ "Enum.max_by"
     end
 
     test "fix uses Enum.max(enum) when acc is a literal sentinel" do
