@@ -93,6 +93,62 @@ defmodule Credence.Pattern.NoEnumAtInRecursionTest do
     end
   end
 
+  describe "detects Enum.slice with dynamic offset in recursive functions" do
+    test "flags piped Enum.slice with variable offset in recursive function" do
+      code = """
+      defmodule MountainChecker do
+        def check(list, idx, end_idx) when idx >= end_idx, do: true
+
+        def check(list, idx, end_idx) do
+          case list |> Enum.slice(idx, 2) do
+            [a, b] when a < b -> check(list, idx + 1, end_idx)
+            _ -> false
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_enum_at_in_recursion
+      assert hd(issues).message =~ "Enum.slice"
+    end
+
+    test "flags direct Enum.slice with variable offset in recursive function" do
+      code = """
+      defmodule Walker do
+        def walk(list, idx) when idx < 0, do: :ok
+
+        def walk(list, idx) do
+          [a, b] = Enum.slice(list, idx, 2)
+          IO.inspect({a, b})
+          walk(list, idx - 1)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_enum_at_in_recursion
+      assert hd(issues).message =~ "Enum.slice"
+    end
+
+    test "does not flag Enum.slice with literal offset in recursive function" do
+      code = """
+      defmodule Safe do
+        def walk(list, acc) when list == [], do: acc
+
+        def walk(list, acc) do
+          [a, b] = Enum.slice(list, 0, 2)
+          walk(tl(list), acc + a + b)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+  end
+
   describe "ignores non-recursive functions" do
     test "does not flag non-recursive function with dynamic Enum.at" do
       code = """

@@ -1,25 +1,23 @@
 defmodule Credence.Pattern.NoEnumAtInRecursion do
   @moduledoc """
-  Performance rule: Flags `Enum.at/2` with a dynamic (non-literal) index
-  inside **recursive** functions.
+  Performance rule: Flags `Enum.at/2` or `Enum.slice/2,3` with a dynamic
+  (non-literal) offset inside **recursive** functions.
 
-  Elixir lists are linked lists — `Enum.at/2` is O(n). Using it with a
-  changing index on every recursive call makes the overall complexity
-  O(n × iterations), when converting the list to a tuple up front and
-  using `elem/2` would give O(n) conversion + O(1) per access.
+  Elixir lists are linked lists — `Enum.at/2` and `Enum.slice/3` are O(n).
+  Using them with a changing index on every recursive call makes the overall
+  complexity O(n × iterations). Instead, walk the list with pattern matching,
+  or convert the list to a tuple up front and use `elem/2` for O(1) access.
 
-  This rule catches the general case: any non-literal index used with
-  `Enum.at/2` inside a recursive function. It does NOT fire when the
-  index is a literal integer (e.g. `Enum.at(list, 0)` is O(1) in
-  practice) or when the index is a midpoint expression (those are
-  handled by `NoEnumAtBinarySearch`).
+  This rule catches the general case: any non-literal offset used with
+  `Enum.at/2` or `Enum.slice/2,3` inside a recursive function. It does NOT
+  fire when the offset is a literal integer or when the offset is a midpoint
+  expression (those are handled by `NoEnumAtBinarySearch`).
 
   ## Check-only (no auto-fix)
 
-  The fix requires structural changes: converting the list to a tuple
-  in the calling function, changing the recursive helper's parameter
-  from list to tuple, and updating all recursive call sites. This
-  cannot be performed safely by an automated tool.
+  The fix requires structural changes: walking the list with pattern matching,
+  or converting the list to a tuple in the calling function. This cannot be
+  performed safely by an automated tool.
 
   ## Bad
 
@@ -29,18 +27,23 @@ defmodule Credence.Pattern.NoEnumAtInRecursion do
         do_search(list, left + 1, right - 1, acc + left_val + right_val)
       end
 
-  ## Good
-
-      def search(list) do
-        tuple = List.to_tuple(list)
-        do_search(tuple, 0, tuple_size(tuple) - 1, 0)
+      defp check_monotonic?(list, index, end_index) when index >= end_index, do: true
+      defp check_monotonic?(list, index, end_index) do
+        [a, b] = Enum.slice(list, index, 2)
+        a < b and check_monotonic?(list, index + 1, end_index)
       end
 
-      defp do_search(tuple, left, right, acc) when left < right do
+  ## Good
+
+      defp do_search(list, left, right, acc) when left < right do
+        tuple = List.to_tuple(list)
         left_val = elem(tuple, left)
         right_val = elem(tuple, right)
         do_search(tuple, left + 1, right - 1, acc + left_val + right_val)
       end
+
+      defp check_monotonic?([a, b | rest]) when a < b, do: check_monotonic?([b | rest])
+      defp check_monotonic?(_), do: false
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
@@ -132,6 +135,24 @@ defmodule Credence.Pattern.NoEnumAtInRecursion do
             {node, {issues, mids}}
           end
 
+        # Direct: Enum.slice(list, offset, ...) — offset is the 2nd arg
+        {{:., _, [{:__aliases__, _, [:Enum]}, :slice]}, meta, [_list, offset | _rest]} = node,
+        {issues, mids} ->
+          if flagged_index?(offset, mids) do
+            {node, {[trigger_slice_issue(meta) | issues], mids}}
+          else
+            {node, {issues, mids}}
+          end
+
+        # Piped: list |> Enum.slice(offset, ...)
+        {:|>, meta, [_list, {{:., _, [{:__aliases__, _, [:Enum]}, :slice]}, _, [offset | _rest]}]} =
+        node, {issues, mids} ->
+          if flagged_index?(offset, mids) do
+            {node, {[trigger_slice_issue(meta) | issues], mids}}
+          else
+            {node, {issues, mids}}
+          end
+
         node, acc ->
           {node, acc}
       end)
@@ -171,7 +192,18 @@ defmodule Credence.Pattern.NoEnumAtInRecursion do
       rule: :no_enum_at_in_recursion,
       message:
         "Using `Enum.at/2` with a dynamic index inside a recursive function is O(n) per call. " <>
-          "Convert the list to a tuple with `List.to_tuple/1` outside the recursion " <>
+          "Walk the list with pattern matching, or convert to a tuple with `List.to_tuple/1` " <>
+          "and use `elem/2` for O(1) access.",
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
+
+  defp trigger_slice_issue(meta) do
+    %Issue{
+      rule: :no_enum_at_in_recursion,
+      message:
+        "Using `Enum.slice/2,3` with a dynamic offset inside a recursive function is O(n) per call. " <>
+          "Walk the list with pattern matching, or convert to a tuple with `List.to_tuple/1` " <>
           "and use `elem/2` for O(1) access.",
       meta: %{line: Keyword.get(meta, :line)}
     }
