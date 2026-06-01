@@ -490,5 +490,53 @@ defmodule Credence.Pattern.NoListToTupleForAccessTest do
         """
       )
     end
+
+    test "does not flag List.to_tuple + elem when tuple is passed to a local defp" do
+      # The tuple is created, one element is extracted (one-shot elem),
+      # then the tuple is passed to a recursive defp for O(1) indexed access.
+      # This is the pattern no_enum_at_in_recursion recommends.
+      input = """
+      defmodule NextPermutation do
+        def find_swap_index(digits, pivot_index) do
+          len = length(digits)
+          tuple_digits = List.to_tuple(digits)
+          pivot_value = elem(tuple_digits, pivot_index)
+          do_find_swap_index(tuple_digits, len - 1, pivot_index, pivot_value)
+        end
+
+        defp do_find_swap_index(_tuple, index, _pivot_index, _pivot_value) when index < 0, do: nil
+
+        defp do_find_swap_index(tuple, index, pivot_index, pivot_value) do
+          elem_at_index = elem(tuple, index)
+
+          if elem_at_index > pivot_value do
+            index
+          else
+            do_find_swap_index(tuple, index - 1, pivot_index, pivot_value)
+          end
+        end
+      end
+      """
+
+      assert check(input) == []
+      assert fix(input) == input
+    end
+
+    test "still flags tuple not passed to any local defp" do
+      code = """
+      defmodule Example do
+        def run(list) do
+          t = List.to_tuple(list)
+          a = elem(t, 0)
+          b = elem(t, 1)
+          {a, b}
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_to_tuple_for_access
+    end
   end
 end

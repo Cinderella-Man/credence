@@ -33,6 +33,10 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
   `def` and the `elem` access is in a nested `defp` (the typical shape
   for recursive helpers). This is the pattern recommended by
   `no_enum_at_in_recursion`.
+
+  Additionally, when the binding variable is also passed as an argument
+  to a locally-defined `defp`, the rule assumes the tuple is used for
+  efficient recursive access and suppresses the issue.
   """
 
   use Credence.Pattern.Rule
@@ -46,6 +50,7 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
       []
     else
       readers = collect_elem_readers(ast, bindings)
+      defp_names = collect_defp_names(ast)
 
       Enum.flat_map(bindings, fn {var, _info} ->
         case Map.get(readers, var, []) do
@@ -53,12 +58,20 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
             []
 
           var_readers ->
-            if Enum.any?(var_readers, & &1.in_loop?) do
+            cond do
               # All-or-some-in-loop: the pattern is the recommended idiom
               # for O(1) random access during iteration. Don't nag.
-              []
-            else
-              [build_issue(var, hd(var_readers).node)]
+              Enum.any?(var_readers, & &1.in_loop?) ->
+                []
+
+              # The tuple is also passed to a local defp — likely used for
+              # O(1) recursive access (the pattern no_enum_at_in_recursion
+              # recommends). Don't flag the one-shot elem call.
+              passed_to_defp?(ast, var, defp_names) ->
+                []
+
+              true ->
+                [build_issue(var, hd(var_readers).node)]
             end
         end
       end)
@@ -73,7 +86,8 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
       []
     else
       readers = collect_elem_readers(ast, bindings)
-      {elem_patches, removable_bindings} = decide_patches(bindings, readers, ast)
+      defp_names = collect_defp_names(ast)
+      {elem_patches, removable_bindings} = decide_patches(bindings, readers, ast, defp_names)
 
       binding_patches = Enum.map(removable_bindings, &binding_removal_patch/1)
       elem_patches ++ binding_patches
@@ -150,7 +164,7 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
 
   defp maybe_record_elem(_, _, _, readers), do: readers
 
-  defp decide_patches(bindings, readers, ast) do
+  defp decide_patches(bindings, readers, ast, defp_names) do
     Enum.reduce(bindings, {[], []}, fn {var, binding_info}, {patches, removable} ->
       var_readers = Map.get(readers, var, [])
 
@@ -160,6 +174,10 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
 
         Enum.any?(var_readers, & &1.in_loop?) ->
           # Preserve the in-loop O(1) random-access idiom intact.
+          {patches, removable}
+
+        passed_to_defp?(ast, var, defp_names) ->
+          # Tuple is passed to a local defp for recursive O(1) access.
           {patches, removable}
 
         true ->
@@ -235,6 +253,48 @@ defmodule Credence.Pattern.NoListToTupleForAccess do
     (rlen > blen and Enum.drop(reader_scope, rlen - blen) == binding_scope) or
       # Prefix check: binding in a def, reader in a nested defp (recursive helper)
       (blen > rlen and Enum.drop(binding_scope, blen - rlen) == reader_scope)
+  end
+
+  # Collects {name, arity} pairs of all defp definitions in the module.
+  defp collect_defp_names(ast) do
+    {_, names} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {:defp, _, [{name, _, args} | _]} = node, acc
+        when is_atom(name) and is_list(args) ->
+          {node, MapSet.put(acc, {name, length(args)})}
+
+        {:defp, _, [{:when, _, [{name, _, args} | _]} | _]} = node, acc
+        when is_atom(name) and is_list(args) ->
+          {node, MapSet.put(acc, {name, length(args)})}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
+  end
+
+  # Returns true if `var` is passed as an argument to any locally-defined defp.
+  defp passed_to_defp?(ast, var, defp_names) do
+    if MapSet.size(defp_names) == 0 do
+      false
+    else
+      {_, found} =
+        Macro.prewalk(ast, false, fn
+          {name, _, args} = node, acc when is_list(args) and acc != true ->
+            if MapSet.member?(defp_names, {name, length(args)}) and
+                 Enum.any?(args, &match?({^var, _, nil}, &1)) do
+              {node, true}
+            else
+              {node, acc}
+            end
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      found
+    end
   end
 
   defp extract_tuple_source({{:., _, [{:__aliases__, _, [:List]}, :to_tuple]}, _, [source]}),
