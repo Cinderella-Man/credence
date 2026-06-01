@@ -300,6 +300,8 @@ defmodule Credence.Pattern.InconsistentParamNames do
   end
 
   defp build_rename_map(args, canonical) do
+    names_in_clause = collect_all_base_names_in_args(args)
+
     Enum.zip(args, canonical)
     |> Enum.reduce(%{}, fn
       # Canonical says skip — don't touch this position
@@ -319,6 +321,17 @@ defmodule Credence.Pattern.InconsistentParamNames do
           current_base == base ->
             map
 
+          # Canonical name already exists elsewhere in this clause's
+          # patterns — renaming would create a duplicate binding (e.g.
+          # def f([prev | rest], prev_prev) → def f([prev | rest], prev)
+          # binds `prev` twice). Skip to avoid breaking the clause.
+          MapSet.member?(names_in_clause, base) ->
+            map
+
+          # Same check for underscore-prefixed variant
+          MapSet.member?(names_in_clause, "_" <> base) ->
+            map
+
           # Needs rename — preserve underscore prefix
           true ->
             new_name =
@@ -333,6 +346,15 @@ defmodule Credence.Pattern.InconsistentParamNames do
       _, map ->
         map
     end)
+  end
+
+  # Collect all base names (variables) that appear anywhere in the
+  # argument patterns of one clause. Used to detect would-be collisions
+  # before renaming.
+  defp collect_all_base_names_in_args(args) do
+    args
+    |> Enum.flat_map(&collect_base_names_in_pattern/1)
+    |> MapSet.new()
   end
 
   defp apply_renames(clause, rename_map) do
