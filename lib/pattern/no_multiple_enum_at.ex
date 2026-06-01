@@ -7,7 +7,8 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
 
   The rule fires when 3 or more `Enum.at(var, literal)` calls target the
   same variable, since that is a strong signal the code should use pattern
-  matching instead.
+  matching instead. Both direct form (`Enum.at(var, idx)`) and piped form
+  (`var |> Enum.at(idx)` / `var |> Enum.at(idx, default)`) are detected.
 
   ## Bad
 
@@ -38,7 +39,44 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
   def check(ast, _opts) do
     {_ast, calls} =
       Macro.prewalk(ast, [], fn
+        # Direct 2-arg: Enum.at(var, idx)
         {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, meta, [{var_name, _, nil}, idx]} = node, acc
+        when is_atom(var_name) ->
+          if literal_index?(idx) do
+            {node, [{var_name, Keyword.get(meta, :line)} | acc]}
+          else
+            {node, acc}
+          end
+
+        # Direct 3-arg: Enum.at(var, idx, _default)
+        {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, meta, [{var_name, _, nil}, idx, _default]} =
+            node,
+            acc
+        when is_atom(var_name) ->
+          if literal_index?(idx) do
+            {node, [{var_name, Keyword.get(meta, :line)} | acc]}
+          else
+            {node, acc}
+          end
+
+        # Piped 1-arg: var |> Enum.at(idx)
+        {:|>, _, [{var_name, _, nil}, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, meta, [idx]}]} =
+            node,
+            acc
+        when is_atom(var_name) ->
+          if literal_index?(idx) do
+            {node, [{var_name, Keyword.get(meta, :line)} | acc]}
+          else
+            {node, acc}
+          end
+
+        # Piped 2-arg: var |> Enum.at(idx, _default)
+        {:|>, _,
+         [
+           {var_name, _, nil},
+           {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, meta, [idx, _default]}
+         ]} = node,
+            acc
         when is_atom(var_name) ->
           if literal_index?(idx) do
             {node, [{var_name, Keyword.get(meta, :line)} | acc]}
@@ -130,11 +168,62 @@ defmodule Credence.Pattern.NoMultipleEnumAt do
     Enum.reverse(groups)
   end
 
+  # Direct 2-arg: target = Enum.at(source, idx)
   defp extract_enum_at_info(
          {:=, _,
           [
             {target, _, nil},
             {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{source, _, nil}, idx]}
+          ]} = node
+       )
+       when is_atom(target) and is_atom(source) do
+    case normalize_index(idx) do
+      {:ok, norm} -> {:ok, {source, target, norm, node}}
+      :error -> :error
+    end
+  end
+
+  # Direct 3-arg: target = Enum.at(source, idx, _default)
+  defp extract_enum_at_info(
+         {:=, _,
+          [
+            {target, _, nil},
+            {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{source, _, nil}, idx, _default]}
+          ]} = node
+       )
+       when is_atom(target) and is_atom(source) do
+    case normalize_index(idx) do
+      {:ok, norm} -> {:ok, {source, target, norm, node}}
+      :error -> :error
+    end
+  end
+
+  # Piped 1-arg: target = source |> Enum.at(idx)
+  defp extract_enum_at_info(
+         {:=, _,
+          [
+            {target, _, nil},
+            {:|>, _, [{source, _, nil}, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [idx]}]}
+          ]} = node
+       )
+       when is_atom(target) and is_atom(source) do
+    case normalize_index(idx) do
+      {:ok, norm} -> {:ok, {source, target, norm, node}}
+      :error -> :error
+    end
+  end
+
+  # Piped 2-arg: target = source |> Enum.at(idx, _default)
+  defp extract_enum_at_info(
+         {:=, _,
+          [
+            {target, _, nil},
+            {:|>,
+             _,
+             [
+               {source, _, nil},
+               {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [idx, _default]}
+             ]}
           ]} = node
        )
        when is_atom(target) and is_atom(source) do

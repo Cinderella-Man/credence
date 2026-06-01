@@ -113,6 +113,74 @@ defmodule Credence.Pattern.NoMultipleEnumAtTest do
       assert length(issues) == 1
       assert hd(issues).message =~ "list"
     end
+
+    test "detects piped Enum.at calls on the same variable" do
+      code = """
+      defmodule PipedCalls do
+        def tail(list) do
+          a = list |> Enum.at(-1)
+          b = list |> Enum.at(-2)
+          c = list |> Enum.at(-3)
+          {a, b, c}
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_multiple_enum_at
+      assert hd(issues).message =~ "list"
+    end
+
+    test "detects piped Enum.at calls with default on the same variable" do
+      code = """
+      defmodule PipedWithDefault do
+        def tail(list) do
+          a = list |> Enum.at(-1, 0)
+          b = list |> Enum.at(-2, 0)
+          c = list |> Enum.at(-3, 0)
+          {a, b, c}
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_multiple_enum_at
+      assert hd(issues).message =~ "list"
+    end
+
+    test "detects 3-arg direct Enum.at calls on the same variable" do
+      code = """
+      defmodule ThreeArg do
+        def tail(list) do
+          a = Enum.at(list, -1, 0)
+          b = Enum.at(list, -2, 0)
+          c = Enum.at(list, -3, 0)
+          {a, b, c}
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_multiple_enum_at
+      assert hd(issues).message =~ "list"
+    end
+
+    test "passes piped Enum.at with fewer than 3 calls" do
+      code = """
+      defmodule PipedFew do
+        def head(list) do
+          a = list |> Enum.at(0)
+          b = list |> Enum.at(1)
+          {a, b}
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix" do
@@ -184,6 +252,60 @@ defmodule Credence.Pattern.NoMultipleEnumAtTest do
       fixed = fix(source)
       assert fixed =~ "[min1, min2 | _] = sorted"
       assert fixed =~ "[max1, max2 | _] = Enum.reverse(sorted)"
+      refute fixed =~ "Enum.at"
+      assert {:ok, _} = Sourceror.parse_string(fixed)
+    end
+
+    test "fixes piped Enum.at calls with negative indices" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          a = list |> Enum.at(-1)
+          b = list |> Enum.at(-2)
+          c = list |> Enum.at(-3)
+          {a, b, c}
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "[a, b, c | _] = Enum.reverse(list)"
+      refute fixed =~ "Enum.at"
+      assert {:ok, _} = Sourceror.parse_string(fixed)
+    end
+
+    test "fixes piped Enum.at calls with default value" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          a = list |> Enum.at(-1, 0)
+          b = list |> Enum.at(-2, 0)
+          c = list |> Enum.at(-3, 0)
+          {a, b, c}
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "[a, b, c | _] = Enum.reverse(list)"
+      refute fixed =~ "Enum.at"
+      assert {:ok, _} = Sourceror.parse_string(fixed)
+    end
+
+    test "fixes 3-arg direct Enum.at calls with negative indices" do
+      source = """
+      defmodule Example do
+        def run(list) do
+          a = Enum.at(list, -1, 0)
+          b = Enum.at(list, -2, 0)
+          c = Enum.at(list, -3, 0)
+          {a, b, c}
+        end
+      end
+      """
+
+      fixed = fix(source)
+      assert fixed =~ "[a, b, c | _] = Enum.reverse(list)"
       refute fixed =~ "Enum.at"
       assert {:ok, _} = Sourceror.parse_string(fixed)
     end
