@@ -74,12 +74,14 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   defp check_node({def_type, _meta, [{:when, _, [{_fn_name, _, args}, _guard]}, body]})
        when def_type in [:def, :defp] and is_list(args) do
     issues = Enum.flat_map(args, fn arg -> check_pattern_body(arg, body, []) end)
+    issues = drop_multi_arg_cons_issues(issues, args, body)
     if issues == [], do: :error, else: {:ok, issues}
   end
 
   defp check_node({def_type, _meta, [{_fn_name, _, args}, body]})
        when def_type in [:def, :defp] and is_list(args) do
     issues = Enum.flat_map(args, fn arg -> check_pattern_body(arg, body, []) end)
+    issues = drop_multi_arg_cons_issues(issues, args, body)
     if issues == [], do: :error, else: {:ok, issues}
   end
 
@@ -160,15 +162,37 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   defp maybe_rewrite(node), do: node
 
   defp rewrite_args_and_body(args, body, extra_ast) do
-    {new_args, new_body, changed?} =
-      Enum.reduce(args, {[], body, false}, fn arg, {acc, cur_body, changed} ->
-        case fix_pattern_body(arg, cur_body, extra_ast) do
-          {:fixed, new_arg, new_body} -> {acc ++ [new_arg], new_body, true}
-          :no_fix -> {acc ++ [arg], cur_body, changed}
+    # When multiple arguments have their cons pattern reconstructed in the
+    # body, the fix would bind each to the same `= list` variable, forcing
+    # the arguments to be equal — a semantic error.  Skip the fix entirely.
+    if multi_arg_cons_reconstruction?(args, body) do
+      :unchanged
+    else
+      {new_args, new_body, changed?} =
+        Enum.reduce(args, {[], body, false}, fn arg, {acc, cur_body, changed} ->
+          case fix_pattern_body(arg, cur_body, extra_ast) do
+            {:fixed, new_arg, new_body} -> {acc ++ [new_arg], new_body, true}
+            :no_fix -> {acc ++ [arg], cur_body, changed}
+          end
+        end)
+
+      if changed?, do: {:changed, new_args, new_body}, else: :unchanged
+    end
+  end
+
+  defp multi_arg_cons_reconstruction?(args, body) do
+    count =
+      Enum.count(args, fn arg ->
+        case extract_cons_names(arg) do
+          {:ok, head_name, tail_name} ->
+            body_contains_same_cons?(body, head_name, tail_name)
+
+          _ ->
+            false
         end
       end)
 
-    if changed?, do: {:changed, new_args, new_body}, else: :unchanged
+    count >= 2
   end
 
   defp fix_case_clause({:->, meta, [[pattern], body]}) do
@@ -386,6 +410,33 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   end
 
   defp cons_match?(_, _, _), do: false
+
+  # When multiple function arguments have their cons pattern reconstructed
+  # in the body, the auto-fix would bind each to the same `= list`
+  # variable, which forces the arguments to be equal — a semantic error.
+  # Drop cons issues when two or more args would be affected.
+  defp drop_multi_arg_cons_issues(issues, args, _body) when length(args) <= 1, do: issues
+
+  defp drop_multi_arg_cons_issues(issues, args, body) do
+    args_with_cons_reconstruction =
+      Enum.count(args, fn arg ->
+        case extract_cons_names(arg) do
+          {:ok, head_name, tail_name} ->
+            body_contains_same_cons?(body, head_name, tail_name)
+
+          _ ->
+            false
+        end
+      end)
+
+    if args_with_cons_reconstruction >= 2 do
+      Enum.reject(issues, &(&1.rule == :no_destructure_reconstruct and cons_issue?(&1)))
+    else
+      issues
+    end
+  end
+
+  defp cons_issue?(%{message: msg}), do: String.starts_with?(msg, "Cons")
 
   defp build_cons_issue(head_name, tail_name, meta) do
     %Issue{

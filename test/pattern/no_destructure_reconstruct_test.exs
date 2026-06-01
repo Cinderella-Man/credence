@@ -364,6 +364,28 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
 
       assert check(code) == []
     end
+
+    test "does not flag cons when same variable names appear in multiple args" do
+      # When two function arguments destructure with the same variable names,
+      # the fix would bind both to the same `list`, forcing arg1 == arg2.
+      # This is a common pattern in recursive algorithms (e.g. LCS).
+      code = """
+      defmodule Good do
+        defp do_lcs([c1 | rest1], [c2 | rest2]) do
+          if c1 == c2 do
+            1 + do_lcs(rest1, rest2)
+          else
+            max(
+              do_lcs(rest1, [c2 | rest2]),
+              do_lcs([c1 | rest1], rest2)
+            )
+          end
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix/2 — case branches" do
@@ -591,6 +613,31 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
       fixed = fix(code)
       ast = Sourceror.parse_string!(fixed)
       assert [] == NoDestructureReconstruct.check(ast, [])
+    end
+
+    test "does not fix when same cons variables appear in multiple args" do
+      code = """
+      defmodule Good do
+        defp do_lcs([c1 | rest1], [c2 | rest2]) do
+          if c1 == c2 do
+            1 + do_lcs(rest1, rest2)
+          else
+            max(
+              do_lcs(rest1, [c2 | rest2]),
+              do_lcs([c1 | rest1], rest2)
+            )
+          end
+        end
+      end
+      """
+
+      result = fix(code)
+
+      # Should NOT introduce a `= list` binding
+      refute result =~ "= list"
+      # Original code should be preserved
+      assert result =~ "[c1 | rest1]"
+      assert result =~ "[c2 | rest2]"
     end
   end
 
