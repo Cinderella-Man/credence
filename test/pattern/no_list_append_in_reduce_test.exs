@@ -66,6 +66,47 @@ defmodule Credence.Pattern.NoListAppendInReduceTest do
       assert length(issues) == 1
     end
 
+    test "flags acc ++ [expr] nested inside case branch" do
+      code = """
+      defmodule Bad do
+        def process(nodes) do
+          Enum.reduce(nodes, {[], []}, fn {val, left, right}, {vals, next} ->
+            next_acc =
+              case left do
+                nil -> next
+                node -> next ++ [node]
+              end
+
+            {[val | vals], next_acc}
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_list_append_in_reduce
+    end
+
+    test "flags acc ++ [expr] nested inside if branch" do
+      code = """
+      defmodule Bad do
+        def process(list) do
+          Enum.reduce(list, [], fn item, acc ->
+            if item > 0 do
+              acc ++ [item]
+            else
+              acc
+            end
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
     # --- NEGATIVE CASES ---
 
     test "does not flag idiomatic prepend" do
@@ -83,9 +124,9 @@ defmodule Credence.Pattern.NoListAppendInReduceTest do
       assert check(code) == []
     end
 
-    test "does not flag reduce with non-empty initial accumulator" do
+    test "flags reduce with non-empty initial accumulator" do
       code = """
-      defmodule NotFixable do
+      defmodule Bad do
         def process(list) do
           Enum.reduce(list, [0], fn item, acc ->
             acc ++ [item]
@@ -94,7 +135,8 @@ defmodule Credence.Pattern.NoListAppendInReduceTest do
       end
       """
 
-      assert check(code) == []
+      issues = check(code)
+      assert length(issues) == 1
     end
 
     test "does not flag when appending multi-element list" do
@@ -125,9 +167,9 @@ defmodule Credence.Pattern.NoListAppendInReduceTest do
       assert check(code) == []
     end
 
-    test "does not flag when ++ is not the return expression" do
+    test "flags when ++ is not the return expression" do
       code = """
-      defmodule NotFixable do
+      defmodule Bad do
         def process(list) do
           Enum.reduce(list, [], fn item, acc ->
             result = acc ++ [item]
@@ -137,7 +179,8 @@ defmodule Credence.Pattern.NoListAppendInReduceTest do
       end
       """
 
-      assert check(code) == []
+      issues = check(code)
+      assert length(issues) == 1
     end
 
     test "does not flag ++ outside of Enum.reduce" do

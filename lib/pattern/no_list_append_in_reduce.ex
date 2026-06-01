@@ -1,12 +1,16 @@
 defmodule Credence.Pattern.NoListAppendInReduce do
   @moduledoc """
-  Performance rule: Detects `acc ++ [expr]` as the return value inside
-  `Enum.reduce/3` when the initial accumulator is `[]`.
+  Performance rule: Detects `acc ++ [expr]` anywhere inside `Enum.reduce/3`.
 
   Appending to a list with `++` is O(n) — it copies the entire left-hand
   list on every iteration, compounding to O(n²). The auto-fix rewrites to
   prepend with `[expr | acc]` and wraps the reduce with `|> Enum.reverse()`,
-  which is O(n) total.
+  which is O(n) total. Auto-fix only applies when the initial accumulator
+  is `[]` and the `++` is the direct last expression.
+
+  The check walks the entire lambda body so that `++` nested inside `case`
+  or `if` branches is also caught. The check fires regardless of the
+  initial accumulator shape — `++` inside a reduce is always suspicious.
 
   ## Bad
 
@@ -14,8 +18,12 @@ defmodule Credence.Pattern.NoListAppendInReduce do
         acc ++ [item * 2]
       end)
 
-      list |> Enum.reduce([], fn item, acc ->
-        acc ++ [process(item)]
+      Enum.reduce(list, [], fn item, acc ->
+        result = case x do
+          nil -> acc
+          val -> acc ++ [val]
+        end
+        result
       end)
 
   ## Good
@@ -32,18 +40,14 @@ defmodule Credence.Pattern.NoListAppendInReduce do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        # 3-arg: Enum.reduce(enum, [], fn ...)
-        {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [_enum, initial, fun]} = node,
+        # 3-arg: Enum.reduce(enum, initial, fn ...)
+        {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [_enum, _initial, fun]} = node,
         issues ->
-          if empty_list?(initial),
-            do: {node, check_lambda(fun, meta, issues)},
-            else: {node, issues}
+          {node, check_lambda(fun, meta, issues)}
 
-        # 2-arg piped: |> Enum.reduce([], fn ...)
-        {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [initial, fun]} = node, issues ->
-          if empty_list?(initial),
-            do: {node, check_lambda(fun, meta, issues)},
-            else: {node, issues}
+        # 2-arg piped: |> Enum.reduce(initial, fn ...)
+        {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, meta, [_initial, fun]} = node, issues ->
+          {node, check_lambda(fun, meta, issues)}
 
         node, issues ->
           {node, issues}
@@ -89,22 +93,64 @@ defmodule Credence.Pattern.NoListAppendInReduce do
   defp check_lambda({:fn, _, [{:->, _, [params, body]}]}, meta, issues)
        when length(params) == 2 do
     acc_var = List.last(params)
+    candidate_vars = acc_candidate_vars(acc_var)
 
-    if simple_var?(acc_var) do
-      case extract_append_expr(body, acc_var) do
-        {:ok, _expr, pp_meta} ->
-          line = Keyword.get(pp_meta, :line) || Keyword.get(meta, :line)
-          [build_issue(line) | issues]
+    case find_append_in_body(body, candidate_vars) do
+      {:ok, _expr, pp_meta} ->
+        line = Keyword.get(pp_meta, :line) || Keyword.get(meta, :line)
+        [build_issue(line) | issues]
 
-        :error ->
-          issues
-      end
-    else
-      issues
+      :error ->
+        issues
     end
   end
 
   defp check_lambda(_, _, issues), do: issues
+
+  # Returns the list of variable nodes from the accumulator parameter that
+  # could be targets of `++ [expr]`. For a simple variable, it's [var].
+  # For a tuple/list pattern, it's all bound variables.
+  defp acc_candidate_vars({:__block__, _, [inner]}), do: acc_candidate_vars(inner)
+  defp acc_candidate_vars(var) when is_list(var), do: extract_pattern_vars(var)
+  defp acc_candidate_vars({:{}, _, elements}), do: extract_pattern_vars(elements)
+  defp acc_candidate_vars({a, b}), do: extract_pattern_vars([a, b])
+
+  defp acc_candidate_vars(var) do
+    if simple_var?(var), do: [var], else: []
+  end
+
+  defp extract_pattern_vars(elements) when is_list(elements) do
+    Enum.flat_map(elements, fn
+      {name, _, ctx} = var when is_atom(name) and (is_nil(ctx) or is_atom(ctx)) -> [var]
+      {:\\, _, [pattern, _]} -> extract_pattern_vars([pattern])
+      {:{}, _, inner} -> extract_pattern_vars(inner)
+      list when is_list(list) -> extract_pattern_vars(list)
+      _ -> []
+    end)
+  end
+
+  # Walk the body for `var ++ [expr]` where `var` is any of the candidate vars.
+  defp find_append_in_body(body, candidate_vars) do
+    Macro.prewalk(body, :error, fn
+      {:++, meta, [lhs, rhs]} = node, :error ->
+        case extract_single_elem_list(rhs) do
+          {:ok, single_expr} ->
+            if Enum.any?(candidate_vars, &same_var?(lhs, &1)) and
+                 not cons_cell?(single_expr) do
+              {node, {:ok, single_expr, meta}}
+            else
+              {node, :error}
+            end
+
+          :error ->
+            {node, :error}
+        end
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
+  end
   # Fix helpers
   defp try_fix_lambda(initial, fun) do
     with true <- empty_list?(initial),
@@ -136,7 +182,7 @@ defmodule Credence.Pattern.NoListAppendInReduce do
     acc_var = List.last(params)
 
     if simple_var?(acc_var) do
-      case extract_append_expr(body, acc_var) do
+      case extract_append_expr_last(body, acc_var) do
         {:ok, expr, _meta} ->
           cons = [{:|, [], [expr, acc_var]}]
           new_body = replace_last_expression(body, cons)
@@ -152,9 +198,9 @@ defmodule Credence.Pattern.NoListAppendInReduce do
 
   defp fix_lambda_body(_), do: :error
   # Shared helpers
-  # Extracts the expression from `acc ++ [expr]`. Sourceror wraps the
-  # `[expr]` list literal in `{:__block__, _, [[expr]]}` for position meta.
-  defp extract_append_expr(body, acc_var) do
+  # Like find_append_in_body but only checks the last expression — used by
+  # the auto-fixer so that nested `++` inside case/if is not rewritten.
+  defp extract_append_expr_last(body, acc_var) do
     last = last_expression(body)
 
     case last do
