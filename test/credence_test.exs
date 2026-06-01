@@ -1198,8 +1198,7 @@ defmodule CredenceTest do
 
         def palindrome?(text) do
           cleaned = text |> String.downcase() |> String.replace(~r/[^a-z0-9]/, "")
-          reversed = String.reverse(cleaned)
-          cleaned == reversed
+          cleaned == String.reverse(cleaned)
         end
 
         defp normalize_words([], acc), do: Enum.reverse(acc)

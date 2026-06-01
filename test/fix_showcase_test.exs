@@ -155,7 +155,7 @@ defmodule Credence.FixShowcaseTest do
     end
 
     test "extracts Kernel.== from pipeline to infix", %{result: %{code: code}} do
-      assert code =~ "cleaned == reversed"
+      assert code =~ "cleaned == String.reverse(cleaned)"
       refute code =~ "Kernel.=="
     end
 
