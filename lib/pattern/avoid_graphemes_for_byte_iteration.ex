@@ -1,19 +1,28 @@
 defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
   @moduledoc """
-  Check-only rule: Detects `String.graphemes/1` piped into `Enum.all?/2`,
-  `Enum.any?/2`, or `Enum.each/2` where the predicate **clearly** operates
-  on integer codepoints.
+  Check-only rule: Detects `String.graphemes/1` piped into an `Enum` function
+  where the callback/predicate operates on integer codepoints.
 
   `String.graphemes/1` splits into grapheme strings — each a single-char
-  binary. When the predicate uses integer/byte-value comparisons (e.g.
-  char literals like `?A`, range guards), `String.to_charlist/1` is more
+  binary. When the callback uses integer/byte-value comparisons (e.g.
+  char literals like `?A`, range guards) or binary pattern matching
+  (`<<char>>`) to extract byte values, `String.to_charlist/1` is more
   direct: it yields integers without the intermediate binary wrapping.
 
-  This rule only fires when the predicate contains **visible integer
-  comparisons** (char literals, integer ranges). It does NOT fire for:
-  - Opaque function captures (`&func/1`) — cannot verify the predicate
+  Covered Enum functions: `all?/2`, `any?/2`, `each/2`, `map/2`,
+  `filter/2`, `flat_map/2`, `reduce/3`.
+
+  This rule fires when:
+  - The predicate contains **visible integer comparisons** (char literals,
+    integer ranges), OR
+  - The callback uses `<<char>>` binary pattern matching in its arguments
+    to extract byte values from graphemes.
+
+  It does NOT fire for:
+  - Opaque function captures (`&func/1`) — cannot verify the callback
     expects integers vs strings.
-  - String/regex operations — the predicate needs grapheme strings.
+  - String/regex operations — the callback needs grapheme strings.
+  - Callbacks that treat graphemes as strings (concatenation, etc.).
 
   This avoids contradictions with `avoid_charlist_for_iteration`, which
   recommends graphemes for general iteration.
@@ -22,6 +31,8 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
 
       string |> String.graphemes() |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)
       string |> String.graphemes() |> Enum.any?(fn c -> c in ?A..?Z end)
+      string |> String.graphemes() |> Enum.reduce(0, fn <<char>>, acc -> acc * 26 + char end)
+      string |> String.graphemes() |> Enum.map(fn <<char>> -> char - ?A + 1 end)
 
   ## Good (not flagged — opaque capture, can't verify)
 
@@ -42,7 +53,8 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
         # Pipe: ... |> String.graphemes() |> Enum.all?(pred)
         {:|>, meta, [lhs, rhs]} = node, issues ->
           if iteration_call?(rhs) and immediate_graphemes?(lhs) and
-               predicate_expects_integers?(rhs) do
+               (predicate_expects_integers?(rhs) or
+                  callback_uses_binary_extraction?(rhs)) do
             {node, [build_issue(meta) | issues]}
           else
             {node, issues}
@@ -58,9 +70,14 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
   @impl true
   def fix_patches(_ast, _opts), do: []
 
-  # Enum.all?(pred), Enum.any?(pred), Enum.each(pred)
+  # Single-arg Enum functions: all?, any?, each, map, filter, flat_map
   defp iteration_call?({{:., _, [{:__aliases__, _, [:Enum]}, func]}, _, [pred]})
-       when func in [:all?, :any?, :each] and is_tuple(pred),
+       when func in [:all?, :any?, :each, :map, :filter, :flat_map] and is_tuple(pred),
+       do: true
+
+  # Two-arg Enum function: reduce (init + callback)
+  defp iteration_call?({{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [_, pred]})
+       when is_tuple(pred),
        do: true
 
   defp iteration_call?(_), do: false
@@ -93,6 +110,31 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
   end
 
   defp predicate_expects_integers?(_), do: false
+
+  # Check if the callback uses <<...>> binary pattern matching in its arguments.
+  # After String.graphemes(), this means the code extracts byte values from
+  # graphemes — to_charlist/1 would be more direct.
+  defp callback_uses_binary_extraction?(
+         {{:., _, [{:__aliases__, _, [:Enum]}, _]}, _, args}
+       ) do
+    callback = List.last(args)
+
+    case callback do
+      {:fn, _, clauses} ->
+        Enum.any?(clauses, fn {:->, _, [patterns, _body]} ->
+          Enum.any?(patterns, &binary_pattern?/1)
+        end)
+
+      _ ->
+        false
+    end
+  end
+
+  defp callback_uses_binary_extraction?(_), do: false
+
+  defp binary_pattern?({:<<>>, _, _}), do: true
+  defp binary_pattern?({:when, _, [inner | _]}), do: binary_pattern?(inner)
+  defp binary_pattern?(_), do: false
 
   # Walk predicate AST looking for comparisons with integer literals (char values).
   # Handles both bare integers and Sourceror-wrapped {:__block__, _, [int]}.
@@ -147,17 +189,18 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
     %Issue{
       rule: :avoid_graphemes_for_byte_iteration,
       message: """
-      `String.graphemes/1` produces single-char binaries, but the predicate \
-      uses integer/byte-value comparisons. `String.to_charlist/1` yields \
-      integers directly and avoids the intermediate binary wrapping.
+      `String.graphemes/1` produces single-char binaries, but the callback \
+      treats them as byte values (via integer comparisons or `<<char>>` \
+      binary pattern matching). `String.to_charlist/1` yields integers \
+      directly and avoids the intermediate binary wrapping.
 
       Replace `String.graphemes/1` with `String.to_charlist/1`:
 
-          # Before (creates binary graphemes):
-          string |> String.graphemes() |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)
+          # Before (creates binary graphemes, extracts bytes manually):
+          string |> String.graphemes() |> Enum.reduce(0, fn <<char>>, acc -> acc + char end)
 
           # After (yields integers directly):
-          string |> String.to_charlist() |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)
+          string |> String.to_charlist() |> Enum.reduce(0, fn char, acc -> acc + char end)
       """,
       meta: %{line: Keyword.get(meta, :line)}
     }

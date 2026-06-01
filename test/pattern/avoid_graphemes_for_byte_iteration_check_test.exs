@@ -38,12 +38,67 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
       code = "string |> String.graphemes() |> Enum.any?(fn c -> c >= ?A and c <= ?Z end)"
       assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
     end
+
+    test "predicate with binary pattern matching in args" do
+      code = """
+      string
+      |> String.graphemes()
+      |> Enum.any?(fn <<c>> when c >= ?A and c <= ?Z -> true; _ -> false end)
+      """
+
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
   end
 
   describe "flags graphemes piped to Enum.each/2 with integer predicate" do
     test "three-step pipe with inline integer comparison" do
       code =
         "string |> String.graphemes() |> Enum.each(fn c -> IO.puts(c >= ?0) end)"
+
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+  end
+
+  describe "flags graphemes piped to Enum.reduce with binary extraction" do
+    test "reduce with <<char>> in callback args" do
+      code =
+        "column |> String.graphemes() |> Enum.reduce(0, fn <<char>>, acc -> acc * 26 + char end)"
+
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+
+    test "reduce with multi-clause callback where one clause has binary pattern" do
+      code = """
+      column
+      |> String.graphemes()
+      |> Enum.reduce(0, fn
+        <<char>>, acc when char >= ?A -> acc + char
+        _, acc -> acc
+      end)
+      """
+
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+  end
+
+  describe "flags graphemes piped to Enum.map with binary extraction" do
+    test "map with <<char>> in callback args" do
+      code = "column |> String.graphemes() |> Enum.map(fn <<char>> -> char - ?A + 1 end)"
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+  end
+
+  describe "flags graphemes piped to Enum.flat_map with binary extraction" do
+    test "flat_map with <<char>> in callback args" do
+      code = "column |> String.graphemes() |> Enum.flat_map(fn <<char>> -> [char] end)"
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+  end
+
+  describe "flags graphemes piped to Enum.filter with binary extraction" do
+    test "filter with <<char>> in callback args" do
+      code =
+        "column |> String.graphemes() |> Enum.filter(fn <<char>> when char >= ?A -> true; _ -> false end)"
 
       assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
     end
@@ -109,16 +164,6 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
       assert check(code) == []
     end
 
-    test "predicate with binary pattern matching" do
-      code = """
-      string
-      |> String.graphemes()
-      |> Enum.any?(fn <<c>> when c >= ?A and c <= ?Z -> true; _ -> false end)
-      """
-
-      assert check(code) == []
-    end
-
     test "String.to_charlist piped to Enum.all?" do
       code = "String.to_charlist(str) |> Enum.all?(&valid?/1)"
       assert check(code) == []
@@ -126,6 +171,26 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
 
     test "graphemes piped to Enum.map" do
       code = "String.graphemes(str) |> Enum.map(& &1)"
+      assert check(code) == []
+    end
+
+    test "graphemes piped to Enum.reduce with string callback" do
+      code = """
+      column
+      |> String.graphemes()
+      |> Enum.reduce("", fn char, acc -> acc <> char end)
+      """
+
+      assert check(code) == []
+    end
+
+    test "graphemes piped to Enum.map with string callback" do
+      code = """
+      column
+      |> String.graphemes()
+      |> Enum.map(fn char -> String.upcase(char) end)
+      """
+
       assert check(code) == []
     end
 
