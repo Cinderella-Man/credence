@@ -129,6 +129,42 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
       [issue] = check(code)
       assert issue.rule == :no_identity_function_in_enum
     end
+
+    test "flags Enum.max_by with identity and default" do
+      code = """
+      defmodule Example do
+        def run(list), do: Enum.max_by(list, &Function.identity/1, fn -> nil end)
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_identity_function_in_enum
+      assert issue.message =~ "Enum.max"
+    end
+
+    test "flags piped Enum.max_by with identity and default" do
+      code = """
+      defmodule Example do
+        def run(list), do: list |> Enum.max_by(&Function.identity/1, fn -> nil end)
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_identity_function_in_enum
+      assert issue.message =~ "Enum.max"
+    end
+
+    test "flags Enum.min_by with identity and default" do
+      code = """
+      defmodule Example do
+        def run(list), do: Enum.min_by(list, fn x -> x end, fn -> 0 end)
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_identity_function_in_enum
+      assert issue.message =~ "Enum.min"
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -200,6 +236,16 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
 
       assert check(code) == []
     end
+
+    test "does not flag Enum.max_by with non-identity callback and default" do
+      code = """
+      defmodule Example do
+        def run(list), do: Enum.max_by(list, fn x -> x * 2 end, fn -> nil end)
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -266,6 +312,30 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
       assert fixed =~ "Enum.dedup(list)"
       refute fixed =~ "dedup_by"
     end
+
+    test "fixes Enum.max_by(list, identity, default) → Enum.max(list, default)" do
+      code = """
+      defmodule Example do
+        def run(list), do: Enum.max_by(list, &Function.identity/1, fn -> nil end)
+      end
+      """
+
+      fixed = fix(code)
+      assert fixed =~ "Enum.max(list, fn -> nil end)"
+      refute fixed =~ "max_by"
+    end
+
+    test "fixes Enum.min_by(list, identity, default) → Enum.min(list, default)" do
+      code = """
+      defmodule Example do
+        def run(list), do: Enum.min_by(list, fn x -> x end, fn -> 0 end)
+      end
+      """
+
+      fixed = fix(code)
+      assert fixed =~ "Enum.min(list, fn -> 0 end)"
+      refute fixed =~ "min_by"
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -311,6 +381,18 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
       assert fixed =~ "Enum.sort()"
       refute fixed =~ "sort_by"
     end
+
+    test "fixes piped Enum.max_by with identity and default" do
+      code = """
+      defmodule Example do
+        def run(list), do: list |> Enum.max_by(&Function.identity/1, fn -> nil end)
+      end
+      """
+
+      fixed = fix(code)
+      assert fixed =~ "Enum.max(fn -> nil end)"
+      refute fixed =~ "max_by"
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -332,6 +414,16 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumTest do
       code = """
       defmodule Example do
         def run(list), do: Enum.uniq(list)
+      end
+      """
+
+      assert fix(code) == code
+    end
+
+    test "does not fix Enum.max_by with non-identity callback and default" do
+      code = """
+      defmodule Example do
+        def run(list), do: Enum.max_by(list, fn x -> x * 2 end, fn -> nil end)
       end
       """
 

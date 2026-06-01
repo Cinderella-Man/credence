@@ -13,6 +13,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
       list |> Enum.sort_by(& &1)
       Enum.min_by(list, fn item -> item end)
       Enum.max_by(list, &Function.identity/1)
+      Enum.max_by(list, &Function.identity/1, fn -> nil end)
 
   ## Good
 
@@ -20,6 +21,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
       list |> Enum.sort()
       Enum.min(list)
       Enum.max(list)
+      Enum.max(list, fn -> nil end)
 
   ## Auto-fix
 
@@ -48,11 +50,32 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
+        # Direct with default: Enum.func_by(list, identity, default)
+        {{:., _, [{:__aliases__, _, [:Enum]}, func]}, meta, [_list, callback, _default]} = node,
+        acc
+        when func in [:min_by, :max_by] ->
+          if identity_fn?(callback) do
+            {node, [build_issue(meta, func, 3) | acc]}
+          else
+            {node, acc}
+          end
+
         # Direct: Enum.func_by(list, identity)
         {{:., _, [{:__aliases__, _, [:Enum]}, func]}, meta, [_list, callback]} = node, acc
         when func in @by_funcs ->
           if identity_fn?(callback) do
-            {node, [build_issue(meta, func) | acc]}
+            {node, [build_issue(meta, func, 2) | acc]}
+          else
+            {node, acc}
+          end
+
+        # Piped with default: list |> Enum.func_by(identity, default)
+        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Enum]}, func]}, meta, [callback, _default]}]} =
+          node,
+        acc
+        when func in [:min_by, :max_by] ->
+          if identity_fn?(callback) do
+            {node, [build_issue(meta, func, 3) | acc]}
           else
             {node, acc}
           end
@@ -62,7 +85,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
         acc
         when func in @by_funcs ->
           if identity_fn?(callback) do
-            {node, [build_issue(meta, func) | acc]}
+            {node, [build_issue(meta, func, 2) | acc]}
           else
             {node, acc}
           end
@@ -78,11 +101,32 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
   def fix_patches(ast, _opts) do
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
+        # Direct with default: Enum.func_by(list, identity, default)
+        {{:., _, [{:__aliases__, _, [:Enum]}, func]}, _meta, [list, callback, default]} = node,
+        acc
+        when func in [:min_by, :max_by] ->
+          if identity_fn?(callback) do
+            {node, [direct_patch_with_default(node, list, func, default) | acc]}
+          else
+            {node, acc}
+          end
+
         # Direct: Enum.func_by(list, identity)
         {{:., _, [{:__aliases__, _, [:Enum]}, func]}, _meta, [list, callback]} = node, acc
         when func in @by_funcs ->
           if identity_fn?(callback) do
             {node, [direct_patch(node, list, func) | acc]}
+          else
+            {node, acc}
+          end
+
+        # Piped with default: list |> Enum.func_by(identity, default)
+        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Enum]}, func]}, _meta, [callback, default]} = rhs]} =
+            node,
+        acc
+        when func in [:min_by, :max_by] ->
+          if identity_fn?(callback) do
+            {node, [piped_patch_with_default(rhs, func, default) | acc]}
           else
             {node, acc}
           end
@@ -125,6 +169,27 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
     }
   end
 
+  defp direct_patch_with_default(node, list, func, default) do
+    simple = Map.fetch!(@by_to_simple, func)
+    list_text = Sourceror.to_string(list)
+    default_text = Sourceror.to_string(default)
+
+    %{
+      range: Sourceror.get_range(node),
+      change: "Enum.#{simple}(#{list_text}, #{default_text})"
+    }
+  end
+
+  defp piped_patch_with_default(rhs_node, func, default) do
+    simple = Map.fetch!(@by_to_simple, func)
+    default_text = Sourceror.to_string(default)
+
+    %{
+      range: Sourceror.get_range(rhs_node),
+      change: "Enum.#{simple}(#{default_text})"
+    }
+  end
+
   # fn x -> x end (single-clause, same variable in arg and body)
   defp identity_fn?({:fn, _, [{:->, _, [[{var, _, ctx}], {var, _, ctx}]}]})
        when is_atom(var) and is_atom(ctx),
@@ -164,14 +229,15 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnum do
 
   defp identity_fn?(_), do: false
 
-  defp build_issue(meta, func) do
+  defp build_issue(meta, func, arity) do
     simple = Map.get(@by_to_simple, func)
+    simple_arity = arity - 1
 
     %Issue{
       rule: :no_identity_function_in_enum,
       message: """
-      `Enum.#{func}/2` with an identity function is equivalent to \
-      `Enum.#{simple}/1`.
+      `Enum.#{func}/#{arity}` with an identity function is equivalent to \
+      `Enum.#{simple}/#{simple_arity}`.
 
       Simplify:
 
