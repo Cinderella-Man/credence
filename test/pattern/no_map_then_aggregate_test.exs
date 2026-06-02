@@ -13,61 +13,6 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
   end
 
   describe "NoMapThenAggregate check" do
-    test "detects Enum.map |> Enum.max in pipeline" do
-      code = """
-      defmodule Bad do
-        def max_sum(numbers, k) do
-          numbers
-          |> Enum.chunk_every(k, 1, :discard)
-          |> Enum.map(&Enum.sum/1)
-          |> Enum.max()
-        end
-      end
-      """
-
-      [issue] = check(code)
-      assert issue.rule == :no_map_then_aggregate
-      assert issue.message =~ "Enum.map"
-      assert issue.message =~ "Enum.max"
-      # Message must NOT suggest unsafe Enum.reduce/2 (no initial value).
-      # The accumulator would start as the raw first element, breaking when
-      # the map function changes the element type.
-      refute issue.message =~ "Enum.reduce(enum, fn",
-             "Message must not suggest Enum.reduce/2 — use Enum.reduce/3 instead"
-    end
-
-    test "detects Enum.map |> Enum.min in pipeline" do
-      code = """
-      defmodule Bad do
-        def cheapest(items) do
-          items
-          |> Enum.map(& &1.price)
-          |> Enum.min()
-        end
-      end
-      """
-
-      [issue] = check(code)
-      assert issue.message =~ "Enum.min"
-      refute issue.message =~ "Enum.reduce(enum, fn",
-             "Message must not suggest Enum.reduce/2 — use Enum.reduce/3 instead"
-    end
-
-    test "detects Enum.map |> Enum.sum in pipeline" do
-      code = """
-      defmodule Bad do
-        def total_area(shapes) do
-          shapes
-          |> Enum.map(&area/1)
-          |> Enum.sum()
-        end
-      end
-      """
-
-      [issue] = check(code)
-      assert issue.message =~ "Enum.sum"
-    end
-
     test "detects Enum.map |> Enum.max_by in pipeline" do
       code = """
       defmodule Bad do
@@ -114,48 +59,90 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       assert issue.message =~ "Enum.max_by"
     end
 
-    test "detects two-step pipeline: Enum.map(list, f) |> Enum.max()" do
+    # ---- max/min/sum: idiomatic, NOT flagged ----
+
+    test "does not flag Enum.map |> Enum.max in pipeline" do
       code = """
-      defmodule Bad do
+      defmodule Good do
+        def max_sum(numbers, k) do
+          numbers
+          |> Enum.chunk_every(k, 1, :discard)
+          |> Enum.map(&Enum.sum/1)
+          |> Enum.max()
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Enum.map |> Enum.min in pipeline" do
+      code = """
+      defmodule Good do
+        def cheapest(items) do
+          items
+          |> Enum.map(& &1.price)
+          |> Enum.min()
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Enum.map |> Enum.sum in pipeline" do
+      code = """
+      defmodule Good do
+        def total_area(shapes) do
+          shapes
+          |> Enum.map(&area/1)
+          |> Enum.sum()
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag two-step pipeline: Enum.map(list, f) |> Enum.max()" do
+      code = """
+      defmodule Good do
         def biggest(list) do
           Enum.map(list, &String.length/1) |> Enum.max()
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.message =~ "Enum.max"
+      assert check(code) == []
     end
 
-    test "detects direct nesting: Enum.max(Enum.map(list, f))" do
+    test "does not flag direct nesting: Enum.max(Enum.map(list, f))" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def biggest(list) do
           Enum.max(Enum.map(list, &String.length/1))
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.message =~ "Enum.max"
+      assert check(code) == []
     end
 
-    test "detects direct nesting: Enum.sum(Enum.map(list, f))" do
+    test "does not flag direct nesting: Enum.sum(Enum.map(list, f))" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def total(list) do
           Enum.sum(Enum.map(list, fn x -> x * x end))
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.message =~ "Enum.sum"
+      assert check(code) == []
     end
 
-    test "detects with anonymous function in map" do
+    test "does not flag Enum.map |> Enum.max with anonymous function" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def hottest(readings) do
           readings
           |> Enum.map(fn {_, temp} -> temp end)
@@ -164,26 +151,24 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       end
       """
 
-      [issue] = check(code)
-      assert issue.rule == :no_map_then_aggregate
+      assert check(code) == []
     end
 
-    test "detects with capture in map" do
+    test "does not flag Enum.map |> Enum.sum with capture" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def total_length(strings) do
           strings |> Enum.map(&byte_size/1) |> Enum.sum()
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.message =~ "Enum.sum"
+      assert check(code) == []
     end
 
-    test "detects Enum.map |> Enum.max with default in pipeline" do
+    test "does not flag Enum.map |> Enum.max with default" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def biggest(list) do
           list
           |> Enum.map(&String.length/1)
@@ -192,14 +177,12 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       end
       """
 
-      [issue] = check(code)
-      assert issue.rule == :no_map_then_aggregate
-      assert issue.message =~ "Enum.max"
+      assert check(code) == []
     end
 
-    test "detects Enum.map |> Enum.min with default in pipeline" do
+    test "does not flag Enum.map |> Enum.min with default" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def smallest(list) do
           list
           |> Enum.map(&String.length/1)
@@ -208,37 +191,31 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       end
       """
 
-      [issue] = check(code)
-      assert issue.rule == :no_map_then_aggregate
-      assert issue.message =~ "Enum.min"
+      assert check(code) == []
     end
 
-    test "detects direct nesting with default: Enum.max(Enum.map(enum, f), default)" do
+    test "does not flag direct nesting with default: Enum.max(Enum.map(enum, f), default)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def biggest(list) do
           Enum.max(Enum.map(list, &String.length/1), 0)
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.rule == :no_map_then_aggregate
-      assert issue.message =~ "Enum.max"
+      assert check(code) == []
     end
 
-    test "detects direct nesting with default: Enum.min(Enum.map(enum, f), default)" do
+    test "does not flag direct nesting with default: Enum.min(Enum.map(enum, f), default)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def smallest(list) do
           Enum.min(Enum.map(list, &String.length/1), 0)
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.rule == :no_map_then_aggregate
-      assert issue.message =~ "Enum.min"
+      assert check(code) == []
     end
 
     # ---- Negative cases ----
@@ -443,124 +420,6 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
   end
 
   describe "NoMapThenAggregate fix" do
-    test "Enum.map |> Enum.max is check-only (no auto-fix)" do
-      code = """
-      list |> Enum.map(&String.length/1) |> Enum.max()
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.max()"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.map |> Enum.min is check-only (no auto-fix)" do
-      code = """
-      list |> Enum.map(&String.length/1) |> Enum.min()
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.min()"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.map |> Enum.sum is check-only (no auto-fix)" do
-      code = """
-      list |> Enum.map(&byte_size/1) |> Enum.sum()
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.sum()"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.map |> Enum.max with preceding step is check-only (no auto-fix)" do
-      code = """
-      numbers
-      |> Enum.chunk_every(k, 1, :discard)
-      |> Enum.map(&Enum.sum/1)
-      |> Enum.max()
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.chunk_every"
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.max()"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.map |> Enum.max with explicit source is check-only (no auto-fix)" do
-      code = """
-      Enum.map(list, &String.length/1) |> Enum.max()
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.max()"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.max(Enum.map(enum, f)) is check-only (no auto-fix)" do
-      code = """
-      Enum.max(Enum.map(list, &String.length/1))
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.max"
-      assert result =~ "Enum.map"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.sum(Enum.map(enum, f)) is check-only (no auto-fix)" do
-      code = """
-      Enum.sum(Enum.map(list, fn x -> x * x end))
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.sum"
-      assert result =~ "Enum.map"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.map |> Enum.max with anonymous function is check-only (no auto-fix)" do
-      code = """
-      readings
-      |> Enum.map(fn {_, temp} -> temp end)
-      |> Enum.max()
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.max()"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.map with destructuring |> Enum.sum is check-only (no auto-fix)" do
-      code = """
-      map
-      |> Enum.map(fn {_key, count} -> div(count * (count - 1), 2) end)
-      |> Enum.sum()
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.sum()"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.map with capture |> Enum.sum is check-only (no auto-fix)" do
-      code = """
-      strings |> Enum.map(&byte_size/1) |> Enum.sum()
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.sum()"
-      refute result =~ "Enum.reduce"
-    end
-
     test "Enum.map |> Enum.max_by is check-only (no auto-fix)" do
       code = """
       matrix
@@ -595,105 +454,6 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
       {:ok, original_ast} = Sourceror.parse_string(code)
       {:ok, fixed_ast} = Sourceror.parse_string(result)
       assert original_ast == fixed_ast
-    end
-
-    test "Enum.chunk_every |> Enum.map(&Enum.max/1) |> Enum.max() is check-only (regression from row 56351)" do
-      code = """
-      defmodule Solution do
-        def maxgamescore(list, k) when k >= 1 do
-          list
-          |> Enum.chunk_every(k, 1, :discard)
-          |> Enum.map(fn chunk -> Enum.max(chunk) end)
-          |> Enum.max()
-        end
-      end
-      """
-
-      [issue] = check(code)
-      assert issue.rule == :no_map_then_aggregate
-
-      result = fix(code)
-      # Must NOT rewrite to Enum.reduce — the reduce/2 form would use the
-      # raw first chunk (a list) as the accumulator, breaking max comparison.
-      refute result =~ "Enum.reduce"
-      assert result =~ "Enum.max()"
-      assert result =~ "Enum.map"
-    end
-
-    test "Enum.map |> Enum.max(default) is check-only (no auto-fix)" do
-      code = """
-      list |> Enum.map(&String.length/1) |> Enum.max(0)
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.max(0)"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.map |> Enum.min(default) is check-only (no auto-fix)" do
-      code = """
-      list |> Enum.map(&String.length/1) |> Enum.min(0)
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.min(0)"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.max(Enum.map(enum, f), default) is check-only (no auto-fix)" do
-      code = """
-      Enum.max(Enum.map(list, &String.length/1), 0)
-      """
-
-      result = fix(code)
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.max"
-      refute result =~ "Enum.reduce"
-    end
-
-    test "Enum.map |> Enum.max with sum is check-only — original preserved" do
-      code = """
-      numbers
-      |> Enum.chunk_every(k, 1, :discard)
-      |> Enum.map(&Enum.sum/1)
-      |> Enum.max()
-      """
-
-      result = fix(code)
-      # Check-only: fix returns original code unchanged
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.max()"
-      assert {:ok, _ast} = Sourceror.parse_string(result)
-    end
-
-    test "Enum.map |> Enum.sum is check-only — sum preserved" do
-      code = """
-      shapes
-      |> Enum.map(&area/1)
-      |> Enum.sum()
-      """
-
-      result = fix(code)
-      # Check-only: fix returns original code unchanged
-      assert result =~ "Enum.map"
-      assert result =~ "Enum.sum()"
-      refute result =~ "Enum.reduce"
-      assert {:ok, _ast} = Sourceror.parse_string(result)
-    end
-
-    test "Enum.sum(Enum.map) is check-only — sum preserved" do
-      code = """
-      Enum.sum(Enum.map(list, fn x -> x * x end))
-      """
-
-      result = fix(code)
-      # Check-only: fix returns original code unchanged
-      assert result =~ "Enum.sum"
-      assert result =~ "Enum.map"
-      refute result =~ "Enum.reduce"
-      assert {:ok, _ast} = Sourceror.parse_string(result)
     end
 
     test "fixes Enum.map |> MapSet.new pipeline" do
@@ -809,67 +569,6 @@ defmodule Credence.Pattern.NoMapThenAggregateTest do
 
       assert output =~ "MapSet.new(fn item ->"
       refute output =~ "Enum.map"
-      assert {:ok, _} = Sourceror.parse_string(output)
-    end
-  end
-
-  describe "NoMapThenAggregate fix — Enum.sum is check-only (no reduce rewrite)" do
-    test "Enum.map |> Enum.sum with dot-access is check-only" do
-      input = """
-      clients |> Enum.map(fn c -> Enum.at(c.delivery, dim, 0) end) |> Enum.sum()
-      """
-
-      output = fix(input)
-
-      # Check-only: code unchanged
-      assert output =~ "Enum.map"
-      assert output =~ "Enum.sum()"
-      refute output =~ "Enum.reduce"
-      assert {:ok, _} = Sourceror.parse_string(output)
-    end
-
-    test "Enum.map |> Enum.sum with chained dot-access is check-only" do
-      input = """
-      records |> Enum.map(fn r -> r.inner.field end) |> Enum.sum()
-      """
-
-      output = fix(input)
-
-      assert output =~ "Enum.map"
-      assert output =~ "Enum.sum()"
-      refute output =~ "Enum.reduce"
-      assert {:ok, _} = Sourceror.parse_string(output)
-    end
-
-    test "Enum.map |> Enum.sum with remote-call argument is check-only" do
-      input = """
-      strings |> Enum.map(fn s -> String.length(s) end) |> Enum.sum()
-      """
-
-      output = fix(input)
-
-      assert output =~ "Enum.map"
-      assert output =~ "Enum.sum()"
-      refute output =~ "Enum.reduce"
-      assert {:ok, _} = Sourceror.parse_string(output)
-    end
-
-    test "full module with Enum.sum is check-only" do
-      input = """
-      defmodule Test do
-        def calc(clients, dim) do
-          clients
-          |> Enum.map(fn c -> Enum.at(c.delivery, dim, 0) end)
-          |> Enum.sum()
-        end
-      end
-      """
-
-      output = fix(input)
-
-      assert output =~ "Enum.map"
-      assert output =~ "Enum.sum()"
-      refute output =~ "Enum.reduce"
       assert {:ok, _} = Sourceror.parse_string(output)
     end
   end
