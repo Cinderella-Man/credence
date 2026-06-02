@@ -209,7 +209,18 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
       {def_type, meta, [{:when, _when_meta, [{fn_name, fn_meta, args}, guard]}, body]}
       when def_type in [:def, :defp] ->
         if guard in fixable do
-          {def_type, meta, [{fn_name, fn_meta, args}, body]}
+          guard_vars = collect_var_names(guard)
+          body_vars = collect_var_names(body)
+          newly_unused = MapSet.difference(guard_vars, body_vars)
+
+          new_args =
+            if MapSet.size(newly_unused) > 0 do
+              prefix_unused_args(args, newly_unused)
+            else
+              args
+            end
+
+          {def_type, meta, [{fn_name, fn_meta, new_args}, body]}
         else
           node
         end
@@ -217,5 +228,35 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
       _ ->
         node
     end
+  end
+
+  defp collect_var_names(ast) do
+    {_ast, names} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {name, _meta, ctx} = node, acc when is_atom(name) and is_atom(ctx) ->
+          {node, MapSet.put(acc, name)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
+  end
+
+  defp prefix_unused_args(args, unused) do
+    Enum.map(args, fn arg ->
+      Macro.prewalk(arg, fn
+        {name, meta, ctx} = node when is_atom(name) and is_atom(ctx) ->
+          if MapSet.member?(unused, name) do
+            prefixed = String.to_atom("_" <> Atom.to_string(name))
+            {prefixed, meta, ctx}
+          else
+            node
+          end
+
+        other ->
+          other
+      end)
+    end)
   end
 end

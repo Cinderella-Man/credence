@@ -202,9 +202,10 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardTest do
 
       fixed = fix(code)
       assert fixed =~ "defp compare([v1 | t1], [v2 | t2]) when v1 == v2"
-      assert fixed =~ "defp compare([v1 | _], [v2"
       assert fixed =~ "do: v1"
       refute fixed =~ "when v1 != v2"
+      # v2 is only in the guard, not the body — prefixed with _
+      assert fixed =~ "_v2"
     end
 
     test "removes !== guard when preceded by === guard" do
@@ -217,8 +218,11 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardTest do
 
       fixed = fix(code)
       assert fixed =~ "defp match(a, b) when a === b"
-      assert fixed =~ "defp match(a, b), do: :not_equal"
+      assert fixed =~ "do: :not_equal"
       refute fixed =~ "!=="
+      # a, b are only in the guard, not the body — prefixed
+      assert fixed =~ "_a"
+      assert fixed =~ "_b"
     end
 
     test "removes != guard in def (not just defp)" do
@@ -231,8 +235,11 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardTest do
 
       fixed = fix(code)
       assert fixed =~ "def compare(x, y) when x == y"
-      assert fixed =~ "def compare(x, y), do: :different"
+      assert fixed =~ "do: :different"
       refute fixed =~ "when x != y"
+      # x, y are only in the guard — prefixed
+      assert fixed =~ "_x"
+      assert fixed =~ "_y"
     end
 
     test "removes guard in longer function with multiple clauses" do
@@ -247,9 +254,10 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardTest do
       fixed = fix(code)
       assert fixed =~ "defp process([h | _], []), do: h"
       assert fixed =~ "defp process([a | t1], [b | t2]) when a == b"
-      assert fixed =~ "defp process([a | _], [b"
       assert fixed =~ "do: a"
       refute fixed =~ "when a != b"
+      # b is only in the guard, not the body — prefixed
+      assert fixed =~ "_b"
     end
 
     test "handles multi-line guard clause" do
@@ -269,6 +277,26 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardTest do
       assert fixed =~ "when v1 == v2"
       refute fixed =~ "when v1 != v2"
       assert fixed =~ "do: v1"
+    end
+
+    test "prefixes guard-only variable with underscore after guard removal" do
+      code = """
+      defmodule Bad do
+        defp walk(<<char, rest::binary>>, current_char, acc) when char == current_char do
+          walk(rest, current_char, acc + 1)
+        end
+
+        defp walk(<<char, rest::binary>>, current_char, acc) when char != current_char do
+          walk(rest, char, 1)
+        end
+      end
+      """
+
+      fixed = fix(code)
+      assert fixed =~ "when char == current_char"
+      refute fixed =~ "when char != current_char"
+      # current_char is only used in the guard, not the body — must be prefixed
+      assert fixed =~ "_current_char"
     end
 
     # ── Fix: preserves code without redundant guards ────────────
