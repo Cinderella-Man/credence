@@ -212,5 +212,132 @@ defmodule Credence.Pattern.NoManualCountWithPredicateTest do
 
       assert check(code) == []
     end
+
+    # ---- 2-clause if pattern ----
+
+    test "detects 2-clause if-based count with arity 3" do
+      code = """
+      defmodule Bad do
+        def count_below(list, threshold) do
+          do_count(list, threshold, 0)
+        end
+
+        defp do_count(_bound, [], acc), do: acc
+
+        defp do_count(bound, [head | tail], acc) do
+          new_acc = if head < bound, do: acc + 1, else: acc
+          do_count(bound, tail, new_acc)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_manual_count_with_predicate
+      assert issue.message =~ "do_count/3"
+      assert issue.message =~ "Enum.count"
+    end
+
+    test "detects 2-clause if-based count with arity 2" do
+      code = """
+      defmodule Bad do
+        defp count_positive([], acc), do: acc
+        defp count_positive([h | t], acc) do
+          new_acc = if h > 0, do: acc + 1, else: acc
+          count_positive(t, new_acc)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.message =~ "count_positive/2"
+    end
+
+    test "detects 2-clause if-based count with reversed clause order" do
+      code = """
+      defmodule Bad do
+        defp do_count(bound, [head | tail], acc) do
+          new_acc = if head < bound, do: acc + 1, else: acc
+          do_count(bound, tail, new_acc)
+        end
+
+        defp do_count(_bound, [], acc), do: acc
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.message =~ "do_count/3"
+    end
+
+    test "detects 2-clause if with reversed acc + 1" do
+      code = """
+      defmodule Bad do
+        defp tally([], acc), do: acc
+        defp tally([h | t], acc) do
+          new_acc = if h > 0, do: 1 + acc, else: acc
+          tally(t, new_acc)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.message =~ "tally/2"
+    end
+
+    test "does not flag 2-clause if when do branch is not acc + 1" do
+      code = """
+      defmodule Good do
+        defp sum_match([], acc), do: acc
+        defp sum_match([h | t], acc) do
+          new_acc = if h > 0, do: acc + h, else: acc
+          sum_match(t, new_acc)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag 2-clause if when else branch is not acc" do
+      code = """
+      defmodule Good do
+        defp weird([], acc), do: acc
+        defp weird([h | t], acc) do
+          new_acc = if h > 0, do: acc + 1, else: acc - 1
+          weird(t, new_acc)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag 2-clause if when body has extra expressions" do
+      code = """
+      defmodule Good do
+        defp count([], acc), do: acc
+        defp count([h | t], acc) do
+          new_acc = if h > 0, do: acc + 1, else: acc
+          IO.puts(h)
+          count(t, new_acc)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag 2-clause if when base case does not return acc" do
+      code = """
+      defmodule Good do
+        defp count([], acc), do: acc + 1
+        defp count([h | t], acc) do
+          new_acc = if h > 0, do: acc + 1, else: acc
+          count(t, new_acc)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 end

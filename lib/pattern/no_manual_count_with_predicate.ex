@@ -7,26 +7,41 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   When a function counts list elements matching a predicate using manual
   tail-recursion with an accumulator, it is reimplementing `Enum.count/2`:
 
-      # Flagged — manual recursive counting
+      # Flagged — 3-clause guard pattern
       defp do_count([], _target, acc), do: acc
       defp do_count([h | t], target, acc) when h == target,
         do: do_count(t, target, acc + 1)
       defp do_count([_h | t], target, acc),
         do: do_count(t, target, acc)
 
+      # Flagged — 2-clause if pattern
+      defp do_count([], acc), do: acc
+      defp do_count([h | t], acc) do
+        new_acc = if h > 0, do: acc + 1, else: acc
+        do_count(t, new_acc)
+      end
+
       # Idiomatic — Enum.count/2
       Enum.count(list, &(&1 == target))
 
   ## Detection scope
 
-  A group of exactly 3 clauses (all `def` or all `defp`) with arity 3
-  where:
+  **3-clause guard pattern** — a group of exactly 3 clauses (all `def` or
+  all `defp`) with the same name and arity where:
 
-  1. One clause matches `([], _bound, acc)` and returns `acc`
-  2. One clause matches `([head | tail], bound, acc)` with a **guard**
-     on `head`/`bound` and recurses with `acc + 1` (or `1 + acc`)
-  3. One clause matches `([_head | tail], bound, acc)` (no guard) and
-     recurses with `acc` unchanged
+  1. One clause matches `([], ..., acc)` and returns `acc`
+  2. One clause matches `([h | t], ..., acc)` with a **guard** on `h`/bound
+     and recurses with `acc + 1` (or `1 + acc`)
+  3. One clause matches `([_h | t], ..., acc)` (no guard) and recurses
+     with `acc` unchanged
+
+  **2-clause if pattern** — a group of exactly 2 clauses with the same
+  name and arity where:
+
+  1. One clause matches `([], ..., acc)` and returns `acc`
+  2. One clause matches `([h | t], ..., acc)` whose body assigns
+     `new_acc = if(condition, do: acc + 1, else: acc)` then recurses
+     with `new_acc`
   """
 
   use Credence.Pattern.Rule
@@ -59,21 +74,21 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
     Enum.reverse(clauses)
   end
 
-  defp extract_clause({def_type, meta, [{:when, _, [{fn_name, _, [p1, p2, p3]}, _guard]}, body]})
-       when def_type in [:def, :defp] and is_atom(fn_name) do
-    {:ok, {fn_name, 3, def_type, meta, {p1, p2, p3}, body, true}}
+  defp extract_clause({def_type, meta, [{:when, _, [{fn_name, _, params}, _guard]}, body]})
+       when def_type in [:def, :defp] and is_atom(fn_name) and is_list(params) do
+    {:ok, {fn_name, length(params), def_type, meta, List.to_tuple(params), body, true}}
   end
 
-  defp extract_clause({def_type, meta, [{fn_name, _, [p1, p2, p3]}, body]})
-       when def_type in [:def, :defp] and is_atom(fn_name) do
-    {:ok, {fn_name, 3, def_type, meta, {p1, p2, p3}, body, false}}
+  defp extract_clause({def_type, meta, [{fn_name, _, params}, body]})
+       when def_type in [:def, :defp] and is_atom(fn_name) and is_list(params) do
+    {:ok, {fn_name, length(params), def_type, meta, List.to_tuple(params), body, false}}
   end
 
   defp extract_clause(_), do: :error
 
-  defp analyze_group(clauses) when length(clauses) != 3, do: []
+  # ── 3-clause guard pattern ─────────────────────────────────────────
 
-  defp analyze_group([a, b, c]) do
+  defp analyze_group([{_, 3, _, _, _, _, _} = a, b, c]) do
     {name, _, def_type, _meta, _pats, _body, _} = a
 
     permutations = [
@@ -83,9 +98,23 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
     Enum.find_value(permutations, [], fn {base, guarded, skip} ->
       if manual_count_pattern?(base, guarded, skip, name) do
         meta = elem(guarded, 3)
-        [build_issue(def_type, name, meta)]
+        [build_issue(def_type, name, 3, meta)]
       end
     end)
+  end
+
+  # 3-clause groups with non-3 arity — not a match for guard pattern
+  defp analyze_group([_, _, _]), do: []
+
+  # ── 2-clause if pattern ────────────────────────────────────────────
+
+  defp analyze_group([{_, arity, _, _, _, _, _} = a, b]) when arity >= 2 do
+    {name, _, def_type, _meta, _pats, _body, _} = a
+
+    case find_if_count_pair(a, b, name) do
+      {:ok, clause_meta} -> [build_issue(def_type, name, elem(a, 1), clause_meta)]
+      :error -> []
+    end
   end
 
   defp analyze_group(_), do: []
@@ -131,6 +160,100 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   end
 
   defp unguarded_skip?(_, _), do: false
+
+  # ── 2-clause if pattern helpers ────────────────────────────────────
+
+  defp find_if_count_pair(a, b, fn_name) do
+    cond do
+      if_count_base?(a) and if_count_recursive?(b, fn_name) ->
+        {:ok, elem(b, 3)}
+
+      if_count_base?(b) and if_count_recursive?(a, fn_name) ->
+        {:ok, elem(a, 3)}
+
+      true ->
+        :error
+    end
+  end
+
+  # Base case: empty list returns accumulator (any arity, any position).
+  defp if_count_base?({_name, _arity, _def_type, _meta, patterns, body, guarded}) do
+    not guarded and
+      has_empty_list_param?(patterns) and
+      last_param_returned?(patterns, body)
+  end
+
+  defp has_empty_list_param?(patterns) do
+    # Check all positions except the last (which is the accumulator)
+    Enum.any?(0..(tuple_size(patterns) - 2), fn i ->
+      empty_list_pattern?(elem(patterns, i))
+    end)
+  end
+
+  # Recursive case: cons pattern with `if` conditional increment.
+  defp if_count_recursive?({_name, _arity, _def_type, _meta, patterns, body, false}, fn_name) do
+    arity = tuple_size(patterns)
+
+    has_cons =
+      Enum.any?(0..(arity - 1), fn i ->
+        match?({:ok, _, _}, destructure_cons(elem(patterns, i)))
+      end)
+
+    acc = elem(patterns, arity - 1)
+    has_cons and var?(acc) and body_has_if_increment?(body, fn_name, acc)
+  end
+
+  defp if_count_recursive?(_, _), do: false
+
+  defp last_param_returned?(patterns, body) do
+    last = elem(patterns, tuple_size(patterns) - 1)
+    var?(last) and returns_var?(body, last)
+  end
+
+  # Body must be: `new_acc = if(cond, do: acc + 1, else: acc)` followed by
+  # a recursive call `fn_name(..., new_acc)`.
+  defp body_has_if_increment?(body, fn_name, acc_param) do
+    case body |> extract_do_body() do
+      {:__block__, _, [assign, call]} ->
+        if_assign_increment?(assign, acc_param) and
+          call_with_var?(call, fn_name, assigned_var(assign))
+
+      _ ->
+        false
+    end
+  end
+
+  defp if_assign_increment?({:=, _, [var, if_expr]}, acc_param) do
+    var?(var) and if_increments_acc?(if_expr, acc_param)
+  end
+
+  defp if_assign_increment?(_, _), do: false
+
+  defp assigned_var({:=, _, [var, _]}), do: var
+
+  defp if_increments_acc?({:if, _, [_cond, clauses]}, acc_param) when is_list(clauses) do
+    do_body = clauses |> extract_if_clause(:do) |> unwrap_single_block()
+    else_body = clauses |> extract_if_clause(:else) |> unwrap_single_block()
+    increment_by_one?(do_body, acc_param) and same_var?(else_body, acc_param)
+  end
+
+  defp if_increments_acc?(_, _), do: false
+
+  defp extract_if_clause(clauses, key) do
+    Enum.find_value(clauses, fn
+      {{:__block__, _, [^key]}, expr} -> expr
+      _ -> nil
+    end)
+  end
+
+  defp unwrap_single_block({:__block__, _, [expr]}), do: expr
+  defp unwrap_single_block(expr), do: expr
+
+  defp call_with_var?({name, _, args}, fn_name, var) when is_list(args) and name == fn_name do
+    Enum.any?(args, &same_var?(&1, var))
+  end
+
+  defp call_with_var?(_, _, _), do: false
 
   # ── pattern helpers ────────────────────────────────────────────────
 
@@ -204,11 +327,11 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   defp same_var?({n, _, _}, {n, _, _}) when is_atom(n), do: true
   defp same_var?(_, _), do: false
 
-  defp build_issue(def_type, fn_name, meta) do
+  defp build_issue(def_type, fn_name, arity, meta) do
     %Issue{
       rule: :no_manual_count_with_predicate,
       message:
-        "`#{def_type} #{fn_name}/3` is a manual recursive counting function " <>
+        "`#{def_type} #{fn_name}/#{arity}` is a manual recursive counting function " <>
           "that reimplements `Enum.count/2`.\n\n" <>
           "Use `Enum.count(list, predicate)` instead — it is clearer " <>
           "and avoids unnecessary code.",
