@@ -9,7 +9,7 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
   (`<<char>>`) to extract byte values, `String.to_charlist/1` is more
   direct: it yields integers without the intermediate binary wrapping.
 
-  Covered Enum functions: `all?/2`, `any?/2`, `each/2`, `map/2`,
+  Covered Enum functions: `all?/2`, `any?/2`, `count/2`, `each/2`, `map/2`,
   `filter/2`, `flat_map/2`, `reduce/3`.
 
   This rule fires when:
@@ -31,6 +31,7 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
 
       string |> String.graphemes() |> Enum.all?(fn c -> c >= ?0 and c <= ?9 end)
       string |> String.graphemes() |> Enum.any?(fn c -> c in ?A..?Z end)
+      string |> String.graphemes() |> Enum.count(fn c -> c in ?0..?9 end)
       string |> String.graphemes() |> Enum.reduce(0, fn <<char>>, acc -> acc * 26 + char end)
       string |> String.graphemes() |> Enum.map(fn <<char>> -> char - ?A + 1 end)
 
@@ -70,14 +71,14 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
   @impl true
   def fix_patches(_ast, _opts), do: []
 
-  # Single-arg Enum functions: all?, any?, each, map, filter, flat_map
+  # Single-arg Enum functions in pipe: all?, any?, count, each, map, filter, flat_map
   defp iteration_call?({{:., _, [{:__aliases__, _, [:Enum]}, func]}, _, [pred]})
-       when func in [:all?, :any?, :each, :map, :filter, :flat_map] and is_tuple(pred),
+       when func in [:all?, :any?, :count, :each, :map, :filter, :flat_map] and is_tuple(pred),
        do: true
 
-  # Two-arg Enum function: reduce (init + callback)
-  defp iteration_call?({{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [_, pred]})
-       when is_tuple(pred),
+  # Two-arg Enum functions: reduce (init + callback), count (collection + predicate)
+  defp iteration_call?({{:., _, [{:__aliases__, _, [:Enum]}, func]}, _, [_, pred]})
+       when func in [:reduce, :count] and is_tuple(pred),
        do: true
 
   defp iteration_call?(_), do: false
@@ -91,12 +92,16 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIteration do
 
   defp graphemes_call?(_), do: false
 
-  # Check if the predicate in Enum.all?/any?/each expects integer codepoints.
+  # Check if the predicate in Enum.all?/any?/count/each expects integer codepoints.
   # Only returns true when we can VERIFY integer comparisons in the predicate.
   # Opaque captures (&func/1) return false — we can't tell what they expect.
+  # Handles both pipe form (1 arg) and direct form (2 args, e.g. Enum.count/2).
   defp predicate_expects_integers?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, _]}, _, [pred]}
-       ) do
+         {{:., _, [{:__aliases__, _, [:Enum]}, _]}, _, args}
+       )
+       when is_list(args) and args != [] do
+    pred = List.last(args)
+
     case pred do
       # Opaque capture: &func/1 or &Mod.func/1 — can't verify
       {:&, _, [{:/, _, _}]} ->

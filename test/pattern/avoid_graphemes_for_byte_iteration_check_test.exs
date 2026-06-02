@@ -88,6 +88,30 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
     end
   end
 
+  describe "flags graphemes piped to Enum.count/2 with integer predicate" do
+    test "three-step pipe with inline integer comparison" do
+      code =
+        "string |> String.graphemes() |> Enum.count(fn c -> c >= ?0 and c <= ?9 end)"
+
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+
+    test "three-step pipe with range in predicate" do
+      code = "string |> String.graphemes() |> Enum.count(fn c -> c in ?A..?Z end)"
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+
+    test "two-step pipe with inline integer comparison" do
+      code = "String.graphemes(str) |> Enum.count(fn c -> c in ?0..?9 end)"
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+
+    test "capture with inline integer comparison" do
+      code = "string |> String.graphemes() |> Enum.count(&(&1 >= ?0 and &1 <= ?9))"
+      assert [%Issue{rule: :avoid_graphemes_for_byte_iteration}] = check(code)
+    end
+  end
+
   describe "flags graphemes piped to Enum.flat_map with binary extraction" do
     test "flat_map with <<char>> in callback args" do
       code = "column |> String.graphemes() |> Enum.flat_map(fn <<char>> -> [char] end)"
@@ -229,6 +253,18 @@ defmodule Credence.Pattern.AvoidGraphemesForByteIterationCheckTest do
 
     test "Enum.count/1 on graphemes is not flagged" do
       code = "str |> String.graphemes() |> Enum.count()"
+      assert check(code) == []
+    end
+
+    test "Enum.count/2 on graphemes with opaque capture is not flagged" do
+      code = "str |> String.graphemes() |> Enum.count(&alphanumeric?/1)"
+      assert check(code) == []
+    end
+
+    test "Enum.count/2 on graphemes with string predicate is not flagged" do
+      code =
+        "string |> String.graphemes() |> Enum.count(fn c -> c == \"0\" end)"
+
       assert check(code) == []
     end
 
