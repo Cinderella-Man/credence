@@ -73,6 +73,42 @@ defmodule Credence.Pattern.NoReduceForPartitionTest do
              end
              """)
     end
+
+    test "reduce with {[], 0} accumulator counting zeros" do
+      assert flagged?("""
+             def move_zeros(list) do
+               {non_zeros, zero_count} =
+                 Enum.reduce(list, {[], 0}, fn
+                   0, {non_zeros, count} ->
+                     {non_zeros, count + 1}
+                   value, {non_zeros, count} ->
+                     {[value | non_zeros], count}
+                 end)
+
+               non_zeros
+               |> Enum.reverse()
+               |> Kernel.++(List.duplicate(0, zero_count))
+             end
+             """)
+    end
+
+    test "reduce with {0, []} accumulator (reversed order)" do
+      assert flagged?("""
+             def move_zeros(list) do
+               {zero_count, non_zeros} =
+                 Enum.reduce(list, {0, []}, fn
+                   0, {count, non_zeros} ->
+                     {count + 1, non_zeros}
+                   value, {count, non_zeros} ->
+                     {count, [value | non_zeros]}
+                 end)
+
+               non_zeros
+               |> Enum.reverse()
+               |> Kernel.++(List.duplicate(0, zero_count))
+             end
+             """)
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -138,6 +174,16 @@ defmodule Credence.Pattern.NoReduceForPartitionTest do
                Enum.reduce(list, %{yes: [], no: []}, fn
                  x, acc when x > 0 -> %{acc | yes: [x | acc.yes]}
                  x, acc -> %{acc | no: [x | acc.no]}
+               end)
+             end
+             """)
+    end
+
+    test "reduce with {[], 0} accumulator that is not a partition" do
+      assert clean?("""
+             def process(list) do
+               Enum.reduce(list, {[], 0}, fn
+                 x, {acc, count} -> {[x * 2 | acc], count + 1}
                end)
              end
              """)

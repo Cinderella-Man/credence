@@ -1,18 +1,17 @@
 defmodule Credence.Pattern.NoReduceForPartition do
   @moduledoc """
-  Detects `Enum.reduce/3` with a `{[], []}` accumulator used to partition
-  a list into two groups by prepending elements into one of two lists,
-  which can be replaced with `Enum.split_with/2`.
+  Detects `Enum.reduce/3` used to partition a list into two groups, which
+  can be replaced with `Enum.split_with/2`.
 
   ## Why this matters
 
   LLMs frequently implement list partitioning by manually accumulating
   into a `{[], []}` tuple with cons-prepend, then reversing both lists
-  at the end.  This is a textbook reimplementation of
-  `Enum.split_with/2`, which does the same thing in a single pass with
-  no manual reverse:
+  at the end.  A variant uses `{[], 0}` — collecting into one list and
+  counting the other side — then reconstructing with `List.duplicate/2`.
+  Both are textbook reimplementations of `Enum.split_with/2`:
 
-      # Flagged — manual reduce-based partition
+      # Variant 1 — two lists
       {evens, odds} =
         Enum.reduce(list, {[], []}, fn
           x, {evens, odds} when rem(x, 2) == 0 -> {[x | evens], odds}
@@ -20,14 +19,24 @@ defmodule Credence.Pattern.NoReduceForPartition do
         end)
       {Enum.reverse(evens), Enum.reverse(odds)}
 
+      # Variant 2 — list + counter
+      {non_zeros, zero_count} =
+        Enum.reduce(list, {[], 0}, fn
+          0, {non_zeros, count} -> {non_zeros, count + 1}
+          x, {non_zeros, count} -> {[x | non_zeros], count}
+        end)
+      Enum.reverse(non_zeros) ++ List.duplicate(0, zero_count)
+
       # Idiomatic — single function call
       {evens, odds} = Enum.split_with(list, &(rem(&1, 2) == 0))
 
   ## Flagged patterns
 
-  `Enum.reduce(enum, {[], []}, fn ...)` where the anonymous function has
-  exactly two clauses, each returning a 2-tuple with one side receiving
-  a cons-prepend and the other side left unchanged.
+  - `Enum.reduce(enum, {[], []}, fn ...)` with two clauses, each
+    returning a 2-tuple with one cons-prepend side and one bare variable.
+  - `Enum.reduce(enum, {[], 0}, fn ...)` (or `{0, []}`) with two clauses:
+    one cons-prepend + bare variable, the other bare variable + counter
+    increment (`count + 1`).
 
   ## Not flagged
 
@@ -79,19 +88,27 @@ defmodule Credence.Pattern.NoReduceForPartition do
   defp check_node(_), do: :error
 
   defp check_reduce_partition(raw_acc, clauses, meta) do
-    if empty_tuple_of_lists?(raw_acc) and partition_clauses?(clauses) do
-      {:ok,
-       %Issue{
-         rule: :no_reduce_for_partition,
-         message:
-           "`Enum.reduce/3` with a `{[], []}` accumulator manually " <>
-             "partitions a list. Use `Enum.split_with/2` instead for a single pass " <>
-             "with no manual reverse.",
-         meta: %{line: Keyword.get(meta, :line)}
-       }}
-    else
-      :error
+    cond do
+      empty_tuple_of_lists?(raw_acc) and partition_clauses?(clauses) ->
+        {:ok, partition_issue(meta)}
+
+      counting_accumulator?(raw_acc) and counting_partition_clauses?(clauses) ->
+        {:ok, partition_issue(meta)}
+
+      true ->
+        :error
     end
+  end
+
+  defp partition_issue(meta) do
+    %Issue{
+      rule: :no_reduce_for_partition,
+      message:
+        "`Enum.reduce/3` manually partitions a list. " <>
+          "Use `Enum.split_with/2` instead for a single pass " <>
+          "with no manual reverse.",
+      meta: %{line: Keyword.get(meta, :line)}
+    }
   end
 
   # Check if a node is the `{[], []}` pattern, unwrapping __block__ wrappers.
@@ -99,6 +116,19 @@ defmodule Credence.Pattern.NoReduceForPartition do
     case unwrap_block(node) do
       {raw_left, raw_right} ->
         unwrap_block(raw_left) == [] and unwrap_block(raw_right) == []
+
+      _ ->
+        false
+    end
+  end
+
+  # Check if a node is the `{[], 0}` or `{0, []}` pattern (list + counter accumulator).
+  defp counting_accumulator?(node) do
+    case unwrap_block(node) do
+      {raw_left, raw_right} ->
+        left = unwrap_block(raw_left)
+        right = unwrap_block(raw_right)
+        (left == [] and right == 0) or (left == 0 and right == [])
 
       _ ->
         false
@@ -114,6 +144,32 @@ defmodule Credence.Pattern.NoReduceForPartition do
   end
 
   defp partition_clauses?(_), do: false
+
+  # Exactly two clauses: one with cons-prepend + bare var, other with bare var + counter increment.
+  defp counting_partition_clauses?([
+         {:->, _, [_patterns1, body1]},
+         {:->, _, [_patterns2, body2]}
+       ]) do
+    s1 = clause_sides(body1)
+    s2 = clause_sides(body2)
+
+    (s1 == {:cons, :var} and s2 == {:var, :arithmetic}) or
+      (s1 == {:var, :cons} and s2 == {:arithmetic, :var}) or
+      (s1 == {:var, :arithmetic} and s2 == {:cons, :var}) or
+      (s1 == {:arithmetic, :var} and s2 == {:var, :cons})
+  end
+
+  defp counting_partition_clauses?(_), do: false
+
+  defp clause_sides(raw_body) do
+    case unwrap_block(raw_body) do
+      {raw_left, raw_right} ->
+        {classify_tuple_side(raw_left), classify_tuple_side(raw_right)}
+
+      _ ->
+        {:other, :other}
+    end
+  end
 
   # A 2-tuple (wrapped in __block__) where exactly one side is [var | var]
   # and the other is a bare variable.
@@ -140,6 +196,17 @@ defmodule Credence.Pattern.NoReduceForPartition do
 
       {name, _, ctx} when is_atom(name) and is_atom(ctx) ->
         :var
+
+      # count + 1 or 1 + count (integer may be __block__-wrapped in Sourceror)
+      {:+, _, [left_node, right_node]} ->
+        left = unwrap_block(left_node)
+        right = unwrap_block(right_node)
+
+        case {left, right} do
+          {{name, _, ctx}, 1} when is_atom(name) and is_atom(ctx) -> :arithmetic
+          {1, {name, _, ctx}} when is_atom(name) and is_atom(ctx) -> :arithmetic
+          _ -> :other
+        end
 
       _ ->
         :other
