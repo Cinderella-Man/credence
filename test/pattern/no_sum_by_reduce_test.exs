@@ -92,6 +92,55 @@ defmodule Credence.Pattern.NoSumByReduceTest do
 
       assert check(code) == []
     end
+
+    test "detects multi-clause reduce with no-op catch-all" do
+      code = """
+      Enum.reduce(points, 0, fn
+        [a, b], acc -> acc + distance(a, b)
+        _, acc -> acc
+      end)
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_sum_by_reduce
+    end
+
+    test "detects piped multi-clause reduce with no-op catch-all" do
+      code = """
+      points
+      |> Enum.chunk_every(2, 1)
+      |> Enum.reduce(0, fn
+        [a, b], acc -> acc + distance(a, b)
+        _, acc -> acc
+      end)
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "does NOT detect multi-clause reduce with non-noop catch-all" do
+      code = """
+      Enum.reduce(points, 0, fn
+        [a, b], acc -> acc + distance(a, b)
+        x, acc -> Logger.warn(x); acc
+      end)
+      """
+
+      assert check(code) == []
+    end
+
+    test "does NOT detect multi-clause reduce with no sum clause" do
+      code = """
+      Enum.reduce(points, 0, fn
+        [a, b], acc -> acc * distance(a, b)
+        _, acc -> acc
+      end)
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix" do
@@ -146,6 +195,51 @@ defmodule Credence.Pattern.NoSumByReduceTest do
     test "round-trip: fixed code produces no issues" do
       code = """
       Enum.reduce(digits, 0, fn digit, acc -> acc + digit ** 3 end)
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoSumByReduce.check(ast, []) == []
+    end
+
+    test "rewrites multi-clause reduce with catch-all to Enum.sum_by" do
+      code = """
+      Enum.reduce(points, 0, fn
+        [a, b], acc -> acc + distance(a, b)
+        _, acc -> acc
+      end)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.sum_by"
+      assert result =~ "distance(a, b)"
+      assert result =~ "-> 0"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "rewrites piped multi-clause reduce with catch-all" do
+      code = """
+      points
+      |> Enum.chunk_every(2, 1)
+      |> Enum.reduce(0, fn
+        [a, b], acc -> acc + distance(a, b)
+        _, acc -> acc
+      end)
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.sum_by"
+      assert result =~ "distance(a, b)"
+      assert result =~ "-> 0"
+      refute result =~ "Enum.reduce"
+    end
+
+    test "round-trip: multi-clause fixed code produces no issues" do
+      code = """
+      Enum.reduce(points, 0, fn
+        [a, b], acc -> acc + distance(a, b)
+        _, acc -> acc
+      end)
       """
 
       fixed = fix(code)
