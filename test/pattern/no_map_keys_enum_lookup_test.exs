@@ -133,6 +133,22 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupTest do
       assert issue.message =~ "groups"
     end
 
+    test "detects Map.keys |> Enum.sort_by with Map.get lookup" do
+      code = """
+      defmodule Bad do
+        def top_keys(counts) do
+          Map.keys(counts)
+          |> Enum.sort_by(fn num -> {-Map.get(counts, num)} end)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_map_keys_enum_lookup
+      assert issue.message =~ "counts"
+      assert issue.message =~ "Enum.sort_by"
+    end
+
     # ---- Three-step pipeline: var |> Map.keys() |> Enum.xxx(fn ...) ----
 
     test "detects var |> Map.keys() |> Enum.all? with lookup" do
@@ -251,6 +267,18 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupTest do
       code = """
       defmodule Good do
         def size(m), do: Map.keys(m) |> Enum.count()
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag Map.keys |> Enum.sort_by without value lookup" do
+      code = """
+      defmodule Good do
+        def sorted(config) do
+          Map.keys(config) |> Enum.sort_by(fn k -> to_string(k) end)
+        end
       end
       """
 
@@ -537,7 +565,75 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupTest do
       assert fixed =~ "Enum.map"
       refute fixed =~ "Map.keys"
     end
+  end
 
+  describe "NoMapKeysEnumLookup — fix (sort_by)" do
+    test "fixes Map.keys |> Enum.sort_by (adds Enum.map to extract keys)" do
+      code = """
+      Map.keys(counts) |> Enum.sort_by(fn num -> {-Map.get(counts, num)} end)
+      """
+
+      fixed = assert_fixes_cleanly(code)
+      assert fixed =~ "Enum.sort_by(counts"
+      assert fixed =~ "{num, v}"
+      assert fixed =~ "{-v}"
+      assert fixed =~ "Enum.map"
+      assert fixed =~ "{k, _v}"
+      refute fixed =~ "Map.keys"
+      refute fixed =~ "Map.get(counts"
+    end
+
+    test "fixes Map.keys |> Enum.sort_by with access syntax" do
+      code = """
+      Map.keys(freq) |> Enum.sort_by(fn k -> {-freq[k], k} end)
+      """
+
+      fixed = assert_fixes_cleanly(code)
+      assert fixed =~ "Enum.sort_by(freq"
+      assert fixed =~ "{-v,"
+      assert fixed =~ "Enum.map"
+      refute fixed =~ "Map.keys"
+      refute fixed =~ "freq[k]"
+    end
+
+    test "fixes three-step var |> Map.keys() |> Enum.sort_by" do
+      code = """
+      counts |> Map.keys() |> Enum.sort_by(fn num -> {-counts[num]} end)
+      """
+
+      fixed = assert_fixes_cleanly(code)
+      assert fixed =~ "counts |> Enum.sort_by"
+      assert fixed =~ "{num, v}"
+      assert fixed =~ "Enum.map"
+      refute fixed =~ "Map.keys"
+    end
+
+    test "fixes direct call Enum.sort_by(Map.keys(var), callback)" do
+      code = """
+      Enum.sort_by(Map.keys(counts), fn num -> {-Map.get(counts, num)} end)
+      """
+
+      fixed = assert_fixes_cleanly(code)
+      assert fixed =~ "Enum.sort_by(counts"
+      assert fixed =~ "{num, v}"
+      assert fixed =~ "Enum.map"
+      refute fixed =~ "Map.keys"
+    end
+
+    test "fixes sort_by with pipeline continuation" do
+      code = """
+      Map.keys(counts) |> Enum.sort_by(fn k -> {-counts[k]} end) |> Enum.take(3)
+      """
+
+      fixed = assert_fixes_cleanly(code)
+      assert fixed =~ "Enum.sort_by(counts"
+      assert fixed =~ "Enum.map"
+      assert fixed =~ "Enum.take(3)"
+      refute fixed =~ "Map.keys"
+    end
+  end
+
+  describe "NoMapKeysEnumLookup — fix (keys-returning pipeline continuation)" do
     test "fixes Enum.filter with pipeline continuation" do
       code = """
       Map.keys(data) |> Enum.filter(fn k -> data[k] > 100 end) |> Enum.sort()

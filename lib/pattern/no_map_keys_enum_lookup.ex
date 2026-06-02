@@ -38,8 +38,8 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  @flagged_enum_fns [:all?, :any?, :each, :map, :filter, :reject, :flat_map]
-  @keys_returning_fns [:filter, :reject]
+  @flagged_enum_fns [:all?, :any?, :each, :map, :filter, :reject, :flat_map, :sort_by]
+  @keys_returning_fns [:filter, :reject, :sort_by]
 
   @impl true
   def check(ast, _opts) do
@@ -74,20 +74,11 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   end
 
   # Direct call: Enum.xxx(Map.keys(var), callback)
-  defp try_fix_node({{:., _, [mod, fn_name]}, _meta, [first_arg, callback | _rest]})
+  defp try_fix_node({{:., _, [mod, fn_name]}, _meta, [first_arg, callback | rest]})
        when fn_name in @flagged_enum_fns do
     with true <- enum_module?(mod),
          {:ok, var_name, var_expr} <- extract_map_keys_var_with_expr(first_arg) do
-      apply_direct_fix(var_expr, var_name, mod, fn_name, callback)
-    end
-  end
-
-  # Direct call: Enum.xxx(Map.keys(var), callback)
-  defp try_fix_node({{:., _, [mod, fn_name]}, _meta, [first_arg, callback | _rest]})
-       when fn_name in @flagged_enum_fns do
-    with true <- enum_module?(mod),
-         {:ok, var_name, var_expr} <- extract_map_keys_var_with_expr(first_arg) do
-      apply_direct_fix(var_expr, var_name, mod, fn_name, callback)
+      apply_direct_fix(var_expr, var_name, mod, fn_name, callback, rest)
     end
   end
 
@@ -149,9 +140,9 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   end
 
   # Enum.xxx(Map.keys(var), callback)
-  defp apply_direct_fix(var_expr, var_name, mod, fn_name, callback) do
+  defp apply_direct_fix(var_expr, var_name, mod, fn_name, callback, extra_args) do
     with {:ok, new_callback} <- transform_callback(callback, var_name) do
-      enum_call = {{:., [], [mod, fn_name]}, [], [var_expr, new_callback]}
+      enum_call = {{:., [], [mod, fn_name]}, [], [var_expr, new_callback | extra_args]}
 
       if fn_name in @keys_returning_fns do
         {:ok, {:|>, [], [enum_call, build_extract_keys_pipe_step()]}}
