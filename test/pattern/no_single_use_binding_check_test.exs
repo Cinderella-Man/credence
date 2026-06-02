@@ -216,6 +216,28 @@ defmodule Credence.Pattern.NoSingleUseBindingCheckTest do
     end
   end
 
+  describe "does not flag boolean-expression group feeding into boolean expression" do
+    test "two or-chain bindings combined with or" do
+      assert clean?("""
+             def run(index, list, next_val, prev, curr) do
+               can_modify_prev = index <= 1 or Enum.at(list, index - 2) <= curr
+               can_modify_curr = next_val == :infinity or prev <= next_val
+               can_modify_prev or can_modify_curr
+             end
+             """)
+    end
+
+    test "two and-chain bindings combined with and" do
+      assert clean?("""
+             def run(x, y, z) do
+               check_a = x > 0 and y < 10
+               check_b = z != 0 and rem(z, 2) == 0
+               check_a and check_b
+             end
+             """)
+    end
+  end
+
   # ═══════════════════════════════════════════════════════════════════
   # SHOULD FLAG — single comparison binding in boolean (still flag)
   # ═══════════════════════════════════════════════════════════════════

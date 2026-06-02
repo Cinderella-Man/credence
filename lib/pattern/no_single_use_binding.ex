@@ -122,7 +122,7 @@ defmodule Credence.Pattern.NoSingleUseBinding do
 
   defp comparison_binding?(_), do: false
 
-  defp comparison_rhs?({op, _, [_, _]}) when op in @comparison_ops, do: true
+  defp comparison_rhs?({op, _, [_, _]}) when op in @flaggable_ops, do: true
   defp comparison_rhs?(_), do: false
 
   defp boolean_expression?({op, _, [_, _]}) when op in @boolean_ops, do: true
