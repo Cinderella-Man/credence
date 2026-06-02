@@ -74,6 +74,56 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
   end
 
+  describe "flags case on single function param" do
+    test "case on a single param with literal patterns" do
+      assert flagged?("""
+             def run(x) do
+               case x do
+                 0 -> :zero
+                 n -> {:ok, n}
+               end
+             end
+             """)
+    end
+
+    test "case on a single param with list patterns (pick_coins style)" do
+      assert flagged?("""
+             def pick_coins(coins) do
+               case coins do
+                 [] -> 0
+                 [first] -> first
+                 [first, second] -> max(first, second)
+                 _ -> do_pick_coins(coins, 0, 0)
+               end
+             end
+             """)
+    end
+
+    test "case on a single param with map patterns" do
+      assert flagged?("""
+             def handle(msg) do
+               case msg do
+                 %{type: :ping} -> :pong
+                 %{type: :data, payload: p} -> process(p)
+                 _ -> :unknown
+               end
+             end
+             """)
+    end
+
+    test "defp case on a single param" do
+      assert flagged?("""
+             defp classify(x) do
+               case x do
+                 0 -> :zero
+                 n when n > 0 -> :positive
+                 _ -> :negative
+               end
+             end
+             """)
+    end
+  end
+
   # ═══════════════════════════════════════════════════════════════════
   # NEGATIVE — must NOT flag
   # ═══════════════════════════════════════════════════════════════════
@@ -107,17 +157,6 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
                case do_something(x) do
                  :ok -> :done
                  :error -> :failed
-               end
-             end
-             """)
-    end
-
-    test "case on a single param (not a tuple)" do
-      assert clean?("""
-             def run(x) do
-               case x do
-                 0 -> :zero
-                 n -> {:ok, n}
                end
              end
              """)

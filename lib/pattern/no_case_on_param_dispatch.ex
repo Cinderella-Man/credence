@@ -1,8 +1,8 @@
 defmodule Credence.Pattern.NoCaseOnParamDispatch do
   @moduledoc """
   Detects a function clause whose body is a `case` that dispatches
-  on a tuple of its own parameters. Multi-clause function heads are the
-  idiomatic Elixir way to express this.
+  on its own parameters (single variable or tuple). Multi-clause function
+  heads are the idiomatic Elixir way to express this.
 
   ## Bad
 
@@ -14,23 +14,36 @@ defmodule Credence.Pattern.NoCaseOnParamDispatch do
         end
       end
 
+      def pick_coins(coins) do
+        case coins do
+          [] -> 0
+          [first] -> first
+          [first, second] -> max(first, second)
+          _ -> do_pick_coins(coins, 0, 0)
+        end
+      end
+
   ## Good
 
       def gcd(0, y), do: y
       def gcd(x, 0), do: x
       def gcd(x, y), do: gcd(y, rem(x, y))
 
+      def pick_coins([]), do: 0
+      def pick_coins([first]), do: first
+      def pick_coins([first, second]), do: max(first, second)
+      def pick_coins(coins), do: do_pick_coins(coins, 0, 0)
+
   ## Scope
 
   Only flags when:
   - The clause body is a single `case` expression.
-  - The `case` subject is a tuple where every element is a bare
-    variable that is one of the function's own parameters.
+  - The `case` subject is a bare variable or a tuple where every element
+    is a bare variable that is one of the function's own parameters.
   - The `case` has at least 2 arms.
 
   Does NOT flag:
   - `case` on expressions that are not the function parameters.
-  - `case` on a single parameter (not a tuple).
   - `case` on a tuple that includes non-parameter or computed expressions.
 
   ## Auto-fix
@@ -70,7 +83,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatch do
   defp maybe_flag(params, body_kw, meta, acc) do
     with {:ok, case_meta, subject, case_kw} <- extract_case(body_kw),
          param_names = for({n, _, c} <- params, is_atom(n), is_atom(c), do: n),
-         {:ok, var_count} when var_count >= 2 <- all_vars_in_params?(subject, param_names),
+         {:ok, var_count} when var_count >= 1 <- all_vars_in_params?(subject, param_names),
          true <- at_least_two_clauses?(case_kw) do
       line = Keyword.get(case_meta, :line) || Keyword.get(meta, :line)
       [build_issue(line) | acc]
