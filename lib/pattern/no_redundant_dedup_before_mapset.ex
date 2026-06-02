@@ -6,15 +6,23 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapset do
   `MapSet.new/1` already stores only unique elements, so running
   `Enum.dedup/1` or `Enum.uniq/1` beforehand has no effect.
 
+  Also detects `Enum.sort/2` or `Enum.sort_by/3` between dedup and
+  `MapSet.new/1` — sorting is pointless when the result is an unordered
+  MapSet.
+
   ## Bad
 
       Enum.dedup(items) |> MapSet.new()
       items |> Enum.dedup() |> MapSet.new()
       MapSet.new(Enum.dedup(items))
       Enum.uniq(items) |> MapSet.new()
+      items |> Enum.uniq() |> Enum.sort() |> MapSet.new()
+      items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new()
 
   ## Good
 
+      MapSet.new(items)
+      MapSet.new(items)
       MapSet.new(items)
       MapSet.new(items)
       MapSet.new(items)
@@ -119,6 +127,17 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapset do
        )
        when func in @dedup_funcs,
        do: {:ok, expr}
+
+  # expr |> Enum.uniq() |> Enum.sort() / Enum.sort_by()
+  defp extract_dedup_expr(
+         {:|>, _, [left, {{:., _, [{:__aliases__, _, [:Enum]}, sort_func]}, _, _}]}
+       )
+       when sort_func in [:sort, :sort_by] do
+    case extract_dedup_expr(left) do
+      {:ok, expr} -> {:ok, expr}
+      :error -> :error
+    end
+  end
 
   defp extract_dedup_expr(_), do: :error
 end

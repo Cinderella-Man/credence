@@ -129,6 +129,71 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetTest do
 
       assert check(code) == []
     end
+
+    test "fires on Enum.uniq(x) |> Enum.sort() |> MapSet.new()" do
+      code = """
+      defmodule Example do
+        def run(items) do
+          Enum.uniq(items) |> Enum.sort() |> MapSet.new()
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_redundant_dedup_before_mapset
+    end
+
+    test "fires on items |> Enum.uniq() |> Enum.sort() |> MapSet.new()" do
+      code = """
+      defmodule Example do
+        def run(items) do
+          items |> Enum.uniq() |> Enum.sort() |> MapSet.new()
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "fires on Enum.dedup(x) |> Enum.sort() |> MapSet.new()" do
+      code = """
+      defmodule Example do
+        def run(items) do
+          Enum.dedup(items) |> Enum.sort() |> MapSet.new()
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "fires on items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new()" do
+      code = """
+      defmodule Example do
+        def run(items) do
+          items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new()
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+
+    test "does not fire on Enum.sort alone piped to MapSet.new" do
+      code = """
+      defmodule Example do
+        def run(items) do
+          Enum.sort(items) |> MapSet.new()
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix/2" do
@@ -183,6 +248,38 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetTest do
       {:ok, fixed_ast} = Sourceror.parse_string(fixed)
       issues = NoRedundantDedupBeforeMapset.check(fixed_ast, [])
       assert issues == []
+    end
+
+    test "fixes Enum.uniq(x) |> Enum.sort() |> MapSet.new() to MapSet.new(x)" do
+      code = "Enum.uniq(items) |> Enum.sort() |> MapSet.new()"
+      result = fix(code)
+      assert result =~ "MapSet.new(items)"
+      refute result =~ "Enum.uniq"
+      refute result =~ "Enum.sort"
+    end
+
+    test "fixes items |> Enum.uniq() |> Enum.sort() |> MapSet.new() to MapSet.new(items)" do
+      code = "items |> Enum.uniq() |> Enum.sort() |> MapSet.new()"
+      result = fix(code)
+      assert result =~ "MapSet.new(items)"
+      refute result =~ "Enum.uniq"
+      refute result =~ "Enum.sort"
+    end
+
+    test "fixes Enum.dedup(x) |> Enum.sort() |> MapSet.new() to MapSet.new(x)" do
+      code = "Enum.dedup(items) |> Enum.sort() |> MapSet.new()"
+      result = fix(code)
+      assert result =~ "MapSet.new(items)"
+      refute result =~ "Enum.dedup"
+      refute result =~ "Enum.sort"
+    end
+
+    test "fixes items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new() to MapSet.new(items)" do
+      code = "items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new()"
+      result = fix(code)
+      assert result =~ "MapSet.new(items)"
+      refute result =~ "Enum.dedup"
+      refute result =~ "Enum.sort_by"
     end
   end
 end
