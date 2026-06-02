@@ -128,6 +128,35 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyCheckTest do
     end
   end
 
+  # ── does NOT flag comparisons inside guards ─────────────────────
+
+  describe "does NOT flag comparisons inside guards" do
+    test "length(l) >= 3 in function guard" do
+      code = "defmodule M do\n  def f(l) when length(l) >= 3, do: :ok\nend"
+      assert check(code) == []
+    end
+
+    test "length(l) == 0 in function guard" do
+      code = "defmodule M do\n  def f(l) when length(l) == 0, do: :ok\nend"
+      assert check(code) == []
+    end
+
+    test "length(l) > 2 in case guard" do
+      code = """
+      defmodule M do
+        def f(l) do
+          case l do
+            x when length(x) > 2 -> :ok
+            _ -> :error
+          end
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+  end
+
   # ── does NOT flag non-variable args (regression) ───────────────
 
   describe "does NOT flag non-variable arguments (regression)" do
