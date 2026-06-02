@@ -74,6 +74,30 @@ defmodule Credence.Pattern.NoRedundantRemGuardTest do
       assert issue.rule == :no_redundant_rem_guard
     end
 
+    test "detects rem(x, 2) != 0 in preceding guard followed by rem(x, 2) == 0" do
+      code = """
+      defmodule Bad do
+        defp classify(x) when rem(x, 2) != 0, do: :odd
+        defp classify(x) when rem(x, 2) == 0, do: :even
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.message =~ "rem(x, 2) == 0"
+    end
+
+    test "detects rem(x, 2) != 1 in preceding guard followed by rem(x, 2) == 1" do
+      code = """
+      defmodule Bad do
+        defp classify(x) when rem(x, 2) != 1, do: :even
+        defp classify(x) when rem(x, 2) == 1, do: :odd
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.message =~ "rem(x, 2) == 1"
+    end
+
     # ── Negative cases (should NOT flag) ────────────────────────
 
     test "does not flag rem(x, 3) followed by rem(x, 3) with different values" do
@@ -125,6 +149,28 @@ defmodule Credence.Pattern.NoRedundantRemGuardTest do
         defp classify(x) when rem(x, 2) == 0, do: :even
         defp classify(x) when x > 10, do: :big
         defp classify(x) when rem(x, 2) == 1, do: :odd
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag rem(x, 2) != 0 followed by rem(x, 2) == 1 (same parity)" do
+      code = """
+      defmodule Good do
+        defp classify(x) when rem(x, 2) != 0, do: :odd
+        defp classify(x) when rem(x, 2) == 1, do: :odd_positive
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag rem(x, 2) != 1 followed by rem(x, 2) == 0 (same parity)" do
+      code = """
+      defmodule Good do
+        defp classify(x) when rem(x, 2) != 1, do: :even
+        defp classify(x) when rem(x, 2) == 0, do: :even_nonneg
       end
       """
 

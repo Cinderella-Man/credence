@@ -12,10 +12,17 @@ defmodule Credence.Pattern.NoRedundantRemGuard do
   `rem(x, 2) == 1` (odd), the second guard is always true for non-negative
   integers — `rem/2` with divisor 2 only produces 0 or 1 for `x >= 0`.
 
+  Also detects `!=` in the preceding guard: `rem(x, 2) != 0` is equivalent
+  to `rem(x, 2) == 1` and `rem(x, 2) != 1` is equivalent to
+  `rem(x, 2) == 0` for non-negative integers.
+
   ## Bad
 
       defp classify(x) when rem(x, 2) == 0, do: :even
       defp classify(x) when rem(x, 2) == 1, do: :odd
+
+      defp classify(x) when rem(x, 2) != 0, do: :odd
+      defp classify(x) when rem(x, 2) == 0, do: :even
 
   ## Good
 
@@ -103,6 +110,16 @@ defmodule Credence.Pattern.NoRedundantRemGuard do
         with {:ok, var} <- unwrap_var(var_ast),
              {:ok, val} <- unwrap_int(val_ast) do
           [{var, val}]
+        else
+          _ -> []
+        end
+
+      {:!=, _, [{:rem, _, [var_ast, {:__block__, _, [2]}]}, val_ast]} ->
+        with {:ok, var} <- unwrap_var(var_ast),
+             {:ok, val} <- unwrap_int(val_ast) do
+          # != val ≡ == complement(val) for mod 2 with non-negative integers
+          complement = if val == 0, do: 1, else: 0
+          [{var, complement}]
         else
           _ -> []
         end
