@@ -643,9 +643,9 @@ defmodule CredenceTest do
     test "anonymous function without rebinding params" do
       assert_clean("""
       defmodule CleanReduce do
-        def sum_evens(list) do
+        def sum_positive(list) do
           Enum.reduce(list, 0, fn num, acc ->
-            if rem(num, 2) == 0, do: acc + num, else: acc
+            if num > 0, do: acc + num, else: acc
           end)
         end
       end
@@ -759,9 +759,9 @@ defmodule CredenceTest do
     test "Enum.find_value — find + transform in one step" do
       assert_clean("""
       defmodule FirstMatch do
-        def first_even_squared(nums) do
+        def first_positive_squared(nums) do
           Enum.find_value(nums, fn num ->
-            if rem(num, 2) == 0, do: num * num
+            if num > 0, do: num * num
           end)
         end
       end
