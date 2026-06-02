@@ -136,7 +136,9 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition), do: {:ok, meta[:line]}, else: :error
+        if guard_eligible?(condition) and not simple_equality_with_literal?(condition),
+          do: {:ok, meta[:line]},
+          else: :error
 
       :error ->
         :error
@@ -151,7 +153,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition) do
+        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) do
           {call, existing_guard} = extract_head_parts(head_ast)
           {do_body, else_body} = extract_branches(body)
 
@@ -262,6 +264,30 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   # Anything else (function calls, pipe chains, etc.) is NOT guard-eligible
   defp guard_eligible?(_), do: false
+
+  # Check if the condition is a simple `var == literal` or `var === literal`
+  # comparison. These should use pattern matching in the function head instead
+  # of guards (see `no_guard_equality_for_pattern_match`).
+  defp simple_equality_with_literal?({op, _, [left, right]}) when op in [:==, :===] do
+    var_and_literal?(left, right) or var_and_literal?(right, left)
+  end
+
+  defp simple_equality_with_literal?(_), do: false
+
+  defp var_and_literal?({name, _, ctx}, literal)
+       when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) do
+    matchable_literal?(literal)
+  end
+
+  defp var_and_literal?(_, _), do: false
+
+  # Sourceror wraps literals in :__block__ to carry position metadata.
+  defp matchable_literal?({:__block__, _, [val]}), do: matchable_literal?(val)
+  defp matchable_literal?(n) when is_number(n), do: true
+  defp matchable_literal?(a) when is_atom(a), do: true
+  defp matchable_literal?(b) when is_binary(b), do: true
+  defp matchable_literal?([]), do: true
+  defp matchable_literal?(_), do: false
 
   # -- patch helpers ---------------------------------------------------------
 

@@ -28,8 +28,8 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
              """)
     end
 
-    test "equality check in condition" do
-      assert flagged?("""
+    test "equality check in condition is not flagged (prefer pattern matching)" do
+      assert clean?("""
              defp handle(x, acc) do
                if x == 0 do
                  acc
@@ -323,7 +323,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
       refute fixed =~ "if x > 0"
     end
 
-    test "equality check" do
+    test "equality check is not fixed (prefer pattern matching)" do
       source = """
       defp check(x) do
         if x == 0 do
@@ -334,10 +334,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
       end
       """
 
-      fixed = apply_fix(source)
-      assert fixed =~ "when x == 0"
-      assert fixed =~ ":zero"
-      assert fixed =~ ":non_zero"
+      assert apply_fix(source) == source
     end
 
     test "is_nil guard" do
