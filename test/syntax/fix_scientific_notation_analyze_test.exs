@@ -48,6 +48,24 @@ defmodule Credence.Syntax.FixScientificNotationAnalyzeTest do
     end
   end
 
+  describe "does NOT flag digits inside decimal-with-exponent strings" do
+    test "123.456e7 in doctest" do
+      assert analyze(~s[iex> Solution.float?("123.456e7")]) == []
+    end
+
+    test "123.456e+7 in doctest" do
+      assert analyze(~s[iex> Solution.float?("123.456e+7")]) == []
+    end
+
+    test "123.456E7 in doctest" do
+      assert analyze(~s[iex> Solution.float?("123.456E7")]) == []
+    end
+
+    test "0.5e-10 in assert_in_delta" do
+      assert analyze("assert_in_delta result, 0.5e-10, 0.001") == []
+    end
+  end
+
   describe "does NOT flag non-numeric uses" do
     test "comment containing 1e10" do
       assert analyze("# tolerance is 1e-10") == []

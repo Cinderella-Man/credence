@@ -57,6 +57,28 @@ defmodule Credence.Syntax.FixScientificNotationFixTest do
     end
   end
 
+  describe "leaves decimal-with-exponent strings unchanged" do
+    test "123.456e7 in doctest" do
+      code = ~s[iex> Solution.float?("123.456e7")]
+      assert fix(code) == code
+    end
+
+    test "123.456e+7 in doctest" do
+      code = ~s[iex> Solution.float?("123.456e+7")]
+      assert fix(code) == code
+    end
+
+    test "123.456E7 in doctest" do
+      code = ~s[iex> Solution.float?("123.456E7")]
+      assert fix(code) == code
+    end
+
+    test "0.5e-10 in assert_in_delta" do
+      code = "assert_in_delta result, 0.5e-10, 0.001"
+      assert fix(code) == code
+    end
+  end
+
   describe "leaves non-numeric content unchanged" do
     test "comments" do
       code = "# tolerance is 1e-10"
