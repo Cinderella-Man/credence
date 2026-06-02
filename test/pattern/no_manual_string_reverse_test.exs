@@ -100,6 +100,68 @@ defmodule Credence.Pattern.NoManualStringReverseTest do
       assert length(check(code)) == 1
     end
 
+    test "detects String.codepoints |> Enum.reverse |> IO.iodata_to_binary pipeline" do
+      code = """
+      defmodule Example do
+        def reverse(str) do
+          str |> String.codepoints() |> Enum.reverse() |> IO.iodata_to_binary()
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_manual_string_reverse
+    end
+
+    test "detects String.graphemes |> Enum.reverse |> IO.iodata_to_binary pipeline" do
+      code = """
+      defmodule Example do
+        def reverse(str) do
+          str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "detects String.codepoints |> Enum.reverse |> Enum.join pipeline" do
+      code = """
+      defmodule Example do
+        def reverse(str) do
+          str |> String.codepoints() |> Enum.reverse() |> Enum.join()
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "detects nested IO.iodata_to_binary(Enum.reverse(String.codepoints(...)))" do
+      code = """
+      defmodule Example do
+        def reverse(str) do
+          IO.iodata_to_binary(Enum.reverse(String.codepoints(str)))
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "detects nested Enum.join(Enum.reverse(String.codepoints(...)))" do
+      code = """
+      defmodule Example do
+        def reverse(str) do
+          Enum.join(Enum.reverse(String.codepoints(str)))
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
     # --- NEGATIVE CASES (should NOT flag) ---
 
     test "passes code that uses String.reverse/1" do
@@ -148,6 +210,30 @@ defmodule Credence.Pattern.NoManualStringReverseTest do
           |> Enum.reverse()
           |> Enum.map(& &1)
           |> Enum.join()
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "ignores String.codepoints used without reverse pattern" do
+      code = """
+      defmodule Example do
+        def count_chars(s) do
+          s |> String.codepoints() |> length()
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "ignores IO.iodata_to_binary used without reverse pattern" do
+      code = """
+      defmodule Example do
+        def to_binary(data) do
+          IO.iodata_to_binary(data)
         end
       end
       """
@@ -327,6 +413,48 @@ defmodule Credence.Pattern.NoManualStringReverseTest do
       fixed = fix(code)
       assert fixed =~ "Enum.reverse"
       assert fixed =~ "Enum.join"
+    end
+
+    test "fixes codepoints |> reverse |> IO.iodata_to_binary pipeline" do
+      code = ~S'''
+      defmodule Example do
+        def reverse(str), do: str |> String.codepoints() |> Enum.reverse() |> IO.iodata_to_binary()
+      end
+      '''
+
+      fixed = fix(code)
+      assert fixed =~ "String.reverse(str)"
+      refute fixed =~ "String.codepoints"
+      refute fixed =~ "Enum.reverse"
+      refute fixed =~ "IO.iodata_to_binary"
+    end
+
+    test "fixes nested IO.iodata_to_binary(Enum.reverse(String.codepoints(...)))" do
+      code = ~S'''
+      defmodule Example do
+        def reverse(str), do: IO.iodata_to_binary(Enum.reverse(String.codepoints(str)))
+      end
+      '''
+
+      fixed = fix(code)
+      assert fixed =~ "String.reverse(str)"
+      refute fixed =~ "String.codepoints"
+      refute fixed =~ "Enum.reverse"
+      refute fixed =~ "IO.iodata_to_binary"
+    end
+
+    test "fixes graphemes |> reverse |> IO.iodata_to_binary pipeline" do
+      code = ~S'''
+      defmodule Example do
+        def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()
+      end
+      '''
+
+      fixed = fix(code)
+      assert fixed =~ "String.reverse(str)"
+      refute fixed =~ "String.graphemes"
+      refute fixed =~ "Enum.reverse"
+      refute fixed =~ "IO.iodata_to_binary"
     end
   end
 end
