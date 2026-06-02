@@ -33,11 +33,16 @@ defmodule Credence.Pattern.NoCaseBooleanResult do
       expr == :ok
       match?(:ok, expr)
 
-  ## Check-only
+  ## Auto-fix (wildcard cases only)
 
-  No auto-fix because the rewrite depends on context and semantics may
-  differ when `expr` returns an unexpected value (the `case` raises
-  `CaseClauseError`, while a comparison returns `false`).
+  When one clause is a wildcard (`_`), the rewrite to `match?/2` is safe:
+
+      case expr do :ok -> true; _ -> false end   →   match?(:ok, expr)
+      case expr do :ok -> false; _ -> true end   →   not match?(:ok, expr)
+
+  When both clauses have specific patterns (no wildcard), no auto-fix is
+  provided — the `case` raises `CaseClauseError` on unexpected values while
+  a comparison returns `false`, so semantics may differ.
   """
 
   use Credence.Pattern.Rule
@@ -63,7 +68,9 @@ defmodule Credence.Pattern.NoCaseBooleanResult do
   end
 
   @impl true
-  def fix_patches(_ast, _opts), do: []
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
+  end
 
   defp check_case_clauses(kw, node, acc, meta) do
     case extract_do_clauses(kw) do
@@ -118,6 +125,95 @@ defmodule Credence.Pattern.NoCaseBooleanResult do
     do: clauses
 
   defp extract_do_clauses(_), do: nil
+
+  # --- auto-fix: rewrite wildcard cases to match?/2 ---
+
+  # case expr do ... end
+  defp maybe_rewrite({:case, _meta, [subject, kw]} = node) when is_list(kw) do
+    case extract_do_clauses(kw) do
+      [clause_a, clause_b] ->
+        case wildcard_rewrite(clause_a, clause_b, subject) do
+          {:ok, replacement} -> replacement
+          :skip -> node
+        end
+
+      _ ->
+        node
+    end
+  end
+
+  # expr |> case do ... end
+  defp maybe_rewrite({:|>, _pipe_meta, [subject, {:case, _case_meta, [kw]}]} = node)
+       when is_list(kw) do
+    case extract_do_clauses(kw) do
+      [clause_a, clause_b] ->
+        case wildcard_rewrite(clause_a, clause_b, subject) do
+          {:ok, replacement} -> replacement
+          :skip -> node
+        end
+
+      _ ->
+        node
+    end
+  end
+
+  defp maybe_rewrite(node), do: node
+
+  defp extract_clause({:->, _, [[pattern], body]}), do: {pattern, body}
+  defp extract_clause(_), do: :error
+
+  # Returns {:ok, match_expr} or :skip when a wildcard case can be rewritten.
+  defp wildcard_rewrite(clause_a, clause_b, subject) do
+    with {pat_a, body_a} <- extract_clause(clause_a),
+         {pat_b, body_b} <- extract_clause(clause_b) do
+      ua = normalize_pattern(pat_a)
+      ub = normalize_pattern(pat_b)
+      ba = unwrap_boolean(body_a)
+      bb = unwrap_boolean(body_b)
+
+      cond do
+        # pattern -> true; _ -> false → match?(pattern, subject)
+        ua == :other and ub == :wildcard and ba == true and bb == false and
+          not variable_pattern?(pat_a) ->
+          {:ok, {:match?, [], [strip_block(pat_a), subject]}}
+
+        # pattern -> false; _ -> true → not match?(pattern, subject)
+        ua == :other and ub == :wildcard and ba == false and bb == true and
+          not variable_pattern?(pat_a) ->
+          {:ok, {:not, [], [{:match?, [], [strip_block(pat_a), subject]}]}}
+
+        # _ -> false; pattern -> true → match?(pattern, subject)
+        ua == :wildcard and ub == :other and ba == false and bb == true and
+          not variable_pattern?(pat_b) ->
+          {:ok, {:match?, [], [strip_block(pat_b), subject]}}
+
+        # _ -> true; pattern -> false → not match?(pattern, subject)
+        ua == :wildcard and ub == :other and ba == true and bb == false and
+          not variable_pattern?(pat_b) ->
+          {:ok, {:not, [], [{:match?, [], [strip_block(pat_b), subject]}]}}
+
+        true ->
+          :skip
+      end
+    else
+      _ -> :skip
+    end
+  end
+
+  # A bare variable binding like `x` — not a useful match? pattern.
+  defp variable_pattern?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
+  defp variable_pattern?(_), do: false
+
+  # Strip Sourceror's {:__block__, _, [value]} wrapper for use in match?/2.
+  defp strip_block({:__block__, _, [value]}), do: value
+  defp strip_block(other), do: other
+
+  defp normalize_pattern(true), do: :boolean
+  defp normalize_pattern(false), do: :boolean
+  defp normalize_pattern({:__block__, _, [true]}), do: :boolean
+  defp normalize_pattern({:__block__, _, [false]}), do: :boolean
+  defp normalize_pattern({:_, _, _}), do: :wildcard
+  defp normalize_pattern(_), do: :other
 
   defp build_issue(meta) do
     %Issue{
