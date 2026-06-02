@@ -49,6 +49,18 @@ defmodule Credence.Pattern.InconsistentParamNames do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
+  # Elixir reserved words that cannot be used as variable names.
+  # Renaming a parameter to one of these would produce a syntax error.
+  @reserved_words MapSet.new([
+                    "after", "and", "case", "catch", "cond", "def", "defdelegate",
+                    "defexception", "defguard", "defguardp", "defimpl", "defmacro",
+                    "defmacrop", "defmodule", "defoverridable", "defp", "defprotocol",
+                    "defstruct", "do", "else", "end", "fn", "for", "if", "import",
+                    "in", "not", "or", "quote", "raise", "receive", "require",
+                    "rescue", "try", "unless", "unquote", "unquote_splicing", "use",
+                    "when", "with"
+                  ])
+
   @impl true
   def check(ast, _opts) do
     clauses = collect_clauses(ast)
@@ -330,6 +342,11 @@ defmodule Credence.Pattern.InconsistentParamNames do
 
           # Same check for underscore-prefixed variant
           MapSet.member?(names_in_clause, "_" <> base) ->
+            map
+
+          # Canonical base is a reserved word — renaming would produce
+          # a syntax error (e.g. `end`, `do`, `fn` cannot be variable names)
+          MapSet.member?(@reserved_words, base) ->
             map
 
           # Needs rename — preserve underscore prefix

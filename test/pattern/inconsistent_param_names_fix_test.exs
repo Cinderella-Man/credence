@@ -491,6 +491,35 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
     end
   end
 
+  describe "does not rename to a reserved word" do
+    test "canonical base is `end` from `_end` — does not rename to `end`" do
+      # The first clause has `_end` (base name "end"), the second has `end_index`.
+      # Renaming `end_index` → `end` would produce a syntax error.
+      code = """
+      defmodule Bad do
+        defp do_thing([], _start, _end), do: :ok
+        defp do_thing([_ | rest], start, end_index), do: do_thing(rest, start, end_index + 1)
+      end
+      """
+
+      fixed = fix(code)
+      # Must NOT rename `end_index` to `end` — that's a reserved word
+      assert fixed =~ "end_index"
+    end
+
+    test "canonical base is `do` from `_do` — does not rename to `do`" do
+      code = """
+      defmodule Bad do
+        def f(_, _do), do: :ok
+        def f(x, done), do: {x, done}
+      end
+      """
+
+      fixed = fix(code)
+      assert fixed =~ "done"
+    end
+  end
+
   describe "does not rename when target conflicts with a pattern variable" do
     test "canonical name clashes with list pattern head variable" do
       # This is the exact bug from the row: clause 1 has `prev` at position 0
