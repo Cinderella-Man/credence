@@ -177,6 +177,32 @@ defmodule Credence.Pattern.NoSingleUseBindingFixTest do
     end
   end
 
+  describe "does not fix comparison group feeding into boolean" do
+    test "two comparison bindings combined with or" do
+      input = """
+      def run(shorter, longer) do
+        replacement_ok = shorter == longer
+        insertion_ok = shorter == tl(longer)
+        replacement_ok or insertion_ok
+      end
+      """
+
+      assert fix(input) == input
+    end
+
+    test "two comparison bindings combined with and" do
+      input = """
+      def run(x, threshold) do
+        above_min = x > 0
+        below_max = x < threshold
+        above_min and below_max
+      end
+      """
+
+      assert fix(input) == input
+    end
+  end
+
   describe "does not fix non-operator expressions" do
     test "function call argument" do
       input = """

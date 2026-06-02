@@ -180,6 +180,58 @@ defmodule Credence.Pattern.NoSingleUseBindingCheckTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # SHOULD NOT FLAG — multiple comparison bindings in boolean expression
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "does not flag comparison group feeding into boolean expression" do
+    test "two comparison bindings combined with or" do
+      assert clean?("""
+             def run(shorter, longer) do
+               replacement_ok = shorter == longer
+               insertion_ok = shorter == tl(longer)
+               replacement_ok or insertion_ok
+             end
+             """)
+    end
+
+    test "two comparison bindings combined with and" do
+      assert clean?("""
+             def run(x, threshold) do
+               above_min = x > 0
+               below_max = x < threshold
+               above_min and below_max
+             end
+             """)
+    end
+
+    test "three comparison bindings combined with or" do
+      assert clean?("""
+             def run(a, b, c) do
+               eq_a = a == 1
+               eq_b = b == 2
+               eq_c = c == 3
+               eq_a or eq_b or eq_c
+             end
+             """)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # SHOULD FLAG — single comparison binding in boolean (still flag)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "still flags single comparison binding in boolean expression" do
+    test "one comparison binding with or" do
+      assert flagged?("""
+             def run(x) do
+               val = compute(x)
+               val == :ok or fallback(x)
+             end
+             """)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # SHOULD NOT FLAG — variable used multiple times
   # ═══════════════════════════════════════════════════════════════════
 

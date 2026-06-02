@@ -39,6 +39,14 @@ defmodule Credence.Pattern.NoSingleUseBinding do
   - EITHER the next statement is a comparison/boolean operator expression,
     OR the RHS is a simple variable (aliasing).
 
+  Does NOT flag when 2+ consecutive comparison bindings all feed into
+  a single boolean expression — named intermediates improve readability:
+
+      # Good — keep named decomposition
+      replacement_ok = shorter == longer
+      insertion_ok = shorter == tl(longer)
+      replacement_ok or insertion_ok
+
   ## Auto-fix
 
   Replaces the variable with the bound expression (wrapped in parens
@@ -77,12 +85,54 @@ defmodule Credence.Pattern.NoSingleUseBinding do
   # ── Check ──────────────────────────────────────────────────────────
 
   defp check_pairs([_first | rest] = statements) when rest != [] do
-    statements
-    |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.flat_map(&check_pair/1)
+    if comparison_group?(statements) do
+      []
+    else
+      statements
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.flat_map(&check_pair/1)
+    end
   end
 
   defp check_pairs(_), do: []
+
+  # When multiple consecutive comparison bindings all feed into a single
+  # boolean expression, keep them as named intermediates for readability.
+  #
+  #   replacement_ok = t_shorter == t_longer
+  #   insertion_ok = t_shorter == tl(t_longer)
+  #   replacement_ok or insertion_ok
+  #
+  # Inlining both produces a dense, hard-to-read expression.
+  defp comparison_group?(statements) when length(statements) < 3, do: false
+
+  defp comparison_group?(statements) do
+    {bindings, [final]} = Enum.split(statements, -1)
+
+    length(bindings) >= 2 and
+      Enum.all?(bindings, &comparison_binding?/1) and
+      boolean_expression?(final) and
+      all_binding_vars_used?(bindings, final)
+  end
+
+  defp comparison_binding?({:=, _, [{name, _, ctx}, rhs]})
+       when is_atom(name) and is_atom(ctx) and name != :_ do
+    comparison_rhs?(rhs)
+  end
+
+  defp comparison_binding?(_), do: false
+
+  defp comparison_rhs?({op, _, [_, _]}) when op in @comparison_ops, do: true
+  defp comparison_rhs?(_), do: false
+
+  defp boolean_expression?({op, _, [_, _]}) when op in @boolean_ops, do: true
+  defp boolean_expression?(_), do: false
+
+  defp all_binding_vars_used?(bindings, final) do
+    Enum.all?(bindings, fn {:=, _, [{name, _, ctx}, _]} ->
+      count_var(name, ctx, final) >= 1
+    end)
+  end
 
   defp check_pair([{:=, meta, [{name, _, ctx}, rhs]}, next_stmt])
        when is_atom(name) and is_atom(ctx) and name != :_ do
@@ -136,12 +186,16 @@ defmodule Credence.Pattern.NoSingleUseBinding do
 
   # Recursively rewrite single-use bindings until none remain.
   defp rewrite_pairs(statements) do
-    case find_and_rewrite_pair(statements) do
-      {:ok, new_statements} when new_statements != statements ->
-        rewrite_pairs(new_statements)
+    if comparison_group?(statements) do
+      statements
+    else
+      case find_and_rewrite_pair(statements) do
+        {:ok, new_statements} when new_statements != statements ->
+          rewrite_pairs(new_statements)
 
-      _ ->
-        statements
+        _ ->
+          statements
+      end
     end
   end
 
