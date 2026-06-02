@@ -156,15 +156,25 @@ defmodule Credence.Pattern.PreferGuardOverIf do
           {do_body, else_body} = extract_branches(body)
 
           range = Sourceror.get_range(node)
+          guard_names = if existing_guard, do: collect_var_names(existing_guard), else: MapSet.new()
 
           # Build first clause: defp call when condition do do_body end
+          # Underscore-prefix any params unused in guard + condition + do_body
           first_guard = combine_guards(existing_guard, condition)
-          first_head = build_head(call, first_guard)
+          first_used =
+            guard_names
+            |> MapSet.union(collect_var_names(condition))
+            |> MapSet.union(collect_var_names(do_body))
+          first_call = underscore_unused_params(call, first_used)
+          first_head = build_head(first_call, first_guard)
           first_clause = {def_kind, [], [first_head, [do: do_body]]}
           first_text = Sourceror.to_string(first_clause)
 
           # Build second clause: defp call [when existing_guard] do else_body end
-          second_head = build_head(call, existing_guard)
+          # Underscore-prefix any params unused in guard + else_body
+          second_used = MapSet.union(guard_names, collect_var_names(else_body))
+          second_call = underscore_unused_params(call, second_used)
+          second_head = build_head(second_call, existing_guard)
           second_clause = {def_kind, [], [second_head, [do: else_body]]}
           second_text = Sourceror.to_string(second_clause)
 
@@ -285,4 +295,34 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   defp build_head(call, nil), do: call
   defp build_head(call, guard), do: {:when, [], [call, guard]}
+
+  # Collect all variable names referenced in an AST subtree.
+  defp collect_var_names(ast) do
+    {_, names} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {name, _, ctx} = node, acc
+        when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) and name != :_ ->
+          {node, MapSet.put(acc, name)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
+  end
+
+  # In a function head AST, prefix any variable not in `used_names` with `_`.
+  defp underscore_unused_params(head, used_names) do
+    Macro.postwalk(head, fn
+      {name, meta, ctx} when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
+        if name in used_names or name == :_ do
+          {name, meta, ctx}
+        else
+          {:"_#{name}", meta, ctx}
+        end
+
+      node ->
+        node
+    end)
+  end
 end

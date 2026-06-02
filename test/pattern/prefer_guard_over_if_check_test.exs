@@ -385,6 +385,41 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
       assert fixed =~ ":non_positive"
     end
 
+    test "underscores unused params in catch-all clause" do
+      source = """
+      defp find_position(matrix, target, low, high) do
+        if low <= high do
+          do_search(matrix, target, low, high)
+        else
+          false
+        end
+      end
+      """
+
+      fixed = apply_fix(source)
+      assert fixed =~ "when low <= high"
+      # Catch-all clause: all params unused since body is just `false`
+      assert fixed =~ "defp find_position(_matrix, _target, _low, _high)"
+    end
+
+    test "underscores unused param in first clause when not used in body or guard" do
+      source = """
+      defp classify(x, y) do
+        if x > 0 do
+          :positive
+        else
+          y
+        end
+      end
+      """
+
+      fixed = apply_fix(source)
+      # First clause: x used in guard, y not used anywhere -> _y
+      assert fixed =~ "defp classify(x, _y) when x > 0"
+      # Second clause: x not used, y used in body
+      assert fixed =~ "defp classify(_x, y)"
+    end
+
     test "does not fix non-guard-eligible condition" do
       source = """
       defp check(x) do
