@@ -110,6 +110,37 @@ defmodule Credence.Pattern.NoStringConcatInLoopTest do
 
       assert length(check(code)) == 1
     end
+
+    test "flags block body where acc only appears in final <>" do
+      code = """
+      defmodule Example do
+        def build(list) do
+          Enum.reduce(list, "", fn char, acc ->
+            count = :erlang.byte_size(char)
+            acc <> String.duplicate(char, count)
+          end)
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
+
+    test "flags block body in pipeline" do
+      code = """
+      defmodule Example do
+        def build(list) do
+          list
+          |> Enum.reduce("", fn char, acc ->
+            upcased = String.upcase(char)
+            acc <> upcased
+          end)
+        end
+      end
+      """
+
+      assert length(check(code)) == 1
+    end
   end
 
   describe "check/2 — negative cases" do
@@ -178,13 +209,13 @@ defmodule Credence.Pattern.NoStringConcatInLoopTest do
       assert check(code) == []
     end
 
-    test "does not flag block body in Enum.reduce" do
+    test "does not flag block body when acc referenced in preceding statements" do
       code = """
       defmodule Example do
         def build(list) do
           Enum.reduce(list, "", fn char, acc ->
-            IO.puts(char)
-            acc <> char
+            prefix = if acc == "", do: "", else: ", "
+            acc <> prefix <> char
           end)
         end
       end
@@ -393,19 +424,73 @@ defmodule Credence.Pattern.NoStringConcatInLoopTest do
       assert normalize(fix(code)) == normalize(code)
     end
 
-    test "does not change Enum.reduce with block body" do
+    test "does not change Enum.reduce with block body when acc used in preceding stmts" do
       code = """
       defmodule Example do
         def build(list) do
           Enum.reduce(list, "", fn char, acc ->
-            IO.puts(char)
-            acc <> char
+            prefix = if acc == "", do: "", else: ", "
+            acc <> prefix <> char
           end)
         end
       end
       """
 
       assert normalize(fix(code)) == normalize(code)
+    end
+
+    test "fixes block body Enum.reduce to Enum.map_join" do
+      input = """
+      defmodule Example do
+        def build(list) do
+          Enum.reduce(list, "", fn char, acc ->
+            count = :erlang.byte_size(char)
+            acc <> String.duplicate(char, count)
+          end)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def build(list) do
+          Enum.map_join(list, fn char ->
+            count = :erlang.byte_size(char)
+            String.duplicate(char, count)
+          end)
+        end
+      end
+      """
+
+      assert normalize(fix(input)) == normalize(expected)
+    end
+
+    test "fixes pipeline block body Enum.reduce to Enum.map_join" do
+      input = """
+      defmodule Example do
+        def build(list) do
+          list
+          |> Enum.reduce("", fn char, acc ->
+            upcased = String.upcase(char)
+            acc <> upcased
+          end)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def build(list) do
+          list
+          |> Enum.map_join(fn char ->
+            upcased = String.upcase(char)
+            upcased
+          end)
+        end
+      end
+      """
+
+      assert normalize(fix(input)) == normalize(expected)
     end
   end
 end
