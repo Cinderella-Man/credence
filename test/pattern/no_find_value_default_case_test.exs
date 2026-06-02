@@ -154,6 +154,57 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseTest do
 
       assert check(code) == []
     end
+
+    test "detects case Enum.find/2 with tuple extraction {k, _} -> k" do
+      code = """
+      case Enum.find(scores, fn {_k, v} -> v == target end) do
+        {key, _} -> key
+        nil -> -1
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_find_value_default_case
+    end
+
+    test "detects case Enum.find/2 with tuple extraction {_, v} -> v" do
+      code = """
+      case Enum.find(scores, fn {k, _v} -> k == target end) do
+        {_, val} -> val
+        nil -> :not_found
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_find_value_default_case
+    end
+
+    test "detects piped case Enum.find/2 with tuple extraction" do
+      code = """
+      Enum.find(scores, fn {_k, v} -> v == target end)
+      |> case do
+        {key, _} -> key
+        nil -> -1
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_find_value_default_case
+    end
+
+    test "does NOT flag case Enum.find/2 with non-variable extraction body" do
+      code = """
+      case Enum.find(scores, fn {_k, v} -> v == target end) do
+        {key, _} -> key + 1
+        nil -> -1
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix" do
@@ -253,6 +304,65 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseTest do
     test "round-trip: || fix produces no issues" do
       code = """
       Enum.find(list, &valid?/1) || :not_found
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoFindValueDefaultCase.check(ast, []) == []
+    end
+
+    test "replaces case Enum.find/2 with tuple extraction {k, _} -> k" do
+      code = """
+      case Enum.find(scores, fn {_k, v} -> v == target end) do
+        {key, _} -> key
+        nil -> -1
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.find_value(scores, -1,"
+      assert result =~ "if"
+      assert result =~ "key"
+      refute result =~ "case"
+    end
+
+    test "replaces case Enum.find/2 with tuple extraction {_, v} -> v" do
+      code = """
+      case Enum.find(scores, fn {k, _v} -> k == target end) do
+        {_, val} -> val
+        nil -> :not_found
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.find_value(scores, :not_found,"
+      assert result =~ "if"
+      assert result =~ "val"
+      refute result =~ "case"
+    end
+
+    test "replaces piped case Enum.find/2 with tuple extraction" do
+      code = """
+      Enum.find(scores, fn {_k, v} -> v == target end)
+      |> case do
+        {key, _} -> key
+        nil -> -1
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Enum.find_value(scores, -1,"
+      assert result =~ "if"
+      assert result =~ "key"
+      refute result =~ "case"
+    end
+
+    test "round-trip: tuple extraction fix produces no issues" do
+      code = """
+      case Enum.find(scores, fn {_k, v} -> v == target end) do
+        {key, _} -> key
+        nil -> -1
+      end
       """
 
       fixed = fix(code)
