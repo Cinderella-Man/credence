@@ -352,6 +352,30 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
       assert check(code) == []
     end
 
+    test "does not flag cons when used as tail of another cons" do
+      code = """
+      defmodule Good do
+        defp handle(item, [top | rest]) when top <= 0 do
+          [item, top | rest]
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag cons when used as tail of another cons with multiple prefixes" do
+      code = """
+      defmodule Good do
+        defp build(a, [h | t]) do
+          [a, b, h | t]
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
     test "does not flag cons when tail is used individually" do
       code = """
       defmodule Good do

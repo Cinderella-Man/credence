@@ -309,20 +309,90 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   end
 
   defp replace_reconstructed_cons(body, head_name, tail_name, replacement) do
-    Macro.prewalk(body, fn
-      {:|, _, [{h, _, h_ctx}, {t, _, t_ctx}]} = node
-      when is_atom(h) and is_atom(t) and (is_nil(h_ctx) or is_atom(h_ctx)) and
-             (is_nil(t_ctx) or is_atom(t_ctx)) ->
-        if h == head_name and t == tail_name, do: replacement, else: node
+    do_replace_cons_outside_tail(body, head_name, tail_name, replacement)
+  end
 
-      {:__block__, _, [[{:|, _, [{h, _, h_ctx}, {t, _, t_ctx}]}]]} = node
-      when is_atom(h) and is_atom(t) and (is_nil(h_ctx) or is_atom(h_ctx)) and
-             (is_nil(t_ctx) or is_atom(t_ctx)) ->
-        if h == head_name and t == tail_name, do: replacement, else: node
+  # Replace matching cons in "outside tail" context.
+  defp do_replace_cons_outside_tail(node, h_name, t_name, replacement) do
+    if cons_match?(node, h_name, t_name) do
+      replacement
+    else
+      case node do
+        {:|, meta, [head, tail]} ->
+          new_head = do_replace_cons_outside_tail(head, h_name, t_name, replacement)
 
-      node ->
+          new_tail =
+            do_replace_cons_in_tail(tail, h_name, t_name, replacement)
+
+          if new_head == head and new_tail == tail,
+            do: node,
+            else: {:|, meta, [new_head, new_tail]}
+
+        list when is_list(list) ->
+          replace_list_outside_tail(list, h_name, t_name, replacement)
+
+        tuple when is_tuple(tuple) ->
+          new_elements =
+            tuple
+            |> Tuple.to_list()
+            |> Enum.map(&do_replace_cons_outside_tail(&1, h_name, t_name, replacement))
+
+          original_elements = Tuple.to_list(tuple)
+          if new_elements == original_elements, do: tuple, else: List.to_tuple(new_elements)
+
+        _ ->
+          node
+      end
+    end
+  end
+
+  # Inside a cons tail — do NOT replace this node (it's not a reconstruction).
+  defp do_replace_cons_in_tail(node, h_name, t_name, replacement) do
+    case node do
+      {:|, meta, [head, tail]} ->
+        new_head = do_replace_cons_outside_tail(head, h_name, t_name, replacement)
+
+        new_tail =
+          do_replace_cons_in_tail(tail, h_name, t_name, replacement)
+
+        if new_head == head and new_tail == tail,
+          do: node,
+          else: {:|, meta, [new_head, new_tail]}
+
+      list when is_list(list) ->
+        replace_list_outside_tail(list, h_name, t_name, replacement)
+
+      tuple when is_tuple(tuple) ->
+        new_elements =
+          tuple
+          |> Tuple.to_list()
+          |> Enum.map(&do_replace_cons_outside_tail(&1, h_name, t_name, replacement))
+
+        original_elements = Tuple.to_list(tuple)
+        if new_elements == original_elements, do: tuple, else: List.to_tuple(new_elements)
+
+      _ ->
         node
-    end)
+    end
+  end
+
+  # Replace matching cons in a list. If the list has a trailing cons
+  # (e.g. [a, h | t] stored as [a, {:|, _, [h, t]}]), the trailing cons
+  # is NOT a standalone reconstruction.
+  defp replace_list_outside_tail(list, h_name, t_name, replacement) do
+    case List.last(list) do
+      {:|, _, _} when length(list) > 1 ->
+        prefix = Enum.drop(list, -1)
+        trailing = List.last(list)
+        new_prefix = Enum.map(prefix, &do_replace_cons_outside_tail(&1, h_name, t_name, replacement))
+        new_trailing = do_replace_cons_in_tail(trailing, h_name, t_name, replacement)
+        new_list = new_prefix ++ [new_trailing]
+        if new_list == list, do: list, else: new_list
+
+      _ ->
+        new_list = Enum.map(list, &do_replace_cons_outside_tail(&1, h_name, t_name, replacement))
+        if new_list == list, do: list, else: new_list
+    end
   end
 
   defp replace_reconstructed_list(body, target_var_names, replacement) do
@@ -420,16 +490,67 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   defp extract_cons_vars(_), do: :error
 
   defp body_contains_same_cons?(body, head_name, tail_name) do
-    {_, found} =
-      Macro.prewalk(body, false, fn
-        node, true ->
-          {node, true}
+    search_cons_outside_tail(body, head_name, tail_name)
+  end
 
-        node, false ->
-          {node, cons_match?(node, head_name, tail_name)}
-      end)
+  # Search for a matching cons in "outside tail" context — a match here means
+  # the cons is used as a standalone value (legitimate reconstruction).
+  defp search_cons_outside_tail(node, h_name, t_name) do
+    if cons_match?(node, h_name, t_name) do
+      true
+    else
+      case node do
+        # Cons node: head is outside tail, tail is inside tail
+        {:|, _, [head, tail]} ->
+          search_cons_outside_tail(head, h_name, t_name) or
+            search_cons_in_tail(tail, h_name, t_name)
 
-    found
+        list when is_list(list) ->
+          search_list_outside_tail(list, h_name, t_name)
+
+        tuple when is_tuple(tuple) ->
+          tuple |> Tuple.to_list() |> Enum.any?(&search_cons_outside_tail(&1, h_name, t_name))
+
+        _ ->
+          false
+      end
+    end
+  end
+
+  # Inside a cons tail — the node itself is NOT a reconstruction (e.g. the
+  # `[h | t]` inside `[a, h | t]` builds a new list, so do NOT match it).
+  # Still recurse: the head of a nested cons resets to outside-tail context.
+  defp search_cons_in_tail(node, h_name, t_name) do
+    case node do
+      {:|, _, [head, tail]} ->
+        search_cons_outside_tail(head, h_name, t_name) or
+          search_cons_in_tail(tail, h_name, t_name)
+
+      list when is_list(list) ->
+        search_list_outside_tail(list, h_name, t_name)
+
+      tuple when is_tuple(tuple) ->
+        tuple |> Tuple.to_list() |> Enum.any?(&search_cons_outside_tail(&1, h_name, t_name))
+
+      _ ->
+        false
+    end
+  end
+
+  # Search a list for matching cons. If the list has a trailing cons
+  # (e.g. [a, h | t] stored as [a, {:|, _, [h, t]}]), the trailing cons
+  # is NOT a standalone reconstruction — it builds the list's tail.
+  defp search_list_outside_tail(list, h_name, t_name) do
+    case List.last(list) do
+      {:|, _, _} = trailing_cons when length(list) > 1 ->
+        # Check all elements except the last
+        prefix = Enum.drop(list, -1)
+        Enum.any?(prefix, &search_cons_outside_tail(&1, h_name, t_name)) or
+          search_cons_in_tail(trailing_cons, h_name, t_name)
+
+      _ ->
+        Enum.any?(list, &search_cons_outside_tail(&1, h_name, t_name))
+    end
   end
 
   defp cons_match?({:|, _, [{h, _, h_ctx}, {t, _, t_ctx}]}, head_name, tail_name)
