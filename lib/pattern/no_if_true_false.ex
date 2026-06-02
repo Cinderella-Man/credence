@@ -201,8 +201,17 @@ defmodule Credence.Pattern.NoIfTrueFalse do
   defp boolean_expr?(_), do: false
 
   # Negates a boolean condition in AST form.
-  # The formatter handles parenthesization (e.g. `not (a == b)` when needed).
+  # Uses the complement operator for comparisons instead of wrapping with `not`,
+  # e.g. `not (a == b)` → `a != b`, `not (a > b)` → `a <= 0`.
   defp negate({:not, _, [inner]}), do: inner
+  defp negate({:==, meta, [a, b]}), do: {:!=, meta, [a, b]}
+  defp negate({:!=, meta, [a, b]}), do: {:==, meta, [a, b]}
+  defp negate({:===, meta, [a, b]}), do: {:!==, meta, [a, b]}
+  defp negate({:!==, meta, [a, b]}), do: {:===, meta, [a, b]}
+  defp negate({:<, meta, [a, b]}), do: {:>=, meta, [a, b]}
+  defp negate({:>, meta, [a, b]}), do: {:<=, meta, [a, b]}
+  defp negate({:<=, meta, [a, b]}), do: {:>, meta, [a, b]}
+  defp negate({:>=, meta, [a, b]}), do: {:<, meta, [a, b]}
   defp negate(condition), do: {:not, [], [condition]}
 
   defp build_issue(meta) do

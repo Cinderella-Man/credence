@@ -82,7 +82,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
 
       expected = """
       def check(x) do
-        not (x > 0)
+        x <= 0
       end
       """
 
@@ -184,7 +184,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
 
       expected = """
       def run(x, y) do
-        not (x > 0) or y == 1
+        x <= 0 or y == 1
       end
       """
 
@@ -204,7 +204,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
 
       expected = """
       def run(x, y) do
-        not (x > 0) and y == 1
+        x <= 0 and y == 1
       end
       """
 
@@ -430,7 +430,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
         rem_hundred = rem(year, 100)
         rem_four_hundred = rem(year, 400)
 
-        rem_four == 0 and (not (rem_hundred == 0) or rem_four_hundred == 0)
+        rem_four == 0 and (rem_hundred != 0 or rem_four_hundred == 0)
       end
       """
 
@@ -461,6 +461,97 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
         parts = String.split(ip_string, ".")
 
         match?([_, _, _, _], parts) and Enum.all?(parts, &valid_octet?/1)
+      end
+      """
+
+      assert fix(input) == expected
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # COMPARISON NEGATION — not (a != b) → a == b
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "simplifies negated comparisons using complement operator" do
+    test "not (a != b) becomes a == b" do
+      input = """
+      def counts_match?(counts1, counts2) do
+        if Map.keys(counts1) != Map.keys(counts2) do
+          false
+        else
+          Enum.all?(counts1, fn {char, count} ->
+            Map.get(counts2, char) == count
+          end)
+        end
+      end
+      """
+
+      expected = """
+      def counts_match?(counts1, counts2) do
+        Map.keys(counts1) == Map.keys(counts2) and
+          Enum.all?(counts1, fn {char, count} ->
+            Map.get(counts2, char) == count
+          end)
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "not (a == b) becomes a != b" do
+      input = """
+      def check(x, y) do
+        if x == y do
+          false
+        else
+          true
+        end
+      end
+      """
+
+      expected = """
+      def check(x, y) do
+        x != y
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "not (a < b) becomes a >= b" do
+      input = """
+      def check(x, y) do
+        if x < y do
+          false
+        else
+          true
+        end
+      end
+      """
+
+      expected = """
+      def check(x, y) do
+        x >= y
+      end
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "not (a === b) becomes a !== b" do
+      input = """
+      def check(x, y) do
+        if x === y do
+          false
+        else
+          true
+        end
+      end
+      """
+
+      expected = """
+      def check(x, y) do
+        x !== y
       end
       """
 
