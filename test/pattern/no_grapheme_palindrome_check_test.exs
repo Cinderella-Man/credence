@@ -153,6 +153,109 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       assert check(code) == []
     end
 
+    test "detects case String.to_charlist with [] -> true and var reverse compare" do
+      code = """
+      defmodule CasePalindrome do
+        def palindrome?(string) do
+          case String.to_charlist(string) do
+            [] -> true
+            chars -> chars == Enum.reverse(chars)
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_grapheme_palindrome_check
+    end
+
+    test "detects case String.graphemes with [] -> true and var reverse compare" do
+      code = """
+      defmodule CaseGraphemes do
+        def palindrome?(s) do
+          case String.graphemes(s) do
+            [] -> true
+            chars -> chars == Enum.reverse(chars)
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_grapheme_palindrome_check
+    end
+
+    test "detects case with reversed comparison order" do
+      code = """
+      defmodule CaseReversed do
+        def palindrome?(s) do
+          case String.to_charlist(s) do
+            [] -> true
+            chars -> Enum.reverse(chars) == chars
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_grapheme_palindrome_check
+    end
+
+    test "detects case with pipe form chars |> Enum.reverse() in comparison" do
+      code = """
+      defmodule CasePipeReverse do
+        def palindrome?(s) do
+          case String.to_charlist(s) do
+            [] -> true
+            chars -> chars == chars |> Enum.reverse()
+          end
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_grapheme_palindrome_check
+    end
+
+    test "ignores case on non-decompose expression" do
+      code = """
+      defmodule SafeCase do
+        def check(list) do
+          case list do
+            [] -> true
+            items -> items == Enum.reverse(items)
+          end
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "ignores case with more than two clauses" do
+      code = """
+      defmodule MultiClause do
+        def palindrome?(s) do
+          case String.to_charlist(s) do
+            [] -> true
+            [_single] -> true
+            chars -> chars == Enum.reverse(chars)
+          end
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
     test "ignores when decompose var is used for other purposes besides palindrome check" do
       code = """
       defmodule SafeGraphemes do
@@ -277,6 +380,70 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
         def palindrome?(s) do
           graphemes = String.graphemes(s)
           graphemes == Enum.reverse(graphemes)
+        end
+      end
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert NoGraphemePalindromeCheck.check(ast, []) == []
+    end
+
+    test "fixes case String.to_charlist palindrome to String.reverse" do
+      code = """
+      case String.to_charlist(s) do
+        [] -> true
+        chars -> chars == Enum.reverse(chars)
+      end
+      """
+
+      result = fix(code)
+      refute result =~ "String.to_charlist"
+      refute result =~ "Enum.reverse"
+      assert result =~ "String.reverse"
+    end
+
+    test "fixes case String.graphemes palindrome to String.reverse" do
+      code = """
+      case String.graphemes(s) do
+        [] -> true
+        chars -> chars == Enum.reverse(chars)
+      end
+      """
+
+      result = fix(code)
+      refute result =~ "String.graphemes"
+      refute result =~ "Enum.reverse"
+      assert result =~ "String.reverse"
+    end
+
+    test "fixes case palindrome inside a module" do
+      code = """
+      defmodule M do
+        def palindrome?(string) do
+          case String.to_charlist(string) do
+            [] -> true
+            chars -> chars == chars |> Enum.reverse()
+          end
+        end
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "def palindrome?"
+      assert result =~ "String.reverse"
+      refute result =~ "String.to_charlist"
+      refute result =~ "Enum.reverse"
+    end
+
+    test "case fix round-trip: fixed code produces no issues" do
+      code = """
+      defmodule M do
+        def palindrome?(s) do
+          case String.to_charlist(s) do
+            [] -> true
+            chars -> chars == Enum.reverse(chars)
+          end
         end
       end
       """

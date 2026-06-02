@@ -8,6 +8,8 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
 
   Detects `String.graphemes/1` or `String.to_charlist/1` at any position in a
   pipe chain — including mid-pipe when followed by `Enum.filter` or similar.
+  Also detects the `case` variant where the result is destructured with an
+  empty-list guard clause.
 
   ## Bad
 
@@ -23,10 +25,17 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
       cleaned = s |> String.downcase() |> String.graphemes() |> Enum.filter(fn c -> ... end)
       cleaned == Enum.reverse(cleaned)
 
+      case String.to_charlist(s) do
+        [] -> true
+        chars -> chars == Enum.reverse(chars)
+      end
+
   ## Good
 
       cleaned = String.downcase(s)
       cleaned == String.reverse(cleaned)
+
+      s == String.reverse(s)
   """
 
   use Credence.Pattern.Rule
@@ -35,20 +44,21 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
 
   @impl true
   def check(ast, _opts) do
-    # Pass 1: collect variables bound to an expression ending in
-    # String.graphemes/1 or String.to_charlist/1
+    check_assignment_pattern(ast) ++ check_case_pattern(ast)
+  end
+
+  # Pass 1: detect `var = String.graphemes(s); var == Enum.reverse(var)` form
+  defp check_assignment_pattern(ast) do
     decompose_vars = collect_decompose_vars(ast)
 
     if map_size(decompose_vars) == 0 do
       []
     else
-      # Only keep vars that are NOT used outside the assignment and palindrome check
       safe_vars = filter_solely_palindrome_vars(decompose_vars, ast)
 
       if map_size(safe_vars) == 0 do
         []
       else
-        # Pass 2: find `var == Enum.reverse(var)` where var is in safe_vars
         {_ast, issues} =
           Macro.prewalk(ast, [], fn
             # var == Enum.reverse(var)
@@ -88,14 +98,39 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
     end
   end
 
+  # Pass 2: detect `case String.to_charlist(s) do [] -> true; v -> v == Enum.reverse(v) end`
+  defp check_case_pattern(ast) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        {:case, meta, [subject, [{{:__block__, _, [:do]}, clauses_block}]]} = node, acc ->
+          case unwrap_clause_block(clauses_block) do
+            [_ | _] = clauses ->
+              if decompose_subject?(subject) and case_palindrome_pattern?(clauses) do
+                {node, [build_issue(meta) | acc]}
+              else
+                {node, acc}
+              end
+
+            _ ->
+              {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reverse(issues)
+  end
+
   @impl true
   def fix_patches(ast, _opts) do
+    fix_assignment_pattern(ast) ++ fix_case_pattern(ast)
+  end
+
+  defp fix_assignment_pattern(ast) do
     decompose_vars = collect_decompose_vars(ast)
     safe_vars = filter_solely_palindrome_vars(decompose_vars, ast)
 
-    # Only auto-fix when graphemes is the terminal pipe call.
-    # Non-terminal graphemes (e.g. followed by Enum.filter) require coordinated
-    # rewrites that are too complex for auto-fix — those are check-only.
     terminal_var_names =
       safe_vars
       |> Enum.filter(fn {_, v} -> v == :terminal end)
@@ -123,6 +158,34 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
           node
       end)
     end
+  end
+
+  # Auto-fix for case-based palindrome: only when subject is a direct call
+  # (not a pipe chain), replace with `subject == String.reverse(subject)`.
+  defp fix_case_pattern(ast) do
+    RuleHelpers.patches_from_postwalk(ast, fn
+      {:case, _meta, [subject, [{{:__block__, _, [:do]}, clauses_block}]]} = node ->
+        case unwrap_clause_block(clauses_block) do
+          [_ | _] = clauses ->
+            if decompose_subject?(subject) and case_palindrome_pattern?(clauses) do
+              case direct_decompose_subject(subject) do
+                {:ok, arg} ->
+                  {:==, [], [arg, string_reverse_call(arg)]}
+
+                :error ->
+                  node
+              end
+            else
+              node
+            end
+
+          _ ->
+            node
+        end
+
+      node ->
+        node
+    end)
   end
 
   # Strip the terminal String.graphemes/String.to_charlist from an expression
@@ -276,5 +339,101 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
           "Use `str == String.reverse(str)` instead — it is clearer and avoids creating an intermediate list.",
       meta: %{line: Keyword.get(meta, :line)}
     }
+  end
+
+  # ── Case-based palindrome pattern helpers ──
+
+  defp case_palindrome_pattern?(clauses) do
+    clause_list = unwrap_clause_block(clauses)
+
+    case clause_list do
+      [clause1, clause2] ->
+        (empty_clause?(clause1) and var_reverse_clause?(clause2)) or
+          (empty_clause?(clause2) and var_reverse_clause?(clause1))
+
+      _ ->
+        false
+    end
+  end
+
+  defp unwrap_clause_block({:__block__, _, list}), do: list
+  defp unwrap_clause_block(list) when is_list(list), do: list
+
+  # Empty list pattern — may be bare or block-wrapped by Sourceror
+  # Body may also be wrapped: true or {:__block__, _, [true]}
+  defp empty_clause?({:->, _, [[{:__block__, _, [[]]}], body]}), do: literal_true?(body)
+  defp empty_clause?({:->, _, [[[]], body]}), do: literal_true?(body)
+  defp empty_clause?(_), do: false
+
+  defp literal_true?(true), do: true
+  defp literal_true?({:__block__, _, [true]}), do: true
+  defp literal_true?(_), do: false
+
+  # Variable pattern — may be bare or block-wrapped by Sourceror
+  defp var_reverse_clause?({:->, _, [[{:__block__, _, [{var_name, _, nil}]}], body]})
+       when is_atom(var_name),
+       do: reverse_comparison?(var_name, body)
+
+  defp var_reverse_clause?({:->, _, [[{var_name, _, nil}], body]})
+       when is_atom(var_name),
+       do: reverse_comparison?(var_name, body)
+
+  defp var_reverse_clause?(_), do: false
+
+  # var == Enum.reverse(var) or var == (var |> Enum.reverse())
+  defp reverse_comparison?(var, {:==, _, [{v, _, nil}, rhs]}) when is_atom(v) and v == var do
+    enum_reverse_of?(var, rhs)
+  end
+
+  # Enum.reverse(var) == var or (var |> Enum.reverse()) == var
+  defp reverse_comparison?(var, {:==, _, [lhs, {v, _, nil}]}) when is_atom(v) and v == var do
+    enum_reverse_of?(var, lhs)
+  end
+
+  defp reverse_comparison?(_, _), do: false
+
+  # Enum.reverse(var) — direct call form
+  defp enum_reverse_of?(
+         var,
+         {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, [{v, _, nil}]}
+       )
+       when is_atom(v) and v == var,
+       do: true
+
+  # var |> Enum.reverse() — pipe form (Sourceror preserves the pipe)
+  defp enum_reverse_of?(
+         var,
+         {:|>, _, [{v, _, nil}, {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _, []}]}
+       )
+       when is_atom(v) and v == var,
+       do: true
+
+  defp enum_reverse_of?(_, _), do: false
+
+  # Check if a case subject is a String.to_charlist/graphemes call (direct or piped)
+  defp decompose_subject?({{:., _, [{:__aliases__, _, [:String]}, func]}, _, _})
+       when func in [:to_charlist, :graphemes],
+       do: true
+
+  defp decompose_subject?({:|>, _, _} = pipe) do
+    case rightmost(pipe) do
+      {{:., _, [{:__aliases__, _, [:String]}, func]}, _, _} when func in [:to_charlist, :graphemes] -> true
+      _ -> false
+    end
+  end
+
+  defp decompose_subject?(_), do: false
+
+  # Extract subject from a direct String.to_charlist/graphemes call (not piped)
+  defp direct_decompose_subject(
+         {{:., _, [{:__aliases__, _, [:String]}, func]}, _, [arg]}
+       )
+       when func in [:to_charlist, :graphemes],
+       do: {:ok, arg}
+
+  defp direct_decompose_subject(_), do: :error
+
+  defp string_reverse_call(arg) do
+    {{:., [], [{:__aliases__, [], [:String]}, :reverse]}, [], [arg]}
   end
 end
