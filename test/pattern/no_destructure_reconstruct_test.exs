@@ -532,6 +532,94 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
 
       assert check(code) == []
     end
+
+    # ---- Tuple pattern cases ----
+
+    test "detects tuple destructure-reconstruct in function head" do
+      code = """
+      defmodule Bad do
+        def do_rectangles_intersect({x1, y1, x2, y2}, {a1, b1, a2, b2}) do
+          check_overlap({x1, y1, x2, y2}, {a1, b1, a2, b2})
+        end
+      end
+      """
+
+      issues = check(code)
+      tuple_issues = Enum.filter(issues, &(&1.message =~ "Tuple"))
+      assert length(tuple_issues) == 2
+      assert Enum.any?(tuple_issues, &(&1.message =~ "x1"))
+      assert Enum.any?(tuple_issues, &(&1.message =~ "a1"))
+    end
+
+    test "detects tuple destructure-reconstruct in case branch" do
+      code = """
+      defmodule Bad do
+        def process(data) do
+          case data do
+            {x, y, z} ->
+              normalize({x, y, z})
+          end
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_destructure_reconstruct
+      assert issue.message =~ "Tuple"
+      assert issue.message =~ "x, y, z"
+    end
+
+    # ---- Tuple pattern negative cases ----
+
+    test "does not flag 2-tuple patterns" do
+      code = """
+      defmodule Good do
+        def check({a, b}) do
+          process(a, b)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag tuple when variables are used individually" do
+      code = """
+      defmodule Good do
+        def process({x, y, z}) do
+          IO.puts(x)
+          IO.puts(z)
+          y * 2
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag tuple when order differs" do
+      code = """
+      defmodule Good do
+        def swap({a, b, c}) do
+          transform({c, b, a})
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does not flag tuple with literal elements" do
+      code = """
+      defmodule Good do
+        def check({a, b, c}) do
+          match({a, 0, c})
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
   end
 
   describe "fix/2 — case branches" do
@@ -871,6 +959,74 @@ defmodule Credence.Pattern.NoDestructureReconstructTest do
               x = <<a, rest::binary>>
               {:ok, x}
           end
+        end
+      end
+      """
+
+      fixed = fix(code)
+      ast = Sourceror.parse_string!(fixed)
+      assert [] == NoDestructureReconstruct.check(ast, [])
+    end
+  end
+
+  describe "fix/2 — tuple patterns" do
+    test "fixes tuple destructure-reconstruct in function head" do
+      code = """
+      defmodule Bad do
+        def process({x, y, z}) do
+          normalize({x, y, z})
+        end
+      end
+      """
+
+      result = fix(code)
+
+      assert result =~ "= tuple"
+      assert result =~ "normalize(tuple)"
+    end
+
+    test "fixes tuple destructure-reconstruct in case branch" do
+      code = """
+      defmodule Bad do
+        def process(data) do
+          case data do
+            {x, y, z} ->
+              normalize({x, y, z})
+          end
+        end
+      end
+      """
+
+      result = fix(code)
+
+      assert result =~ "= tuple"
+      assert result =~ "normalize(tuple)"
+    end
+
+    test "fixes tuple keeping individually-used variable" do
+      code = """
+      defmodule Bad do
+        def process({x, y, z}) do
+          IO.puts(x)
+          normalize({x, y, z})
+        end
+      end
+      """
+
+      result = fix(code)
+
+      # x is used individually, so it stays in the pattern
+      assert result =~ "x"
+      assert result =~ "IO.puts(x)"
+      assert result =~ "= tuple"
+      assert result =~ "normalize(tuple)"
+    end
+
+    test "round-trip: fixed tuple code produces zero issues" do
+      code = """
+      defmodule Bad do
+        def process({x, y, z}) do
+          normalize({x, y, z})
         end
       end
       """

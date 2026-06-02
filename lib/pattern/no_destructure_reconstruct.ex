@@ -47,6 +47,10 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   replace the reconstructed binary in the body with `string`, and
   replace unused segment variables with `_` in the pattern.
 
+  **Tuples (3+ elements):** bind the whole tuple with `= tuple` on the
+  pattern, replace the reconstructed tuple in the body with `tuple`, and
+  replace unused variables with `_` in the pattern.
+
   ## Flagged patterns
 
   - A list pattern `[a, b, c, ...]` in a `case` branch or function head
@@ -55,9 +59,14 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   - A cons pattern `[h | t]` where the body reconstructs the same cons.
   - A binary pattern `<<a, rest::binary>>` where the body reconstructs
     the same binary using the same segment variables.
+  - A tuple pattern `{a, b, c, ...}` (3+ elements) in a `case` branch
+    or function head where the body contains a tuple literal with the
+    exact same variables in the same order.
 
   Only flagged when the pattern contains 2 or more simple variables
   (not literals, patterns, or underscore-prefixed names).
+  Tuple patterns require 3+ elements to avoid ambiguity with 2-tuple
+  AST nodes used elsewhere in Elixir's internal representation.
   """
 
   use Credence.Pattern.Rule
@@ -148,7 +157,20 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
           []
       end
 
-    list_issues ++ cons_issues ++ binary_issues
+    tuple_issues =
+      case extract_tuple_names(pattern) do
+        {:ok, var_names} when length(var_names) >= 3 ->
+          if body_contains_same_tuple?(body, var_names) do
+            [build_tuple_issue(var_names, meta)]
+          else
+            []
+          end
+
+        _ ->
+          []
+      end
+
+    list_issues ++ cons_issues ++ binary_issues ++ tuple_issues
   end
 
   @impl true
@@ -245,7 +267,12 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
       :no_fix ->
         case fix_cons_pattern_body(pattern, body, extra_ast) do
           {:fixed, _, _} = result -> result
-          :no_fix -> fix_binary_pattern_body(pattern, body, extra_ast)
+
+          :no_fix ->
+            case fix_binary_pattern_body(pattern, body, extra_ast) do
+              {:fixed, _, _} = result -> result
+              :no_fix -> fix_tuple_pattern_body(pattern, body, extra_ast)
+            end
         end
     end
   end
@@ -745,6 +772,103 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
 
       {:__block__, _, [{:<<>>, _, _} = inner]} = node ->
         case extract_binary_segment_names(inner) do
+          {:ok, ^target_var_names} -> replacement
+          _ -> node
+        end
+
+      node ->
+        node
+    end)
+  end
+
+  # ---- Tuple pattern helpers ----
+
+  defp extract_tuple_names({:__block__, _, [inner]}), do: extract_tuple_names(inner)
+
+  defp extract_tuple_names({:{}, _, elements})
+       when is_list(elements) and length(elements) >= 3 do
+    extract_names_from_elements(elements)
+  end
+
+  defp extract_tuple_names(_), do: :error
+
+  defp extract_tuple_elements({:__block__, _, [inner]}), do: extract_tuple_elements(inner)
+  defp extract_tuple_elements({:{}, _, elements}) when is_list(elements), do: {:ok, elements}
+  defp extract_tuple_elements(_), do: :error
+
+  defp body_contains_same_tuple?(body, target_var_names) do
+    {_, found} =
+      Macro.prewalk(body, false, fn
+        node, true ->
+          {node, true}
+
+        node, false ->
+          case extract_tuple_names(node) do
+            {:ok, ^target_var_names} -> {node, true}
+            _ -> {node, false}
+          end
+      end)
+
+    found
+  end
+
+  defp build_tuple_issue(var_names, meta) do
+    vars_str = Enum.map_join(var_names, ", ", &to_string/1)
+    count = length(var_names)
+
+    %Issue{
+      rule: :no_destructure_reconstruct,
+      message: """
+      Tuple `{#{vars_str}}` is destructured and then reassembled \
+      into the same tuple.
+
+      Bind the tuple as a whole and pattern match for size:
+
+          {#{String.duplicate("_, ", count - 1)}_} = tuple\
+      """,
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
+
+  defp fix_tuple_pattern_body(pattern, body, extra_ast) do
+    with {:ok, var_names} when length(var_names) >= 3 <- extract_tuple_names(pattern),
+         true <- body_contains_same_tuple?(body, var_names) do
+      binding_var = {:tuple, [], nil}
+      new_body = replace_reconstructed_tuple(body, var_names, binding_var)
+
+      used = collect_variable_names(new_body)
+
+      used =
+        if extra_ast, do: MapSet.union(used, collect_variable_names(extra_ast)), else: used
+
+      {:ok, elements} = extract_tuple_elements(pattern)
+
+      new_elements =
+        Enum.map(elements, fn
+          {name, meta, ctx} when is_atom(name) and is_atom(ctx) ->
+            if MapSet.member?(used, name), do: {name, meta, ctx}, else: {:_, meta, ctx}
+
+          other ->
+            other
+        end)
+
+      new_pattern = {:{}, [], new_elements}
+      {:fixed, {:=, [], [new_pattern, binding_var]}, new_body}
+    else
+      _ -> :no_fix
+    end
+  end
+
+  defp replace_reconstructed_tuple(body, target_var_names, replacement) do
+    Macro.prewalk(body, fn
+      {:__block__, _, [inner]} = node ->
+        case extract_tuple_names(inner) do
+          {:ok, ^target_var_names} -> replacement
+          _ -> node
+        end
+
+      {:{}, _, _} = node ->
+        case extract_tuple_names(node) do
           {:ok, ^target_var_names} -> replacement
           _ -> node
         end
