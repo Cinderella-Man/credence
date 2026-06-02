@@ -296,6 +296,124 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
   end
 
+  # ═══════════════════════════════════════════════════════════════════
+  # AUTO-FIX
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "auto-fixes if/else into two function clauses" do
+    defp apply_fix(code) do
+      Credence.RuleHelpers.apply_rule_fix(PreferGuardOverIf, code)
+    end
+
+    test "comparison operator" do
+      source = """
+      defp check(x) do
+        if x > 0 do
+          :positive
+        else
+          :non_positive
+        end
+      end
+      """
+
+      fixed = apply_fix(source)
+      assert fixed =~ "when x > 0"
+      assert fixed =~ ":positive"
+      assert fixed =~ ":non_positive"
+      refute fixed =~ "if x > 0"
+    end
+
+    test "equality check" do
+      source = """
+      defp check(x) do
+        if x == 0 do
+          :zero
+        else
+          :non_zero
+        end
+      end
+      """
+
+      fixed = apply_fix(source)
+      assert fixed =~ "when x == 0"
+      assert fixed =~ ":zero"
+      assert fixed =~ ":non_zero"
+    end
+
+    test "is_nil guard" do
+      source = """
+      defp check(val, default) do
+        if is_nil(val) do
+          default
+        else
+          val
+        end
+      end
+      """
+
+      fixed = apply_fix(source)
+      assert fixed =~ "when is_nil(val)"
+      assert fixed =~ "default"
+    end
+
+    test "preserves existing guard" do
+      source = """
+      defp check(x) when is_integer(x) do
+        if x > 0 do
+          :positive
+        else
+          :non_positive
+        end
+      end
+      """
+
+      fixed = apply_fix(source)
+      assert fixed =~ "when is_integer(x) and x > 0"
+      assert fixed =~ ":non_positive"
+    end
+
+    test "keyword syntax if" do
+      source = """
+      defp check(x) do
+        if x > 0, do: :positive, else: :non_positive
+      end
+      """
+
+      fixed = apply_fix(source)
+      assert fixed =~ "when x > 0"
+      assert fixed =~ ":positive"
+      assert fixed =~ ":non_positive"
+    end
+
+    test "does not fix non-guard-eligible condition" do
+      source = """
+      defp check(x) do
+        if valid?(x) do
+          :ok
+        else
+          :error
+        end
+      end
+      """
+
+      assert apply_fix(source) == source
+    end
+
+    test "does not fix remote function call in condition" do
+      source = """
+      defp check(list) do
+        if Enum.empty?(list) do
+          :empty
+        else
+          hd(list)
+        end
+      end
+      """
+
+      assert apply_fix(source) == source
+    end
+  end
+
   describe "does not flag function with non-if body" do
     test "simple expression body" do
       assert clean?("""

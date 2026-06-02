@@ -25,11 +25,12 @@ defmodule Credence.Pattern.PreferGuardOverIf do
         {Enum.reverse(current_run), list}
       end
 
-  ## Check-only
+  ## Auto-fix
 
-  This rule detects the anti-pattern but does not auto-fix it, because
-  the transformation requires creating a new function clause and
-  adjusting pattern matches, which is too complex for a safe patch.
+  Splits the `if/else` body into two function clauses: the first clause
+  gets the condition as a `when` guard with the `do` branch as body; the
+  second clause keeps the original head (with any existing guard preserved)
+  and uses the `else` branch as its body.
   """
 
   use Credence.Pattern.Rule
@@ -116,7 +117,17 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   end
 
   @impl true
-  def fix_patches(_ast, _opts), do: []
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case try_build_patch(node) do
+          {:ok, patch} -> {node, [patch | acc]}
+          :error -> {node, acc}
+        end
+      end)
+
+    Enum.reverse(patches)
+  end
 
   # Match def/defp with explicit body keyword list
   defp check_node({def_kind, meta, [_head, body_kw]})
@@ -133,6 +144,43 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   end
 
   defp check_node(_), do: :error
+
+  defp try_build_patch({def_kind, _meta, [head_ast, body_kw]} = node)
+       when def_kind in [:def, :defp] and is_list(body_kw) do
+    body = extract_body(body_kw)
+
+    case extract_if_else(body) do
+      {:ok, condition} ->
+        if guard_eligible?(condition) do
+          {call, existing_guard} = extract_head_parts(head_ast)
+          {do_body, else_body} = extract_branches(body)
+
+          range = Sourceror.get_range(node)
+
+          # Build first clause: defp call when condition do do_body end
+          first_guard = combine_guards(existing_guard, condition)
+          first_head = build_head(call, first_guard)
+          first_clause = {def_kind, [], [first_head, [do: do_body]]}
+          first_text = Sourceror.to_string(first_clause)
+
+          # Build second clause: defp call [when existing_guard] do else_body end
+          second_head = build_head(call, existing_guard)
+          second_clause = {def_kind, [], [second_head, [do: else_body]]}
+          second_text = Sourceror.to_string(second_clause)
+
+          change = "#{first_text}\n#{second_text}"
+
+          {:ok, %{range: range, change: change}}
+        else
+          :error
+        end
+
+      :error ->
+        :error
+    end
+  end
+
+  defp try_build_patch(_), do: :error
 
   # Extract the `:do` value from a keyword list, handling both
   # `[do: body]` and `[{{:__block__, _, [:do]}, body}]` forms.
@@ -204,4 +252,37 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   # Anything else (function calls, pipe chains, etc.) is NOT guard-eligible
   defp guard_eligible?(_), do: false
+
+  # -- patch helpers ---------------------------------------------------------
+
+  defp extract_head_parts({:when, _, [call, guard]}), do: {call, guard}
+  defp extract_head_parts(call), do: {call, nil}
+
+  defp extract_branches({:if, _meta, [_condition, clauses]}) when is_list(clauses) do
+    do_body = extract_kw_value(clauses, :do)
+    else_body = extract_kw_value(clauses, :else)
+    {do_body, else_body}
+  end
+
+  defp extract_branches({:__block__, _, [expr]}), do: extract_branches(expr)
+  defp extract_branches(_), do: {nil, nil}
+
+  defp extract_kw_value(kw, key) do
+    case Keyword.get(kw, key) do
+      nil ->
+        Enum.find_value(kw, fn
+          {{:__block__, _, [^key]}, body} -> body
+          _ -> nil
+        end)
+
+      body ->
+        body
+    end
+  end
+
+  defp combine_guards(nil, new), do: new
+  defp combine_guards(existing, new), do: {:and, [], [existing, new]}
+
+  defp build_head(call, nil), do: call
+  defp build_head(call, guard), do: {:when, [], [call, guard]}
 end
