@@ -1,31 +1,32 @@
-# Pattern rule interface — design retrospective
+# How the Pattern rules got their shape (a look back)
 
-## Context
+## Where we started
 
-The Pattern phase started with a uniform rule interface: each rule
-implemented `fix(source, opts) :: String.t()`, internally parsed the
-source with `Sourceror.parse_string!`, walked the AST, and called
-`Sourceror.to_string` to render the result. The orchestrator also
-re-parsed the source on every iteration. Visible problems:
+The Pattern round began with one shape for every rule: each rule had a
+`fix(source, opts) :: String.t()` function. Inside, it parsed the code with
+`Sourceror.parse_string!`, walked the tree, and turned the result back into text
+with `Sourceror.to_string`. The part that runs the rules also re-parsed the code
+on every pass. Three problems showed up:
 
-- **Layout collapse at the change site.** A short `Enum.reduce(...)`
-  replacement would be re-rendered as a single line even when the
-  original source was multi-line. Surfaced by Issue 4 in the
-  `credence_fix_bugs.md` report.
-- **No locality guarantee.** `Sourceror.to_string` on the whole AST is
-  free to reformat anywhere; in practice metadata-tagged unchanged
-  nodes survived, but the contract said otherwise.
-- **A "warn-only" mode that nobody could fix.** 15 rules detected
-  anti-patterns whose fixes required non-local refactoring,
-  shape-changing transformations, or ambiguous remedies. They flagged
-  things and left the user holding the bag.
+- **Layout fell apart right where the change was.** A short
+  `Enum.reduce(...)` replacement would get re-printed as one line even when the
+  original code was spread over several. (This was Issue 4 in the
+  `credence_fix_bugs.md` report.)
+- **No promise to leave the rest alone.** Running `Sourceror.to_string` on the
+  whole tree is free to re-format anything, anywhere. In practice the untouched
+  nodes survived, but nothing in the design *guaranteed* it.
+- **A "warn but don't fix" mode nobody could act on.** 15 rules pointed at
+  problems whose fixes needed rearranging code in several places, changing the
+  type of value returned, or picking between several reasonable answers. They
+  flagged things and left the user to sort it out.
 
-Driver: **architectural cleanliness**, not perf. One way to express a
-fix; layout-safe by construction; either fix or stay quiet.
+What drove the change was wanting the code to be **clean and predictable**, not
+faster. One way to write a fix; the layout stays safe by design; a rule either
+fixes the problem or stays quiet.
 
-## Final shape
+## Where we landed
 
-### Rule behaviour (`lib/pattern/rule.ex`)
+### The rule shape (`lib/pattern/rule.ex`)
 
 ```elixir
 @callback priority() :: integer()
@@ -39,19 +40,19 @@ fix; layout-safe by construction; either fix or stay quiet.
 }
 ```
 
-Two callbacks express a fix; rules pick whichever fits:
+There are two ways to write a fix; a rule picks whichever fits:
 
-- **`fix_patches/2`** — preferred. Walks an AST, emits a list of
-  `%{range, change}` patches. Only the changed bytes move; everything
-  else stays byte-identical.
-- **`fix/2`** — adapter shape. Returns transformed source. The
-  default `fix_patches/2` (provided by `__using__`) wraps `fix/2` in
-  a single whole-source patch.
+- **`fix_patches/2`** — preferred. Walks the tree and hands back a list of
+  `%{range, change}` patches. Only the bytes you point at move; everything else
+  stays byte-for-byte the same.
+- **`fix/2`** — the simple way out. Hands back the changed source text. The
+  built-in `fix_patches/2` (provided by `__using__`) wraps your `fix/2` as one
+  big patch over the whole source.
 
-The `fixable?/0` callback no longer exists — every rule that compiles
-is fixable by definition.
+The old `fixable?/0` callback is gone — every rule that compiles fixes
+something, by definition.
 
-### Orchestrator (`lib/pattern.ex`)
+### The part that runs the rules (`lib/pattern.ex`)
 
 ```elixir
 defp run_fixable_rules(rules, source, opts) do
@@ -74,152 +75,143 @@ end
 ```
 
 `apply_rule_fix/3` always parses the source, calls
-`rule.fix_patches(ast, opts)`, and applies the result via
-`Sourceror.patch_string/2`. No `function_exported?` branching, no
-legacy fallback — every rule has `fix_patches/2` via the
-`__using__` default.
+`rule.fix_patches(ast, opts)`, and applies the result with
+`Sourceror.patch_string/2`. No checking which functions a rule happens to have,
+no old fallback path — every rule has `fix_patches/2` through the `__using__`
+default.
 
-`apply_or_revert/5` is the compile-output gate: after patches apply,
-compile the result; if it fails, revert to pre-fix source and tag the
-rule `:reverted` in the trace.
+`apply_or_revert/5` is the after-the-fix check: once the patches go on, it
+compiles the result; if that fails, it puts the code back the way it was and
+marks the rule `:reverted` in the trace.
 
-### Rule census (post-migration)
+### A count of where the rules ended up
 
-76 fixable Pattern rules, split by what they actually do under the
-patch interface:
+76 fixing Pattern rules, sorted by what they actually do under the patch system:
 
-| Group | Count | Fix shape |
+| Group | Count | How the fix works |
 |---|---|---|
-| Real per-site patches (locality preserved) | 13 | Override `fix_patches/2` directly; emit one patch per match site |
-| Whole-source adapter (`fix/2` + default `fix_patches/2`) | 63 | The transformation logic stays source-level; the default wraps it as a single whole-source patch |
+| Real per-spot patches (layout kept) | 13 | Write `fix_patches/2` directly; hand back one patch per matching spot |
+| Whole-text rules (`fix/2` + the default `fix_patches/2`) | 63 | The fix stays text-level; the default wraps it as one big patch |
 
-The 13 explicitly-migrated rules are the three that already used
-`Sourceror.patch_string` before this work
-(`no_list_to_tuple_for_access`, `no_length_comparison_for_empty`,
-`no_map_then_aggregate`) plus seven Bucket B rules and three Bucket D
-rules with simple-enough match patterns to decompose cleanly.
+The 13 hand-written ones are the three that already used
+`Sourceror.patch_string` before this work (`no_list_to_tuple_for_access`,
+`no_length_comparison_for_empty`, `no_map_then_aggregate`), plus seven rules
+from one earlier group and three from another that were simple enough to break
+into clean patches.
 
-The 63 adapter rules satisfy the new interface but don't gain
-locality benefit — they still rewrite their whole source string and
-the orchestrator patches it back in one shot. Refactoring each into
-real per-site patches is per-rule work that can be done incrementally
-over future sessions; the interface is uniform regardless.
+The 63 whole-text rules meet the new shape but don't get the layout benefit —
+they still rewrite their whole source string and the runner patches it back in
+one go. Turning each into real per-spot patches is per-rule work that can happen
+bit by bit later; the shape is the same either way.
 
-### Archived unfixable rules (`docs/unfixable_rules/`)
+### Parked rules (`docs/unfixable_rules/`)
 
-15 rules were moved out of `lib/pattern/` and `test/pattern/` to
-`docs/unfixable_rules/` along with their tests and a `README.md`
-explaining each rule's reason for being unfixable. Five categories
-emerged:
+15 rules were moved out of `lib/pattern/` and `test/pattern/` into
+`docs/unfixable_rules/`, along with their tests and a `README.md` saying why
+each one can't be fixed. They fell into five kinds:
 
-1. **Non-local restructuring** (6 rules) — fix touches multiple sites
-   or requires algorithm change.
-2. **Shape-changing transformation** (2 rules) — fix would change
-   return type or element shape.
-3. **Data-flow analysis required** (2 rules) — fix needs upstream
-   variable initialisation changes plus matching reader rewrites.
-4. **Ambiguous remedy** (3 rules) — multiple valid fixes depending on
-   intent the tool can't infer.
-5. **Companion-of-a-fixable-rule** (3 rules) — existed only to flag
-   the residual cases a narrower fixable rule skipped. Without
-   "warn-only" mode the role goes away.
+1. **Fix touches several spots** (6 rules) — the fix hits more than one place,
+   or needs the whole approach to change.
+2. **Fix changes the type of value** (2 rules) — the fix would change the return
+   type or the shape of the result.
+3. **Fix needs to trace data around** (2 rules) — it has to change how a
+   variable starts out *and* every place that reads it.
+4. **More than one good fix** (3 rules) — several fixes work, and the right one
+   depends on what the programmer meant, which the tool can't tell.
+5. **Only there to catch leftovers** (3 rules) — they existed only to flag the
+   few cases a narrower fixing rule skipped. With no "warn only" mode, there's
+   no job left for them.
 
-See `docs/unfixable_rules/README.md` for the per-rule breakdown.
+See `docs/unfixable_rules/README.md` for the rule-by-rule breakdown.
 
-## What was deliberately not done
+## Things we chose *not* to do
 
-### Cosmetic rename `fix_patches` → `fix`
+### Rename `fix_patches` to `fix`
 
-Originally planned. The renaming would touch 76 rule files, 76 test
-files, the behaviour, the `__using__` macro, and the orchestrator —
-130+ mechanical edits with no functional change. Deferred to a
-separate session. Until then, `fix_patches/2` is the patch-emitting
-callback and legacy `fix/2` keeps its source-string signature.
+We meant to. The rename would touch 76 rule files, 76 test files, the behaviour,
+the `__using__` macro, and the runner — 130-plus mechanical edits that change
+nothing about how it works. Left for a separate session. Until then,
+`fix_patches/2` is the patch-handing callback and the old `fix/2` keeps its
+text-string shape.
 
-### Per-rule decomposition of the 63 adapter rules
+### Turning the 63 whole-text rules into per-spot rules
 
-Real per-site patches deliver locality (multi-line layouts survive,
-each rule's change region is byte-identical outside the patch). For
-the 63 adapter rules to claim this, each needs its `fix/2` rewritten
-as a `fix_patches/2` that walks the AST and emits one patch per
-match. Per-rule work; each rule has unique transformation logic; not
-mechanical.
+Real per-spot patches keep the layout (multi-line code stays multi-line, and
+everything outside the patch is byte-for-byte unchanged). For the 63 whole-text
+rules to get that, each one's `fix/2` needs to be rewritten as a `fix_patches/2`
+that walks the tree and hands back one patch per spot. That's per-rule work —
+each rule has its own fix logic; it's not a find-and-replace.
 
-### Bucket D as truly first-class patch rules
+### Making the six byte-surgery rules into proper patch rules
 
-Six Bucket D rules (`no_nested_enum_on_same_enumerable`,
-`no_identity_float_coercion`, `prefer_erlang_float`,
-`no_enum_at_negative_index`, `no_string_concat_in_loop`,
-`no_map_keys_or_values_for_iteration`) already do their own
-locality-preserving byte surgery internally — but the surgery isn't
-exposed as discrete patches at the orchestrator level. They went
-through the adapter path. A future refactor could split each rule's
-internal patches into orchestrator-visible patches, making locality
-machine-checkable.
+Six rules (`no_nested_enum_on_same_enumerable`, `no_identity_float_coercion`,
+`prefer_erlang_float`, `no_enum_at_negative_index`, `no_string_concat_in_loop`,
+`no_map_keys_or_values_for_iteration`) already do their own careful,
+layout-keeping byte edits inside themselves — but those edits aren't handed up
+to the runner as separate patches. They went through the whole-text path. A
+future change could lift each rule's inside edits up into runner-visible
+patches, so the layout-keeping could be checked by the machine.
 
-## What this work actually delivered
+## What this work actually gave us
 
-1. **Single uniform fix entry point.** Every rule has `fix_patches/2`;
-   every test goes through `Credence.RuleHelpers.apply_rule_fix/3`;
-   every orchestrator path goes through `Sourceror.patch_string/2`.
-2. **Compile-output gate.** A rule whose fix produces broken output
-   gets reverted and surfaced as `{rule, :reverted}` in the trace.
-   Implemented as part of Issue 3 from the bug report.
-3. **Layout-preserving rendering helper.**
-   `Credence.RuleHelpers.render_replacement/2` computes a `line_length`
-   budget from the original expression's range so a multi-line
-   original yields a multi-line replacement. Used by the three rules
-   with real per-site patches; available to any future migration.
-4. **`fixable?/0` callback gone.** Every rule fixes. Project stance
-   codified in the behaviour itself.
-5. **Unfixable rules archived.** 15 rules moved to
-   `docs/unfixable_rules/` with reasoning. The compiled rule set is
-   now strictly "fix or don't exist."
+1. **One way in for fixes.** Every rule has `fix_patches/2`; every test goes
+   through `Credence.RuleHelpers.apply_rule_fix/3`; every runner path goes
+   through `Sourceror.patch_string/2`.
+2. **The after-the-fix check.** A rule whose fix produces broken code gets
+   undone and shows up as `{rule, :reverted}` in the trace. (This was Issue 3
+   from the bug report.)
+3. **A layout-keeping printer helper.**
+   `Credence.RuleHelpers.render_replacement/2` works out a line-width budget
+   from the original code's size, so a multi-line original gives a multi-line
+   replacement. Used by the three rules with real per-spot patches; ready for
+   any future rule.
+4. **The `fixable?/0` callback is gone.** Every rule fixes. The project's stance
+   is now baked into the rule shape itself.
+5. **Unfixable rules parked.** 15 rules moved to `docs/unfixable_rules/` with
+   reasons. The compiled rule set is now strictly "fix it or don't exist."
 
 ## Files touched
 
-### Interface
+### The rule shape
 
-- `lib/pattern/rule.ex` — added `@type patch`, `@callback fix_patches/2`;
-  removed `@callback fixable?/0`; `__using__` provides default
-  `fix_patches/2` adapter over `fix/2`.
+- `lib/pattern/rule.ex` — added `@type patch` and `@callback fix_patches/2`;
+  removed `@callback fixable?/0`; `__using__` now provides a default
+  `fix_patches/2` that wraps `fix/2`.
 
-### Orchestrator and helpers
+### The runner and helpers
 
-- `lib/pattern.ex` — `run_fixable_rules/3` now passes all rules
-  (no `fixable?` filter); `apply_or_revert/5` runs the compile-output
-  gate.
-- `lib/rule_helpers.ex` — added `apply_rule_fix/3` (single fix entry
-  point), `whole_source_patches/2` (adapter helper),
-  `render_replacement/2` (layout-budget helper).
-- `lib/credence.ex` — typespec for `applied_rules` widened to
+- `lib/pattern.ex` — `run_fixable_rules/3` now runs all rules (no `fixable?`
+  filter); `apply_or_revert/5` does the after-the-fix check.
+- `lib/rule_helpers.ex` — added `apply_rule_fix/3` (the one way in for fixes),
+  `whole_source_patches/2` (the wrap-as-one-patch helper), and
+  `render_replacement/2` (the layout-budget helper).
+- `lib/credence.ex` — widened the type of `applied_rules` to
   `{module(), non_neg_integer() | :reverted}`.
 
-### Rules
+### The rules
 
-- 13 rules under `lib/pattern/` — explicit `fix_patches/2` overrides.
-- 63 rules under `lib/pattern/` — unchanged; satisfied by the default
-  `fix_patches/2` in `__using__`. The bulk Perl strip removed
-  redundant `def fixable?, do: true` from 76 files.
+- 13 rules under `lib/pattern/` — hand-written `fix_patches/2`.
+- 63 rules under `lib/pattern/` — unchanged; covered by the default
+  `fix_patches/2` in `__using__`. A bulk text edit removed the now-pointless
+  `def fixable?, do: true` from 76 files.
 - 15 rules moved to `docs/unfixable_rules/`.
 
-### Tests
+### The tests
 
 - 13 test files use `Credence.RuleHelpers.apply_rule_fix/3`.
-- 63 test files unchanged (call `Rule.fix(source, opts)` directly via
-  the still-present legacy callback).
-- 29 test files had `assert Rule.fixable?() == true` and empty
-  `describe "fixable?/0"` blocks stripped.
+- 63 test files unchanged (they call `Rule.fix(source, opts)` directly through
+  the still-present old callback).
+- 29 test files had `assert Rule.fixable?() == true` and empty `describe
+  "fixable?/0"` blocks taken out.
 - 15 test files moved to `docs/unfixable_rules/tests/`.
 
-## Verification
+## Checking it works
 
-`mix test` — **2967 tests, 0 failures.** Down from 3197 pre-archive
-(201 tests for the 15 archived rules + 29 `fixable?` assertions). No
-compile warnings. The compile-output gate fires its intentional
-warnings only inside `ExUnit.CaptureLog.with_log/1` blocks so they
-don't leak to the test runner's stdout.
+`mix test` — **2967 tests, 0 failures.** Down from 3197 before parking the rules
+(201 tests for the 15 parked rules, plus 29 `fixable?` checks). No compile
+warnings. The after-the-fix check only prints its on-purpose warnings inside
+`ExUnit.CaptureLog.with_log/1` blocks, so they don't leak into the test
+runner's output.
 
-Manual verification: repro snippets from the original
-`credence_fix_bugs.md` issues 1–4 still produce correct, compiling
-output.
+By hand: the example snippets from the original `credence_fix_bugs.md` issues
+1–4 still come out correct and compiling.

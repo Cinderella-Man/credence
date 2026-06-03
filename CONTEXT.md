@@ -1,49 +1,63 @@
 # Credence — Context
 
-Semantic linter for Elixir. Detects anti-patterns in LLM-generated code and
-either auto-fixes them or removes them from the codebase. Project stance:
-**every rule either fixes its anti-pattern or it doesn't exist** — warn-only
-rules have been archived to `docs/unfixable_rules/`.
+A tool that reads Elixir code written by an AI, finds clumsy patterns, and
+either fixes them or doesn't include the rule at all. The project's stance:
+**every rule either fixes its problem or it doesn't exist** — rules that could
+only warn have been parked in `docs/unfixable_rules/`.
+
+A note on words used a lot here:
+
+- **AST** — the tree shape a parser turns your code text into. Rules work on the
+  tree, not the raw text.
+- **codepoint** vs **grapheme** — a grapheme is a whole character as you see it
+  (`é`, `👍`). A codepoint is one of the smaller pieces a character can be built
+  from. Simple letters are one piece; some characters are several. The two ways
+  of counting drift apart whenever a character is more than one piece — which is
+  the source of a lot of unsafe rewrites (see the bottom of this file).
 
 ## Parser: Sourceror only
 
-Credence uses **Sourceror's AST exclusively**. `Code.string_to_quoted/1`
-(Elixir's standard parser) does **not** appear anywhere in `lib/` or `test/`
-— greppable invariant. All parsing goes through `Sourceror.parse_string/1`
-or `Sourceror.parse_string!/1`, including:
+Credence parses code with **Sourceror, and nothing else**. Sourceror is a
+parsing library; the tree it makes keeps extra notes about spacing and position
+that Elixir's built-in parser throws away. `Code.string_to_quoted/1` (Elixir's
+built-in parser) does **not** appear anywhere in `lib/` or `test/` — you can
+check this with grep, and it should stay that way. Every bit of parsing goes
+through `Sourceror.parse_string/1` or `Sourceror.parse_string!/1`, including:
 
 - Both Pattern callbacks (`check/2` and `fix_patches/2`).
-- The Syntax phase's parse-success guard.
-- The Pattern orchestrator's per-iteration re-parse.
-- Test invocations of `check/2` (test files parse with `Sourceror.parse_string!/1`).
-- Template construction inside rules (e.g. `Sourceror.parse_string!("require Logger")`).
+- The Syntax round's "did it parse?" check.
+- The Pattern runner's re-parse on each pass.
+- Tests calling `check/2` (test files parse with `Sourceror.parse_string!/1`).
+- Building little bits of code inside a rule (e.g.
+  `Sourceror.parse_string!("require Logger")`).
 
-Sourceror's AST is **not** the same as Elixir's standard `Code.string_to_quoted`
-AST. The shape differences are the main thing to internalize when writing
-or reading a rule — see "Sourceror AST gotchas" below. Standard-AST
-pattern matches like `{:==, _, [_, 1]}` will silently fail to match against
-Sourceror's `{:==, _, [_, {:__block__, _, [1]}]}`, which is the most common
-source of "my rule doesn't fire" bugs.
+Sourceror's tree is **not** the same shape as the built-in parser's tree. That
+shape difference is the main thing to keep in your head when writing or reading
+a rule — see "Sourceror tree surprises" below. A pattern match written for the
+built-in tree, like `{:==, _, [_, 1]}`, will quietly fail to match Sourceror's
+`{:==, _, [_, {:__block__, _, [1]}]}`. This is the number-one cause of "my rule
+won't fire" bugs.
 
-## Pipeline
+## The three rounds
 
-`Credence.fix/2` runs three phases in order. Each phase has its own `Rule`
-behaviour and discovers rules automatically via `RuleHelpers.discover_rules/1`.
+`Credence.fix/2` runs three rounds in order. Each round has its own kind of rule
+and finds its rules by itself through `RuleHelpers.discover_rules/1`.
 
-1. **Syntax** (`lib/syntax/`) — string-level fixes for code that won't parse.
-   No AST available. Rules take `String.t() -> String.t()`.
+1. **Syntax** (`lib/syntax/`) — text fixes for code that won't parse. No tree
+   yet. Rules are `String.t() -> String.t()`.
 2. **Semantic** (`lib/semantic/`) — fixes for compiler warnings. Rules match
-   against `Code.with_diagnostics/1` output and patch the source.
-3. **Pattern** (`lib/pattern/`) — the bulk of Credence: 76 AST-level
-   anti-pattern rules.
+   against `Code.with_diagnostics/1` output and patch the text.
+3. **Pattern** (`lib/pattern/`) — the bulk of Credence: 76 rules that work on
+   the tree.
 
-Phases run sequentially; if syntax issues remain, semantic/pattern are
-skipped. Pattern phase skips entirely if the source doesn't compile —
-applying AST transforms to broken code risks wasting an LLM retry.
+The rounds run one after another; if syntax problems are still there, the
+semantic and pattern rounds are skipped. The Pattern round is skipped entirely
+if the code doesn't compile — rewriting broken code risks wasting an AI's
+retry.
 
-## Pattern phase — the rule interface
+## The Pattern round — what a rule looks like
 
-Every rule in `lib/pattern/` implements three callbacks:
+Every rule in `lib/pattern/` has three callbacks:
 
 ```elixir
 @callback priority() :: integer()                                  # default 500
@@ -51,223 +65,227 @@ Every rule in `lib/pattern/` implements three callbacks:
 @callback fix_patches(ast :: Macro.t(), opts :: keyword()) :: [patch]
 ```
 
-**Both callbacks receive Sourceror AST** (`Sourceror.parse_string!/1`),
-not the standard `Code.string_to_quoted` AST. The two shapes differ:
-literals, atoms, lists, and 2-tuples are wrapped in `{:__block__, meta, [value]}`
-nodes to carry position and delimiter metadata. Strings carry a
-`:delimiter` key in the block meta (`"\""` vs `~s(""")`). See "Sourceror
-AST gotchas" below for the full surface area.
+**Both callbacks get the Sourceror tree** (from `Sourceror.parse_string!/1`),
+not the built-in parser's tree. The two differ: simple values (numbers, floats,
+strings, atoms, lists, and 2-tuples) are wrapped in a `{:__block__, meta,
+[value]}` node that carries position and quoting notes. Strings also carry a
+`:delimiter` note in that block's meta (`"\""` for a normal string vs. `~s(""")`
+for a heredoc). See "Sourceror tree surprises" for the whole list.
 
-`opts` carries `:source` for rules that need raw bytes (e.g. for slicing
-into a patch's `change`).
+`opts` carries `:source` for rules that need the raw bytes (e.g. to slice a
+piece of the original text into a patch's `change`).
 
-A `patch` is `%{range: Sourceror.Range, change: String.t()}` — apply via
-`Sourceror.patch_string/2`. Empty list = no change.
+A `patch` is `%{range: Sourceror.Range, change: String.t()}` — apply it with
+`Sourceror.patch_string/2`. An empty list means no change.
 
-### Three patch-emission patterns
+### Three ways rules build their patches
 
-Rules differ in *how* they compute their patches, not in their return shape:
+Rules differ in *how* they work out their patches, not in what they hand back:
 
-- **`RuleHelpers.patches_from_postwalk(ast, matcher)`** — single
-  `Macro.postwalk/2` matcher, helper diffs original vs. transformed AST and
-  emits one patch per outermost change. Used by ~50 rules.
-- **`RuleHelpers.patches_from_ast_transform(ast, source, transform_fn)`** —
-  arbitrary AST → AST transform; the helper renders the result via
-  `Sourceror.to_string/1`, re-parses, and diffs. Use when the transform
-  prunes/reorders siblings or inserts statements into a block (single
-  `postwalk` matcher can't express it).
-- **Direct patch emission** — the rule walks the AST itself and builds
-  `[%{range: ..., change: ...}]`. Use when the kept subtree's *source bytes*
-  must be preserved verbatim — typically because Sourceror's renderer
-  would drop them (see Sourceror gotchas).
+- **`RuleHelpers.patches_from_postwalk(ast, matcher)`** — one walk over the tree
+  with a matcher; the helper compares the original tree to the changed one and
+  hands back one patch per outermost change. Used by ~50 rules.
+- **`RuleHelpers.patches_from_ast_transform(ast, source, transform_fn)`** — any
+  tree-to-tree change; the helper prints the result with `Sourceror.to_string/1`,
+  re-parses, and compares. Use this when the change drops or reorders siblings,
+  or adds statements into a block (a single walk-matcher can't say that).
+- **Building the patches by hand** — the rule walks the tree itself and builds
+  `[%{range: ..., change: ...}]`. Use this when the *original bytes* of the kept
+  part must stay exactly as written — usually because Sourceror's printer would
+  drop them (see the surprises below).
 
-There is no source-level helper. `patches_from_fix_source` existed during the
-migration and was deleted once the last rule converted.
+There is no text-level helper. `patches_from_fix_source` existed during the
+move-over and was deleted once the last rule switched off it.
 
-## Domain vocabulary
+## Words we use
 
-- **Rule** — a module implementing one of the three `Rule` behaviours
-  (Syntax / Semantic / Pattern).
-- **Issue** — `%Credence.Issue{rule, message, meta: %{line: ...}}`. Same
-  struct across all phases.
-- **Check** — the issue-detection function (`check/2` for Pattern;
-  `analyze/1` for Syntax; `match?/1` + `to_issue/1` for Semantic).
-- **Fix** — the patch-producing function (`fix_patches/2` for Pattern;
-  `fix/1` for Syntax/Semantic).
-- **Patch** — `%{range, change}`. Sourceror's byte-range edit format.
-- **Applied trace** — `[{rule_module, count_or_:reverted}]`. Returned by
-  `fix_with_trace/2` for each phase. `:reverted` means a rule produced
-  non-compiling output and the orchestrator backed out its changes.
-- **Compile-output gate** — after each rule's patches apply, the Pattern
-  orchestrator runs `Code.compile_string/2`. If the result fails to
-  compile, the rule's changes are reverted and a warning is logged. This
-  catches rules that emit syntactically valid but semantically broken
-  output before the LLM sees it.
-- **Unfixable rule** — a rule that could only detect, never fix. Archived
-  to `docs/unfixable_rules/` (with its tests) and excluded from
-  compilation. The README explains why.
+- **Rule** — a module that implements one of the three kinds of rule (Syntax,
+  Semantic, or Pattern).
+- **Issue** — `%Credence.Issue{rule, message, meta: %{line: ...}}`. The same
+  struct in every round.
+- **Check** — the part that finds problems (`check/2` for Pattern; `analyze/1`
+  for Syntax; `match?/1` + `to_issue/1` for Semantic).
+- **Fix** — the part that makes patches (`fix_patches/2` for Pattern; `fix/1`
+  for Syntax/Semantic).
+- **Patch** — `%{range, change}`. Sourceror's "edit these bytes" format.
+- **Applied trace** — `[{rule_module, count_or_:reverted}]`. Handed back by
+  `fix_with_trace/2` for each round. `:reverted` means a rule produced code that
+  wouldn't compile and the runner undid its change.
+- **After-the-fix check** — after a rule's patches go on, the Pattern runner
+  runs `Code.compile_string/2`. If the result won't compile, the rule's change
+  is undone and a warning is logged. This catches rules that make code that
+  parses but is broken, before the AI sees it.
+- **Parked rule** — a rule that could find a problem but never fix it. Moved to
+  `docs/unfixable_rules/` (with its tests) and left out of the build. The README
+  there says why.
 
-## Sourceror AST gotchas
+## Sourceror tree surprises
 
-Sourceror's parser produces an AST that mostly mirrors Elixir's standard
-AST (the one `Code.string_to_quoted/1` produces) but with critical
-differences. Rules that don't account for these silently fail to match.
+Sourceror's tree mostly mirrors the built-in parser's tree, but with a few
+important differences. Rules that don't account for them quietly fail to match.
 
-- **Literal wrappers**: Sourceror wraps literals (atoms, integers, floats,
-  strings, 2-tuples, lists) in `{:__block__, meta, [value]}` to carry
-  position metadata. Standard Elixir AST has bare literals. A pattern like
+- **Simple values are wrapped.** Sourceror wraps simple values (atoms, numbers,
+  floats, strings, 2-tuples, lists) in `{:__block__, meta, [value]}` to carry
+  position notes. The built-in tree has them bare. So a pattern like
   `{:==, _, [_, 1]}` won't match Sourceror's `{:==, _, [_, {:__block__, _, [1]}]}`.
-  Rules pattern-match against the wrapped form directly — use
-  `unwrap_literal/1`, `unwrap_list/1`, or `extract_do_body/1` in
-  `RuleHelpers` for the common cases (literal-or-`__block__`,
-  list-or-wrapped-list, do-keyword). Don't normalize the AST inside a
-  rule — every Pattern rule walks Sourceror shape end-to-end.
-- **Atom positions that stay bare**: Sourceror wraps atom *values* in
-  `:__block__` (e.g. `:asc` in `Enum.sort(list, :asc)`) but leaves atoms
-  bare in *function-name* positions (`:get` in `Map.get(...)`) and *module*
-  positions (`:Enum` in `{:__aliases__, _, [:Enum]}`). The `unwrap_atom`
-  helpers in rules accept both — the bare clause is for these legitimately-
-  bare atom positions, not a Code-AST compat shim.
-- **Building Sourceror-shaped output**: when a rule synthesizes new literal
-  nodes for the patch's replacement, wrap them too — `Sourceror.to_string/1`
-  crashes on bare integers in argument positions and renders bare 2-tuples
-  as map-update syntax (`{_k, v}` → `_k => v`). Wrap integers as
-  `{:__block__, [token: "N"], [n]}`, strings as `{:__block__, [delimiter: ~s(")], [s]}`,
-  tuples as `{:__block__, [], [{a, b}]}`. See `no_map_keys_or_values_for_iteration`'s
-  `wrap_int/1`, `wrap_str/1`, `wrap_tuple/1` for the canonical builders.
-- **String `:delimiter` metadata**: heredocs (`"""`) and regular strings
-  (`"`) produce the *same* string value in standard Elixir AST — both
-  collapse to a bare binary. Sourceror keeps them apart via a `:delimiter`
-  key in the string's `:__block__` meta (`~s(""")` for heredocs, `"\""`
-  for regular). Rules that need to skip heredocs (e.g. `NoTrailingNewlineInDoc`,
-  `PreferHeredocForMultiLineDoc`) read that key — no `:source`-string
-  inspection needed.
-- **`:parens` metadata is one-way**: `(a - b)` parses to `{:-, [parens: ...], [a, b]}`
-  but `Sourceror.to_string/1` *drops* the parens when rendering the node
-  standalone. There's no API to force their preservation. If a rule needs
-  parens kept verbatim (e.g. stripping `* 1.0` from `(a + b) * 1.0`), it
-  must slice the original source bytes for the kept subtree instead of
-  re-rendering — `Sourceror.get_range/1` *does* include source-level parens.
-- **Layout meta drives line-wrap decisions**: Sourceror picks single-line vs.
-  multi-line layout based on each node's `:line`/`:column`/`:closing` meta.
-  When a rule builds a replacement subtree from fresh nodes (empty meta)
-  containing reused original subnodes (with line meta from far away),
-  Sourceror sees a wide line span and wraps unnecessarily. Mitigations:
-  - `RuleHelpers.render_replacement/3` strips `:line`/`:column`/`:closing`/`:last`/`:end`
-    before rendering, restoring length-based layout. Both
-    `patches_from_postwalk` and `patches_from_ast_transform` apply this.
-  - When building a new call that should sit on a known source line (e.g.
-    rewriting `Enum.member?` → `MapSet.member?`), copy the original call's
-    `dot_meta`/`call_meta` onto the replacement to preserve line span.
+  Rules pattern-match the wrapped form directly — use `unwrap_literal/1`,
+  `unwrap_list/1`, or `extract_do_body/1` in `RuleHelpers` for the common cases
+  (value-or-`__block__`, list-or-wrapped-list, do-keyword). Don't reshape the
+  tree inside a rule — every Pattern rule walks the Sourceror shape from start to
+  finish.
 
-## Block-scope walking
+- **Some atoms stay bare.** Sourceror wraps atom *values* (e.g. `:asc` in
+  `Enum.sort(list, :asc)`) but leaves atoms bare in *function-name* spots
+  (`:get` in `Map.get(...)`) and *module* spots (`:Enum` in
+  `{:__aliases__, _, [:Enum]}`). The `unwrap_atom` helpers accept both — the
+  bare branch is for these genuinely-bare spots, not a patch to match the
+  built-in tree.
 
-Many Pattern rules need to act on statement groups within a function body,
-`if/else` branch, or `case` clause. Each is a `{:__block__, meta, stmts}`
-in Sourceror AST (when it has 2+ statements). The natural unit:
+- **Building Sourceror-shaped output.** When a rule makes a fresh simple value
+  for its replacement, wrap it too — `Sourceror.to_string/1` crashes on a bare
+  number in an argument spot, and prints a bare 2-tuple as map-update syntax
+  (`{_k, v}` → `_k => v`). Wrap numbers as `{:__block__, [token: "N"], [n]}`,
+  strings as `{:__block__, [delimiter: ~s(")], [s]}`, tuples as
+  `{:__block__, [], [{a, b}]}`. See `no_map_keys_or_values_for_iteration`'s
+  `wrap_int/1`, `wrap_str/1`, `wrap_tuple/1` for the go-to builders.
 
-- Walk the AST. When we hit a `:__block__` with statements, rewrite them
-  in place.
-- Inner blocks are separate scopes. Helpers that collect call sites within
-  a single statement should *stop* at nested `:__block__`/`def`/`defp`/`fn`
-  — those scopes get their own block-walk pass.
+- **The string `:delimiter` note.** Heredocs (`"""`) and normal strings (`"`)
+  produce the *same* value in the built-in tree — both become a plain binary.
+  Sourceror keeps them apart with a `:delimiter` note in the string's
+  `:__block__` meta (`~s(""")` for a heredoc, `"\""` for a normal string). Rules
+  that need to skip heredocs (e.g. `NoTrailingNewlineInDoc`,
+  `PreferHeredocForMultiLineDoc`) read that note — no need to look at the
+  `:source` text.
 
-This pattern shows up in `no_enum_at_negative_index` (groups bare negative-
-index assignments per block) and `no_redundant_list_traversal` (merges
-multiple traversals of the same list).
+- **The `:parens` note only works one way.** `(a - b)` parses to
+  `{:-, [parens: ...], [a, b]}`, but `Sourceror.to_string/1` *drops* the parens
+  when printing that node on its own. There's no way to force them back. If a
+  rule needs the parens kept exactly (e.g. stripping `* 1.0` from
+  `(a + b) * 1.0`), it must slice the original bytes for the kept part instead of
+  re-printing it — `Sourceror.get_range/1` *does* include the parens from the
+  original text.
+
+- **Position notes decide line-wrapping.** Sourceror chooses one line vs. several
+  based on each node's `:line`/`:column`/`:closing` notes. When a rule builds a
+  replacement out of fresh nodes (no notes) that reuse some original sub-nodes
+  (with notes pointing far away), Sourceror sees a wide span and wraps lines it
+  didn't need to. Two ways to handle it:
+  - `RuleHelpers.render_replacement/3` strips
+    `:line`/`:column`/`:closing`/`:last`/`:end` before printing, so wrapping goes
+    back to being based on length. Both `patches_from_postwalk` and
+    `patches_from_ast_transform` do this.
+  - When building a new call that should sit on a known line (e.g. rewriting
+    `Enum.member?` → `MapSet.member?`), copy the original call's
+    `dot_meta`/`call_meta` onto the replacement so the span is kept.
+
+## Walking block by block
+
+Many Pattern rules need to act on a group of statements inside a function body,
+an `if/else` branch, or a `case` clause. Each of those is a
+`{:__block__, meta, stmts}` in the Sourceror tree (when it has 2 or more
+statements). The natural way to handle it:
+
+- Walk the tree. When you hit a `:__block__` with statements, rewrite them in
+  place.
+- Inner blocks are their own scope. A helper that gathers call sites within one
+  statement should *stop* at a nested `:__block__`/`def`/`defp`/`fn` — those get
+  their own block walk.
+
+You can see this in `no_enum_at_negative_index` (groups bare negative-index
+assignments per block) and `no_redundant_list_traversal` (merges several walks
+over the same list).
 
 ## Where things live
 
-- `lib/credence.ex` — top-level `analyze/2` and `fix/2`. Sequences phases.
+- `lib/credence.ex` — the top-level `analyze/2` and `fix/2`. Runs the rounds in
+  order.
 - `lib/issue.ex` — the `%Issue{}` struct.
-- `lib/rule_helpers.ex` — shared utilities. The three patch-emission
-  helpers, AST-diff machinery, Sourceror-shape unwrappers, compile gate,
-  diff logging.
+- `lib/rule_helpers.ex` — shared tools: the three patch-building helpers, the
+  tree-comparing machinery, the Sourceror unwrappers, the after-the-fix check,
+  and diff logging.
 - `lib/syntax/`, `lib/semantic/`, `lib/pattern/` — one file per rule.
-  `<phase>.ex` is the phase orchestrator; `<phase>/rule.ex` is the
-  behaviour module.
-- `test/<phase>/<rule>_test.exs` — paired one-to-one with rule files.
-  Some rules split into `<rule>_check_test.exs` + `<rule>_fix_test.exs`.
-- `docs/unfixable_rules/` — archived check-only rules with their tests
-  and a README explaining the policy.
-- `test/credence_pipeline_test.exs` — end-to-end pipeline tests including
-  the compile-output gate (with intentional `BrokenFixRule` /
-  `UnparseableFixRule` fixtures).
-- `test/fix_showcase_test.exs` — a single realistic LLM-generated module
-  put through `Credence.fix/2`; verifies every transformation lands.
+  `<round>.ex` runs that round; `<round>/rule.ex` is the kind-of-rule module.
+- `test/<round>/<rule>_test.exs` — paired one-to-one with the rule files. Some
+  rules split into `<rule>_check_test.exs` + `<rule>_fix_test.exs`.
+- `docs/unfixable_rules/` — parked find-only rules with their tests and a README
+  explaining the stance.
+- `test/credence_pipeline_test.exs` — end-to-end tests, including the
+  after-the-fix check (with on-purpose `BrokenFixRule` / `UnparseableFixRule`
+  test rules).
+- `test/fix_showcase_test.exs` — one realistic AI-written module run through
+  `Credence.fix/2`; checks that every change lands.
 
 ## Adding a Pattern rule — checklist
 
-1. Pick the matcher form: a single postwalk-rewritable shape →
-   `patches_from_postwalk`. Restructures or inserts siblings →
-   `patches_from_ast_transform`. Needs verbatim source bytes → walk + emit
-   patches directly.
-2. Write `check/2` to detect the issue. Pattern-match Sourceror's wrapped
-   shape directly. Return `[Issue.t()]`.
-3. Write `fix_patches/2`. Pattern-match Sourceror's wrapped shape directly
-   when reading the AST; wrap any fresh literal nodes (integers, strings,
-   tuples) you emit so `Sourceror.to_string/1` renders them correctly.
+1. Pick how you'll build patches: one walk-rewritable shape →
+   `patches_from_postwalk`. Drops or adds siblings → `patches_from_ast_transform`.
+   Needs the exact original bytes → walk and build the patches by hand.
+2. Write `check/2` to find the problem. Pattern-match Sourceror's wrapped shape
+   directly. Hand back `[Issue.t()]`.
+3. Write `fix_patches/2`. Pattern-match Sourceror's wrapped shape when reading
+   the tree; wrap any fresh simple values (numbers, strings, tuples) you make so
+   `Sourceror.to_string/1` prints them right.
 4. Write tests in `test/pattern/<rule>_test.exs`. Parse the source with
    `Sourceror.parse_string!/1` before calling `check/2`. Use
-   `RuleHelpers.apply_rule_fix/3` to invoke the fix from a test.
-5. Run the full suite. The compile-output gate will revert any rule that
-   produces non-compiling output (with a debug log) — fix the rule or the
-   helpers, don't paper over the symptom.
+   `RuleHelpers.apply_rule_fix/3` to run the fix from a test.
+5. Run the whole suite. The after-the-fix check will undo any rule that makes
+   code that won't compile (with a debug log) — fix the rule or the helpers,
+   don't cover up the symptom.
 
 ## Project policy
 
-- **Fix or archive**: every rule auto-fixes. If a rule can only detect,
-  move it to `docs/unfixable_rules/` rather than leaving it as a warning.
-- **No layout regressions**: rule output must be byte-identical to the
-  original for unchanged regions. Trailing newlines preserved, blank lines
-  between top-level forms preserved, comments preserved.
-- **No bypassing the compile gate**: if a rule produces non-compiling
-  output, fix the rule. Don't disable the gate, don't `--no-verify`.
-- **Sourceror only, no `Code.string_to_quoted`**: every parser invocation
-  goes through Sourceror. `Code.string_to_quoted` (Elixir's standard
-  parser) does not appear in `lib/` or `test/` — it produces a different
-  AST shape than Sourceror, and mixing the two silently corrupts rule
-  behaviour. Both `check/2` and `fix_patches/2` receive Sourceror AST;
-  rules pattern-match against its wrapped-literal shape directly. Template
-  construction inside a rule uses `Sourceror.parse_string!/1`, not
+- **Fix or park it.** Every rule fixes. If a rule can only find a problem, move
+  it to `docs/unfixable_rules/` instead of leaving it as a warning.
+- **Don't change the layout.** A rule's output must be byte-for-byte the same as
+  the original everywhere it didn't change. Trailing newlines kept, blank lines
+  between top-level forms kept, comments kept.
+- **Don't go around the after-the-fix check.** If a rule makes code that won't
+  compile, fix the rule. Don't turn the check off, don't `--no-verify`.
+- **Sourceror only, no `Code.string_to_quoted`.** Every parse goes through
+  Sourceror. `Code.string_to_quoted` (the built-in parser) does not appear in
+  `lib/` or `test/` — it makes a different tree shape than Sourceror, and mixing
+  the two quietly breaks rules. Both `check/2` and `fix_patches/2` get the
+  Sourceror tree; rules pattern-match its wrapped shape directly. Building little
+  bits of code inside a rule uses `Sourceror.parse_string!/1`, not
   `Code.string_to_quoted!/1`.
-- **No `normalize_sourceror_ast/1` inside rules**: every Pattern rule
-  walks Sourceror's wrapped AST end-to-end. The `normalize_sourceror_ast/1`
-  helper still exists in `RuleHelpers` but is used only by test-helper
-  `norm/1` functions for AST-equivalence comparison via `Macro.to_string/1`
-  — never by production rule logic. Earlier the helper was used by three
-  rules as an internal shortcut; that pattern was removed because it
-  smuggled standard-Elixir-AST shape into a project that's nominally
-  Sourceror-only.
-- **Rules don't re-parse the source as a shape workaround**: if a matcher
-  doesn't fit, fix the matcher. Don't re-parse the source string with a
-  different parser to get a shape that matches.
-- **Behaviour preservation is absolute — a fix that can change any output is
-  not a fix.** A rule must never trade correctness for idiom or performance.
-  If the only available rewrite changes behaviour on *some* input, the rule
-  does not fix that case — and if it can't fix *any* case safely, it does not
-  exist (don't even ship it as a check). "Correct for the common input" is not
-  good enough: the fix must be a true refactor that is output-identical for
-  *every* input.
-- **FORBIDDEN: codepoint↔grapheme rewrites.** Do **not** rewrite a
-  charlist/codepoint operation into a grapheme operation (or vice versa).
-  `String.to_charlist/1` and `?c`/`String.codepoints/1` work in **codepoint**
-  space; `String.at`/`String.reverse`/`String.length`/`String.graphemes` work
-  in **grapheme** space. The two index spaces diverge whenever a character
-  spans multiple codepoints — decomposed/NFD accents (`"b́"` = `b` + U+0301, no
-  precomposed form, so NFC can't even collapse it), ZWJ emoji (`"👨‍👩‍👧"` = 1
-  grapheme / 5 codepoints), flags (`"🇵🇱"` = 1 / 2). Concretely, **none** of
-  these are valid fixes:
+- **No `normalize_sourceror_ast/1` inside rules.** Every Pattern rule walks
+  Sourceror's wrapped tree from start to finish. The `normalize_sourceror_ast/1`
+  helper still exists in `RuleHelpers`, but only test helpers (`norm/1`) use it,
+  to compare trees for sameness via `Macro.to_string/1` — never real rule logic.
+  It used to be used as a shortcut inside three rules; that was removed because
+  it smuggled the built-in tree shape into a project that's meant to be Sourceror
+  only.
+- **Rules don't re-parse the source to dodge a shape.** If a matcher doesn't fit,
+  fix the matcher. Don't re-parse the text with a different parser to get a shape
+  that does.
+- **The answer must never change — a fix that can change any output is not a
+  fix.** A rule must never trade a correct answer for a tidier or faster one. If
+  the only rewrite available changes the answer on *some* input, the rule does
+  not fix that case — and if it can't safely fix *any* case, it does not exist
+  (don't even ship it as a find-only check). "Right for the usual input" is not
+  good enough: the fix must give the same answer for *every* input.
+- **NOT ALLOWED: swapping codepoint work for grapheme work.** Do **not** rewrite
+  a charlist/codepoint operation into a grapheme one (or the other way round).
+  `String.to_charlist/1` and `?c`/`String.codepoints/1` work on the small pieces
+  (codepoints); `String.at`/`String.reverse`/`String.length`/`String.graphemes`
+  work on whole characters (graphemes). The two ways of counting drift apart
+  whenever a character is made of more than one piece — accent-mark letters
+  (`"b́"` = `b` + U+0301, with no ready-made single-piece form, so even
+  normalizing can't merge it), joined emoji (`"👨‍👩‍👧"` = 1 character / 5 pieces),
+  flags (`"🇵🇱"` = 1 / 2). Concretely, **none** of these are valid fixes:
 
   - `Enum.at(String.to_charlist(s), i)` → `String.at(s, i)`
-    (codepoint integer vs grapheme string, and indices misalign)
+    (a piece-number vs. a whole-character string, and the positions don't line up)
   - `String.to_charlist(s) == Enum.reverse(String.to_charlist(s))`
-    → `s == String.reverse(s)` (the `to_charlist`/codepoint side; flips on NFD)
-  - `length(String.to_charlist(s))` → `String.length(s)` (codepoint vs grapheme count)
+    → `s == String.reverse(s)` (the `to_charlist`/piece side; flips on
+    accent-mark text)
+  - `length(String.to_charlist(s))` → `String.length(s)` (piece count vs.
+    whole-character count)
 
-  There is no standard-library way to be both correct *and* an improvement:
-  `String.codepoints/1` preserves codepoint semantics but still allocates the
-  list (no win), and no list-free codepoint accessor (`String.codepoint_at/2`)
-  exists. **Same-space** rewrites are fine — e.g.
+  There's no standard-library way to be both correct *and* an improvement:
+  `String.codepoints/1` keeps the piece-level meaning but still builds the list
+  (no win), and there's no list-free piece accessor (`String.codepoint_at/2`
+  doesn't exist). **Same-kind** rewrites are fine — e.g.
   `String.graphemes(s) == Enum.reverse(String.graphemes(s))` →
-  `s == String.reverse(s)` is grapheme→grapheme and *is* behaviour-preserving.
+  `s == String.reverse(s)` is whole-character to whole-character and *does* keep
+  the same answer.

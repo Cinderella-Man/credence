@@ -1,186 +1,194 @@
-# Rule review & hardening process
+# How we check and accept rules
 
-How we evaluate and land rules contributed to the `evolution` branch (the
-LLM-generated rule stream) into the main rule set. The driving principle is
-simple and non-negotiable, and everything below is in service of it:
+How we look over rules and let them into the main set. New rules show up on the
+`evolution` branch (where an AI writes them). The one rule we never bend, and
+everything below exists to protect it:
 
-> **A fix must preserve behaviour for every input. If we can't preserve
-> behaviour, we don't change the code.**
+> **A fix must give the exact same answer for every possible input. If we can't
+> promise that, we don't touch the code.**
 
-A "more idiomatic" or "faster" rewrite that changes the result on *any* input
-is not an improvement — it's a bug. "Correct for the common case" is not
-acceptable. See the Project policy section of `CONTEXT.md` for the canonical
-statement; this doc is the working procedure that enforces it.
+A "tidier" or "faster" rewrite that changes the answer on *even one* input is
+not an improvement — it's a bug. "Right for the usual case" is not good enough.
+The `CONTEXT.md` "Project policy" section is the official statement of this;
+this doc is the step-by-step way we make it stick.
 
-## Why this process exists
+## Why we have this process
 
-The `evolution` branch accumulates many machine-generated rules. They compile
-and their tests pass, but passing tests only prove the rule does *something* —
-not that the something is safe, non-duplicative, or worth shipping. Each rule
-is reviewed by hand before it joins the main set. We take **one rule's file set
-at a time** (the rule file + its test file(s)) and run it through the steps
-below.
+The `evolution` branch piles up lots of AI-written rules. They compile and their
+tests pass — but passing tests only prove the rule *does something*, not that
+the something is safe, not a copy of an existing rule, or worth keeping. So a
+person checks each rule by hand before it joins the main set. We take **one
+rule at a time** (the rule file plus its test file(s)) and walk it through the
+steps below.
 
-## Branch & worklist setup
+## Setting up the branch and the to-do list
 
-- **`evolution_accepted`** is branched from **`main`**. Reviewed sets are
-  migrated into it one at a time *from* `evolution`. `main` stays untouched
-  until a batch is ready.
-- The **worklist** is the PR diff between `evolution` and `main`, copied to
-  **`docs/pr_diff.md`**. Work it **top to bottom**.
-- A **set** is one rule plus its test file(s) — e.g.
+- **`evolution_accepted`** branches off **`main`**. We move checked rules into
+  it one at a time *from* `evolution`. `main` stays untouched until a batch is
+  ready.
+- The **to-do list** is the difference between `evolution` and `main`, copied
+  into **`docs/pr_diff.md`**. Work it **top to bottom**.
+- A **set** is one rule plus its test file(s) — for example
   `lib/pattern/avoid_charlist_enum_at.ex` +
   `test/pattern/avoid_charlist_enum_at_test.exs`.
-- As each set is finished, **delete its entries from `docs/pr_diff.md`**. The
-  shrinking diff *is* the progress tracker; what remains is what's left to do.
+- When a set is done, **delete its lines from `docs/pr_diff.md`**. The
+  shrinking file *is* the progress bar: whatever's left is whatever's still to
+  do.
 
-### Work one set at a time — the list *is* the process
+### One set at a time — the list is the plan
 
-Only touch the set you're currently on. You will often notice problems in
-*other* rules while working one (a duplicate, a wrong-target bug, a shared-file
-dependency). **Do not go fix them out of band.** Note the finding if it's worth
-remembering, leave the rule on the list, and rework it when the worklist
-reaches it. We can't — and shouldn't — fix every rule at once; the value is in
-going one-by-one with full attention, and the list guarantees nothing is lost.
-A reverted side-quest is cheaper than a half-reviewed batch.
+Only touch the set you're on right now. While working one rule you'll often
+spot problems in *other* rules (a duplicate, a rule aimed at the wrong thing, a
+shared file they both lean on). **Don't run off and fix those.** Jot down the
+finding if it's worth remembering, leave the rule on the list, and deal with it
+when the list gets there. We can't — and shouldn't — fix every rule at once.
+The value is in giving each rule full attention one by one, and the list makes
+sure nothing slips through. Undoing a little detour is cheaper than a
+half-checked batch.
 
-## The review steps
+## The steps
 
-For each candidate set, top to bottom through `docs/pr_diff.md`:
+For each rule, going top to bottom through `docs/pr_diff.md`:
 
 1. **Copy the set in** from `evolution` to `evolution_accepted` (rule file +
-   test file(s)), and remove its lines from `docs/pr_diff.md`.
+   test file(s)), and delete its lines from `docs/pr_diff.md`.
 
-2. **Run `mix test` immediately — before judging anything.** A rule often does
-   not stand alone: the `evolution` branch may also have changed shared files
-   (`lib/credence.ex`, `lib/rule_helpers.ex`, the rule registry, etc.) that the
-   rule depends on. If the suite fails or the rule misbehaves because of a
-   missing supporting change:
-   - **Port the supporting change over** — some or all of the diff to that
-     shared file, whatever this rule actually needs. The PR diff shows exactly
-     what `evolution` did to it.
-   - Or **fix it directly** if porting drags in unrelated churn. Either way it
-     is usually small — don't skip the rule over it.
+2. **Run `mix test` right away — before judging anything.** A rule often can't
+   stand on its own: the `evolution` branch may also have changed shared files
+   (`lib/credence.ex`, `lib/rule_helpers.ex`, the rule list, etc.) that this
+   rule needs. If the tests fail or the rule acts up because a supporting change
+   is missing:
+   - **Bring that supporting change over** — some or all of the change to that
+     shared file, whatever this rule actually needs. The to-do list shows
+     exactly what `evolution` did to it.
+   - Or **just fix it directly** if copying the change would drag in unrelated
+     clutter. Either way it's usually small — don't drop the rule over it.
 
-   Note any shared-file edits you port: they may also be needed (or already
-   satisfied) by later sets, so re-check this when the same file reappears in
-   the diff.
+   Write down any shared-file edits you bring over: later rules may need them
+   too (or already have them), so check again when the same file shows up again.
 
-3. **Read the rule and its tests.** Understand exactly what AST it matches and
-   what it rewrites to.
+3. **Read the rule and its tests.** Be sure you know exactly what code shape it
+   matches and what it turns that into.
 
-4. **Duplication check.** Grep the existing rules for the same target
-   functions / anti-pattern. If another rule already covers it, stop — either
-   fold the new idea into the existing rule or drop it.
+4. **Check for duplicates.** Search the existing rules for the same target
+   functions or the same bad habit. If another rule already handles it, stop —
+   either fold the new idea into the old rule or drop it.
 
-5. **Correctness audit — the core step.** Ask: *is the rewrite output-identical
-   to the input for every possible value?* Construct the adversarial inputs,
-   don't reason in the abstract:
-   - Unicode: ASCII vs NFC vs NFD, combining marks, ZWJ emoji, flags.
-   - Empty / single-element / nil / negative-index edge cases.
-   - Wrong value domain: digit *values* vs digit *characters*, codepoints vs
-     graphemes, bytes vs codepoints — the rewrite target must live in the same
-     domain as the source expression.
-   - The variable being touched is used **elsewhere** (see below).
-   - Side effects in any sub-expression we might duplicate or reorder.
+5. **Check it's correct — the heart of the job.** Ask: *does the rewrite give
+   the exact same answer as the original, for every possible value?* Don't think
+   about it in the abstract — build the nasty inputs on purpose:
+   - **Unicode:** plain ASCII, and the two ways of typing accented letters
+     (one ready-made piece, or a letter plus a separate accent mark), and emoji
+     built from several pieces, and flag symbols.
+   - **Edge cases:** empty, one element, `nil`, a negative index.
+   - **Wrong kind of value:** the *number* 7 vs. the *character* `"7"`,
+     codepoints vs. graphemes (the small pieces a character is made of vs. the
+     whole character you see), bytes vs. codepoints — the thing the rewrite
+     produces has to be the same kind of value as the original.
+   - **The variable you're touching is used somewhere else too** (see below).
+   - **Side effects** in any part you might copy or move around.
 
-   Run the before/after in `iex`/`elixir` and compare actual values. A green
-   test suite is not evidence of correctness; a `{before, after, before ==
-   after}` check on the adversarial input is.
+   Run the before and after in `iex`/`elixir` and compare the real values. A
+   green test suite is not proof of correctness; a `{before, after, before ==
+   after}` check on the nasty input is.
 
-6. **Decide the rule's fate** based on the audit:
+6. **Decide what happens to the rule** based on what you found:
 
-   | Audit result | Action |
+   | What you found | What you do |
    |---|---|
-   | Rewrite is behaviour-identical for all inputs | **Keep / accept.** |
-   | Safe only on a *subset* of what it currently matches | **Narrow** (see below). |
-   | Right anti-pattern, wrong rewrite target | **Re-target** — fix the rule to rewrite to the correct (same-domain) function, rename it if the name now lies, and keep the safe cases. |
-   | No input is safely fixable | **Delete** it (or archive to `docs/unfixable_rules/` if the detection is still worth documenting). Never ship a check-only "warn" rule — the project has no warn-only mode. |
+   | Same answer for every input | **Keep it.** |
+   | Safe only on *some* of what it currently matches | **Narrow it** (see below). |
+   | Right bad habit, wrong replacement | **Re-aim it** — point the fix at the correct function (one that gives the same kind of value), rename the rule if its name now lies, and keep the safe cases. |
+   | No input is safe to fix | **Delete it** (or park it in `docs/unfixable_rules/` if it's still worth writing down). Never ship a rule that only warns — Credence has no warn-only mode. |
 
-7. **Split and simplify the tests** (see "Test layout").
+7. **Split and tidy the tests** (see "How tests are laid out").
 
-8. **Verify**: targeted test file(s) green, then the **full suite** green
-   (rules are auto-discovered and run in the pipeline, so a new/changed rule
-   can affect integration tests).
+8. **Check it works:** the rule's own test file(s) green, then the **whole
+   suite** green (rules are found and run automatically, so a new or changed
+   rule can affect the end-to-end tests).
 
-## Narrowing: shrink a greedy rule to its provably-safe core
+## Narrowing: shrink a too-eager rule to its safe core
 
-The most common outcome is a rule that is *almost* right: it fires on a broad
-pattern, but only part of that pattern can be rewritten safely. Don't delete
-it and don't ship it as-is — **narrow it**:
+The most common outcome is a rule that's *almost* right: it fires on a wide
+pattern, but only part of that pattern can be rewritten safely. Don't delete it
+and don't ship it as-is — **narrow it**:
 
-- Restrict `check/2` to fire **only** on the cases that have a
-  behaviour-preserving fix.
-- Implement `fix_patches/2` for exactly those cases.
-- The cases you drop are not lost — they resurface naturally later. When a
-  dropped case shows up again in the logs, you either expand this rule to cover
-  it (once you've found a safe fix) or spin up a new companion rule. That is
-  the normal life-cycle of a rule.
+- Make `check/2` fire **only** on the cases that have a safe, same-answer fix.
+- Write `fix_patches/2` for exactly those cases.
+- The cases you drop aren't lost — they'll come back later. When a dropped case
+  turns up again in the logs, you either grow this rule to cover it (once you've
+  found a safe fix) or start a new sister rule for it. That's the normal life
+  of a rule.
 
 `check` and `fix` must agree: never flag a case the fix won't touch (that would
-report an "issue" we refuse to fix). When in doubt, both sides consult the same
-classification helper.
+report a "problem" we refuse to fix). When unsure, have both sides ask the same
+helper.
 
 ### Worked examples
 
 - **`avoid_charlist_enum_at` — deleted.** It rewrote
   `Enum.at(String.to_charlist(s), i)` → `String.at(s, i)`. But
-  `String.to_charlist` indexes codepoints (returns an integer) while
-  `String.at` indexes graphemes (returns a string); the index spaces diverge on
-  any multi-codepoint grapheme. Its *only* fixable shape was the unsafe one, so
-  there was nothing to narrow to — deleted.
+  `String.to_charlist` counts in codepoints (the small pieces, and it hands back
+  a number) while `String.at` counts in graphemes (whole characters, and it
+  hands back a string); the two ways of counting drift apart the moment a
+  character is made of more than one piece. Its *only* fixable shape was the
+  unsafe one, so there was nothing safe to shrink down to — deleted.
 
-- **`no_grapheme_palindrome_check` — narrowed, then sharpened.** It detected
-  both `String.graphemes`-based and `String.to_charlist`-based palindrome
-  comparisons and rewrote both to `String.reverse`. The `graphemes` path is
-  grapheme→grapheme and safe; the `to_charlist` path is codepoint→grapheme and
-  flips on NFD input (verified). We narrowed it to the graphemes-only path. A
-  later pass also found and fixed a latent bug in its binding rewrite (below).
+- **`no_grapheme_palindrome_check` — narrowed, then sharpened.** It spotted
+  palindrome checks done two ways — with `String.graphemes` and with
+  `String.to_charlist` — and rewrote both to `String.reverse`. The `graphemes`
+  way is whole-character to whole-character and safe; the `to_charlist` way
+  mixes the small pieces with whole characters and gives a different answer on
+  accent-mark text (checked). We narrowed it to the `graphemes`-only way. A
+  later pass also found and fixed a hidden bug in how it rewrote variables
+  (below).
 
-- **`no_integer_to_string_digits` — wrong target, deferred (still on the
-  list).** While working a *different* set we noticed this rule rewrites to
-  `Integer.digits`, which returns digit *values* (`[1, 0, 1, 0]`), whereas its
-  source produces digit *characters*
-  (`String.to_charlist(Integer.to_string(10, 2)) == [49, 48, 49, 48]`) — a
-  wrong-target bug. The same-domain fix is `Integer.to_charlist/1,2`
-  (`Integer.to_charlist(10, 2) == ~c"1010"`, verified equal for negatives,
-  bases 2–36, zero), dropping the `String.graphemes` variant as unfixable. But
-  this rule was nowhere near the current set, so the rework was **reverted and
-  left on the list** rather than fixed out of band — it gets redone when the
-  worklist reaches it. (See "Work one set at a time".)
+- **`no_integer_to_string_digits` — wrong target, left on the list for later.**
+  While working a *different* rule we noticed this one rewrites to
+  `Integer.digits`, which hands back the digit *numbers* (`[1, 0, 1, 0]`),
+  while the original code hands back the digit *characters*
+  (`String.to_charlist(Integer.to_string(10, 2)) == [49, 48, 49, 48]`) — wrong
+  kind of value. The same-kind fix is `Integer.to_charlist/1,2`
+  (`Integer.to_charlist(10, 2) == ~c"1010"`, checked equal for negatives, bases
+  2–36, and zero), dropping the `String.graphemes` version as unfixable. But
+  this rule was nowhere near the set we were on, so we **undid the rework and
+  left it on the list** instead of fixing it off to the side — it gets done when
+  the list reaches it. (See "One set at a time".)
 
-## The "used elsewhere" trap
+## The "used somewhere else" trap
 
-When a fix rewrites or removes a **variable binding**, check whether that
-variable is referenced anywhere besides the spot you're fixing. Rewriting the
-binding in place silently changes those other uses.
+When a fix rewrites or removes a **variable**, check whether that variable is
+used anywhere other than the spot you're fixing. Rewriting it in place quietly
+changes those other uses too.
 
-Real example from `no_grapheme_palindrome_check`: the old fix turned
-`graphemes = String.graphemes(s)` into `graphemes = s` unconditionally. If the
-code also did `Enum.count(graphemes)`, that became `Enum.count(s)` on a binary
-— a runtime crash. The corrected rule counts references and branches:
+A real example from `no_grapheme_palindrome_check`: the old fix turned
+`graphemes = String.graphemes(s)` into `graphemes = s`, always. If the code also
+did `Enum.count(graphemes)`, that became `Enum.count(s)` on a string — a crash
+at runtime. The fixed rule counts how many times the variable is used and picks
+a path:
 
-- used **only** in the fixed expression → safe to drop / rewrite the binding;
-- used **elsewhere** → leave the binding intact and inline the original value
-  into the fixed expression instead (so the other uses are untouched);
-- if neither is safe (e.g. inlining would duplicate an effectful expression) →
-  don't fix, and don't flag.
+- used **only** in the spot being fixed → safe to drop or rewrite the variable;
+- used **elsewhere too** → leave the variable alone and drop the original value
+  straight into the fixed line instead (so the other uses don't change);
+- if neither is safe (for example, dropping it in would run an effectful
+  expression twice) → don't fix it, and don't flag it.
 
-This "recover the original value, count references, drop the binding only when
-dead, keep it when still used" shape has recurred across rules
-(`avoid_charlist_enum_at` had it before deletion; `no_grapheme_palindrome_check`
-uses it now). If it shows up a third time, extract it into `RuleHelpers`.
+This "get the original value back, count the uses, drop the variable only when
+nothing else needs it, keep it when something does" shape has come up in more
+than one rule (`avoid_charlist_enum_at` had it before it was deleted;
+`no_grapheme_palindrome_check` uses it now). If it shows up a third time, pull
+it out into `RuleHelpers`.
 
-## Test layout
+## How tests are laid out
 
-Split a rule's tests into two files following the repo convention:
+Split a rule's tests into two files, the way the repo does it:
 
-- `test/pattern/<rule>_check_test.exs` — detection only. Asserts which inputs do
-  and do **not** produce issues (include the deliberately-skipped unsafe cases
-  as negative tests, so the safety decision is locked in).
+- `test/pattern/<rule>_check_test.exs` — finding problems only. Says which
+  inputs do and do **not** raise an issue (include the unsafe cases you
+  deliberately skip as "no issue" tests, so the safety choice is locked in).
 - `test/pattern/<rule>_fix_test.exs` — the rewrites.
 
-**Fix tests use a plain exact-string comparison:**
+**Fix tests compare exact strings:**
 
 ```elixir
 code = """
@@ -195,24 +203,26 @@ s == String.reverse(s)
 assert fix(code) == expected
 ```
 
-Capture the `expected` value from the rule's actual output rather than
-hand-writing it. Formatting differences don't matter — `mix format` runs after
-all rules are applied — so the goal of the string compare is to pin the
-*semantic* shape of the output, not its layout. For "leaves it alone" cases the
-cleanest assertion is `assert fix(code) == code`.
+Grab the `expected` value from the rule's real output rather than typing it by
+hand. Spacing and layout don't matter — `mix format` runs after all the rules —
+so the point of the string compare is to pin down the *meaning* of the output,
+not its layout. For "leaves it alone" cases the cleanest check is
+`assert fix(code) == code`.
 
-## Documentation & guardrails
+## Writing it down
 
-A correctness decision isn't done until it's written where it will be re-read:
+A correctness decision isn't finished until it's written where it'll be read
+again:
 
-- **`CONTEXT.md` → Project policy** — the durable statement of the rule (e.g.
-  "behaviour preservation is absolute"; "codepoint↔grapheme rewrites are
-  forbidden"). This is what a human or agent consults before touching a rule.
-- **`prompt.md`** — the generator's guardrails, so the same unsafe rule isn't
-  produced again on the next pass.
-- **`docs/unfixable_rules/`** — archived rules kept as reference, with the
-  reason each can't be fixed.
+- **`CONTEXT.md` → Project policy** — the lasting statement of the rule (for
+  example, "the answer must never change"; "don't swap codepoint operations for
+  grapheme ones"). This is what a person or an agent reads before touching a
+  rule.
+- **`prompt.md`** — the instructions for the AI that writes rules, so the same
+  unsafe rule isn't made again next time.
+- **`docs/unfixable_rules/`** — parked rules kept as notes, each with the reason
+  it can't be fixed.
 
-When you discover a new class of unsafe rewrite, update all three: state the
-policy in `CONTEXT.md`, teach the generator in `prompt.md`, and (if archiving)
-drop the rule in `docs/unfixable_rules/` with its rationale.
+When you find a new kind of unsafe rewrite, update all three: state the rule in
+`CONTEXT.md`, teach the AI in `prompt.md`, and (if you're parking it) drop the
+rule in `docs/unfixable_rules/` with the reason.
