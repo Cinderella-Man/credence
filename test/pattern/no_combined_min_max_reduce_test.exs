@@ -149,6 +149,25 @@ defmodule Credence.Pattern.NoCombinedMinMaxReduceTest do
       assert check(code) == []
     end
 
+    test "detects combined min/max reduce using kernel max/min calls" do
+      code = """
+      defmodule BadMinMaxKernel do
+        def min_max(list) do
+          Enum.reduce(list, {hd(list), hd(list)}, fn num, {current_max, current_min} ->
+            new_max = max(num, current_max)
+            new_min = min(num, current_min)
+            {new_max, new_min}
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+      issue = hd(issues)
+      assert issue.rule == :no_combined_min_max_reduce
+    end
+
     test "detects multiple combined min/max reduces" do
       code = """
       defmodule MultipleBad do

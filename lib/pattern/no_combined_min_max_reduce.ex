@@ -3,12 +3,21 @@ defmodule Credence.Pattern.NoCombinedMinMaxReduce do
   Flags `Enum.reduce/3` that computes both min AND max in a single pass
   with a 2-tuple accumulator. Prefer `Enum.min_max/1` instead.
 
+  Detects both `<`/`>` comparison patterns and `min()`/`max()` kernel
+  call patterns inside the reduce body.
+
   ## Bad
 
       Enum.reduce(list, {nil, nil}, fn elem, {min_acc, max_acc} ->
         min_val = if min_acc == nil or elem < min_acc, do: elem, else: min_acc
         max_val = if max_acc == nil or elem > max_acc, do: elem, else: max_acc
         {min_val, max_val}
+      end)
+
+      Enum.reduce(list, {hd(list), hd(list)}, fn elem, {max_acc, min_acc} ->
+        new_max = max(elem, max_acc)
+        new_min = min(elem, min_acc)
+        {new_max, new_min}
       end)
 
   ## Good
@@ -79,15 +88,17 @@ defmodule Credence.Pattern.NoCombinedMinMaxReduce do
   defp two_tuple_param?({:__block__, _, [inner]}), do: two_tuple_param?(inner)
   defp two_tuple_param?(_), do: false
 
-  # Body must contain both a `<` comparison (for min) and a `>` comparison (for max),
-  # and return a 2-tuple of simple variables.
+  # Body must contain both min and max operations — either via `<`/`>` comparisons
+  # or `Kernel.min/2`/`Kernel.max/2` calls — and return a 2-tuple of simple variables.
   defp min_max_body?({:__block__, _, [_ | _] = exprs}) do
-    {has_lt, has_gt} =
-      Enum.reduce(exprs, {false, false}, fn expr, {lt, gt} ->
-        {lt or contains_lt?(expr), gt or contains_gt?(expr)}
+    {has_lt, has_gt, has_max_call, has_min_call} =
+      Enum.reduce(exprs, {false, false, false, false}, fn expr, {lt, gt, mx, mn} ->
+        {lt or contains_lt?(expr), gt or contains_gt?(expr),
+         mx or contains_max_call?(expr), mn or contains_min_call?(expr)}
       end)
 
-    has_lt and has_gt and returns_2_tuple?(List.last(exprs))
+    ((has_lt and has_gt) or (has_max_call and has_min_call)) and
+      returns_2_tuple?(List.last(exprs))
   end
 
   defp min_max_body?(_), do: false
@@ -109,6 +120,28 @@ defmodule Credence.Pattern.NoCombinedMinMaxReduce do
     {_found, result} =
       Macro.prewalk(node, false, fn
         {:>, _, [_, _]} = child, _acc -> {child, true}
+        child, acc -> {child, acc}
+      end)
+    result
+  end
+
+  # Check for `Kernel.max/2` call anywhere in the expression tree
+  defp contains_max_call?({:max, _, [_, _]}), do: true
+  defp contains_max_call?(node) do
+    {_found, result} =
+      Macro.prewalk(node, false, fn
+        {:max, _, [_, _]} = child, _acc -> {child, true}
+        child, acc -> {child, acc}
+      end)
+    result
+  end
+
+  # Check for `Kernel.min/2` call anywhere in the expression tree
+  defp contains_min_call?({:min, _, [_, _]}), do: true
+  defp contains_min_call?(node) do
+    {_found, result} =
+      Macro.prewalk(node, false, fn
+        {:min, _, [_, _]} = child, _acc -> {child, true}
         child, acc -> {child, acc}
       end)
     result
