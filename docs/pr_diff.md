@@ -1,4 +1,3 @@
-lib/pattern/avoid_charlist_enum_at.ex
 lib/pattern/avoid_charlist_for_iteration.ex
 lib/pattern/avoid_graphemes_enum_count_with_predicate.ex
 lib/pattern/avoid_graphemes_for_byte_iteration.ex
@@ -142,7 +141,6 @@ test/credence_test.exs
 test/debug_ast_test.exs
 test/fix_examples_test.exs
 test/fix_showcase_test.exs
-test/pattern/avoid_charlist_enum_at_test.exs
 test/pattern/avoid_charlist_for_iteration_test.exs
 test/pattern/avoid_graphemes_enum_count_with_predicate_check_test.exs
 test/pattern/avoid_graphemes_enum_count_with_predicate_fix_test.exs
