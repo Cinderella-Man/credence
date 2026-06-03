@@ -130,17 +130,12 @@ lib/pattern/prefer_regex_match.ex
 lib/semantic/fix_range_step.ex
 lib/semantic/undefined_function.ex
 lib/semantic/unused_variable.ex
-lib/syntax.ex
 lib/syntax/fix_div_rem.ex
 lib/syntax/fix_module_attr_outside_module.ex
 lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 lib/syntax/fix_typespec_literal_list.ex
-test/credence_test.exs
-test/debug_ast_test.exs
-test/fix_examples_test.exs
-test/fix_showcase_test.exs
 test/pattern/avoid_charlist_for_iteration_test.exs
 test/pattern/avoid_graphemes_enum_count_with_predicate_check_test.exs
 test/pattern/avoid_graphemes_enum_count_with_predicate_fix_test.exs
