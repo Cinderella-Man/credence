@@ -131,11 +131,9 @@ lib/semantic/fix_range_step.ex
 lib/semantic/undefined_function.ex
 lib/semantic/unused_variable.ex
 lib/syntax/fix_div_rem.ex
-lib/syntax/fix_module_attr_outside_module.ex
 lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
-lib/syntax/fix_typespec_literal_list.ex
 test/pattern/avoid_charlist_for_iteration_test.exs
 test/pattern/avoid_graphemes_enum_count_with_predicate_check_test.exs
 test/pattern/avoid_graphemes_enum_count_with_predicate_fix_test.exs
@@ -287,10 +285,7 @@ test/semantic/fix_range_step_fix_test.exs
 test/semantic/undefined_function_matcher_fix_test.exs
 test/semantic/unused_variable_test.exs
 test/syntax/fix_div_rem_test.exs
-test/syntax/fix_module_attr_outside_module_analyze_test.exs
-test/syntax/fix_module_attr_outside_module_fix_test.exs
 test/syntax/fix_python_augmented_assignment_test.exs
 test/syntax/fix_python_floor_div_test.exs
 test/syntax/fix_scientific_notation_analyze_test.exs
 test/syntax/fix_scientific_notation_fix_test.exs
-test/syntax/fix_typespec_literal_list_test.exs
