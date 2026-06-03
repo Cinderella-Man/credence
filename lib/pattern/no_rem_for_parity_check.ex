@@ -51,7 +51,77 @@ defmodule Credence.Pattern.NoRemForParityCheck do
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
+    transformed = transform_ast(ast)
+
+    if transformed == ast do
+      []
+    else
+      Credence.RuleHelpers.patches_from_diff(ast, transformed)
+    end
+  end
+
+  # Walk the AST replacing parity checks everywhere. For defmodule nodes
+  # that contain parity patterns, also insert `require Integer` if missing
+  # (since Integer.is_even/is_odd are macros).
+  #
+  # Uses prewalk so that defmodule nodes are visited BEFORE their children.
+  # This lets us: (1) detect raw `rem(x, 2)` patterns in the body, (2) replace
+  # them AND add `require Integer` in one shot, then (3) return the fully
+  # transformed defmodule — the children are skipped.
+  defp transform_ast(ast) do
+    Macro.prewalk(ast, fn
+      {:defmodule, meta, [name, kw]} = node when is_list(kw) ->
+        case extract_do_body(kw) do
+          {:ok, body} ->
+            if has_parity_check?(body) do
+              replaced = replace_parity_checks(body)
+              statements = block_to_list(replaced)
+
+              new_body =
+                if has_integer_require?(statements) do
+                  replaced
+                else
+                  insert_integer_require(statements)
+                end
+
+              {:defmodule, meta, [name, replace_do_body(kw, new_body)]}
+            else
+              node
+            end
+
+          :error ->
+            node
+        end
+
+      node ->
+        case match_parity_check(node) do
+          {:ok, var_ast, replacement} ->
+            {{:., [], [{:__aliases__, [], [:Integer]}, replacement]}, [], [var_ast]}
+
+          :error ->
+            node
+        end
+    end)
+  end
+
+  defp has_parity_check?(body) do
+    {_, found} =
+      Macro.prewalk(body, false, fn
+        _node, true ->
+          {nil, true}
+
+        node, false ->
+          case match_parity_check(node) do
+            {:ok, _, _} -> {node, true}
+            :error -> {node, false}
+          end
+      end)
+
+    found
+  end
+
+  defp replace_parity_checks(body) do
+    Macro.postwalk(body, fn node ->
       case match_parity_check(node) do
         {:ok, var_ast, replacement} ->
           {{:., [], [{:__aliases__, [], [:Integer]}, replacement]}, [], [var_ast]}
@@ -61,6 +131,43 @@ defmodule Credence.Pattern.NoRemForParityCheck do
       end
     end)
   end
+
+  defp block_to_list({:__block__, _, stmts}), do: stmts
+  defp block_to_list(single), do: [single]
+
+  defp has_integer_require?(statements) do
+    Enum.any?(statements, fn
+      {:require, _, [{:__aliases__, _, [:Integer]} | _]} -> true
+      {:import, _, [{:__aliases__, _, [:Integer]} | _]} -> true
+      _ -> false
+    end)
+  end
+
+  defp insert_integer_require(statements) do
+    require_ast = Sourceror.parse_string!("require Integer")
+    insert_idx = find_directive_end(statements)
+    {:__block__, [], List.insert_at(statements, insert_idx, require_ast)}
+  end
+
+  @directives [:use, :import, :require, :alias]
+
+  defp find_directive_end(statements) do
+    statements
+    |> Enum.with_index()
+    |> Enum.reduce(0, fn {stmt, idx}, last ->
+      if directive_like?(stmt), do: idx + 1, else: last
+    end)
+  end
+
+  defp directive_like?({tag, _, _}) when tag in @directives, do: true
+  defp directive_like?({:@, _, [{:moduledoc, _, _}]}), do: true
+  defp directive_like?(_), do: false
+
+  defp extract_do_body([{{:__block__, _, [:do]}, body}]), do: {:ok, body}
+  defp extract_do_body(_), do: :error
+
+  defp replace_do_body([{{:__block__, m, [:do]}, _old}], new_body),
+    do: [{{:__block__, m, [:do]}, new_body}]
 
   # Match: rem(x, 2) == 0  →  Integer.is_even(x)
   # Match: 0 == rem(x, 2)  →  Integer.is_even(x)

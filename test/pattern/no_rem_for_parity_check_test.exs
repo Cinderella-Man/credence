@@ -160,5 +160,48 @@ defmodule Credence.Pattern.NoRemForParityCheckTest do
       ast = Sourceror.parse_string!(fixed)
       assert NoRemForParityCheck.check(ast, []) == []
     end
+
+    test "inserts require Integer when module lacks it" do
+      code = """
+      defmodule M do
+        def odd?(x), do: rem(x, 2) != 0
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "require Integer"
+      assert result =~ "Integer.is_odd(x)"
+      refute result =~ "rem("
+    end
+
+    test "does not duplicate require Integer when already present" do
+      code = """
+      defmodule M do
+        require Integer
+
+        def odd?(x), do: rem(x, 2) != 0
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "Integer.is_odd(x)"
+      # Count occurrences — should be exactly 1
+      occurrences = result |> String.split("require Integer") |> length() |> Kernel.-(1)
+      assert occurrences == 1
+    end
+
+    test "inserts require Integer after @moduledoc" do
+      code = """
+      defmodule M do
+        @moduledoc "Checks parity"
+
+        def odd?(x), do: rem(x, 2) != 0
+      end
+      """
+
+      result = fix(code)
+      assert result =~ "require Integer"
+      assert result =~ "Integer.is_odd(x)"
+    end
   end
 end
