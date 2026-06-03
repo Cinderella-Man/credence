@@ -1,7 +1,8 @@
 defmodule Credence.Pattern.NoCondTwoClauses do
   @moduledoc """
   Detects `cond` with exactly two clauses where the second guard is
-  `true` — a pattern that is just an `if/else` in disguise.
+  redundant — either literal `true` or the logical complement of the
+  first guard. Both patterns are just an `if/else` in disguise.
 
   ## Bad
 
@@ -12,6 +13,11 @@ defmodule Credence.Pattern.NoCondTwoClauses do
           search(mid, target)
       end
 
+      cond do
+        x <= target -> go_right
+        x > target -> found
+      end
+
   ## Good
 
       if low > high do
@@ -19,6 +25,12 @@ defmodule Credence.Pattern.NoCondTwoClauses do
       else
         mid = div(low + high, 2)
         search(mid, target)
+      end
+
+      if x <= target do
+        go_right
+      else
+        found
       end
 
   ## Auto-fix
@@ -57,7 +69,7 @@ defmodule Credence.Pattern.NoCondTwoClauses do
   # the second guard.
   defp two_clause_cond?({:cond, _, [kw]}) when is_list(kw) do
     case extract_do_clauses(kw) do
-      [_first, second] -> guard_is_true?(second)
+      [first, second] -> guard_is_true?(second) or complementary_guards?(first, second)
       _ -> false
     end
   end
@@ -86,7 +98,7 @@ defmodule Credence.Pattern.NoCondTwoClauses do
   defp maybe_rewrite({:cond, meta, [kw]} = node) when is_list(kw) do
     case extract_do_clauses(kw) do
       [first, second] ->
-        if guard_is_true?(second) do
+        if guard_is_true?(second) or complementary_guards?(first, second) do
           rewrite_to_if(meta, first, second, kw)
         else
           node
@@ -119,12 +131,42 @@ defmodule Credence.Pattern.NoCondTwoClauses do
     ]
   end
 
+  # Checks if two clauses have complementary comparison guards.
+  # e.g., `x <= y` and `x > y` — the second is always true when
+  # the first is false.
+  defp complementary_guards?({:->, _, [[g1], _]}, {:->, _, [[g2], _]}) do
+    complementary_expressions?(g1, g2)
+  end
+
+  defp complementary_expressions?({:__block__, _, [g1]}, g2),
+    do: complementary_expressions?(g1, g2)
+
+  defp complementary_expressions?(g1, {:__block__, _, [g2]}),
+    do: complementary_expressions?(g1, g2)
+
+  defp complementary_expressions?({op1, _, [a, b]}, {op2, _, [c, d]}) do
+    complement_operator?(op1, op2) and same_expr?(a, c) and same_expr?(b, d)
+  end
+
+  defp complementary_expressions?(_, _), do: false
+
+  defp complement_operator?(:<=, :>), do: true
+  defp complement_operator?(:<, :>=), do: true
+  defp complement_operator?(:==, :!=), do: true
+  defp complement_operator?(:>, :<=), do: true
+  defp complement_operator?(:>=, :<), do: true
+  defp complement_operator?(:!=, :==), do: true
+  defp complement_operator?(_, _), do: false
+
+  defp same_expr?(a, b), do: Macro.to_string(a) == Macro.to_string(b)
+
   defp build_issue(meta) do
     %Issue{
       rule: :no_cond_two_clauses,
       message:
-        "`cond` with two clauses where the second guard is `true` " <>
-          "is an `if/else` in disguise. Use `if/else` instead.",
+        "`cond` with two clauses where the second guard is redundant " <>
+          "(`true` or the complement of the first) is an `if/else` in disguise. " <>
+          "Use `if/else` instead.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

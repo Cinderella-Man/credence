@@ -121,6 +121,71 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
   end
 
+  describe "flags cond with exactly 2 clauses where second is the complement" do
+    test "complementary guards — <= and >" do
+      assert flagged?("""
+             def run(x, target) do
+               cond do
+                 x <= target -> :left
+                 x > target -> :right
+               end
+             end
+             """)
+    end
+
+    test "complementary guards — < and >=" do
+      assert flagged?("""
+             def run(x, y) do
+               cond do
+                 x < y -> :less
+                 x >= y -> :not_less
+               end
+             end
+             """)
+    end
+
+    test "complementary guards — == and !=" do
+      assert flagged?("""
+             def run(x, y) do
+               cond do
+                 x == y -> :equal
+                 x != y -> :not_equal
+               end
+             end
+             """)
+    end
+
+    test "complementary guards — reversed order (first is >, second is <=)" do
+      assert flagged?("""
+             def run(x, target) do
+               cond do
+                 x > target -> :right
+                 x <= target -> :left
+               end
+             end
+             """)
+    end
+
+    test "complementary guards in binary search pattern — idx=61326" do
+      assert flagged?("""
+             def search(tuple, target, low, high) do
+               mid = div(low + high, 2)
+               mid_char = elem(tuple, mid)
+               cond do
+                 mid_char <= target ->
+                   search(tuple, target, mid + 1, high)
+                 mid_char > target ->
+                   if mid == 0 or elem(tuple, mid - 1) <= target do
+                     mid
+                   else
+                     search(tuple, target, low, mid - 1)
+                   end
+               end
+             end
+             """)
+    end
+  end
+
   # ═══════════════════════════════════════════════════════════════════
   # NEGATIVE — must NOT flag
   # ═══════════════════════════════════════════════════════════════════
@@ -153,12 +218,12 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
   end
 
   describe "does not flag cond with 2 clauses where second is not true" do
-    test "both clauses have real guards" do
+    test "non-complementary guards" do
       assert clean?("""
              def run(x) do
                cond do
-                 x > 0 -> :positive
-                 x <= 0 -> :non_positive
+                 x > 100 -> :high
+                 x > 0 -> :low_positive
                end
              end
              """)
