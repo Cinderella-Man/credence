@@ -21,22 +21,66 @@ is reviewed by hand before it joins the main set. We take **one rule's file set
 at a time** (the rule file + its test file(s)) and run it through the steps
 below.
 
+## Branch & worklist setup
+
+- **`evolution_accepted`** is branched from **`main`**. Reviewed sets are
+  migrated into it one at a time *from* `evolution`. `main` stays untouched
+  until a batch is ready.
+- The **worklist** is the PR diff between `evolution` and `main`, copied to
+  **`docs/pr_diff.md`**. Work it **top to bottom**.
+- A **set** is one rule plus its test file(s) — e.g.
+  `lib/pattern/avoid_charlist_enum_at.ex` +
+  `test/pattern/avoid_charlist_enum_at_test.exs`.
+- As each set is finished, **delete its entries from `docs/pr_diff.md`**. The
+  shrinking diff *is* the progress tracker; what remains is what's left to do.
+
+### Work one set at a time — the list *is* the process
+
+Only touch the set you're currently on. You will often notice problems in
+*other* rules while working one (a duplicate, a wrong-target bug, a shared-file
+dependency). **Do not go fix them out of band.** Note the finding if it's worth
+remembering, leave the rule on the list, and rework it when the worklist
+reaches it. We can't — and shouldn't — fix every rule at once; the value is in
+going one-by-one with full attention, and the list guarantees nothing is lost.
+A reverted side-quest is cheaper than a half-reviewed batch.
+
 ## The review steps
 
-For each candidate rule:
+For each candidate set, top to bottom through `docs/pr_diff.md`:
 
-1. **Read the rule and its tests.** Understand exactly what AST it matches and
+1. **Copy the set in** from `evolution` to `evolution_accepted` (rule file +
+   test file(s)), and remove its lines from `docs/pr_diff.md`.
+
+2. **Run `mix test` immediately — before judging anything.** A rule often does
+   not stand alone: the `evolution` branch may also have changed shared files
+   (`lib/credence.ex`, `lib/rule_helpers.ex`, the rule registry, etc.) that the
+   rule depends on. If the suite fails or the rule misbehaves because of a
+   missing supporting change:
+   - **Port the supporting change over** — some or all of the diff to that
+     shared file, whatever this rule actually needs. The PR diff shows exactly
+     what `evolution` did to it.
+   - Or **fix it directly** if porting drags in unrelated churn. Either way it
+     is usually small — don't skip the rule over it.
+
+   Note any shared-file edits you port: they may also be needed (or already
+   satisfied) by later sets, so re-check this when the same file reappears in
+   the diff.
+
+3. **Read the rule and its tests.** Understand exactly what AST it matches and
    what it rewrites to.
 
-2. **Duplication check.** Grep the existing rules for the same target
+4. **Duplication check.** Grep the existing rules for the same target
    functions / anti-pattern. If another rule already covers it, stop — either
    fold the new idea into the existing rule or drop it.
 
-3. **Correctness audit — the core step.** Ask: *is the rewrite output-identical
+5. **Correctness audit — the core step.** Ask: *is the rewrite output-identical
    to the input for every possible value?* Construct the adversarial inputs,
    don't reason in the abstract:
    - Unicode: ASCII vs NFC vs NFD, combining marks, ZWJ emoji, flags.
    - Empty / single-element / nil / negative-index edge cases.
+   - Wrong value domain: digit *values* vs digit *characters*, codepoints vs
+     graphemes, bytes vs codepoints — the rewrite target must live in the same
+     domain as the source expression.
    - The variable being touched is used **elsewhere** (see below).
    - Side effects in any sub-expression we might duplicate or reorder.
 
@@ -44,17 +88,18 @@ For each candidate rule:
    test suite is not evidence of correctness; a `{before, after, before ==
    after}` check on the adversarial input is.
 
-4. **Decide the rule's fate** based on the audit:
+6. **Decide the rule's fate** based on the audit:
 
    | Audit result | Action |
    |---|---|
    | Rewrite is behaviour-identical for all inputs | **Keep / accept.** |
    | Safe only on a *subset* of what it currently matches | **Narrow** (see below). |
+   | Right anti-pattern, wrong rewrite target | **Re-target** — fix the rule to rewrite to the correct (same-domain) function, rename it if the name now lies, and keep the safe cases. |
    | No input is safely fixable | **Delete** it (or archive to `docs/unfixable_rules/` if the detection is still worth documenting). Never ship a check-only "warn" rule — the project has no warn-only mode. |
 
-5. **Split and simplify the tests** (see "Test layout").
+7. **Split and simplify the tests** (see "Test layout").
 
-6. **Verify**: targeted test file(s) green, then the **full suite** green
+8. **Verify**: targeted test file(s) green, then the **full suite** green
    (rules are auto-discovered and run in the pipeline, so a new/changed rule
    can affect integration tests).
 
@@ -92,10 +137,17 @@ classification helper.
   flips on NFD input (verified). We narrowed it to the graphemes-only path. A
   later pass also found and fixed a latent bug in its binding rewrite (below).
 
-- **`no_integer_to_string_digits` — deleted.** Different mechanism, same rule:
-  `String.to_charlist(Integer.to_string(10, 2))` is `[49, 48, 49, 48]` (ASCII
-  codes) but `Integer.digits(10, 2)` is `[1, 0, 1, 0]` (values). Not equal, no
-  safe fix — deleted.
+- **`no_integer_to_string_digits` — wrong target, deferred (still on the
+  list).** While working a *different* set we noticed this rule rewrites to
+  `Integer.digits`, which returns digit *values* (`[1, 0, 1, 0]`), whereas its
+  source produces digit *characters*
+  (`String.to_charlist(Integer.to_string(10, 2)) == [49, 48, 49, 48]`) — a
+  wrong-target bug. The same-domain fix is `Integer.to_charlist/1,2`
+  (`Integer.to_charlist(10, 2) == ~c"1010"`, verified equal for negatives,
+  bases 2–36, zero), dropping the `String.graphemes` variant as unfixable. But
+  this rule was nowhere near the current set, so the rework was **reverted and
+  left on the list** rather than fixed out of band — it gets redone when the
+  worklist reaches it. (See "Work one set at a time".)
 
 ## The "used elsewhere" trap
 
