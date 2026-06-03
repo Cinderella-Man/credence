@@ -8,6 +8,16 @@ defmodule Credence.Pattern.NoFilterThenMapTest do
     NoFilterThenMap.check(ast, [])
   end
 
+  defp fix(code) do
+    ast = Sourceror.parse_string!(code)
+    patches = NoFilterThenMap.fix_patches(ast, source: code)
+
+    case patches do
+      [] -> code
+      _ -> Sourceror.patch_string(code, patches)
+    end
+  end
+
   describe "NoFilterThenMap check" do
     test "detects Enum.filter |> Enum.map in pipeline" do
       code = """
@@ -110,6 +120,121 @@ defmodule Credence.Pattern.NoFilterThenMapTest do
       """
 
       assert check(code) == []
+    end
+
+    test "reports only one issue per filter-map pair (no duplicates in nested pipelines)" do
+      code = """
+      defmodule Bad do
+        def process(items) do
+          items
+          |> Enum.filter(fn x -> rem(x, 2) == 0 end)
+          |> Enum.map(fn x -> x * x end)
+          |> Enum.sort()
+        end
+      end
+      """
+
+      issues = check(code)
+      assert length(issues) == 1
+    end
+  end
+
+  describe "NoFilterThenMap fix" do
+    test "rewrites simple filter |> map to for comprehension" do
+      result = fix("""
+      defmodule Bad do
+        def evens_squared(numbers) do
+          numbers
+          |> Enum.filter(fn x -> rem(x, 2) == 0 end)
+          |> Enum.map(fn x -> x * x end)
+        end
+      end
+      """)
+
+      assert result =~ "for"
+      assert result =~ "x <- numbers"
+      assert result =~ "rem(x, 2) == 0"
+      assert result =~ "x * x"
+      refute result =~ "Enum.filter"
+      refute result =~ "Enum.map"
+    end
+
+    test "rewrites tuple destructuring with merged bindings" do
+      result = fix("""
+      defmodule Bad do
+        def most_common(frequencies, max_count) do
+          frequencies
+          |> Enum.filter(fn {_word, count} -> count == max_count end)
+          |> Enum.map(fn {word, _count} -> word end)
+        end
+      end
+      """)
+
+      assert result =~ "for"
+      assert result =~ "{word, count}"
+      assert result =~ "<- frequencies"
+      assert result =~ "count == max_count"
+      assert result =~ "word"
+      refute result =~ "Enum.filter"
+      refute result =~ "Enum.map"
+    end
+
+    test "preserves trailing pipeline steps" do
+      result = fix("""
+      defmodule Bad do
+        def process(items) do
+          items
+          |> Enum.filter(fn x -> rem(x, 2) == 0 end)
+          |> Enum.map(fn x -> x * x end)
+          |> Enum.sort()
+        end
+      end
+      """)
+
+      assert result =~ "for"
+      assert result =~ "|> Enum.sort()"
+    end
+
+    test "does not fix capture syntax" do
+      code = """
+      defmodule Bad do
+        def positive_items(items) do
+          items
+          |> Enum.filter(&(&1 > 0))
+          |> Enum.map(&(&1 * 2))
+        end
+      end
+      """
+
+      assert fix(code) == code
+    end
+
+    test "does not fix lambda with guard" do
+      code = """
+      defmodule Bad do
+        def process(items) do
+          items
+          |> Enum.filter(fn x when is_integer(x) -> x > 0 end)
+          |> Enum.map(fn x -> x * 2 end)
+        end
+      end
+      """
+
+      assert fix(code) == code
+    end
+
+    test "does not fix incompatible binding shapes" do
+      code = """
+      defmodule Bad do
+        def process(items) do
+          items
+          |> Enum.filter(fn {a, b} -> a > b end)
+          |> Enum.map(fn x -> x * 2 end)
+        end
+      end
+      """
+
+      assert fix(code) == code
     end
   end
 end
