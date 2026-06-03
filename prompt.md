@@ -611,5 +611,21 @@ Some important rules:
 - we do NOT care about existing formatting - we are running mix format after
 - PREFER AST manipulation
 - don't use `~S()` sigils - just use tripple quotes multi line strings
+- BEHAVIOUR PRESERVATION IS ABSOLUTE: a fix must produce output that is
+  identical for EVERY input. If a rewrite can change the result on any input,
+  it is NOT a valid fix — don't make the code "more idiomatic" at the cost of
+  correctness. "Correct for the common case" is not acceptable.
+- NEVER swap a codepoint/charlist operation for a grapheme operation (or vice
+  versa) — THEY ARE NOT EQUIVALENT. `String.to_charlist/1`, `?c`, and
+  `String.codepoints/1` work in CODEPOINT space; `String.at`,
+  `String.reverse`, `String.length`, `String.graphemes` work in GRAPHEME
+  space. They diverge on any multi-codepoint grapheme (NFD/decomposed accents,
+  ZWJ emoji like 👨‍👩‍👧, flags like 🇵🇱). For example, do NOT generate:
+  `Enum.at(String.to_charlist(s), i)` → `String.at(s, i)`,
+  `length(String.to_charlist(s))` → `String.length(s)`, or a palindrome check
+  that turns a `String.to_charlist` comparison into `String.reverse`. There is
+  no stdlib replacement that is both correct and an improvement, so such a rule
+  should not be created at all. (Same-space rewrites are fine, e.g.
+  `String.graphemes` ↔ `String.reverse`/`String.length`.)
 
 After that read the log files that I've attached

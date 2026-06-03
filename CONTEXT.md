@@ -242,3 +242,32 @@ multiple traversals of the same list).
 - **Rules don't re-parse the source as a shape workaround**: if a matcher
   doesn't fit, fix the matcher. Don't re-parse the source string with a
   different parser to get a shape that matches.
+- **Behaviour preservation is absolute — a fix that can change any output is
+  not a fix.** A rule must never trade correctness for idiom or performance.
+  If the only available rewrite changes behaviour on *some* input, the rule
+  does not fix that case — and if it can't fix *any* case safely, it does not
+  exist (don't even ship it as a check). "Correct for the common input" is not
+  good enough: the fix must be a true refactor that is output-identical for
+  *every* input.
+- **FORBIDDEN: codepoint↔grapheme rewrites.** Do **not** rewrite a
+  charlist/codepoint operation into a grapheme operation (or vice versa).
+  `String.to_charlist/1` and `?c`/`String.codepoints/1` work in **codepoint**
+  space; `String.at`/`String.reverse`/`String.length`/`String.graphemes` work
+  in **grapheme** space. The two index spaces diverge whenever a character
+  spans multiple codepoints — decomposed/NFD accents (`"b́"` = `b` + U+0301, no
+  precomposed form, so NFC can't even collapse it), ZWJ emoji (`"👨‍👩‍👧"` = 1
+  grapheme / 5 codepoints), flags (`"🇵🇱"` = 1 / 2). Concretely, **none** of
+  these are valid fixes:
+
+  - `Enum.at(String.to_charlist(s), i)` → `String.at(s, i)`
+    (codepoint integer vs grapheme string, and indices misalign)
+  - `String.to_charlist(s) == Enum.reverse(String.to_charlist(s))`
+    → `s == String.reverse(s)` (the `to_charlist`/codepoint side; flips on NFD)
+  - `length(String.to_charlist(s))` → `String.length(s)` (codepoint vs grapheme count)
+
+  There is no standard-library way to be both correct *and* an improvement:
+  `String.codepoints/1` preserves codepoint semantics but still allocates the
+  list (no win), and no list-free codepoint accessor (`String.codepoint_at/2`)
+  exists. **Same-space** rewrites are fine — e.g.
+  `String.graphemes(s) == Enum.reverse(String.graphemes(s))` →
+  `s == String.reverse(s)` is grapheme→grapheme and *is* behaviour-preserving.
