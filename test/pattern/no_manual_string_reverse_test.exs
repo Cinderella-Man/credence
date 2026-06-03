@@ -329,4 +329,34 @@ defmodule Credence.Pattern.NoManualStringReverseTest do
       assert fixed =~ "Enum.join"
     end
   end
+
+  describe "graphemes + IO.iodata_to_binary reassemble (always-safe, no promise)" do
+    test "detects graphemes |> reverse |> IO.iodata_to_binary pipeline" do
+      code =
+        ~s[def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()]
+
+      assert [%Issue{rule: :no_manual_string_reverse}] = check(code)
+    end
+
+    test "detects nested IO.iodata_to_binary(Enum.reverse(String.graphemes(...)))" do
+      code = ~s[def reverse(str), do: IO.iodata_to_binary(Enum.reverse(String.graphemes(str)))]
+      assert [%Issue{rule: :no_manual_string_reverse}] = check(code)
+    end
+
+    test "fixes graphemes |> reverse |> IO.iodata_to_binary pipeline" do
+      code =
+        ~s[def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()]
+
+      fixed = fix(code)
+      assert fixed =~ "String.reverse(str)"
+      refute fixed =~ "String.graphemes"
+      refute fixed =~ "IO.iodata_to_binary"
+    end
+
+    test "does NOT touch codepoints (handled by NoCodepointStringReverse)" do
+      code = ~s[def reverse(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()]
+      assert check(code) == []
+      assert fix(code) == code
+    end
+  end
 end

@@ -4,13 +4,21 @@ How we look over rules and let them into the main set. New rules show up on the
 `evolution` branch (where an AI writes them). The one rule we never bend, and
 everything below exists to protect it:
 
-> **A fix must give the exact same answer for every possible input. If we can't
-> promise that, we don't touch the code.**
+> **A fix must give the exact same answer for every input the user's promises
+> admit. With no promises (`:strict`), that means every possible input.**
 
-A "tidier" or "faster" rewrite that changes the answer on *even one* input is
-not an improvement — it's a bug. "Right for the usual case" is not good enough.
-The `CONTEXT.md` "Project policy" section is the official statement of this;
-this doc is the step-by-step way we make it stick.
+A "tidier" or "faster" rewrite that changes the answer on *even one* admitted
+input is not an improvement — it's a bug. "Right for the usual case" is not good
+enough.
+
+The one escape hatch is a **safety switch** (`Credence.Assumptions`): a checkable
+promise about the program's running data that a rule can declare via
+`assumptions/0`. A rule may rely on a switch only after it's been shrunk so the
+promise covers *only* the rare-text gap, and only with a property test proving
+old == new across promise-satisfying inputs (see `docs/03-safety-switches.md`).
+`:strict` makes zero promises, so it stays bit-identical for every input. The
+`CONTEXT.md` "Project policy" section is the official statement of this; this doc
+is the step-by-step way we make it stick.
 
 ## Why we have this process
 
@@ -98,6 +106,7 @@ For each rule, going top to bottom through `docs/pr_diff.md`:
    |---|---|
    | Same answer for every input | **Keep it.** |
    | Safe only on *some* of what it currently matches | **Narrow it** (see below). |
+   | Safe only when a checkable promise about the data holds (and the leftover difference is *rare text*, not a plain bug) | **Gate it behind a switch** — shrink first, then declare the switch in `assumptions/0` and add a property test (`docs/03-safety-switches.md`). A type change can't be promised away. |
    | Right bad habit, wrong replacement | **Re-aim it** — point the fix at the correct function (one that gives the same kind of value), rename the rule if its name now lies, and keep the safe cases. |
    | No input is safe to fix | **Delete it** (or park it in `docs/unfixable_rules/` if it's still worth writing down). Never ship a rule that only warns — Credence has no warn-only mode. |
 

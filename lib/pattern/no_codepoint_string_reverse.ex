@@ -1,23 +1,29 @@
-defmodule Credence.Pattern.NoManualStringReverse do
+defmodule Credence.Pattern.NoCodepointStringReverse do
   @moduledoc """
-  Readability & performance rule: Detects the pattern
-  `String.graphemes(s) |> Enum.reverse() |> Enum.join()` (and the
-  `IO.iodata_to_binary/1` reassemble variant) which is a manual
+  Readability & performance rule: Detects
+  `String.codepoints(s) |> Enum.reverse() |> IO.iodata_to_binary()` (and the
+  `Enum.join/0` reassemble variant, and the nested call forms) which is a manual
   reimplementation of `String.reverse/1`.
 
-  This rule covers only the **grapheme** decompose. Reversing a list of
-  graphemes and gluing it back is identical to `String.reverse/1` for *every*
-  input — graphemes are exactly what `String.reverse/1` reverses — so it needs
-  no assumption and runs even in `:strict` mode. The `String.codepoints/1`
-  variants are handled by `Credence.Pattern.NoCodepointStringReverse`, which
-  needs the `single_codepoint_graphemes` promise (see decision 4: the split key
-  is the *decompose* function, not the reassemble function).
+  ## Safety: behind a switch
 
-  ## Bad
+  Reversing a list of *codepoints* and gluing it back is **not** the same as
+  `String.reverse/1` when a grapheme spans more than one codepoint — a decomposed
+  accent, a ZWJ emoji, or a flag sequence would be torn apart. So this rule needs
+  the `single_codepoint_graphemes` promise (see `Credence.Assumptions`): while it
+  is on, every grapheme is a single codepoint, the codepoint list equals the
+  grapheme list, and the rewrite is identical to the original. In `:strict` mode
+  the rule does not run.
 
-      reversed = str |> String.graphemes() |> Enum.reverse() |> Enum.join()
-      reversed = str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()
-      reversed = Enum.join(Enum.reverse(String.graphemes(str)))
+  This is the `String.codepoints/1` half of the split described in the safety
+  plan (decision 4/12); the always-safe `String.graphemes/1` half lives in
+  `Credence.Pattern.NoManualStringReverse`.
+
+  ## Bad (only rewritten while `single_codepoint_graphemes` is on)
+
+      reversed = str |> String.codepoints() |> Enum.reverse() |> IO.iodata_to_binary()
+      reversed = str |> String.codepoints() |> Enum.reverse() |> Enum.join()
+      reversed = IO.iodata_to_binary(Enum.reverse(String.codepoints(str)))
 
   ## Good
 
@@ -27,10 +33,13 @@ defmodule Credence.Pattern.NoManualStringReverse do
   alias Credence.Issue
 
   @impl true
+  def assumptions, do: [:single_codepoint_graphemes]
+
+  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        # Pipeline: ... |> String.graphemes() |> Enum.reverse() |> REASSEMBLE()
+        # Pipeline: ... |> String.codepoints() |> Enum.reverse() |> REASSEMBLE()
         {:|>, meta, [left, right]} = node, issues ->
           if reassemble_call?(right) and remote_call?(rightmost(left), :Enum, :reverse) do
             grandparent =
@@ -48,7 +57,7 @@ defmodule Credence.Pattern.NoManualStringReverse do
             {node, issues}
           end
 
-        # Nested call: REASSEMBLE(Enum.reverse(String.graphemes(s)))
+        # Nested call: REASSEMBLE(Enum.reverse(String.codepoints(s)))
         node, issues ->
           case match_nested_manual_reverse(node) do
             {:ok, meta, _subject} -> {node, [build_issue(meta) | issues]}
@@ -80,12 +89,12 @@ defmodule Credence.Pattern.NoManualStringReverse do
     end)
   end
 
-  # Extracts the subject from String.graphemes in the middle of a pipe chain.
+  # Extracts the subject from String.codepoints in the middle of a pipe chain.
   defp decompose_in_middle({:|>, _, [subject, decompose]}) do
     if decompose_call?(decompose), do: {:ok, subject}, else: :error
   end
 
-  defp decompose_in_middle({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [subject]}) do
+  defp decompose_in_middle({{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, [subject]}) do
     {:ok, subject}
   end
 
@@ -125,27 +134,24 @@ defmodule Credence.Pattern.NoManualStringReverse do
     match?({{:., _, [{:__aliases__, _, [^mod]}, ^func]}, _, _}, node)
   end
 
-  # Decompose step: String.graphemes only (codepoints is a separate rule).
-  defp decompose_call?(node), do: remote_call?(node, :String, :graphemes)
+  # Decompose step: String.codepoints only (graphemes is a separate rule).
+  defp decompose_call?(node), do: remote_call?(node, :String, :codepoints)
 
-  # Reassemble step: Enum.join or IO.iodata_to_binary (for check — any args).
   defp reassemble_call?(node) do
     remote_call?(node, :Enum, :join) or remote_call?(node, :IO, :iodata_to_binary)
   end
 
-  # Reassemble that is safe to auto-fix (Enum.join without separator, or any
-  # IO.iodata_to_binary — it has no separator concept).
   defp reassemble_fixable?(node) do
     (remote_call?(node, :Enum, :join) and join_no_separator?(node)) or
       remote_call?(node, :IO, :iodata_to_binary)
   end
 
-  # Nested form: REASSEMBLE(Enum.reverse(String.graphemes(subject)))
+  # Nested form: REASSEMBLE(Enum.reverse(String.codepoints(subject)))
   defp match_nested_manual_reverse(
          {{:., meta, [{:__aliases__, _, outer_mod}, outer_func]}, _,
           [
             {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _,
-             [{{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [subject]}]}
+             [{{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, [subject]}]}
           ]}
        )
        when outer_mod in [[:Enum], [:IO]] and outer_func in [:join, :iodata_to_binary] do
@@ -156,9 +162,9 @@ defmodule Credence.Pattern.NoManualStringReverse do
 
   defp build_issue(meta) do
     %Issue{
-      rule: :no_manual_string_reverse,
+      rule: :no_codepoint_string_reverse,
       message:
-        "Use `String.reverse/1` instead of manually decomposing a string into graphemes, " <>
+        "Use `String.reverse/1` instead of manually decomposing a string into codepoints, " <>
           "reversing, and reassembling. It is clearer and handles Unicode correctly.",
       meta: %{line: Keyword.get(meta, :line)}
     }

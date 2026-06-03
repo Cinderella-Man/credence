@@ -111,6 +111,32 @@ Credence.analyze(code, rules: [
 ])
 ```
 
+## Safety switches
+
+A few cleanups are identical to your original code for almost every input, and
+differ only on rare Unicode — a decomposed accent (an `"e"` plus a separate
+accent mark), a joined emoji, a flag. Credence keeps those cleanups behind a
+**safety switch**: a promise about the text your program **handles while it
+runs** — names, messages, file contents — **not** the characters in your `.ex`
+source files.
+
+The first switch, `single_codepoint_graphemes`, is **on by default**: Credence
+assumes the text your code processes is all plain, single-piece characters,
+which is true for almost every app. If your code processes arbitrary Unicode and
+you want the iron-clad "identical for every possible input" guarantee, turn the
+promises off:
+
+```elixir
+# play it safe everywhere — only always-correct rules run
+Credence.fix(code, assumptions: :strict)
+
+# or set it project-wide
+config :credence, assumptions: :strict
+```
+
+`Credence.Pattern.rule_status/1` shows which rules are on and which promises they
+need. Full reference: the `Credence.Assumptions` moduledoc.
+
 ## Writing your own rules
 
 Each round has its own kind of rule.

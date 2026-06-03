@@ -32,6 +32,19 @@ There are two ways to run Credence:
   for almost all real code our users write. This lets it also run the extra rules, which is
   correct for ~99% of real code.
 
+**The invariant, reframed.** We are *not* abandoning behaviour preservation — we are stating
+it relative to a declared domain:
+
+> **Credence never changes behaviour on any input your stated promises admit.**
+
+In `:strict` you make **zero** promises, so the admitted domain is *every possible input* and
+the result is bit-identical to the original code — the old iron-clad guarantee, intact and
+reachable by one word. In the helpful default you make **one** checkable promise, and the
+result is identical for every input that keeps it. This is not "best-effort"; it is "absolute,
+relative to a stated domain." (This reframing must also be written into `CONTEXT.md` and
+`docs/02_rule-review-process.md`, which today still state the old "every input, no exceptions"
+wording.)
+
 Plain words only. No "gated", no "ungated" — just "the promise is on" or "the promise is off".
 
 ## Important: the promise is about your *running data*, not your *source code*
@@ -146,6 +159,27 @@ which was always safe and never needed a promise. Splitting means strict users s
 always-safe half. The promise should cost you exactly the rules that actually need it, and no
 more.
 
+**The split key is the *decompose* function, not the reassemble function — get this right or
+you misroute.** The reverse rule matches four shapes (either decompose paired with either
+reassemble). What decides safe-vs-unsafe is the **first** function: `String.graphemes`
+(sees whole characters; reversing them always equals `String.reverse`) vs `String.codepoints`
+(sees the pieces; can split a decomposed accent). The reassemble function (`Enum.join` vs
+`IO.iodata_to_binary`) makes **no** difference — both just glue the pieces back. Verified
+empirically on a decomposed accent: `graphemes |> iodata_to_binary == String.reverse` (safe),
+`codepoints |> join != String.reverse` (unsafe).
+
+| decompose | reassemble | rule it belongs to |
+|---|---|---|
+| `String.graphemes` | `Enum.join` | always-safe (`no_manual_string_reverse`, no promise) |
+| `String.graphemes` | `IO.iodata_to_binary` | always-safe (`no_manual_string_reverse`, no promise) |
+| `String.codepoints` | `Enum.join` | promise (`no_codepoint_string_reverse`) |
+| `String.codepoints` | `IO.iodata_to_binary` | promise (`no_codepoint_string_reverse`) |
+
+The danger is routing by the *last* function (because §4's two examples happen to pair
+`graphemes` with `join` and `codepoints` with `iodata`): that would let `codepoints |> join`
+run with no promise — a behaviour-changing fix shipped in `:strict`. The promise rule's
+property test **must** include a `codepoints |> join` case so a misroute is a red build.
+
 ## 5. Defaults come from real data, not Elixir habit
 
 **Decision.** Pick each default from what our users' running data actually looks like — not
@@ -197,25 +231,48 @@ easy to convince yourself a rewrite is safe and miss a case. A property test tha
 thousands of promise-satisfying strings and compares old-vs-fixed is the real proof. A
 green example-based test only proves the handful of cases you happened to think of.
 
-## 7. How you set switches: a small map *or* `:strict`
+## 7. How you set switches: a small map, `:strict`, or `:default`
 
-**Decision.** You pass `assumptions:` as either a small map naming only the switches you want
-to change — `%{single_codepoint_graphemes: false}` — or the single word `:strict`, meaning
-"turn every promise off".
+**Decision.** You pass `assumptions:` as one of three things:
+- a **small map** naming only the switches you want to change — `%{single_codepoint_graphemes: false}`;
+- the word **`:strict`**, meaning "turn every promise off";
+- the word **`:default`**, meaning "discard the lower layers and use the built-in defaults".
 
-**Why the sparse map.** You name only what you're changing; everything else keeps its
-default. You don't have to know or restate the full switch list to flip one flag.
+**The three behave as two different *kinds* of operation — this is the merge algebra:**
+
+- **`:strict` and `:default` are full resets.** They reach **every** known switch, named or
+  not: `:strict` forces all of them off; `:default` sets all of them to their registry
+  default. Neither depends on what any lower layer said.
+- **A small map is a patch.** It overrides **only** the keys it names; every switch it does
+  *not* mention falls through unchanged to the layer below (config, then defaults). A small
+  map is **never** expanded with defaults before merging — doing so would let an unmentioned
+  switch silently stomp the layer beneath it.
+
+**Why the sparse map is a patch, not a full map.** Picture two switches and a config that set
+the *other* one. If your call's `%{single_codepoint_graphemes: false}` were expanded to a full
+map (filling the other switch from its default), merging it over config would reset that other
+switch — undoing a project-wide setting you never touched. So a small map must only patch its
+own keys.
 
 **Why `:strict` as one word.** "Turn everything off" is the common careful case, and it
 shouldn't require listing every switch by hand — that's tedious *and* it would silently break
 the day we add a new switch (your hand-written list wouldn't include it). One word stays
 correct forever.
 
+**Why `:default` as the mirror.** The same forever-correct argument runs in the opposite
+direction: a trusted call under a `:strict` project that wants *all* the helpful behaviour back
+would otherwise have to hand-list every switch — and silently miss switch #2 the day we add it.
+`:default` is the one word that says "all of it, whatever the current defaults are," and stays
+correct forever too. Same machinery as `:strict`, pointed at the defaults map instead of
+all-off.
+
 ## 8. Three places to set switches; later wins; a missing place does nothing
 
 **Decision.** Credence reads, in order: (1) built-in defaults, (2) `config :credence` in the
-app config, (3) options passed into the call. The later one wins. A place that isn't set is
-simply skipped.
+app config, (3) options passed into the call. The later one wins (call > config > defaults). A
+place that isn't set is simply skipped. Mechanically: start from the full defaults map, then
+fold each later layer on top using the §7 algebra — `:strict`/`:default` overwrite **all**
+keys, a small map patches **only its own** keys.
 
 **Why three.** They map to three real scopes: sensible behaviour out of the box (defaults), a
 project-wide policy (config), and a one-off override (call options). Later-wins lets a single
@@ -238,6 +295,15 @@ hands Credence an explicit `rules:` list.
 `rules:` bypassed the filter, a user could accidentally run a rule that's unsafe for *their*
 data just by naming it, which would quietly defeat the whole safety story. The filter is not
 optional dressing; it's the guarantee.
+
+**But name a rule and have it filtered, and you get a *visible* heads-up.** Silently dropping a
+rule the caller asked for by name reads as "this rule is broken." So when a rule appears in an
+**explicit** `rules:` list **and** is filtered out for a missing promise, Credence logs one
+**warning**-level line naming the rule and the missing promise (e.g. `NoCodepointStringReverse
+skipped: needs single_codepoint_graphemes, which is off`). It still does **not** run the rule —
+the filter has no exceptions — and it does **not** crash (that would wreck the trusted-script
+ergonomics and contradict "missing = skip", §8). The warning fires only for rules you
+deliberately named, so the default path stays quiet.
 
 ## 10. `rule_status/1` lists every rule and its missing promises
 
@@ -279,20 +345,22 @@ point. An unknown promise is treated as a promise that can never be satisfied.
    `single_codepoint?/1` helper keeps `check` and `fix` in agreement. Tag it
    `def assumptions, do: [:single_codepoint_graphemes]`.
 
-2. **`no_manual_string_reverse`** — split in two (see decision 4): the **graphemes** version
-   stays always-safe and needs no promise; the **codepoints** version becomes a new rule
-   needing `[:single_codepoint_graphemes]`. Name TBD, e.g. `no_codepoint_string_reverse`.
+2. **`no_manual_string_reverse`** — split in two **by the decompose function** (see decision
+   4's four-shape table): the rule keeps **both `String.graphemes` shapes** (with either
+   `Enum.join` or `IO.iodata_to_binary`), stays always-safe, needs no promise. A new rule
+   **`no_codepoint_string_reverse`** takes **both `String.codepoints` shapes** and needs
+   `[:single_codepoint_graphemes]`. Its property test must include a `codepoints |> join` case.
 
 **Why these two.** They're the smallest pair that exercises the whole design: #1 shows
 shrink-first-then-promise (6a) on a single rule, and #2 shows the split-mixed-rules rule (4)
 where one half needs a promise and the other doesn't. Both come from the `evolution` branch
 (`/home/car/projects/credence_evolution`) with their tests.
 
-## 13. The generator and `prompt.md` are out of scope
+## 13. The generator is out of scope
 
-**Decision.** Don't touch the rule generator or `prompt.md` in this change.
+**Decision.** Don't touch the rule generator in this change.
 
-**Why.** They're a separate external tool. Keeping them out keeps this change focused on the
+**Why.** It's a separate external tool. Keeping it out keeps this change focused on the
 switch mechanism and its two example rules — one reviewable unit instead of two tangled ones.
 
 ## 14. Say the default helps most people — and that the promise is about *running data*
@@ -331,6 +399,13 @@ add a new default-on switch, an app that upgrades could see its code rewritten i
 That's a behaviour change tied to a version, so it must be written down where upgraders look —
 which is exactly what a changelog is for.
 
+**And it gets teeth, not just trust.** "Require a changelog line" is the same kind of thing
+§18 says humans forget under deadline — so we enforce it the same way, with the lightest check
+that works: a CI step that fails if the `@registry` defaults in `lib/assumptions.ex` changed in
+a commit and `CHANGELOG.md` did **not**. Like §18's property-test check, it can't judge whether
+the changelog *line* is good — but it turns "shipped a default-on behaviour change with no
+changelog" from possible-and-silent into a red build.
+
 ## 17. Switch docs live in the `Credence.Assumptions` `@moduledoc`
 
 **Decision.** The authoritative reference is the `@moduledoc` on `Credence.Assumptions`, next
@@ -367,23 +442,30 @@ for the unknown-switch CI check (decision 11).
 - **`lib/assumptions.ex` (new) `Credence.Assumptions`** — the list of all known switches:
   `@registry %{atom => %{default, summary}}`. Helpers: `all/0`, `names/0`, `defaults/0`,
   `known?/1`, `validate!/1` (stops with an error on an unknown name). Its `@moduledoc` is the
-  user reference: how to set switches, what `:strict` means, the three-places order,
-  `config :credence`, `rule_status/1`, and a plain-words description of each switch (the
-  description talks about *running data*, per the section above). First switch:
-  `single_codepoint_graphemes`, on by default.
+  user reference: how to set switches, what `:strict` and `:default` mean, the three-places
+  order and merge algebra (§7), `config :credence`, `rule_status/1`, and a plain-words
+  description of each switch (the description talks about *running data*, per the section
+  above). First switch: `single_codepoint_graphemes`, on by default.
 
 - **`lib/rule_helpers.ex`** — the plumbing:
   - `effective_assumptions(opts)` — reads `Application.get_env(:credence, :assumptions, %{})`,
-    combines the three places (defaults, then config, then call options), understands
-    `:strict`, and checks the names with `validate!`.
+    folds the three places (defaults → config → call options, later wins) using the §7 algebra:
+    starts from the full defaults map, and for each later layer applies `:strict` (all keys
+    off) or `:default` (all keys to registry default) as a **full reset**, or a small map as a
+    **patch of only its named keys** (never expanded with defaults). Checks the names with
+    `validate!`.
   - `filter_by_assumptions(rules, opts)` — keeps only the rules whose every needed promise is
     on. A rule that names an unknown switch is treated as having a promise that can never be
-    satisfied, so it is turned off (and a warning is logged).
+    satisfied, so it is turned off (and a warning is logged). When a filtered-out rule was named
+    in an **explicit** `rules:` list, logs a **warning** naming the rule and its missing
+    promise (§9) — still filtered, never crashes.
   - `rule_enabled?/2`.
 
 - **`lib/pattern.ex`** — `rules/1` runs the base list through `filter_by_assumptions/2` (this
-  is what makes the filter apply even to an explicit `rules:` list). Add `rule_status/1` and
-  `enabled_rules/1`. In `fix_with_trace/2`, log which switches are off at debug level.
+  is what makes the filter apply even to an explicit `rules:` list), and tells the filter
+  whether the list was caller-supplied so it can warn on an explicitly-named filtered rule
+  (§9). Add `rule_status/1` and `enabled_rules/1`. In `fix_with_trace/2`, log which switches
+  are off at debug level.
 
 ## New and changed files
 
@@ -399,13 +481,14 @@ the shared random-string generator (e.g. `test/support/assumption_generators.ex`
 version to 0.7.0.
 
 **Changed — docs:** `README.md` (a short section, the plain "this is about your running data"
-sentence, and a link); `CONTEXT.md` (the two modes; shrink-the-rule-first; reuse the smallest
-existing promise; the property-test requirement; the changelog rule; and a note that turning
-text-piece counts into character counts is **not allowed unless** it's behind
-`single_codepoint_graphemes` after shrinking and with a property test);
-`docs/02_rule-review-process.md` (a row in the decision table plus this as a worked example);
-`docs/unfixable_rules/README.md` (one line: a switch can bring back a rule whose only leftover
-difference is a registered promise; type changes are still excluded).
+sentence, and a link); `CONTEXT.md` (**rewrite the absolute "identical output for every input"
+rule into the reframed invariant** — *"Credence never changes behaviour on any input your
+stated promises admit"*, with `:strict` = zero promises = bit-identical; the two modes;
+shrink-the-rule-first; reuse the smallest existing promise; the property-test requirement; the
+changelog rule; and a note that turning text-piece counts into character counts is **not
+allowed unless** it's behind `single_codepoint_graphemes` after shrinking and with a property
+test); `docs/02_rule-review-process.md` (**the same reframed invariant** replacing the old
+every-input wording; a row in the decision table plus this as a worked example).
 
 ## The random-string generator (how we prove safety)
 
@@ -446,13 +529,20 @@ broken generator would otherwise turn every property test green while proving no
 ## Tests
 
 - **`assumptions_test`** — the shape of `defaults/0`; `validate!` stops on an unknown name;
-  `single_codepoint_graphemes` is on by default.
+  `single_codepoint_graphemes` is on by default; `effective_assumptions` merge algebra (§7):
+  `:strict` and `:default` reset **all** keys, a small map patches **only** its named keys and
+  leaves the rest to the layer below (the two-switch patch case from §7), call > config >
+  defaults precedence.
 - **`assumptions_filtering_test`** (through the public API) — default: tagged rules run;
   `assumptions: %{single_codepoint_graphemes: false}`: no issue reported **and** `fix` leaves
-  the code untouched; `:strict`: only no-promise rules run; a no-promise rule is unaffected;
-  an unknown name you pass stops with an error; the `config :credence` place is respected and
-  the call options can override it; a missing config place does nothing. *(This single test
-  file checks decisions 2, 6, 7, 8, 9, and 11 end-to-end through the real public API.)*
+  the code untouched; `:strict`: only no-promise rules run; `:default` under a `:strict` config
+  re-enables everything; a no-promise rule is unaffected; an unknown name you pass stops with an
+  error; naming a filtered rule in an explicit `rules:` list logs a warning but still filters it
+  (§9); the `config :credence` place is respected and the call options can override it; a
+  missing config place does nothing. *(This single test file checks decisions 2, 6, 7, 8, 9,
+  and 11 end-to-end through the real public API.)*
+- **Changelog guard (§16 teeth)** — a CI step asserting that if the `@registry` defaults in
+  `lib/assumptions.ex` changed in a commit, `CHANGELOG.md` changed too.
 - **Whole-suite check** — every rule's `assumptions/0` only names real switches
   (`⊆ Assumptions.names()`). *(The teeth on decision 11's rule-typo case.)*
 - **Whole-suite check (the teeth on "every promised rule is proven")** — for every rule that
@@ -491,13 +581,127 @@ Each line points to the full reasoning above.
 1. Build the feature (§1). 2. Two modes, plain words (§2). 3. Smallest shared promise; flat
 list (§3). 4. None/one/several promises + split mixed rules (§4). 5. Defaults from real data,
 not Elixir habit (§5). 6. The completeness promise, both halves (§6); shrink first (§6a);
-required property test (§6b). 7. Value is a small map **or** `:strict` (§7). 8. Three places,
-later wins, missing place is a no-op (§8). 9. The filter always applies, even to explicit
-`rules:` (§9). 10. `rule_status/1` lists every rule + missing promises (§10). 11. Unknown
-switch: your typo raises, a rule's typo turns that rule off + warns + CI catches it (§11). 12.
-Narrowed to a single-piece literal, verified (§12). 13. Generator / `prompt.md` out of scope
-(§13). 14. Say the default helps most, and the promise is about *running data* (§14). 15. No
+required property test (§6b). 7. Value is a small map, `:strict`, or `:default`; full-reset vs
+patch merge algebra (§7). 8. Three places, later wins, missing place is a no-op (§8). 9. The
+filter always applies, even to explicit `rules:`; an explicitly-named filtered rule warns (§9).
+10. `rule_status/1` lists every rule + missing promises (§10). 11. Unknown switch: your typo
+raises, a rule's typo turns that rule off + warns + CI catches it (§11). 12. Narrowed to a
+single-codepoint literal, verified; reverse rule split by decompose function (§12). 13.
+Generator out of scope (§13). 14. Say the default helps most, and the promise is about *running data* (§14). 15. No
 reviving the deleted charlist rules — type changes can't be promised away (§15). 16. Add
 `CHANGELOG.md`, ship `0.7.0` (§16). 17. Switch docs live in the `Credence.Assumptions`
 `@moduledoc` (§17). 18. The required property test is enforced by a CI meta-test, not by
 trust (§18).
+
+---
+
+# Concrete implementation sequence (do in this order)
+
+Ordered so the tree stays green after every step and each step depends only on earlier
+ones. Run `mix test` at the end of each phase; it must stay green. The two example rules and
+their check/fix tests are ported from `evolution`
+(`/home/car/projects/credence_evolution`) — bring each rule's existing tests with it.
+
+## Phase A — Scaffolding (no behaviour change yet)
+1. `mix.exs`: add `{:stream_data, "~> 1.0", only: :test}`; bump `version:` to `0.7.0`.
+2. Add `CHANGELOG.md` with a `0.7.0` entry: safety switches; `single_codepoint_graphemes`
+   default-on; the two example rules now fix behind the switch.
+3. `lib/pattern/rule.ex`: add `@callback assumptions() :: [atom()]`; in `__using__` add
+   `def assumptions, do: []` + `defoverridable assumptions: 0` (mirror `priority/0`).
+   - **Done when:** `mix deps.get` succeeds and `mix test` is green — every existing rule now
+     answers `assumptions/0 == []` and nothing is filtered. This proves backward-compatibility.
+
+## Phase B — The registry
+4. `lib/assumptions.ex` → `Credence.Assumptions`: `@registry %{single_codepoint_graphemes:
+   %{default: true, summary: "..."}}`; helpers `all/0`, `names/0`, `defaults/0`, `known?/1`,
+   `validate!/1` (raises a clear error on an unknown name). Write the `@moduledoc` (the user
+   reference: setting switches, `:strict`/`:default`, the three-places order + merge algebra
+   §7, `config :credence`, `rule_status/1`, plain-words per-switch description framed about
+   *running data*).
+5. `test/assumptions_test.exs` (registry half): `defaults/0` shape; `validate!` raises on a
+   bad name; `single_codepoint_graphemes` default true.
+   - **Done when:** Phase B tests green.
+
+## Phase C — The plumbing (merge algebra + filter)
+6. `lib/rule_helpers.ex`: `effective_assumptions(opts)` — fold defaults → `config :credence`
+   → call `opts`, later wins, applying the §7 algebra (`:strict`/`:default` reset all keys; a
+   small map patches only its named keys; never expand a small map with defaults); call
+   `Assumptions.validate!` on user-named keys. `filter_by_assumptions(rules, opts, explicit?)`
+   — keep rules whose every needed promise is on; an unknown switch on a rule = unsatisfiable
+   ⇒ rule off + `Logger.warning`; a rule filtered out while named in an explicit `rules:` list
+   ⇒ `Logger.warning` naming rule + missing promise (§9). `rule_enabled?/2`.
+7. Extend `test/assumptions_test.exs` (merge half): `:strict`/`:default` reset all; small-map
+   patch leaves unmentioned switches to the layer below (the two-switch §7 case — use a
+   temporary second fake switch in the test or assert via a stubbed registry); precedence
+   call > config > defaults.
+   - **Done when:** Phase C tests green.
+
+## Phase D — Wire into the public path
+8. `lib/pattern.ex`: `rules/1` runs the base list through `filter_by_assumptions/3`, passing
+   whether `rules:` was caller-supplied (for the §9 warning). Add `rule_status/1` (every
+   discovered rule: name, needed promises, on/off now, which needed promises are off) and
+   `enabled_rules/1` (the on-names from that list). In `fix_with_trace/2`, debug-log which
+   switches are off.
+   - **Done when:** `mix test` green (no rule tags a switch yet, so still a no-op end-to-end);
+     `rule_status/1` returns sane data in `iex`.
+
+## Phase E — The safety generator (needed before any property test)
+9. `test/support/assumption_generators.ex`: `single_codepoint_string/0` over
+   `[?\s..?~, 0xC0..0xD6, 0xD8..0xF6, 0xF8..0xFF]`.
+10. Honesty test: assert every value it produces is single-codepoint (each grapheme one
+    codepoint).
+    - **Done when:** honesty test green.
+
+## Phase F — Example rule #1: `avoid_graphemes_enum_count_with_predicate`
+11. Port the rule from `evolution`. Narrow `check` and `fix` to a **single-codepoint literal**
+    via a shared `single_codepoint?/1` helper (`length(String.to_charlist(lit)) == 1`) so
+    `""`, `"ab"`, two-piece `"é"` are dropped and `"a"`, `" "`, one-piece `"é"` kept. Tag
+    `def assumptions, do: [:single_codepoint_graphemes]`.
+12. Port its check/fix tests; pin the shrunk-away cases as "no issue" at the default setting.
+13. `test/pattern/avoid_graphemes_enum_count_with_predicate_property_test.exs`: old
+    (`String.graphemes |> Enum.count(pred)`) vs fixed (`String.count`) agree across the
+    generator; record the two-piece/emoji cases as known differences.
+    - **Done when:** these tests green; by hand, default `fix` rewrites it, `:strict` leaves it.
+
+## Phase G — Example rule #2: split the reverse rule
+14. In `no_manual_string_reverse`, **keep both `String.graphemes` shapes** (with `Enum.join`
+    or `IO.iodata_to_binary`); always-safe, no `assumptions`. Remove the `String.codepoints`
+    shapes from it.
+15. New `lib/pattern/no_codepoint_string_reverse.ex` handling **both `String.codepoints`
+    shapes**; tag `[:single_codepoint_graphemes]`. Split the ported tests accordingly.
+16. `test/pattern/no_codepoint_string_reverse_property_test.exs` — old vs `String.reverse`
+    agree across the generator; **must include a `codepoints |> Enum.join` case** (the
+    misroute guard from §4).
+    - **Done when:** these tests green; the graphemes rule still fixes under `:strict`.
+
+## Phase H — End-to-end + visibility (now real tagged rules exist)
+17. `test/pattern/assumptions_filtering_test.exs` through the public API: default tagged rules
+    run; `single_codepoint_graphemes: false` ⇒ no issue + `fix` untouched; `:strict` ⇒ only
+    no-promise rules; `:default` under a `:strict` config re-enables; unknown user name raises;
+    explicit-`rules:` filtered rule warns but stays filtered; `config :credence` respected and
+    call overrides it; missing config is a no-op.
+18. `rule_status/1` test: right on/off + missing-promise values under different options.
+
+## Phase I — Meta-tests (the CI teeth)
+19. Whole-suite: every rule's `assumptions/0` ⊆ `Assumptions.names()` (§11 rule-typo teeth).
+20. Whole-suite: every rule with non-empty `assumptions/0` has a loadable
+    `Credence.Pattern.<Rule>PropertyTest` in `test/pattern/<rule>_property_test.exs` (§18).
+
+## Phase J — Changelog guard
+21. CI step: if `@registry` defaults in `lib/assumptions.ex` changed in the commit and
+    `CHANGELOG.md` did not, fail the build (§16 teeth).
+
+## Phase K — Docs
+22. `CONTEXT.md` and `docs/02_rule-review-process.md`: replace the old "identical output for
+    every input" wording with the **reframed invariant** (`:strict` = zero promises =
+    bit-identical; default = identical for every input the promises admit); add the
+    shrink-first / reuse-smallest-promise / property-test / changelog notes and the
+    "text-piece counts → character counts only behind `single_codepoint_graphemes`" line.
+23. `README.md`: short section + the "this is about your *running data*" sentence + link to
+    the `Credence.Assumptions` moduledoc.
+
+## Phase L — Final check
+24. `mix test` green; by hand confirm: default `fix` rewrites both example rules; `:strict`
+    leaves them; `rule_status(assumptions: %{single_codepoint_graphemes: false})` shows both
+    off with `single_codepoint_graphemes` as their missing promise. The property tests are the
+    real proof of safety.

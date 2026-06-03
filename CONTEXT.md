@@ -258,34 +258,49 @@ over the same list).
 - **Rules don't re-parse the source to dodge a shape.** If a matcher doesn't fit,
   fix the matcher. Don't re-parse the text with a different parser to get a shape
   that does.
-- **The answer must never change — a fix that can change any output is not a
-  fix.** A rule must never trade a correct answer for a tidier or faster one. If
-  the only rewrite available changes the answer on *some* input, the rule does
-  not fix that case — and if it can't safely fix *any* case, it does not exist
-  (don't even ship it as a find-only check). "Right for the usual input" is not
-  good enough: the fix must give the same answer for *every* input.
-- **NOT ALLOWED: swapping codepoint work for grapheme work.** Do **not** rewrite
-  a charlist/codepoint operation into a grapheme one (or the other way round).
-  `String.to_charlist/1` and `?c`/`String.codepoints/1` work on the small pieces
-  (codepoints); `String.at`/`String.reverse`/`String.length`/`String.graphemes`
-  work on whole characters (graphemes). The two ways of counting drift apart
-  whenever a character is made of more than one piece — accent-mark letters
-  (`"b́"` = `b` + U+0301, with no ready-made single-piece form, so even
-  normalizing can't merge it), joined emoji (`"👨‍👩‍👧"` = 1 character / 5 pieces),
-  flags (`"🇵🇱"` = 1 / 2). Concretely, **none** of these are valid fixes:
+- **The answer must never change on any input your promises admit.** A rule must
+  never trade a correct answer for a tidier or faster one. By default this is
+  absolute: if the only rewrite available changes the answer on *some* input, the
+  rule does not fix that case — and if it can't safely fix *any* case, it does not
+  exist (don't even ship it as a find-only check). "Right for the usual input" is
+  not good enough.
+
+  The **one** escape hatch is a *safety switch* (`Credence.Assumptions`): a
+  checkable promise about the program's running data. A rule may declare a switch
+  via `assumptions/0` and then be correct only while that promise holds — but only
+  after it has been **shrunk** so the promise covers *only* the rare-text gap
+  (never a plain bug), and only with a **property test** proving old == new across
+  promise-satisfying inputs. The reframed invariant: *Credence never changes
+  behaviour on any input your stated promises admit.* `:strict` makes zero
+  promises, so it stays bit-identical for **every** input — the old guarantee,
+  reachable by one word. See `docs/03-safety-switches.md`.
+- **Swapping codepoint work for grapheme work: banned by default, allowed only
+  behind a switch.** Do **not** rewrite a charlist/codepoint operation into a
+  grapheme one (or the other way round) unless it is gated on
+  `single_codepoint_graphemes` (shrunk first, property-tested — see the bullet
+  above). `String.to_charlist/1` and `?c`/`String.codepoints/1` work on the small
+  pieces (codepoints); `String.at`/`String.reverse`/`String.length`/
+  `String.graphemes`/`String.count` work on whole characters (graphemes). The two
+  ways of counting drift apart whenever a character is made of more than one piece
+  — accent-mark letters (`"b́"` = `b` + U+0301, with no ready-made single-piece
+  form, so even normalizing can't merge it), joined emoji (`"👨‍👩‍👧"` = 1 character
+  / 5 pieces), flags (`"🇵🇱"` = 1 / 2).
+
+  Behind `single_codepoint_graphemes`, that drift can't happen, so a piece↔whole
+  swap whose *only* remaining difference is multi-piece data becomes a valid fix
+  (e.g. `String.graphemes(s) |> Enum.count(&(&1 == c))` → `String.count(s, c)`,
+  and the codepoint half of `no_codepoint_string_reverse`).
+
+  But a **type** change can never be promised away — a switch is a promise about
+  *data*, and no promise makes a number equal a string. These stay banned in
+  every mode:
 
   - `Enum.at(String.to_charlist(s), i)` → `String.at(s, i)`
-    (a piece-number vs. a whole-character string, and the positions don't line up)
-  - `String.to_charlist(s) == Enum.reverse(String.to_charlist(s))`
-    → `s == String.reverse(s)` (the `to_charlist`/piece side; flips on
-    accent-mark text)
-  - `length(String.to_charlist(s))` → `String.length(s)` (piece count vs.
-    whole-character count)
+    (a piece-number integer vs. a whole-character string — a type change)
+  - `length(String.to_charlist(s))` → `String.length(s)` is only valid behind the
+    switch (piece count vs. whole-character count — same type, data-only drift)
 
-  There's no standard-library way to be both correct *and* an improvement:
-  `String.codepoints/1` keeps the piece-level meaning but still builds the list
-  (no win), and there's no list-free piece accessor (`String.codepoint_at/2`
-  doesn't exist). **Same-kind** rewrites are fine — e.g.
+  **Same-kind** rewrites are always fine, no switch needed — e.g.
   `String.graphemes(s) == Enum.reverse(String.graphemes(s))` →
-  `s == String.reverse(s)` is whole-character to whole-character and *does* keep
-  the same answer.
+  `s == String.reverse(s)` is whole-character to whole-character and keeps the
+  same answer for every input.

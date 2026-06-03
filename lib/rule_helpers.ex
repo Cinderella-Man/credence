@@ -43,6 +43,111 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
+  Resolves the effective assumption settings from `opts`, folding the three
+  layers (built-in defaults → `config :credence, :assumptions` → call `opts`),
+  later wins. See `Credence.Assumptions` for the merge algebra. User-supplied
+  layers are validated; an unknown switch name raises.
+  """
+  @spec effective_assumptions(keyword()) :: Credence.Assumptions.settings()
+  def effective_assumptions(opts) do
+    config = Application.get_env(:credence, :assumptions, %{})
+    call = Keyword.get(opts, :assumptions, %{})
+
+    validate_assumption_layer!(config)
+    validate_assumption_layer!(call)
+
+    merge_assumptions(Credence.Assumptions.defaults(), [config, call])
+  end
+
+  @doc """
+  Pure merge algebra for assumption layers, independent of the registry.
+
+  Starts from `defaults` and folds each layer on top: `:strict` forces every
+  key off, `:default` resets every key to `defaults`, and a map patches only
+  the keys it names (unmentioned keys keep the value from the layer below).
+  """
+  @spec merge_assumptions(Credence.Assumptions.settings(), [map() | :strict | :default]) ::
+          Credence.Assumptions.settings()
+  def merge_assumptions(defaults, layers) do
+    Enum.reduce(layers, defaults, &apply_assumption_layer(&2, defaults, &1))
+  end
+
+  defp apply_assumption_layer(acc, _defaults, :strict),
+    do: Map.new(acc, fn {k, _} -> {k, false} end)
+
+  defp apply_assumption_layer(_acc, defaults, :default), do: defaults
+
+  defp apply_assumption_layer(acc, _defaults, map) when is_map(map), do: Map.merge(acc, map)
+
+  defp validate_assumption_layer!(value) when value in [:strict, :default], do: :ok
+  defp validate_assumption_layer!(map) when is_map(map), do: Credence.Assumptions.validate!(map)
+
+  defp validate_assumption_layer!(other) do
+    raise ArgumentError,
+          "invalid `:assumptions` value: #{inspect(other)}. " <>
+            "Expected a map of switch settings, `:strict`, or `:default`."
+  end
+
+  @doc """
+  The assumptions a `rule` needs that are **not** on under `effective` settings.
+  An empty list means every needed promise holds. A switch the rule names that
+  is unknown (not in `effective`) counts as off — an unsatisfiable promise.
+  """
+  @spec missing_assumptions(module(), Credence.Assumptions.settings()) :: [atom()]
+  def missing_assumptions(rule, effective) do
+    Enum.reject(rule.assumptions(), fn name -> Map.get(effective, name, false) == true end)
+  end
+
+  @doc """
+  Keeps only the rules whose every needed promise is on under `opts`.
+
+  A rule that names an unknown switch is treated as relying on a promise that
+  can never be satisfied, so it is filtered out and a warning is logged. When
+  `explicit_list?` is true (the caller passed an explicit `rules:` list), a
+  rule filtered out for an *off* (but known) promise also logs a warning, since
+  naming a rule and getting silence reads as "this rule is broken".
+  """
+  @spec filter_by_assumptions([module()], keyword(), boolean()) :: [module()]
+  def filter_by_assumptions(rules, opts, explicit_list? \\ false) do
+    effective = effective_assumptions(opts)
+
+    Enum.filter(rules, fn rule ->
+      case missing_assumptions(rule, effective) do
+        [] ->
+          true
+
+        missing ->
+          warn_filtered_rule(rule, missing, explicit_list?)
+          false
+      end
+    end)
+  end
+
+  @doc "Whether `rule`'s every needed promise is on under `opts`."
+  @spec rule_enabled?(module(), keyword()) :: boolean()
+  def rule_enabled?(rule, opts) do
+    missing_assumptions(rule, effective_assumptions(opts)) == []
+  end
+
+  defp warn_filtered_rule(rule, missing, explicit_list?) do
+    name = rule_name(rule)
+    {unknown, known_off} = Enum.split_with(missing, &(not Credence.Assumptions.known?(&1)))
+
+    if unknown != [] do
+      Logger.warning(
+        "[credence] #{name} disabled: names unknown assumption(s) #{inspect(unknown)} — " <>
+          "treated as never satisfiable. This is a rule bug; CI should catch it."
+      )
+    end
+
+    if explicit_list? and known_off != [] do
+      Logger.warning("[credence] #{name} skipped: needs #{inspect(known_off)}, which is off")
+    end
+
+    :ok
+  end
+
+  @doc """
   Compiles `source` with `Code.with_diagnostics/1` and returns
   `{:ok, diagnostics}` or `{:error, diagnostics}`.
 
