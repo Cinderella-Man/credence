@@ -281,3 +281,10 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_reverse_then_sort_fix_test.exs`
 - Reason: unsound premise — Enum.sort is a stable sort, so reverse-then-sort differs from sort whenever the list has distinct-but-equal-under-comparator elements (e.g. Enum.sort([1,1.0])=[1,1.0] vs Enum.sort(Enum.reverse([1,1.0]))=[1.0,1], === false); no syntactic narrowing can guarantee absence of such elements, so no safe core.
 
+## no_single_use_binding — 2026-06-05
+- Files:
+  - `lib/pattern/no_single_use_binding.ex`
+  - `test/pattern/no_single_use_binding_check_test.exs`
+  - `test/pattern/no_single_use_binding_fix_test.exs`
+- Reason: unsafe — check counts var uses only in the next statement, so it removes a binding still referenced later (e.g. `v=foo(x); v>0; bar(v)` → `foo(x)>0; bar(v)`, unbound-var CompileError); also conflicts head-on with accepted no_kernel_op_in_pipeline, breaking end-to-end showcase tests outside the set.
+
