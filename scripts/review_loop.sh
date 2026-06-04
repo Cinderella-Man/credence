@@ -56,19 +56,28 @@ rlog() { [[ -n "$ROWLOG" ]] && printf '[%s] %-9s %s\n' "$(date +%H:%M:%S)" "$1" 
 # Informational scan: report each fix test's `=~` / `\n`-escaped-string count.
 # Never fails the gate — the agent is expected to have converted these; this just
 # makes the state visible (e.g. "fix tests are clean — no =~").
+# Partial-match ASSERTION weasels the AI has used to dodge exact `==` compares:
+# =~, and assert/refute lines using String.contains?/match?/starts_with?/ends_with?
+# /split or Regex.match?/run/scan. Anchored to assert|refute so the SAME functions
+# appearing inside the code-under-test or an expected heredoc are NOT flagged.
+WEASEL_RE='^[[:space:]]*(assert|refute)[[:space:]].*(String\.(contains\?|match\?|starts_with\?|ends_with\?|split)|Regex\.(match\?|run|scan))'
+# A `\n` inside a longer string literal (an `\n`-escaped code string), but NOT the
+# bare `"\n"` used by `fix/` helpers (there the `\n` is right after the quote).
+NLSTR_RE='[^"]\\n'
 scan_fix_tests() {
-  local base="$1" kind="$2" t="test/${kind}" ft tot=0 nlraw=0 n m
+  local base="$1" kind="$2" t="test/${kind}" ft n p m tot=0 totp=0 totnl=0
   for ft in "$REPO/$t/${base}"*_fix_test.exs "$REPO/$t/${base}_test.exs"; do
     [[ -f "$ft" ]] || continue
     n="$(grep -c '=~' "$ft" 2>/dev/null)"; n="${n:-0}"
-    m="$(grep -c '= "[^"]*\\\\n' "$ft" 2>/dev/null)"; m="${m:-0}"
-    tot=$((tot + n)); nlraw=$((nlraw + m))
-    rlog SCAN "$(basename "$ft"): ${n} =~ assertion(s), ${m} \\n-escaped string(s)"
+    p="$(grep -cE "$WEASEL_RE" "$ft" 2>/dev/null)"; p="${p:-0}"
+    m="$(grep -cE "$NLSTR_RE" "$ft" 2>/dev/null)"; m="${m:-0}"
+    tot=$((tot + n)); totp=$((totp + p)); totnl=$((totnl + m))
+    rlog SCAN "$(basename "$ft"): ${n} =~, ${p} partial-match assert (contains?/match?/split/Regex), ${m} \\n-escaped string(s)"
   done
-  if [[ "$tot" -eq 0 && "$nlraw" -eq 0 ]]; then
-    rlog SCAN "fix tests are CLEAN — no =~ partial matches, no \\n-escaped strings"
+  if (( tot == 0 && totp == 0 && totnl == 0 )); then
+    rlog SCAN "fix tests are CLEAN — exact whole-string == compares only (no =~, no String.contains?/match?, no \\n-strings)"
   else
-    rlog SCAN "TOTAL ${tot} =~ assertion(s), ${nlraw} \\n-escaped string(s) across fix tests"
+    rlog SCAN "TOTAL ${tot} =~ + ${totp} partial-match assert(s) + ${totnl} \\n-escaped string(s) — all should be exact == compares"
   fi
 }
 

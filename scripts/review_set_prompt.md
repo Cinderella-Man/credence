@@ -71,15 +71,19 @@ not that it is safe. This is the bar you are defending.
    Grab each `expected` string from the rule's real output (run it), not by hand;
    layout doesn't matter (`mix format` runs later), the string pins the meaning.
    **Every fix-test assertion compares the WHOLE output** — `assert fix(code) ==
-   expected`, or `assert fix(code) == code` for a no-op. **Never** use `=~`,
-   substring, or any partial match — not even for "must-NOT-rename" / negative
-   cases; a fragment match lets an unintended change elsewhere slip through.
+   expected`, or `assert fix(code) == code` for a no-op. **Never** check a fragment
+   of the output. That bans *all* of these dodges, not just `=~`:
+   `=~`, `String.contains?`, `String.match?`/`Regex.match?`, `String.starts_with?`
+   /`String.ends_with?`, and slicing with `String.split` + `Enum.at` — every one of
+   them lets an unintended change elsewhere slip through. Not even for
+   "must-NOT-rename" / negative cases. Pin the entire string with `==`.
    - **Always use triple-quoted heredocs** (`"""…"""`) for `code` and `expected`.
      **Never** write single-quoted strings with `\n` escapes (e.g.
      `"defmodule M do\n  ..."`) — they're unreadable and easy to get wrong.
    - **Fix, don't reject.** If the set's existing fix tests already use `=~`,
-     substring matches, or `\n`-escaped strings, that is *your work to fix*:
-     rewrite each into an exact heredoc compare against the rule's real output.
+     `String.contains?`/`String.match?`/`Regex.match?`, other substring matches, or
+     `\n`-escaped strings, that is *your work to fix*: rewrite each into an exact
+     heredoc compare against the rule's real output.
      A `=~` in a fix test is never a reason to send a rule to followup — it's a
      thing you repair so the rule can be accepted. The only time you stop is when
      converting a `=~` reveals the rule's output is actually wrong or won't
