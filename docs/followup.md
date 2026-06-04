@@ -256,3 +256,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_range_comparison_for_membership_test.exs`
 - Reason: fix not behavior-preserving — float x (e.g. 5.5 or 10.0) satisfies `x>=a and x<=b` (true) but `x in a..b` is false (range membership requires integer); no static way to prove x is integer, so no safe core
 
+## no_redundant_length_with_regex — 2026-06-05
+- Files:
+  - `lib/pattern/no_redundant_length_with_regex.ex`
+  - `test/pattern/no_redundant_length_with_regex_test.exs`
+- Reason: unsound premise — regex `$` permits a trailing newline, so `String.length(x)==N` is NOT redundant with `^...{N}$`; fix changes the answer on any N-char string + "\n" (e.g. "1234567890\n": before=false, after=true). No safe core keeps the `$`-anchored shape; dot `.` element also multibyte-unsafe.
+

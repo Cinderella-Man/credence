@@ -1,4 +1,3 @@
-lib/pattern/no_redundant_length_with_regex.ex
 lib/pattern/no_redundant_list_traversal.ex
 lib/pattern/no_redundant_negated_guard.ex
 lib/pattern/no_redundant_to_list.ex
@@ -23,7 +22,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_redundant_length_with_regex_test.exs
 test/pattern/no_redundant_list_traversal_check_test.exs
 test/pattern/no_redundant_list_traversal_fix_test.exs
 test/pattern/no_redundant_negated_guard_test.exs
