@@ -1,4 +1,3 @@
-lib/pattern/no_reduce_for_group_by.ex
 lib/pattern/no_reduce_for_map_building.ex
 lib/pattern/no_reduce_while_without_halt.ex
 lib/pattern/no_redundant_case_nil_clause.ex
@@ -28,7 +27,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_reduce_for_group_by_test.exs
 test/pattern/no_reduce_for_map_building_test.exs
 test/pattern/no_reduce_while_without_halt_test.exs
 test/pattern/no_redundant_case_nil_clause_check_test.exs
