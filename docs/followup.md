@@ -220,3 +220,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_manual_map_key_union_test.exs`
 - Reason: not behavior-preserving — manual concat-uniq preserves m1-then-m2 first-occurrence order while Map.keys(Map.merge) returns plain map term order (e.g. %{b,d}/%{a,c} → [:b,:d,:c,:a] vs [:c,:b,:a,:d]); result is an order-observable list and map args are always variables, so no statically-safe core.
 
+## no_manual_string_reverse — 2026-06-04
+- Files:
+  - `lib/pattern/no_manual_string_reverse.ex`
+  - `test/pattern/no_manual_string_reverse_test.exs`
+- Reason: delta folds String.codepoints into this no-promise :strict rule, but codepoints-reverse-join != String.reverse for multi-codepoint graphemes (proven "́e" vs "é"); unsafe fix and duplicates NoCodepointStringReverse which already gates codepoints behind single_codepoint_graphemes.
+
