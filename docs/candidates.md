@@ -1,4 +1,3 @@
-lib/pattern/no_enum_into_empty_mapset.ex
 lib/pattern/no_enum_slice_with_length.ex
 lib/pattern/no_explicit_max_reduce.ex
 lib/pattern/no_explicit_min_reduce.ex
@@ -68,7 +67,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_enum_into_empty_mapset_test.exs
 test/pattern/no_enum_slice_with_length_test.exs
 test/pattern/no_explicit_max_reduce_test.exs
 test/pattern/no_explicit_min_reduce_test.exs
