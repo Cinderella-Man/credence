@@ -1,4 +1,3 @@
-lib/pattern/no_case_boolean_result.ex
 lib/pattern/no_case_destructure_in_pipe.ex
 lib/pattern/no_case_digit_to_integer.ex
 lib/pattern/no_case_true_false.ex
@@ -81,8 +80,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_case_boolean_result_check_test.exs
-test/pattern/no_case_boolean_result_fix_test.exs
 test/pattern/no_case_destructure_in_pipe_test.exs
 test/pattern/no_case_digit_to_integer_test.exs
 test/pattern/no_case_true_false_check_test.exs
