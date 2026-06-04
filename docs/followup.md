@@ -274,3 +274,10 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_rem_for_parity_check_test.exs`
 - Reason: unsafe on every input — rem(x,2) raises ArithmeticError on non-integers while Integer.is_even/is_odd (guarded by is_integer) returns false, and the ==1/!=1 cases are wrong for negative integers (rem(-3,2)==1 is false but is_odd(-3) is true); no safe core remains.
 
+## no_reverse_then_sort — 2026-06-05
+- Files:
+  - `lib/pattern/no_reverse_then_sort.ex`
+  - `test/pattern/no_reverse_then_sort_check_test.exs`
+  - `test/pattern/no_reverse_then_sort_fix_test.exs`
+- Reason: unsound premise — Enum.sort is a stable sort, so reverse-then-sort differs from sort whenever the list has distinct-but-equal-under-comparator elements (e.g. Enum.sort([1,1.0])=[1,1.0] vs Enum.sort(Enum.reverse([1,1.0]))=[1.0,1], === false); no syntactic narrowing can guarantee absence of such elements, so no safe core.
+
