@@ -166,3 +166,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_if_subtraction_for_max_fix_test.exs`
 - Reason: max(0, x - y) evaluates the subtraction unconditionally — on non-number operands the original `if x > y, do: x - y, else: 0` returns 0 (cond false) while the rewrite raises ArithmeticError; `>=` also turns float-zero 0.0 into integer 0. Not narrowable syntactically (operands are runtime-bound; can't prove numbers), and the type change can't be promised away.
 
+## no_integer_to_string_digits — 2026-06-04
+- Files:
+  - `lib/pattern/no_integer_to_string_digits.ex`
+  - `test/pattern/no_integer_to_string_digits_test.exs`
+- Reason: unsound on every input — Integer.digits yields raw digit values [1,0,1] while String.to_charlist(Integer.to_string(...)) yields ASCII codepoints [49,48,49] and String.graphemes yields a list of strings ["1","0","1"]; no base/number matches, and graphemes also changes type, so there is no safe narrow core.
+
