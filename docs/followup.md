@@ -244,3 +244,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_map_then_flatten_test.exs`
 - Reason: map|>List.flatten -> Enum.flat_map not behavior-preserving (List.flatten is deep+raise-tolerant, flat_map is shallow+raises on non-list); no safe static core to narrow to
 
+## no_multiple_enum_at — 2026-06-04
+- Files:
+  - `lib/pattern/no_multiple_enum_at.ex`
+  - `test/pattern/no_multiple_enum_at_test.exs`
+- Reason: delta adds fix for Enum.at/3 default forms (direct 3-arg + piped 2-arg) — rewrite to `[a,b,c | _] = Enum.reverse(var)` drops the default and raises MatchError on out-of-bounds instead of returning the default (proven: Enum.at([1,2],-3,0)=0 vs MatchError); not behavior-preserving.
+
