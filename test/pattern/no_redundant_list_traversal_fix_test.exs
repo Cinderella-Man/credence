@@ -12,11 +12,11 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # length + Enum.sum → Enum.reduce
+  # length + Enum.sum → NOT auto-fixed (readability downgrade)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "fixes length + Enum.sum into Enum.reduce" do
-    test "basic case" do
+  describe "does not auto-fix length + Enum.sum (idiomatic pattern)" do
+    test "basic case — count then sum" do
       input = """
       def run(numbers) do
         count = length(numbers)
@@ -25,14 +25,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      expected = """
-      def run(numbers) do
-        {count, sum} = Enum.reduce(numbers, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)
-        {count, sum}
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(input) == input
     end
 
     test "Enum.count + Enum.sum" do
@@ -44,14 +37,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      expected = """
-      def run(numbers) do
-        {count, sum} = Enum.reduce(numbers, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)
-        sum / count
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(input) == input
     end
 
     test "preserves intervening code" do
@@ -64,15 +50,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      expected = """
-      def run(numbers) do
-        {count, actual} = Enum.reduce(numbers, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)
-        expected = div(count * (count + 1), 2)
-        expected - actual
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(input) == input
     end
 
     test "flipped order — sum first, then length" do
@@ -84,14 +62,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      expected = """
-      def run(numbers) do
-        {sum, count} = Enum.reduce(numbers, {0, 0}, fn x, {s, c} -> {s + x, c + 1} end)
-        sum / count
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(input) == input
     end
 
     test "inside a full module" do
@@ -105,16 +76,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      expected = """
-      defmodule Stats do
-        def average(numbers) do
-          {count, sum} = Enum.reduce(numbers, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)
-          sum / count
-        end
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(input) == input
     end
   end
 
@@ -187,6 +149,52 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
   # SAFETY — must NOT modify
   # ═══════════════════════════════════════════════════════════════════
 
+  describe "does not modify inline calls in the same expression" do
+    test "Enum.sum + length for average" do
+      input = """
+      def run(numbers) do
+        average = Enum.sum(numbers) / length(numbers)
+        Enum.filter(numbers, &(&1 >= average))
+      end
+      """
+
+      assert fix(input) == input
+    end
+
+    test "Enum.sum + Enum.count for average" do
+      input = """
+      def run(numbers) do
+        average = Enum.sum(numbers) / Enum.count(numbers)
+        average
+      end
+      """
+
+      assert fix(input) == input
+    end
+
+    test "Enum.min + Enum.max in same expression" do
+      input = """
+      def run(numbers) do
+        diff = Enum.max(numbers) - Enum.min(numbers)
+        diff
+      end
+      """
+
+      assert fix(input) == input
+    end
+
+    test "Enum.sum + length added together" do
+      input = """
+      def run(numbers) do
+        result = Enum.sum(numbers) + length(numbers)
+        result
+      end
+      """
+
+      assert fix(input) == input
+    end
+  end
+
   describe "does not modify when variables differ" do
     test "length on a, sum on b" do
       input = """
@@ -236,7 +244,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
   # One bare + one inline → merged with generated variable
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "fixes bare assignment + inline call" do
+  describe "does not auto-fix bare assignment + inline count/sum call" do
     test "bare length + inline Enum.sum — exact idx=33 pattern" do
       input = """
       def run(numbers) do
@@ -245,14 +253,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      expected = """
-      def run(numbers) do
-        {n, sum} = Enum.reduce(numbers, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)
-        div(n * (n + 1), 2) - sum
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(input) == input
     end
 
     test "bare length + inline Enum.sum in assignment RHS" do
@@ -264,15 +265,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      expected = """
-      def run(numbers) do
-        {count, sum} = Enum.reduce(numbers, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)
-        doubled_sum = sum * 2
-        {count, doubled_sum}
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(input) == input
     end
 
     test "bare Enum.sum + inline length in assignment RHS" do
@@ -284,15 +277,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      expected = """
-      def run(numbers) do
-        {count, sum} = Enum.reduce(numbers, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)
-        half_count = div(count, 2)
-        {half_count, sum}
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(input) == input
     end
 
     test "bare Enum.min + inline Enum.max" do

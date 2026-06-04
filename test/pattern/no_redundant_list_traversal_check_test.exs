@@ -407,6 +407,48 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # NEGATIVE — inline calls in the same expression
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "does not flag inline calls in the same expression" do
+    test "Enum.sum + length for average" do
+      assert clean?("""
+             def run(numbers) do
+               average = Enum.sum(numbers) / length(numbers)
+               Enum.filter(numbers, &(&1 >= average))
+             end
+             """)
+    end
+
+    test "Enum.sum + Enum.count for average" do
+      assert clean?("""
+             def run(numbers) do
+               average = Enum.sum(numbers) / Enum.count(numbers)
+               average
+             end
+             """)
+    end
+
+    test "Enum.min + Enum.max in same expression" do
+      assert clean?("""
+             def run(numbers) do
+               diff = Enum.max(numbers) - Enum.min(numbers)
+               diff
+             end
+             """)
+    end
+
+    test "Enum.sum + length added together" do
+      assert clean?("""
+             def run(numbers) do
+               result = Enum.sum(numbers) + length(numbers)
+               result
+             end
+             """)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # NEGATIVE — already optimal
   # ═══════════════════════════════════════════════════════════════════
 
