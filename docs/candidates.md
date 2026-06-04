@@ -1,4 +1,3 @@
-lib/pattern/no_list_duplicate_flatten.ex
 lib/pattern/no_list_duplicate_join.ex
 lib/pattern/no_list_to_tuple_for_access.ex
 lib/pattern/no_manual_enum_uniq.ex
@@ -46,7 +45,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_list_duplicate_flatten_test.exs
 test/pattern/no_list_duplicate_join_test.exs
 test/pattern/no_list_to_tuple_for_access_test.exs
 test/pattern/no_manual_enum_uniq_test.exs
