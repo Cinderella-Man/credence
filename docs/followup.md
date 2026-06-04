@@ -57,8 +57,8 @@ Items pulled out of the candidate queue that need dedicated human attention
   Full suite green (3213 tests). The old syntax entries are removed from `pr_diff.md`.
 ## avoid_graphemes_enum_count_with_predicate — 2026-06-04
 - Files:
-  - \`lib/pattern/avoid_graphemes_enum_count_with_predicate.ex\`
-  - \`test/pattern/avoid_graphemes_enum_count_with_predicate_check_test.exs\`
-  - \`test/pattern/avoid_graphemes_enum_count_with_predicate_fix_test.exs\`
+  - `lib/pattern/avoid_graphemes_enum_count_with_predicate.ex`
+  - `test/pattern/avoid_graphemes_enum_count_with_predicate_check_test.exs`
+  - `test/pattern/avoid_graphemes_enum_count_with_predicate_fix_test.exs`
 - Reason: delta drops single-codepoint narrowing + promise; fix now changes answer (e.g. "" 0→14, "ab" 0→2)
 

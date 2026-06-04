@@ -224,7 +224,7 @@ followup() {
 
   {
     echo "## ${base} — $(date +%F)"
-    echo "- Files:"; printf '  - \`%s\`\n' "${paths[@]}"
+    echo "- Files:"; printf "  - \`%s\`\n" "${paths[@]}"
     echo "- Reason: ${reason}"
     echo
   } >> "$FOLLOWUP"
