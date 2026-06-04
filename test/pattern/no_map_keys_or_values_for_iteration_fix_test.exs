@@ -672,7 +672,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   describe "no-ops" do
     test "unfixable func left unchanged" do
       code = "Enum.chunk_every(Map.values(m), 2)"
-      assert fix(code) =~ "Map.values"
+      assert fix(code) == code
     end
 
     test "variable callback still removes Map.values" do
@@ -741,8 +741,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     end
 
     test "fixes nested Enum calls independently" do
-      result =
-        fix("""
+      assert_fix(
+        """
         defmodule Example do
           def f(m) do
             Enum.all?(Map.values(m), fn _v ->
@@ -750,10 +750,17 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
             end)
           end
         end
-        """)
-
-      refute result =~ "Map.values"
-      refute result =~ "Map.keys"
+        """,
+        """
+        defmodule Example do
+          def f(m) do
+            Enum.all?(m, fn {_k, _v} ->
+              Enum.any?(m2, fn {_k, _v} -> true end)
+            end)
+          end
+        end
+        """
+      )
     end
   end
 

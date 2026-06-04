@@ -66,11 +66,15 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
       end
       """
 
-      fixed = fix(code)
-      assert fixed =~ "def foo(x), do: x + 1"
-      assert fixed =~ "[\"a\", \"b\"]"
-      assert fixed =~ "def baz(y), do: y * 2"
-      refute fixed =~ "<<"
+      expected = """
+      defmodule Example do
+        def foo(x), do: x + 1
+        def bar, do: ["a", "b"]
+        def baz(y), do: y * 2
+      end
+      """
+
+      assert fix(code) == expected
     end
 
     test "fixes in case expression" do
@@ -81,9 +85,14 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
       end
       """
 
-      fixed = fix(code)
-      assert fixed =~ "\"a\" -> :ok"
-      refute fixed =~ "<<"
+      expected = """
+      case x do
+        "a" -> :ok
+        _ -> :error
+      end
+      """
+
+      assert fix(code) == expected
     end
   end
 

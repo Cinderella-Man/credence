@@ -119,9 +119,17 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
       end
       """
 
-      fixed = fix(code)
-      assert fixed =~ "!match?([_, _ | _], nums)"
-      refute fixed =~ "length(nums)"
+      expected = """
+      defmodule Example do
+        def max_product(nums) do
+          if !match?([_, _ | _], nums) do
+            raise ArgumentError, "need at least 2"
+          end
+        end
+      end
+      """
+
+      assert fix(code) == expected
     end
 
     test "preserves surrounding code" do
@@ -133,10 +141,15 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
       end
       """
 
-      fixed = fix(code)
-      assert fixed =~ "def foo(x), do: x + 1"
-      assert fixed =~ "match?([_, _, _ | _], list)"
-      assert fixed =~ "def baz(y), do: y * 2"
+      expected = """
+      defmodule Example do
+        def foo(x), do: x + 1
+        def bar(list), do: match?([_, _, _ | _], list)
+        def baz(y), do: y * 2
+      end
+      """
+
+      assert fix(code) == expected
     end
   end
 
@@ -242,12 +255,16 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
       end
       """
 
-      output = fix(code)
+      # Guard untouched, body rewritten to `state == []`.
+      expected = """
+      defmodule Test do
+        def f(state) when is_list(state) do
+          state == []
+        end
+      end
+      """
 
-      # Guard untouched, body rewritten.
-      assert output =~ "when is_list(state)"
-      refute output =~ "length(state) == 0"
-      assert output =~ "state == []"
+      assert fix(code) == expected
     end
   end
 end

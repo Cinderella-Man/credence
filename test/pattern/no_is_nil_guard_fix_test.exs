@@ -124,10 +124,11 @@ defmodule Credence.Pattern.NoIsNilGuardFixTest do
       def palindrome?(string) when is_nil(string), do: raise ArgumentError, message: "cannot be nil"
       """
 
-      fixed = fix(code)
-      assert fixed =~ "def palindrome?(nil)"
-      refute fixed =~ "when is_nil"
-      refute fixed =~ "string"
+      expected = """
+      def palindrome?(nil), do: raise ArgumentError, message: "cannot be nil"
+      """
+
+      assert fix(code) == expected
     end
 
     test "preserves surrounding code" do
@@ -139,11 +140,15 @@ defmodule Credence.Pattern.NoIsNilGuardFixTest do
       end
       """
 
-      fixed = fix(code)
-      assert fixed =~ "def foo(nil), do: :default"
-      assert fixed =~ "def foo(x), do: x + 1"
-      assert fixed =~ "def bar(y), do: y * 2"
-      refute fixed =~ "is_nil"
+      expected = """
+      defmodule Example do
+        def foo(nil), do: :default
+        def foo(x), do: x + 1
+        def bar(y), do: y * 2
+      end
+      """
+
+      assert fix(code) == expected
     end
   end
 

@@ -93,8 +93,8 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
   describe "all four patterns together" do
     test "fixes all in one module" do
-      result =
-        fix("""
+      assert_fix(
+        """
         defmodule M do
           def f(a, b) do
             x = Enum.join(a, "")
@@ -104,17 +104,19 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
             {x, y, z, w}
           end
         end
-        """)
-
-      assert result =~ "Enum.join(a)"
-      assert result =~ "Enum.join(b)"
-      assert result =~ "Enum.map_join(a, &to_string/1)"
-      assert result =~ "Enum.map_join(b, &to_string/1)"
-      refute result =~ "Enum.join(a, \"\")"
-      refute result =~ "Enum.join(\"\")"
-      refute result =~ "Enum.map_join(a, \"\", &to_string/1)"
-      refute result =~ "Enum.map_join(\"\", &to_string/1)"
-      refute result =~ "|>"
+        """,
+        """
+        defmodule M do
+          def f(a, b) do
+            x = Enum.join(a)
+            y = Enum.join(b)
+            z = Enum.map_join(a, &to_string/1)
+            w = Enum.map_join(b, &to_string/1)
+            {x, y, z, w}
+          end
+        end
+        """
+      )
     end
   end
 
@@ -129,19 +131,22 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
     end
 
     test "preserves surrounding code" do
-      result =
-        fix("""
+      assert_fix(
+        """
         defmodule M do
           @moduledoc "Test module"
           def process(list), do: Enum.join(list, "")
           def other(x), do: x + 1
         end
-        """)
-
-      assert result =~ "@moduledoc"
-      assert result =~ "def other(x)"
-      assert result =~ "Enum.join(list)"
-      refute result =~ "Enum.join(list, \"\")"
+        """,
+        """
+        defmodule M do
+          @moduledoc "Test module"
+          def process(list), do: Enum.join(list)
+          def other(x), do: x + 1
+        end
+        """
+      )
     end
   end
 
@@ -183,12 +188,21 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       end
       """
 
-      result = fix(input)
+      expected = """
+      defmodule Example do
+        @doc \"""
+        Joins a list of strings into a single string.
 
-      refute result =~ ~s|Enum.join(list, "")|
-      assert result =~ "Enum.join(list)"
-      assert result =~ ~s|@doc \"""|
-      refute result =~ ~s|@doc "Joins|
+        Returns a binary.
+        \"""
+        def run(list) do
+          Enum.join(list)
+        end
+      end
+      """
+
+      # Exact compare proves the @doc heredoc is preserved (not collapsed to a string).
+      assert fix(input) == expected
     end
 
     test "fix does not collapse @moduledoc heredoc" do
@@ -204,12 +218,20 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       end
       """
 
-      result = fix(input)
+      expected = """
+      defmodule Example do
+        @moduledoc \"""
+        This module does things.
 
-      assert result =~ "Enum.join(list)"
-      refute result =~ "|>"
-      assert result =~ ~s|@moduledoc \"""|
-      refute result =~ ~s|@moduledoc "This|
+        It does them well.
+        \"""
+
+        def run(list), do: Enum.join(list)
+      end
+      """
+
+      # Exact compare proves the @moduledoc heredoc is preserved.
+      assert fix(input) == expected
     end
   end
 

@@ -73,10 +73,16 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
       end
       """
 
-      fixed = fix(code)
-      assert fixed =~ "prev = List.last(acc)"
-      assert fixed =~ "prev * 2"
-      refute fixed =~ "Keyword.get"
+      expected = """
+      defmodule Example do
+        def last_value(acc) do
+          prev = List.last(acc)
+          prev * 2
+        end
+      end
+      """
+
+      assert fix(code) == expected
     end
 
     test "the actual pattern from the LLM log" do

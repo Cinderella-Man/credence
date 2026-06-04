@@ -25,3 +25,6 @@ credence-*.tar
 
 # Autonomous review-loop verdict channel (transient)
 docs/_verdict
+
+# Autonomous review-loop per-row agent transcripts
+scripts/.review_logs/

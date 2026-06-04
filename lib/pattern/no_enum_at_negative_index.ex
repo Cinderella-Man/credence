@@ -278,7 +278,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
   defp plan_inline_for_statement(stmt, calls) do
     by_var = Enum.group_by(calls, & &1.list_var)
 
-    {prepends_rev, subst_map} =
+    {prepends_acc, subst_map} =
       Enum.reduce(by_var, {[], %{}}, fn {list_var, var_calls}, {prepends, subst} ->
         indices = var_calls |> Enum.map(& &1.index) |> Enum.uniq() |> Enum.sort()
 
@@ -310,7 +310,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
                 Map.put(acc, {list_var, idx}, Map.fetch!(depth_to_name, abs(idx)))
               end)
 
-            {reverse_and_pattern(list_var, pattern_elems) ++ prepends, new_subst}
+            {prepends ++ reverse_and_pattern(list_var, pattern_elems), new_subst}
 
           true ->
             {prepends, subst}
@@ -324,7 +324,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndex do
         substitute_enum_at_calls(stmt, subst_map)
       end
 
-    {Enum.reverse(prepends_rev), rewritten}
+    {prepends_acc, rewritten}
   end
 
   # Walk statement and collect `Enum.at(list_var, -N)` calls (direct or piped).

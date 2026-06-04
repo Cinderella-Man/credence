@@ -502,9 +502,9 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      fixed = fix(code)
-      # Must NOT rename `end_index` to `end` — that's a reserved word
-      assert fixed =~ "end_index"
+      # The rule must NOT rename `end_index` to the reserved word `end`; it leaves
+      # the whole clause untouched. Exact compare pins the entire output.
+      assert fix(code) == code
     end
 
     test "canonical base is `do` from `_do` — does not rename to `do`" do
@@ -515,8 +515,8 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      fixed = fix(code)
-      assert fixed =~ "done"
+      # Must NOT rename `done` to the reserved word `do`; nothing else changes.
+      assert fix(code) == code
     end
   end
 
@@ -537,9 +537,9 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      # Fix must NOT rename `prev_prev` to `prev` — that would break the clause.
-      fixed = fix(code)
-      assert fixed =~ "prev_prev"
+      # Fix must NOT rename `prev_prev` to `prev` (that would bind `prev` twice);
+      # the whole clause is left untouched.
+      assert fix(code) == code
     end
 
     test "canonical name clashes with map pattern variable" do
@@ -550,9 +550,9 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      fixed = fix(code)
-      # `val_extra` must NOT be renamed to `val` (clashes with `%{key: val}`)
-      assert fixed =~ "val_extra"
+      # `val_extra` must NOT be renamed to `val` (clashes with `%{key: val}`);
+      # the whole clause is left untouched.
+      assert fix(code) == code
     end
   end
 
@@ -576,14 +576,19 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      # Renaming `prev` → `current` at position 1 would clash with the existing
-      # `current` at position 2 in clause 2. The fix correctly skips this rename.
-      # Position 0 remains inconsistent (prev vs current) — flagged but unfixable.
-      fixed = fix(code)
-      assert fixed =~ "prev"
-      assert fixed =~ "current"
-      issues = check(fixed)
-      assert length(issues) >= 1
+      # Position 0 (`prev` vs `current`) is left alone — renaming it collides with
+      # the `current` already in clause 2 — while position 1 (`current` → `next`)
+      # is safely renamed to match clause 1's `_next`. Position 0 stays
+      # inconsistent, so the fixed code is still flagged.
+      expected = """
+      defmodule Bad do
+        defp do_fibonacci(current, _next, 0), do: current
+        defp do_fibonacci(prev, next, steps), do: do_fibonacci(next, prev + next, steps - 1)
+      end
+      """
+
+      assert fix(code) == expected
+      assert length(check(fix(code))) >= 1
     end
 
     test "fixed code produces zero issues (original validate_answers_match bug)" do

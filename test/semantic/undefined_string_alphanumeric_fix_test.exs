@@ -132,17 +132,23 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       end
       """
 
-      fixed = UndefinedStringAlphanumeric.fix(source, diag(2))
+      # Only line 2 (def a) is rewritten; line 3 (def b) keeps the capture form.
+      expected = """
+      defmodule M do
+        def a(s), do: String.graphemes(s) |> Enum.filter(fn char -> String.match?(char, ~r/^[a-zA-Z0-9]$/) end)
+        def b(s), do: String.graphemes(s) |> Enum.filter(&String.alphanumeric?/1)
+      end
+      """
 
-      lines = String.split(fixed, "\n")
-      assert Enum.at(lines, 1) =~ "String.match?"
-      assert Enum.at(lines, 2) =~ "&String.alphanumeric?/1"
+      assert UndefinedStringAlphanumeric.fix(source, diag(2)) == expected
     end
   end
 
   describe "fix/2 — no-ops" do
     test "returns source unchanged when position is nil" do
-      source = "some code\n"
+      source = """
+      some code
+      """
 
       bad_diag = %{
         severity: :warning,

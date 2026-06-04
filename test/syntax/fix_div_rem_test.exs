@@ -94,17 +94,27 @@ defmodule Credence.Syntax.FixDivRemTest do
 
   describe "fix/1" do
     test "fixes simple infix div" do
-      source = "x = a div b\n"
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "div(a, b)"
-      refute fixed =~ "a div b"
+      source = """
+      x = a div b
+      """
+
+      expected = """
+      x = div(a, b)
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "fixes simple infix rem" do
-      source = "x = a rem b\n"
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "rem(a, b)"
-      refute fixed =~ "a rem b"
+      source = """
+      x = a rem b
+      """
+
+      expected = """
+      x = rem(a, b)
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "fixes div with assignment" do
@@ -117,9 +127,16 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "div(n, 2)"
-      refute fixed =~ "n div 2"
+      expected = """
+      defmodule Example do
+        def half(n) do
+          result = div(n, 2)
+          result
+        end
+      end
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "fixes complex left operand" do
@@ -132,9 +149,16 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "div(n * (n + 1), 2)"
-      refute fixed =~ "div 2"
+      expected = """
+      defmodule Example do
+        def gauss(n) do
+          expected_sum = div(n * (n + 1), 2)
+          expected_sum
+        end
+      end
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "fixes both div and rem in same file" do
@@ -148,9 +172,17 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "div(a, b)"
-      assert fixed =~ "rem(a, b)"
+      expected = """
+      defmodule Example do
+        def compute(a, b) do
+          x = div(a, b)
+          y = rem(a, b)
+          {x, y}
+        end
+      end
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "does not modify valid function call syntax" do

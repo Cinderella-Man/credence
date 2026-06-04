@@ -49,6 +49,61 @@ die() { printf '[review_loop] FATAL: %s\n' "$*" >&2; exit 1; }
 
 list_empty()  { ! grep -q -v '^[[:space:]]*$' "$CANDIDATES"; }
 top_anchor()  { grep -m1 -v '^[[:space:]]*$' "$CANDIDATES" || true; }
+count_list()  { grep -c -v '^[[:space:]]*$' "$CANDIDATES" 2>/dev/null || echo 0; }
+
+# Per-row agent transcripts (gitignored); keep the console a one-line digest.
+LOGDIR="$REPO/scripts/.review_logs"
+mkdir -p "$LOGDIR"
+MIXLOG=/tmp/review_loop_mixtest.log
+
+# Per-row summary state, reset each iteration; set by the handlers, printed once.
+G_ROW=0; G_BASE=""; G_KIND=""; G_MODE=""; G_VERDICT=""; G_REASON=""
+G_FILES=""; G_SUITE=""; G_PUSH=""; G_LB=0; G_LA=0; G_GATE_REASON=""
+
+# Compact "NNNN✓" / "NNNN/F✗" parsed from the gate's mix test log.
+suite_summary() {
+  local line tests fails
+  [[ -f "$MIXLOG" ]] || { echo ""; return; }
+  line="$(grep -oE '[0-9]+ tests?, [0-9]+ failures?' "$MIXLOG" | tail -1)"
+  [[ -n "$line" ]] || { echo ""; return; }
+  tests="$(grep -oE '^[0-9]+' <<<"$line")"
+  fails="$(grep -oE '[0-9]+ failures?' <<<"$line" | grep -oE '[0-9]+')"
+  if [[ "$fails" == 0 ]]; then echo "${tests}✓"; else echo "${tests}/${fails}✗"; fi
+}
+
+# Compact diffstat of HEAD: "<N>f +<ins>/-<del>".
+diffstat_head() {
+  local stat ins del nf
+  stat="$(git -C "$REPO" show --shortstat --format= HEAD | tail -1)"
+  ins="$(grep -oE '[0-9]+ insertion' <<<"$stat" | grep -oE '[0-9]+')"
+  del="$(grep -oE '[0-9]+ deletion'  <<<"$stat" | grep -oE '[0-9]+')"
+  nf="$(git -C "$REPO" show --stat --format= HEAD | grep -c '|')"
+  echo "${nf}f +${ins:-0}/-${del:-0}"
+}
+
+# Push and record status for the digest.
+do_push() {
+  if git -C "$REPO" push -q; then G_PUSH="pushed"
+  else G_PUSH="local"; log "warning: push failed for $1 (commit is local)"; fi
+}
+
+# Print the one-line row digest from the G_* state.
+row_summary() {
+  local sym
+  case "$G_VERDICT" in
+    ACCEPT)   sym="✓" ;;
+    FOLLOWUP) sym="✗" ;;
+    ORPHAN)   sym="—" ;;
+    *)        sym="?" ;;
+  esac
+  local line="${sym} row ${G_ROW}  ${G_BASE} (${G_KIND}${G_MODE:+/$G_MODE})  ${G_VERDICT}"
+  [[ -n "$G_REASON" ]] && line+=": ${G_REASON:0:90}"
+  [[ -n "$G_FILES"  ]] && line+="  | ${G_FILES}"
+  [[ -n "$G_SUITE"  ]] && line+="  | suite ${G_SUITE}"
+  line+="  | list ${G_LB}→${G_LA}"
+  [[ -n "$G_PUSH"   ]] && line+="  | ${G_PUSH}"
+  printf '%s\n' "$line"
+}
 
 # The set paths for a given anchor: the rule file + its grouped test line(s) as
 # they appear in candidates.md (whatever was/will be copied in).
@@ -157,35 +212,38 @@ run_session() {
 }
 
 # Per-kind ACCEPT re-verify gate. Returns 0 to accept, 1 to route to followup.
+# On failure sets G_GATE_REASON to the specific check that failed.
+gate_fail() { G_GATE_REASON="$1"; log "gate: $1"; return 1; }
 gate_accept() {
   local base="$1" kind="$2" rule="lib/${kind}/${base}.ex" t="test/${kind}"
+  G_GATE_REASON=""; rm -f "$MIXLOG"
 
   # (a) the rule file must exist and NOT be a stub (the fix must be real).
-  [[ -f "$REPO/$rule" ]]      || { log "gate: rule file missing: $rule"; return 1; }
-  if is_unfixable_stub "$REPO/$rule"; then log "gate: fix is not real (still a stub)"; return 1; fi
+  [[ -f "$REPO/$rule" ]]      || { gate_fail "rule file missing: $rule"; return 1; }
+  if is_unfixable_stub "$REPO/$rule"; then gate_fail "fix is not real (still a stub)"; return 1; fi
 
   # (b) test shape by kind.
   case "$kind" in
     pattern)
       [[ -f "$REPO/$t/${base}_check_test.exs" && -f "$REPO/$t/${base}_fix_test.exs" ]] \
-        || { log "gate: pattern needs ${base}_check_test.exs + ${base}_fix_test.exs"; return 1; } ;;
+        || { gate_fail "pattern needs ${base}_check_test.exs + ${base}_fix_test.exs"; return 1; } ;;
     semantic)
       compgen -G "$REPO/$t/${base}*_check_test.exs" >/dev/null \
         && compgen -G "$REPO/$t/${base}*_fix_test.exs" >/dev/null \
-        || { log "gate: semantic needs ≥1 ${base}*_check_test + ≥1 ${base}*_fix_test"; return 1; } ;;
+        || { gate_fail "semantic needs ≥1 ${base}*_check_test + ≥1 ${base}*_fix_test"; return 1; } ;;
     syntax)
       { [[ -f "$REPO/$t/${base}_analyze_test.exs" && -f "$REPO/$t/${base}_fix_test.exs" ]] \
         || [[ -f "$REPO/$t/${base}_test.exs" ]]; } \
-        || { log "gate: syntax needs analyze+fix or a single ${base}_test.exs"; return 1; } ;;
-    *) log "gate: unknown kind $kind"; return 1 ;;
+        || { gate_fail "syntax needs analyze+fix or a single ${base}_test.exs"; return 1; } ;;
+    *) gate_fail "unknown kind $kind"; return 1 ;;
   esac
 
   # (c) confined diff: nothing outside the set changed.
-  dirty_confined_to "$base" || { log "gate: changes outside the set — rejecting"; return 1; }
+  dirty_confined_to "$base" || { gate_fail "changes outside the set"; return 1; }
 
   # (d) full suite green (last — the expensive check).
-  ( cd "$REPO" && mix test >/tmp/review_loop_mixtest.log 2>&1 ) \
-    || { log "gate: mix test failed (see /tmp/review_loop_mixtest.log)"; return 1; }
+  ( cd "$REPO" && mix test >"$MIXLOG" 2>&1 ) \
+    || { gate_fail "mix test failed (suite $(suite_summary))"; return 1; }
 
   return 0
 }
@@ -205,8 +263,8 @@ accept_commit() {
   git -C "$REPO" add -A -- "$t/${base}"* >/dev/null 2>&1 || true
   git -C "$REPO" add -- "$CANDIDATES" >/dev/null
   git -C "$REPO" commit -q -m "${base}: accepted"
-  git -C "$REPO" push -q || log "warning: push failed for '${base}: accepted' (commit is local)"
-  log "ACCEPTED ${base} (${kind})"
+  G_FILES="$(diffstat_head)"; G_SUITE="$(suite_summary)"
+  do_push "${base}: accepted"
 }
 
 followup() {
@@ -231,8 +289,8 @@ followup() {
 
   git -C "$REPO" add -- "$CANDIDATES" "$FOLLOWUP" >/dev/null
   git -C "$REPO" commit -q -m "${base}: followup — ${reason}"
-  git -C "$REPO" push -q || log "warning: push failed for '${base}: followup' (commit is local)"
-  log "FOLLOWUP ${base} — ${reason}"
+  G_FILES="reverted ${#paths[@]}f"
+  do_push "${base}: followup"
 }
 
 # Orphan test anchor (a test/ line with no owning rule): straight to followup, no
@@ -249,8 +307,7 @@ route_orphan() {
   } >> "$FOLLOWUP"
   git -C "$REPO" add -- "$CANDIDATES" "$FOLLOWUP" >/dev/null
   git -C "$REPO" commit -q -m "${base}: followup — orphan test"
-  git -C "$REPO" push -q || log "warning: push failed for orphan '${anchor}' (commit is local)"
-  log "FOLLOWUP (orphan) ${anchor}"
+  do_push "orphan ${anchor}"
 }
 
 # Does a candidate test anchor have an owning rule anywhere (queue, tree, sister)?
@@ -270,41 +327,58 @@ main() {
     if list_empty; then log "done — candidates.md empty"; break; fi
     if (( CAP > 0 && iter >= CAP )); then log "cap ${CAP} reached"; break; fi
 
-    local anchor kind base
+    local anchor kind base rowlog
     anchor="$(top_anchor)"
+
+    # reset per-row digest state
+    G_ROW=$((iter + 1)); G_MODE=""; G_VERDICT=""; G_REASON=""
+    G_FILES=""; G_SUITE=""; G_PUSH=""; G_LB="$(count_list)"
 
     # Orphan / global-suite test anchor → followup, no session.
     if [[ "$anchor" == test/* ]]; then
       if rule_exists_for "$anchor"; then
         die "test anchor '${anchor}' has an owning rule but sits above it in the list — fix ordering"
       fi
+      G_BASE="$(rule_base "$anchor")"; G_KIND="$(rule_kind "$anchor")"; G_VERDICT="ORPHAN"
       route_orphan "$anchor"
+      G_LA="$(count_list)"; row_summary
       iter=$((iter + 1)); continue
     fi
 
     kind="$(rule_kind "$anchor")"
     [[ -n "$kind" ]] || die "cannot derive kind from anchor: ${anchor}"
     base="$(rule_base "$anchor")"
-    log "set '${base}' (${kind}) — iteration $((iter + 1))"
+    G_BASE="$base"; G_KIND="$kind"
+    rowlog="$LOGDIR/${base}.log"; : > "$rowlog"
 
-    "$SCRIPT_DIR/copy_next_candidate.sh" || die "copy_next_candidate.sh failed for ${anchor}"
+    "$SCRIPT_DIR/copy_next_candidate.sh" >>"$rowlog" 2>&1 \
+      || die "copy_next_candidate.sh failed for ${anchor} (see $rowlog)"
 
-    local briefing; briefing="$(build_briefing "$anchor" "$kind")"
+    # build_briefing runs in a subshell here, so read its mode back from the
+    # briefing text (the body carries "Mode: <greenfield|delta>") and re-export it
+    # for run_session's trailing MODE line.
+    local briefing; briefing="$(build_briefing "$anchor" "$kind" 2>>"$rowlog")"
+    G_MODE="$(awk '/^Mode:/{print $2; exit}' <<<"$briefing")"
+    BRIEFING_MODE="$G_MODE"
     rm -f "$VERDICT"
-    run_session "$anchor" "$kind" "$briefing"
+    run_session "$anchor" "$kind" "$briefing" >>"$rowlog" 2>&1
 
     local verdict; verdict="$(head -n1 "$VERDICT" 2>/dev/null || true)"
     case "$verdict" in
       ACCEPT)
         if gate_accept "$base" "$kind"; then
-          accept_commit "$base" "$kind" "$anchor"
+          G_VERDICT="ACCEPT"; accept_commit "$base" "$kind" "$anchor"
         else
-          followup "$base" "$anchor" "failed accept gate"
+          G_VERDICT="FOLLOWUP"; G_REASON="failed gate: ${G_GATE_REASON}"
+          followup "$base" "$anchor" "failed accept gate (${G_GATE_REASON})"
         fi ;;
-      FOLLOWUP:*) followup "$base" "$anchor" "${verdict#FOLLOWUP:}" ;;
-      *)          followup "$base" "$anchor" "missing or unparseable verdict" ;;
+      FOLLOWUP:*) G_VERDICT="FOLLOWUP"; G_REASON="${verdict#FOLLOWUP:}"
+                  followup "$base" "$anchor" "${verdict#FOLLOWUP:}" ;;
+      *)          G_VERDICT="FOLLOWUP"; G_REASON="missing or unparseable verdict"
+                  followup "$base" "$anchor" "missing or unparseable verdict" ;;
     esac
 
+    G_LA="$(count_list)"; row_summary
     rm -f "$VERDICT"
     iter=$((iter + 1))
     list_empty && { log "done — candidates.md empty"; break; }

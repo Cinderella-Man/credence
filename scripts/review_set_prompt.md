@@ -70,6 +70,21 @@ not that it is safe. This is the bar you are defending.
      `<base>_test.exs`.
    Grab each `expected` string from the rule's real output (run it), not by hand;
    layout doesn't matter (`mix format` runs later), the string pins the meaning.
+   **Every fix-test assertion compares the WHOLE output** — `assert fix(code) ==
+   expected`, or `assert fix(code) == code` for a no-op. **Never** use `=~`,
+   substring, or any partial match — not even for "must-NOT-rename" / negative
+   cases; a fragment match lets an unintended change elsewhere slip through.
+   - **Always use triple-quoted heredocs** (`"""…"""`) for `code` and `expected`.
+     **Never** write single-quoted strings with `\n` escapes (e.g.
+     `"defmodule M do\n  ..."`) — they're unreadable and easy to get wrong.
+   - **Fix, don't reject.** If the set's existing fix tests already use `=~`,
+     substring matches, or `\n`-escaped strings, that is *your work to fix*:
+     rewrite each into an exact heredoc compare against the rule's real output.
+     A `=~` in a fix test is never a reason to send a rule to followup — it's a
+     thing you repair so the rule can be accepted. The only time you stop is when
+     converting a `=~` reveals the rule's output is actually wrong or won't
+     compile: then fix (or narrow) the *rule* so its real output is correct, and
+     pin that. Be productive — leave the set better than you found it.
 8. **Verify green:** the set's own tests, then the **whole** `mix test` suite
    (a changed rule can affect the auto-discovered end-to-end suites). If you
    can't get the whole suite green without touching files outside the set, that
