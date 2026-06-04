@@ -159,3 +159,10 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_identity_function_in_enum_test.exs`
 - Reason: failed accept gate (pattern needs no_identity_function_in_enum_check_test.exs + no_identity_function_in_enum_fix_test.exs)
 
+## no_if_subtraction_for_max — 2026-06-04
+- Files:
+  - `lib/pattern/no_if_subtraction_for_max.ex`
+  - `test/pattern/no_if_subtraction_for_max_check_test.exs`
+  - `test/pattern/no_if_subtraction_for_max_fix_test.exs`
+- Reason: max(0, x - y) evaluates the subtraction unconditionally — on non-number operands the original `if x > y, do: x - y, else: 0` returns 0 (cond false) while the rewrite raises ArithmeticError; `>=` also turns float-zero 0.0 into integer 0. Not narrowable syntactically (operands are runtime-bound; can't prove numbers), and the type change can't be promised away.
+
