@@ -300,3 +300,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_split_then_insert_test.exs`
 - Reason: unsafe — List.insert_at differs from split-then-concat on negative index (appends at end vs inserts before last) and raises FunctionClauseError on non-list enumerables that Enum.split accepts; only safe core (literal list + literal non-neg int index) never occurs in real code, so no useful narrowing.
 
+## no_string_split_whitespace_regex — 2026-06-05
+- Files:
+  - `lib/pattern/no_string_split_whitespace_regex.ex`
+  - `test/pattern/no_string_split_whitespace_regex_test.exs`
+- Reason: unsafe at every variant — String.split/1 trims and uses Unicode-whitespace semantics that no ~r/\s/ regex matches; 2-arg ~r/\s+/ differs on padded/Unicode input, 3-arg ~r/\s/[u] differs on em-space (no u) or non-breaking space (with u); arg is a runtime value so no syntactic safe core.
+
