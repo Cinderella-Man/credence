@@ -172,3 +172,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_integer_to_string_digits_test.exs`
 - Reason: unsound on every input — Integer.digits yields raw digit values [1,0,1] while String.to_charlist(Integer.to_string(...)) yields ASCII codepoints [49,48,49] and String.graphemes yields a list of strings ["1","0","1"]; no base/number matches, and graphemes also changes type, so there is no safe narrow core.
 
+## no_integer_to_string_length — 2026-06-04
+- Files:
+  - `lib/pattern/no_integer_to_string_length.ex`
+  - `test/pattern/no_integer_to_string_length_test.exs`
+- Reason: unsound on negative integers — String.length(Integer.to_string(n, base)) counts the leading "-" (e.g. -123 base 10 → 4) while length(Integer.digits(n, base)) does not (→ 3), so they differ by 1 on every negative input; n is runtime-bound, so non-negativity can't be proven syntactically and the only "safe" narrow core is non-negative integer literals (degenerate/useless).
+
