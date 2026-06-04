@@ -93,3 +93,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_doc_false_on_private_test.exs`
 - Reason: delta broadens match from literal `@doc false` to any `@doc <expr>`; fix deletes `@doc` whose argument has compile-time side effects (e.g. `@doc (IO.puts(...) && "d")`, interpolation), dropping the evaluation — not behavior-preserving.
 
+## no_enum_at_negative_index — 2026-06-04
+- Files:
+  - `lib/pattern/no_enum_at_negative_index.ex`
+  - `test/pattern/no_enum_at_negative_index_fix_test.exs`
+- Reason: delta's plan_inline_for_statement rework emits the pattern match before the Enum.reverse binding (e.g. `result = Enum.at(sorted, -2) + 1` → `[_, sorted_neg2 | _] = sorted_reversed` precedes `sorted_reversed = Enum.reverse(sorted)`), producing non-compiling/behavior-changing output; the delta also replaced exact `==` heredoc fix-tests with `=~` substring checks that hide this ordering regression.
+
