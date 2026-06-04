@@ -1,5 +1,3 @@
-lib/pattern/no_find_value_default_case.ex
-test/pattern/no_find_value_default_case_test.exs
 lib/pattern/no_manual_integer_undigits.ex
 lib/pattern/no_manual_list_delete_at.ex
 lib/pattern/no_manual_list_replace_at.ex
