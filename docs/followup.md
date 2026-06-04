@@ -153,3 +153,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_guard_equality_for_pattern_match_test.exs`
 - Reason: failed accept gate (pattern needs no_guard_equality_for_pattern_match_check_test.exs + no_guard_equality_for_pattern_match_fix_test.exs)
 
+## no_identity_function_in_enum — 2026-06-04
+- Files:
+  - `lib/pattern/no_identity_function_in_enum.ex`
+  - `test/pattern/no_identity_function_in_enum_test.exs`
+- Reason: failed accept gate (pattern needs no_identity_function_in_enum_check_test.exs + no_identity_function_in_enum_fix_test.exs)
+

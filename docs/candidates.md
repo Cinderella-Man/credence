@@ -1,4 +1,3 @@
-lib/pattern/no_identity_function_in_enum.ex
 lib/pattern/no_if_empty_for_enum_min_max.ex
 lib/pattern/no_if_subtraction_for_max.ex
 lib/pattern/no_if_true_false.ex
@@ -55,7 +54,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_identity_function_in_enum_test.exs
 test/pattern/no_if_empty_for_enum_min_max_test.exs
 test/pattern/no_if_subtraction_for_max_check_test.exs
 test/pattern/no_if_subtraction_for_max_fix_test.exs
