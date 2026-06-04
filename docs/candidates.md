@@ -1,4 +1,3 @@
-lib/pattern/no_map_then_flatten.ex
 lib/pattern/no_multiple_enum_at.ex
 lib/pattern/no_range_comparison_for_membership.ex
 lib/pattern/no_reduce_for_group_by.ex
@@ -31,7 +30,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_map_then_flatten_test.exs
 test/pattern/no_multiple_enum_at_test.exs
 test/pattern/no_range_comparison_for_membership_test.exs
 test/pattern/no_reduce_for_group_by_test.exs

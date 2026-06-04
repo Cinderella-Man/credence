@@ -238,3 +238,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_map_then_aggregate_test.exs`
 - Reason: constructor_step? allows args [0,1], so `enum |> Enum.map(f) |> MapSet.new(g)` (valid MapSet.new/2 with transform) is flagged and auto-fixed to `MapSet.new(enum, f)`, silently dropping g — proven different result (set of f(x) vs g(f(x))); same for Map.new. Also max_by/min_by are flagged check-only with a non-equivalent "use directly" suggestion (mapped-element vs original-element return), violating check/fix agreement.
 
+## no_map_then_flatten — 2026-06-04
+- Files:
+  - `lib/pattern/no_map_then_flatten.ex`
+  - `test/pattern/no_map_then_flatten_test.exs`
+- Reason: map|>List.flatten -> Enum.flat_map not behavior-preserving (List.flatten is deep+raise-tolerant, flat_map is shallow+raises on non-list); no safe static core to narrow to
+
