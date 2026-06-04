@@ -250,3 +250,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_multiple_enum_at_test.exs`
 - Reason: delta adds fix for Enum.at/3 default forms (direct 3-arg + piped 2-arg) — rewrite to `[a,b,c | _] = Enum.reverse(var)` drops the default and raises MatchError on out-of-bounds instead of returning the default (proven: Enum.at([1,2],-3,0)=0 vs MatchError); not behavior-preserving.
 
+## no_range_comparison_for_membership — 2026-06-04
+- Files:
+  - `lib/pattern/no_range_comparison_for_membership.ex`
+  - `test/pattern/no_range_comparison_for_membership_test.exs`
+- Reason: fix not behavior-preserving — float x (e.g. 5.5 or 10.0) satisfies `x>=a and x<=b` (true) but `x in a..b` is false (range membership requires integer); no static way to prove x is integer, so no safe core
+
