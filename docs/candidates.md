@@ -1,4 +1,3 @@
-lib/pattern/no_explicit_product_reduce.ex
 lib/pattern/no_explicit_sum_reduce.ex
 lib/pattern/no_filter_then_count.ex
 lib/pattern/no_filter_then_first.ex
@@ -64,7 +63,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_explicit_product_reduce_test.exs
 test/pattern/no_explicit_sum_reduce_test.exs
 test/pattern/no_filter_then_count_fix_test.exs
 test/pattern/no_filter_then_count_test.exs
