@@ -1,4 +1,3 @@
-lib/pattern/no_map_keys_for_membership.ex
 lib/pattern/no_map_keys_or_values_for_iteration.ex
 lib/pattern/no_map_put_get_increment.ex
 lib/pattern/no_map_then_aggregate.ex
@@ -35,7 +34,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_map_keys_for_membership_test.exs
 test/pattern/no_map_keys_or_values_for_iteration_check_test.exs
 test/pattern/no_map_keys_or_values_for_iteration_fix_test.exs
 test/pattern/no_map_put_get_increment_test.exs
