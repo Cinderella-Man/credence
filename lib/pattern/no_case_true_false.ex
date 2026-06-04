@@ -10,12 +10,15 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   function call, operator) — not a plain variable, which may be a legitimate
   pattern match on a tristate value.
 
+  Also catches the piped variant: `expr |> case do true -> …; false -> … end`.
+
   ## Detected patterns
 
       case expr do true -> A; false -> B end
       case expr do false -> B; true -> A end
       case expr do true -> A; _ -> B end
       case expr do false -> B; _ -> A end
+      expr |> case do true -> A; false -> B end
 
   ## Bad
 
@@ -45,12 +48,33 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
+        # case expr do true -> …; false -> … end
         {:case, meta, [subject, kw]} = node, acc when is_list(kw) ->
           case extract_do_clauses(kw) do
             [clause_a, clause_b] ->
               if not plain_variable?(subject) and
                    boolean_clause_pair?(clause_pattern(clause_a), clause_pattern(clause_b)) do
                 {node, [build_issue(meta) | acc]}
+              else
+                {node, acc}
+              end
+
+            _ ->
+              {node, acc}
+          end
+
+        # expr |> case do true -> …; false -> … end
+        # Match the pipe node so we can see the piped subject `expr`. The case
+        # node itself carries only the keyword block (the subject comes from
+        # the pipe), so the guard below would otherwise be impossible to apply.
+        # As with the direct form, skip a plain variable on the left: it may be
+        # a legitimate tristate pattern match that `if` would not preserve.
+        {:|>, _, [expr, {:case, case_meta, [kw]}]} = node, acc when is_list(kw) ->
+          case extract_do_clauses(kw) do
+            [clause_a, clause_b] ->
+              if not plain_variable?(expr) and
+                   boolean_clause_pair?(clause_pattern(clause_a), clause_pattern(clause_b)) do
+                {node, [build_issue(case_meta) | acc]}
               else
                 {node, acc}
               end
@@ -113,6 +137,9 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp extract_do_clauses(_), do: nil
 
   # Postwalk callback: rewrite a matching case node to if/else.
+  # Handles both `case expr do … end` and `expr |> case do … end`.
+
+  # case expr do true -> A; false -> B end
   defp maybe_rewrite_case({:case, meta, [subject, kw]} = node) when is_list(kw) do
     case extract_do_clauses(kw) do
       [clause_a, clause_b] ->
@@ -122,6 +149,29 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
           case rewrite_clauses(clause_a, clause_b) do
             {:ok, do_body, else_body} ->
               {:if, meta, [subject, [do: do_body, else: else_body]]}
+
+            :skip ->
+              node
+          end
+        end
+
+      _ ->
+        node
+    end
+  end
+
+  # expr |> case do true -> A; false -> B end
+  # The pipe node wraps the case; rewrite the entire pipe to if/else.
+  defp maybe_rewrite_case({:|>, _pipe_meta, [expr, {:case, case_meta, [kw]}]} = node)
+       when is_list(kw) do
+    case extract_do_clauses(kw) do
+      [clause_a, clause_b] ->
+        if plain_variable?(expr) do
+          node
+        else
+          case rewrite_clauses(clause_a, clause_b) do
+            {:ok, do_body, else_body} ->
+              {:if, case_meta, [expr, [do: do_body, else: else_body]]}
 
             :skip ->
               node
