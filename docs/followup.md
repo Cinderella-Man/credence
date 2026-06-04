@@ -129,3 +129,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_explicit_sum_reduce_test.exs`
 - Reason: new &+/2 clause leaves init (_acc) a wildcard, so Enum.reduce(enum, <non-zero>, &+/2) is now flagged and rewritten to Enum.sum(enum), dropping the accumulator (behavior-changing; e.g. reduce([1,2,3],10,&+/2)==16 vs Enum.sum==6); accepted version did not flag capture syntax.
 
+## no_filter_then_map — 2026-06-04
+- Files:
+  - `lib/pattern/no_filter_then_map.ex`
+  - `test/pattern/no_filter_then_map_test.exs`
+- Reason: filter|>map is two-pass (all preds, then all transforms); `for` interleaves, so on admitted inputs like [2,:sym] (pred rem(x,2)==0, transform hd(x)) it raises a different exception (ArithmeticError vs ArgumentError); destructuring patterns also turn a FunctionClauseError into a silent skip — no safe narrowable core under :strict.
+
