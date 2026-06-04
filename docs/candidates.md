@@ -1,4 +1,3 @@
-lib/pattern/no_if_true_false.ex
 lib/pattern/no_integer_to_string_digits.ex
 lib/pattern/no_integer_to_string_length.ex
 lib/pattern/no_is_prefix_for_non_guard.ex
@@ -52,8 +51,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_if_true_false_check_test.exs
-test/pattern/no_if_true_false_fix_test.exs
 test/pattern/no_integer_to_string_digits_test.exs
 test/pattern/no_integer_to_string_length_test.exs
 test/pattern/no_is_prefix_for_non_guard_test.exs
