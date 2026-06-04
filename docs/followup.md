@@ -184,3 +184,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_list_append_in_reduce_test.exs`
 - Reason: delta widens check to flag unfixable cases (non-empty initial, ++ nested in case/if, ++ not the return expr) while fix stays gated on empty-initial + last-expression ++; breaks check/fix-agreement bar and Credence has no warn-only mode
 
+## no_list_to_tuple_for_access — 2026-06-04
+- Files:
+  - `lib/pattern/no_list_to_tuple_for_access.ex`
+  - `test/pattern/no_list_to_tuple_for_access_test.exs`
+- Reason: failed accept gate (pattern needs no_list_to_tuple_for_access_check_test.exs + no_list_to_tuple_for_access_fix_test.exs)
+
