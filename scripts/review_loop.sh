@@ -15,7 +15,7 @@
 #
 # Usage:   review_loop.sh [cap] [wait_min]
 #   cap        max iterations (0 = run until candidates.md empty; default 0)
-#   wait_min   minutes to sleep between iterations (default 2)
+#   wait_min   minutes to sleep between iterations (default 15)
 # Env:
 #   SISTER=/path     sister checkout (default ../credence_evolution)
 #   CLAUDE_MODEL     optional --model for the session
@@ -35,7 +35,7 @@ SISTER="${SISTER:-$(cd "$REPO/.." && pwd)/credence_evolution}"
 CLAUDE_MODEL="${CLAUDE_MODEL:-}"
 
 CAP="${1:-0}"
-WAIT_MIN="${2:-2}"
+WAIT_MIN="${2:-15}"
 
 ALLOWED_TOOLS="Read Edit Write Grep Glob Bash(mix test:*) Bash(mix format:*) Bash(elixir:*)"
 
@@ -470,7 +470,12 @@ main() {
     iter=$((iter + 1))
     list_empty && { log "done — candidates.md empty"; break; }
     (( CAP > 0 && iter >= CAP )) && { log "cap ${CAP} reached"; break; }
-    sleep "$((WAIT_MIN * 60))"
+    if (( WAIT_MIN > 0 )); then
+      local resume; resume="$(date -d "+${WAIT_MIN} minutes" '+%H:%M' 2>/dev/null || date '+%H:%M')"
+      log "Waiting ${WAIT_MIN} minutes before the next set ( ${G_LA} left in queue )…"
+      log "Next set starts at ${resume}. Not crashed — sleeping; Ctrl-C to stop."
+      sleep "$((WAIT_MIN * 60))"
+    fi
   done
 }
 
