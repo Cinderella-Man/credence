@@ -1,4 +1,3 @@
-lib/pattern/no_empty_map_new.ex
 lib/pattern/no_enum_at_negative_index.ex
 lib/pattern/no_enum_into_empty_map.ex
 lib/pattern/no_enum_into_empty_mapset.ex
@@ -71,7 +70,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_empty_map_new_test.exs
 test/pattern/no_enum_at_negative_index_fix_test.exs
 test/pattern/no_enum_into_empty_map_test.exs
 test/pattern/no_enum_into_empty_mapset_test.exs
