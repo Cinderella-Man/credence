@@ -141,3 +141,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_find_value_default_case_test.exs`
 - Reason: missing or unparseable verdict
 
+## no_grapheme_palindrome_check — 2026-06-04
+- Files:
+  - `lib/pattern/no_grapheme_palindrome_check.ex`
+  - `test/pattern/no_grapheme_palindrome_check_test.exs`
+- Reason: delta re-adds String.to_charlist form (codepoint reverse) and rewrites it to String.reverse (grapheme reverse) — diverges on multi-codepoint graphemes, behavior-changing; accepted version deliberately excluded this
+
