@@ -1,4 +1,3 @@
-lib/pattern/no_cond_two_clauses.ex
 lib/pattern/no_dead_map_update.ex
 lib/pattern/no_destructure_reconstruct.ex
 lib/pattern/no_doc_false_on_private.ex
@@ -75,8 +74,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_cond_two_clauses_check_test.exs
-test/pattern/no_cond_two_clauses_fix_test.exs
 test/pattern/no_dead_map_update_test.exs
 test/pattern/no_destructure_reconstruct_test.exs
 test/pattern/no_doc_false_on_private_test.exs
