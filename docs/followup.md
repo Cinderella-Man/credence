@@ -268,3 +268,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_redundant_negated_guard_test.exs`
 - Reason: delta's underscore-prefixing changes behavior — `f(x, _x, y) when x != y` becomes `f(_x, _x, _y)`, an accidental non-linear pattern forcing arg1==arg2; f(1,99,2) returns :neq before, crashes after.
 
+## no_rem_for_parity_check — 2026-06-05
+- Files:
+  - `lib/pattern/no_rem_for_parity_check.ex`
+  - `test/pattern/no_rem_for_parity_check_test.exs`
+- Reason: unsafe on every input — rem(x,2) raises ArithmeticError on non-integers while Integer.is_even/is_odd (guarded by is_integer) returns false, and the ==1/!=1 cases are wrong for negative integers (rem(-3,2)==1 is false but is_odd(-3) is true); no safe core remains.
+
