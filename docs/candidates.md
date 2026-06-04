@@ -1,4 +1,3 @@
-lib/pattern/no_manual_list_delete_at.ex
 lib/pattern/no_manual_list_replace_at.ex
 lib/pattern/no_manual_map_key_union.ex
 lib/pattern/no_manual_string_reverse.ex
@@ -40,7 +39,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_manual_list_delete_at_test.exs
 test/pattern/no_manual_list_replace_at_test.exs
 test/pattern/no_manual_map_key_union_test.exs
 test/pattern/no_manual_string_reverse_test.exs

@@ -202,3 +202,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_manual_integer_undigits_test.exs`
 - Reason: no safe same-answer fix — reduce form diverges for ranges/float elements (undigits raises); join form is not equivalent to Integer.undigits (string concat+parse vs positional base-10) and diverges/raises on multi-digit/empty inputs; no meaningful statically-safe core
 
+## no_manual_list_delete_at — 2026-06-04
+- Files:
+  - `lib/pattern/no_manual_list_delete_at.ex`
+  - `test/pattern/no_manual_list_delete_at_test.exs`
+- Reason: not behavior-preserving — list & index are always variables; negative index diverges (take(x,-1)++drop(x,0) != delete_at(x,-1)) and non-list enumerables (Range/Map) make List.delete_at raise while manual form works; no statically-safe core in this matching shape.
+
