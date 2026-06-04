@@ -81,3 +81,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_dead_map_update_test.exs`
 - Reason: not behavior-preserving — Map.update/4 runs fun on the existing value when the key is present, so removing the dead update drops side effects and exceptions; original `%{prev: "x"} |> Map.update(:prev, 0, &(&1 - 1)) |> Map.drop([:prev])` raises ArithmeticError while `Map.drop(map, [:prev])` returns %{}. No statically-provable safe core (can't prove key absent or fun total/pure).
 
+## no_destructure_reconstruct — 2026-06-04
+- Files:
+  - `lib/pattern/no_destructure_reconstruct.ex`
+  - `test/pattern/no_destructure_reconstruct_test.exs`
+- Reason: new tuple/binary families lack the multi-arg guard the cons family has — `def f({...} = tuple, {...} = tuple)` forces arg1==arg2 (silent behavior change), and `<<len, data::binary-size(len)>>` underscores `len` to `_` leaving `size(len)` undefined (non-compiling fix); delta is not behavior-preserving.
+
