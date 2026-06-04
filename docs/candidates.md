@@ -1,4 +1,3 @@
-lib/pattern/inconsistent_param_names.ex
 lib/pattern/no_capture_fn_apply.ex
 lib/pattern/no_case_boolean_result.ex
 lib/pattern/no_case_destructure_in_pipe.ex
@@ -83,7 +82,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/inconsistent_param_names_fix_test.exs
 test/pattern/no_capture_fn_apply_test.exs
 test/pattern/no_case_boolean_result_check_test.exs
 test/pattern/no_case_boolean_result_fix_test.exs

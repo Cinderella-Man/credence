@@ -491,6 +491,71 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
     end
   end
 
+  describe "does not rename to a reserved word" do
+    test "canonical base is `end` from `_end` — does not rename to `end`" do
+      # The first clause has `_end` (base name "end"), the second has `end_index`.
+      # Renaming `end_index` → `end` would produce a syntax error.
+      code = """
+      defmodule Bad do
+        defp do_thing([], _start, _end), do: :ok
+        defp do_thing([_ | rest], start, end_index), do: do_thing(rest, start, end_index + 1)
+      end
+      """
+
+      fixed = fix(code)
+      # Must NOT rename `end_index` to `end` — that's a reserved word
+      assert fixed =~ "end_index"
+    end
+
+    test "canonical base is `do` from `_do` — does not rename to `do`" do
+      code = """
+      defmodule Bad do
+        def f(_, _do), do: :ok
+        def f(x, done), do: {x, done}
+      end
+      """
+
+      fixed = fix(code)
+      assert fixed =~ "done"
+    end
+  end
+
+  describe "does not rename when target conflicts with a pattern variable" do
+    test "canonical name clashes with list pattern head variable" do
+      # This is the exact bug from the row: clause 1 has `prev` at position 0
+      # inside a list pattern. Clause 2 has `prev_prev` at position 1.
+      # Renaming `prev_prev` → `prev` would bind `prev` twice.
+      code = """
+      defmodule Bad do
+        defp do_check([prev, curr | rest], _prev, count) when curr >= prev do
+          do_check([curr | rest], prev, count)
+        end
+
+        defp do_check([prev, curr | rest], prev_prev, count) when curr < prev do
+          do_check([curr | rest], prev_prev, count + 1)
+        end
+      end
+      """
+
+      # Fix must NOT rename `prev_prev` to `prev` — that would break the clause.
+      fixed = fix(code)
+      assert fixed =~ "prev_prev"
+    end
+
+    test "canonical name clashes with map pattern variable" do
+      code = """
+      defmodule Bad do
+        defp process(%{key: val}, _val, acc), do: {val, acc}
+        defp process(%{key: k}, val_extra, acc), do: {k, val_extra, acc}
+      end
+      """
+
+      fixed = fix(code)
+      # `val_extra` must NOT be renamed to `val` (clashes with `%{key: val}`)
+      assert fixed =~ "val_extra"
+    end
+  end
+
   describe "round-trip" do
     test "fixed code produces zero issues (basic)" do
       code = """
@@ -503,7 +568,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       assert check(fix(code)) == []
     end
 
-    test "fixed code produces zero issues (fibonacci)" do
+    test "fibonacci — fix skips rename that would create duplicate binding" do
       code = """
       defmodule Bad do
         defp do_fibonacci(current, _next, 0), do: current
@@ -511,7 +576,14 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      # Renaming `prev` → `current` at position 1 would clash with the existing
+      # `current` at position 2 in clause 2. The fix correctly skips this rename.
+      # Position 0 remains inconsistent (prev vs current) — flagged but unfixable.
+      fixed = fix(code)
+      assert fixed =~ "prev"
+      assert fixed =~ "current"
+      issues = check(fixed)
+      assert length(issues) >= 1
     end
 
     test "fixed code produces zero issues (original validate_answers_match bug)" do
