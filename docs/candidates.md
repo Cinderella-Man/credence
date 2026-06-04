@@ -1,4 +1,3 @@
-lib/pattern/avoid_graphemes_enum_count_with_predicate.ex
 lib/pattern/inconsistent_param_names.ex
 lib/pattern/no_capture_fn_apply.ex
 lib/pattern/no_case_boolean_result.ex
@@ -83,8 +82,6 @@ lib/syntax/fix_div_rem.ex
 lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
-test/pattern/avoid_graphemes_enum_count_with_predicate_check_test.exs
-test/pattern/avoid_graphemes_enum_count_with_predicate_fix_test.exs
 test/pattern/debug_ast_test.exs
 test/pattern/inconsistent_param_names_fix_test.exs
 test/pattern/no_capture_fn_apply_test.exs
