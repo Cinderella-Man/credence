@@ -294,3 +294,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_sort_with_key_comparator_test.exs`
 - Reason: unsafe at every variant — strict </> comparators aren't stable like sort_by's <=/>= (reverse equal-key runs, e.g. [{:a,2},{:b,1},{:c,2},{:d,1},{:e,2}] differs), and for <=/>= the tuple pattern {_,_,w1} raises FunctionClauseError on wrong-arity tuples while &elem(&1,2) silently succeeds; no syntactic narrowing guarantees uniform tuple arity, so no safe core.
 
+## no_split_then_insert — 2026-06-05
+- Files:
+  - `lib/pattern/no_split_then_insert.ex`
+  - `test/pattern/no_split_then_insert_test.exs`
+- Reason: unsafe — List.insert_at differs from split-then-concat on negative index (appends at end vs inserts before last) and raises FunctionClauseError on non-list enumerables that Enum.split accepts; only safe core (literal list + literal non-neg int index) never occurs in real code, so no useful narrowing.
+
