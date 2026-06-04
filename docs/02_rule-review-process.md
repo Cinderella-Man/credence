@@ -35,11 +35,11 @@ steps below.
   it one at a time *from* `evolution`. `main` stays untouched until a batch is
   ready.
 - The **to-do list** is the difference between `evolution` and `main`, copied
-  into **`docs/pr_diff.md`**. Work it **top to bottom**.
+  into **`docs/candidates.md`**. Work it **top to bottom**.
 - A **set** is one rule plus its test file(s) — for example
   `lib/pattern/avoid_charlist_enum_at.ex` +
   `test/pattern/avoid_charlist_enum_at_test.exs`.
-- When a set is done, **delete its lines from `docs/pr_diff.md`**. The
+- When a set is done, **delete its lines from `docs/candidates.md`**. The
   shrinking file *is* the progress bar: whatever's left is whatever's still to
   do.
 
@@ -56,10 +56,10 @@ half-checked batch.
 
 ## The steps
 
-For each rule, going top to bottom through `docs/pr_diff.md`:
+For each rule, going top to bottom through `docs/candidates.md`:
 
 1. **Copy the set in** from `evolution` to `evolution_accepted` (rule file +
-   test file(s)), and delete its lines from `docs/pr_diff.md`.
+   test file(s)), and delete its lines from `docs/candidates.md`.
 
 2. **Run `mix test` right away — before judging anything.** A rule often can't
    stand on its own: the `evolution` branch may also have changed shared files

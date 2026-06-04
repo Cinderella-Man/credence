@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 #
-# drop_set.sh — reject the set currently in the working tree (inverse of
-# get_set.sh).
+# remove_from_list_revert_files.sh — reject the set currently in the working tree (inverse of
+# copy_next_candidate.sh).
 #
 # It:
 #   1. figures out which rule + test files were added/modified locally
 #      (uncommitted changes under lib/ and test/),
 #   2. reverts those files (deletes new ones, restores modified ones to HEAD),
-#   3. removes their lines from docs/pr_diff.md.
+#   3. removes their lines from docs/candidates.md.
 #
-# Everything else — staged shared-file edits, docs/pr_diff.md's own diff — is
+# Everything else — staged shared-file edits, docs/candidates.md's own diff — is
 # left untouched. Pass file paths as args to restrict to just those instead of
 # auto-detecting.
 #
@@ -17,9 +17,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(dirname "$SCRIPT_DIR")"
-PRDIFF="$REPO/docs/pr_diff.md"
+CANDIDATES="$REPO/docs/candidates.md"
 
-[[ -f "$PRDIFF" ]] || { echo "error: $PRDIFF not found" >&2; exit 1; }
+[[ -f "$CANDIDATES" ]] || { echo "error: $CANDIDATES not found" >&2; exit 1; }
 
 # Collect the set's files. Either the args given, or auto-detect: every changed
 # (untracked/added/modified) path under lib/ or test/.
@@ -60,13 +60,13 @@ for rel in "${files[@]}"; do
   reverted=$((reverted + 1))
 done
 
-# 3: drop the reverted files' lines from docs/pr_diff.md (exact whole-line match).
+# 3: drop the reverted files' lines from docs/candidates.md (exact whole-line match).
 tmp="$(mktemp)"
 printf '%s\n' "${files[@]}" > "$tmp"
-before="$(grep -c -v '^[[:space:]]*$' "$PRDIFF" || true)"
-filtered="$(grep -vxF -f "$tmp" "$PRDIFF" || true)"
-printf '%s\n' "$filtered" > "$PRDIFF"
+before="$(grep -c -v '^[[:space:]]*$' "$CANDIDATES" || true)"
+filtered="$(grep -vxF -f "$tmp" "$CANDIDATES" || true)"
+printf '%s\n' "$filtered" > "$CANDIDATES"
 rm -f "$tmp"
-after="$(grep -c -v '^[[:space:]]*$' "$PRDIFF" || true)"
+after="$(grep -c -v '^[[:space:]]*$' "$CANDIDATES" || true)"
 
-echo "reverted ${reverted} file(s)  —  removed $((before - after)) line(s) from pr_diff.md, ${after} left"
+echo "reverted ${reverted} file(s)  —  removed $((before - after)) line(s) from candidates.md, ${after} left"
