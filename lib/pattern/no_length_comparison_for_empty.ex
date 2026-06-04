@@ -42,11 +42,20 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
 
   @impl true
   def check(ast, _opts) do
+    guard_ids = collect_guard_member_ids(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, acc ->
         case detect_pattern(node) do
-          {:ok, meta} -> {node, [build_issue(meta) | acc]}
-          :skip -> {node, acc}
+          {:ok, meta} ->
+            if node_id(meta) in guard_ids do
+              {node, acc}
+            else
+              {node, [build_issue(meta) | acc]}
+            end
+
+          :skip ->
+            {node, acc}
         end
       end)
 
