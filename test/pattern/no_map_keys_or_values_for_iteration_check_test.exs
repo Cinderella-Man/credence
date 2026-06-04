@@ -15,11 +15,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
                check("Enum.all?(Map.values(degrees), fn v -> v == 0 end)")
     end
 
-    test "Enum.sum(Map.values(m))" do
-      assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
-               check("Enum.sum(Map.values(m))")
-    end
-
     test "Enum.filter(Map.values(m), ...)" do
       assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
                check("Enum.filter(Map.values(m), fn v -> v > 0 end)")
@@ -43,11 +38,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
   end
 
   describe "flags pipe form" do
-    test "Map.values(m) |> Enum.max()" do
-      assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
-               check("Map.values(map) |> Enum.max()")
-    end
-
     test "Map.keys(m) |> Enum.map(&to_string/1)" do
       assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
                check("Map.keys(map) |> Enum.map(&to_string/1)")
@@ -55,9 +45,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
   end
 
   describe "flags triple-pipe form" do
-    test "map |> Map.values() |> Enum.max()" do
+    test "map |> Map.values() |> Enum.count()" do
       assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
-               check("map |> Map.values() |> Enum.max()")
+               check("map |> Map.values() |> Enum.count()")
     end
   end
 
@@ -76,6 +66,38 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
 
     test "unfixable Enum function" do
       assert check("Enum.chunk_every(Map.values(m), 2)") == []
+    end
+
+    test "Map.values |> Enum.max — already idiomatic" do
+      assert check("Map.values(map) |> Enum.max()") == []
+    end
+
+    test "Map.values |> Enum.min — already idiomatic" do
+      assert check("Map.values(map) |> Enum.min()") == []
+    end
+
+    test "Enum.max(Map.values(m)) — already idiomatic" do
+      assert check("Enum.max(Map.values(m))") == []
+    end
+
+    test "Map.keys |> Enum.max — already idiomatic" do
+      assert check("Map.keys(map) |> Enum.max()") == []
+    end
+
+    test "Enum.sum(Map.values(m)) — already idiomatic" do
+      assert check("Enum.sum(Map.values(m))") == []
+    end
+
+    test "Map.values |> Enum.sum() — already idiomatic" do
+      assert check("Map.values(map) |> Enum.sum()") == []
+    end
+
+    test "Enum.product(Map.keys(m)) — already idiomatic" do
+      assert check("Enum.product(Map.keys(m))") == []
+    end
+
+    test "map |> Map.values() |> Enum.sum() — already idiomatic" do
+      assert check("map |> Map.values() |> Enum.sum()") == []
     end
   end
 

@@ -13,14 +13,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       Enum.all?(Map.values(degrees), fn v -> v == 0 end)
       → Enum.all?(degrees, fn {_k, v} -> v == 0 end)
 
-      # max/min → max_by/min_by + elem
-      Enum.max(Map.values(m))
-      → Enum.max_by(m, fn {_k, v} -> v end) |> elem(1)
-
-      # sum/product → reduce
-      Enum.sum(Map.values(m))
-      → Enum.reduce(m, 0, fn {_k, v}, acc -> acc + v end)
-
       # find/at → case expression
       Enum.find(Map.values(m), fn v -> v > 0 end)
       → case Enum.find(m, fn {_k, v} -> v > 0 end) do
@@ -32,9 +24,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       → m |> Enum.filter(fn {k, _v} -> k > 0 end)
         |> Enum.map(fn {k, _v} -> k end)
 
-  Functions returning complex structures (`chunk_every`, `zip`, `split`,
-  `with_index`, `scan`, `tally`, etc.) cannot be safely auto-fixed and
-  are handled by `NoMapKeysOrValuesForRawIteration`.
+  `Enum.sum`, `Enum.product`, `Enum.max`, and `Enum.min` with
+  `Map.values`/`Map.keys` are already idiomatic and not flagged.
 
   ## Bad
       Enum.all?(Map.values(degrees), fn v -> v == 0 end)
@@ -42,6 +33,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   ## Good
       Enum.all?(degrees, fn {_k, v} -> v == 0 end)
       Enum.map(map, fn {k, _v} -> to_string(k) end)
+      Map.values(map) |> Enum.sum()       # already idiomatic
+      Enum.max(Map.values(m))              # already idiomatic
 
   ## Glossary (terms used throughout this module)
 
@@ -69,12 +62,10 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   @fixable_funcs ~w(
     all? any? count each map flat_map frequencies_by find_value
     reduce reduce_while
-    max min max_by min_by
-    sum product
+    max_by min_by
     at find random empty?
     join
     filter reject
-    sort sort_by
     uniq uniq_by dedup dedup_by
     take drop take_while drop_while
     reverse sample shuffle slice
@@ -193,19 +184,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
     # 1) Wrap any single-arg callbacks in enum_args so the user's
     #    variable binds to the correct slot of the `{k, v}` pair.
-    orig_args = enum_args
     enum_args = wrap_fns(enum_args, map_fn)
-
-    # 2) For sort/2 with a lambda comparator, use the original (unwrapped)
-    #    callback — wrap_sort does its own two-arg destructuring.
-    enum_args =
-      case {enum_fn, orig_args} do
-        {:sort, [comparator]} ->
-          if function?(comparator), do: [wrap_sort(comparator, map_fn)], else: enum_args
-
-        _ ->
-          enum_args
-      end
 
     case enum_fn do
       f when f in [:all?, :any?, :each, :map, :flat_map, :frequencies_by, :find_value] ->
@@ -226,37 +205,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
           [cb | _] -> if function?(cb), do: {:ok, enum.(:count, [map_expr, cb])}, else: :no
         end
 
-      :max ->
-        on_empty(enum_args, fn ->
-          {:ok,
-           elem_call(
-             enum.(:max_by, [map_expr, extractor_lambda(map_fn)]),
-             key_or_value_index(map_fn)
-           )}
-        end)
-
-      :min ->
-        on_empty(enum_args, fn ->
-          {:ok,
-           elem_call(
-             enum.(:min_by, [map_expr, extractor_lambda(map_fn)]),
-             key_or_value_index(map_fn)
-           )}
-        end)
-
       f when f in [:max_by, :min_by] ->
         on_first(enum_args, fn cb ->
           {:ok, elem_call(enum.(f, [map_expr, cb]), key_or_value_index(map_fn))}
-        end)
-
-      :sum ->
-        on_empty(enum_args, fn ->
-          {:ok, enum.(:reduce, [map_expr, wrap_int(0), accumulator_fn(map_fn, :+)])}
-        end)
-
-      :product ->
-        on_empty(enum_args, fn ->
-          {:ok, enum.(:reduce, [map_expr, wrap_int(1), accumulator_fn(map_fn, :*)])}
         end)
 
       :at ->
@@ -310,50 +261,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       f when f in [:filter, :reject] ->
         on_first(enum_args, fn cb ->
           {:ok, enum.(:map, [enum.(f, [map_expr, cb]), extractor_lambda(map_fn)])}
-        end)
-
-      :sort ->
-        case enum_args do
-          [] ->
-            {:ok,
-             enum.(:map, [
-               enum.(:sort_by, [map_expr, extractor_lambda(map_fn)]),
-               extractor_lambda(map_fn)
-             ])}
-
-          [comparator] ->
-            cond do
-              atom_literal?(comparator) ->
-                {:ok,
-                 enum.(:map, [
-                   enum.(:sort_by, [map_expr, extractor_lambda(map_fn), comparator]),
-                   extractor_lambda(map_fn)
-                 ])}
-
-              function?(comparator) ->
-                {:ok,
-                 enum.(:map, [
-                   enum.(:sort, [map_expr, comparator]),
-                   extractor_lambda(map_fn)
-                 ])}
-
-              true ->
-                :no
-            end
-
-          _ ->
-            :no
-        end
-
-      :sort_by ->
-        on_first(enum_args, fn cb ->
-          opts = tl(enum_args)
-
-          {:ok,
-           enum.(:map, [
-             enum.(:sort_by, [map_expr, cb | opts]),
-             extractor_lambda(map_fn)
-           ])}
         end)
 
       f when f in [:uniq, :dedup] ->
@@ -429,19 +336,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
     # 1) Wrap any single-arg callbacks so the user's variable binds
     #    to the correct slot of the `{k, v}` pair.
-    orig_args = enum_args
     enum_args = wrap_fns(enum_args, map_fn)
-
-    # 2) For sort/2 with a lambda comparator, use the original (unwrapped)
-    #    callback — wrap_sort does its own two-arg destructuring.
-    enum_args =
-      case {enum_fn, orig_args} do
-        {:sort, [comparator]} ->
-          if function?(comparator), do: [wrap_sort(comparator, map_fn)], else: enum_args
-
-        _ ->
-          enum_args
-      end
 
     case enum_fn do
       f when f in [:all?, :any?, :each, :map, :flat_map, :frequencies_by, :find_value] ->
@@ -459,39 +354,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
           [cb | _] -> if function?(cb), do: {:ok, enum.(:count, [cb])}, else: :no
         end
 
-      :max ->
-        on_empty(enum_args, fn ->
-          {:ok,
-           pipe_into_elem(
-             pipe_meta,
-             enum.(:max_by, [extractor_lambda(map_fn)]),
-             key_or_value_index(map_fn)
-           )}
-        end)
-
-      :min ->
-        on_empty(enum_args, fn ->
-          {:ok,
-           pipe_into_elem(
-             pipe_meta,
-             enum.(:min_by, [extractor_lambda(map_fn)]),
-             key_or_value_index(map_fn)
-           )}
-        end)
-
       f when f in [:max_by, :min_by] ->
         on_first(enum_args, fn cb ->
           {:ok, pipe_into_elem(pipe_meta, enum.(f, [cb]), key_or_value_index(map_fn))}
-        end)
-
-      :sum ->
-        on_empty(enum_args, fn ->
-          {:ok, enum.(:reduce, [wrap_int(0), accumulator_fn(map_fn, :+)])}
-        end)
-
-      :product ->
-        on_empty(enum_args, fn ->
-          {:ok, enum.(:reduce, [wrap_int(1), accumulator_fn(map_fn, :*)])}
         end)
 
       :at ->
@@ -541,54 +406,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       f when f in [:filter, :reject] ->
         on_first(enum_args, fn cb ->
           {:ok, chain.(enum.(f, [cb]), :map, [extractor_lambda(map_fn)])}
-        end)
-
-      :sort ->
-        case enum_args do
-          [] ->
-            {:ok,
-             chain.(
-               enum.(:sort_by, [extractor_lambda(map_fn)]),
-               :map,
-               [extractor_lambda(map_fn)]
-             )}
-
-          [comparator] ->
-            cond do
-              atom_literal?(comparator) ->
-                {:ok,
-                 chain.(
-                   enum.(:sort_by, [extractor_lambda(map_fn), comparator]),
-                   :map,
-                   [extractor_lambda(map_fn)]
-                 )}
-
-              function?(comparator) ->
-                {:ok,
-                 chain.(
-                   enum.(:sort, [comparator]),
-                   :map,
-                   [extractor_lambda(map_fn)]
-                 )}
-
-              true ->
-                :no
-            end
-
-          _ ->
-            :no
-        end
-
-      :sort_by ->
-        on_first(enum_args, fn cb ->
-          opts = tl(enum_args)
-
-          {:ok,
-           chain.(
-             enum.(:sort_by, [cb | opts]),
-             :map,
-             [extractor_lambda(map_fn)]
-           )}
         end)
 
       f when f in [:uniq, :dedup] ->
@@ -717,18 +534,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     found
   end
 
-  # `fn a, b -> body`  →  `fn {a, _v}, {b, _v} -> body`  for :keys
-  #                    →  `fn {_k, a}, {_k, b} -> body`  for :values
-  # Used for the comparator arg of `Enum.sort/2`.
-  defp wrap_sort({:fn, fn_meta, clauses}, map_fn) do
-    rewritten =
-      Enum.map(clauses, fn {:->, arrow_meta, [head, body]} ->
-        {:->, arrow_meta, [sorter_head(head, map_fn), body]}
-      end)
-
-    {:fn, fn_meta, rewritten}
-  end
-
   # Destructures the first parameter of a lambda clause head, preserving
   # any `when` guard and leaving extra parameters alone (e.g. the `acc`
   # of `Enum.reduce/3`).
@@ -741,18 +546,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   end
 
   defp destructure_head([], _map_fn), do: []
-
-  # Like `destructure_head/2`, but destructures BOTH arguments — used
-  # for 2-arg sort comparators.
-  defp sorter_head([{:when, when_meta, [p1, guard]}, p2 | rest], map_fn) do
-    [{:when, when_meta, [kv_pattern(p1, map_fn), guard]}, kv_pattern(p2, map_fn) | rest]
-  end
-
-  defp sorter_head([p1, p2 | rest], map_fn) do
-    [kv_pattern(p1, map_fn), kv_pattern(p2, map_fn) | rest]
-  end
-
-  defp sorter_head(other, _map_fn), do: other
 
   # Returns the `{k, v}` tuple pattern that binds `user_pattern` to the
   # correct slot of a key-value pair:
@@ -802,10 +595,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   defp function?({:fn, _, _}), do: true
   defp function?({:&, _, [{:/, _, [_, {:__block__, _, [1]}]}]}), do: true
   defp function?(_), do: false
-
-  # Sourceror wraps atom literals in `{:__block__, _, [atom]}`.
-  defp atom_literal?({:__block__, _, [a]}) when is_atom(a), do: true
-  defp atom_literal?(_), do: false
 
   # ════════════════════════════════════════════════════════════════
   # AST builders
@@ -878,18 +667,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   # hand side of the matching clause is just this variable.
   defp extractor_var(:values), do: {:v, [], nil}
   defp extractor_var(:keys), do: {:k, [], nil}
-
-  # `fn {k, v}, acc -> acc <op> <k or v> end` — accumulator lambda for
-  # rewriting `Enum.sum` / `Enum.product` into `Enum.reduce`.
-  defp accumulator_fn(map_fn, op) do
-    acc = {:acc, [], nil}
-
-    {:fn, [],
-     [
-       {:->, [],
-        [[extractor_pattern(map_fn), acc], {op, [], [acc, extractor_var(map_fn)]}]}
-     ]}
-  end
 
   # Wraps an `Enum.find` / `Enum.at` result in:
   #

@@ -228,21 +228,33 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   # max / min → max_by / min_by + elem
   # ═══════════════════════════════════════════════════════════════
 
-  describe "max / min" do
-    test "Enum.max(Map.values(m))" do
-      assert_fix(
-        "Enum.max(Map.values(m))",
-        "elem(Enum.max_by(m, fn {_, v} -> v end), 1)"
-      )
+  describe "max / min — no fix (already idiomatic)" do
+    test "Enum.max(Map.values(m)) — not flagged, not rewritten" do
+      code = "Enum.max(Map.values(m))"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
-    test "Enum.min(Map.keys(m))" do
-      assert_fix(
-        "Enum.min(Map.keys(m))",
-        "elem(Enum.min_by(m, fn {k, _} -> k end), 0)"
-      )
+    test "Enum.min(Map.keys(m)) — not flagged, not rewritten" do
+      code = "Enum.min(Map.keys(m))"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
+    test "pipe: Map.values |> Enum.max() — not flagged, not rewritten" do
+      code = "Map.values(map) |> Enum.max()"
+      assert check(code) == []
+      assert fix(code) == code
+    end
+
+    test "triple pipe: map |> Map.values() |> Enum.max() — not flagged, not rewritten" do
+      code = "map |> Map.values() |> Enum.max()"
+      assert check(code) == []
+      assert fix(code) == code
+    end
+  end
+
+  describe "max_by / min_by with callback" do
     test "Enum.max_by with callback" do
       assert_fix(
         "Enum.max_by(Map.values(m), fn v -> v * 2 end)",
@@ -256,53 +268,35 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
         "elem(Enum.min_by(m, fn {_k, v} -> abs(v) end), 1)"
       )
     end
-
-    test "pipe: Map.values |> Enum.max()" do
-      assert_fix(
-        "Map.values(map) |> Enum.max()",
-        "Enum.max_by(map, fn {_, v} -> v end) |> elem(1)"
-      )
-    end
-
-    test "triple pipe: map |> Map.values() |> Enum.max()" do
-      assert_fix(
-        "map |> Map.values() |> Enum.max()",
-        "Enum.max_by(map, fn {_, v} -> v end) |> elem(1)"
-      )
-    end
   end
 
   # ═══════════════════════════════════════════════════════════════
   # sum / product → reduce
   # ═══════════════════════════════════════════════════════════════
 
-  describe "sum / product" do
-    test "Enum.sum(Map.values(m))" do
-      assert_fix(
-        "Enum.sum(Map.values(m))",
-        "Enum.reduce(m, 0, fn {_k, v}, acc -> acc + v end)"
-      )
+  describe "sum / product — no fix (already idiomatic)" do
+    test "Enum.sum(Map.values(m)) — not flagged, not rewritten" do
+      code = "Enum.sum(Map.values(m))"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
-    test "Enum.product(Map.keys(m))" do
-      assert_fix(
-        "Enum.product(Map.keys(m))",
-        "Enum.reduce(m, 1, fn {k, _v}, acc -> acc * k end)"
-      )
+    test "Enum.product(Map.keys(m)) — not flagged, not rewritten" do
+      code = "Enum.product(Map.keys(m))"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
-    test "pipe: Map.values |> Enum.sum()" do
-      assert_fix(
-        "Map.values(map) |> Enum.sum()",
-        "Enum.reduce(map, 0, fn {_k, v}, acc -> acc + v end)"
-      )
+    test "pipe: Map.values |> Enum.sum() — not flagged, not rewritten" do
+      code = "Map.values(map) |> Enum.sum()"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
-    test "triple pipe: map |> Map.values() |> Enum.sum()" do
-      assert_fix(
-        "map |> Map.values() |> Enum.sum()",
-        "Enum.reduce(map, 0, fn {_k, v}, acc -> acc + v end)"
-      )
+    test "triple pipe: map |> Map.values() |> Enum.sum() — not flagged, not rewritten" do
+      code = "map |> Map.values() |> Enum.sum()"
+      assert check(code) == []
+      assert fix(code) == code
     end
   end
 
@@ -471,54 +465,41 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   # sort (exercises both ex() fix and sort double-wrap fix)
   # ═══════════════════════════════════════════════════════════════
 
-  describe "sort" do
-    test "Enum.sort(Map.values(m))" do
-      assert_fix(
-        "Enum.sort(Map.values(m))",
-        "Enum.map(Enum.sort_by(m, fn {_, v} -> v end), fn {_, v} -> v end)"
-      )
+  describe "sort — no rewrite (order-observable, not auto-fixed)" do
+    test "Enum.sort(Map.values(m)) is left unchanged" do
+      code = "Enum.sort(Map.values(m))"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
-    test "Enum.sort with :desc" do
-      assert_fix(
-        "Enum.sort(Map.values(m), :desc)",
-        "Enum.map(Enum.sort_by(m, fn {_, v} -> v end, :desc), fn {_, v} -> v end)"
-      )
+    test "Enum.sort(Map.keys(m)) is left unchanged" do
+      code = "Enum.sort(Map.keys(m))"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
-    test "Enum.sort with :asc" do
-      assert_fix(
-        "Enum.sort(Map.values(m), :asc)",
-        "Enum.map(Enum.sort_by(m, fn {_, v} -> v end, :asc), fn {_, v} -> v end)"
-      )
+    test "Map.keys |> Enum.sort() is left unchanged" do
+      code = "Map.keys(map) |> Enum.sort()"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
-    test "Enum.sort with comparator lambda" do
-      assert_fix(
-        "Enum.sort(Map.values(m), fn a, b -> a <= b end)",
-        "Enum.map(Enum.sort(m, fn {_k, a}, {_k, b} -> a <= b end), fn {_, v} -> v end)"
-      )
+    test "Map.values |> Enum.sort(:desc) is left unchanged" do
+      code = "Map.values(map) |> Enum.sort(:desc)"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
-    test "Enum.sort_by with callback" do
-      assert_fix(
-        "Enum.sort_by(Map.values(m), fn v -> v end)",
-        "Enum.map(Enum.sort_by(m, fn {_k, v} -> v end), fn {_, v} -> v end)"
-      )
+    test "Enum.sort with comparator lambda is left unchanged" do
+      code = "Enum.sort(Map.values(m), fn a, b -> a <= b end)"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
-    test "pipe: Map.values |> Enum.sort()" do
-      assert_fix(
-        "Map.values(map) |> Enum.sort()",
-        "Enum.map(Enum.sort_by(map, fn {_, v} -> v end), fn {_, v} -> v end)"
-      )
-    end
-
-    test "pipe: Map.values |> Enum.sort(:desc)" do
-      assert_fix(
-        "Map.values(map) |> Enum.sort(:desc)",
-        "Enum.map(Enum.sort_by(map, fn {_, v} -> v end, :desc), fn {_, v} -> v end)"
-      )
+    test "Enum.sort_by(Map.keys(m), ...) is left unchanged" do
+      code = "Enum.sort_by(Map.keys(m), fn k -> k end)"
+      assert check(code) == []
+      assert fix(code) == code
     end
   end
 
@@ -727,14 +708,14 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
         defmodule Example do
           def f(m), do: Enum.all?(Map.values(m), fn v -> v == 0 end)
           def g(m), do: Enum.count(Map.keys(m))
-          def h(m), do: Enum.sum(Map.values(m))
+          def h(m), do: Enum.filter(Map.values(m), fn v -> v > 0 end)
         end
         """,
         """
         defmodule Example do
           def f(m), do: Enum.all?(m, fn {_k, v} -> v == 0 end)
           def g(m), do: Enum.count(m)
-          def h(m), do: Enum.reduce(m, 0, fn {_k, v}, acc -> acc + v end)
+          def h(m), do: Enum.map(Enum.filter(m, fn {_k, v} -> v > 0 end), fn {_, v} -> v end)
         end
         """
       )
@@ -869,11 +850,10 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       )
     end
 
-    test "Enum.sort_by with Map.keys" do
-      assert_fix(
-        "Enum.sort_by(Map.keys(m), fn k -> k end)",
-        "Enum.map(Enum.sort_by(m, fn {k, _v} -> k end), fn {k, _} -> k end)"
-      )
+    test "Enum.sort_by with Map.keys is left unchanged" do
+      code = "Enum.sort_by(Map.keys(m), fn k -> k end)"
+      assert check(code) == []
+      assert fix(code) == code
     end
 
     test "Enum.reduce_while with Map.keys" do
@@ -891,12 +871,11 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
     end
   end
 
-  describe "Map.keys callback wrapping — sort/2 comparators bind BOTH args to key" do
-    test "Enum.sort with comparator on Map.keys" do
-      assert_fix(
-        "Enum.sort(Map.keys(m), fn a, b -> a <= b end)",
-        "Enum.map(Enum.sort(m, fn {a, _v}, {b, _v} -> a <= b end), fn {k, _} -> k end)"
-      )
+  describe "Map.keys callback wrapping — sort/2 not rewritten" do
+    test "Enum.sort with comparator on Map.keys is left unchanged" do
+      code = "Enum.sort(Map.keys(m), fn a, b -> a <= b end)"
+      assert check(code) == []
+      assert fix(code) == code
     end
   end
 
@@ -959,10 +938,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       defmodule Example do
         def a(m), do: Enum.all?(Map.values(m), fn v -> v == 0 end)
         def b(m), do: Enum.count(Map.values(m))
-        def c(m), do: Enum.sum(Map.values(m))
-        def d(m), do: Enum.filter(Map.values(m), fn v -> v > 0 end)
-        def e(m), do: Map.values(m) |> Enum.max()
-        def f(m), do: Enum.join(Map.values(m))
+        def c(m), do: Enum.filter(Map.values(m), fn v -> v > 0 end)
+        def d(m), do: Map.values(m) |> Enum.max()
+        def e(m), do: Enum.join(Map.values(m))
       end
       """
 
@@ -974,8 +952,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       defmodule Example do
         def a(m), do: Enum.all?(Map.values(m), fn v -> v == 0 end)
         def b(m), do: Enum.filter(Map.values(m), fn v -> v > 0 end)
-        def c(m), do: Enum.sort(Map.values(m))
-        def d(m), do: Map.keys(m) |> Enum.join()
+        def c(m), do: Map.keys(m) |> Enum.join()
       end
       """
 
