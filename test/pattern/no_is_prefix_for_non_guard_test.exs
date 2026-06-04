@@ -180,14 +180,33 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
       assert check(code) == []
     end
 
-    test "does not flag is_ functions that also end with ?" do
+    test "detects def is_empty? — redundant double convention" do
       code = """
-      defmodule Good do
+      defmodule Bad do
         def is_empty?(list), do: list == []
       end
       """
 
-      assert check(code) == []
+      [issue] = check(code)
+      assert issue.rule == :no_is_prefix_for_non_guard
+      assert issue.message =~ "is_empty?"
+      assert issue.message =~ "empty?"
+    end
+
+    test "detects defp is_palindrome? — redundant double convention" do
+      code = """
+      defmodule Bad do
+        defp is_palindrome?(num) do
+          str = Integer.to_string(num)
+          str == String.reverse(str)
+        end
+      end
+      """
+
+      [issue] = check(code)
+      assert issue.rule == :no_is_prefix_for_non_guard
+      assert issue.message =~ "is_palindrome?"
+      assert issue.message =~ "palindrome?"
     end
 
     test "does not flag non-function nodes" do
@@ -425,6 +444,43 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardTest do
         Credence.RuleHelpers.apply_rule_fix(NoIsPrefixForNonGuard, code, [])
 
       assert fixed =~ "def public?(x)"
+    end
+
+    test "renames is_palindrome? to palindrome? (strip prefix, keep ?)" do
+      code = """
+      defmodule Example do
+        defp is_palindrome?(num) do
+          str = Integer.to_string(num)
+          str == String.reverse(str)
+        end
+
+        def check(n) do
+          if is_palindrome?(n), do: :yes, else: :no
+        end
+      end
+      """
+
+      fixed = fix(code)
+      assert fixed =~ "defp palindrome?(num)"
+      assert fixed =~ "if palindrome?(n)"
+      refute fixed =~ "is_palindrome"
+    end
+
+    test "renames is_empty? to empty? (strip prefix, keep ?)" do
+      code = """
+      defmodule Example do
+        def is_empty?(list), do: list == []
+
+        def check(list) do
+          is_empty?(list)
+        end
+      end
+      """
+
+      fixed = fix(code)
+      assert fixed =~ "def empty?(list)"
+      assert fixed =~ "empty?(list)"
+      refute fixed =~ "is_empty"
     end
   end
 end

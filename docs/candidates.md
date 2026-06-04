@@ -1,4 +1,3 @@
-lib/pattern/no_is_prefix_for_non_guard.ex
 lib/pattern/no_length_comparison_for_empty.ex
 lib/pattern/no_list_append_in_reduce.ex
 lib/pattern/no_list_duplicate_flatten.ex
@@ -49,7 +48,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_is_prefix_for_non_guard_test.exs
 test/pattern/no_length_comparison_for_empty_check_test.exs
 test/pattern/no_list_append_in_reduce_test.exs
 test/pattern/no_list_duplicate_flatten_test.exs

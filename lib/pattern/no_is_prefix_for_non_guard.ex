@@ -12,7 +12,11 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
 
   LLMs generate `is_valid`, `is_palindrome`, etc., on virtually every boolean
   function because Python and JavaScript use `is_` freely. In Elixir, this
-  misleads readers into thinking the function is guard-safe:
+  misleads readers into thinking the function is guard-safe.
+
+  Also catches the redundant "double convention" where both `is_` prefix AND
+  `?` suffix are used (e.g. `is_palindrome?`). The `is_` prefix is
+  superfluous when `?` is already present.
 
   ## Bad
 
@@ -20,11 +24,15 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
 
       defp is_valid_email(str), do: String.contains?(str, "@")
 
+      defp is_palindrome?(num), do: Integer.to_string(num) == String.reverse(...)
+
   ## Good
 
       def palindrome?(str), do: str == String.reverse(str)
 
       defp valid_email?(str), do: String.contains?(str, "@")
+
+      defp palindrome?(num), do: Integer.to_string(num) == String.reverse(...)
 
   ## Exceptions
 
@@ -106,12 +114,21 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
   defp maybe_add_rename(acc, fn_name) do
     str = Atom.to_string(fn_name)
 
-    if String.starts_with?(str, "is_") and not String.ends_with?(str, "?") and
-         fn_name not in @erlang_guards do
-      new_name = str |> String.trim_leading("is_") |> Kernel.<>("?") |> String.to_atom()
-      Map.put(acc, fn_name, new_name)
-    else
-      acc
+    cond do
+      # is_palindrome? — strip `is_`, keep existing `?`
+      String.starts_with?(str, "is_") and String.ends_with?(str, "?") and
+          fn_name not in @erlang_guards ->
+        new_name = str |> String.trim_leading("is_") |> String.to_atom()
+        Map.put(acc, fn_name, new_name)
+
+      # is_palindrome — strip `is_`, add `?`
+      String.starts_with?(str, "is_") and not String.ends_with?(str, "?") and
+          fn_name not in @erlang_guards ->
+        new_name = str |> String.trim_leading("is_") |> Kernel.<>("?") |> String.to_atom()
+        Map.put(acc, fn_name, new_name)
+
+      true ->
+        acc
     end
   end
 
@@ -165,19 +182,35 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuard do
   defp check_name(fn_name, def_type, arity, meta) do
     str = Atom.to_string(fn_name)
 
-    if String.starts_with?(str, "is_") and not String.ends_with?(str, "?") and
-         fn_name not in @erlang_guards do
-      # Transforms "is_valid_foo" -> "valid_foo?"
-      suggested = str |> String.trim_leading("is_") |> Kernel.<>("?")
+    cond do
+      # is_palindrome? — both `is_` prefix AND `?` suffix: redundant double convention
+      String.starts_with?(str, "is_") and String.ends_with?(str, "?") and
+          fn_name not in @erlang_guards ->
+        # "is_palindrome?" -> "palindrome?"
+        suggested = String.trim_leading(str, "is_")
 
-      {:ok,
-       %Issue{
-         rule: :no_is_prefix_for_non_guard,
-         message: build_message(def_type, fn_name, arity, suggested),
-         meta: %{line: Keyword.get(meta, :line)}
-       }}
-    else
-      :error
+        {:ok,
+         %Issue{
+           rule: :no_is_prefix_for_non_guard,
+           message: build_message(def_type, fn_name, arity, suggested),
+           meta: %{line: Keyword.get(meta, :line)}
+         }}
+
+      # is_palindrome — `is_` prefix only, not a guard
+      String.starts_with?(str, "is_") and not String.ends_with?(str, "?") and
+          fn_name not in @erlang_guards ->
+        # "is_valid_foo" -> "valid_foo?"
+        suggested = str |> String.trim_leading("is_") |> Kernel.<>("?")
+
+        {:ok,
+         %Issue{
+           rule: :no_is_prefix_for_non_guard,
+           message: build_message(def_type, fn_name, arity, suggested),
+           meta: %{line: Keyword.get(meta, :line)}
+         }}
+
+      true ->
+        :error
     end
   end
 
