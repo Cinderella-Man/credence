@@ -92,7 +92,7 @@ MIXLOG=/tmp/review_loop_mixtest.log
 
 # Per-row summary state, reset each iteration; set by the handlers, printed once.
 G_ROW=0; G_BASE=""; G_KIND=""; G_MODE=""; G_VERDICT=""; G_REASON=""
-G_FILES=""; G_SUITE=""; G_PUSH=""; G_LB=0; G_LA=0; G_GATE_REASON=""
+G_FILES=""; G_SUITE=""; G_PUSH=""; G_LB=0; G_LA=0; G_GATE_REASON=""; G_SESSION_RC=0
 
 # Compact "NNNN✓" / "NNNN/F✗" parsed from the gate's mix test log.
 suite_summary() {
@@ -128,6 +128,7 @@ row_summary() {
     ACCEPT)   sym="✓" ;;
     FOLLOWUP) sym="✗" ;;
     ORPHAN)   sym="—" ;;
+    RETRY)    sym="↻" ;;
     *)        sym="?" ;;
   esac
   local line="${sym} row ${G_ROW}  ${G_BASE} (${G_KIND}${G_MODE:+/$G_MODE})  ${G_VERDICT}"
@@ -250,6 +251,7 @@ run_session() {
   local rc=0
   ( cd "$REPO" && claude -p "$prompt" --permission-mode acceptEdits \
       --allowedTools "$ALLOWED_TOOLS" "${model_args[@]}" ) || rc=$?
+  G_SESSION_RC="$rc"
   rlog SESSION "----- end transcript (claude exit=${rc}) -----"
   [[ "$rc" -eq 0 ]] || log "warning: claude session exited non-zero (verdict still checked)"
 }
@@ -391,7 +393,7 @@ rule_exists_for() {
 }
 
 main() {
-  local iter=0
+  local iter=0 retry=0 prev_anchor=""
   while :; do
     self_heal
     if list_empty; then log "done — candidates.md empty"; break; fi
@@ -399,10 +401,13 @@ main() {
 
     local anchor kind base rowlog
     anchor="$(top_anchor)"
+    # retry counter is per-row: reset whenever the top candidate changes.
+    [[ "$anchor" == "$prev_anchor" ]] || retry=0
+    prev_anchor="$anchor"
 
     # reset per-row digest state
     G_ROW=$((iter + 1)); G_MODE=""; G_VERDICT=""; G_REASON=""
-    G_FILES=""; G_SUITE=""; G_PUSH=""; G_LB="$(count_list)"
+    G_FILES=""; G_SUITE=""; G_PUSH=""; G_LB="$(count_list)"; G_SESSION_RC=0
 
     # Orphan / global-suite test anchor → followup, no session.
     if [[ "$anchor" == test/* ]]; then
@@ -426,6 +431,7 @@ main() {
     rowlog="$LOGDIR/${base}.log"; : > "$rowlog"
     ROWLOG="$rowlog"
     rlog START "row ${G_ROW}: anchor=${anchor} kind=${kind} (queue: ${G_LB} left)"
+    log "▶ Started $(date '+%H:%M') — set '${base}' (${kind}), ${G_LB} left in queue${retry:+}$([[ $retry -gt 0 ]] && echo " [retry #${retry}]")  (log: ${rowlog})"
 
     rlog COPY "copying set from sister…"
     "$SCRIPT_DIR/copy_next_candidate.sh" >>"$rowlog" 2>&1 \
@@ -459,10 +465,30 @@ main() {
         fi ;;
       FOLLOWUP:*) G_VERDICT="FOLLOWUP"; G_REASON="${verdict#FOLLOWUP:}"
                   followup "$base" "$anchor" "${verdict#FOLLOWUP:}" ;;
-      *)          G_VERDICT="FOLLOWUP"; G_REASON="missing or unparseable verdict"
-                  followup "$base" "$anchor" "missing or unparseable verdict" ;;
+      *)
+        # No usable verdict → TRANSIENT agent error (crash, token limit, killed
+        # mid-run), NOT a real decision. Do NOT followup. Revert the in-set files
+        # and STAY on this row, retrying with backoff (15/30/45/60, then hourly)
+        # until Claude recovers. The candidate is left untouched in candidates.md.
+        retry=$((retry + 1))
+        local mins=$(( retry * 15 )); (( mins > 60 )) && mins=60
+        local secs=$(( mins * 60 ))
+        # test hook: REVIEW_RETRY_STEP_S shortens the backoff (seconds per step).
+        [[ -n "${REVIEW_RETRY_STEP_S:-}" ]] && secs=$(( retry * REVIEW_RETRY_STEP_S ))
+        revert_set_files
+        rm -f "$VERDICT"
+        G_VERDICT="RETRY"; G_REASON="no verdict (agent error/token-limit, claude exit=${G_SESSION_RC})"
+        G_LA="$(count_list)"
+        rlog RETRY "no verdict — reverted in-set files; retry #${retry} in ${mins} min (staying on this row)"
+        row_summary
+        local rs; rs="$(date -d "+${mins} minutes +30 seconds" '+%H:%M' 2>/dev/null || date '+%H:%M')"
+        log "⚠ No verdict from Claude on '${base}' (agent error/token-limit, exit=${G_SESSION_RC}) — NOT a followup; staying on this row."
+        log "Retry #${retry} for '${base}' in ${mins} minutes (≈ ${rs}). Will keep retrying until Claude recovers; Ctrl-C to stop."
+        sleep "$secs"
+        continue ;;
     esac
 
+    retry=0   # row completed (accepted or genuine followup) — clear retry backoff
     G_LA="$(count_list)"
     rlog DONE "${G_VERDICT}${G_REASON:+: $G_REASON} | files ${G_FILES} | suite ${G_SUITE:-n/a} | list ${G_LB}→${G_LA} | ${G_PUSH:-no-push}"
     row_summary
@@ -471,9 +497,9 @@ main() {
     list_empty && { log "done — candidates.md empty"; break; }
     (( CAP > 0 && iter >= CAP )) && { log "cap ${CAP} reached"; break; }
     if (( WAIT_MIN > 0 )); then
-      local resume; resume="$(date -d "+${WAIT_MIN} minutes" '+%H:%M' 2>/dev/null || date '+%H:%M')"
+      local resume; resume="$(date -d "+${WAIT_MIN} minutes +30 seconds" '+%H:%M' 2>/dev/null || date '+%H:%M')"
       log "Waiting ${WAIT_MIN} minutes before the next set ( ${G_LA} left in queue )…"
-      log "Next set starts at ${resume}. Not crashed — sleeping; Ctrl-C to stop."
+      log "Next set starts ≈ ${resume}. Not crashed — sleeping; Ctrl-C to stop."
       sleep "$((WAIT_MIN * 60))"
     fi
   done
