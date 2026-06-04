@@ -214,3 +214,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_manual_list_replace_at_test.exs`
 - Reason: not behavior-preserving — list & index always bare variables, no statically-safe core; manual form raises MatchError on out-of-range/non-list while List.replace_at returns list unchanged (OOB) or raises FunctionClauseError (Range/Map), and negative-OOB replaces index 0 vs unchanged — same shape as no_manual_list_delete_at.
 
+## no_manual_map_key_union — 2026-06-04
+- Files:
+  - `lib/pattern/no_manual_map_key_union.ex`
+  - `test/pattern/no_manual_map_key_union_test.exs`
+- Reason: not behavior-preserving — manual concat-uniq preserves m1-then-m2 first-occurrence order while Map.keys(Map.merge) returns plain map term order (e.g. %{b,d}/%{a,c} → [:b,:d,:c,:a] vs [:c,:b,:a,:d]); result is an order-observable list and map args are always variables, so no statically-safe core.
+
