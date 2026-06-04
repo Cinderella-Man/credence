@@ -1,4 +1,3 @@
-lib/pattern/no_manual_enum_uniq.ex
 lib/pattern/no_manual_frequencies.ex
 lib/pattern/no_manual_integer_undigits.ex
 lib/pattern/no_manual_list_delete_at.ex
@@ -43,7 +42,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_manual_enum_uniq_test.exs
 test/pattern/no_manual_frequencies_test.exs
 test/pattern/no_manual_integer_undigits_test.exs
 test/pattern/no_manual_list_delete_at_test.exs

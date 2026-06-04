@@ -190,3 +190,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_list_to_tuple_for_access_test.exs`
 - Reason: failed accept gate (pattern needs no_list_to_tuple_for_access_check_test.exs + no_list_to_tuple_for_access_fix_test.exs)
 
+## no_manual_enum_uniq — 2026-06-04
+- Files:
+  - `lib/pattern/no_manual_enum_uniq.ex`
+  - `test/pattern/no_manual_enum_uniq_test.exs`
+- Reason: new :__block__ collapse fix leaves an unbound var / drops the return value when the destructured tuple var is used elsewhere in the block (e.g. {result,_}=reduce; IO.inspect(result); Enum.reverse(result) -> Enum.uniq(list); IO.inspect(result)) — breaks exact-same-answer.
+
