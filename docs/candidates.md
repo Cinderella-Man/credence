@@ -1,4 +1,3 @@
-lib/pattern/no_sum_by_reduce.ex
 lib/pattern/no_tautological_if.ex
 lib/pattern/no_with_as_boolean_chain.ex
 lib/pattern/no_zip_then_map.ex
@@ -12,7 +11,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_sum_by_reduce_test.exs
 test/pattern/no_tautological_if_check_test.exs
 test/pattern/no_tautological_if_fix_test.exs
 test/pattern/no_with_as_boolean_chain_check_test.exs

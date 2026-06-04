@@ -306,3 +306,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_string_split_whitespace_regex_test.exs`
 - Reason: unsafe at every variant — String.split/1 trims and uses Unicode-whitespace semantics that no ~r/\s/ regex matches; 2-arg ~r/\s+/ differs on padded/Unicode input, 3-arg ~r/\s/[u] differs on em-space (no u) or non-breaking space (with u); arg is a runtime value so no syntactic safe core.
 
+## no_sum_by_reduce — 2026-06-05
+- Files:
+  - `lib/pattern/no_sum_by_reduce.ex`
+  - `test/pattern/no_sum_by_reduce_test.exs`
+- Reason: conflicts with accepted end-to-end showcase tests (fix_showcase_test.exs:109, credence_test.exs:1080) that expect `acc + String.length(el)` reduce left unrewritten — fix needs out-of-set changes; also misfires on acc-referencing transforms (e.g. `acc + acc * x`) emitting unbound-`acc` code that won't compile.
+
