@@ -111,3 +111,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_enum_slice_with_length_test.exs`
 - Reason: not behavior-preserving — Enum.slice/3 raises FunctionClauseError when length(var)-k is negative (any list shorter than k, e.g. the empty list since k>0), while the range fix Enum.slice(var, 0..-(k+1)//1) returns []; no narrowing fixes this since the list length is unknowable statically.
 
+## no_explicit_max_reduce — 2026-06-04
+- Files:
+  - `lib/pattern/no_explicit_max_reduce.ex`
+  - `test/pattern/no_explicit_max_reduce_test.exs`
+- Reason: delta's :max if-classification never checks branch direction, so a min reducer `if x > acc, do: acc, else: x` is flagged :max and the new `Enum.max([acc | enum])` fix path rewrites it into a max (behavior-changing on valid input).
+
