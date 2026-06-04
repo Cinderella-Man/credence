@@ -226,3 +226,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_manual_string_reverse_test.exs`
 - Reason: delta folds String.codepoints into this no-promise :strict rule, but codepoints-reverse-join != String.reverse for multi-codepoint graphemes (proven "́e" vs "é"); unsafe fix and duplicates NoCodepointStringReverse which already gates codepoints behind single_codepoint_graphemes.
 
+## no_map_keys_enum_lookup — 2026-06-04
+- Files:
+  - `lib/pattern/no_map_keys_enum_lookup.ex`
+  - `test/pattern/no_map_keys_enum_lookup_test.exs`
+- Reason: sort_by delta not behavior-preserving — stable sort over an order-observable key list; for maps >32 entries Map.keys order is reversed vs direct Enum order, so tied sort keys diverge (proven), and map arg is always a bare variable so no safe static core.
+
