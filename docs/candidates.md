@@ -1,4 +1,3 @@
-lib/pattern/no_sort_with_key_comparator.ex
 lib/pattern/no_split_then_insert.ex
 lib/pattern/no_string_concat_in_loop.ex
 lib/pattern/no_string_split_whitespace_regex.ex
@@ -16,7 +15,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_sort_with_key_comparator_test.exs
 test/pattern/no_split_then_insert_test.exs
 test/pattern/no_string_concat_in_loop_test.exs
 test/pattern/no_string_split_whitespace_regex_test.exs

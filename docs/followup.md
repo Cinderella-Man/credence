@@ -288,3 +288,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_single_use_binding_fix_test.exs`
 - Reason: unsafe — check counts var uses only in the next statement, so it removes a binding still referenced later (e.g. `v=foo(x); v>0; bar(v)` → `foo(x)>0; bar(v)`, unbound-var CompileError); also conflicts head-on with accepted no_kernel_op_in_pipeline, breaking end-to-end showcase tests outside the set.
 
+## no_sort_with_key_comparator — 2026-06-05
+- Files:
+  - `lib/pattern/no_sort_with_key_comparator.ex`
+  - `test/pattern/no_sort_with_key_comparator_test.exs`
+- Reason: unsafe at every variant — strict </> comparators aren't stable like sort_by's <=/>= (reverse equal-key runs, e.g. [{:a,2},{:b,1},{:c,2},{:d,1},{:e,2}] differs), and for <=/>= the tuple pattern {_,_,w1} raises FunctionClauseError on wrong-arity tuples while &elem(&1,2) silently succeeds; no syntactic narrowing guarantees uniform tuple arity, so no safe core.
+
