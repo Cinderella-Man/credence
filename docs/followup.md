@@ -178,3 +178,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_integer_to_string_length_test.exs`
 - Reason: unsound on negative integers — String.length(Integer.to_string(n, base)) counts the leading "-" (e.g. -123 base 10 → 4) while length(Integer.digits(n, base)) does not (→ 3), so they differ by 1 on every negative input; n is runtime-bound, so non-negativity can't be proven syntactically and the only "safe" narrow core is non-negative integer literals (degenerate/useless).
 
+## no_list_append_in_reduce — 2026-06-04
+- Files:
+  - `lib/pattern/no_list_append_in_reduce.ex`
+  - `test/pattern/no_list_append_in_reduce_test.exs`
+- Reason: delta widens check to flag unfixable cases (non-empty initial, ++ nested in case/if, ++ not the return expr) while fix stays gated on empty-initial + last-expression ++; breaks check/fix-agreement bar and Credence has no warn-only mode
+
