@@ -117,3 +117,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_explicit_max_reduce_test.exs`
 - Reason: delta's :max if-classification never checks branch direction, so a min reducer `if x > acc, do: acc, else: x` is flagged :max and the new `Enum.max([acc | enum])` fix path rewrites it into a max (behavior-changing on valid input).
 
+## no_explicit_min_reduce — 2026-06-04
+- Files:
+  - `lib/pattern/no_explicit_min_reduce.ex`
+  - `test/pattern/no_explicit_min_reduce_test.exs`
+- Reason: delta broadens the __block__ clause from `[body]` (single-expr only) to `[_|_]` recurse-on-last, so multi-statement reduce bodies like `y = x*2; min(y, acc)` are now flagged and rewritten to `Enum.min(enum)` — dropping the transformation and init (behavior-changing); the accepted version did not flag these.
+
