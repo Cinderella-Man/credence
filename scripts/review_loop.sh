@@ -47,9 +47,34 @@ done
 log() { printf '[review_loop] %s\n' "$*"; }
 die() { printf '[review_loop] FATAL: %s\n' "$*" >&2; exit 1; }
 
+# Per-row transcript. ROWLOG is set in main; rlog appends a timestamped, stage-
+# tagged line so the log narrates every step (copy → classify → scan → session →
+# each gate check → commit → push).
+ROWLOG=""
+rlog() { [[ -n "$ROWLOG" ]] && printf '[%s] %-9s %s\n' "$(date +%H:%M:%S)" "$1" "${*:2}" >> "$ROWLOG"; return 0; }
+
+# Informational scan: report each fix test's `=~` / `\n`-escaped-string count.
+# Never fails the gate — the agent is expected to have converted these; this just
+# makes the state visible (e.g. "fix tests are clean — no =~").
+scan_fix_tests() {
+  local base="$1" kind="$2" t="test/${kind}" ft tot=0 nlraw=0 n m
+  for ft in "$REPO/$t/${base}"*_fix_test.exs "$REPO/$t/${base}_test.exs"; do
+    [[ -f "$ft" ]] || continue
+    n="$(grep -c '=~' "$ft" 2>/dev/null)"; n="${n:-0}"
+    m="$(grep -c '= "[^"]*\\\\n' "$ft" 2>/dev/null)"; m="${m:-0}"
+    tot=$((tot + n)); nlraw=$((nlraw + m))
+    rlog SCAN "$(basename "$ft"): ${n} =~ assertion(s), ${m} \\n-escaped string(s)"
+  done
+  if [[ "$tot" -eq 0 && "$nlraw" -eq 0 ]]; then
+    rlog SCAN "fix tests are CLEAN — no =~ partial matches, no \\n-escaped strings"
+  else
+    rlog SCAN "TOTAL ${tot} =~ assertion(s), ${nlraw} \\n-escaped string(s) across fix tests"
+  fi
+}
+
 list_empty()  { ! grep -q -v '^[[:space:]]*$' "$CANDIDATES"; }
 top_anchor()  { grep -m1 -v '^[[:space:]]*$' "$CANDIDATES" || true; }
-count_list()  { grep -c -v '^[[:space:]]*$' "$CANDIDATES" 2>/dev/null || echo 0; }
+count_list()  { local n; n="$(grep -c -v '^[[:space:]]*$' "$CANDIDATES" 2>/dev/null)"; echo "${n:-0}"; }
 
 # Per-row agent transcripts (gitignored); keep the console a one-line digest.
 LOGDIR="$REPO/scripts/.review_logs"
@@ -176,6 +201,11 @@ build_briefing() {
 
   if [[ ${#modified[@]} -gt 0 ]]; then BRIEFING_MODE="delta"; else BRIEFING_MODE="greenfield"; fi
 
+  rlog CLASSIFY "mode=${BRIEFING_MODE} (new=${#new[@]}, modified=${#modified[@]})"
+  local f
+  for f in "${new[@]}"; do rlog CLASSIFY "  new:      ${f}"; done
+  for f in "${modified[@]}"; do rlog CLASSIFY "  modified: ${f}"; done
+
   {
     echo "# Set briefing"
     echo "Anchor: ${anchor}"
@@ -206,65 +236,90 @@ run_session() {
   local -a model_args=()
   [[ -n "$CLAUDE_MODEL" ]] && model_args=(--model "$CLAUDE_MODEL")
 
+  rlog SESSION "starting claude (mode=${BRIEFING_MODE}, model=${CLAUDE_MODEL:-default}, prompt ${#prompt} chars)"
+  rlog SESSION "----- agent transcript -----"
+  local rc=0
   ( cd "$REPO" && claude -p "$prompt" --permission-mode acceptEdits \
-      --allowedTools "$ALLOWED_TOOLS" "${model_args[@]}" ) || \
-    log "warning: claude session exited non-zero (verdict still checked)"
+      --allowedTools "$ALLOWED_TOOLS" "${model_args[@]}" ) || rc=$?
+  rlog SESSION "----- end transcript (claude exit=${rc}) -----"
+  [[ "$rc" -eq 0 ]] || log "warning: claude session exited non-zero (verdict still checked)"
 }
 
 # Per-kind ACCEPT re-verify gate. Returns 0 to accept, 1 to route to followup.
 # On failure sets G_GATE_REASON to the specific check that failed.
-gate_fail() { G_GATE_REASON="$1"; log "gate: $1"; return 1; }
+gate_fail() { G_GATE_REASON="$1"; rlog GATE "FAIL ✗ $1"; log "gate: $1"; return 1; }
 gate_accept() {
   local base="$1" kind="$2" rule="lib/${kind}/${base}.ex" t="test/${kind}"
   G_GATE_REASON=""; rm -f "$MIXLOG"
+  rlog GATE "begin re-verify gate (kind=${kind})"
 
   # (a) the rule file must exist and NOT be a stub (the fix must be real).
   [[ -f "$REPO/$rule" ]]      || { gate_fail "rule file missing: $rule"; return 1; }
+  rlog GATE "(a) rule file present: ${rule}"
   if is_unfixable_stub "$REPO/$rule"; then gate_fail "fix is not real (still a stub)"; return 1; fi
+  rlog GATE "(a) fix is real (not a check-only stub): PASS ✓"
 
   # (b) test shape by kind.
   case "$kind" in
     pattern)
       [[ -f "$REPO/$t/${base}_check_test.exs" && -f "$REPO/$t/${base}_fix_test.exs" ]] \
-        || { gate_fail "pattern needs ${base}_check_test.exs + ${base}_fix_test.exs"; return 1; } ;;
+        || { gate_fail "pattern needs ${base}_check_test.exs + ${base}_fix_test.exs"; return 1; }
+      rlog GATE "(b) test shape: PASS ✓ — ${base}_check_test.exs + ${base}_fix_test.exs present"
+      # Delete a superseded single <base>_test.exs now that the split pair exists,
+      # BEFORE running mix test, so the suite count matches the committed state.
+      if [[ -f "$REPO/$t/${base}_test.exs" ]]; then
+        if git -C "$REPO" ls-files --error-unmatch "$t/${base}_test.exs" >/dev/null 2>&1; then
+          git -C "$REPO" rm -q "$t/${base}_test.exs"
+        else
+          rm -f "$REPO/$t/${base}_test.exs"
+        fi
+        rlog GATE "(b) deleted superseded single ${base}_test.exs (split pair supersedes it)"
+      fi ;;
     semantic)
       compgen -G "$REPO/$t/${base}*_check_test.exs" >/dev/null \
         && compgen -G "$REPO/$t/${base}*_fix_test.exs" >/dev/null \
-        || { gate_fail "semantic needs ≥1 ${base}*_check_test + ≥1 ${base}*_fix_test"; return 1; } ;;
+        || { gate_fail "semantic needs ≥1 ${base}*_check_test + ≥1 ${base}*_fix_test"; return 1; }
+      rlog GATE "(b) test shape: PASS ✓ — ${base}*_check_test + ${base}*_fix_test present" ;;
     syntax)
       { [[ -f "$REPO/$t/${base}_analyze_test.exs" && -f "$REPO/$t/${base}_fix_test.exs" ]] \
         || [[ -f "$REPO/$t/${base}_test.exs" ]]; } \
-        || { gate_fail "syntax needs analyze+fix or a single ${base}_test.exs"; return 1; } ;;
+        || { gate_fail "syntax needs analyze+fix or a single ${base}_test.exs"; return 1; }
+      rlog GATE "(b) test shape: PASS ✓ — analyze+fix or single test present" ;;
     *) gate_fail "unknown kind $kind"; return 1 ;;
   esac
 
+  # (b2) informational: report the =~ / \n-escaped state of the fix tests.
+  scan_fix_tests "$base" "$kind"
+
   # (c) confined diff: nothing outside the set changed.
   dirty_confined_to "$base" || { gate_fail "changes outside the set"; return 1; }
+  rlog GATE "(c) confined diff: PASS ✓ — changed: $(dirty_code | sed 's/^...//' | tr '\n' ' ')"
 
   # (d) full suite green (last — the expensive check).
+  rlog GATE "(d) mix test: running full suite…"
   ( cd "$REPO" && mix test >"$MIXLOG" 2>&1 ) \
     || { gate_fail "mix test failed (suite $(suite_summary))"; return 1; }
-
+  rlog GATE "(d) mix test: PASS ✓ — $(suite_summary)"
+  rlog GATE "RESULT: ACCEPT (all checks pass)"
   return 0
 }
 
 accept_commit() {
   local base="$1" kind="$2" anchor="$3" t="test/${kind}"
-
-  # pattern: delete a superseded single <base>_test.exs now that the split exists.
-  if [[ "$kind" == pattern && -f "$REPO/$t/${base}_test.exs" ]]; then
-    rm -f "$REPO/$t/${base}_test.exs"
-  fi
+  # (the superseded single <base>_test.exs was already removed in the gate.)
 
   "$SCRIPT_DIR/remove_from_list_keep_files.sh" "$anchor" >/dev/null
+  rlog ACCEPT "stripped set lines from candidates.md (kept files)"
 
-  # Stage the rule, all its test files (incl. the deletion), and the list.
+  # Stage the rule, all its test files (incl. any deletion), and the list.
   git -C "$REPO" add -- "lib/${kind}/${base}.ex" >/dev/null 2>&1 || true
   git -C "$REPO" add -A -- "$t/${base}"* >/dev/null 2>&1 || true
   git -C "$REPO" add -- "$CANDIDATES" >/dev/null
   git -C "$REPO" commit -q -m "${base}: accepted"
   G_FILES="$(diffstat_head)"; G_SUITE="$(suite_summary)"
+  rlog ACCEPT "committed '${base}: accepted' (${G_FILES}, suite ${G_SUITE})"
   do_push "${base}: accepted"
+  rlog PUSH "${G_PUSH}"
 }
 
 followup() {
@@ -278,7 +333,9 @@ followup() {
   # any split tests the agent created) and strip their lines from candidates.md.
   # Auto-detect (no args) so agent-created files are cleaned too; the iteration
   # started clean, so the dirty set is exactly this candidate's files.
+  rlog FOLLOWUP "reason: ${reason}"
   "$SCRIPT_DIR/remove_from_list_revert_files.sh" >/dev/null 2>&1 || true
+  rlog FOLLOWUP "reverted in-set files + stripped ${#paths[@]} set line(s) from candidates.md"
 
   {
     echo "## ${base} — $(date +%F)"
@@ -290,7 +347,9 @@ followup() {
   git -C "$REPO" add -- "$CANDIDATES" "$FOLLOWUP" >/dev/null
   git -C "$REPO" commit -q -m "${base}: followup — ${reason}"
   G_FILES="reverted ${#paths[@]}f"
+  rlog FOLLOWUP "committed '${base}: followup — ${reason}'"
   do_push "${base}: followup"
+  rlog PUSH "${G_PUSH}"
 }
 
 # Orphan test anchor (a test/ line with no owning rule): straight to followup, no
@@ -307,7 +366,9 @@ route_orphan() {
   } >> "$FOLLOWUP"
   git -C "$REPO" add -- "$CANDIDATES" "$FOLLOWUP" >/dev/null
   git -C "$REPO" commit -q -m "${base}: followup — orphan test"
+  rlog FOLLOWUP "orphan test → followup.md, stripped from candidates.md, committed"
   do_push "orphan ${anchor}"
+  rlog PUSH "${G_PUSH}"
 }
 
 # Does a candidate test anchor have an owning rule anywhere (queue, tree, sister)?
@@ -340,8 +401,12 @@ main() {
         die "test anchor '${anchor}' has an owning rule but sits above it in the list — fix ordering"
       fi
       G_BASE="$(rule_base "$anchor")"; G_KIND="$(rule_kind "$anchor")"; G_VERDICT="ORPHAN"
+      ROWLOG="$LOGDIR/${G_BASE}.log"; : > "$ROWLOG"
+      rlog START "row ${G_ROW}: orphan test anchor=${anchor} (no owning rule)"
       route_orphan "$anchor"
-      G_LA="$(count_list)"; row_summary
+      G_LA="$(count_list)"
+      rlog DONE "ORPHAN→followup | list ${G_LB}→${G_LA} | ${G_PUSH:-no-push}"
+      row_summary
       iter=$((iter + 1)); continue
     fi
 
@@ -350,9 +415,18 @@ main() {
     base="$(rule_base "$anchor")"
     G_BASE="$base"; G_KIND="$kind"
     rowlog="$LOGDIR/${base}.log"; : > "$rowlog"
+    ROWLOG="$rowlog"
+    rlog START "row ${G_ROW}: anchor=${anchor} kind=${kind} (queue: ${G_LB} left)"
 
+    rlog COPY "copying set from sister…"
     "$SCRIPT_DIR/copy_next_candidate.sh" >>"$rowlog" 2>&1 \
       || die "copy_next_candidate.sh failed for ${anchor} (see $rowlog)"
+    rlog COPY "set files: $(set_paths "$anchor" | tr '\n' ' ')"
+
+    # Pre-agent snapshot of the shipped fix tests (so the log shows what the agent
+    # started with — e.g. how many =~ it needs to convert).
+    rlog SCAN "shipped fix tests (pre-agent):"
+    scan_fix_tests "$base" "$kind"
 
     # build_briefing runs in a subshell here, so read its mode back from the
     # briefing text (the body carries "Mode: <greenfield|delta>") and re-export it
@@ -360,10 +434,12 @@ main() {
     local briefing; briefing="$(build_briefing "$anchor" "$kind" 2>>"$rowlog")"
     G_MODE="$(awk '/^Mode:/{print $2; exit}' <<<"$briefing")"
     BRIEFING_MODE="$G_MODE"
+    rlog BRIEF "briefing built (mode=${G_MODE}, $(wc -c <<<"$briefing") chars)"
     rm -f "$VERDICT"
     run_session "$anchor" "$kind" "$briefing" >>"$rowlog" 2>&1
 
     local verdict; verdict="$(head -n1 "$VERDICT" 2>/dev/null || true)"
+    rlog VERDICT "${verdict:-<missing _verdict file>}"
     case "$verdict" in
       ACCEPT)
         if gate_accept "$base" "$kind"; then
@@ -378,7 +454,9 @@ main() {
                   followup "$base" "$anchor" "missing or unparseable verdict" ;;
     esac
 
-    G_LA="$(count_list)"; row_summary
+    G_LA="$(count_list)"
+    rlog DONE "${G_VERDICT}${G_REASON:+: $G_REASON} | files ${G_FILES} | suite ${G_SUITE:-n/a} | list ${G_LB}→${G_LA} | ${G_PUSH:-no-push}"
+    row_summary
     rm -f "$VERDICT"
     iter=$((iter + 1))
     list_empty && { log "done — candidates.md empty"; break; }

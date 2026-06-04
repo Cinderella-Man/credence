@@ -35,7 +35,7 @@ else
       *) continue ;;
     esac
     case "$xy" in
-      '??' | 'A '* | ' A'* | 'AM' | ' M'* | 'M '* | 'MM' | 'AD' | 'MD')
+      '??' | 'A '* | ' A'* | 'AM' | ' M'* | 'M '* | 'MM' | 'AD' | 'MD' | 'D '* | ' D'*)
         files+=("$path") ;;
     esac
   done < <(git -C "$REPO" status --porcelain=v1)
