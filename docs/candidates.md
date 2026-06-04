@@ -1,4 +1,3 @@
-lib/pattern/no_redundant_to_list.ex
 lib/pattern/no_rem_for_parity_check.ex
 lib/pattern/no_reverse_then_sort.ex
 lib/pattern/no_single_use_binding.ex
@@ -20,7 +19,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_redundant_to_list_test.exs
 test/pattern/no_rem_for_parity_check_test.exs
 test/pattern/no_reverse_then_sort_check_test.exs
 test/pattern/no_reverse_then_sort_fix_test.exs
