@@ -62,3 +62,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/avoid_graphemes_enum_count_with_predicate_fix_test.exs`
 - Reason: delta drops single-codepoint narrowing + promise; fix now changes answer (e.g. "" 0→14, "ab" 0→2)
 
+## no_case_digit_to_integer — 2026-06-04
+- Files:
+  - `lib/pattern/no_case_digit_to_integer.ex`
+  - `test/pattern/no_case_digit_to_integer_test.exs`
+- Reason: case is partial (raises off "0".."9"); String.to_integer is total — differs on "10","-1","+5","00","07" etc. No safe core to narrow to.
+
