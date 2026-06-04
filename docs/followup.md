@@ -147,3 +147,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_grapheme_palindrome_check_test.exs`
 - Reason: delta re-adds String.to_charlist form (codepoint reverse) and rewrites it to String.reverse (grapheme reverse) — diverges on multi-codepoint graphemes, behavior-changing; accepted version deliberately excluded this
 
+## no_guard_equality_for_pattern_match — 2026-06-04
+- Files:
+  - `lib/pattern/no_guard_equality_for_pattern_match.ex`
+  - `test/pattern/no_guard_equality_for_pattern_match_test.exs`
+- Reason: failed accept gate (pattern needs no_guard_equality_for_pattern_match_check_test.exs + no_guard_equality_for_pattern_match_fix_test.exs)
+
