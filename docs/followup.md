@@ -87,3 +87,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_destructure_reconstruct_test.exs`
 - Reason: new tuple/binary families lack the multi-arg guard the cons family has — `def f({...} = tuple, {...} = tuple)` forces arg1==arg2 (silent behavior change), and `<<len, data::binary-size(len)>>` underscores `len` to `_` leaving `size(len)` undefined (non-compiling fix); delta is not behavior-preserving.
 
+## no_doc_false_on_private — 2026-06-04
+- Files:
+  - `lib/pattern/no_doc_false_on_private.ex`
+  - `test/pattern/no_doc_false_on_private_test.exs`
+- Reason: delta broadens match from literal `@doc false` to any `@doc <expr>`; fix deletes `@doc` whose argument has compile-time side effects (e.g. `@doc (IO.puts(...) && "d")`, interpolation), dropping the evaluation — not behavior-preserving.
+
