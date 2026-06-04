@@ -232,3 +232,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_map_keys_enum_lookup_test.exs`
 - Reason: sort_by delta not behavior-preserving — stable sort over an order-observable key list; for maps >32 entries Map.keys order is reversed vs direct Enum order, so tied sort keys diverge (proven), and map arg is always a bare variable so no safe static core.
 
+## no_map_then_aggregate — 2026-06-04
+- Files:
+  - `lib/pattern/no_map_then_aggregate.ex`
+  - `test/pattern/no_map_then_aggregate_test.exs`
+- Reason: constructor_step? allows args [0,1], so `enum |> Enum.map(f) |> MapSet.new(g)` (valid MapSet.new/2 with transform) is flagged and auto-fixed to `MapSet.new(enum, f)`, silently dropping g — proven different result (set of f(x) vs g(f(x))); same for Map.new. Also max_by/min_by are flagged check-only with a non-equivalent "use directly" suggestion (mapped-element vs original-element return), violating check/fix agreement.
+
