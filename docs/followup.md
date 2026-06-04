@@ -99,3 +99,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_enum_at_negative_index_fix_test.exs`
 - Reason: delta's plan_inline_for_statement rework emits the pattern match before the Enum.reverse binding (e.g. `result = Enum.at(sorted, -2) + 1` → `[_, sorted_neg2 | _] = sorted_reversed` precedes `sorted_reversed = Enum.reverse(sorted)`), producing non-compiling/behavior-changing output; the delta also replaced exact `==` heredoc fix-tests with `=~` substring checks that hide this ordering regression.
 
+## no_enum_into_empty_map — 2026-06-04
+- Files:
+  - `lib/pattern/no_enum_into_empty_map.ex`
+  - `test/pattern/no_enum_into_empty_map_test.exs`
+- Reason: rule flags Enum.into(enum, %{}) which the curated shared suite test/credence_test.exs:777 explicitly asserts must stay clean ("collect into any collectable"); reconciling requires editing that out-of-scope shared file, so the full suite cannot go green.
+
