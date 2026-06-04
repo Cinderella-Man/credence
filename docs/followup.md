@@ -123,3 +123,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_explicit_min_reduce_test.exs`
 - Reason: delta broadens the __block__ clause from `[body]` (single-expr only) to `[_|_]` recurse-on-last, so multi-statement reduce bodies like `y = x*2; min(y, acc)` are now flagged and rewritten to `Enum.min(enum)` — dropping the transformation and init (behavior-changing); the accepted version did not flag these.
 
+## no_explicit_sum_reduce — 2026-06-04
+- Files:
+  - `lib/pattern/no_explicit_sum_reduce.ex`
+  - `test/pattern/no_explicit_sum_reduce_test.exs`
+- Reason: new &+/2 clause leaves init (_acc) a wildcard, so Enum.reduce(enum, <non-zero>, &+/2) is now flagged and rewritten to Enum.sum(enum), dropping the accumulator (behavior-changing; e.g. reduce([1,2,3],10,&+/2)==16 vs Enum.sum==6); accepted version did not flag capture syntax.
+
