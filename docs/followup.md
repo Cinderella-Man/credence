@@ -105,3 +105,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_enum_into_empty_map_test.exs`
 - Reason: rule flags Enum.into(enum, %{}) which the curated shared suite test/credence_test.exs:777 explicitly asserts must stay clean ("collect into any collectable"); reconciling requires editing that out-of-scope shared file, so the full suite cannot go green.
 
+## no_enum_slice_with_length — 2026-06-04
+- Files:
+  - `lib/pattern/no_enum_slice_with_length.ex`
+  - `test/pattern/no_enum_slice_with_length_test.exs`
+- Reason: not behavior-preserving — Enum.slice/3 raises FunctionClauseError when length(var)-k is negative (any list shorter than k, e.g. the empty list since k>0), while the range fix Enum.slice(var, 0..-(k+1)//1) returns []; no narrowing fixes this since the list length is unknowable statically.
+
