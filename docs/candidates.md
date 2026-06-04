@@ -1,4 +1,3 @@
-lib/pattern/no_find_value_default_case.ex
 lib/pattern/no_grapheme_palindrome_check.ex
 lib/pattern/no_group_by_for_frequencies.ex
 lib/pattern/no_guard_equality_for_pattern_match.ex
@@ -59,7 +58,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_find_value_default_case_test.exs
 test/pattern/no_grapheme_palindrome_check_test.exs
 test/pattern/no_group_by_for_frequencies_test.exs
 test/pattern/no_guard_equality_for_pattern_match_test.exs
