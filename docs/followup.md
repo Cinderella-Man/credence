@@ -262,3 +262,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_redundant_length_with_regex_test.exs`
 - Reason: unsound premise — regex `$` permits a trailing newline, so `String.length(x)==N` is NOT redundant with `^...{N}$`; fix changes the answer on any N-char string + "\n" (e.g. "1234567890\n": before=false, after=true). No safe core keeps the `$`-anchored shape; dot `.` element also multibyte-unsafe.
 
+## no_redundant_negated_guard — 2026-06-05
+- Files:
+  - `lib/pattern/no_redundant_negated_guard.ex`
+  - `test/pattern/no_redundant_negated_guard_test.exs`
+- Reason: delta's underscore-prefixing changes behavior — `f(x, _x, y) when x != y` becomes `f(_x, _x, _y)`, an accidental non-linear pattern forcing arg1==arg2; f(1,99,2) returns :neq before, crashes after.
+
