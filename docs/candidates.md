@@ -1,4 +1,3 @@
-lib/pattern/no_zip_then_map.ex
 lib/pattern/prefer_guard_over_if.ex
 lib/pattern/prefer_map_put_new.ex
 lib/semantic/fix_range_step.ex
@@ -9,8 +8,6 @@ lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/pattern/no_zip_then_map_check_test.exs
-test/pattern/no_zip_then_map_fix_test.exs
 test/pattern/prefer_guard_over_if_check_test.exs
 test/pattern/prefer_map_put_new_test.exs
 test/semantic/fix_range_step_fix_test.exs
