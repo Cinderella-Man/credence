@@ -1,9 +1,7 @@
-lib/syntax/fix_div_rem.ex
 lib/syntax/fix_python_augmented_assignment.ex
 lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/syntax/fix_div_rem_test.exs
 test/syntax/fix_python_augmented_assignment_test.exs
 test/syntax/fix_python_floor_div_test.exs
 test/syntax/fix_scientific_notation_analyze_test.exs

@@ -80,6 +80,20 @@ defmodule Credence.Syntax.FixDivRemTest do
       assert FixDivRem.analyze(source) == []
     end
 
+    test "detects infix rem inside capture" do
+      source = """
+      defmodule Example do
+        def check(list) do
+          Enum.map(list, &(&1 rem 2 == 0))
+        end
+      end
+      """
+
+      issues = FixDivRem.analyze(source)
+      assert length(issues) == 1
+      assert hd(issues).rule == :infix_rem
+    end
+
     test "no issues for div in comments" do
       source = """
       defmodule Example do
@@ -189,6 +203,18 @@ defmodule Credence.Syntax.FixDivRemTest do
       source = """
       defmodule Example do
         def half(n), do: div(n, 2)
+      end
+      """
+
+      assert FixDivRem.fix(source) == source
+    end
+
+    test "does not rewrite infix rem inside capture" do
+      source = """
+      defmodule Example do
+        def check(list) do
+          Enum.map(list, &(&1 rem 2 == 0))
+        end
       end
       """
 
