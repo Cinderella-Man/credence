@@ -1,5 +1,3 @@
-lib/pattern/no_case_on_param_dispatch.ex
-test/pattern/no_case_on_param_dispatch_check_test.exs
 lib/pattern/no_combined_min_max_reduce.ex
 test/pattern/no_combined_min_max_reduce_test.exs
 lib/pattern/no_comprehension_then_flatten.ex
