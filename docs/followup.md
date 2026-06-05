@@ -331,3 +331,6 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/semantic/unused_variable_test.exs`
 - Reason: failed accept gate (semantic needs ≥1 unused_variable*_check_test + ≥1 unused_variable*_fix_test)
 
+## test/pattern/debug_ast_test.exs — 2026-06-05
+- Reason: orphan test — no owning rule in tree or sister.
+
