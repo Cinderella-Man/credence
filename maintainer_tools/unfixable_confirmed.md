@@ -78,3 +78,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_enum_chunk_every_for_adjacent_pairs_test.exs`
 - Reason: fix needs semantic rewrite of arbitrary reduce callback; only structural alt (zip+tl) changes element type list->tuple and raises on non-list enumerables, unnarrowable from AST
 
+## no_filter_then_flat_map — 2026-06-06
+- Files:
+  - `lib/pattern/no_filter_then_flat_map.ex`
+  - `test/pattern/no_filter_then_flat_map_test.exs`
+- Reason: filter|>flat_map fusion is single interleaved pass; reorders pred-vs-transform exceptions (e.g. [2,:sym]: ArithmeticError vs ArgumentError) — two-pass order has no fusing builtin, no safe core.
+
