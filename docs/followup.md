@@ -325,3 +325,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/semantic/fix_range_step_fix_test.exs`
 - Reason: rule never fires on real diagnostics — the range-step warning reports position: 0 (real line only in the undeclared `stacktrace` field), so extract_line→0→idx -1→no-op; a working fix needs shared-framework position normalization (out of scope) and the text substitution is also unsafe (replaces all/substring occurrences).
 
+## unused_variable — 2026-06-05
+- Files:
+  - `lib/semantic/unused_variable.ex`
+  - `test/semantic/unused_variable_test.exs`
+- Reason: failed accept gate (semantic needs ≥1 unused_variable*_check_test + ≥1 unused_variable*_fix_test)
+
