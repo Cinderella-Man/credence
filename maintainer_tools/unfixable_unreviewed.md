@@ -1,5 +1,3 @@
-lib/pattern/no_double_filter.ex
-test/pattern/no_double_filter_test.exs
 lib/pattern/no_enum_at_binary_search.ex
 test/pattern/no_enum_at_binary_search_test.exs
 lib/pattern/no_enum_at_in_recursion.ex
