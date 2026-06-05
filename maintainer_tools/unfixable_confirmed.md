@@ -96,3 +96,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_group_by_identity_test.exs`
 - Reason: only replacement (Enum.frequencies) returns %{v=>count} vs group_by's %{v=>[v,...]} — a value-type change, never equal for non-empty input
 
+## no_integer_to_string_contains — 2026-06-06
+- Files:
+  - `lib/pattern/no_integer_to_string_contains.ex`
+  - `test/pattern/no_integer_to_string_contains_test.exs`
+- Reason: digit-membership rewrite flips the boolean on negative ints (digits go negative) and differs on non-int crash type (ArgumentError vs FunctionClauseError); sign/type of a variable arg can't be narrowed away.
+

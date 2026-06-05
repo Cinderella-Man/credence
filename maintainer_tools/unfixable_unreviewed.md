@@ -1,5 +1,3 @@
-lib/pattern/no_integer_to_string_contains.ex
-test/pattern/no_integer_to_string_contains_test.exs
 lib/pattern/no_list_as_optional_value.ex
 test/pattern/no_list_as_optional_value_test.exs
 lib/pattern/no_list_concat_with_recursive_result.ex
