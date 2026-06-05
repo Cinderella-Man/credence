@@ -90,3 +90,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_filter_then_new_test.exs`
 - Reason: only fix is interleaved `for`; reorders pred-vs-transform exceptions vs two-pass filter|>{MapSet,Map}.new (no two-pass collect builtin)
 
+## no_group_by_identity — 2026-06-06
+- Files:
+  - `lib/pattern/no_group_by_identity.ex`
+  - `test/pattern/no_group_by_identity_test.exs`
+- Reason: only replacement (Enum.frequencies) returns %{v=>count} vs group_by's %{v=>[v,...]} — a value-type change, never equal for non-empty input
+
