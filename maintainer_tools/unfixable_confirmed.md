@@ -42,3 +42,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_combined_min_max_reduce_test.exs`
 - Reason: reduce->Enum.min_max diverges on empty ({nil,nil} vs raise), tuple min/max order is undetermined by check, and collection reconstruction breaks on non-list enumerables; no safe subset.
 
+## no_comprehension_then_flatten — 2026-06-05
+- Files:
+  - `lib/pattern/no_comprehension_then_flatten.ex`
+  - `test/pattern/no_comprehension_then_flatten_test.exs`
+- Reason: List.flatten is recursive (deep) while Enum.flat_map/concat are single-level and raise on scalar bodies; no static subset proving body is one-level/non-list is decidable.
+

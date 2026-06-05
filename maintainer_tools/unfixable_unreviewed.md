@@ -1,5 +1,3 @@
-lib/pattern/no_comprehension_then_flatten.ex
-test/pattern/no_comprehension_then_flatten_test.exs
 lib/pattern/no_conditional_max_in_reduce.ex
 test/pattern/no_conditional_max_in_reduce_test.exs
 lib/pattern/no_double_filter.ex
