@@ -30,3 +30,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_body_destructure_of_param_test.exs`
 - Reason: moving a refutable destructure to the head changes non-matching inputs from MatchError to FunctionClauseError, and with sibling clauses silently re-dispatches to a different clause/value; no irrefutable (always-matching) non-trivial pattern exists to narrow to.
 
+## no_case_enum_at_nil — 2026-06-05
+- Files:
+  - `lib/pattern/no_case_enum_at_nil.ex`
+  - `test/pattern/no_case_enum_at_nil_check_test.exs`
+- Reason: Enum.fetch! diverges on every flagged input — ArgumentError→Enum.OutOfBoundsError on out-of-bounds, and raise→nil on nil-in-list (value-type change).
+
