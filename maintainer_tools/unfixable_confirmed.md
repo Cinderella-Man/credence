@@ -60,3 +60,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_enum_at_binary_search_test.exs`
 - Reason: fix requires list⇒tuple value-type change across wrapper + recursive signature + all call sites; any local Enum.at→elem patch raises on oob/negative where Enum.at returns nil/from-end and isn't even O(1).
 
+## no_enum_at_in_recursion — 2026-06-05
+- Files:
+  - `lib/pattern/no_enum_at_in_recursion.ex`
+  - `test/pattern/no_enum_at_in_recursion_test.exs`
+- Reason: only fixes are structural/multi-site (walk-by-pattern or hoist List.to_tuple to caller); local elem(List.to_tuple(l),i) differs on negative/out-of-range and stays O(n).
+
