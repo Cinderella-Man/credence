@@ -119,7 +119,7 @@ defmodule Credence.Semantic.UndefinedFunction do
         fix_qualified(source, line_no, mod, fun, arity)
 
       {:local, {name, arity}} ->
-        fix_local(source, line_no, name, arity, msg)
+        fix_local(source, line_no, name, arity)
 
       nil ->
         source
@@ -166,7 +166,7 @@ defmodule Credence.Semantic.UndefinedFunction do
     end
   end
 
-  defp fix_local(source, line_no, name, arity, msg) do
+  defp fix_local(source, line_no, name, arity) do
     case Map.get(@local_replacements, {name, arity}) do
       {:literal, replacement} ->
         replace_all_on_line(source, line_no, "#{name}()", replacement)
@@ -184,19 +184,12 @@ defmodule Credence.Semantic.UndefinedFunction do
         to_range_on_line(source, line_no, arity)
 
       nil ->
-        module_name = parse_expected_module(msg)
-
-        if module_name do
-          case Credence.FunctionMatcher.suggest(source, module_name, name, arity) do
-            {:ok, suggested} ->
-              replace_call_on_line(source, line_no, name, suggested)
-
-            :no_candidates ->
-              source
-          end
-        else
-          source
-        end
+        # No FunctionMatcher fallback for local (bare) undefined function calls.
+        # Fuzzy-matching bare calls is too dangerous — the matcher can suggest
+        # the enclosing function itself (e.g. list_to_tuple → findmaxinrotatedlist),
+        # creating infinite recursion. Only known patterns from @local_replacements
+        # are fixed; everything else is left for the user.
+        source
     end
   end
 
@@ -218,13 +211,6 @@ defmodule Credence.Semantic.UndefinedFunction do
   defp parse_local_ref(msg) do
     case Regex.run(~r/undefined function (\w+)\/(\d+)/, msg) do
       [_, name, arity] -> {name, String.to_integer(arity)}
-      _ -> nil
-    end
-  end
-
-  defp parse_expected_module(msg) do
-    case Regex.run(~r/expected ([\w.]+) to define/, msg) do
-      [_, module_name] -> module_name
       _ -> nil
     end
   end
