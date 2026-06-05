@@ -102,3 +102,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_integer_to_string_contains_test.exs`
 - Reason: digit-membership rewrite flips the boolean on negative ints (digits go negative) and differs on non-int crash type (ArgumentError vs FunctionClauseError); sign/type of a variable arg can't be narrowed away.
 
+## no_list_as_optional_value — 2026-06-06
+- Files:
+  - `lib/pattern/no_list_as_optional_value.ex`
+  - `test/pattern/no_list_as_optional_value_test.exs`
+- Reason: []/[x]->nil/x sentinel collides with a nil payload ([nil] vs [] both become nil; payload is arbitrary input, not narrowable); fix also needs non-local caller seed rewrites the check can't do.
+

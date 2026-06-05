@@ -1,5 +1,3 @@
-lib/pattern/no_list_as_optional_value.ex
-test/pattern/no_list_as_optional_value_test.exs
 lib/pattern/no_list_concat_with_recursive_result.ex
 test/pattern/no_list_concat_with_recursive_result_test.exs
 lib/pattern/no_list_delete_at_length.ex
