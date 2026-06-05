@@ -1,5 +1,3 @@
-lib/pattern/no_filter_then_new.ex
-test/pattern/no_filter_then_new_test.exs
 lib/pattern/no_group_by_identity.ex
 test/pattern/no_group_by_identity_test.exs
 lib/pattern/no_hd_tl_when_cons_bound.ex

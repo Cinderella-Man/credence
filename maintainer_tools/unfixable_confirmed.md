@@ -84,3 +84,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_filter_then_flat_map_test.exs`
 - Reason: filter|>flat_map fusion is single interleaved pass; reorders pred-vs-transform exceptions (e.g. [2,:sym]: ArithmeticError vs ArgumentError) — two-pass order has no fusing builtin, no safe core.
 
+## no_filter_then_new — 2026-06-06
+- Files:
+  - `lib/pattern/no_filter_then_new.ex`
+  - `test/pattern/no_filter_then_new_test.exs`
+- Reason: only fix is interleaved `for`; reorders pred-vs-transform exceptions vs two-pass filter|>{MapSet,Map}.new (no two-pass collect builtin)
+
