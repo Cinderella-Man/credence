@@ -1,5 +1,3 @@
-lib/pattern/no_list_delete_at_length.ex
-test/pattern/no_list_delete_at_length_test.exs
 lib/pattern/no_list_delete_at_with_length.ex
 test/pattern/no_list_delete_at_with_length_test.exs
 lib/pattern/no_list_pop_at_for_access.ex
