@@ -36,3 +36,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_case_enum_at_nil_check_test.exs`
 - Reason: Enum.fetch! diverges on every flagged input — ArgumentError→Enum.OutOfBoundsError on out-of-bounds, and raise→nil on nil-in-list (value-type change).
 
+## no_combined_min_max_reduce — 2026-06-05
+- Files:
+  - `lib/pattern/no_combined_min_max_reduce.ex`
+  - `test/pattern/no_combined_min_max_reduce_test.exs`
+- Reason: reduce->Enum.min_max diverges on empty ({nil,nil} vs raise), tuple min/max order is undetermined by check, and collection reconstruction breaks on non-list enumerables; no safe subset.
+
