@@ -1,5 +1,3 @@
-lib/pattern/no_enum_at_in_reduce.ex
-test/pattern/no_enum_at_in_reduce_test.exs
 lib/pattern/no_enum_chunk_every_for_adjacent_pairs.ex
 test/pattern/no_enum_chunk_every_for_adjacent_pairs_test.exs
 lib/pattern/no_fetch_then_update.ex

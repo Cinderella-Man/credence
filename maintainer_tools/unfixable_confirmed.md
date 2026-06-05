@@ -66,3 +66,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_enum_at_in_recursion_test.exs`
 - Reason: only fixes are structural/multi-site (walk-by-pattern or hoist List.to_tuple to caller); local elem(List.to_tuple(l),i) differs on negative/out-of-range and stays O(n).
 
+## no_enum_at_in_reduce — 2026-06-05
+- Files:
+  - `lib/pattern/no_enum_at_in_reduce.ex`
+  - `test/pattern/no_enum_at_in_reduce_test.exs`
+- Reason: Enum.at(list,i)→elem(List.to_tuple(list),i) over dynamic index differs on negative idx (last vs raise), out-of-bounds (nil vs raise), and non-list enumerables (List.to_tuple raises); no in-bounds-provable subset since literals are excluded.
+
