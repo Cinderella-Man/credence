@@ -1,5 +1,3 @@
-lib/pattern/no_fetch_then_update.ex
-test/pattern/no_fetch_then_update_test.exs
 lib/pattern/no_filter_then_flat_map.ex
 test/pattern/no_filter_then_flat_map_test.exs
 lib/pattern/no_filter_then_new.ex
