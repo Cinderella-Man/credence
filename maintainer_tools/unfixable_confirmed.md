@@ -54,3 +54,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_conditional_max_in_reduce_test.exs`
 - Reason: reduce->filter+max is context-dependent, not behaviour-preserving (diverges on non-zero init, negative values, acc-referencing cond, side-effect order); no statically-identifiable safe subset to narrow to.
 
+## no_enum_at_binary_search — 2026-06-05
+- Files:
+  - `lib/pattern/no_enum_at_binary_search.ex`
+  - `test/pattern/no_enum_at_binary_search_test.exs`
+- Reason: fix requires list⇒tuple value-type change across wrapper + recursive signature + all call sites; any local Enum.at→elem patch raises on oob/negative where Enum.at returns nil/from-end and isn't even O(1).
+
