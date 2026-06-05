@@ -108,3 +108,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_list_as_optional_value_test.exs`
 - Reason: []/[x]->nil/x sentinel collides with a nil payload ([nil] vs [] both become nil; payload is arbitrary input, not narrowable); fix also needs non-local caller seed rewrites the check can't do.
 
+## no_list_replace_at_in_recursion — 2026-06-06
+- Files:
+  - `lib/pattern/no_list_replace_at_in_recursion.ex`
+  - `test/pattern/no_list_replace_at_in_recursion_test.exs`
+- Reason: only fix threads a tuple through the recursion (value-type change, non-local) and put_elem raises on the out-of-bounds/negative dynamic indices that List.replace_at/update_at silently tolerate
+
