@@ -1,5 +1,3 @@
-lib/pattern/no_body_destructure_of_param.ex
-test/pattern/no_body_destructure_of_param_test.exs
 lib/pattern/no_case_enum_at_nil.ex
 test/pattern/no_case_enum_at_nil_check_test.exs
 lib/pattern/no_case_on_param_dispatch.ex

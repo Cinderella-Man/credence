@@ -24,3 +24,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/avoid_graphemes_for_byte_iteration_check_test.exs`
 - Reason: fix swaps grapheme binaries for codepoint integers (value-type change); int-cmp predicate flips answer and <<char>> shape turns multibyte crash into a value
 
+## no_body_destructure_of_param — 2026-06-05
+- Files:
+  - `lib/pattern/no_body_destructure_of_param.ex`
+  - `test/pattern/no_body_destructure_of_param_test.exs`
+- Reason: moving a refutable destructure to the head changes non-matching inputs from MatchError to FunctionClauseError, and with sibling clauses silently re-dispatches to a different clause/value; no irrefutable (always-matching) non-trivial pattern exists to narrow to.
+
