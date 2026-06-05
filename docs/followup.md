@@ -319,3 +319,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_with_as_boolean_chain_fix_test.exs`
 - Reason: unsafe — `with true <-` chain always yields a strict boolean and never crashes, but the `and`-chain returns the last predicate's truthy value (true and 5 == 5) and raises BadBooleanError on a non-boolean earlier predicate (nil/5); safe only when every RHS is syntactically boolean (comparison/guard), which excludes all predicate-function chains the rule targets.
 
+## fix_range_step — 2026-06-05
+- Files:
+  - `lib/semantic/fix_range_step.ex`
+  - `test/semantic/fix_range_step_fix_test.exs`
+- Reason: rule never fires on real diagnostics — the range-step warning reports position: 0 (real line only in the undeclared `stacktrace` field), so extract_line→0→idx -1→no-op; a working fix needs shared-framework position normalization (out of scope) and the text substitution is also unsafe (replaces all/substring occurrences).
+
