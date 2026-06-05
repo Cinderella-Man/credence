@@ -19,7 +19,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(dirname "$SCRIPT_DIR")"
+REPO="$(cd "$SCRIPT_DIR"/../.. && pwd)"
 cd "$REPO"
 
 BASE="${1:-${BASE:-origin/main}}"

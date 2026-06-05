@@ -3,8 +3,7 @@ defmodule Credence.Pattern.Rule do
   Behaviour for pattern-level rules that detect and auto-fix anti-patterns.
 
   Every Pattern rule fixes the issue it detects — there is no "warn-only"
-  mode. Rules that could only detect but not fix were archived to
-  `docs/unfixable_rules/` and removed from compilation.
+  mode. Rules that could only detect but not fix are deleted, not shipped.
 
   ## Interface
 

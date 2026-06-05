@@ -35,11 +35,11 @@ steps below.
   it one at a time *from* `evolution`. `main` stays untouched until a batch is
   ready.
 - The **to-do list** is the difference between `evolution` and `main`, copied
-  into **`docs/candidates.md`**. Work it **top to bottom**.
+  into **`maintainer_tools/candidates.md`**. Work it **top to bottom**.
 - A **set** is one rule plus its test file(s) — for example
   `lib/pattern/avoid_charlist_enum_at.ex` +
   `test/pattern/avoid_charlist_enum_at_test.exs`.
-- When a set is done, **delete its lines from `docs/candidates.md`**. The
+- When a set is done, **delete its lines from `maintainer_tools/candidates.md`**. The
   shrinking file *is* the progress bar: whatever's left is whatever's still to
   do.
 
@@ -56,10 +56,10 @@ half-checked batch.
 
 ## The steps
 
-For each rule, going top to bottom through `docs/candidates.md`:
+For each rule, going top to bottom through `maintainer_tools/candidates.md`:
 
 1. **Copy the set in** from `evolution` to `evolution_accepted` (rule file +
-   test file(s)), and delete its lines from `docs/candidates.md`.
+   test file(s)), and delete its lines from `maintainer_tools/candidates.md`.
 
 2. **Run `mix test` right away — before judging anything.** A rule often can't
    stand on its own: the `evolution` branch may also have changed shared files
@@ -108,7 +108,7 @@ For each rule, going top to bottom through `docs/candidates.md`:
    | Safe only on *some* of what it currently matches | **Narrow it** (see below). |
    | Safe only when a checkable promise about the data holds (and the leftover difference is *rare text*, not a plain bug) | **Gate it behind a switch** — shrink first, then declare the switch in `assumptions/0` and add a property test (`docs/03-safety-switches.md`). A type change can't be promised away. |
    | Right bad habit, wrong replacement | **Re-aim it** — point the fix at the correct function (one that gives the same kind of value), rename the rule if its name now lies, and keep the safe cases. |
-   | No input is safe to fix | **Delete it** (or park it in `docs/unfixable_rules/` if it's still worth writing down). Never ship a rule that only warns — Credence has no warn-only mode. |
+   | No input is safe to fix | **Delete it.** Never ship a rule that only warns — Credence has no warn-only mode. |
 
 7. **Split and tidy the tests** (see "How tests are laid out").
 
@@ -229,9 +229,6 @@ again:
   rule.
 - **`prompt.md`** — the instructions for the AI that writes rules, so the same
   unsafe rule isn't made again next time.
-- **`docs/unfixable_rules/`** — parked rules kept as notes, each with the reason
-  it can't be fixed.
 
-When you find a new kind of unsafe rewrite, update all three: state the rule in
-`CONTEXT.md`, teach the AI in `prompt.md`, and (if you're parking it) drop the
-rule in `docs/unfixable_rules/` with the reason.
+When you find a new kind of unsafe rewrite, update both: state the rule in
+`CONTEXT.md`, and teach the AI in `prompt.md`.

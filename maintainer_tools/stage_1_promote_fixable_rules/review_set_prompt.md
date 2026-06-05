@@ -103,7 +103,7 @@ not that it is safe. This is the bar you are defending.
   and never misfires on valid code; tests = analyze+fix or single.
 
 ## Last action — the verdict (do this exactly once, last)
-Write the file `docs/_verdict` with **exactly one** of:
+Write the file `maintainer_tools/_verdict` with **exactly one** of:
 
 - `ACCEPT` — the set meets its kind's bar, the fix is real, the suite is green,
   and only the set's files changed.

@@ -2,7 +2,7 @@
 #
 # remove_from_list_keep_files.sh — ACCEPT mechanic.
 #
-# Strip the current set's lines from docs/candidates.md — the rule line plus its
+# Strip the current set's lines from maintainer_tools/candidates.md — the rule line plus its
 # grouped test line(s) (longest-rule-base-prefix-wins, incl. any superseded
 # single <base>_test.exs) — and KEEP all files. This is the inverse of
 # remove_from_list_revert_files.sh, which reverts the files as well.
@@ -13,10 +13,10 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(dirname "$SCRIPT_DIR")"
+REPO="$(cd "$SCRIPT_DIR"/../.. && pwd)"
 # shellcheck source=review_lib.sh
 source "$SCRIPT_DIR/review_lib.sh"
-CANDIDATES="$REPO/docs/candidates.md"
+CANDIDATES="$REPO/maintainer_tools/candidates.md"
 
 [[ -f "$CANDIDATES" ]] || { echo "error: $CANDIDATES not found" >&2; exit 1; }
 

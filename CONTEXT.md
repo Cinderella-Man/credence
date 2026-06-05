@@ -2,8 +2,8 @@
 
 A tool that reads Elixir code written by an AI, finds clumsy patterns, and
 either fixes them or doesn't include the rule at all. The project's stance:
-**every rule either fixes its problem or it doesn't exist** — rules that could
-only warn have been parked in `docs/unfixable_rules/`.
+**every rule either fixes its problem or it doesn't exist** — a rule that could
+only warn is deleted, never shipped.
 
 A note on words used a lot here:
 
@@ -115,9 +115,9 @@ move-over and was deleted once the last rule switched off it.
   runs `Code.compile_string/2`. If the result won't compile, the rule's change
   is undone and a warning is logged. This catches rules that make code that
   parses but is broken, before the AI sees it.
-- **Parked rule** — a rule that could find a problem but never fix it. Moved to
-  `docs/unfixable_rules/` (with its tests) and left out of the build. The README
-  there says why.
+- **Find-only rule** — a rule that could find a problem but never fix it.
+  Credence doesn't ship these: by policy such a rule is deleted, not kept as a
+  warning.
 
 ## Sourceror tree surprises
 
@@ -207,8 +207,6 @@ over the same list).
   `<round>.ex` runs that round; `<round>/rule.ex` is the kind-of-rule module.
 - `test/<round>/<rule>_test.exs` — paired one-to-one with the rule files. Some
   rules split into `<rule>_check_test.exs` + `<rule>_fix_test.exs`.
-- `docs/unfixable_rules/` — parked find-only rules with their tests and a README
-  explaining the stance.
 - `test/credence_pipeline_test.exs` — end-to-end tests, including the
   after-the-fix check (with on-purpose `BrokenFixRule` / `UnparseableFixRule`
   test rules).
@@ -234,8 +232,8 @@ over the same list).
 
 ## Project policy
 
-- **Fix or park it.** Every rule fixes. If a rule can only find a problem, move
-  it to `docs/unfixable_rules/` instead of leaving it as a warning.
+- **Fix or drop it.** Every rule fixes. If a rule can only find a problem, it is
+  deleted, not kept as a warning.
 - **Don't change the layout.** A rule's output must be byte-for-byte the same as
   the original everywhere it didn't change. Trailing newlines kept, blank lines
   between top-level forms kept, comments kept.

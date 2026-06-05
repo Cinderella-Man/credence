@@ -3,8 +3,8 @@
 # review_loop.sh — orchestrator for the autonomous fixable-rule review loop.
 #
 # Drives one fresh, sandboxed (no-git) Claude session per candidate set from
-# docs/candidates.md. The wrapper owns ALL git and ALL list edits; the session's
-# only output channel is docs/_verdict (ACCEPT | FOLLOWUP: <reason>).
+# maintainer_tools/candidates.md. The wrapper owns ALL git and ALL list edits; the session's
+# only output channel is maintainer_tools/_verdict (ACCEPT | FOLLOWUP: <reason>).
 #
 # Per iteration: self-heal a stale tree → pick the top set → (orphan test ⇒
 # followup, no session) → copy the set in → classify new-vs-delta + build a
@@ -23,13 +23,13 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(dirname "$SCRIPT_DIR")"
+REPO="$(cd "$SCRIPT_DIR"/../.. && pwd)"
 # shellcheck source=review_lib.sh
 source "$SCRIPT_DIR/review_lib.sh"
 
-CANDIDATES="$REPO/docs/candidates.md"
-FOLLOWUP="$REPO/docs/followup.md"
-VERDICT="$REPO/docs/_verdict"
+CANDIDATES="$REPO/maintainer_tools/candidates.md"
+FOLLOWUP="$REPO/maintainer_tools/followup.md"
+VERDICT="$REPO/maintainer_tools/_verdict"
 PROMPT="$SCRIPT_DIR/review_set_prompt.md"
 SISTER="${SISTER:-$(cd "$REPO/.." && pwd)/credence_evolution}"
 CLAUDE_MODEL="${CLAUDE_MODEL:-}"
@@ -86,7 +86,7 @@ top_anchor()  { grep -m1 -v '^[[:space:]]*$' "$CANDIDATES" || true; }
 count_list()  { local n; n="$(grep -c -v '^[[:space:]]*$' "$CANDIDATES" 2>/dev/null)"; echo "${n:-0}"; }
 
 # Per-row agent transcripts (gitignored); keep the console a one-line digest.
-LOGDIR="$REPO/scripts/.review_logs"
+LOGDIR="$SCRIPT_DIR/.review_logs"
 mkdir -p "$LOGDIR"
 MIXLOG=/tmp/review_loop_mixtest.log
 
@@ -176,7 +176,7 @@ revert_set_files() {
 }
 
 # Self-heal: a clean-or-resumable tree, else abort. Called at the top of each
-# iteration. docs/_verdict is transient (gitignored) and always ignorable.
+# iteration. maintainer_tools/_verdict is transient (gitignored) and always ignorable.
 self_heal() {
   rm -f "$VERDICT"
   dirty_code | grep -q . || return 0   # clean → nothing to do

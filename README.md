@@ -40,9 +40,7 @@ runs them in a set order.
 "just warn me" mode. If a problem can only be pointed at but not safely fixed —
 because the fix would have to rearrange code in several places, because there's
 more than one reasonable fix, or because the fix would change the *type* of
-value the code returns — we took that rule out of the program and parked it in
-`docs/unfixable_rules/`. That folder's `README.md` lists every parked rule and
-why.
+value the code returns — we leave that rule out of the program entirely.
 
 ## Installation
 

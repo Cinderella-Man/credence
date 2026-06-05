@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# move_unfixable_out.sh — one-time pre-pass over docs/candidates.md.
+# move_unfixable_out.sh — one-time pre-pass over maintainer_tools/candidates.md.
 #
 # Reads the sister checkout to find candidate rules that are PROVABLY check-only
 # (the `unfixable_stub?` predicate in review_lib.sh) and removes each from the
 # queue — its rule line PLUS its grouped test line(s) — recording it in
-# docs/unfixable.md. List-only bookkeeping: no rule files enter this branch.
+# maintainer_tools/unfixable_unreviewed.md. List-only bookkeeping: no rule files enter this branch.
 # One commit + push. Idempotent: once the queue is clean, a re-run is a no-op.
 #
 # Works for all three kinds (pattern|semantic|syntax); the predicate dispatches
@@ -18,11 +18,11 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(dirname "$SCRIPT_DIR")"
+REPO="$(cd "$SCRIPT_DIR"/../.. && pwd)"
 # shellcheck source=review_lib.sh
 source "$SCRIPT_DIR/review_lib.sh"
-CANDIDATES="$REPO/docs/candidates.md"
-UNFIXABLE="$REPO/docs/unfixable.md"
+CANDIDATES="$REPO/maintainer_tools/candidates.md"
+UNFIXABLE="$REPO/maintainer_tools/unfixable_unreviewed.md"
 SISTER="${SISTER:-$(cd "$REPO/.." && pwd)/credence_evolution}"
 DRY_RUN="${DRY_RUN:-}"
 
@@ -51,16 +51,10 @@ while IFS= read -r rel; do
   printf '%s\n' "$rel" >> "$strip"
   [[ ${#tlines[@]} -gt 0 ]] && printf '%s\n' "${tlines[@]}" >> "$strip"
 
-  {
-    echo "## ${base} (${kind}) — ${today}"
-    echo "- Rule: \`${rel}\`"
-    if [[ ${#tlines[@]} -gt 0 ]]; then
-      echo "- Tests:"
-      printf '  - `%s`\n' "${tlines[@]}"
-    fi
-    echo "- Reason: check-only stub — every fix clause is the verbatim dead form (\`unfixable_stub?\`)."
-    echo
-  } >> "$entries"
+  # Flat output: bare rule + grouped test path lines (candidates.md shape), so the
+  # queue stays a pure path list stage_2 can drain with the same line-strip helpers.
+  printf '%s\n' "$rel" >> "$entries"
+  [[ ${#tlines[@]} -gt 0 ]] && printf '%s\n' "${tlines[@]}" >> "$entries"
   count=$((count + 1))
 done < "$CANDIDATES"
 
@@ -74,7 +68,7 @@ echo "found ${count} unfixable stub(s) → ${strip_n} line(s) to strip from cand
 
 if [[ -n "$DRY_RUN" ]]; then
   echo "--- DRY RUN: lines that would be stripped ---"; cat "$strip"
-  echo "--- DRY RUN: entries that would be appended to unfixable.md ---"; cat "$entries"
+  echo "--- DRY RUN: path lines that would be appended to unfixable_unreviewed.md ---"; cat "$entries"
   exit 0
 fi
 

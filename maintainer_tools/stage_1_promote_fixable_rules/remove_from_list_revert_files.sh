@@ -7,17 +7,17 @@
 #   1. figures out which rule + test files were added/modified locally
 #      (uncommitted changes under lib/ and test/),
 #   2. reverts those files (deletes new ones, restores modified ones to HEAD),
-#   3. removes their lines from docs/candidates.md.
+#   3. removes their lines from maintainer_tools/candidates.md.
 #
-# Everything else — staged shared-file edits, docs/candidates.md's own diff — is
+# Everything else — staged shared-file edits, maintainer_tools/candidates.md's own diff — is
 # left untouched. Pass file paths as args to restrict to just those instead of
 # auto-detecting.
 #
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(dirname "$SCRIPT_DIR")"
-CANDIDATES="$REPO/docs/candidates.md"
+REPO="$(cd "$SCRIPT_DIR"/../.. && pwd)"
+CANDIDATES="$REPO/maintainer_tools/candidates.md"
 
 [[ -f "$CANDIDATES" ]] || { echo "error: $CANDIDATES not found" >&2; exit 1; }
 
@@ -60,7 +60,7 @@ for rel in "${files[@]}"; do
   reverted=$((reverted + 1))
 done
 
-# 3: drop the reverted files' lines from docs/candidates.md (exact whole-line match).
+# 3: drop the reverted files' lines from maintainer_tools/candidates.md (exact whole-line match).
 tmp="$(mktemp)"
 printf '%s\n' "${files[@]}" > "$tmp"
 before="$(grep -c -v '^[[:space:]]*$' "$CANDIDATES" || true)"

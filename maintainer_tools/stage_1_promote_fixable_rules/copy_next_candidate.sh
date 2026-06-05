@@ -3,11 +3,11 @@
 # copy_next_candidate.sh — fetch the next review "set" from the credence_evolution sister
 # checkout into this repo.
 #
-# A "set" is the FIRST file listed in docs/candidates.md (the rule file) plus any
+# A "set" is the FIRST file listed in maintainer_tools/candidates.md (the rule file) plus any
 # of its test files that also appear in the list. Each file is copied from the
 # sister checkout into the same relative path here (nested dirs preserved).
 #
-# It does NOT modify docs/candidates.md — that list is your progress tracker, so
+# It does NOT modify maintainer_tools/candidates.md — that list is your progress tracker, so
 # remove a set's lines yourself once you've finished reviewing it. Running this
 # again then picks up the new first line.
 #
@@ -16,10 +16,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(dirname "$SCRIPT_DIR")"
+REPO="$(cd "$SCRIPT_DIR"/../.. && pwd)"
 # shellcheck source=review_lib.sh
 source "$SCRIPT_DIR/review_lib.sh"
-CANDIDATES="$REPO/docs/candidates.md"
+CANDIDATES="$REPO/maintainer_tools/candidates.md"
 SISTER="${SISTER:-$(cd "$REPO/.." && pwd)/credence_evolution}"
 
 [[ -f "$CANDIDATES" ]] || { echo "error: $CANDIDATES not found" >&2; exit 1; }
@@ -28,7 +28,7 @@ SISTER="${SISTER:-$(cd "$REPO/.." && pwd)/credence_evolution}"
 # First non-blank line is the anchor of the set (normally the rule file).
 first="$(grep -m1 -v '^[[:space:]]*$' "$CANDIDATES" || true)"
 if [[ -z "$first" ]]; then
-  echo "docs/candidates.md is empty — nothing left to do."
+  echo "maintainer_tools/candidates.md is empty — nothing left to do."
   exit 0
 fi
 
