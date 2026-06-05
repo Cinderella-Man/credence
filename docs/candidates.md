@@ -1,6 +1,4 @@
-lib/syntax/fix_python_floor_div.ex
 lib/syntax/fix_scientific_notation.ex
 test/pattern/debug_ast_test.exs
-test/syntax/fix_python_floor_div_test.exs
 test/syntax/fix_scientific_notation_analyze_test.exs
 test/syntax/fix_scientific_notation_fix_test.exs
