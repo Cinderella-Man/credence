@@ -1,5 +1,3 @@
-lib/pattern/no_enum_chunk_every_for_adjacent_pairs.ex
-test/pattern/no_enum_chunk_every_for_adjacent_pairs_test.exs
 lib/pattern/no_fetch_then_update.ex
 test/pattern/no_fetch_then_update_test.exs
 lib/pattern/no_filter_then_flat_map.ex

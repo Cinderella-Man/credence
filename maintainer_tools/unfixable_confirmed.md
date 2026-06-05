@@ -72,3 +72,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_enum_at_in_reduce_test.exs`
 - Reason: Enum.at(list,i)→elem(List.to_tuple(list),i) over dynamic index differs on negative idx (last vs raise), out-of-bounds (nil vs raise), and non-list enumerables (List.to_tuple raises); no in-bounds-provable subset since literals are excluded.
 
+## no_enum_chunk_every_for_adjacent_pairs — 2026-06-05
+- Files:
+  - `lib/pattern/no_enum_chunk_every_for_adjacent_pairs.ex`
+  - `test/pattern/no_enum_chunk_every_for_adjacent_pairs_test.exs`
+- Reason: fix needs semantic rewrite of arbitrary reduce callback; only structural alt (zip+tl) changes element type list->tuple and raises on non-list enumerables, unnarrowable from AST
+
