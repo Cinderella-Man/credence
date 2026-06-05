@@ -1,5 +1,3 @@
-lib/pattern/avoid_graphemes_for_byte_iteration.ex
-test/pattern/avoid_graphemes_for_byte_iteration_check_test.exs
 lib/pattern/no_body_destructure_of_param.ex
 test/pattern/no_body_destructure_of_param_test.exs
 lib/pattern/no_case_enum_at_nil.ex

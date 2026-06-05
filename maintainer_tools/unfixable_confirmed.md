@@ -18,3 +18,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/avoid_charlist_for_iteration_test.exs`
 - Reason: to_charlist→graphemes is a value-type change (integer codepoints vs grapheme strings) on every input incl. ASCII; no safe subset.
 
+## avoid_graphemes_for_byte_iteration — 2026-06-05
+- Files:
+  - `lib/pattern/avoid_graphemes_for_byte_iteration.ex`
+  - `test/pattern/avoid_graphemes_for_byte_iteration_check_test.exs`
+- Reason: fix swaps grapheme binaries for codepoint integers (value-type change); int-cmp predicate flips answer and <<char>> shape turns multibyte crash into a value
+
