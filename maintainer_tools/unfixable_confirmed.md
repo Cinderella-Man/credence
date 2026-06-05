@@ -48,3 +48,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_comprehension_then_flatten_test.exs`
 - Reason: List.flatten is recursive (deep) while Enum.flat_map/concat are single-level and raise on scalar bodies; no static subset proving body is one-level/non-list is decidable.
 
+## no_conditional_max_in_reduce — 2026-06-05
+- Files:
+  - `lib/pattern/no_conditional_max_in_reduce.ex`
+  - `test/pattern/no_conditional_max_in_reduce_test.exs`
+- Reason: reduce->filter+max is context-dependent, not behaviour-preserving (diverges on non-zero init, negative values, acc-referencing cond, side-effect order); no statically-identifiable safe subset to narrow to.
+
