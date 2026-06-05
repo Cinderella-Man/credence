@@ -1,5 +1,3 @@
-lib/pattern/no_list_pop_at_for_access.ex
-test/pattern/no_list_pop_at_for_access_test.exs
 lib/pattern/no_list_replace_at_in_recursion.ex
 test/pattern/no_list_replace_at_in_recursion_test.exs
 lib/pattern/no_list_replace_at_in_reduce.ex
