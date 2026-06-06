@@ -1,33 +1,34 @@
 defmodule Credence.Pattern.NoSortThenAtEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
+  Tier 1 (expression), empty-collection dimension.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  `Enum.sort(nums) |> Enum.at(0)` → `Enum.min(nums, fn -> nil end)` (and the
+  `at(-1)` / `Enum.max` variants). The original returns `nil` on an empty
+  collection; bare `Enum.min/1` would raise `Enum.EmptyError`, so the fix uses
+  the `empty_fallback` to preserve `nil`-on-empty. The battery leads with `[]`
+  and includes ties and the `1`/`1.0` value-kind case.
+
+  Regression note: the bare-`Enum.min/1` fix diverged here (nil vs raise on `[]`);
+  see docs/07. This test pins the empty-safe form.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoSortThenAt
 
-  # Firing snippets lifted from no_sort_then_at_check_test.exs:
-  #   defmodule M do
-  #       def largest(nums), do: Enum.sort(nums, fn a, b -> a > b end) |> Enum.at(0)
-  #     end
-  #   defmodule M do
-  #       def largest(nums), do: Enum.sort(nums, fn a, b -> a < b end) |> Enum.at(-1)
-  #     end
-  #   defmodule M do
-  #       def largest(nums), do: Enum.sort(nums, fn a, b -> b < a end) |> Enum.at(0)
-  #     end
-
-  test "no_sort_then_at: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "sort |> at(0) → Enum.min(_, fn -> nil end) preserves behaviour incl. empty list" do
+    assert_equivalent("Enum.sort(nums) |> Enum.at(0)",
       rule: NoSortThenAt,
-      vars: [:todo],
+      vars: [:nums],
+      inputs: B.term_lists()
+    )
+  end
+
+  test "sort |> at(-1) → Enum.max(_, fn -> nil end) preserves behaviour incl. empty list" do
+    assert_equivalent("Enum.sort(nums) |> Enum.at(-1)",
+      rule: NoSortThenAt,
+      vars: [:nums],
       inputs: B.term_lists()
     )
   end

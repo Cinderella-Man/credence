@@ -81,6 +81,14 @@ opt-outs remain; nothing is unconstructible.
   `AssumptionGenerators.proper_list/0`, `redundant_list_guard_property_test.exs` (promise proof),
   and the equivalence test now passes in-domain (proper lists) + an out-of-domain `assert_raise`
   demo. Confirmed end-to-end: `:strict` keeps the guard (`Applied: []`), default removes it.
+- **`no_sort_then_at` — was UNSAFE, now RESOLVED (empty-safe fix).** `Enum.sort(c) |> Enum.at(0)`
+  returns `nil` on an empty collection, but the fix `Enum.min(c)` raises `Enum.EmptyError`
+  (same for `at(-1)` → `Enum.max`); non-empty inputs (incl. ties + `1`/`1.0`) all matched.
+  Fixed by emitting the empty_fallback form `Enum.min(c, fn -> nil end)` / `Enum.max(c, fn -> nil end)` —
+  the maintainer's existing idiom (`no_if_empty_for_enum_min_max`), behaviour-preserving for every
+  input with no assumption. Updated: rule fix + moduledoc, ~all `no_sort_then_at_fix_test` expectations,
+  equivalence test (battery leads with `[]`). **Follow-on:** sibling `no_sort_for_top_k` (and any
+  `sort |> hd/first/at` rule) likely shares the empty hazard — check during its fill.
 - `no_piped_regex_replace` — investigated, **SAFE** (only the piped, crashing form is rewritten;
   `String.replace ≡ Regex.replace` on all probed inputs). Kept as T2; not a divergence.
 
@@ -171,8 +179,12 @@ above is the human worklist.)
    `_check_test.exs`, tagged `@moduletag :equivalence_todo` (excluded via `test_helper.exs`, so the
    suite stays green: 4493 tests / 117 excluded). The 2 cosmetics are pre-filled and pass now.
    Remaining work = the fill pass: replace each TODO snippet/battery and drop the tag, highest-risk
-   T1 first, then T2, then probe. Each divergence on a shipped rule → narrow/drop (decision 2; first
-   one — `redundant_list_guard` — already resolved).
+   T1 first, then T2, then probe. Each divergence on a shipped rule → narrow/drop (decision 2).
+   **Filled so far (11/125):** 6 exemplars + first high-risk T1 batch — `no_enum_take_negative`,
+   `no_enum_drop_negative` (bounds, safe), `no_manual_string_reverse` (Unicode, safe — grapheme-based),
+   `no_redundant_case_nil_clause` (nil/term-ordering, safe — smart guard rewrite), `no_sort_then_at`
+   (empty-list divergence → fixed). 2 cosmetics done. Suite green: 4499 tests / 112 excluded.
+   **2 shipped bugs found & fixed so far** (`redundant_list_guard`, `no_sort_then_at`).
 3. **Backfill T2 (29)** via `assert_equivalent_module`; **PROBE (26)** turn on `probe_effects`.
 4. **Stamp T3a (8) + T3b (2)** with cosmetic/unconstructible marks + reasons. Resolve the
    two flagged rules. Drive the T3b/unconstructible pile to minimum.

@@ -1,53 +1,32 @@
 defmodule Credence.Pattern.NoRedundantCaseNilClauseEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
+  Tier 1 (expression), nil-edge / term-ordering dimension.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  `case x do nil -> 0; n when n > 0 -> n; _ -> 0 end` → the rule drops the
+  explicit `nil ->` clause but **adds `not is_nil(n)`** to the intermediate
+  guard. That guard is load-bearing: term ordering makes `nil > 0` *true*, so a
+  naive deletion would let `nil` fall into `n when n > 0` and return `nil`
+  instead of `0`. The battery includes `nil` plus values across types that
+  exercise the guard.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoRedundantCaseNilClause
 
-  # Firing snippets lifted from no_redundant_case_nil_clause_check_test.exs:
-  #   case Map.get(map, key) do
-  #       nil ->
-  #         default_action()
-  #     
-  #       prev when prev >= left ->
-  #         use_value(prev)
-  #     
-  #       _prev ->
-  #         default_action()
-  #     end
-  #   case x do
-  #       nil -> 0
-  #       n when n > 0 -> n
-  #       _ -> 0
-  #     end
-  #   case Map.get(m, k) do
-  #       nil ->
-  #         a = compute_default()
-  #         {a, acc}
-  #     
-  #       val when val >= threshold ->
-  #         a = transform(val)
-  #         {a, Map.put(acc, k, val)}
-  #     
-  #       _val ->
-  #         a = compute_default()
-  #         {a, acc}
-  #     end
+  @expr """
+  case x do
+    nil -> 0
+    n when n > 0 -> n
+    _ -> 0
+  end
+  """
 
-  test "no_redundant_case_nil_clause: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "dropping the nil clause preserves behaviour (incl. the nil > 0 term-ordering trap)" do
+    assert_equivalent(@expr,
       rule: NoRedundantCaseNilClause,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:x],
+      inputs: [nil, -1, 0, 5, :atom, 3.0, "s"]
     )
   end
 end

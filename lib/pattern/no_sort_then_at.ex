@@ -2,8 +2,14 @@ defmodule Credence.Pattern.NoSortThenAt do
   @moduledoc """
   Performance rule (fixable): Detects `Enum.sort |> Enum.at(index)` where the
   index is a **literal** `0` or `-1` and the sort direction can be statically
-  determined. These can be safely replaced with `Enum.min/1` or `Enum.max/1`,
-  avoiding the O(n log n) sort entirely.
+  determined. These are replaced with `Enum.min`/`Enum.max`, avoiding the
+  O(n log n) sort entirely.
+
+  The fix uses the `empty_fallback` form `Enum.min(c, fn -> nil end)` rather than
+  bare `Enum.min(c)`: `Enum.at(sorted, 0 | -1)` returns `nil` on an empty
+  collection, while bare `Enum.min/1` raises `Enum.EmptyError`. The fallback
+  preserves the original `nil`-on-empty behaviour for every input (incl. `[]`,
+  `%{}`, empty ranges/MapSets), so the rewrite needs no assumption.
 
   ## Recognised direction forms
 
@@ -186,10 +192,17 @@ defmodule Credence.Pattern.NoSortThenAt do
 
   defp extract_sort_args(_), do: nil
 
-  defp replacement_call(:asc, :first, c), do: make_remote(:Enum, :min, [c])
-  defp replacement_call(:asc, :last, c), do: make_remote(:Enum, :max, [c])
-  defp replacement_call(:desc, :first, c), do: make_remote(:Enum, :max, [c])
-  defp replacement_call(:desc, :last, c), do: make_remote(:Enum, :min, [c])
+  defp replacement_call(:asc, :first, c), do: make_remote(:Enum, :min, [c, empty_fallback()])
+  defp replacement_call(:asc, :last, c), do: make_remote(:Enum, :max, [c, empty_fallback()])
+  defp replacement_call(:desc, :first, c), do: make_remote(:Enum, :max, [c, empty_fallback()])
+  defp replacement_call(:desc, :last, c), do: make_remote(:Enum, :min, [c, empty_fallback()])
+
+  # `Enum.sort(c) |> Enum.at(0 | -1)` returns `nil` on an empty collection, but
+  # bare `Enum.min/1` / `Enum.max/1` raise `Enum.EmptyError`. Preserve the
+  # nil-on-empty behaviour exactly via the `empty_fallback` parameter, so the
+  # rewrite is behaviour-preserving for every input (incl. `[]`, `%{}`, empty
+  # ranges/MapSets) with no assumption required.
+  defp empty_fallback, do: {:fn, [], [{:->, [], [[], nil]}]}
 
   defp make_remote(mod, fun, args) do
     {{:., [], [{:__aliases__, [], [mod]}, fun]}, [], args}

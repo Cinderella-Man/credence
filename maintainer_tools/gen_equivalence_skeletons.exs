@@ -154,7 +154,7 @@ render = fn full_mod, short, base, t, probe?, snips, cosmetic ->
       use ExUnit.Case, async: true
     #{if tag?, do: "  @moduletag :equivalence_todo\n", else: ""}
       import Credence.BehaviourEquivalence
-    #{if t == :t1 and not probe?, do: "  alias Credence.EquivalenceBatteries, as: B\n", else: ""}  alias #{full_mod}
+    #{if t == :t1 and not probe?, do: "  alias Credence.EquivalenceBatteries, as: B\n", else: ""}#{if t != :cosmetic, do: "  alias #{full_mod}\n", else: ""}
 
       # Firing snippets lifted from #{base}_check_test.exs:
     #{comment_block.(snips)}

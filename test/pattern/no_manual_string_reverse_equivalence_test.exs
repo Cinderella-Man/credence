@@ -1,46 +1,25 @@
 defmodule Credence.Pattern.NoManualStringReverseEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
+  Tier 1 (expression), Unicode dimension — the always-safe sibling of
+  `no_codepoint_string_reverse`.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  `str |> String.graphemes() |> Enum.reverse() |> Enum.join()` → `String.reverse(str)`.
+
+  Both sides reverse by **grapheme**, so they agree on every string — including
+  decomposed accents, ZWJ emoji, and flags. Unlike the codepoint variant, this
+  needs no assumption: it passes over the full multi-codepoint battery.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoManualStringReverse
 
-  # Firing snippets lifted from no_manual_string_reverse_check_test.exs:
-  #   defmodule BadPalindrome do
-  #       def is_palindrome(word) do
-  #         normalized = String.downcase(word)
-  #         reversed = normalized |> String.graphemes() |> Enum.reverse() |> Enum.join()
-  #         normalized == reversed
-  #       end
-  #     end
-  #   defmodule BadNested do
-  #       def reverse_string(s) do
-  #         Enum.join(Enum.reverse(String.graphemes(s)))
-  #       end
-  #     end
-  #   defmodule Example do
-  #       def reverse(str) do
-  #         str
-  #         |> String.trim()
-  #         |> String.graphemes()
-  #         |> Enum.reverse()
-  #         |> Enum.join()
-  #       end
-  #     end
-
-  test "no_manual_string_reverse: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "graphemes |> reverse |> join → String.reverse preserves behaviour over all Unicode" do
+    assert_equivalent("str |> String.graphemes() |> Enum.reverse() |> Enum.join()",
       rule: NoManualStringReverse,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:str],
+      inputs: B.unicode_strings()
     )
   end
 end
