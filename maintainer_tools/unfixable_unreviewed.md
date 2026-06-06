@@ -1,5 +1,3 @@
-lib/pattern/no_repeated_length_in_recursion.ex
-test/pattern/no_repeated_length_in_recursion_test.exs
 lib/pattern/no_reverse_then_find.ex
 test/pattern/no_reverse_then_find_test.exs
 lib/pattern/no_reverse_uniq_reverse.ex

@@ -180,3 +180,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_redundant_sort_comparator_check_test.exs`
 - Reason: Enum.sort/1 differs from every flagged comparator on runtime-only facts static analysis can't exclude — strict `<` is unstable and reorders int/float value-equal-but-not-`===` elements ([1,2] vs [1.0,2]), crashes (FunctionClauseError) on wrong-arity/typed elements where sort/1 succeeds, and the `<=` variant short-circuits to a different ordering entirely.
 
+## no_repeated_length_in_recursion — 2026-06-06
+- Files:
+  - `lib/pattern/no_repeated_length_in_recursion.ex`
+  - `test/pattern/no_repeated_length_in_recursion_test.exs`
+- Reason: fix requires adding a parameter (arity change) and rewriting every entry call site, which is an out-of-scope interface change and double-evaluates side-effecting call-site exprs; no arity-preserving rewrite removes the recompute, so no safe core.
+
