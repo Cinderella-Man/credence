@@ -59,9 +59,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateFixTest do
     end
 
     test "sum_by counting fn keeps upstream pipeline" do
-      assert fix(
-               ~s[str |> String.trim() |> String.graphemes() |> Enum.sum_by(fn "a" -> 1; _ -> 0 end)]
-             ) ==
+      assert fix(~s[str |> String.trim() |> String.graphemes() |> Enum.sum_by(fn "a" -> 1; _ -> 0 end)]) ==
                ~s[str |> String.trim() |> String.count("a")]
     end
 

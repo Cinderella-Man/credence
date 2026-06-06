@@ -157,8 +157,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
     end
 
     test "Enum.count/2 with non-capture function" do
-      assert check(~s[Enum.count(String.graphemes(str), fn c -> String.contains?(c, "1") end)]) ==
-               []
+      assert check(~s[Enum.count(String.graphemes(str), fn c -> String.contains?(c, "1") end)]) == []
     end
 
     test "Enum.sum_by on non-graphemes" do
@@ -175,8 +174,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
     end
 
     test "sum_by with non-literal match" do
-      assert check(~s[String.graphemes(str) |> Enum.sum_by(fn x when x == "1" -> 1; _ -> 0 end)]) ==
-               []
+      assert check(~s[String.graphemes(str) |> Enum.sum_by(fn x when x == "1" -> 1; _ -> 0 end)]) == []
     end
 
     test "sum_by with non-1/0 return values" do

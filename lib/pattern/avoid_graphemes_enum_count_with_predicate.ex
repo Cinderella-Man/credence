@@ -1,8 +1,7 @@
 defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicate do
   @moduledoc """
   Performance rule: Detects `Enum.count/2` with an equality predicate or
-  `Enum.sum_by/2` with a counting function on the result of `String.graphemes/1`,
-  counting occurrences of a single literal character.
+  `Enum.sum_by/2` with a counting function on the result of `String.graphemes/1`.
 
   Splitting a string into a grapheme list just to count occurrences of a
   specific character is wasteful. `String.count/2` performs the same count
@@ -166,7 +165,9 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicate do
   end
 
   # Extract literal from Enum.count/2 in a pipe (only pred arg present)
-  defp extract_enum_count_pred_literal({{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [pred]}) do
+  defp extract_enum_count_pred_literal(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [pred]}
+       ) do
     equality_literal(pred)
   end
 
