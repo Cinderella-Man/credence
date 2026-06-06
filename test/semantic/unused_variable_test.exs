@@ -41,9 +41,14 @@ defmodule Credence.Semantic.UnusedVariableTest do
         position: {2, 4}
       }
 
-      fixed = UnusedVariable.fix(source, diag)
-      assert fixed =~ "_current"
-      assert fixed =~ "max"
+      expected = """
+      def run(list) do
+        {_current, max} = compute(list)
+        max
+      end
+      """
+
+      assert UnusedVariable.fix(source, diag) == expected
     end
 
     test "does not double-prefix already underscored variable" do
@@ -60,8 +65,8 @@ defmodule Credence.Semantic.UnusedVariableTest do
         position: {2, 4}
       }
 
-      fixed = UnusedVariable.fix(source, diag)
-      refute fixed =~ "__current"
+      # Already underscored — left untouched.
+      assert UnusedVariable.fix(source, diag) == source
     end
 
     test "fixes on correct line only" do
@@ -77,13 +82,13 @@ defmodule Credence.Semantic.UnusedVariableTest do
         position: {2, 9}
       }
 
-      fixed = UnusedVariable.fix(source, diag)
-      # Only line 2 should be modified
-      lines = String.split(fixed, "\n")
-      assert Enum.at(lines, 1) =~ "_extra"
-      # Line 1 and 3 untouched
-      assert Enum.at(lines, 0) =~ "total = compute()"
-      assert Enum.at(lines, 2) =~ "total"
+      expected = """
+      total = compute()
+      {total, _extra} = split(data)
+      total
+      """
+
+      assert UnusedVariable.fix(source, diag) == expected
     end
 
     test "handles position as bare integer" do
@@ -95,8 +100,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
         position: 1
       }
 
-      fixed = UnusedVariable.fix(source, diag)
-      assert fixed =~ "_x"
+      assert UnusedVariable.fix(source, diag) == "_x = 1\n"
     end
   end
 
@@ -144,9 +148,16 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
-      assert fixed =~ "_current"
-      refute fixed =~ ~r/[^_]current/
+      expected = """
+      defmodule UnusedVarInteg2 do
+        def run do
+          {_current, max} = {1, 2}
+          max
+        end
+      end
+      """
+
+      assert Credence.Semantic.fix(source) == expected
     end
 
     test "no issues when all variables are used" do
@@ -181,14 +192,6 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
   # ════════════════════════════════════════════════════════════════
   # Regression: binding-name conflict on the same line
-  #
-  # The diagnostic's column points exactly at the unused binding. The
-  # fix MUST use it — a string-replace on the line will pick the first
-  # textual occurrence of the variable name, which may be a string key,
-  # atom key, function name, or alias that happens to contain those
-  # characters earlier on the line. Renaming the wrong one silently
-  # mangles unrelated code (and, for pattern keys, breaks runtime
-  # matching — the original GitHub report).
   # ════════════════════════════════════════════════════════════════
 
   describe "binding-name conflict on same line (REGRESSION)" do
@@ -202,13 +205,16 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
+      expected = """
+      defmodule LiveEvent do
+        def handle_event("move-to", %{"destination" => _destination} = params, socket) do
+          IO.inspect(params)
+          {:noreply, socket}
+        end
+      end
+      """
 
-      # The binding gets underscored:
-      assert fixed =~ ~s|"destination" => _destination|
-      # The string key MUST be preserved — otherwise the live-event
-      # payload key has been silently renamed.
-      refute fixed =~ ~s|"_destination"|
+      assert Credence.Semantic.fix(source) == expected
     end
 
     test "atom-keyed map, binding matches key" do
@@ -218,11 +224,13 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
+      expected = """
+      defmodule Atomic do
+        def get(%{foo: _foo}), do: :ok
+      end
+      """
 
-      assert fixed =~ "%{foo: _foo}"
-      # The atom key stays `foo:`, not `_foo:`.
-      refute fixed =~ "%{_foo:"
+      assert Credence.Semantic.fix(source) == expected
     end
 
     test "function name contains the binding name as a substring" do
@@ -232,16 +240,16 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
+      expected = """
+      defmodule Fns do
+        def destination_helper(_destination), do: nil
+      end
+      """
 
-      assert fixed =~ "def destination_helper(_destination)"
-      # The function name MUST NOT be sliced into `_destination_helper`.
-      refute fixed =~ "_destination_helper"
+      assert Credence.Semantic.fix(source) == expected
     end
 
     test "function name ENDS with the binding's letters" do
-      # The binding `x` first appears textually inside `index` (last
-      # letter). A naive string replace would split `index` → `inde_x`.
       source = """
       defmodule Ending do
         def index(:a, x), do: :ok
@@ -249,17 +257,19 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
+      expected = """
+      defmodule Ending do
+        def index(:a, _x), do: :ok
+        def index(:b, x), do: x
+      end
+      """
 
-      assert fixed =~ "def index(:a, _x), do: :ok"
-      refute fixed =~ "inde_x"
+      assert Credence.Semantic.fix(source) == expected
     end
   end
 
   # ════════════════════════════════════════════════════════════════
-  # Common destructuring shapes — should fix cleanly with no special
-  # cases. These exist to lock in behaviour for everyday patterns and
-  # would silently regress if the fix logic was rewritten badly.
+  # Common destructuring shapes
   # ════════════════════════════════════════════════════════════════
 
   describe "common destructuring shapes" do
@@ -270,8 +280,13 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
-      assert fixed =~ "{outer, _inner}"
+      expected = """
+      defmodule Nested do
+        def f({outer, _inner}), do: outer
+      end
+      """
+
+      assert Credence.Semantic.fix(source) == expected
     end
 
     test "list cons pattern with unused tail" do
@@ -281,8 +296,13 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
-      assert fixed =~ "[head | _tail]"
+      expected = """
+      defmodule Lst do
+        def f([head | _tail]), do: head
+      end
+      """
+
+      assert Credence.Semantic.fix(source) == expected
     end
 
     test "lambda argument unused" do
@@ -292,8 +312,13 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
-      assert fixed =~ "fn _x -> 1 end"
+      expected = """
+      defmodule Lam do
+        def f(list), do: Enum.map(list, fn _x -> 1 end)
+      end
+      """
+
+      assert Credence.Semantic.fix(source) == expected
     end
 
     test "multi-clause function — only the clause whose arg is unused gets touched" do
@@ -304,9 +329,14 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
-      assert fixed =~ "def f(:a, _x), do: :ok"
-      assert fixed =~ "def f(:b, x), do: x"
+      expected = """
+      defmodule Multi do
+        def f(:a, _x), do: :ok
+        def f(:b, x), do: x
+      end
+      """
+
+      assert Credence.Semantic.fix(source) == expected
     end
 
     test "case clause with unused binding" do
@@ -321,19 +351,23 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
-      assert fixed =~ "{:ok, _val} -> :ok"
+      expected = """
+      defmodule CaseTest do
+        def f(x) do
+          case x do
+            {:ok, _val} -> :ok
+            _ -> :error
+          end
+        end
+      end
+      """
+
+      assert Credence.Semantic.fix(source) == expected
     end
   end
 
   # ════════════════════════════════════════════════════════════════
   # Multiple unused bindings on a single line.
-  #
-  # Each diagnostic carries its own column. Applying them in arbitrary
-  # order would shift later columns by 1 per `_` insert, so the rule
-  # must either (a) sort same-line diagnostics right-to-left within
-  # one pass, or (b) lean on the pipeline's re-compile-between-passes
-  # to refresh columns.
   # ════════════════════════════════════════════════════════════════
 
   describe "multiple unused on same line" do
@@ -347,8 +381,16 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
-      assert fixed =~ "{_a, _b} = {1, 2}"
+      expected = """
+      defmodule Both do
+        def f do
+          {_a, _b} = {1, 2}
+          :ok
+        end
+      end
+      """
+
+      assert Credence.Semantic.fix(source) == expected
     end
 
     test "three unused in nested pattern — all underscored, structure intact" do
@@ -361,15 +403,21 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      fixed = Credence.Semantic.fix(source)
-      assert fixed =~ "{_a, {_b, _c}} = {1, {2, 3}}"
+      expected = """
+      defmodule Triple do
+        def f do
+          {_a, {_b, _c}} = {1, {2, 3}}
+          :ok
+        end
+      end
+      """
+
+      assert Credence.Semantic.fix(source) == expected
     end
   end
 
   # ════════════════════════════════════════════════════════════════
-  # Negative cases: nothing to fix because the compiler emits no
-  # warning. Pinning these protects against rule drift (e.g. a future
-  # regex change in `match?/1` accidentally firing on legitimate code).
+  # Negative cases: nothing to fix because the compiler emits no warning.
   # ════════════════════════════════════════════════════════════════
 
   describe "should NOT trigger" do
@@ -407,8 +455,6 @@ defmodule Credence.Semantic.UnusedVariableTest do
     end
 
     test "intentional pattern-match equality (`x, x`) is not flagged" do
-      # `def f(x, x)` binds twice with an equality constraint; both
-      # are "used" in the sense that they participate in the match.
       source = """
       defmodule Eq do
         def f(x, x), do: x
@@ -422,17 +468,10 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
   # ════════════════════════════════════════════════════════════════
   # Safety guards on `fix/2`.
-  #
-  # When the diagnostic can't be applied unambiguously, the rule must
-  # refuse to mutate the source — silently changing the wrong identifier
-  # is far worse than leaving a warning visible.
   # ════════════════════════════════════════════════════════════════
 
   describe "fix/2 — safety guards" do
     test "no column AND var name appears more than once on the line — skip" do
-      # Without column info, the rule can't tell which `foo` is the
-      # binding and which is the string key. Refusing to act is the
-      # only safe choice.
       source = ~s|  %{"foo" => foo} = params\n|
 
       diag = %{
@@ -457,10 +496,6 @@ defmodule Credence.Semantic.UnusedVariableTest do
     end
 
     test "text at the given column does not start with the var name — skip" do
-      # The var `x` exists in the source (at column 5), but the diagnostic
-      # claims it's at column 1 — which actually holds `y`. A naive
-      # first-match string replace would underscore the wrong `x`;
-      # respecting the column means we recognise the drift and skip.
       source = "y = x\n"
 
       diag = %{

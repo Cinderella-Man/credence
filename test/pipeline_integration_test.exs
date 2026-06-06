@@ -5,6 +5,8 @@ defmodule Credence.PipelineIntegrationTest do
   """
   use ExUnit.Case
 
+  defp fmt(s), do: s |> Code.format_string!() |> IO.iodata_to_binary()
+
   describe "Credence.Syntax phase" do
     test "analyze detects infix div in unparseable code" do
       source = """
@@ -29,7 +31,16 @@ defmodule Credence.PipelineIntegrationTest do
       """
 
       %{code: fixed} = Credence.fix(source)
-      assert fixed =~ "div("
+
+      expected = """
+      defmodule SyntaxFixDiv do
+        def gauss(n) do
+          div(n * (n + 1), 2)
+        end
+      end
+      """
+
+      assert fmt(fixed) == fmt(expected)
       assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 
@@ -70,7 +81,17 @@ defmodule Credence.PipelineIntegrationTest do
       """
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed =~ "_unused"
+
+      expected = """
+      defmodule SemanticFix1 do
+        def run do
+          {_unused, used} = {1, 2}
+          used
+        end
+      end
+      """
+
+      assert fmt(fixed) == fmt(expected)
     end
 
     test "clean code has no semantic issues" do
@@ -104,7 +125,16 @@ defmodule Credence.PipelineIntegrationTest do
       """
 
       %{code: fixed, issues: _issues} = Credence.fix(source)
-      assert fixed =~ "div("
+
+      expected = """
+      defmodule FullPipeline1 do
+        def gauss_sum(n) do
+          div(n * (n + 1), 2)
+        end
+      end
+      """
+
+      assert fmt(fixed) == fmt(expected)
       assert {:ok, _} = Sourceror.parse_string(fixed)
     end
 

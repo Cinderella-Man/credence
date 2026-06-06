@@ -4,6 +4,8 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
   alias Credence.Pattern.NoTrailingNewlineInDoc
   alias Credence.Pattern.PreferHeredocForMultiLineDoc
 
+  defp fmt(s), do: s |> Code.format_string!() |> IO.iodata_to_binary()
+
   # Heredoc handling: Sourceror records the string delimiter (`"""` vs `"`)
   # in the `:__block__` metadata, so `check/2` can tell heredocs apart from
   # escape-string docs purely from the AST — no `:source` needed.
@@ -117,12 +119,21 @@ defmodule Credence.Pattern.FixWithTraceSourceAwarenessTest do
           ]
         )
 
-      # The single-line @doc trailing \n should be fixed
-      refute fixed =~ ~S|"Function doc with trailing newline.\n"|
-      assert fixed =~ ~S|"Function doc with trailing newline."|
+      # The single-line @doc trailing \n is fixed; the heredoc is untouched.
+      expected = ~S'''
+      defmodule Example do
+        @moduledoc """
+        Multi-line heredoc.
 
-      # The heredoc should be untouched
-      assert fixed =~ "Should not be touched."
+        Should not be touched.
+        """
+
+        @doc "Function doc with trailing newline."
+        def foo, do: :ok
+      end
+      '''
+
+      assert fmt(fixed) == fmt(expected)
 
       # Only NoTrailingNewlineInDoc should appear in applied
       applied_rules = Enum.map(applied, fn {rule, _} -> rule end)

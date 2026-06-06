@@ -1,7 +1,8 @@
 defmodule Credence.FixExamplesTest do
   @moduledoc """
   Five additional realistic LLM-generated modules put through Credence.fix/2.
-  Each exercises a different combination of rules.
+  Each exercises a different combination of rules. Each example pins the FULL
+  fixed module with a whole-string `==` compare.
   """
   use ExUnit.Case
 
@@ -31,36 +32,30 @@ defmodule Credence.FixExamplesTest do
   end
   """
 
+  @fizzbuzz_fixed ~S"""
+  defmodule FizzBuzz do
+    @moduledoc "Generates FizzBuzz sequences."
+    @doc "Returns a FizzBuzz list for the given range."
+    def generate(n) do
+      Enum.map_join(1..n, ", ", fn x -> fizz_or_buzz(x) end)
+    end
+
+    def divisible?(n, d), do: rem(n, d) == 0
+
+    defp fizz_or_buzz(n) do
+      cond do
+        divisible?(n, 15) -> "FizzBuzz"
+        divisible?(n, 3) -> "Fizz"
+        divisible?(n, 5) -> "Buzz"
+        true -> Integer.to_string(n)
+      end
+    end
+  end
+  """
+
   describe "Example 1: FizzBuzz" do
-    setup do
-      %{result: Credence.fix(@fizzbuzz_input, [])}
-    end
-
-    test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Sourceror.parse_string(code)
-    end
-
-    test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do
-      assert code =~ ~S|@moduledoc "Generates FizzBuzz sequences."|
-      refute code =~ ~S|sequences.\n"|
-    end
-
-    test "strips trailing \\n from @doc", %{result: %{code: code}} do
-      refute code =~ ~S|range.\n"|
-    end
-
-    test "fuses Enum.map |> Enum.join into Enum.map_join", %{result: %{code: code}} do
-      assert code =~ "Enum.map_join"
-      refute Regex.match?(~r/Enum\.map\(.*\) \|> Enum\.join/, code)
-    end
-
-    test "renames is_divisible to divisible?", %{result: %{code: code}} do
-      assert code =~ "divisible?"
-      refute code =~ "is_divisible"
-    end
-
-    test "removes @doc false on defp", %{result: %{code: code}} do
-      refute code =~ "@doc false"
+    test "fully fixed output" do
+      assert Credence.fix(@fizzbuzz_input, []).code == @fizzbuzz_fixed
     end
   end
 
@@ -95,26 +90,36 @@ defmodule Credence.FixExamplesTest do
   end
   """
 
+  @caesar_fixed ~S"""
+  defmodule CaesarCipher do
+    @moduledoc "Simple Caesar cipher encryption and decryption."
+
+    def encrypt(text, shift) do
+      String.graphemes(text) |> Enum.map_join(fn c -> shift_char(c, shift) end)
+    end
+
+    def decrypt(text, shift) do
+      String.graphemes(text) |> Enum.map_join(fn c -> shift_char(c, -shift) end)
+    end
+
+    def letter?(char) do
+      String.match?(char, ~r/[a-zA-Z]/)
+    end
+
+    defp shift_char(char, shift) do
+      if letter?(char) do
+        base = if char >= "a" and char <= "z", do: ?a, else: ?A
+        <<rem(hd(String.to_charlist(char)) - base + shift + 26, 26) + base>>
+      else
+        char
+      end
+    end
+  end
+  """
+
   describe "Example 2: Caesar Cipher" do
-    setup do
-      %{result: Credence.fix(@caesar_input, [])}
-    end
-
-    test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Sourceror.parse_string(code)
-    end
-
-    test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do
-      refute code =~ ~S|decryption.\n"|
-    end
-
-    test "removes redundant empty string from Enum.join", %{result: %{code: code}} do
-      refute code =~ ~S|Enum.join("")|
-    end
-
-    test "renames is_letter to letter?", %{result: %{code: code}} do
-      assert code =~ "letter?"
-      refute code =~ "is_letter"
+    test "fully fixed output" do
+      assert Credence.fix(@caesar_input, []).code == @caesar_fixed
     end
   end
 
@@ -141,40 +146,28 @@ defmodule Credence.FixExamplesTest do
   end
   """
 
+  @stats_fixed ~S"""
+  defmodule Stats do
+    @moduledoc "Basic statistical functions."
+
+    def summarize(nums) do
+      if nums == [] do
+        :empty
+      else
+        sorted = Enum.sort(nums, :desc)
+        max_val = Enum.at(sorted, 0)
+        min_val = List.last(sorted)
+        total = Enum.sum(nums)
+        mean = total / length(nums)
+        %{max: max_val, min: min_val, mean: mean, count: length(nums)}
+      end
+    end
+  end
+  """
+
   describe "Example 3: Stats" do
-    setup do
-      %{result: Credence.fix(@stats_input, [])}
-    end
-
-    test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Sourceror.parse_string(code)
-    end
-
-    test "replaces length(nums) == 0 with nums == []", %{result: %{code: code}} do
-      assert code =~ "nums == []"
-      refute code =~ "length(nums) == 0"
-    end
-
-    test "replaces Enum.sort |> Enum.reverse with Enum.sort(:desc)", %{result: %{code: code}} do
-      assert code =~ "Enum.sort(nums, :desc)"
-      refute code =~ "Enum.sort(nums) |> Enum.reverse()"
-    end
-
-    test "replaces Enum.count with length", %{result: %{code: code}} do
-      assert code =~ "length(nums)"
-      refute code =~ "Enum.count(nums)"
-    end
-
-    test "removes * 1.0", %{result: %{code: code}} do
-      refute code =~ "* 1.0"
-    end
-
-    test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do
-      refute code =~ ~S|functions.\n"|
-    end
-
-    test "simplifies Enum.map identity |> Enum.sum", %{result: %{code: code}} do
-      refute code =~ "Enum.map(nums, fn n -> n end)"
+    test "fully fixed output" do
+      assert Credence.fix(@stats_input, []).code == @stats_fixed
     end
   end
 
@@ -205,27 +198,30 @@ defmodule Credence.FixExamplesTest do
   end
   """
 
+  @ranker_fixed ~S"""
+  defmodule WordRanker do
+    @doc "Ranks words by frequency, returns top n."
+    def top_words(text, n) do
+      words = text |> String.downcase() |> String.split(~r/\W+/u, trim: true)
+
+      freq = Enum.frequencies(words)
+
+      freq
+      |> Map.to_list()
+      |> Enum.sort_by(fn {_word, count} -> count end)
+      |> Enum.reverse()
+      |> Enum.take(n)
+    end
+
+    def common_word?(word) do
+      word |> String.downcase() |> Kernel.in(["the", "a", "an", "is", "of", "to"])
+    end
+  end
+  """
+
   describe "Example 4: Word Ranker" do
-    setup do
-      %{result: Credence.fix(@ranker_input, [])}
-    end
-
-    test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Sourceror.parse_string(code)
-    end
-
-    test "replaces manual frequency reduce with Enum.frequencies", %{result: %{code: code}} do
-      assert code =~ "Enum.frequencies"
-      refute code =~ "Map.update(acc"
-    end
-
-    test "strips trailing \\n from @doc", %{result: %{code: code}} do
-      refute code =~ ~S|top n.\n"|
-    end
-
-    test "renames is_common_word to common_word?", %{result: %{code: code}} do
-      assert code =~ "common_word?"
-      refute code =~ "is_common_word"
+    test "fully fixed output" do
+      assert Credence.fix(@ranker_input, []).code == @ranker_fixed
     end
   end
 
@@ -252,37 +248,27 @@ defmodule Credence.FixExamplesTest do
   end
   """
 
+  @toolkit_fixed ~S"""
+  defmodule ListToolkit do
+    @moduledoc "Utility functions for list manipulation."
+
+    def unique_sorted(list) do
+      list |> Enum.uniq() |> Enum.sort()
+    end
+
+    def char_count(text) do
+      String.length(text)
+    end
+
+    defp do_flatten([], acc), do: Enum.reverse(acc)
+    defp do_flatten([h | t], acc) when is_list(h), do: do_flatten(h ++ t, acc)
+    defp do_flatten([h | t], acc), do: do_flatten(t, [h | acc])
+  end
+  """
+
   describe "Example 5: List Toolkit" do
-    setup do
-      result = Credence.fix(@toolkit_input, [])
-      %{result: result}
-    end
-
-    test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _} = Sourceror.parse_string(code)
-    end
-
-    test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do
-      refute code =~ ~S|manipulation.\n"|
-    end
-
-    test "simplifies Enum.uniq_by identity to Enum.uniq", %{result: %{code: code}} do
-      assert code =~ "Enum.uniq()"
-      refute code =~ "Enum.uniq_by"
-    end
-
-    test "replaces String.graphemes |> length with String.length", %{result: %{code: code}} do
-      assert code =~ "String.length(text)"
-      refute code =~ "String.graphemes(text) |> length()"
-    end
-
-    test "removes @doc false on defp", %{result: %{code: code}} do
-      refute code =~ "@doc false"
-    end
-
-    test "fixes list append in recursion to prepend", %{result: %{code: code}} do
-      assert code =~ "[h | acc]"
-      refute code =~ "acc ++ [h]"
+    test "fully fixed output" do
+      assert Credence.fix(@toolkit_input, []).code == @toolkit_fixed
     end
   end
 end

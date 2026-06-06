@@ -80,7 +80,16 @@ defmodule Credence.PipelineTest do
 
       result = Credence.fix(source)
 
-      assert result.code =~ "_unused"
+      expected = ~S"""
+      defmodule CrdPT_UnusedVar do
+        def example do
+          _unused = 1
+          :ok
+        end
+      end
+      """
+
+      assert result.code == expected
       assert has_semantic_rules?(result.applied_rules)
       assert code_compiles?(result.code)
     end
@@ -98,7 +107,16 @@ defmodule Credence.PipelineTest do
       result = Credence.fix(source)
 
       # _count used on two lines → should become count
-      assert result.code =~ ~r/(?<![_])count\s*=/
+      expected = ~S"""
+      defmodule CrdPT_UsedUnderscore do
+        def example do
+          count = length([1, 2, 3])
+          count + 1
+        end
+      end
+      """
+
+      assert result.code == expected
       assert has_semantic_rules?(result.applied_rules)
       assert code_compiles?(result.code)
     end
@@ -118,8 +136,17 @@ defmodule Credence.PipelineTest do
 
       result = Credence.fix(source)
 
-      assert result.code =~ "Enum.sum"
-      refute result.code =~ "Enum.reduce"
+      expected = ~S"""
+      defmodule CrdPT_SumReduce do
+        @doc "Sums a list."
+        @spec total([number()]) :: number()
+        def total(list) do
+          Enum.sum(list)
+        end
+      end
+      """
+
+      assert result.code == expected
       assert has_pattern_rules?(result.applied_rules)
       assert code_compiles?(result.code)
     end
@@ -140,11 +167,19 @@ defmodule Credence.PipelineTest do
 
       result = Credence.fix(source)
 
-      # Semantic: unused → _unused
-      assert result.code =~ "_unused"
-      # Pattern: Enum.reduce → Enum.sum
-      assert result.code =~ "Enum.sum"
+      # Semantic: unused → _unused; Pattern: Enum.reduce → Enum.sum
+      expected = ~S"""
+      defmodule CrdPT_MultiPhase do
+        @doc "Sums a list."
+        @spec total([number()]) :: number()
+        def total(list) do
+          _unused = :ignored
+          Enum.sum(list)
+        end
+      end
+      """
 
+      assert result.code == expected
       assert has_semantic_rules?(result.applied_rules)
       assert has_pattern_rules?(result.applied_rules)
       assert code_compiles?(result.code)
@@ -193,7 +228,7 @@ defmodule Credence.PipelineTest do
                "but these fired: #{inspect(pattern_rules(result.applied_rules))}"
 
       # The Enum.reduce anti-pattern should NOT have been touched
-      assert result.code =~ "Enum.reduce"
+      assert result.code == source
     end
 
     test "skips pattern when code has multiple undefined variables" do
@@ -212,7 +247,7 @@ defmodule Credence.PipelineTest do
       result = Credence.fix(source)
 
       refute has_pattern_rules?(result.applied_rules)
-      assert result.code =~ "Enum.reduce"
+      assert result.code == source
     end
 
     test "skips pattern when code has type/guard errors" do
@@ -267,7 +302,18 @@ defmodule Credence.PipelineTest do
 
       result = Credence.fix(source)
 
-      assert result.code =~ "Enum.sum"
+      expected = ~S"""
+      defmodule CrdPT_CompilesWithWarning do
+        @doc "Sums a list."
+        @spec total([number()]) :: number()
+        def total(list) do
+          _ignored = :ok
+          Enum.sum(list)
+        end
+      end
+      """
+
+      assert result.code == expected
       assert has_pattern_rules?(result.applied_rules)
     end
 
@@ -436,9 +482,18 @@ defmodule Credence.PipelineTest do
       # Broken rule reverted, other rules still applied.
       assert {BrokenFixRule, :reverted} in applied
       assert code_compiles?(output)
+
       # The real rule for length == 0 should have fired and produced
       # `list == []` in the output.
-      assert output =~ "list == []"
+      expected = ~S"""
+      defmodule CrdPT_RevertIsolation do
+        def go(list) do
+          list == []
+        end
+      end
+      """
+
+      assert output == expected
     end
   end
 
@@ -766,8 +821,22 @@ defmodule Credence.PipelineTest do
       result = Credence.fix(source)
 
       assert code_compiles?(result.code)
+
       # Semantic should fix the unused var in Multi_B
-      assert result.code =~ "_unused"
+      expected = ~S"""
+      defmodule CrdPT_Multi_A do
+        def a, do: 1
+      end
+
+      defmodule CrdPT_Multi_B do
+        def b do
+          _unused = 2
+          :ok
+        end
+      end
+      """
+
+      assert result.code == expected
     end
 
     test "compile error with zero diagnostics (rescue path)" do

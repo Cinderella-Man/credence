@@ -1,0 +1,167 @@
+defmodule Credence.Pattern.NoExplicitMinReduceCheckTest do
+  use ExUnit.Case
+
+  alias Credence.Issue
+  alias Credence.Pattern.NoExplicitMinReduce
+
+  defp check(code) do
+    ast = Sourceror.parse_string!(code)
+    NoExplicitMinReduce.check(ast, [])
+  end
+
+  describe "NoExplicitMinReduce" do
+    test "passes code that uses Enum.min/1 instead of reduce" do
+      code = """
+      defmodule Goodmin do
+        def min_value(list) do
+          Enum.min(list)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "passes code that uses Enum.min_by/2" do
+      code = """
+      defmodule GoodminBy do
+        def min_by_value(list) do
+          Enum.min_by(list, & &1)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "detects explicit min/2 inside reduce" do
+      code = """
+      defmodule BadminReduce do
+        def min_value(list) do
+          Enum.reduce(list, 0, fn x, acc ->
+            min(x, acc)
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      issue = hd(issues)
+
+      assert %Issue{} = issue
+      assert issue.rule == :no_explicit_min_reduce
+
+      assert issue.message =~ "min-reduction"
+      assert issue.meta.line != nil
+    end
+
+    test "detects if x < acc pattern inside reduce" do
+      code = """
+      defmodule BadIfGreater do
+        def min_value(list) do
+          Enum.reduce(list, 0, fn x, acc ->
+            if x < acc do x else acc end
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+      assert hd(issues).rule == :no_explicit_min_reduce
+    end
+
+    test "detects if x <= acc pattern inside reduce" do
+      code = """
+      defmodule BadIfGreaterEqual do
+        def min_value(list) do
+          Enum.reduce(list, 0, fn x, acc ->
+            if x <= acc do x else acc end
+          end)
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 1
+    end
+
+    test "does NOT detect sum reduction (must avoid false positives)" do
+      code = """
+      defmodule GoodSum do
+        def sum(list) do
+          Enum.reduce(list, 0, fn x, acc ->
+            acc + x
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does NOT detect map-based reductions" do
+      code = """
+      defmodule GoodMapReduce do
+        def build_map(list) do
+          Enum.reduce(list, %{}, fn x, acc ->
+            Map.put(acc, x, true)
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "does NOT detect tuple-based state reducers" do
+      code = """
+      defmodule GoodStatefulReduce do
+        def track(list) do
+          Enum.reduce(list, {0, 0}, fn x, {a, b} ->
+            {a + x, b}
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "detects multiple explicit min calls inside separate reduces" do
+      code = """
+      defmodule MultipleBadmin do
+        def process(a, b) do
+          x = Enum.reduce(a, 0, fn v, acc -> min(v, acc) end)
+          y = Enum.reduce(b, 0, fn v, acc -> min(v, acc) end)
+          {x, y}
+        end
+      end
+      """
+
+      issues = check(code)
+
+      assert length(issues) == 2
+    end
+
+    test "ignores unrelated comparison operators outside reduce" do
+      code = """
+      defmodule NoReduce do
+        def compare(a, b) do
+          if a > b do
+            a
+          else
+            b
+          end
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+  end
+end
