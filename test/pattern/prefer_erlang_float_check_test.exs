@@ -152,55 +152,56 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
   # MIXED BARE + NON-BARE ON SAME LINE
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "mixed bare and non-bare on same line" do
-    test "flags bare var but not function call on same line" do
+  describe "mixed bare and non-bare on same line (both flagged after merge)" do
+    test "flags bare var and function call on same line" do
       assert flagged?("{n * 1.0, Enum.sum(xs) * 1.0}")
     end
 
-    test "counts only bare-var hits, not non-bare" do
-      assert length(check("{n * 1.0, Enum.sum(xs) * 1.0}")) == 1
+    test "counts both bare-var and non-bare hits" do
+      assert length(check("{n * 1.0, Enum.sum(xs) * 1.0}")) == 2
     end
 
-    test "flags both bare vars when two bare + one non-bare" do
-      assert length(check("{n * 1.0, Enum.sum(xs) * 1.0, m + 0.0}")) == 2
+    test "flags all three when two bare + one non-bare" do
+      assert length(check("{n * 1.0, Enum.sum(xs) * 1.0, m + 0.0}")) == 3
     end
 
-    test "flags bare var with leading identity mixed with non-bare" do
-      assert length(check("{1.0 * n, Enum.sum(xs) * 1.0}")) == 1
+    test "flags bare var with leading identity plus non-bare" do
+      assert length(check("{1.0 * n, Enum.sum(xs) * 1.0}")) == 2
     end
 
     test "in function context" do
-      assert length(check("def foo(n, xs), do: {n * 1.0, Enum.sum(xs) * 1.0}")) == 1
+      assert length(check("def foo(n, xs), do: {n * 1.0, Enum.sum(xs) * 1.0}")) == 2
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # MUST NOT FLAG — non-bare operands (handled by NoIdentityFloatCoercion)
+  # FLAGGED — compound / non-bare operands (merged in from the old
+  # NoIdentityFloatCoercion; now WRAPPED in :erlang.float, not removed)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "does not flag non-bare operands" do
+  describe "flags non-bare operands" do
     test "function call * 1.0" do
-      assert clean?("Enum.at(list, 0) * 1.0")
+      assert flagged?("Enum.at(list, 0) * 1.0")
     end
 
     test "compound expression * 1.0" do
-      assert clean?("(a + b) * 1.0")
+      assert flagged?("(a + b) * 1.0")
     end
 
     test "1.0 * function call" do
-      assert clean?("1.0 * Enum.sum(list)")
+      assert flagged?("1.0 * Enum.sum(list)")
     end
 
     test "function call / 1.0" do
-      assert clean?("Enum.count(list) / 1.0")
+      assert flagged?("Enum.count(list) / 1.0")
     end
 
     test "function call + 0.0" do
-      assert clean?("Enum.sum(list) + 0.0")
+      assert flagged?("Enum.sum(list) + 0.0")
     end
 
     test "tuple access * 1.0" do
-      assert clean?("elem(pair, 0) * 1.0")
+      assert flagged?("elem(pair, 0) * 1.0")
     end
   end
 

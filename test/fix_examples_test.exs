@@ -158,7 +158,7 @@ defmodule Credence.FixExamplesTest do
         max_val = Enum.at(sorted, 0)
         min_val = List.last(sorted)
         total = Enum.sum(nums)
-        mean = total / length(nums)
+        mean = :erlang.float(total / length(nums))
         %{max: max_val, min: min_val, mean: mean, count: length(nums)}
       end
     end

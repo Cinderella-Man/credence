@@ -1151,7 +1151,7 @@ defmodule CredenceTest do
             char_count = String.length(text)
 
             total_length = Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)
-            avg_length = total_length / length(words)
+            avg_length = :erlang.float(total_length / length(words))
 
             frequencies =
               Enum.frequencies_by(words, fn word -> String.downcase(word) end)
@@ -1380,7 +1380,7 @@ defmodule CredenceTest do
 
       expected = """
       defmodule Example do
-        def foo(n, xs), do: {:erlang.float(n), Enum.sum(xs)}
+        def foo(n, xs), do: {:erlang.float(n), :erlang.float(Enum.sum(xs))}
       end
       """
 

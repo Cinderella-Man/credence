@@ -76,7 +76,9 @@ defmodule Credence.BehaviourEquivalence do
       o = eval_outcome(fn -> apply(orig, args) end, compare_messages?)
       n = eval_outcome(fn -> apply(new, args) end, compare_messages?)
 
-      assert o == n, divergence_msg(rule, input, o, n, before_expr, fixed)
+      # Strict `===`: `6 == 6.0` is true but they are different values — value-kind
+      # (int↔float) changes are exactly what this suite must catch.
+      assert o === n, divergence_msg(rule, input, o, n, before_expr, fixed)
     end
 
     :ok
@@ -111,7 +113,7 @@ defmodule Credence.BehaviourEquivalence do
       o = eval_outcome(fn -> apply(orig_mod, fun, args) end, compare_messages?)
       n = eval_outcome(fn -> apply(new_mod, fun, args) end, compare_messages?)
 
-      assert o == n, divergence_msg(rule, input, o, n, before_module, fixed)
+      assert o === n, divergence_msg(rule, input, o, n, before_module, fixed)
     end
 
     :ok
@@ -149,7 +151,7 @@ defmodule Credence.BehaviourEquivalence do
       {vo, trace_o} = run_with_trace(orig, data_args)
       {vn, trace_n} = run_with_trace(new, data_args)
 
-      assert {vo, trace_o} == {vn, trace_n},
+      assert {vo, trace_o} === {vn, trace_n},
              """
              effect-trace divergence in #{inspect(rule)} on #{inspect(input)}
                original => value #{inspect(vo)}, trace #{inspect(trace_o)}

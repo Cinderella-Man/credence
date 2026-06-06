@@ -41,6 +41,7 @@ generalizes that one block into shared, mandatory, gate-enforced support.
    - **T3b unconstructible** — behavioural but no self-contained callable example (cross-module/macro/compile-time) → `mark_equivalence_unconstructible(reason)`.
 4. **No ETS / no global attestation.** Anti-stub teeth come from `assert_equivalent` itself (asserts rule fires + a rewrite happened + battery ≥ 3). Meta-gate only checks per-rule file existence + that the file references the rule.
 5. **In-process eval + `try/rescue/catch`** (no spawn/timeout). Outcome tagged `{:ok,v}` | `{:raise,Module}` | `{:throw|:exit,term}`. Exception compared **module-only** (`compare_messages: true` opt-in). Per-rule timeout wrapper documented as an escape hatch, unused by default.
+   - **Value comparison is strict `===`, not `==`** (upgraded after the exemplar's `==`): `6 == 6.0` is true, so `==` would miss int↔float value-kind changes — the doc's #1 rejection class. `===` catches them. Re-verified: all prior filled rules stay green under `===`.
 6. **Effect probe is a helper mode, not a phase.** `probe_effects: true` injects an effect-recording expr into the rule's predicate/transform hole (in-eval, via process dict) and asserts effect-trace equality (order + count). Used by the 26 PROBE rules.
 7. **Curated batteries only** gate; StreamData stays additive/non-gating (last phase).
 8. **Backfill authored** by a throwaway scaffold script under `maintainer_tools/` (reads `default_rules/0`, lifts `_check_test.exs` snippets into skeletons, stamps guessed tier), then a human/agent fill pass tier-by-tier. No `mix` task in `lib`, no loop, no shared-doc edit.
@@ -109,6 +110,20 @@ opt-outs remain; nothing is unconstructible.
   `|> Enum.reverse()`, which restores ascending order — behaviour-preserving and still cheaper (`take(n)`
   from the front + reversing n beats `take(-n)` walking the whole list). Updated rule (rebuild pipeline +
   insert reverse) + moduledoc + fix_test + equivalence test + 2 showcase golden tests.
+- **`no_keyword_get_integer_key` — DROPPED (no fixable core).** `Keyword.get(l, <int>)` always raises
+  `FunctionClauseError` (the `is_atom(key)` guard), so the fix `List.first/last(l)` (a value) can never be
+  behaviour-preserving. It is a bug-flagger, not a refactor — incompatible with the suite's invariant.
+  Deleted rule + check/fix/equivalence tests (125→124 rules). Resurrect as a non-fixable lint if wanted.
+- **`no_identity_float_coercion` + `prefer_erlang_float` — MERGED into `prefer_erlang_float`.**
+  The two encoded opposite theories of the same `expr * 1.0` pattern: one *removed* it (turning
+  `6.0`→`6` — a value-kind bug), the other *wrapped* it in `:erlang.float/1` (preserving the float).
+  Wrapping is the behaviour-preserving one, so `prefer_erlang_float` now handles **all** operand shapes
+  (bare var + compound) → `:erlang.float(operand)`, and `no_identity_float_coercion` is deleted
+  (124→123 rules; drops its priority-coordination hack). Value-kind is now fully preserved. The only
+  residual is the exception *module* on a non-number operand (`ArithmeticError` vs `ArgumentError`) on
+  already-crashing code — **maintainer accepted this (error type doesn't matter), so no assumption added.**
+  Equivalence test uses a numeric battery (where value-kind risk lives) + a moduledoc note on the
+  non-number edge. Updated rule + moduledoc + both rules' check/fix tests merged + 4 showcase golden tests.
 - `no_piped_regex_replace` — investigated, **SAFE** (only the piped, crashing form is rewritten;
   `String.replace ≡ Regex.replace` on all probed inputs). Kept as T2; not a divergence.
 
@@ -205,10 +220,13 @@ above is the human worklist.)
    `no_redundant_case_nil_clause` (nil/term-ordering, safe), `no_sort_then_at` (empty → fixed).
    Batch 2: `no_grapheme_palindrome_check`, `no_string_length_for_char_check` (Unicode, safe),
    `unnecessary_grapheme_chunking` (len<n → fixed via `//1`), `no_sort_for_top_k` (narrowed to at(0)
-   + empty_fallback), `prefer_desc_sort_over_negative_take` (added trailing reverse). 2 cosmetics done.
-   Suite green: 4504 tests / 107 excluded.
-   **5 shipped bugs found, all fixed in-session** (`redundant_list_guard`, `no_sort_then_at`,
-   `unnecessary_grapheme_chunking`, `no_sort_for_top_k`, `prefer_desc_sort_over_negative_take`).
+   + empty_fallback), `prefer_desc_sort_over_negative_take` (added trailing reverse).
+   Batch 3 (after the strict-`===` upgrade): `no_list_delete_at_length`, `no_map_keys_for_membership`
+   (safe); `no_keyword_get_integer_key` DROPPED (no fixable core); `no_identity_float_coercion` +
+   `prefer_erlang_float` MERGED (wrap via `:erlang.float`, value-kind preserved, no assumption).
+   2 cosmetics done. Suite green: 4418 tests / 102 excluded (**123 rules**).
+   **Bugs found: 7 fixed in-session, 1 rule dropped, 1 pair merged** (the `===` upgrade is what
+   exposed the float value-kind bug). Rule count 125→123 (1 dropped, 1 merged away).
 3. **Backfill T2 (29)** via `assert_equivalent_module`; **PROBE (26)** turn on `probe_effects`.
 4. **Stamp T3a (8) + T3b (2)** with cosmetic/unconstructible marks + reasons. Resolve the
    two flagged rules. Drive the T3b/unconstructible pile to minimum.

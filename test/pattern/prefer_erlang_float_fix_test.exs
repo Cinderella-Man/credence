@@ -275,24 +275,23 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
   # ═══════════════════════════════════════════════════════════════════
   # MIXED BARE + NON-BARE ON SAME LINE
-  # (PreferErlangFloat only rewrites bare-var sites; non-bare stays
-  #  for NoIdentityFloatCoercion to handle in its own pass)
+  # (after the merge, EVERY coercion site is wrapped in :erlang.float)
   # ═══════════════════════════════════════════════════════════════════
 
   describe "mixed bare and non-bare on same line" do
-    test "rewrites bare var, leaves non-bare intact" do
+    test "wraps both bare var and function call" do
       assert fix("{n * 1.0, Enum.sum(xs) * 1.0}") ==
-               "{:erlang.float(n), Enum.sum(xs) * 1.0}"
+               "{:erlang.float(n), :erlang.float(Enum.sum(xs))}"
     end
 
-    test "rewrites both bare vars, leaves non-bare intact" do
+    test "wraps all three sites" do
       assert fix("{n * 1.0, Enum.sum(xs) * 1.0, m + 0.0}") ==
-               "{:erlang.float(n), Enum.sum(xs) * 1.0, :erlang.float(m)}"
+               "{:erlang.float(n), :erlang.float(Enum.sum(xs)), :erlang.float(m)}"
     end
 
-    test "rewrites leading identity bare var, leaves non-bare intact" do
+    test "wraps leading-identity bare var and non-bare" do
       assert fix("{1.0 * n, Enum.sum(xs) * 1.0}") ==
-               "{:erlang.float(n), Enum.sum(xs) * 1.0}"
+               "{:erlang.float(n), :erlang.float(Enum.sum(xs))}"
     end
 
     test "in function context" do
@@ -304,7 +303,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
       expected = """
       defmodule Example do
-        def foo(n, xs), do: {:erlang.float(n), Enum.sum(xs) * 1.0}
+        def foo(n, xs), do: {:erlang.float(n), :erlang.float(Enum.sum(xs))}
       end
       """
 
@@ -313,28 +312,25 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
     test "division and addition mixed" do
       assert fix("{n / 1.0, Enum.count(xs) / 1.0}") ==
-               "{:erlang.float(n), Enum.count(xs) / 1.0}"
+               "{:erlang.float(n), :erlang.float(Enum.count(xs))}"
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # NO-OPS — non-bare operands (handled by NoIdentityFloatCoercion)
+  # WRAPS — compound / non-bare operands (merged in; wrapped, not removed)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "does not touch non-bare operands" do
-    test "function call * 1.0 unchanged" do
-      code = "Enum.at(list, 0) * 1.0"
-      assert fix(code) == code
+  describe "wraps non-bare operands in :erlang.float" do
+    test "function call * 1.0" do
+      assert fix("Enum.at(list, 0) * 1.0") == ":erlang.float(Enum.at(list, 0))"
     end
 
-    test "compound expression * 1.0 unchanged" do
-      code = "(a + b) * 1.0"
-      assert fix(code) == code
+    test "compound expression * 1.0" do
+      assert fix("(a + b) * 1.0") == ":erlang.float(a + b)"
     end
 
-    test "1.0 * function call unchanged" do
-      code = "1.0 * Enum.sum(list)"
-      assert fix(code) == code
+    test "1.0 * function call" do
+      assert fix("1.0 * Enum.sum(list)") == ":erlang.float(Enum.sum(list))"
     end
   end
 

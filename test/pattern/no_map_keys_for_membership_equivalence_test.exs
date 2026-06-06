@@ -1,35 +1,26 @@
 defmodule Credence.Pattern.NoMapKeysForMembershipEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression), value-kind dimension.
+  `x in Map.keys(m)` → `Map.has_key?(m, x)`. Both use strict key equality, so the
+  `1` vs `1.0` value-kind case agrees (a `1` key is not matched by `1.0`). Battery
+  includes value-kind keys, a present key, an absent key, and an atom key.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoMapKeysForMembership
 
-  # Firing snippets lifted from no_map_keys_for_membership_check_test.exs:
-  #   defmodule TestMod do
-  #       def keep_allowed(enum, allowed) do
-  #         Enum.filter(enum, &(&1 in Map.keys(allowed)))
-  #       end
-  #     end
-  #   defmodule TestMod do
-  #       def lookup(key, map) do
-  #         if key in Map.keys(map), do: Map.get(map, key), else: nil
-  #       end
-  #     end
-
-  test "no_map_keys_for_membership: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "x in Map.keys(m) → Map.has_key?(m, x) preserves the boolean incl. value-kind keys" do
+    assert_equivalent("x in Map.keys(m)",
       rule: NoMapKeysForMembership,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:x, :m],
+      inputs: [
+        {1, %{1 => :a, 2 => :b}},
+        {1, %{1.0 => :a}},
+        {2, %{1 => :a}},
+        {:k, %{k: 1}},
+        {"s", %{"s" => 1, "t" => 2}}
+      ]
     )
   end
 end
