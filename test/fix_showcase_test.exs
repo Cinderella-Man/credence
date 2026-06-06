@@ -64,7 +64,7 @@ defmodule Credence.FixShowcaseTest do
     %{result: result}
   end
 
-  describe "Credence.fix/2 showcase — 19 anti-patterns in, idiomatic Elixir out" do
+  describe "Credence.fix/2 showcase — 18 anti-patterns in, idiomatic Elixir out" do
     # ── Doc formatting ──────────────────────────────────────────────
 
     test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do
@@ -110,9 +110,11 @@ defmodule Credence.FixShowcaseTest do
       refute code =~ "Enum.map(words, fn w -> String.length(w) end) |> Enum.sum()"
     end
 
-    test "replaces manual frequency reduce with Enum.frequencies", %{result: %{code: code}} do
-      assert code =~ "Enum.frequencies"
-      refute code =~ "Map.update(acc"
+    test "does not replace frequency reduce with a derived key", %{result: %{code: code}} do
+      # The counted key is String.downcase(word), not word — Enum.frequencies(words)
+      # would count different buckets, so the reduce is left untouched.
+      assert code =~ "Map.update(acc, String.downcase(word), 1, &(&1 + 1))"
+      refute code =~ "Enum.frequencies"
     end
 
     test "replaces Enum.sort |> Enum.reverse with Enum.sort(:desc)", %{result: %{code: code}} do

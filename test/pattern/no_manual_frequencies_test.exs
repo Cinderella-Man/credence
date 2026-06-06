@@ -112,9 +112,12 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
       assert hd(issues).rule == :no_manual_frequencies
     end
 
-    test "detects Map.update! variant" do
+    test "passes Map.update! variant (raises on the first, missing key)" do
+      # Map.update!/3 raises KeyError on a key not already present, so against a
+      # fresh `%{}` it raises for any non-empty input — never equal to
+      # Enum.frequencies/1. Deliberately not flagged.
       code = """
-      defmodule Bad do
+      defmodule Safe do
         def count(list) do
           Enum.reduce(list, %{}, fn item, acc ->
             Map.update!(acc, item, &(&1 + 1))
@@ -123,9 +126,38 @@ defmodule Credence.Pattern.NoManualFrequenciesTest do
       end
       """
 
-      issues = check(code)
+      assert check(code) == []
+    end
 
-      assert length(issues) == 1
+    test "passes reduce with a DERIVED key (would count different buckets)" do
+      # The key is String.downcase(word), not word — Enum.frequencies(words)
+      # counts the raw words and would give a different map.
+      code = """
+      defmodule Safe do
+        def count(words) do
+          Enum.reduce(words, %{}, fn word, acc ->
+            Map.update(acc, String.downcase(word), 1, &(&1 + 1))
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "passes reduce with a WEIGHTED increment (not a plain count)" do
+      # Enum.frequencies/1 always counts by 1; &(&1 + 2) is a different tally.
+      code = """
+      defmodule Safe do
+        def weighted(list) do
+          Enum.reduce(list, %{}, fn item, acc ->
+            Map.update(acc, item, 1, &(&1 + 2))
+          end)
+        end
+      end
+      """
+
+      assert check(code) == []
     end
   end
 
