@@ -1154,9 +1154,7 @@ defmodule CredenceTest do
             avg_length = total_length / length(words)
 
             frequencies =
-              Enum.reduce(words, %{}, fn word, acc ->
-                Map.update(acc, String.downcase(word), 1, &(&1 + 1))
-              end)
+              Enum.frequencies_by(words, fn word -> String.downcase(word) end)
 
             sorted_desc = Enum.sort(words, :desc)
             top_3 = Enum.sort(words, :desc) |> Enum.take(3)
