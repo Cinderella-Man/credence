@@ -3,12 +3,6 @@
 Items pulled out of the candidate queue that need dedicated human attention
 (not handled by the per-rule review loop). Reviewed case by case.
 
-## no_dead_map_update — 2026-06-04
-- Files:
-  - `lib/pattern/no_dead_map_update.ex`
-  - `test/pattern/no_dead_map_update_test.exs`
-- Reason: not behavior-preserving — Map.update/4 runs fun on the existing value when the key is present, so removing the dead update drops side effects and exceptions; original `%{prev: "x"} |> Map.update(:prev, 0, &(&1 - 1)) |> Map.drop([:prev])` raises ArithmeticError while `Map.drop(map, [:prev])` returns %{}. No statically-provable safe core (can't prove key absent or fun total/pure).
-
 ## no_destructure_reconstruct — 2026-06-04
 - Files:
   - `lib/pattern/no_destructure_reconstruct.ex`
