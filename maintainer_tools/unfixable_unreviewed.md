@@ -1,5 +1,3 @@
-lib/pattern/no_manual_sorted_merge.ex
-test/pattern/no_manual_sorted_merge_test.exs
 lib/pattern/no_manual_top_k_reduce.ex
 test/pattern/no_manual_top_k_reduce_test.exs
 lib/pattern/no_map_then_reduce.ex

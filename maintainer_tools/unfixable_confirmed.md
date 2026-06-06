@@ -132,3 +132,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_manual_has_duplicates_test.exs`
 - Reason: check flags the arity-2 accumulator helper, whose answer depends on the accumulator (do_check([1,2],%{1=>true})=true vs Enum.uniq!=list=false under :strict); the only equivalent rewrite (Enum.uniq(list)!=list) belongs to the un-flagged caller seeding %{} and still diverges on non-list/improper inputs, with no safe local subset.
 
+## no_manual_sorted_merge — 2026-06-06
+- Files:
+  - `lib/pattern/no_manual_sorted_merge.ex`
+  - `test/pattern/no_manual_sorted_merge_test.exs`
+- Reason: Enum.sort(a++b) equals the manual merge only for already-sorted inputs (a runtime invariant); on unsorted inputs it differs (merge([3,1],[2])=[2,3,1] vs [1,2,3]), and no syntactic subset can guarantee sortedness.
+
