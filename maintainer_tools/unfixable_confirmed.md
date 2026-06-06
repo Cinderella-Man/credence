@@ -192,3 +192,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_reverse_then_find_test.exs`
 - Reason: removing the reverse forces a forward pass that evaluates pred on all elements, breaking reverse|>find's short-circuit-from-end; diverges (returns vs raises) on partial/side-effecting predicates, no static narrowing isolates a real safe core.
 
+## no_reverse_uniq_reverse — 2026-06-06
+- Files:
+  - `lib/pattern/no_reverse_uniq_reverse.ex`
+  - `test/pattern/no_reverse_uniq_reverse_test.exs`
+- Reason: reverse|>uniq|>reverse keeps last occurrence (order-preserved); Enum.uniq keeps first, so the only replacement changes which elements survive — no same-answer fix.
+
