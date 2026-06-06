@@ -1,5 +1,3 @@
-lib/pattern/no_manual_find.ex
-test/pattern/no_manual_find_test.exs
 lib/pattern/no_manual_has_duplicates.ex
 test/pattern/no_manual_has_duplicates_test.exs
 lib/pattern/no_manual_list_reduce.ex
