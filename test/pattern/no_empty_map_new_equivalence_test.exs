@@ -1,28 +1,18 @@
 defmodule Credence.Pattern.NoEmptyMapNewEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression). `Map.new()` → `%{}`. Both are the empty map; no free vars.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoEmptyMapNew
 
-  # Firing snippets lifted from no_empty_map_new_check_test.exs:
-  #   Map.new(list, fn x -> {x, true} end)
-  #   Map.new(pairs)
-  #   list |> Map.new()
-
-  test "no_empty_map_new: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "Map.new() → %{} is the empty map" do
+    assert_equivalent("Map.new()",
       rule: NoEmptyMapNew,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [],
+      inputs: [nil],
+      tiny_battery_ok: true
     )
   end
 end

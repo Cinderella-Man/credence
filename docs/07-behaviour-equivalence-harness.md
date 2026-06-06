@@ -139,6 +139,15 @@ opt-outs remain; nothing is unconstructible.
   the rule's test (bare-var positives → negatives, structural-context tests given provably-list args)
   + 3 golden tests (bare-var `Enum.count` retained). Gotcha: Sourceror wraps list literals as
   `{:__block__, _, [[...]]}`, so `provably_list?` unwraps that.
+- **`no_manual_enum_uniq` — DROPPED (over-eager heuristic, unsafe in almost every shape).** It rewrote a
+  manual-uniq `Enum.reduce` → `Enum.uniq(list)` across shapes that are NOT behaviour-preserving — verified:
+  bare reduce → `{seen, acc}` tuple vs a list; `reduce |> elem(0)` → reversed list (`[3,2,1]` vs `[1,2,3]`,
+  the acc is prepend-built); `reduce |> Enum.reverse()` → `Protocol.UndefinedError` (reverse on a tuple)
+  vs a list. Only the full `reduce |> elem(list_idx) |> Enum.reverse()` pipeline is correct, and ~15 of
+  the rule's ~22 fix tests asserted the broken shapes. Narrowing to the one safe idiom would gut it and
+  require rewriting most of its corpus, so dropped (like `no_keyword_get_integer_key`). Deleted rule +
+  check/fix/equivalence tests + 1 dedicated integration test; retargeted the `applied_rules` trace test;
+  renamed a stale negative test. 123→122 rules.
 - `no_piped_regex_replace` — investigated, **SAFE** (only the piped, crashing form is rewritten;
   `String.replace ≡ Regex.replace` on all probed inputs). Kept as T2; not a divergence.
 
@@ -247,8 +256,14 @@ above is the human worklist.)
    Batch 5 (enumerable-type + eval-order): `no_list_fold` (safe — `foldr` fix reverses to keep order),
    `no_map_put_get_increment`, `no_reduce_while_without_halt`, `no_redundant_enum_join_separator` (safe);
    `no_enum_count_for_length` NARROWED to provably-list args (enumerable-type). Suite green: 4429 / 92 excluded.
-   **Bugs found: 10 fixed/narrowed in-session, 1 dropped, 1 merged** (the `===` upgrade keeps
-   exposing value-kind/enumerable-type bugs). Rule count 125→123.
+   Batch 6 (10 rules): `no_empty_map_new`, `no_enum_into_empty_mapset`, `no_redundant_binary_syntax`,
+   `no_identity_function_in_enum`, `no_cond_two_clauses`, `no_list_duplicate_join`,
+   `no_chunk_by_identity_for_dedup`, `no_kernel_op_in_pipeline` (safe); `no_length_comparison_for_empty`
+   (safe on `length`'s proper-list domain); `no_manual_enum_uniq` DROPPED (over-eager — unsafe in ~all
+   shapes; only the full `reduce |> elem |> reverse` idiom was correct). Harness gained zero-var support
+   (`to_args/2` for `vars: []`). Suite green: 4399 / 82 excluded.
+   **Bugs found: 11 fixed/narrowed in-session, 2 dropped, 1 merged** (the `===` upgrade keeps exposing
+   value-kind/enumerable-type bugs). Rule count 125→122.
 3. **Backfill T2 (29)** via `assert_equivalent_module`; **PROBE (26)** turn on `probe_effects`.
 4. **Stamp T3a (8) + T3b (2)** with cosmetic/unconstructible marks + reasons. Resolve the
    two flagged rules. Drive the T3b/unconstructible pile to minimum.

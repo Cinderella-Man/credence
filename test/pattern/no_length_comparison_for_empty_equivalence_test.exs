@@ -1,27 +1,24 @@
 defmodule Credence.Pattern.NoLengthComparisonForEmptyEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
+  Tier 1 (expression). `length(l) == 0` → `l == []`.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Equivalent on `length/1`'s domain — **proper lists** — which is the only place
+  the original doesn't crash: `length/1` raises on a non-list or improper list,
+  so writing `length(l)` already asserts `l` is a proper list. On that domain
+  `length(l) == 0` ⟺ `l == []`. (Outside it the original raises and the rewrite
+  returns `false`; that input is already-broken code — not asserted here, the
+  battery is proper lists.)
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoLengthComparisonForEmpty
 
-  # Firing snippets lifted from no_length_comparison_for_empty_check_test.exs:
-  #   length(l) == 0
-  #   0 == length(l)
-  #   2 <= length(l)
-
-  test "no_length_comparison_for_empty: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "length(l) == 0 → l == [] preserves the boolean over proper lists" do
+    assert_equivalent("length(l) == 0",
       rule: NoLengthComparisonForEmpty,
-      vars: [:todo],
+      vars: [:l],
       inputs: B.term_lists()
     )
   end

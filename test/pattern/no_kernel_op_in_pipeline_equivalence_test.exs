@@ -1,36 +1,19 @@
 defmodule Credence.Pattern.NoKernelOpInPipelineEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression). `score |> Kernel.>=(threshold)` → `score >= threshold`:
+  the piped `Kernel.>=/2` is the infix operator. Battery drives the comparison
+  true, false, and equal.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoKernelOpInPipeline
 
-  # Firing snippets lifted from no_kernel_op_in_pipeline_check_test.exs:
-  #   defmodule Example do
-  #       def run(list) do
-  #         list |> Enum.sort() |> Kernel.==(list)
-  #       end
-  #     end
-  #   defmodule Example do
-  #       def run(a, b), do: a |> String.downcase() |> Kernel.!=(b)
-  #     end
-  #   defmodule Example do
-  #       def run(score, threshold), do: score |> calculate() |> Kernel.>=(threshold)
-  #     end
-
-  test "no_kernel_op_in_pipeline: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "score |> Kernel.>=(threshold) → score >= threshold preserves the boolean" do
+    assert_equivalent("score |> Kernel.>=(threshold)",
       rule: NoKernelOpInPipeline,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:score, :threshold],
+      inputs: [{5, 3}, {3, 5}, {5, 5}, {-1, 0}, {1.0, 1}]
     )
   end
 end

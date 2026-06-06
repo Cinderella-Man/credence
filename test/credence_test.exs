@@ -506,7 +506,7 @@ defmodule CredenceTest do
   end
 
   describe "edge cases that should NOT trigger rules" do
-    test "Enum.uniq in pipeline (should not trigger NoManualEnumUniq)" do
+    test "Enum.uniq in pipeline stays clean" do
       assert_clean("""
       defmodule UniqueChars do
         def unique_char_in_order(input_string) do
@@ -1204,13 +1204,7 @@ defmodule CredenceTest do
       input = """
       defmodule Example do
         def run(list) do
-          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
-            if MapSet.member?(seen, item) do
-              {seen, acc}
-            else
-              {MapSet.put(seen, item), [item | acc]}
-            end
-          end)
+          Enum.sort(list) |> Enum.reverse()
         end
       end
       """
@@ -1222,38 +1216,6 @@ defmodule CredenceTest do
       {rule_mod, count} = hd(result.applied_rules)
       assert is_atom(rule_mod)
       assert is_integer(count) and count > 0
-    end
-
-    test "NoManualEnumUniq strips orphaned elem(0) and Enum.reverse (idx=10 unique_char_in_order)" do
-      input = """
-      defmodule UniqueChars do
-        def unique_char_in_order(input_string) do
-          String.graphemes(input_string)
-          |> Enum.reduce({[], MapSet.new()}, fn char, {acc_list, acc_set} ->
-            if MapSet.member?(acc_set, char) do
-              {acc_list, acc_set}
-            else
-              {[char | acc_list], MapSet.put(acc_set, char)}
-            end
-          end)
-          |> elem(0)
-          |> Enum.reverse()
-        end
-      end
-      """
-
-      expected = """
-      defmodule UniqueChars do
-        def unique_char_in_order(input_string) do
-          String.graphemes(input_string)
-          |> Enum.uniq()
-        end
-      end
-      """
-
-      result = Credence.fix(input)
-      assert String.trim_trailing(result.code) == String.trim_trailing(expected)
-      assert {:ok, _ast} = Sourceror.parse_string(result.code)
     end
 
     test "NoEagerWithIndexInReduce preserves String.graphemes (idx=9 length_of_longest_substring)" do

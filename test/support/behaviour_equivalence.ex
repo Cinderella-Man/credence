@@ -248,10 +248,14 @@ defmodule Credence.BehaviourEquivalence do
     {value, Enum.reverse(Process.get(:eqv_trace))}
   end
 
-  # Single var: the input IS the sole argument. Multiple vars: a tuple/list of args.
+  # No vars: a constant expression, called with no args (input is an ignored
+  # placeholder). Single var: the input IS the sole argument. Multiple vars: a
+  # tuple/list of args.
+  defp to_args(_input, []), do: []
+
   defp to_args(input, vars) do
     cond do
-      length(vars) <= 1 -> [input]
+      length(vars) == 1 -> [input]
       is_tuple(input) -> Tuple.to_list(input)
       is_list(input) -> input
       true -> [input]
