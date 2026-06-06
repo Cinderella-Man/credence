@@ -1,5 +1,3 @@
-lib/pattern/no_redundant_comparison_guard.ex
-test/pattern/no_redundant_comparison_guard_test.exs
 lib/pattern/no_redundant_rem_guard.ex
 test/pattern/no_redundant_rem_guard_test.exs
 lib/pattern/no_redundant_sort_comparator.ex
