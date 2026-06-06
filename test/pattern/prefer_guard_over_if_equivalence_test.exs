@@ -1,47 +1,34 @@
 defmodule Credence.Pattern.PreferGuardOverIfEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). An `if cond do … else … end` that is a function's whole
+  body becomes two guarded clauses. Safe only when `cond` is a non-raising,
+  guard-legal test — the rule is narrowed to that core: it does NOT fire when the
+  condition contains a call that could raise (verified: `if hd(x) > 0` is left
+  alone), so moving it into a guard can't swallow an error or change a truthiness.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.PreferGuardOverIf
 
-  # Firing snippets lifted from prefer_guard_over_if_check_test.exs:
-  #   defp accumulate_run(last_val, [head | tail] = list, current_run) do
-  #       if head > last_val do
-  #         accumulate_run(head, tail, [head | current_run])
-  #       else
-  #         {Enum.reverse(current_run), list}
-  #       end
-  #     end
-  #   defp handle(x, acc) do
-  #       if x == 0 do
-  #         acc
-  #       else
-  #         [x | acc]
-  #       end
-  #     end
-  #   defp process(val, default) do
-  #       if is_nil(val) do
-  #         default
-  #       else
-  #         val
-  #       end
-  #     end
+  @before """
+  defmodule Bad do
+    def run(x), do: f(x)
+    defp f(x) do
+      if x > 0 do
+        :pos
+      else
+        :nonpos
+      end
+    end
+  end
+  """
 
-  test "prefer_guard_over_if: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
+  test "if (guard-legal cond) body → guarded clauses preserve dispatch" do
+    assert_equivalent_module(@before,
       rule: PreferGuardOverIf,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
+      call: {:run, 1},
+      inputs: [1, -1, 0, 100, -50]
     )
   end
 end

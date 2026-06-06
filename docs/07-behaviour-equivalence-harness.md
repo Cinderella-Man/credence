@@ -37,8 +37,9 @@ generalizes that one block into shared, mandatory, gate-enforced support.
 3. **Three coverage tiers** (every rule lands in exactly one — see table):
    - **T1 expression** — fix rewrites a self-contained expression → wrap before/after in `fn <vars> -> expr end`, apply per input.
    - **T2 module-call** — fix is def/module-structural (inline defp, case→heads, manual recursion→Enum, cross-statement) → compile the whole before- and after-**module**, invoke the target function over inputs.
-   - **T3a cosmetic** — provably no runtime effect (param rename, attr move, doc text, typespec, `require Logger`) → `mark_equivalence_cosmetic(reason)`.
+   - **T3a cosmetic** — provably no runtime effect (param rename, attr move, doc text, typespec) → `mark_equivalence_cosmetic(reason)`. Before and after are behaviourally identical.
    - **T3b unconstructible** — behavioural but no self-contained callable example (cross-module/macro/compile-time) → `mark_equivalence_unconstructible(reason)`.
+   - **T3c repair** — the firing precondition is a *broken* input (does-not-compile, e.g. a hallucinated guard or a missing `require Logger`; **or** always-fails — compiles but raises on *every* input, e.g. an arg-order bug like `s |> Regex.replace(...)`) → `mark_equivalence_repair(reason)`. **Deliberately NOT behaviour-preserving** — sound because the "before" has no input that yields a valid result; the fix is a *correction*. This is the principled home for the whole "fix broken → working" family (which by definition changes behaviour). The reason must state the broken precondition (and, for always-fails, that *no* input avoids the crash). A rule whose "before" returns a valid—even if undesired—value on some input is NOT a repair: it is a behaviour change and must be narrowed, gated, or dropped (e.g. `no_map_get_sentinel`, dropped). `unconstructible` is the preferred wording for the does-not-compile flavour and stays a distinct mark.
 4. **No ETS / no global attestation.** Anti-stub teeth come from `assert_equivalent` itself (asserts rule fires + a rewrite happened + battery ≥ 3). Meta-gate only checks per-rule file existence + that the file references the rule.
 5. **In-process eval + `try/rescue/catch`** (no spawn/timeout). Outcome tagged `{:ok,v}` | `{:raise,Module}` | `{:throw|:exit,term}`. Exception compared **module-only** (`compare_messages: true` opt-in). Per-rule timeout wrapper documented as an escape hatch, unused by default.
    - **Value comparison is strict `===`, not `==`** (upgraded after the exemplar's `==`): `6 == 6.0` is true, so `==` would miss int↔float value-kind changes — the doc's #1 rejection class. `===` catches them. Re-verified: all prior filled rules stay green under `===`.
@@ -110,10 +111,13 @@ opt-outs remain; nothing is unconstructible.
   `|> Enum.reverse()`, which restores ascending order — behaviour-preserving and still cheaper (`take(n)`
   from the front + reversing n beats `take(-n)` walking the whole list). Updated rule (rebuild pipeline +
   insert reverse) + moduledoc + fix_test + equivalence test + 2 showcase golden tests.
-- **`no_keyword_get_integer_key` — DROPPED (no fixable core).** `Keyword.get(l, <int>)` always raises
-  `FunctionClauseError` (the `is_atom(key)` guard), so the fix `List.first/last(l)` (a value) can never be
-  behaviour-preserving. It is a bug-flagger, not a refactor — incompatible with the suite's invariant.
-  Deleted rule + check/fix/equivalence tests (125→124 rules). Resurrect as a non-fixable lint if wanted.
+- **`no_keyword_get_integer_key` — REINSTATED as a REPAIR rule (T3c, always-fails).** `Keyword.get(l, <int>)`
+  always raises `FunctionClauseError` (the `is_atom(key)` guard) — re-probed exhaustively: 24/24 list×key
+  combinations crash, **0** produce a value. The rule fires only on integer *literals* (2-arg form). Since the
+  "before" has no valid behaviour on any input, the fix (`-1`→`List.last`, `0`→`List.first`, `n`→`Enum.at`,
+  the Python-index intent) is a *correction*, not a behaviour-preserving rewrite — exactly the repair
+  category. It was dropped earlier under the old ad-hoc handling; recovered from `103db1b^` and marked
+  `mark_equivalence_repair`. (This is the precedent the repair policy now governs uniformly.)
 - **`no_identity_float_coercion` + `prefer_erlang_float` — MERGED into `prefer_erlang_float`.**
   The two encoded opposite theories of the same `expr * 1.0` pattern: one *removed* it (turning
   `6.0`→`6` — a value-kind bug), the other *wrapped* it in `:erlang.float/1` (preserving the float).
@@ -187,8 +191,32 @@ opt-outs remain; nothing is unconstructible.
   swallow the `(`, rendered via `render_replacement/2` (layout-meta stripped, so multi-line fns re-render
   cleanly). Verified valid for single / chained / multi-line / in-module forms; a non-pipe `(fn).()` is
   correctly left untouched. Equivalence test filled (value-equivalent — the fn is applied once either way).
-- `no_piped_regex_replace` — investigated, **SAFE** (only the piped, crashing form is rewritten;
-  `String.replace ≡ Regex.replace` on all probed inputs). Kept as T2; not a divergence.
+- **`no_manual_list_last` — autofix diverged on `[]`, now FIXED.** The hand-rolled `f([val]) -> val;
+  f([_|rest]) -> f(rest)` raises on `[]`, but the autofix's `List.last([])` returns **`nil`** — a real
+  behaviour change. (The detection requires exactly those 2 clauses, so it can never see a safe `[]→nil`
+  base clause.) Changed the autofix — def body, nested calls, and the pipe form (now `|> Enum.reverse() |> hd()`)
+  — to `hd(Enum.reverse(list))`, which raises on `[]` like the original (`ArgumentError` vs
+  `FunctionClauseError` — error-type-only on the degenerate input). This is what the rule's own moduledoc
+  recommended. Updated the fix tests' golden outputs.
+- **`no_guard_equality_for_pattern_match` — was UNSAFE on number literals, now NARROWED to atom/string.**
+  `def f(x) when x == 0` → head `f(0)` diverges on `0.0`: the guard's `==` matches `0.0`, the pattern head's
+  `===` does not, so a float-equal value routes to a different clause. Atoms/strings have no cross-type
+  value-equal partner, so `==` and pattern-match agree. Dropped integer (and float) from `fixable_literal`;
+  converted the integer-based check/fix tests to atoms (and the integer-specific cases to negatives).
+- **`no_map_get_sentinel` — DROPPED (behaviour-changing by design).** `Map.get(map, :key, -1); if val != -1`
+  → the fix distinguishes a missing key from a present `-1`, so on `%{key: -1}` the original returns
+  `:missing` but the fix returns `-1`. The rule's whole purpose is to *fix* the Python sentinel-collision
+  idiom, so it cannot be behaviour-preserving — out of Credence's mandate. Deleted rule + tests.
+- **`no_multiple_enum_at` — DROPPED (nil→crash on short lists).** Multiple `Enum.at(list, i)` → a destructure
+  (`[a, b | _] = list`). `Enum.at` is nil-safe past the end, but the destructure raises `MatchError` on a
+  list shorter than the indices (verified on `[1]`/`[]`). No length guarantee is available, so the fusion
+  can't preserve behaviour. Deleted rule + tests.
+- **`no_piped_regex_replace` — REPAIR rule (always-fails).** Re-investigated: the only firing shape,
+  `value |> Regex.replace(~r/.../, repl)`, desugars to `Regex.replace(value, regex, repl)` — `value`
+  lands in the regex slot, so it raises `FunctionClauseError` on **every** input (all strings, empty
+  string, even a `%Regex{}` — no input yields a valid result). The fix `value |> String.replace(...)` is
+  the correct call. Not behaviour-preserving (crash → work); marked `mark_equivalence_repair` (T3c).
+  (Earlier "SAFE/T2" note was wrong — there is no valid before-behaviour.)
 
 ### T2 module-call (37) — compile before/after module, invoke fn over battery
 Structural / cross-statement: no_case_on_param_dispatch, no_destructure_reconstruct,
@@ -285,7 +313,8 @@ above is the human worklist.)
    `unnecessary_grapheme_chunking` (len<n → fixed via `//1`), `no_sort_for_top_k` (narrowed to at(0)
    + empty_fallback), `prefer_desc_sort_over_negative_take` (added trailing reverse).
    Batch 3 (after the strict-`===` upgrade): `no_list_delete_at_length`, `no_map_keys_for_membership`
-   (safe); `no_keyword_get_integer_key` DROPPED (no fixable core); `no_identity_float_coercion` +
+   (safe); `no_keyword_get_integer_key` dropped here (later REINSTATED as a T3c repair rule — see Batch 13);
+   `no_identity_float_coercion` +
    `prefer_erlang_float` MERGED (wrap via `:erlang.float`, value-kind preserved, no assumption).
    2 cosmetics done. Suite green: 4418 tests / 102 excluded (**123 rules**).
    Batch 4 (value-kind + enumerable-type): `no_uniq_then_count`, `no_redundant_to_list`,
@@ -324,16 +353,64 @@ above is the human worklist.)
    `no_map_keys_or_values_for_iteration` NARROWED to order-independent ops (>32-key map order divergence);
    `no_anon_fn_application_in_pipe` was a malformed-output BUG, FIXED (patch range extended to include the
    parenthesized fn's `(`). Suite green: 4410 / 42 excluded.
-   **Bugs found: 15 fixed/narrowed in-session, 4 dropped, 1 merged** (the `===` upgrade keeps exposing
-   value-kind/enumerable-type/bounds/order bugs; plus one malformed-output fix-renderer bug). Rule count 125→120.
+   Batch 11 (10 T2 module-call rules): `no_manual_count_with_predicate`, `no_manual_find`,
+   `no_manual_list_reduce`, `no_case_on_param_dispatch`, `prefer_enum_split`, `no_redundant_negated_guard`,
+   `no_redundant_comparison_guard`, `no_is_nil_guard`, `no_double_filter` (all safe — verified by compiling
+   before/after modules and invoking the entry fn over adversarial batteries);
+   `no_manual_list_last` autofix diverged on `[]` (`List.last` → `nil` vs manual raise), FIXED to
+   `hd(Enum.reverse/1)`. Suite green: 4420 / 32 excluded.
+   Batch 12 (10 T2 rules): `no_case_boolean_result`, `no_hd_tl_when_cons_bound`, `no_length_guard_to_pattern`,
+   `no_repeated_div_rem`, `no_nested_enum_on_same_enumerable`, `prefer_guard_over_if` (narrowed to
+   non-raising guard-legal conditions — verified it won't fire on `if hd(x) > 0`), `no_double_sort_same_list`
+   (`sort(:desc)` ≡ `reverse(sort)` even on value-kind ties) (all safe);
+   `no_guard_equality_for_pattern_match` NARROWED to atom/string (number literal → `0.0` value-kind);
+   `no_map_get_sentinel` DROPPED (sentinel-collision behaviour-change), `no_multiple_enum_at` DROPPED
+   (`Enum.at` nil-safe → destructure crashes on short lists). Suite green: 4340 / 22 excluded.
+   **Bugs found: 17 fixed/narrowed in-session, 5 dropped, 1 merged, 1 reinstated-as-repair** (the `===`
+   upgrade keeps exposing value-kind/enumerable-type/bounds/order bugs; plus a malformed-output fix-renderer
+   bug and empty/short-list autofix divergences). Rule count 125→119.
+   (Dropped: `no_manual_enum_uniq`, `no_explicit_max_reduce`, `no_explicit_min_reduce`, `no_map_get_sentinel`,
+   `no_multiple_enum_at`. `no_keyword_get_integer_key` was dropped then reinstated as a T3c repair rule.)
    (Every PROBE rule so far preserves eval order — none needed the effect-trace mode; `prefer_map_put_new`
-   self-narrows away from side-effecting values.)
-3. **Backfill T2 (29)** via `assert_equivalent_module`; **PROBE (26)** turn on `probe_effects`.
-4. **Stamp T3a (8) + T3b (2)** with cosmetic/unconstructible marks + reasons. Resolve the
-   two flagged rules. Drive the T3b/unconstructible pile to minimum.
-5. **Flip gate hard** (un-exclude `equivalence_meta_test.exs`) once backfill = 100% and the
-   divergence worklist is empty.
-- StreamData layer (additive, fixed-seed, non-gating) — optional, after the flip.
+   and `prefer_guard_over_if` self-narrow away from side-effecting/raising inputs. T2 guard/clause rewrites
+   verified safe via module-invoke.)
+   Batch 13 (10 rules): cosmetic (T3a) — `no_trailing_newline_in_doc`, `prefer_heredoc_for_multi_line_doc`,
+   `no_attr_before_defmodule`, `inconsistent_param_names`, `no_underscore_function_name`,
+   `no_is_prefix_for_non_guard`; unconstructible (T3b) — `no_missing_require_logger`; safe T2 —
+   `no_map_update_then_fetch`, `no_destructure_reconstruct`; **introduced the T3c REPAIR category** and
+   marked `no_piped_regex_replace` (always-fails). Then **REINSTATED `no_keyword_get_integer_key`** (recovered
+   from `103db1b^`) as a repair rule after re-probing it crashes on 24/24 inputs. Suite green: 4383 / 12 excluded.
+   Rule count 118→119.
+   **Policy:** "fix broken → working" rules are a recognised, behaviour-CHANGING family — documented via
+   `mark_equivalence_repair` (or `unconstructible` for the compile-broken flavour), never silently dropped.
+   The repair test must prove the broken precondition (here: no input avoids the crash); a "before" that
+   returns a valid value on *any* input is a behaviour change, not a repair.
+   Batch 14 (final 12 rules — clears the skeleton backlog): safe T2 — `no_case_tuple_guard_dispatch`,
+   `no_group_by_for_frequencies`, `no_list_append_in_recursion`, `no_list_concat_with_recursive_result`,
+   `non_grouped_clauses` (relative clause order preserved), `no_case_destructure_in_pipe`,
+   `no_eager_with_index_in_reduce`, `no_redundant_list_traversal` (min+max → `Enum.min_max`),
+   `no_length_based_indexing` (→ `List.last`), `no_unnecessary_catch_all_raise` (list domain; error-type-only
+   on non-lists); DROPPED `no_enum_at_midpoint_access` and `no_list_to_tuple_for_access` (both the
+   `elem`-vs-`Enum.at` nil/crash mismatch — same hazard as `no_multiple_enum_at`).
+
+   **★ BACKFILL COMPLETE — 0 skeletons, 0 excluded. Every rule has a real equivalence test.**
+   Final: **17 fixed/narrowed in-session, 7 dropped, 1 merged, 1 reinstated-as-repair.** Rule count 125→117.
+   Suite: **4344 tests, 0 failures, 0 warnings, 0 excluded.**
+   Dropped: `no_manual_enum_uniq`, `no_explicit_max_reduce`, `no_explicit_min_reduce`, `no_map_get_sentinel`,
+   `no_multiple_enum_at`, `no_enum_at_midpoint_access`, `no_list_to_tuple_for_access`. Merged:
+   `no_identity_float_coercion`→`prefer_erlang_float`. Reinstated as repair: `no_keyword_get_integer_key`.
+3. ~~Backfill T2 / PROBE~~ — **done** (all tiers filled; PROBE rules verified to preserve eval order via
+   value tests, effect-trace mode unused).
+4. ~~Stamp T3a/T3b~~ — **done**, plus the new **T3c repair** tier; all flagged divergences resolved
+   (fixed / narrowed / dropped / reinstated), none pinned.
+5. **Flip gate hard — ★ DONE.** `test/equivalence_meta_test.exs` is live: it discovers every
+   `Credence.Pattern.Rule` and asserts each has a test module `Credence.Pattern.<Name>EquivalenceTest`
+   (coverage checked by module name — no filename guessing), plus that no equivalence test is still tagged
+   `:equivalence_todo`. The `:equivalence_todo` exclude was dropped from `test_helper.exs` (`ExUnit.start()`
+   with no excludes), so a newly-added rule shipped without a real equivalence test now **fails the suite**.
+   Teeth verified: hiding one rule's test makes the gate fail naming that rule; restoring greens it.
+   Suite green with no excludes: **4347 tests, 0 failures**.
+- StreamData layer (additive, fixed-seed, non-gating) — optional, future enhancement now that the gate holds.
 
 ## Verification
 - **Catches divergence (real example, resolved):** `redundant_list_guard` over the improper-list

@@ -1,38 +1,18 @@
 defmodule Credence.Pattern.NoIsPrefixForNonGuardEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 3a (cosmetic). Renames a boolean-returning function that uses the guard-style
+  `is_` prefix (e.g. `is_palindrome`) to the idiomatic trailing-`?` form
+  (`palindrome?`) and updates its in-module call sites. A consistent rename —
+  behaviour-preserving for the computation; only the function name changes.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
-
   import Credence.BehaviourEquivalence
-  alias Credence.Pattern.NoIsPrefixForNonGuard
 
-  # Firing snippets lifted from no_is_prefix_for_non_guard_check_test.exs:
-  #   defmodule Bad do
-  #       def is_palindrome(str), do: str == String.reverse(str)
-  #     end
-  #   defmodule Bad do
-  #       defp is_palindrome(list), do: list == Enum.reverse(list)
-  #     end
-  #   defmodule Bad do
-  #       def is_valid_ipv4(ip) when is_binary(ip) do
-  #         parts = String.split(ip, ".")
-  #         length(parts) == 4
-  #       end
-  #     end
-
-  test "no_is_prefix_for_non_guard: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
-      rule: NoIsPrefixForNonGuard,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
-    )
+  test "no_is_prefix_for_non_guard: cosmetic — `is_foo` → `foo?` rename" do
+    assert :ok =
+             mark_equivalence_cosmetic(
+               "Renames `is_foo` to `foo?` and rewrites in-module call sites — a consistent " <>
+                 "rename; the boolean each call computes is unchanged."
+             )
   end
 end

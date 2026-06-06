@@ -1,39 +1,26 @@
 defmodule Credence.Pattern.NoPipedRegexReplaceEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
+  Repair rule (always-fails flavour). The rule fires ONLY on the piped shape
+  `value |> Regex.replace(~r/.../, replacement)`, which desugars to
+  `Regex.replace(value, ~r/.../, replacement)` — putting `value` in
+  `Regex.replace/3`'s *regex* slot. That raises `FunctionClauseError` on **every**
+  input (verified: all strings, the empty string, and even a `%Regex{}` crash —
+  there is no input that produces a valid result). The fix rewrites it to
+  `value |> String.replace(~r/.../, replacement)`, the correct call.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  So the "before" has no valid runtime behaviour to preserve; this is a
+  correction, not a behaviour-preserving rewrite. See `mark_equivalence_repair/1`.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
-
   import Credence.BehaviourEquivalence
-  alias Credence.Pattern.NoPipedRegexReplace
 
-  # Firing snippets lifted from no_piped_regex_replace_check_test.exs:
-  #   defmodule M do
-  #       def clean(s), do: s |> Regex.replace(~r/[^a-z]/, "")
-  #     end
-  #   defmodule M do
-  #       def clean(s) do
-  #         s
-  #         |> String.downcase()
-  #         |> Regex.replace(~r/[^a-z0-9]/, "")
-  #       end
-  #     end
-  #   defmodule M do
-  #       def clean(s), do: s |> Regex.replace(~r/\s+/, " ", global: true)
-  #     end
-
-  test "no_piped_regex_replace: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
-      rule: NoPipedRegexReplace,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
-    )
+  test "no_piped_regex_replace: repair — piped `Regex.replace` arg-order bug crashes on every input" do
+    assert :ok =
+             mark_equivalence_repair(
+               "`value |> Regex.replace(~r/../, repl)` = `Regex.replace(value, regex, repl)` puts " <>
+                 "`value` in the regex slot, raising FunctionClauseError on EVERY input (strings, " <>
+                 "empty string, even a %Regex{}). The fix `value |> String.replace(...)` is the " <>
+                 "correct call — no valid before-behaviour exists to preserve."
+             )
   end
 end

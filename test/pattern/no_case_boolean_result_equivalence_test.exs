@@ -1,41 +1,30 @@
 defmodule Credence.Pattern.NoCaseBooleanResultEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). `case x do :ok -> true; _ -> false end` collapses to the
+  boolean test itself. The catch-all `_ -> false` makes it total, so the rewrite
+  matches for every input.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoCaseBooleanResult
 
-  # Firing snippets lifted from no_case_boolean_result_check_test.exs:
-  #   check(x)
-  #     |> case do
-  #       :ok -> true
-  #       _ -> false
-  #     end
-  #   x
-  #     |> validate()
-  #     |> normalize()
-  #     |> case do
-  #       :ok -> true
-  #       _ -> false
-  #     end
-  #   case result do
-  #       :ok -> true
-  #       _ -> false
-  #     end
+  @before """
+  defmodule Bad do
+    def f(result) do
+      case result do
+        :ok -> true
+        _ -> false
+      end
+    end
+  end
+  """
 
-  test "no_case_boolean_result: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "case → true/false collapses to the boolean test, preserving the result" do
+    assert_equivalent_module(@before,
       rule: NoCaseBooleanResult,
-      vars: [:todo],
-      inputs: B.term_lists()
+      call: {:f, 1},
+      inputs: [:ok, :error, 1, nil, "ok"]
     )
   end
 end

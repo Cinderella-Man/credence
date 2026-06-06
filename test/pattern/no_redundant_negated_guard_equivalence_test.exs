@@ -1,38 +1,28 @@
 defmodule Credence.Pattern.NoRedundantNegatedGuardEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). When a clause's guard is the exact negation of the previous
+  clause's (`when v1 == v2` then `when v1 != v2`), the second guard is redundant —
+  any input reaching it already failed the first — so it can be dropped. Dispatch is
+  unchanged because the earlier clause still catches the positive case.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRedundantNegatedGuard
 
-  # Firing snippets lifted from no_redundant_negated_guard_check_test.exs:
-  #   defmodule Bad do
-  #       defp compare([v1 | t1], [v2 | t2]) when v1 == v2, do: compare(t1, t2)
-  #       defp compare([v1 | _], [v2 |_ ]) when v1 != v2, do: v1
-  #     end
-  #   defmodule Bad do
-  #       defp match(a, b) when a === b, do: :equal
-  #       defp match(a, b) when a !== b, do: :not_equal
-  #     end
-  #   defmodule Bad do
-  #       def compare(x, y) when x == y, do: :same
-  #       def compare(x, y) when x != y, do: :different
-  #     end
+  @before """
+  defmodule Bad do
+    def cmp(a, b), do: compare(a, b)
+    defp compare([v1 | t1], [v2 | t2]) when v1 == v2, do: compare(t1, t2)
+    defp compare([v1 | _], [v2 | _]) when v1 != v2, do: v1
+  end
+  """
 
-  test "no_redundant_negated_guard: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
+  test "dropping the redundant negated guard preserves dispatch" do
+    assert_equivalent_module(@before,
       rule: NoRedundantNegatedGuard,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
+      call: {:cmp, 2},
+      inputs: [{[1, 2], [1, 3]}, {[1], [1]}, {[5], [9]}, {[1, 2, 3], [1, 2, 3]}, {[1, 9], [1, 9]}]
     )
   end
 end

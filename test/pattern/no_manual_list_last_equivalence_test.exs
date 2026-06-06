@@ -1,38 +1,33 @@
 defmodule Credence.Pattern.NoManualListLastEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
+  Tier 2 (module-call). A hand-rolled last-element recursion (`f([val]) -> val`,
+  `f([_|rest]) -> f(rest)`) is rewritten to `hd(Enum.reverse(list))`.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  On any NON-EMPTY list both return the last element. On `[]` both *raise* (the
+  manual form has no `[]` clause → `FunctionClauseError`; `hd(Enum.reverse([]))` →
+  `ArgumentError`) — an error-type-only difference on the degenerate input, which
+  is why the fix uses `hd(Enum.reverse/1)` rather than `List.last/1` (the latter
+  would silently return `nil` on `[]`, a real behaviour change). The battery uses
+  non-empty lists to pin the value-preserving domain.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoManualListLast
 
-  # Firing snippets lifted from no_manual_list_last_check_test.exs:
-  #   defmodule Bad do
-  #       defp get_last_element([val]), do: val
-  #       defp get_last_element([_ | rest]), do: get_last_element(rest)
-  #     end
-  #   defmodule Bad do
-  #       defp last_item([x]), do: x
-  #       defp last_item([_ | t]), do: last_item(t)
-  #     end
-  #   defmodule Bad do
-  #       defp tail_val([v]), do: v
-  #       defp tail_val([_head | rest]), do: tail_val(rest)
-  #     end
+  @before """
+  defmodule Bad do
+    def last(l), do: get_last(l)
+    defp get_last([val]), do: val
+    defp get_last([_ | rest]), do: get_last(rest)
+  end
+  """
 
-  test "no_manual_list_last: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
+  test "manual last-element recursion → hd(Enum.reverse/1) preserves the last element" do
+    assert_equivalent_module(@before,
       rule: NoManualListLast,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
+      call: {:last, 1},
+      inputs: [[1], [1, 2, 3], [:a, :b, :c], [nil], Enum.to_list(1..50)]
     )
   end
 end

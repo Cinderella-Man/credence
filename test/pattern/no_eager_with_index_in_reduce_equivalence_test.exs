@@ -1,48 +1,27 @@
 defmodule Credence.Pattern.NoEagerWithIndexInReduceEquivalenceTest do
   @moduledoc """
-  Tier 1 + PROBE — eval-order/double-eval over a transform hole.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). `Enum.reduce(Enum.with_index(list), acc, fn {val, idx}, a -> ... end)`
+  is rewritten to thread the index without the eager `Enum.with_index/1` materialisation.
+  The same `{val, idx}` pairs are folded in the same order, so the result is identical.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoEagerWithIndexInReduce
 
-  # Firing snippets lifted from no_eager_with_index_in_reduce_check_test.exs:
-  #   defmodule BadDirect do
-  #       def process(list) do
-  #         Enum.reduce(Enum.with_index(list), [], fn {val, idx}, acc ->
-  #           [{idx, val} | acc]
-  #         end)
-  #       end
-  #     end
-  #   defmodule BadPiped do
-  #       def process(list) do
-  #         list
-  #         |> Enum.with_index()
-  #         |> Enum.reduce([], fn {val, idx}, acc ->
-  #           [{idx, val} | acc]
-  #         end)
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       def process(list) do
-  #         list
-  #         |> Enum.filter(&(&1 > 0))
-  #         |> Enum.with_index()
-  #         |> Enum.reduce([], fn {val, idx}, acc -> [{idx, val} | acc] end)
-  #       end
-  #     end
+  @before """
+  defmodule Bad do
+    def process(list) do
+      Enum.reduce(Enum.with_index(list), [], fn {val, idx}, acc -> [{idx, val} | acc] end)
+    end
+  end
+  """
 
-  test "no_eager_with_index_in_reduce: fix preserves transform call order/count over the battery" do
-    assert_effect_trace_equivalent(
-      "TODO: firing expression with the transform hole written as `effect.(x)`",
+  test "reduce over with_index → index-threading reduce preserves the result" do
+    assert_equivalent_module(@before,
       rule: NoEagerWithIndexInReduce,
-      vars: [:list],
-      inputs: [{[1, 2, 3], "-"}]
+      call: {:process, 1},
+      inputs: [[], [5], [10, 20, 30], [:a, :b], Enum.to_list(1..15)]
     )
   end
 end

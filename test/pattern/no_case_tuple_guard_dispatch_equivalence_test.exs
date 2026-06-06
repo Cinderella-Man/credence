@@ -1,46 +1,31 @@
 defmodule Credence.Pattern.NoCaseTupleGuardDispatchEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). `case {e1, e2} do {e1, e2} when e1 < e2 -> ...; ... end`
+  becomes guarded function heads. The clause order, tuple patterns, and guards are
+  preserved, so dispatch is identical (including the value-kind `{1, 1.0}` case).
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoCaseTupleGuardDispatch
 
-  # Firing snippets lifted from no_case_tuple_guard_dispatch_check_test.exs:
-  #   def run(e1, e2) do
-  #       case {e1, e2} do
-  #         {e1, e2} when e1 < e2 -> :left
-  #         {e1, e2} when e1 > e2 -> :right
-  #         _ -> :equal
-  #       end
-  #     end
-  #   def run(e1, e2) do
-  #       case {e1, e2} do
-  #         {e1, e2} when e1 < e2 -> :left
-  #         {e1, e2} when e1 > e2 -> :right
-  #         {e1, e2} -> :equal
-  #       end
-  #     end
-  #   def run(a, b, c) do
-  #       case {a, b, c} do
-  #         {a, b, c} when a < b and b < c -> :ascending
-  #         {a, b, c} when a > b and b > c -> :descending
-  #         {a, b, c} -> :other
-  #       end
-  #     end
+  @before """
+  defmodule Bad do
+    def run(e1, e2) do
+      case {e1, e2} do
+        {e1, e2} when e1 < e2 -> :left
+        {e1, e2} when e1 > e2 -> :right
+        _ -> :equal
+      end
+    end
+  end
+  """
 
-  test "no_case_tuple_guard_dispatch: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "case on a {a, b} tuple with guards → guarded heads preserves dispatch" do
+    assert_equivalent_module(@before,
       rule: NoCaseTupleGuardDispatch,
-      vars: [:todo],
-      inputs: B.term_lists()
+      call: {:run, 2},
+      inputs: [{1, 2}, {2, 1}, {1, 1}, {1, 1.0}, {:a, :b}]
     )
   end
 end

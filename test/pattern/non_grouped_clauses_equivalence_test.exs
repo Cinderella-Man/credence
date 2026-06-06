@@ -1,42 +1,36 @@
 defmodule Credence.Pattern.NonGroupedClausesEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). Moves a function's scattered clauses to be adjacent. The
+  *relative* order of each function's own clauses is preserved (only unrelated defs
+  in between move), so dispatch for every function is unchanged. Battery exercises
+  both the regrouped function and the one that was moved.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NonGroupedClauses
 
-  # Firing snippets lifted from non_grouped_clauses_check_test.exs:
-  #   defmodule M do
-  #       def foo(1), do: 1
-  #       def bar(x), do: x
-  #       def foo(x), do: x + 1
-  #     end
-  #   defmodule M do
-  #       defp helper(1), do: :one
-  #       defp other(x), do: x
-  #       defp helper(x), do: :other
-  #     end
-  #   defmodule M do
-  #       def foo(1), do: 1
-  #       def bar(1), do: 1
-  #       def foo(x), do: x
-  #       def bar(x), do: x
-  #     end
+  @before """
+  defmodule Bad do
+    def foo(1), do: 1
+    def bar(x), do: x
+    def foo(x), do: x + 1
+  end
+  """
 
-  test "non_grouped_clauses: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
+  test "regrouping clauses preserves foo/1 dispatch (relative order intact)" do
+    assert_equivalent_module(@before,
       rule: NonGroupedClauses,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
+      call: {:foo, 1},
+      inputs: [1, 2, 5, 0, -3]
+    )
+  end
+
+  test "regrouping clauses leaves the moved bar/1 unchanged" do
+    assert_equivalent_module(@before,
+      rule: NonGroupedClauses,
+      call: {:bar, 1},
+      inputs: [1, :x, "s", 42]
     )
   end
 end

@@ -1,41 +1,26 @@
 defmodule Credence.Pattern.NoLengthGuardToPatternEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). `def f(list) when length(list) > 0` → `def f([_ | _] = list)`.
+  A proper list has `length > 0` iff it is a cons, so the pattern selects exactly
+  the same inputs; the empty list still falls through to the next clause.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoLengthGuardToPattern
 
-  # Firing snippets lifted from no_length_guard_to_pattern_check_test.exs:
-  #   defmodule Bad do
-  #       def process(list) when length(list) > 0 do
-  #         Enum.sum(list)
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       defp triplet(list) when length(list) == 3 do
-  #         List.to_tuple(list)
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       def process(list, x) when length(list) > 0 and is_integer(x) do
-  #         :ok
-  #       end
-  #     end
+  @before """
+  defmodule Bad do
+    def process(list) when length(list) > 0, do: Enum.sum(list)
+    def process(_), do: 0
+  end
+  """
 
-  test "no_length_guard_to_pattern: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
+  test "length(list) > 0 guard → [_|_] pattern preserves dispatch incl. empty" do
+    assert_equivalent_module(@before,
       rule: NoLengthGuardToPattern,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
+      call: {:process, 1},
+      inputs: [[], [5], [1, 2, 3], [-1, -2], Enum.to_list(1..20)]
     )
   end
 end

@@ -1,57 +1,18 @@
 defmodule Credence.Pattern.NoMissingRequireLoggerEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 3b (unconstructible). Adds a missing `require Logger` to a module that calls
+  Logger macros. `Logger.info/2` etc. are macros that require `require Logger`; a
+  module that calls them WITHOUT the require does not compile. So there is no
+  runnable "before" to compare against — the fix makes invalid code compile.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
-
   import Credence.BehaviourEquivalence
-  alias Credence.Pattern.NoMissingRequireLogger
 
-  # Firing snippets lifted from no_missing_require_logger_check_test.exs:
-  #   defmodule Outer do
-  #       require Logger
-  #     
-  #       defmodule Inner do
-  #         def run do
-  #           Logger.info("from inner")
-  #         end
-  #       end
-  #     end
-  #   defmodule Outer do
-  #       defmodule Inner do
-  #         require Logger
-  #     
-  #         def run do
-  #           Logger.info("from inner")
-  #         end
-  #       end
-  #     end
-  #   defmodule Outer do
-  #       require Logger
-  #     
-  #       def run do
-  #         Logger.info("from outer")
-  #       end
-  #     
-  #       defmodule Inner do
-  #         def run do
-  #           :ok
-  #         end
-  #       end
-  #     end
-
-  test "no_missing_require_logger: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
-      rule: NoMissingRequireLogger,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
-    )
+  test "no_missing_require_logger: unconstructible — module without the require does not compile" do
+    assert :ok =
+             mark_equivalence_unconstructible(
+               "The rule fires when a module uses Logger macros but is missing `require Logger`; " <>
+                 "such a module does not compile, so there is no runnable before-code to compare."
+             )
   end
 end

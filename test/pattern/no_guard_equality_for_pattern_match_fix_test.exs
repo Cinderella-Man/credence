@@ -11,16 +11,12 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
   end
 
   describe "fix" do
-    test "removes simple integer guard and substitutes parameter" do
-      input = """
+    test "does not modify integer guard (== matches 2.0 but the pattern head would not)" do
+      code = """
       defp do_count(n, _a, b) when n == 2, do: b
       """
 
-      expected = """
-      defp do_count(2, _a, b), do: b
-      """
-
-      assert fix(input) == expected
+      assert fix(code) == code
     end
 
     test "removes atom guard and substitutes parameter" do
@@ -49,11 +45,11 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
 
     test "handles reversed equality (literal == var)" do
       input = """
-      def foo(n) when 2 == n, do: :ok
+      def foo(n) when :two == n, do: :ok
       """
 
       expected = """
-      def foo(2), do: :ok
+      def foo(:two), do: :ok
       """
 
       assert fix(input) == expected
@@ -61,11 +57,11 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
 
     test "keeps remaining condition in and-guard when var not referenced elsewhere" do
       input = """
-      def foo(n, m) when n == 2 and m > 0, do: m
+      def foo(n, m) when n == :two and m > 0, do: m
       """
 
       expected = """
-      def foo(2, m) when m > 0, do: m
+      def foo(:two, m) when m > 0, do: m
       """
 
       assert fix(input) == expected
@@ -73,11 +69,11 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
 
     test "removes entire guard when all and-conditions are equalities" do
       input = """
-      def foo(n, m) when n == 2 and m == 3, do: :ok
+      def foo(n, m) when n == :a and m == :b, do: :ok
       """
 
       expected = """
-      def foo(2, 3), do: :ok
+      def foo(:a, :b), do: :ok
       """
 
       assert fix(input) == expected
@@ -118,14 +114,14 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
     test "fixes only the guarded clause in multi-clause function" do
       input = """
       defmodule Multi do
-        def classify(n) when n == 0, do: :zero
+        def classify(n) when n == :zero, do: :zero
         def classify(n), do: n
       end
       """
 
       expected = """
       defmodule Multi do
-        def classify(0), do: :zero
+        def classify(:zero), do: :zero
         def classify(n), do: n
       end
       """
@@ -147,15 +143,15 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
     test "fixes multiple functions in same module" do
       input = """
       defmodule MultiFns do
-        def foo(n) when n == 1, do: :one
-        def bar(m) when m == 2, do: :two
+        def foo(n) when n == :one, do: :one
+        def bar(m) when m == :two, do: :two
       end
       """
 
       expected = """
       defmodule MultiFns do
-        def foo(1), do: :one
-        def bar(2), do: :two
+        def foo(:one), do: :one
+        def bar(:two), do: :two
       end
       """
 
@@ -164,11 +160,11 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
 
     test "preserves non-parameter patterns in function head" do
       input = """
-      def foo(n, {a, b}) when n == 2, do: {a, b}
+      def foo(n, {a, b}) when n == :two, do: {a, b}
       """
 
       expected = """
-      def foo(2, {a, b}), do: {a, b}
+      def foo(:two, {a, b}), do: {a, b}
       """
 
       assert fix(input) == expected
@@ -176,11 +172,11 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
 
     test "works with defp" do
       input = """
-      defp helper(n) when n == 42, do: :found
+      defp helper(n) when n == :answer, do: :found
       """
 
       expected = """
-      defp helper(42), do: :found
+      defp helper(:answer), do: :found
       """
 
       assert fix(input) == expected
@@ -188,11 +184,11 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
 
     test "works with reversed literal in compound and-guard" do
       input = """
-      def foo(n, m) when 2 == n and m > 0, do: m
+      def foo(n, m) when :two == n and m > 0, do: m
       """
 
       expected = """
-      def foo(2, m) when m > 0, do: m
+      def foo(:two, m) when m > 0, do: m
       """
 
       assert fix(input) == expected
@@ -208,11 +204,11 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
 
     test "fixes when body uses other variables but not the matched one" do
       input = """
-      def foo(n, m) when n == 2, do: m * 2
+      def foo(n, m) when n == :two, do: m * 2
       """
 
       expected = """
-      def foo(2, m), do: m * 2
+      def foo(:two, m), do: m * 2
       """
 
       assert fix(input) == expected

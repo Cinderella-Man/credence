@@ -1,45 +1,26 @@
 defmodule Credence.Pattern.NoListConcatWithRecursiveResultEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). `def build([h | t]), do: [h] ++ build(t)` → `[h | build(t)]`.
+  `[h] ++ rest` is exactly `[h | rest]`, so the constructed list is identical for
+  every input (and avoids the per-step concat traversal).
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoListConcatWithRecursiveResult
 
-  # Firing snippets lifted from no_list_concat_with_recursive_result_check_test.exs:
-  #   defmodule Bad do
-  #       def build([]), do: []
-  #     
-  #       def build([h | t]) do
-  #         [h] ++ build(t)
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       def pre([]), do: []
-  #       def pre([h | t]), do: [h, h * 2] ++ pre(t)
-  #     end
-  #   defmodule Bad do
-  #       def build([]), do: []
-  #     
-  #       def build([h | t]) do
-  #         rest = build(t)
-  #         [h] ++ rest
-  #       end
-  #     end
+  @before """
+  defmodule Bad do
+    def build([]), do: []
+    def build([h | t]), do: [h] ++ build(t)
+  end
+  """
 
-  test "no_list_concat_with_recursive_result: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
+  test "[h] ++ build(t) → [h | build(t)] preserves the list" do
+    assert_equivalent_module(@before,
       rule: NoListConcatWithRecursiveResult,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
+      call: {:build, 1},
+      inputs: [[], [1], [1, 2, 3], [:a, :b, :c], Enum.to_list(1..20)]
     )
   end
 end

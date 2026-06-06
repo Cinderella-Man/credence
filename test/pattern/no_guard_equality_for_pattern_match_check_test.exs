@@ -44,11 +44,22 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       assert check(code) == []
     end
 
-    test "detects when var == integer_literal in guard" do
+    test "does not flag integer literal (== matches 2.0 but the pattern head would not)" do
       code = """
       defmodule BadIntGuard do
         defp do_count(n, _a, b) when n == 2, do: b
         defp do_count(n, a, b), do: do_count(n - 1, b, a + b)
+      end
+      """
+
+      assert check(code) == []
+    end
+
+    test "detects when var == atom_literal in guard (and reports metadata)" do
+      code = """
+      defmodule BadAtomMeta do
+        defp step(s, _a, b) when s == :done, do: b
+        defp step(s, a, b), do: step(s, b, a + b)
       end
       """
 
@@ -59,7 +70,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       assert %Issue{} = issue
       assert issue.rule == :no_guard_equality_for_pattern_match
 
-      assert issue.message =~ "n == 2"
+      assert issue.message =~ "s == :done"
       assert issue.message =~ "pattern matching"
       assert issue.meta.line != nil
     end
@@ -95,15 +106,15 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
     test "detects equality inside a compound guard" do
       code = """
       defmodule BadCompound do
-        def process(n) when is_integer(n) and n == 0, do: :zero
-        def process(n) when is_integer(n), do: n
+        def process(s) when is_binary(s) and s == "zero", do: :zero
+        def process(s) when is_binary(s), do: s
       end
       """
 
       issues = check(code)
 
       assert length(issues) == 1
-      assert hd(issues).message =~ "n == 0"
+      assert hd(issues).message =~ ~s(s == "zero")
     end
 
     test "ignores non-param variables in guard equality" do
@@ -133,20 +144,20 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
     test "detects reversed equality (literal == var)" do
       code = """
       defmodule ReversedGuard do
-        def process(n) when 2 == n, do: :two
+        def process(n) when :two == n, do: :two
         def process(n), do: n
       end
       """
 
       issues = check(code)
       assert length(issues) == 1
-      assert hd(issues).message =~ "n == 2"
+      assert hd(issues).message =~ "n == :two"
     end
 
     test "detects multiple equalities in and-guard" do
       code = """
       defmodule MultiGuard do
-        def foo(n, m) when n == 2 and m == 3, do: :ok
+        def foo(n, m) when n == :two and m == :three, do: :ok
       end
       """
 
@@ -154,14 +165,14 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       assert length(issues) == 2
 
       messages = Enum.map(issues, & &1.message)
-      assert Enum.any?(messages, &(&1 =~ "n == 2"))
-      assert Enum.any?(messages, &(&1 =~ "m == 3"))
+      assert Enum.any?(messages, &(&1 =~ "n == :two"))
+      assert Enum.any?(messages, &(&1 =~ "m == :three"))
     end
 
     test "detects equalities inside or-guard" do
       code = """
       defmodule OrGuard do
-        def foo(n) when n == 2 or n == 3, do: :ok
+        def foo(n) when n == :two or n == :three, do: :ok
       end
       """
 
@@ -216,32 +227,32 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
     test "detects equality mixed with other guards in and" do
       code = """
       defmodule MixedGuard do
-        def foo(n) when n > 0 and n == 2, do: :ok
+        def foo(n) when is_atom(n) and n == :two, do: :ok
       end
       """
 
       issues = check(code)
       assert length(issues) == 1
-      assert hd(issues).message =~ "n == 2"
+      assert hd(issues).message =~ "n == :two"
     end
 
     test "detects in def (not only defp)" do
       code = """
       defmodule DefGuard do
-        def helper(n) when n == 42, do: :found
+        def helper(n) when n == :answer, do: :found
         def helper(_), do: :not_found
       end
       """
 
       issues = check(code)
       assert length(issues) == 1
-      assert hd(issues).message =~ "42"
+      assert hd(issues).message =~ ":answer"
     end
 
     test "detects only the guarded clause in multi-clause function" do
       code = """
       defmodule MultiClause do
-        def classify(n) when n == 0, do: :zero
+        def classify(n) when n == :zero, do: :zero
         def classify(n) when n > 0, do: :positive
         def classify(_n), do: :negative
       end
@@ -249,13 +260,13 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
 
       issues = check(code)
       assert length(issues) == 1
-      assert hd(issues).message =~ "n == 0"
+      assert hd(issues).message =~ "n == :zero"
     end
 
     test "detects nested and/or combinations" do
       code = """
       defmodule NestedGuard do
-        def foo(n, m, k) when (n == 2 and m > 0) or k == 3, do: :ok
+        def foo(n, m, k) when (n == :two and m > 0) or k == :three, do: :ok
       end
       """
 
@@ -263,8 +274,8 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       assert length(issues) == 2
 
       messages = Enum.map(issues, & &1.message)
-      assert Enum.any?(messages, &(&1 =~ "n == 2"))
-      assert Enum.any?(messages, &(&1 =~ "k == 3"))
+      assert Enum.any?(messages, &(&1 =~ "n == :two"))
+      assert Enum.any?(messages, &(&1 =~ "k == :three"))
     end
 
     test "does not flag comparison to composite types" do

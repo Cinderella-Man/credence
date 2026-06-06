@@ -175,6 +175,27 @@ defmodule Credence.BehaviourEquivalence do
   """
   def mark_equivalence_unconstructible(reason) when is_binary(reason) and reason != "", do: :ok
 
+  @doc """
+  Mark a rule as a **repair**: its firing precondition is that the input is
+  *broken*, so there is no valid runtime behaviour to preserve and the fix is a
+  *correction* rather than a behaviour-preserving rewrite. Two flavours:
+
+    * **does-not-compile** — e.g. a hallucinated guard, a missing `require`. (The
+      narrower `mark_equivalence_unconstructible/1` is the preferred wording for
+      this flavour.)
+    * **always-fails** — compiles, but raises on *every* possible input (e.g. an
+      argument-order bug like piping a string into `Regex.replace/3`'s regex slot).
+
+  Repair rules are deliberately NOT covered by the behaviour-preservation
+  guarantee — that is sound, because the "before" has no input that produces a
+  valid result. The reason MUST state the broken precondition (and, for
+  always-fails, that *no* input avoids the crash) so the claim is auditable.
+  Keep this set small and reviewed; a rule whose "before" returns a valid (even
+  if undesired) value on some input is NOT a repair — it is a behaviour change
+  and must be narrowed, gated, or dropped instead.
+  """
+  def mark_equivalence_repair(reason) when is_binary(reason) and reason != "", do: :ok
+
   # ── Outcome tagging ───────────────────────────────────────────────────
 
   @doc """

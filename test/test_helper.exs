@@ -8,7 +8,9 @@ Logger.configure(level: :info)
   Logger.Formatter.new(format: "$date $time [$level] $message\n\n")
 )
 
-# `:equivalence_todo` tags un-filled behaviour-equivalence backfill skeletons
-# (see maintainer_tools/gen_equivalence_skeletons.exs). Excluded by default so
-# the suite stays green during backfill; the gate un-excludes them at the end.
-ExUnit.start(exclude: [:equivalence_todo])
+# Behaviour-equivalence backfill is COMPLETE: every Pattern rule has a real
+# equivalence test and no `:equivalence_todo` skeletons remain (enforced by
+# `test/equivalence_meta_test.exs`). The exclude is therefore dropped — a newly
+# added rule shipped with only a skeleton (or with no equivalence test at all)
+# now fails the suite, so coverage cannot silently regress.
+ExUnit.start()

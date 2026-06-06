@@ -1,51 +1,33 @@
 defmodule Credence.Pattern.NoCaseDestructureInPipeEquivalenceTest do
   @moduledoc """
-  Tier 1 + PROBE — eval-order/double-eval over a transform hole.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). A pipeline ending in `|> case do value -> ... end` (a single
+  catch-all clause used only to bind/transform) is rewritten to the equivalent
+  pipe-friendly form. The single clause binds the piped value and computes the same
+  result, so behaviour is preserved.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoCaseDestructureInPipe
 
-  # Firing snippets lifted from no_case_destructure_in_pipe_check_test.exs:
-  #   defmodule BadCase do
-  #       def process(x) do
-  #         x
-  #         |> compute()
-  #         |> case do
-  #           value -> value + 1
-  #         end
-  #       end
-  #     end
-  #   defmodule BadCase do
-  #       def process(x) do
-  #         x
-  #         |> compute()
-  #         |> case do
-  #           _ -> 42
-  #         end
-  #       end
-  #     end
-  #   defmodule BadCase do
-  #       def process(x) do
-  #         x
-  #         |> compute()
-  #         |> case do
-  #           _value -> 42
-  #         end
-  #       end
-  #     end
+  @before """
+  defmodule Bad do
+    def process(x) do
+      x
+      |> compute()
+      |> case do
+        value -> value + 1
+      end
+    end
+    defp compute(x), do: x * 10
+  end
+  """
 
-  test "no_case_destructure_in_pipe: fix preserves transform call order/count over the battery" do
-    assert_effect_trace_equivalent(
-      "TODO: firing expression with the transform hole written as `effect.(x)`",
+  test "pipe into single-clause case → preserves the computed value" do
+    assert_equivalent_module(@before,
       rule: NoCaseDestructureInPipe,
-      vars: [:list],
-      inputs: [{[1, 2, 3], "-"}]
+      call: {:process, 1},
+      inputs: [0, 1, 2, -3, 100]
     )
   end
 end

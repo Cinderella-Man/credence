@@ -1,35 +1,26 @@
 defmodule Credence.Pattern.NoHdTlWhenConsBoundEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). When the head pattern already binds a cons
+  (`def first(list = [_ | _])`), calling `hd(list)`/`tl(list)` is redundant — use
+  the bound head/tail. The cons pattern guarantees a non-empty list, so the bound
+  element equals `hd`/`tl` exactly.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoHdTlWhenConsBound
 
-  # Firing snippets lifted from no_hd_tl_when_cons_bound_check_test.exs:
-  #   defmodule Bad do
-  #       def first(list = [_ | _]), do: hd(list)
-  #     end
-  #   defmodule Bad do
-  #       def rest(list = [_ | _]), do: tl(list)
-  #     end
-  #   defmodule Bad do
-  #       def split(list = [_ | _]), do: {hd(list), tl(list)}
-  #     end
+  @before """
+  defmodule Bad do
+    def first(list = [_ | _]), do: hd(list)
+  end
+  """
 
-  test "no_hd_tl_when_cons_bound: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
+  test "hd(list) under a bound cons head → the bound head preserves the value" do
+    assert_equivalent_module(@before,
       rule: NoHdTlWhenConsBound,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
+      call: {:first, 1},
+      inputs: [[1, 2], [5], [:a, :b, :c], [nil, 1]]
     )
   end
 end

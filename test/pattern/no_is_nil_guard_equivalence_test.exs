@@ -1,32 +1,26 @@
 defmodule Credence.Pattern.NoIsNilGuardEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call) — compile before/after module, invoke a function.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). `def foo(x) when is_nil(x)` → `def foo(nil)`. `is_nil(x)` is
+  true exactly for `nil`, so the pattern clause matches the same inputs — `false`
+  and other falsy-but-not-nil values still fall through to the next clause.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoIsNilGuard
 
-  # Firing snippets lifted from no_is_nil_guard_check_test.exs:
-  #   def foo(x) when is_nil(x), do: :bar
-  #   defmodule E do
-  #       def foo(x) when is_nil(x), do: :bar
-  #       def bar(y) when is_nil(y), do: :baz
-  #     end
-  #   def foo(x, y) when is_nil(x) and is_binary(y), do: :ok
+  @before """
+  defmodule Bad do
+    def foo(x) when is_nil(x), do: :bar
+    def foo(_x), do: :baz
+  end
+  """
 
-  test "no_is_nil_guard: fix preserves the called function's behaviour over the battery" do
-    assert_equivalent_module(
-      """
-      TODO: before module (lift a firing snippet from the check test)
-      """,
+  test "is_nil guard → nil pattern preserves dispatch incl. false" do
+    assert_equivalent_module(@before,
       rule: NoIsNilGuard,
-      call: {:todo_fun, 1},
-      inputs: [[], [1, 2, 3], [:a, :b]]
+      call: {:foo, 1},
+      inputs: [nil, false, 1, :x, "s", 0]
     )
   end
 end

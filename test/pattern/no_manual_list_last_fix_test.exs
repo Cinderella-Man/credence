@@ -11,7 +11,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
   end
 
   describe "fix" do
-    test "replaces hand-rolled function with List.last delegation" do
+    test "replaces hand-rolled function with hd(Enum.reverse/1) delegation" do
       input = """
       defmodule Bad do
         defp get_last_element([val]), do: val
@@ -22,7 +22,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp get_last_element(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
       end
       """
@@ -43,10 +43,10 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp get_last_element(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
-        def run(list), do: List.last(list)
+        def run(list), do: hd(Enum.reverse(list))
       end
       """
 
@@ -66,10 +66,10 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp last(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
-        def run(list), do: list |> List.last()
+        def run(list), do: list |> Enum.reverse() |> hd()
       end
       """
 
@@ -79,7 +79,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
     test "does not modify code without the pattern" do
       code = """
       defmodule Good do
-        def run(list), do: List.last(list)
+        def run(list), do: hd(Enum.reverse(list))
       end
       """
 
@@ -97,7 +97,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp my_last(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
       end
       """
@@ -116,7 +116,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         def final(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
       end
       """
@@ -137,10 +137,10 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp last(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
-        def run(list), do: {List.last(list), :ok}
+        def run(list), do: {hd(Enum.reverse(list)), :ok}
       end
       """
 
@@ -160,10 +160,10 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp last(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
-        def run(lists), do: Enum.map(lists, fn x -> List.last(x) end)
+        def run(lists), do: Enum.map(lists, fn x -> hd(Enum.reverse(x)) end)
       end
       """
 
@@ -188,12 +188,12 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp last(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
         def run(list) do
           case :ok do
-            :ok -> List.last(list)
+            :ok -> hd(Enum.reverse(list))
             _ -> nil
           end
         end
@@ -217,11 +217,11 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp last_a(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
         defp last_b(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
       end
       """
@@ -242,7 +242,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp last(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
         def other(x), do: x + 1
@@ -278,14 +278,15 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp last(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
         def run(list),
           do:
             list
             |> Enum.map(& &1)
-            |> List.last()
+            |> Enum.reverse()
+            |> hd()
       end
       """
 
@@ -304,7 +305,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp last(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
         def other(x), do: x + 1
@@ -327,10 +328,10 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       expected = """
       defmodule Bad do
         defp last(list) do
-          List.last(list)
+          hd(Enum.reverse(list))
         end
 
-        def run(list), do: {List.last(list), List.last(list)}
+        def run(list), do: {hd(Enum.reverse(list)), hd(Enum.reverse(list))}
       end
       """
 

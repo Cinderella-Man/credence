@@ -1,39 +1,30 @@
 defmodule Credence.Pattern.NoRedundantListTraversalEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 2 (module-call). Separate `Enum.min(list)` and `Enum.max(list)` over the same
+  list (two traversals) collapse to one `Enum.min_max(list)`. `Enum.min_max/1` uses
+  the same comparison as `min`/`max`, so the pair matches — including the value-kind
+  `[1, 1.0]` case — and the empty list raises in both (`Enum.EmptyError`).
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoRedundantListTraversal
 
-  # Firing snippets lifted from no_redundant_list_traversal_check_test.exs:
-  #   def run(numbers) do
-  #       n = length(numbers)
-  #       div(n * (n + 1), 2) - Enum.sum(numbers)
-  #     end
-  #   def run(numbers) do
-  #       count = length(numbers)
-  #       doubled_sum = Enum.sum(numbers) * 2
-  #       {count, doubled_sum}
-  #     end
-  #   def run(numbers) do
-  #       half_count = div(length(numbers), 2)
-  #       sum = Enum.sum(numbers)
-  #       {half_count, sum}
-  #     end
+  @before """
+  defmodule Bad do
+    def run(numbers) do
+      minimum = Enum.min(numbers)
+      maximum = Enum.max(numbers)
+      {minimum, maximum}
+    end
+  end
+  """
 
-  test "no_redundant_list_traversal: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "separate Enum.min + Enum.max → Enum.min_max preserves {min, max} incl. value-kind/empty" do
+    assert_equivalent_module(@before,
       rule: NoRedundantListTraversal,
-      vars: [:todo],
-      inputs: B.term_lists()
+      call: {:run, 1},
+      inputs: [[3, 1, 2], [1, 1.0], [5], [], [-1, -5, 3], Enum.to_list(1..20)]
     )
   end
 end
