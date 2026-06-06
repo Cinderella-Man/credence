@@ -24,7 +24,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       defmodule Fixed do
         def check(items) do
           Enum.reduce_while(items, 0, fn elem, acc ->
-            if &(is_integer / 1.(elem)), do: {:cont, acc + 1}, else: {:halt, acc}
+            if (&is_integer/1).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
           end)
         end
       end
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
         def count_matching(list) do
           list
           |> Enum.reduce_while(0, fn elem, acc ->
-            if &(&1 > 0).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
+            if (&(&1 > 0)).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
           end)
         end
       end
@@ -71,7 +71,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       defmodule Fixed do
         def count_valid(items) do
           Enum.reduce_while(items, 0, fn elem, acc ->
-            if &(&1 != nil).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
+            if (&(&1 != nil)).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
           end)
         end
       end
@@ -147,7 +147,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       defmodule Fixed do
         def all_positive?(list) do
           Enum.reduce_while(list, 0, fn elem, acc ->
-            if &(&1 > 0).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
+            if (&(&1 > 0)).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
           end) == length(list)
         end
       end
@@ -176,7 +176,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
           |> String.trim()
           |> String.graphemes()
           |> Enum.reduce_while(0, fn elem, acc ->
-            if &(&1 != " ").(elem), do: {:cont, acc + 1}, else: {:halt, acc}
+            if (&(&1 != " ")).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
           end)
         end
       end
@@ -201,13 +201,13 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       defmodule Fixed do
         def count_a(items) do
           Enum.reduce_while(items, 0, fn elem, acc ->
-            if &(is_integer / 1.(elem)), do: {:cont, acc + 1}, else: {:halt, acc}
+            if (&is_integer/1).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
           end)
         end
 
         def count_b(items) do
           Enum.reduce_while(items, 0, fn elem, acc ->
-            if &(is_binary / 1.(elem)), do: {:cont, acc + 1}, else: {:halt, acc}
+            if (&is_binary/1).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
           end)
         end
       end
@@ -245,7 +245,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       defmodule Mixed do
         def count_leading(items) do
           Enum.reduce_while(items, 0, fn elem, acc ->
-            if &(is_integer / 1.(elem)), do: {:cont, acc + 1}, else: {:halt, acc}
+            if (&is_integer/1).(elem), do: {:cont, acc + 1}, else: {:halt, acc}
           end)
         end
 
