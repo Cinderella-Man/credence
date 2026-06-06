@@ -1,5 +1,3 @@
-lib/pattern/no_manual_bit_count.ex
-test/pattern/no_manual_bit_count_test.exs
 lib/pattern/no_manual_count_with_predicate.ex
 test/pattern/no_manual_count_with_predicate_test.exs
 lib/pattern/no_manual_find.ex

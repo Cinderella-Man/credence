@@ -120,3 +120,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_list_replace_at_in_reduce_test.exs`
 - Reason: only fix swaps the list accumulator for a map/tuple (Map.put/put_elem) — a value-type change spanning init+downstream, applies to all flagged shapes, no safe same-type core
 
+## no_manual_bit_count — 2026-06-06
+- Files:
+  - `lib/pattern/no_manual_bit_count.ex`
+  - `test/pattern/no_manual_bit_count_test.exs`
+- Reason: non-local rewrite (delete 2 helper clauses + rewrite remote call sites) and check underspecifies popcount (admits non-popcount/list/tuple accumulators and negative/non-terminating inputs), so no behaviour-preserving patch exists for any flagged shape.
+
