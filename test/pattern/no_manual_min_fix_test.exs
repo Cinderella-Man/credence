@@ -11,20 +11,14 @@ defmodule Credence.Pattern.NoManualMinFixTest do
   end
 
   describe "NoManualMin fix" do
-    test "if a < b, do: a, else: b → min(a, b)" do
-      input = """
-      defmodule Example do
+    test "does not modify strict if a < b (value-kind unsafe on ties)" do
+      code = """
+      defmodule Good do
         def smaller(a, b), do: if(a < b, do: a, else: b)
       end
       """
 
-      expected = """
-      defmodule Example do
-        def smaller(a, b), do: min(a, b)
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(code) == code
     end
 
     test "if a <= b, do: a, else: b → min(a, b)" do
@@ -43,20 +37,14 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       assert fix(input) == expected
     end
 
-    test "if b > a, do: a, else: b → min(a, b)" do
-      input = """
-      defmodule Example do
+    test "does not modify strict if b > a (value-kind unsafe on ties)" do
+      code = """
+      defmodule Good do
         def smaller(a, b), do: if(b > a, do: a, else: b)
       end
       """
 
-      expected = """
-      defmodule Example do
-        def smaller(a, b), do: min(a, b)
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(code) == code
     end
 
     test "if b >= a, do: a, else: b → min(a, b)" do
@@ -75,10 +63,10 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       assert fix(input) == expected
     end
 
-    test "if a > b, do: b, else: a → min(b, a)" do
+    test "if a >= b, do: b, else: a → min(b, a)" do
       input = """
       defmodule Example do
-        def smaller(a, b), do: if(a > b, do: b, else: a)
+        def smaller(a, b), do: if(a >= b, do: b, else: a)
       end
       """
 
@@ -95,7 +83,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       input = """
       defmodule Example do
         def smaller(a, b) do
-          if a < b do
+          if a <= b do
             a
           else
             b
@@ -119,7 +107,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       input = """
       defmodule Example do
         def clamp_low(value, floor) do
-          if value - 1 < floor, do: value - 1, else: floor
+          if value - 1 <= floor, do: value - 1, else: floor
         end
       end
       """
@@ -139,8 +127,8 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       input = """
       defmodule Example do
         def f(a, b, c) do
-          x = if a < b, do: a, else: b
-          y = if c > x, do: x, else: c
+          x = if a <= b, do: a, else: b
+          y = if c >= x, do: x, else: c
           y
         end
       end
@@ -163,7 +151,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       input = """
       defmodule Example do
         def smaller(a, b) do
-          result = if a < b, do: a, else: b
+          result = if a <= b, do: a, else: b
           result
         end
       end
@@ -185,7 +173,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       input = """
       defmodule Example do
         def run(a, b) do
-          IO.puts(if a < b, do: a, else: b)
+          IO.puts(if a <= b, do: a, else: b)
         end
       end
       """

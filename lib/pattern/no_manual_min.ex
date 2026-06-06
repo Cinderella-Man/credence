@@ -18,20 +18,20 @@ defmodule Credence.Pattern.NoManualMin do
 
   ## Flagged patterns
 
-  Any `if` expression where:
+  Only the **non-strict** comparison forms are flagged, because only they equal
+  `min/2` for every input. `min/2` returns its first argument on a tie, so:
 
-  - The condition is a comparison (`>`, `>=`, `<`, `<=`),
-  - One branch returns the left operand and the other returns the right, and
-  - The branch returning the "lesser" operand is the `do` (true) branch.
+  | Pattern                      | Replacement | Flagged? |
+  | ---------------------------- | ----------- | -------- |
+  | `if a <= b, do: a, else: b` | `min(a, b)` | yes      |
+  | `if b >= a, do: a, else: b` | `min(a, b)` | yes      |
+  | `if a < b, do: a, else: b`  | —           | no       |
+  | `if b > a, do: a, else: b`  | —           | no       |
 
-  All four comparison operators are handled:
-
-  | Pattern                          | Replacement    |
-  | -------------------------------- | -------------- |
-  | `if a < b, do: a, else: b`      | `min(a, b)`    |
-  | `if a <= b, do: a, else: b`     | `min(a, b)`    |
-  | `if b > a, do: a, else: b`      | `min(a, b)`    |
-  | `if b >= a, do: a, else: b`     | `min(a, b)`    |
+  The strict forms (`<`, `>`) take the `else` branch on a tie, which differs from
+  `min/2` when the operands are equal in value but different in type — e.g.
+  `min(1, 1.0)` is `1`, but `if 1 < 1.0, do: 1, else: 1.0` yields `1.0`. So they
+  are not rewritten.
   """
 
   use Credence.Pattern.Rule
@@ -87,13 +87,16 @@ defmodule Credence.Pattern.NoManualMin do
   #
   # For `>` and `>=`: do == right operand, else == left operand
   #   → "if b > a, do: a, else: b"  (return lesser in true branch)
-  defp min_pattern?({op, _, [left, right]}, do_branch, else_branch)
-       when op in [:<, :<=] do
+  # Only the NON-STRICT operators are behaviour-preserving. `min/2` uses `<=`,
+  # so `if a <= b, do: a, else: b` matches it exactly. The strict `if a < b`
+  # takes the ELSE branch on a tie, differing from `min` when the operands are
+  # equal in value but different in type, e.g. `min(1, 1.0) == 1` but the manual
+  # form yields `1.0`.
+  defp min_pattern?({:<=, _, [left, right]}, do_branch, else_branch) do
     ast_equal?(do_branch, left) and ast_equal?(else_branch, right)
   end
 
-  defp min_pattern?({op, _, [left, right]}, do_branch, else_branch)
-       when op in [:>, :>=] do
+  defp min_pattern?({:>=, _, [left, right]}, do_branch, else_branch) do
     ast_equal?(do_branch, right) and ast_equal?(else_branch, left)
   end
 
@@ -106,10 +109,8 @@ defmodule Credence.Pattern.NoManualMin do
     end
   end
 
-  # For < and <=: do_branch == left (the lesser value)
-  # Result: min(left, right)
-  defp get_min_operands({op, _, [left, right]}, do_branch, else_branch)
-       when op in [:<, :<=] do
+  # For <=: do_branch == left (the lesser value) → min(left, right)
+  defp get_min_operands({:<=, _, [left, right]}, do_branch, else_branch) do
     if ast_equal?(do_branch, left) and ast_equal?(else_branch, right) do
       {:ok, [left, right]}
     else
@@ -117,11 +118,8 @@ defmodule Credence.Pattern.NoManualMin do
     end
   end
 
-  # For > and >=: do_branch == right (the lesser value)
-  # Result: min(right, left) — puts the lesser value first to match
-  # the convention shown in the documentation
-  defp get_min_operands({op, _, [left, right]}, do_branch, else_branch)
-       when op in [:>, :>=] do
+  # For >=: do_branch == right (the lesser value) → min(right, left)
+  defp get_min_operands({:>=, _, [left, right]}, do_branch, else_branch) do
     if ast_equal?(do_branch, right) and ast_equal?(else_branch, left) do
       {:ok, [right, left]}
     else

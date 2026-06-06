@@ -1307,7 +1307,7 @@ defmodule CredenceTest do
                 end
 
               current_length = current_index - new_left + 1
-              max_len = max(current_length, acc.max_length)
+              max_len = if current_length > acc.max_length, do: current_length, else: acc.max_length
 
               %{
                 left: new_left,

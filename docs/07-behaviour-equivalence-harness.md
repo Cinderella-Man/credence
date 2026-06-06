@@ -124,6 +124,12 @@ opt-outs remain; nothing is unconstructible.
   already-crashing code — **maintainer accepted this (error type doesn't matter), so no assumption added.**
   Equivalence test uses a numeric battery (where value-kind risk lives) + a moduledoc note on the
   non-number edge. Updated rule + moduledoc + both rules' check/fix tests merged + 4 showcase golden tests.
+- **`no_manual_max` + `no_manual_min` — was UNSAFE on strict forms, now NARROWED.** Both fired on
+  strict (`>`/`<`) and non-strict (`>=`/`<=`) comparison forms, but `max`/`min` use `>=`/`<=` and keep
+  the first arg on a tie. So `if a > b, do: a, else: b` → `max(a, b)` diverged on equal-value-different-type
+  — `max(1, 1.0) == 1` but the manual form yields `1.0` (caught only by the new strict `===`). Narrowed
+  both rules to the **non-strict forms only** (the subset that equals `max`/`min` exactly). Updated both
+  rules' moduledocs + check/fix tests (strict positives → negatives) + 1 integration golden test.
 - `no_piped_regex_replace` — investigated, **SAFE** (only the piped, crashing form is rewritten;
   `String.replace ≡ Regex.replace` on all probed inputs). Kept as T2; not a divergence.
 
@@ -225,8 +231,12 @@ above is the human worklist.)
    (safe); `no_keyword_get_integer_key` DROPPED (no fixable core); `no_identity_float_coercion` +
    `prefer_erlang_float` MERGED (wrap via `:erlang.float`, value-kind preserved, no assumption).
    2 cosmetics done. Suite green: 4418 tests / 102 excluded (**123 rules**).
-   **Bugs found: 7 fixed in-session, 1 rule dropped, 1 pair merged** (the `===` upgrade is what
-   exposed the float value-kind bug). Rule count 125→123 (1 dropped, 1 merged away).
+   Batch 4 (value-kind + enumerable-type): `no_uniq_then_count`, `no_redundant_to_list`,
+   `no_redundant_dedup_before_mapset` (safe — `Enum.uniq`/`MapSet` both strict `===`); `no_manual_max`
+   + `no_manual_min` NARROWED to non-strict forms (strict `>`/`<` diverged on `max(1,1.0)`). Suite green:
+   4422 tests / 97 excluded.
+   **Bugs found: 9 fixed/narrowed in-session, 1 rule dropped, 1 pair merged** (the `===` upgrade keeps
+   exposing value-kind bugs). Rule count 125→123.
 3. **Backfill T2 (29)** via `assert_equivalent_module`; **PROBE (26)** turn on `probe_effects`.
 4. **Stamp T3a (8) + T3b (2)** with cosmetic/unconstructible marks + reasons. Resolve the
    two flagged rules. Drive the T3b/unconstructible pile to minimum.

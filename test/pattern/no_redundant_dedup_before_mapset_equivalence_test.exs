@@ -1,39 +1,23 @@
 defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
+  Tier 1 (expression), value-kind dimension.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  `items |> Enum.uniq() |> MapSet.new()` → `MapSet.new(items)`. `MapSet`
+  deduplicates by strict `===`, exactly as `Enum.uniq/1` does, so dropping the
+  pre-dedup yields the same set — including the `1` vs `1.0` value-kind case
+  (both kept distinct either way). Battery includes a value-kind list, empty,
+  and duplicates.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoRedundantDedupBeforeMapset
 
-  # Firing snippets lifted from no_redundant_dedup_before_mapset_check_test.exs:
-  #   defmodule Example do
-  #       def run(items) do
-  #         Enum.uniq(items) |> Enum.sort() |> MapSet.new()
-  #       end
-  #     end
-  #   defmodule Example do
-  #       def run(items) do
-  #         items |> Enum.uniq() |> Enum.sort() |> MapSet.new()
-  #       end
-  #     end
-  #   defmodule Example do
-  #       def run(items) do
-  #         Enum.dedup(items) |> Enum.sort() |> MapSet.new()
-  #       end
-  #     end
-
-  test "no_redundant_dedup_before_mapset: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "items |> Enum.uniq() |> MapSet.new() → MapSet.new(items) preserves the set" do
+    assert_equivalent("items |> Enum.uniq() |> MapSet.new()",
       rule: NoRedundantDedupBeforeMapset,
-      vars: [:todo],
+      vars: [:items],
       inputs: B.term_lists()
     )
   end

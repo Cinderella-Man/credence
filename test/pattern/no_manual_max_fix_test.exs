@@ -11,26 +11,6 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
   end
 
   describe "fix" do
-    test "fixes if a > b, do: a, else: b" do
-      input = """
-      defmodule Bad do
-        def bigger(a, b) do
-          if a > b, do: a, else: b
-        end
-      end
-      """
-
-      expected = """
-      defmodule Bad do
-        def bigger(a, b) do
-          max(a, b)
-        end
-      end
-      """
-
-      assert fix(input) == expected
-    end
-
     test "fixes if a >= b, do: a, else: b" do
       input = """
       defmodule Bad do
@@ -55,7 +35,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       input = """
       defmodule Bad do
         def bigger(a, b) do
-          if b < a, do: a, else: b
+          if b <= a, do: a, else: b
         end
       end
       """
@@ -93,7 +73,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
 
     test "fixes complex expressions" do
       input = """
-      new_current = if(current_sum + num > num, do: current_sum + num, else: num)
+      new_current = if(current_sum + num >= num, do: current_sum + num, else: num)
       """
 
       expected = """
@@ -107,8 +87,8 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       input = """
       defmodule Bad do
         def f(current_sum, num, max_sum) do
-          new_current = if(current_sum + num > num, do: current_sum + num, else: num)
-          new_max = if(new_current > max_sum, do: new_current, else: max_sum)
+          new_current = if(current_sum + num >= num, do: current_sum + num, else: num)
+          new_max = if(new_current >= max_sum, do: new_current, else: max_sum)
           {new_current, new_max}
         end
       end
@@ -131,7 +111,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       input = """
       defmodule Bad do
         def bigger(a, b, c) do
-          result = if a > b, do: a, else: b
+          result = if a >= b, do: a, else: b
           other = c * 2
           {result, other}
         end
@@ -155,7 +135,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       input = """
       defmodule Bad do
         def f(a, b, c) do
-          if (if a > b, do: a, else: b) > c, do: (if a > b, do: a, else: b), else: c
+          if (if a >= b, do: a, else: b) >= c, do: (if a >= b, do: a, else: b), else: c
         end
       end
       """
@@ -174,7 +154,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
     test "fixes if b > a, do: b, else: a (also a max pattern)" do
       input = """
       def bigger(a, b) do
-        if b > a, do: b, else: a
+        if b >= a, do: b, else: a
       end
       """
 
@@ -191,7 +171,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       input = """
       defmodule Bad do
         def bigger(a, b) do
-          if a > b, do: a, else: b
+          if a >= b, do: a, else: b
         end
       end
       """
@@ -286,7 +266,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
         """
         @spec step(integer(), integer()) :: integer()
         def step(current_sum, num) do
-          new_current = if(current_sum + num > num, do: current_sum + num, else: num)
+          new_current = if(current_sum + num >= num, do: current_sum + num, else: num)
           new_current
         end
       end
@@ -323,7 +303,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
         """
         @spec pick(integer(), integer()) :: integer()
         def pick(a, b) do
-          result = if a > b, do: a, else: b
+          result = if a >= b, do: a, else: b
           result
         end
       end

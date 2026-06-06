@@ -9,18 +9,16 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
   end
 
   describe "NoManualMin check" do
-    test "detects if a < b, do: a, else: b" do
+    test "does not flag strict if a < b, do: a, else: b (value-kind unsafe on ties)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def smaller(a, b) do
           if a < b, do: a, else: b
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.rule == :no_manual_min
-      assert issue.message =~ "min/2"
+      assert check(code) == []
     end
 
     test "detects if a <= b, do: a, else: b" do
@@ -36,17 +34,16 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       assert issue.message =~ "min/2"
     end
 
-    test "detects if b > a, do: a, else: b (flipped comparison)" do
+    test "does not flag strict if b > a, do: a, else: b (value-kind unsafe on ties)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def smaller(a, b) do
           if b > a, do: a, else: b
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.message =~ "min/2"
+      assert check(code) == []
     end
 
     test "detects if b >= a, do: a, else: b (flipped with >=)" do
@@ -62,11 +59,11 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       assert issue.message =~ "min/2"
     end
 
-    test "detects if a > b, do: b, else: a" do
+    test "detects if a >= b, do: b, else: a" do
       code = """
       defmodule Bad do
         def smaller(a, b) do
-          if a > b, do: b, else: a
+          if a >= b, do: b, else: a
         end
       end
       """
@@ -79,7 +76,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       code = """
       defmodule Bad do
         def clamp_low(value, floor) do
-          if value - 1 < floor, do: value - 1, else: floor
+          if value - 1 <= floor, do: value - 1, else: floor
         end
       end
       """
@@ -92,7 +89,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       code = """
       defmodule Bad do
         def smaller(a, b) do
-          if a < b do
+          if a <= b do
             a
           else
             b
@@ -109,8 +106,8 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       code = """
       defmodule Bad do
         def f(a, b, c) do
-          x = if a < b, do: a, else: b
-          y = if c > x, do: x, else: c
+          x = if a <= b, do: a, else: b
+          y = if c >= x, do: x, else: c
           y
         end
       end

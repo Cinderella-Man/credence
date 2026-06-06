@@ -9,18 +9,16 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
   end
 
   describe "NoManualMax check" do
-    test "detects if a > b, do: a, else: b" do
+    test "does not flag strict if a > b, do: a, else: b (value-kind unsafe on ties)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def bigger(a, b) do
           if a > b, do: a, else: b
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.rule == :no_manual_max
-      assert issue.message =~ "max/2"
+      assert check(code) == []
     end
 
     test "detects if a >= b, do: a, else: b" do
@@ -36,17 +34,16 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       assert issue.message =~ "max/2"
     end
 
-    test "detects if b < a, do: a, else: b (flipped comparison)" do
+    test "does not flag strict if b < a, do: a, else: b (value-kind unsafe on ties)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def bigger(a, b) do
           if b < a, do: a, else: b
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.message =~ "max/2"
+      assert check(code) == []
     end
 
     test "detects if b <= a, do: a, else: b (flipped with <=)" do
@@ -66,8 +63,8 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       code = """
       defmodule Bad do
         def f(current_sum, num, max_sum) do
-          new_current = if(current_sum + num > num, do: current_sum + num, else: num)
-          new_max = if(new_current > max_sum, do: new_current, else: max_sum)
+          new_current = if(current_sum + num >= num, do: current_sum + num, else: num)
+          new_max = if(new_current >= max_sum, do: new_current, else: max_sum)
           {new_current, new_max}
         end
       end
@@ -81,7 +78,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       code = """
       defmodule Bad do
         def bigger(a, b) do
-          if a > b do
+          if a >= b do
             a
           else
             b
