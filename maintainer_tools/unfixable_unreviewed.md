@@ -1,5 +1,3 @@
-lib/pattern/no_nested_then.ex
-test/pattern/no_nested_then_test.exs
 lib/pattern/no_reduce_for_partition.ex
 test/pattern/no_reduce_for_partition_test.exs
 lib/pattern/no_reduce_range_with_elem.ex

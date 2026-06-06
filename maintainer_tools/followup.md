@@ -340,3 +340,9 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_manual_list_reverse_test.exs`
 - Reason: duplicates already-promoted no_manual_list_reduce (manual reverse is a fold with update [h|acc]; its own fix test "cons-building update" already flags+fixes this exact shape) — fold/drop
 
+## no_nested_then — 2026-06-06
+- Files:
+  - `lib/pattern/no_nested_then.ex`
+  - `test/pattern/no_nested_then_test.exs`
+- Reason: flattening then-closures leaks param bindings (proven: shadowing {20,1}vs{20,2}; binding() [:z]vs[:a,:r1,:z]); a safe fix needs scope-aware restructuring (fresh-name hoisting + binding/var! exclusion + statement-position detection), no clean slim core authorable in a single-rule review — inconclusive
+
