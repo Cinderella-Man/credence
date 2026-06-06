@@ -3,13 +3,6 @@
 Items pulled out of the candidate queue that need dedicated human attention
 (not handled by the per-rule review loop). Reviewed case by case.
 
-## no_cond_two_clauses — 2026-06-04
-- Files:
-  - `lib/pattern/no_cond_two_clauses.ex`
-  - `test/pattern/no_cond_two_clauses_check_test.exs`
-  - `test/pattern/no_cond_two_clauses_fix_test.exs`
-- Reason: complement extension is not behavior-preserving — original cond evaluates the guard operands twice in the else path (first guard, then complement) while the if/else rewrite evaluates them once; diverges on side-effecting/non-idempotent operands (e.g. `IO.puts(x)==:e`/`!=`, `next_id()<=max`/`>max`). The accepted `true`-second-guard case never had this since `true` is not evaluated; the rule can't statically restrict to pure operands.
-
 ## no_dead_map_update — 2026-06-04
 - Files:
   - `lib/pattern/no_dead_map_update.ex`
