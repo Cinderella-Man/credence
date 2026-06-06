@@ -126,3 +126,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_manual_bit_count_test.exs`
 - Reason: non-local rewrite (delete 2 helper clauses + rewrite remote call sites) and check underspecifies popcount (admits non-popcount/list/tuple accumulators and negative/non-terminating inputs), so no behaviour-preserving patch exists for any flagged shape.
 
+## no_manual_has_duplicates — 2026-06-06
+- Files:
+  - `lib/pattern/no_manual_has_duplicates.ex`
+  - `test/pattern/no_manual_has_duplicates_test.exs`
+- Reason: check flags the arity-2 accumulator helper, whose answer depends on the accumulator (do_check([1,2],%{1=>true})=true vs Enum.uniq!=list=false under :strict); the only equivalent rewrite (Enum.uniq(list)!=list) belongs to the un-flagged caller seeding %{} and still diverges on non-list/improper inputs, with no safe local subset.
+
