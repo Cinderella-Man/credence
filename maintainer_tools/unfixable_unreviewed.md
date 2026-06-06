@@ -1,5 +1,3 @@
-lib/pattern/no_reduce_range_with_elem.ex
-test/pattern/no_reduce_range_with_elem_test.exs
 lib/pattern/no_redundant_comparison_guard.ex
 test/pattern/no_redundant_comparison_guard_test.exs
 lib/pattern/no_redundant_rem_guard.ex

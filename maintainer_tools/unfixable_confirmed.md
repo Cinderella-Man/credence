@@ -162,3 +162,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_reduce_for_partition_test.exs`
 - Reason: check flags only the reduce node, whose value is reversed-order lists (or {list,int}); no Enum.split_with reproduces it, and matching the trailing reverses is unsafe (guard swallows errors a predicate raises)
 
+## no_reduce_range_with_elem — 2026-06-06
+- Files:
+  - `lib/pattern/no_reduce_range_with_elem.ex`
+  - `test/pattern/no_reduce_range_with_elem_test.exs`
+- Reason: reduce-over-range+elem → zip/Tuple.to_list can't preserve answer; range bound never statically equals tuple_size (out-of-bounds elem raises while rewrite truncates), even the slimmest core diverges on the empty tuple (raises vs []), bodies/accumulators are arbitrary, and the order-fixing Enum.reverse is outside the flagged node.
+
