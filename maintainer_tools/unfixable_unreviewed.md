@@ -1,5 +1,3 @@
-lib/pattern/no_uniq_then_count.ex
-test/pattern/no_uniq_then_count_test.exs
 lib/pattern/prefer_enum_split.ex
 test/pattern/prefer_enum_split_test.exs
 lib/pattern/prefer_regex_match.ex
