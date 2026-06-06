@@ -150,3 +150,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_map_then_reduce_test.exs`
 - Reason: fusing map-then-reduce reorders map/reduce side effects (mmmrrr→mrmrmr) and the 2-arity reduce form leaves the first source element unmapped ({4,3}); no safe core without an undecidable purity guarantee :strict forbids.
 
+## no_min_max_reduce_with_index — 2026-06-06
+- Files:
+  - `lib/pattern/no_min_max_reduce_with_index.ex`
+  - `test/pattern/no_min_max_reduce_with_index_test.exs`
+- Reason: reduce's seed accumulator is an extra candidate that can be returned (proven {0,0} vs {3,1}); min_by/max_by has no seed, and check never constrains init to the enumerable's first element.
+
