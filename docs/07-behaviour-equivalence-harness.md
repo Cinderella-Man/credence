@@ -1,0 +1,212 @@
+# Behaviour-equivalence test suite — prove every rule's fix preserves behaviour
+
+## Context
+~32 rules in `maintainer_tools/unfixable_confirmed.md` + ~44 in `followup.md` were
+rejected because a fix **changed behaviour on an input the author never hand-tested**
+— a runtime divergence between `eval(original)` and `eval(fixed)` on some witness
+(value-kind change, negative index, non-list enumerable raises, multi-codepoint
+grapheme, exception type/order, double-eval, sort stability, dropped accumulator,
+empty/nil edges). The existing per-rule tests (`_check_test.exs` + `_fix_test.exs`)
+are example-based **source-string `==`** checks — they only cover inputs the author
+imagined, so they miss exactly these.
+
+**This is NOT a new "harness" or judge.** It is a third kind of per-rule test case,
+living in `test/pattern/`, run by plain `mix test` alongside `_check`/`_fix`: run the
+before- and after-code over a curated battery of adversarial inputs and assert
+identical outcomes (incl. exception parity). Its job in Credence: a **permanent
+regression safety net** over all 125 shipped rules (and any future rule).
+
+Because these tests run over **already-shipped** code, the backfill will surface
+shipped rules that diverge. **A divergence is a real bug** (decision below): narrow
+the rule's safe core or drop the unsafe case — never weaken/hide the test
+([[rule-evolution-methodology]]).
+
+**Impact on rule creation (note only — out of scope for this repo):** once the
+meta-gate requires an equivalence test per rule, the sister-repo authoring loop,
+seeing the gate fail, will write these tests up front — catching behaviour-changing
+fixes at creation instead of at review. That benefit is a side effect of the gate
+existing here; this document does not modify the creation repo.
+
+**Exemplar already in-tree:** `test/pattern/no_manual_frequencies_fix_test.exs:114-225`
+(`eval1` + `assert_preserves` over `@term_lists`/`@string_lists`). This plan
+generalizes that one block into shared, mandatory, gate-enforced support.
+
+## Decisions (locked)
+1. **Purpose:** regression safety net inside `mix test`; not a separate harness/judge. Creation-repo benefit is a note.
+2. **Divergence on a shipped rule = a bug.** Fix/narrow/drop the rule; never `@tag`-skip or weaken the test. Meta-gate stays *soft* (excluded) during backfill so `main` stays mergeable, flips *hard* once the divergence list is empty.
+3. **Three coverage tiers** (every rule lands in exactly one — see table):
+   - **T1 expression** — fix rewrites a self-contained expression → wrap before/after in `fn <vars> -> expr end`, apply per input.
+   - **T2 module-call** — fix is def/module-structural (inline defp, case→heads, manual recursion→Enum, cross-statement) → compile the whole before- and after-**module**, invoke the target function over inputs.
+   - **T3a cosmetic** — provably no runtime effect (param rename, attr move, doc text, typespec, `require Logger`) → `mark_equivalence_cosmetic(reason)`.
+   - **T3b unconstructible** — behavioural but no self-contained callable example (cross-module/macro/compile-time) → `mark_equivalence_unconstructible(reason)`.
+4. **No ETS / no global attestation.** Anti-stub teeth come from `assert_equivalent` itself (asserts rule fires + a rewrite happened + battery ≥ 3). Meta-gate only checks per-rule file existence + that the file references the rule.
+5. **In-process eval + `try/rescue/catch`** (no spawn/timeout). Outcome tagged `{:ok,v}` | `{:raise,Module}` | `{:throw|:exit,term}`. Exception compared **module-only** (`compare_messages: true` opt-in). Per-rule timeout wrapper documented as an escape hatch, unused by default.
+6. **Effect probe is a helper mode, not a phase.** `probe_effects: true` injects an effect-recording expr into the rule's predicate/transform hole (in-eval, via process dict) and asserts effect-trace equality (order + count). Used by the 26 PROBE rules.
+7. **Curated batteries only** gate; StreamData stays additive/non-gating (last phase).
+8. **Backfill authored** by a throwaway scaffold script under `maintainer_tools/` (reads `default_rules/0`, lifts `_check_test.exs` snippets into skeletons, stamps guessed tier), then a human/agent fill pass tier-by-tier. No `mix` task in `lib`, no loop, no shared-doc edit.
+
+## Files
+- add `test/support/behaviour_equivalence.ex` — `Credence.BehaviourEquivalence`: `assert_equivalent/2`, T2 `assert_equivalent_module/2`, `mark_equivalence_cosmetic/1`, `mark_equivalence_unconstructible/1`, `eval_outcome/2`, effect probe. (`test/support` already in `elixirc_paths(:test)`.)
+- add `test/support/equivalence_batteries.ex` — curated dimensions by data-shape; reuse `assumption_generators.ex:single_codepoint_string`.
+- add `test/equivalence_meta_test.exs` — gate (mirror `test/assumptions_meta_test.exs`): per rule in `Credence.Pattern.default_rules()`, `test/pattern/<snake>_equivalence_test.exs` exists AND references the rule.
+- add `test/pattern/<base>_equivalence_test.exs` ×125 (snippets from `_check_test.exs`).
+- modify `test/pattern/no_manual_frequencies_fix_test.exs` — port exemplar block to the helper (or move into its new `_equivalence_test.exs`).
+- reference (unmodified): `lib/rule_helpers.ex:295` (`apply_rule_fix/3`), `lib/pattern.ex:145` (`default_rules/0`).
+- **NOT modified:** `credence_evolution/prompt.md` (other repo, out of scope).
+
+## Support module — `Credence.BehaviourEquivalence`
+- `assert_equivalent(before_expr, opts)`, opts = `rule:` module, `vars:` (ordered free-var names; single scalar auto-wrapped), `inputs:` (battery list), `probe_effects:`, `compare_messages:`, `tiny_battery_ok:`. Steps:
+  1. assert `rule.check(parse(before)) != []` (rule fires — anti-dead-snippet),
+  2. `fixed = RuleHelpers.apply_rule_fix(rule, before)`; assert `fixed != before` (rewrite happened),
+  3. assert `length(inputs) >= 3` unless `tiny_battery_ok:`,
+  4. compile `fn <vars> -> before end` / `fn <vars> -> fixed end` once each; for every input assert `eval_outcome(orig,in) == eval_outcome(fixed,in)`.
+- `assert_equivalent_module(before_module_src, opts)` (T2): opts add `call:` (`{fun, arity}` or builder) — compile both module sources under unique names, apply `fun` over each battery input, compare `eval_outcome`.
+- `eval_outcome/2` — `try/rescue/catch` → `{:ok,v}` | `{:raise,mod}` | `{:throw,t}` | `{:exit,t}`. Suppress eval warnings via `ExUnit.CaptureIO` only if noisy.
+
+## Coverage worklist — all 125 rules
+Counts (after deep-dive confirmation of every opt-out + borderline):
+**T1 = 86, T2 = 37, T3a = 2, T3b = 0.** PROBE (effect-trace) flag on **26**.
+Deep-dive converted **6 former opt-outs into genuine behavioural tests** and
+**confirmed 1 unsafe shipped rule** (`redundant_list_guard`, below). Only 2 truly-inert
+opt-outs remain; nothing is unconstructible.
+
+### Confirmed divergences (shipped-rule bugs found during classification)
+- **`redundant_list_guard` — was UNSAFE, now RESOLVED (narrowed via assumption).** Dropping
+  `is_list(tail)` from a cons-head guard diverges on the improper list `[1 | 2]` (guarded →
+  `:fallthrough`; ungated → `{:matched, 1, 2}`), verified by compiling+running both modules.
+  Since the cons pattern never forces `tail` to be a list, there is no clause-shape safe core —
+  so the fix is gated behind a new **`proper_lists`** assumption (default on; off under `:strict`),
+  exactly mirroring `single_codepoint_graphemes`. Implemented: switch added to
+  `Credence.Assumptions`, `assumptions/0` + honest moduledoc/message on the rule,
+  `AssumptionGenerators.proper_list/0`, `redundant_list_guard_property_test.exs` (promise proof),
+  and the equivalence test now passes in-domain (proper lists) + an out-of-domain `assert_raise`
+  demo. Confirmed end-to-end: `:strict` keeps the guard (`Applied: []`), default removes it.
+- `no_piped_regex_replace` — investigated, **SAFE** (only the piped, crashing form is rewritten;
+  `String.replace ≡ Regex.replace` on all probed inputs). Kept as T2; not a divergence.
+
+### T2 module-call (37) — compile before/after module, invoke fn over battery
+Structural / cross-statement: no_case_on_param_dispatch, no_destructure_reconstruct,
+no_double_filter, no_double_sort_same_list, no_enum_at_midpoint_access,
+no_guard_equality_for_pattern_match, no_hd_tl_when_cons_bound, no_is_nil_guard,
+no_is_prefix_for_non_guard, no_length_based_indexing, no_length_guard_to_pattern,
+no_list_append_in_recursion, no_list_concat_with_recursive_result, no_list_to_tuple_for_access,
+no_manual_count_with_predicate ⚑, no_manual_find ⚑, no_manual_list_last,
+no_manual_list_reduce ⚑, no_map_get_sentinel, no_map_update_then_fetch,
+no_multiple_enum_at, no_nested_enum_on_same_enumerable, no_redundant_comparison_guard,
+no_redundant_negated_guard, no_repeated_div_rem, no_trivial_delegation,
+no_underscore_function_name, no_unnecessary_catch_all_raise, prefer_guard_over_if.
+Converted from opt-out (deep-dive): **inconsistent_param_names** (param rename across
+clauses/body — miss/collision changes return), **non_grouped_clauses** (clause reorder with
+NO overlap guard — can change pattern-match dispatch), **no_missing_require_logger** (before
+crashes `UndefinedFunctionError`, after returns), **no_attr_before_defmodule** (doc attachment
+via `Code.fetch_docs/1`), **no_piped_regex_replace** (safe), **redundant_list_guard** (unsafe — above).
+Doc-observation sub-case (compile module, compare `Code.fetch_docs/1` instead of a return value):
+**no_trailing_newline_in_doc**, **prefer_heredoc_for_multi_line_doc** (buggy strip/unescape
+corrupts the stored docstring — low runtime risk but cheaply witnessable).
+
+### T3a cosmetic (2) — `mark_equivalence_cosmetic` (proven inert)
+no_doc_false_on_private (`@doc` on `defp` is compile-time-discarded — no emitted code changes),
+no_literal_list_typespec (`@spec` is compile-only; the original doesn't even compile).
+
+### T3b unconstructible (0)
+None — deep-dive converted both former candidates to T2.
+
+### PROBE ⚑ rules (26) — need `probe_effects: true` (eval-order/double-eval)
+no_anon_fn_application_in_pipe, no_case_destructure_in_pipe, no_eager_with_index_in_reduce,
+no_explicit_max_reduce, no_explicit_min_reduce, no_explicit_product_reduce,
+no_explicit_sum_reduce, no_filter_then_count, no_filter_then_first,
+no_find_value_default_case, no_group_by_for_frequencies, no_if_empty_for_enum_min_max,
+no_list_append_in_reduce, no_manual_count_with_predicate, no_manual_find,
+no_manual_list_reduce, no_map_keys_enum_lookup, no_map_keys_or_values_for_iteration,
+no_map_then_aggregate, no_reduce_for_group_by, no_reduce_for_map_building,
+no_string_concat_in_loop, no_take_while_length_check, no_zip_then_map,
+prefer_map_put_new, use_map_join.
+
+### T1 expression (86) — `fn <vars> -> expr end`
+All remaining rules. High-risk first (taxonomy witnesses): no_enum_at_negative_index,
+no_enum_drop_negative, no_enum_take_negative (bounds/negatives); no_codepoint_string_reverse,
+no_manual_string_reverse, unnecessary_grapheme_chunking, no_grapheme_palindrome_check,
+no_string_length_for_char_check, avoid_graphemes_* (Unicode); no_sort_then_at,
+no_sort_then_reverse, no_sort_for_top_k, prefer_desc_sort_over_negative_take (sort stability);
+no_redundant_case_nil_clause, no_map_keys_for_membership, no_keyword_get_integer_key,
+no_list_delete_at_length, no_list_delete_at_with_length, no_list_pop_at_for_access
+(nil/empty edges); no_identity_float_coercion, prefer_erlang_float (value-kind).
+Remainder: avoid_graphemes_enum_count(_with_predicate), avoid_graphemes_length,
+hallucinated_guard, no_capture_fn_apply, no_case_boolean_result, no_case_true_false,
+no_case_tuple_guard_dispatch, no_chunk_by_identity_for_dedup, no_cond_two_clauses,
+no_dead_map_update, no_empty_map_new, no_enum_count_for_length, no_enum_into_empty_mapset,
+no_fetch_then_update, no_identity_function_in_enum, no_if_true_false, no_kernel_op_in_pipeline,
+no_length_comparison_for_empty, no_list_duplicate_flatten, no_list_duplicate_join,
+no_list_fold, no_manual_enum_uniq, no_manual_frequencies, no_manual_max, no_manual_min,
+no_map_put_get_increment, no_param_rebinding, no_reduce_while_without_halt,
+no_redundant_assignment, no_redundant_binary_syntax, no_redundant_dedup_before_mapset,
+no_redundant_enum_join_separator, no_redundant_list_traversal, no_redundant_to_list,
+no_tautological_if, no_uniq_then_count, no_unless_else, prefer_enum_reverse_two,
+prefer_enum_slice, prefer_enum_split, prefer_regex_match, no_kernel_shadowing
+(var shadows `Kernel.max/2`; wrap lambda), use_map_join handled under PROBE.
+(`redundant_list_guard` moved to T2 — confirmed unsafe, see divergences above.)
+
+(Full machine-readable tier+probe+freevars table emitted by the scaffold script;
+above is the human worklist.)
+
+## Phasing (gate flips hard only at the end)
+1. **Support + battery + 6 proof tests — DONE (all modes proven, full suite green: 4488/0).**
+   - `test/support/behaviour_equivalence.ex` — `assert_equivalent/2` (T1), `assert_equivalent_module/2`
+     (T2, compiles before/after under unique names, arity-aware args), `assert_effect_trace_equivalent/2`
+     (PROBE, process-dict trace), `eval_outcome/2` (exception parity), `mark_equivalence_cosmetic/1`,
+     `mark_equivalence_unconstructible/1`. Anti-stub teeth (fires + rewrote + battery ≥ 3) verified
+     by negative controls.
+   - `test/support/equivalence_batteries.ex` — `term_lists`, `signed_integers`, `unicode_strings`,
+     `single_codepoint_strings`, `multi_codepoint_strings`, `stability_lists`.
+   - Proof tests: `no_enum_at_negative_index` (T1), `no_codepoint_string_reverse` (T1 — **dual
+     exemplar**: passes on single-codepoint strings, and the suite *catches* the divergence on
+     multi-codepoint graphemes, demonstrating why the rule carries `single_codepoint_graphemes`),
+     `no_sort_then_reverse` (T1 stability), `no_trivial_delegation` (T2), `use_map_join` (PROBE),
+     `redundant_list_guard` (T2 — divergence demo: pins the confirmed bug via `assert_raise` until narrowed).
+   - Note: `apply_rule_fix/3` bypasses assumption gating, so the suite tests the fix unconditionally
+     (correct — an assumption-gated rule must still be witnessed safe *within* its domain).
+2. **Backfill — scaffold DONE; fill IN PROGRESS.** `maintainer_tools/gen_equivalence_skeletons.exs`
+   generated all 119 missing `*_equivalence_test.exs` (6 exemplars preserved) → **125/125 files exist**.
+   Each skeleton is stamped with its confirmed tier, seeded with firing snippets lifted from the
+   `_check_test.exs`, tagged `@moduletag :equivalence_todo` (excluded via `test_helper.exs`, so the
+   suite stays green: 4493 tests / 117 excluded). The 2 cosmetics are pre-filled and pass now.
+   Remaining work = the fill pass: replace each TODO snippet/battery and drop the tag, highest-risk
+   T1 first, then T2, then probe. Each divergence on a shipped rule → narrow/drop (decision 2; first
+   one — `redundant_list_guard` — already resolved).
+3. **Backfill T2 (29)** via `assert_equivalent_module`; **PROBE (26)** turn on `probe_effects`.
+4. **Stamp T3a (8) + T3b (2)** with cosmetic/unconstructible marks + reasons. Resolve the
+   two flagged rules. Drive the T3b/unconstructible pile to minimum.
+5. **Flip gate hard** (un-exclude `equivalence_meta_test.exs`) once backfill = 100% and the
+   divergence worklist is empty.
+- StreamData layer (additive, fixed-seed, non-gating) — optional, after the flip.
+
+## Verification
+- **Catches divergence (real example, resolved):** `redundant_list_guard` over the improper-list
+  witness `[1 | 2]` (`:fallthrough` vs `{:matched,1,2}`) failed equivalence; after narrowing behind
+  the `proper_lists` assumption it passes in-domain (proper lists) and the out-of-domain `assert_raise`
+  demo pins the divergence. Also craft `no_enum_take_negative` with a count that swaps halves / a
+  sort rule on equal-key tuples → must fail with witness.
+- **Exception parity:** snippet where original raises `ArithmeticError` and fixed `ArgumentError`
+  must fail — proves `eval_outcome` compares raises module-only.
+- **Effect probe:** a reorder/double-eval snippet must fail on trace mismatch.
+- **Anti-stub:** an empty `<base>_equivalence_test.exs` or `[]`/`<3` battery must fail
+  (helper assertion + meta-gate file/reference check).
+- **Historical regression check:** for ≥5 rules in `unfixable_confirmed.md`/`followup.md`,
+  write the equivalence test against their *original (rejected)* fix and confirm the battery
+  reproduces the documented divergence — i.e. the suite would have caught each.
+- `mix test` green after each phase; hard-flip green only at 100% backfill + empty divergence list.
+
+## Unresolved questions
+1. **T2 callable synthesis:** for def/module rules whose `_check` snippet is a fragment (not a
+   full module), do we (a) hand-wrap each into a minimal callable `defmodule`, or (b) have the
+   scaffold script synthesize a wrapper from the rule's expected shape? (a) is safer, (b) scales.
+2. **Battery↔tier defaults:** should the scaffold auto-attach default battery dimensions per
+   rule from its `assumptions/0` (so fill = confirm), or leave batteries blank (so fill = author)?
+3. ~~`redundant_list_guard` fix~~ — RESOLVED: narrowed behind the new `proper_lists` assumption
+   (default on, off under `:strict`); tests green. Loop firing confirmed: the rule-creation/review
+   flow runs `:default`, where `proper_lists` is on, so the rule fires unchanged.
+4. **Divergence worklist home:** track shipped-rule divergences found during backfill in
+   `maintainer_tools/` (alongside unfixable/followup), or in this repo's docs?
+5. **Doc-observation rules worth it?** `no_trailing_newline_in_doc` / `prefer_heredoc_for_multi_line_doc`
+   are testable via `Code.fetch_docs/1` but carry near-zero runtime risk — keep as T2-doc tests, or
+   accept as cosmetic to save effort?

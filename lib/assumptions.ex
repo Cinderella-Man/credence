@@ -65,6 +65,17 @@ defmodule Credence.Assumptions do
   characters in your source file. It is on by default because LLM-generated
   Phoenix apps overwhelmingly process exactly this kind of text; turn it off
   (or use `:strict`) if your code processes arbitrary Unicode.
+
+  ### `proper_lists` (on by default)
+
+  Promises that every list your **running data** builds or receives is a
+  *proper* list — one whose final tail is `[]`, so the tail of any cons cell is
+  itself a list. It rules out *improper* lists such as `[1 | 2]`, whose tail is
+  a non-list value. This matters for rules that drop an `is_list/1` guard on a
+  cons-tail variable (`[head | tail] when is_list(tail)`): the guard is only
+  redundant when `tail` cannot be a non-list, i.e. under this promise. It is on
+  by default because improper lists are rare in application code; turn it off
+  (or use `:strict`) if your code deliberately constructs improper lists.
   """
 
   @type name :: atom()
@@ -76,6 +87,13 @@ defmodule Credence.Assumptions do
       summary:
         "Every character in your running data is a single codepoint (no decomposed " <>
           "accents, ZWJ emoji, or flag sequences). About running data, not source."
+    },
+    proper_lists: %{
+      default: true,
+      summary:
+        "Every list your running data builds or receives is a proper list — its " <>
+          "tail is always a list, never an improper cons like `[1 | 2]`. About " <>
+          "running data, not source."
     }
   }
 

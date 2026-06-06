@@ -1,14 +1,21 @@
 defmodule Credence.Pattern.RedundantListGuard do
   @moduledoc """
-  Detects redundant `is_list/1` guards on variables already bound by a
-  cons pattern `[head | tail]`).
+  Detects `is_list/1` guards on a cons-pattern tail variable
+  (`[head | tail] when is_list(tail)`) that are redundant **under the
+  `proper_lists` promise**.
 
   ## Why this matters
 
-  The pattern `[head | tail]` destructures a cons cell. While technically
-  `tail` could be a non-list value (creating an improper list), in practice
-  almost all Elixir code works with proper lists, making `is_list(tail)`
-  guards on cons-tail variables redundant noise.
+  The pattern `[head | tail]` destructures a cons cell, but it does **not**
+  guarantee `tail` is a list: it also matches *improper* lists like `[1 | 2]`,
+  where `tail` is a non-list. So `is_list(tail)` is doing real work — it filters
+  those out. The guard is only redundant when no improper list can reach the
+  clause, i.e. when the caller promises proper lists.
+
+  This rule therefore declares the `proper_lists` assumption and runs only while
+  that switch is on (the default). Under `:strict` it does not fire, because
+  removing the guard would change behaviour on `[1 | 2]` (the guarded clause
+  rejects it and falls through; the unguarded clause matches it).
 
   ## Flagged patterns
 
@@ -40,6 +47,9 @@ defmodule Credence.Pattern.RedundantListGuard do
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
+
+  @impl true
+  def assumptions, do: [:proper_lists]
 
   @impl true
   def check(ast, _opts) do
@@ -188,9 +198,9 @@ defmodule Credence.Pattern.RedundantListGuard do
 
   defp build_message(var) do
     """
-    Redundant `when is_list(#{var})` guard.
-    The pattern `[_ | #{var}]` already guarantees that `#{var}` is a list.
-    Remove the `is_list(#{var})` guard to reduce noise.
+    Redundant `when is_list(#{var})` guard (under the `proper_lists` promise).
+    With proper lists, the tail `#{var}` of `[_ | #{var}]` is always a list, so
+    the guard never changes which clause matches. Remove it to reduce noise.
     """
   end
 end

@@ -28,4 +28,14 @@ defmodule Credence.AssumptionGenerators do
   def single_codepoint_string do
     StreamData.string([?\s..?~, 0xC0..0xD6, 0xD8..0xF6, 0xF8..0xFF])
   end
+
+  @doc """
+  A generator of non-empty **proper** lists — the proof tool for `proper_lists`.
+  StreamData's `list_of/2` only ever builds proper lists (the tail is always
+  `[]`), so every value it emits satisfies the promise by construction. We force
+  at least one element so the value matches a `[head | tail]` cons pattern.
+  """
+  def proper_list do
+    StreamData.list_of(StreamData.term(), min_length: 1)
+  end
 end
