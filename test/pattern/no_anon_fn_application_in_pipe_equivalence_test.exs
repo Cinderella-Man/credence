@@ -1,25 +1,32 @@
 defmodule Credence.Pattern.NoAnonFnApplicationInPipeEquivalenceTest do
   @moduledoc """
-  Tier 1 + PROBE — eval-order/double-eval over a transform hole.
+  Tier 1 (expression). `value |> (fn x -> ... end).()` → `value |> then(fn x -> ... end)`.
+  Both apply the anonymous function to the piped value exactly once, so the result
+  is identical. Battery covers several piped values.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Regression note: the fix's patch range used to start at the `fn` keyword,
+  stranding the parenthesized fn's leading `(` and producing the uncompilable
+  `value |> (then(fn ... end)`. The range is now extended one column left to
+  swallow that `(`; verified valid for single, chained, and multi-line forms.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoAnonFnApplicationInPipe
 
-  # Firing snippets lifted from no_anon_fn_application_in_pipe_check_test.exs:
-  #   (none auto-extracted — see the check test)
-
-  test "no_anon_fn_application_in_pipe: fix preserves transform call order/count over the battery" do
-    assert_effect_trace_equivalent(
-      "TODO: firing expression with the transform hole written as `effect.(x)`",
+  test "value |> (fn x -> ... end).() → then(fn) preserves the result" do
+    assert_equivalent("list |> Enum.sort() |> (fn s -> [1 | s] end).()",
       rule: NoAnonFnApplicationInPipe,
       vars: [:list],
-      inputs: [{[1, 2, 3], "-"}]
+      inputs: [[], [3, 1, 2], [1], [2, 2, 1], [-1, -5, 0]]
+    )
+  end
+
+  test "chained applications → chained then/2 preserve the result" do
+    assert_equivalent("x |> (fn a -> a + 1 end).() |> (fn b -> b * 2 end).()",
+      rule: NoAnonFnApplicationInPipe,
+      vars: [:x],
+      inputs: [0, 1, -3, 10, 100]
     )
   end
 end

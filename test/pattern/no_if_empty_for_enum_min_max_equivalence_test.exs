@@ -1,39 +1,20 @@
 defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxEquivalenceTest do
   @moduledoc """
-  Tier 1 + PROBE — eval-order/double-eval over a transform hole.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression).
+  `if Enum.empty?(x), do: default, else: Enum.min(x)` → `Enum.min(x, fn -> default end)`.
+  `Enum.empty?/1` reports emptiness for every enumerable, matching `Enum.min/2`'s
+  empty_fallback exactly. Battery leads with the empty list (where the fallback fires).
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoIfEmptyForEnumMinMax
 
-  # Firing snippets lifted from no_if_empty_for_enum_min_max_check_test.exs:
-  #   defmodule Bad do
-  #       def run(lengths) do
-  #         if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       def run(lengths) do
-  #         if Enum.empty?(lengths), do: -1, else: Enum.max(lengths)
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       def run(lengths) do
-  #         if !Enum.empty?(lengths), do: Enum.min(lengths), else: 0
-  #       end
-  #     end
-
-  test "no_if_empty_for_enum_min_max: fix preserves transform call order/count over the battery" do
-    assert_effect_trace_equivalent(
-      "TODO: firing expression with the transform hole written as `effect.(x)`",
+  test "if Enum.empty? default else Enum.min → Enum.min(_, fn -> default end) incl. empty" do
+    assert_equivalent("if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)",
       rule: NoIfEmptyForEnumMinMax,
-      vars: [:list],
-      inputs: [{[1, 2, 3], "-"}]
+      vars: [:lengths],
+      inputs: [[], [3, 1, 2], [5], [1, 1.0, 2], [-3, -1]]
     )
   end
 end

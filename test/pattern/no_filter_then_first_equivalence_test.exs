@@ -1,37 +1,19 @@
 defmodule Credence.Pattern.NoFilterThenFirstEquivalenceTest do
   @moduledoc """
-  Tier 1 + PROBE — eval-order/double-eval over a transform hole.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression). `Enum.at(Stream.filter(nums, pred), 0)` → `Enum.find(nums, pred)`.
+  Both return the first element satisfying `pred` (or `nil`), applying `pred` in
+  order and short-circuiting. Battery covers match, no-match, and empty.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoFilterThenFirst
 
-  # Firing snippets lifted from no_filter_then_first_check_test.exs:
-  #   defmodule M do
-  #       def first_even(nums), do: Enum.at(Stream.filter(nums, &even?/1), 0)
-  #     end
-  #   defmodule M do
-  #       def first_even(nums), do: Stream.filter(nums, &even?/1) |> Enum.at(0)
-  #     end
-  #   defmodule M do
-  #       def first_palindrome(nums) do
-  #         nums
-  #         |> Stream.filter(&palindrome?/1)
-  #         |> Enum.at(0)
-  #       end
-  #     end
-
-  test "no_filter_then_first: fix preserves transform call order/count over the battery" do
-    assert_effect_trace_equivalent(
-      "TODO: firing expression with the transform hole written as `effect.(x)`",
+  test "Enum.at(Stream.filter(nums, pred), 0) → Enum.find(nums, pred) preserves the first match" do
+    assert_equivalent("Enum.at(Stream.filter(nums, fn x -> rem(x, 2) == 0 end), 0)",
       rule: NoFilterThenFirst,
-      vars: [:list],
-      inputs: [{[1, 2, 3], "-"}]
+      vars: [:nums],
+      inputs: [[], [1, 3, 5], [1, 2, 3, 4], [2, 4], [-3, -2, -1]]
     )
   end
 end

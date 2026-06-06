@@ -1,39 +1,20 @@
 defmodule Credence.Pattern.NoManualFrequenciesEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression). `Enum.reduce(list, %{}, fn item, counts -> Map.update(counts, item, 1, &(&1 + 1)) end)`
+  → `Enum.frequencies(list)`. Both count occurrences with strict-`===` keys, so the
+  `1` vs `1.0` value-kind case keeps them distinct. (The richer exemplar lives in
+  no_manual_frequencies_fix_test.exs; this pins the identity-key case via the harness.)
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoManualFrequencies
 
-  # Firing snippets lifted from no_manual_frequencies_check_test.exs:
-  #   defmodule Bad do
-  #       def char_freq(string) do
-  #         string
-  #         |> String.graphemes()
-  #         |> Enum.reduce(%{}, fn char, counts ->
-  #           Map.update(counts, char, 1, &(&1 + 1))
-  #         end)
-  #       end
-  #     end
-  #   Enum.reduce(words, %{}, fn word, acc ->
-  #       Map.update(acc, word, 1, &(&1 + 1))
-  #     end)
-  #   Enum.reduce(words, %{}, fn word, acc ->
-  #       Map.update(acc, String.downcase(word), 1, &(&1 + 1))
-  #     end)
-
-  test "no_manual_frequencies: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "manual Map.update reduce → Enum.frequencies preserves the map incl. value-kind keys" do
+    assert_equivalent("Enum.reduce(list, %{}, fn item, counts -> Map.update(counts, item, 1, &(&1 + 1)) end)",
       rule: NoManualFrequencies,
-      vars: [:todo],
+      vars: [:list],
       inputs: B.term_lists()
     )
   end

@@ -1,39 +1,19 @@
 defmodule Credence.Pattern.NoStringConcatInLoopEquivalenceTest do
   @moduledoc """
-  Tier 1 + PROBE — eval-order/double-eval over a transform hole.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression). `Enum.reduce(list, "", fn char, acc -> acc <> char end)` →
+  `Enum.join(list)`. Both concatenate in order. Battery covers empty, single, and
+  multi-element string lists.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoStringConcatInLoop
 
-  # Firing snippets lifted from no_string_concat_in_loop_check_test.exs:
-  #   defmodule Example do
-  #       def build(list) do
-  #         Enum.reduce(list, "", fn char, acc -> acc <> char end)
-  #       end
-  #     end
-  #   defmodule Example do
-  #       def build(list) do
-  #         Enum.reduce(list, "", fn char, acc -> acc <> to_string(char) end)
-  #       end
-  #     end
-  #   defmodule Example do
-  #       def build(list) do
-  #         list |> Enum.reduce("", fn char, acc -> acc <> char end)
-  #       end
-  #     end
-
-  test "no_string_concat_in_loop: fix preserves transform call order/count over the battery" do
-    assert_effect_trace_equivalent(
-      "TODO: firing expression with the transform hole written as `effect.(x)`",
+  test "reduce(acc <> char) → Enum.join preserves the concatenation" do
+    assert_equivalent(~S|Enum.reduce(graphemes, "", fn char, acc -> acc <> char end)|,
       rule: NoStringConcatInLoop,
-      vars: [:list],
-      inputs: [{[1, 2, 3], "-"}]
+      vars: [:graphemes],
+      inputs: [[], ["x"], ["a", "b", "c"], ["", "z", ""], ["日", "本"]]
     )
   end
 end

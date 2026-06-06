@@ -1,8 +1,7 @@
 defmodule Credence.Pattern.NoMapThenAggregate do
   @moduledoc """
-  Detects `Enum.map/2` immediately followed by a terminal aggregation
-  like `Enum.max/1`, `Enum.min/1`, or `Enum.sum/1`, which creates an
-  unnecessary intermediate list.
+  Detects `Enum.map/2` immediately followed by `Enum.sum/1`, which creates an
+  unnecessary intermediate list, and fuses it into a single `Enum.reduce/3`.
 
   ## Why this matters
 
@@ -12,34 +11,34 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
       # Flagged — two passes, intermediate list allocation
       numbers
-      |> Enum.chunk_every(k, 1, :discard)
       |> Enum.map(&Enum.sum/1)
-      |> Enum.max()
+      |> Enum.sum()
 
       # Better — single pass, no intermediate list
       numbers
-      |> Enum.chunk_every(k, 1, :discard)
-      |> Enum.reduce(fn chunk, best -> max(Enum.sum(chunk), best) end)
+      |> Enum.reduce(0, fn x, acc -> acc + Enum.sum(x) end)
 
-  For `max` and `min`, the fix is `Enum.reduce/2` with `max/2` or
-  `min/2`.  For `sum`, the fix is `Enum.reduce/3` accumulating the
-  result directly.
+  ## Only `sum` (aggregation), not `max`/`min` (selection)
+
+  Only `Enum.sum/1` is fused. `+` has an identity (`0`) that seeds the reduce,
+  and the mapper is applied to every element. `Enum.max/1`/`Enum.min/1` are
+  **not** flagged: the natural fusion is `Enum.reduce/2` (no init), whose seed is
+  the *first, unmapped* element — so `[5] |> Enum.map(f) |> Enum.max()` would
+  give `f.(5)` but the fused `reduce/2` gives the raw `5`. There is no identity
+  to seed max/min, so the mapper can't be applied to the seed — the fusion is not
+  behaviour-preserving. (Selection-vs-aggregation: same reason `no_explicit_max_reduce`
+  was dropped.)
 
   ## Flagged patterns
 
-  `Enum.map(f)` piped into or wrapping:
-  - `Enum.max/1`
-  - `Enum.min/1`
-  - `Enum.sum/1`
-
-  Both pipeline and direct-call nesting forms are detected.
+  `Enum.map(f)` piped into or wrapping `Enum.sum/1` (pipeline and direct-call forms).
   """
 
   use Credence.Pattern.Rule
 
   alias Credence.Issue
 
-  @aggregators [:max, :min, :sum]
+  @aggregators [:sum]
 
   @impl true
   def check(ast, _opts) do

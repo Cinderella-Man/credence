@@ -1,28 +1,20 @@
 defmodule Credence.Pattern.AvoidGraphemesEnumCountEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression), Unicode. `string |> String.graphemes() |> Enum.count()` →
+  `String.length(string)`. Both count graphemes, so they agree on every string
+  including decomposed accents and flags.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.AvoidGraphemesEnumCount
 
-  # Firing snippets lifted from avoid_graphemes_enum_count_check_test.exs:
-  #   str |> String.graphemes() |> Enum.count()
-  #   String.graphemes(str) |> Enum.count()
-  #   Enum.count(String.graphemes(str))
-
-  test "avoid_graphemes_enum_count: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "graphemes |> count → String.length preserves the count over Unicode" do
+    assert_equivalent("string |> String.graphemes() |> Enum.count()",
       rule: AvoidGraphemesEnumCount,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:string],
+      inputs: B.unicode_strings()
     )
   end
 end

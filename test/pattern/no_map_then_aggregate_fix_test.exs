@@ -11,28 +11,20 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
   end
 
   describe "NoMapThenAggregate fix" do
-    test "fixes basic pipeline: Enum.map |> Enum.max" do
-      input = """
+    test "does not flag Enum.map |> Enum.max (selection — unmapped seed, not fusable)" do
+      code = """
       list |> Enum.map(&String.length/1) |> Enum.max()
       """
 
-      expected = """
-      list |> Enum.reduce(fn el, best -> max(String.length(el), best) end)
-      """
-
-      assert fix(input) == expected
+      assert fix(code) == code
     end
 
-    test "fixes basic pipeline: Enum.map |> Enum.min" do
-      input = """
+    test "does not flag Enum.map |> Enum.min (selection — unmapped seed, not fusable)" do
+      code = """
       list |> Enum.map(&String.length/1) |> Enum.min()
       """
 
-      expected = """
-      list |> Enum.reduce(fn el, best -> min(String.length(el), best) end)
-      """
-
-      assert fix(input) == expected
+      assert fix(code) == code
     end
 
     test "fixes basic pipeline: Enum.map |> Enum.sum" do
@@ -52,17 +44,14 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       numbers
       |> Enum.chunk_every(k, 1, :discard)
       |> Enum.map(&Enum.sum/1)
-      |> Enum.max()
+      |> Enum.sum()
       """
 
       expected = """
       numbers
       |> Enum.chunk_every(k, 1, :discard)
-      |> Enum.reduce(fn el, best ->
-        max(
-          Enum.sum(el),
-          best
-        )
+      |> Enum.reduce(0, fn el, acc ->
+        acc + Enum.sum(el)
       end)
       """
 
@@ -71,26 +60,22 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
 
     test "fixes two-step pipeline (explicit source)" do
       input = """
-      Enum.map(list, &String.length/1) |> Enum.max()
+      Enum.map(list, &String.length/1) |> Enum.sum()
       """
 
       expected = """
-      Enum.reduce(list, fn el, best -> max(String.length(el), best) end)
+      Enum.reduce(list, 0, fn el, acc -> acc + String.length(el) end)
       """
 
       assert fix(input) == expected
     end
 
-    test "fixes direct nesting: Enum.max(Enum.map(enum, f))" do
-      input = """
+    test "does not flag direct nesting Enum.max(Enum.map(...)) (selection — not fusable)" do
+      code = """
       Enum.max(Enum.map(list, &String.length/1))
       """
 
-      expected = """
-      Enum.reduce(list, fn el, best -> max(String.length(el), best) end)
-      """
-
-      assert fix(input) == expected
+      assert fix(code) == code
     end
 
     test "fixes direct nesting: Enum.sum(Enum.map(enum, f))" do
@@ -109,16 +94,13 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       input = """
       readings
       |> Enum.map(fn {_, temp} -> temp end)
-      |> Enum.max()
+      |> Enum.sum()
       """
 
       expected = """
       readings
-      |> Enum.reduce(fn el, best ->
-        max(
-          (fn {_, temp} -> temp end).(el),
-          best
-        )
+      |> Enum.reduce(0, fn el, acc ->
+        acc + (fn {_, temp} -> temp end).(el)
       end)
       """
 

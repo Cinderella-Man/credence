@@ -59,19 +59,14 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
   @map_funcs [:keys, :values]
 
-  @fixable_funcs ~w(
-    all? any? count each map flat_map frequencies_by find_value
-    reduce reduce_while
-    max_by min_by
-    at find random empty?
-    join
-    filter reject
-    uniq uniq_by dedup dedup_by
-    take drop take_while drop_while
-    reverse sample shuffle slice
-    frequencies group_by
-    take_every drop_every
-  )a
+  # Only ORDER-INDEPENDENT terminals are safe to rewrite. `Map.keys/1` and
+  # `Map.values/1` iterate in a different order than a direct `Enum`-over-map
+  # traversal once the map has > 32 keys (the small-map array vs the hash-tree
+  # iterator), so any order-dependent op (`map`, `flat_map`, `reduce`, `find`,
+  # `at`, `take`, `join`, `group_by`, `each`'s effect order, …) — and the
+  # non-deterministic `random`/`sample`/`shuffle` — would diverge. Only ops whose
+  # result is independent of iteration order are rewritten.
+  @fixable_funcs ~w(all? any? count empty? frequencies frequencies_by)a
 
   # ════════════════════════════════════════════════════════════════
   # check

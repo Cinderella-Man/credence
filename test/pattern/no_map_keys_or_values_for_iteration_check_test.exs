@@ -15,9 +15,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
                check("Enum.all?(Map.values(degrees), fn v -> v == 0 end)")
     end
 
-    test "Enum.filter(Map.values(m), ...)" do
-      assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
-               check("Enum.filter(Map.values(m), fn v -> v > 0 end)")
+    test "does not flag Enum.filter (order-dependent — diverges for > 32-key maps)" do
+      assert check("Enum.filter(Map.values(m), fn v -> v > 0 end)") == []
     end
 
     test "Enum.count(Map.values(m))" do
@@ -37,10 +36,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
     end
   end
 
-  describe "flags pipe form" do
-    test "Map.keys(m) |> Enum.map(&to_string/1)" do
-      assert [%Issue{rule: :no_map_keys_or_values_for_iteration}] =
-               check("Map.keys(map) |> Enum.map(&to_string/1)")
+  describe "does not flag order-dependent pipe form" do
+    test "Map.keys(m) |> Enum.map(&to_string/1) (order-dependent — diverges for > 32-key maps)" do
+      assert check("Map.keys(map) |> Enum.map(&to_string/1)") == []
     end
   end
 

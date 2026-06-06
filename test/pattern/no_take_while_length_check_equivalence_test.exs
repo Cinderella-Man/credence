@@ -1,46 +1,34 @@
 defmodule Credence.Pattern.NoTakeWhileLengthCheckEquivalenceTest do
   @moduledoc """
-  Tier 1 + PROBE — eval-order/double-eval over a transform hole.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression).
+  `range |> Enum.take_while(pred) |> length() == n` → a `reduce_while` that counts
+  matches and halts on the first false, compared to `n`. Both count the leading run
+  of `pred`-true elements and short-circuit identically. Battery drives the
+  predicate to pass-all, fail-early, and fail-first.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoTakeWhileLengthCheck
 
-  # Firing snippets lifted from no_take_while_length_check_check_test.exs:
-  #   defmodule Bad do
-  #       def palindrome?(graphemes, start, len) do
-  #         half = div(len, 2)
-  #         0..(half - 1)
-  #         |> Enum.take_while(fn i ->
-  #           Enum.at(graphemes, start + i) == Enum.at(graphemes, start + len - 1 - i)
-  #         end)
-  #         |> length() == half
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       def count_matching(list) do
-  #         list
-  #         |> Enum.take_while(&(&1 > 0))
-  #         |> Enum.count()
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       def check(items) do
-  #         Enum.take_while(items, &is_integer/1) |> length()
-  #       end
-  #     end
+  @expr """
+  half = div(len, 2)
+  0..(half - 1)
+  |> Enum.take_while(fn i -> Enum.at(g, i) == Enum.at(g, len - 1 - i) end)
+  |> length() == half
+  """
 
-  test "no_take_while_length_check: fix preserves transform call order/count over the battery" do
-    assert_effect_trace_equivalent(
-      "TODO: firing expression with the transform hole written as `effect.(x)`",
+  test "take_while |> length == n → reduce_while count == n preserves the boolean" do
+    assert_equivalent(@expr,
       rule: NoTakeWhileLengthCheck,
-      vars: [:list],
-      inputs: [{[1, 2, 3], "-"}]
+      vars: [:g, :len],
+      inputs: [
+        {["a", "b", "a"], 3},
+        {["a", "b", "c"], 3},
+        {["x", "x", "x", "x"], 4},
+        {["a", "z", "b", "a"], 4},
+        {[], 0}
+      ]
     )
   end
 end

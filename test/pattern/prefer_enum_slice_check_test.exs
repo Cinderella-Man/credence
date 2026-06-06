@@ -28,8 +28,8 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       defmodule BadPipeline do
         def extract(graphemes, best_window_start, best_length) do
           graphemes
-          |> Enum.drop(best_window_start)
-          |> Enum.take(best_length)
+          |> Enum.drop(5)
+          |> Enum.take(3)
         end
       end
       """
@@ -64,7 +64,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       code = """
       defmodule BadNested do
         def extract(list, start, len) do
-          Enum.take(Enum.drop(list, start), len)
+          Enum.take(Enum.drop(list, 2), 5)
         end
       end
       """
@@ -78,7 +78,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       code = """
       defmodule SinglePipe do
         def extract(list, start, len) do
-          Enum.drop(list, start) |> Enum.take(len)
+          Enum.drop(list, 2) |> Enum.take(5)
         end
       end
       """
@@ -190,6 +190,23 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
+      assert check(code) == []
+    end
+
+    # --- NARROWING: only non-negative literal amounts (slice-equivalent) ---
+
+    test "ignores variable amounts (could be negative at runtime)" do
+      code = "Enum.drop(list, start) |> Enum.take(len)"
+      assert check(code) == []
+    end
+
+    test "ignores negative drop amount" do
+      code = "Enum.drop(list, -1) |> Enum.take(2)"
+      assert check(code) == []
+    end
+
+    test "ignores negative take amount" do
+      code = "Enum.drop(list, 1) |> Enum.take(-2)"
       assert check(code) == []
     end
   end

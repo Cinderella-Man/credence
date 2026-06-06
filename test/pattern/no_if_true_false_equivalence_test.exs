@@ -1,46 +1,19 @@
 defmodule Credence.Pattern.NoIfTrueFalseEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression). `if cond do true else false end` → `cond` — safe because
+  the rule fires only when the condition is already boolean (a comparison), so
+  returning it directly equals the if/else. Battery drives the condition both ways.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoIfTrueFalse
 
-  # Firing snippets lifted from no_if_true_false_check_test.exs:
-  #   def check(x) do
-  #       if x > 0 do
-  #         true
-  #       else
-  #         false
-  #       end
-  #     end
-  #   def check(list) do
-  #       if Enum.all?(list, &valid?/1) do
-  #         true
-  #       else
-  #         false
-  #       end
-  #     end
-  #   def check(parts) do
-  #       if match?([_, _, _, _], parts) and Enum.all?(parts, &valid_octet?/1) do
-  #         true
-  #       else
-  #         false
-  #       end
-  #     end
-
-  test "no_if_true_false: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "if x > 0 do true else false end → (x > 0) preserves the boolean" do
+    assert_equivalent("if x > 0 do\n  true\nelse\n  false\nend",
       rule: NoIfTrueFalse,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:x],
+      inputs: [1, -1, 0, 100, -100]
     )
   end
 end

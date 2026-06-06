@@ -1,36 +1,19 @@
 defmodule Credence.Pattern.PreferEnumReverseTwoEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression). `Enum.reverse(acc) ++ tail` → `Enum.reverse(acc, tail)`.
+  `Enum.reverse/2` is defined as `reverse(acc) ++ tail`, so it is exact. Battery
+  covers empty/non-empty acc and tail, and a value-kind list.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.PreferEnumReverseTwo
 
-  # Firing snippets lifted from prefer_enum_reverse_two_check_test.exs:
-  #   defmodule OptimizationTarget do
-  #       def merge(acc, tail) do
-  #         Enum.reverse(acc) ++ tail
-  #       end
-  #     end
-  #   defmodule GoodCode do
-  #       def merge(acc, tail), do: Enum.reverse(acc, tail)
-  #     end
-  #   defmodule StandardConcatenation do
-  #       def combine(a, b), do: a ++ b
-  #     end
-
-  test "prefer_enum_reverse_two: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "Enum.reverse(acc) ++ tail → Enum.reverse(acc, tail) preserves the list" do
+    assert_equivalent("Enum.reverse(acc) ++ tail",
       rule: PreferEnumReverseTwo,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:acc, :tail],
+      inputs: [{[1, 2], [3, 4]}, {[], [1]}, {[1], []}, {[], []}, {[1, 1.0], [2]}]
     )
   end
 end

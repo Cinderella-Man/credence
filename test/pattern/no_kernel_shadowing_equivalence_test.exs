@@ -1,35 +1,20 @@
 defmodule Credence.Pattern.NoKernelShadowingEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression). Renames a variable that shadows a Kernel function so the
+  call resolves unambiguously: `fn x, max -> max(x, max) end` → `fn x, max_value -> max(x, max_value) end`.
+  A pure alpha-rename — behaviour is identical for every input.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoKernelShadowing
 
-  # Firing snippets lifted from no_kernel_shadowing_check_test.exs:
-  #   Enum.reduce(list, 0, fn x, max -> max(x, max) end)
-  #   defmodule M do
-  #       def f(list) do
-  #         min = hd(list)
-  #         min
-  #       end
-  #     end
-  #   defmodule M do
-  #       defp go([], max), do: max
-  #     end
-
-  test "no_kernel_shadowing: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "renaming the shadowing var preserves the fold result" do
+    assert_equivalent("Enum.reduce(list, 0, fn x, max -> max(x, max) end)",
       rule: NoKernelShadowing,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:list],
+      inputs: B.signed_integers()
     )
   end
 end

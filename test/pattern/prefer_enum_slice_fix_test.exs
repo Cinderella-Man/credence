@@ -21,8 +21,8 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       defmodule Example do
         def extract(graphemes, start, len) do
           graphemes
-          |> Enum.drop(start)
-          |> Enum.take(len)
+          |> Enum.drop(2)
+          |> Enum.take(5)
         end
       end
       """
@@ -31,7 +31,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       defmodule Example do
         def extract(graphemes, start, len) do
           graphemes
-          |> Enum.slice(start, len)
+          |> Enum.slice(2, 5)
         end
       end
       """
@@ -43,7 +43,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       input = """
       defmodule Example do
         def extract(list, start, len) do
-          Enum.take(Enum.drop(list, start), len)
+          Enum.take(Enum.drop(list, 2), 5)
         end
       end
       """
@@ -51,7 +51,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       expected = """
       defmodule Example do
         def extract(list, start, len) do
-          Enum.slice(list, start, len)
+          Enum.slice(list, 2, 5)
         end
       end
       """
@@ -63,7 +63,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       input = """
       defmodule Example do
         def extract(list, start, len) do
-          Enum.drop(list, start) |> Enum.take(len)
+          Enum.drop(list, 2) |> Enum.take(5)
         end
       end
       """
@@ -71,7 +71,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       expected = """
       defmodule Example do
         def extract(list, start, len) do
-          Enum.slice(list, start, len)
+          Enum.slice(list, 2, 5)
         end
       end
       """
@@ -149,8 +149,8 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       assert fix(input) == expected
     end
 
-    test "fix nested function call with complex arguments" do
-      input = """
+    test "does not modify non-literal (field-access) amounts — could be negative" do
+      code = """
       defmodule Example do
         def extract(list, config) do
           Enum.take(Enum.drop(list, config.start), config.length)
@@ -158,15 +158,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      expected = """
-      defmodule Example do
-        def extract(list, config) do
-          Enum.slice(list, config.start, config.length)
-        end
-      end
-      """
-
-      assert fix(input) == expected
+      assert fix(code) == code
     end
 
     test "does not modify code without the pattern" do
@@ -215,8 +207,8 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       defmodule Example do
         def extract(list, start, len) do
           list
-          |> Enum.drop(start)
-          |> Enum.take(len)
+          |> Enum.drop(2)
+          |> Enum.take(5)
         end
       end
       """
@@ -231,8 +223,8 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       defmodule Example do
         def extract(list, start, len) do
           list
-          |> Enum.drop(start)
-          |> Enum.take(len)
+          |> Enum.drop(2)
+          |> Enum.take(5)
         end
       end
       """
@@ -244,7 +236,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       input = """
       defmodule Example do
         def extract(list, start, len) do
-          Enum.take(Enum.drop(list, start), len)
+          Enum.take(Enum.drop(list, 2), 5)
         end
       end
       """
@@ -256,7 +248,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       input = """
       defmodule Example do
         def extract(list, start, len) do
-          Enum.drop(list, start) |> Enum.take(len)
+          Enum.drop(list, 2) |> Enum.take(5)
         end
       end
       """

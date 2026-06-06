@@ -1,46 +1,24 @@
 defmodule Credence.Pattern.NoMapThenAggregateEquivalenceTest do
   @moduledoc """
-  Tier 1 + PROBE — eval-order/double-eval over a transform hole.
+  Tier 1 (expression). `coll |> Enum.map(f) |> Enum.sum()` → `Enum.reduce(coll, 0, fn x, acc -> acc + f.(x) end)`.
+  Sum aggregates with identity init `0` and applies the mapper to every element,
+  so the fusion is exact incl. value-kind.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Regression note: the rule used to also fire on `Enum.max`/`Enum.min` (selection),
+  producing `Enum.reduce/2` whose seed is the *first unmapped* element
+  (`[5] |> map(f) |> max()` → `f.(5)` but the fused `reduce/2` gave `5`). Narrowed
+  to `:sum` only — selection has no identity to seed a mapped reduce.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoMapThenAggregate
 
-  # Firing snippets lifted from no_map_then_aggregate_check_test.exs:
-  #   defmodule Bad do
-  #       def max_sum(numbers, k) do
-  #         numbers
-  #         |> Enum.chunk_every(k, 1, :discard)
-  #         |> Enum.map(&Enum.sum/1)
-  #         |> Enum.max()
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       def cheapest(items) do
-  #         items
-  #         |> Enum.map(& &1.price)
-  #         |> Enum.min()
-  #       end
-  #     end
-  #   defmodule Bad do
-  #       def total_area(shapes) do
-  #         shapes
-  #         |> Enum.map(&area/1)
-  #         |> Enum.sum()
-  #       end
-  #     end
-
-  test "no_map_then_aggregate: fix preserves transform call order/count over the battery" do
-    assert_effect_trace_equivalent(
-      "TODO: firing expression with the transform hole written as `effect.(x)`",
+  test "map(f) |> sum → reduce(0, acc + f) preserves the total incl. value-kind" do
+    assert_equivalent("numbers |> Enum.map(fn x -> x * 2 end) |> Enum.sum()",
       rule: NoMapThenAggregate,
-      vars: [:list],
-      inputs: [{[1, 2, 3], "-"}]
+      vars: [:numbers],
+      inputs: [[], [1, 2, 3], [1.0, 2.0], [1, 1.0, 2], [-1, -2, -3], Enum.to_list(1..30)]
     )
   end
 end

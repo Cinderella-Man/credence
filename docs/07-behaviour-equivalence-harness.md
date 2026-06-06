@@ -148,6 +148,45 @@ opt-outs remain; nothing is unconstructible.
   require rewriting most of its corpus, so dropped (like `no_keyword_get_integer_key`). Deleted rule +
   check/fix/equivalence tests + 1 dedicated integration test; retargeted the `applied_rules` trace test;
   renamed a stale negative test. 123→122 rules.
+- **`prefer_enum_slice` — was UNSAFE on negative/variable amounts, now NARROWED.** `Enum.drop(l, s) |>
+  Enum.take(n)` → `Enum.slice(l, s, n)` is equivalent only for **non-negative** `s`, `n`. It fired on
+  negatives (`drop(-1) |> take(2)` → `slice(-1, 2)`: `[4]` vs `[1,2]`; `take(-2)` → `slice(_, -2)` raises)
+  and on variable amounts (could be negative at runtime). Narrowed to fire only when both amounts are
+  **non-negative integer literals** (added `slice_safe?`/`non_neg_int?`). Updated rule + moduledoc +
+  check/fix tests (variable-amount positives → literals; field-access + negative cases → negatives).
+- **`no_explicit_max_reduce` + `no_explicit_min_reduce` — DROPPED (unsafe, no safe core).** They fire
+  only on the 3-arg `Enum.reduce(list, 0, fn x, acc -> max(x, acc) end)` and rewrite to `Enum.max(list)`,
+  **dropping the init** — but the init seeds the fold (`reduce([-2,-3], 0, max)` = `0` vs `Enum.max` = `-2`),
+  and max/min have **no identity literal** (unlike sum's `0`/product's `1`). Even the 2-arg form (which
+  they don't match) diverges from `Enum.max` on value-kind ties (`[1,1.0]` → reduce `1.0` vs `Enum.max` `1`).
+  Safe only under a 2-arg rewrite + a number-kind assumption — not worth it; dropped like
+  `no_manual_enum_uniq`. (`sum`/`product` reduce are safe — they aggregate, no element-selection, and
+  `0`/`1` are identities.) 122→120 rules.
+- **`no_map_then_aggregate` — was UNSAFE on max/min, now NARROWED to `:sum`.** `Enum.map(f) |> Enum.sum()`
+  → `Enum.reduce(coll, 0, fn x, acc -> acc + f.(x) end)` is correct (identity init, mapper on every
+  element). But `Enum.map(f) |> Enum.max()`/`min()` fused to `Enum.reduce/2` whose seed is the *first
+  unmapped element* (`[5] |> map(f) |> max()` → `f.(5)`, but the fused reduce gave `5`). Max/min have no
+  identity to seed a mapped reduce, so selection can't be fused — `@aggregators` narrowed to `[:sum]`,
+  moduledoc + check/fix tests updated (max/min → negatives, structural tests → sum). Same selection-vs-
+  aggregation lesson as the dropped `no_explicit_max_reduce`.
+- **`hallucinated_guard` — UNCONSTRUCTIBLE.** Replaces a hallucinated guard (`is_pos_integer(x)` →
+  `is_integer(x) and x > 0`); the original uses an undefined macro and does not compile, so there is no
+  runnable before-code. `mark_equivalence_unconstructible`.
+- **`no_map_keys_or_values_for_iteration` — was BROADLY UNSAFE, now NARROWED.** It rewrote
+  `Enum.<op>(Map.keys/values(m), f)` → `Enum.<op>(m, fn {k,v} -> ... end)` for ~25 ops, but `Map.keys/1`/
+  `Map.values/1` iterate in a *different order* than direct `Enum`-over-map once a map has > 32 keys
+  (verified: `Enum.map(Map.values(big40), …)` gives a different list order). Order-dependent ops (`map`,
+  `flat_map`, `reduce`, `find`, `at`, `take`, `join`, `group_by`, `each`'s effect order) diverge, and
+  `random`/`sample`/`shuffle` are non-deterministic. Narrowed `@fixable_funcs` to the order-independent
+  set `[all? any? count empty? frequencies frequencies_by]`; map/filter check tests → negatives.
+  (`no_map_keys_enum_lookup` was already restricted to the order-independent `all?`-with-lookup form — safe.)
+- **`no_anon_fn_application_in_pipe` — was a BUG (malformed output), now FIXED.** `x |> (fn s -> ... end).()`
+  → the old `patches_from_postwalk` patch landed at the `.()` call node, whose Sourceror range starts at
+  the `fn` keyword and **excludes the wrapping `(`**, stranding it → the uncompilable `x |> (then(fn ... end)`.
+  Rewrote `fix_patches` to patch the `.()` node directly with its range **extended one column left** to
+  swallow the `(`, rendered via `render_replacement/2` (layout-meta stripped, so multi-line fns re-render
+  cleanly). Verified valid for single / chained / multi-line / in-module forms; a non-pipe `(fn).()` is
+  correctly left untouched. Equivalence test filled (value-equivalent — the fn is applied once either way).
 - `no_piped_regex_replace` — investigated, **SAFE** (only the piped, crashing form is rewritten;
   `String.replace ≡ Regex.replace` on all probed inputs). Kept as T2; not a divergence.
 
@@ -262,8 +301,33 @@ above is the human worklist.)
    (safe on `length`'s proper-list domain); `no_manual_enum_uniq` DROPPED (over-eager — unsafe in ~all
    shapes; only the full `reduce |> elem |> reverse` idiom was correct). Harness gained zero-var support
    (`to_args/2` for `vars: []`). Suite green: 4399 / 82 excluded.
-   **Bugs found: 11 fixed/narrowed in-session, 2 dropped, 1 merged** (the `===` upgrade keeps exposing
-   value-kind/enumerable-type bugs). Rule count 125→122.
+   Batch 7 (10 rules): `no_if_true_false`, `no_unless_else`, `no_tautological_if` (already narrowed to
+   pure-total conditions), `no_redundant_assignment`, `no_dead_map_update`, `no_case_true_false`,
+   `no_capture_fn_apply`, `no_list_duplicate_flatten`, `prefer_enum_reverse_two` (safe);
+   `prefer_enum_slice` NARROWED to non-negative literal amounts (negative/variable diverged from `slice/3`).
+   Suite green: 4413 / 72 excluded.
+   Batch 8 (10 rules): `no_explicit_sum_reduce`, `no_explicit_product_reduce` (safe — aggregate),
+   `no_kernel_shadowing`, `no_param_rebinding` (safe alpha-renames), `no_list_delete_at_with_length`,
+   `no_list_pop_at_for_access`, `prefer_regex_match`, `no_fetch_then_update` (safe);
+   `no_explicit_max_reduce` + `no_explicit_min_reduce` DROPPED (init contamination + value-kind ties,
+   no identity literal). Suite green: 4390 / 62 excluded.
+   Batch 9 (10 rules): `avoid_graphemes_enum_count`, `avoid_graphemes_length`,
+   `avoid_graphemes_enum_count_with_predicate`, `no_manual_frequencies`, `no_filter_then_count`,
+   `no_string_concat_in_loop`, `no_zip_then_map`, `no_take_while_length_check` (safe — probe rules whose
+   pred/mapper order is preserved by construction); `hallucinated_guard` UNCONSTRUCTIBLE;
+   `no_map_then_aggregate` NARROWED to `:sum` (max/min selection had an unmapped reduce/2 seed).
+   Suite green: 4400 / 52 excluded.
+   Batch 10 (10 PROBE rules): `no_filter_then_first`, `no_find_value_default_case`,
+   `no_if_empty_for_enum_min_max`, `no_list_append_in_reduce`, `no_reduce_for_map_building`,
+   `prefer_map_put_new` (safe — doesn't fire on side-effecting value), `no_map_keys_enum_lookup`
+   (safe — order-independent `all?`), `no_reduce_for_group_by` (safe — full reduce|>Map.new(reverse) = group_by);
+   `no_map_keys_or_values_for_iteration` NARROWED to order-independent ops (>32-key map order divergence);
+   `no_anon_fn_application_in_pipe` was a malformed-output BUG, FIXED (patch range extended to include the
+   parenthesized fn's `(`). Suite green: 4410 / 42 excluded.
+   **Bugs found: 15 fixed/narrowed in-session, 4 dropped, 1 merged** (the `===` upgrade keeps exposing
+   value-kind/enumerable-type/bounds/order bugs; plus one malformed-output fix-renderer bug). Rule count 125→120.
+   (Every PROBE rule so far preserves eval order — none needed the effect-trace mode; `prefer_map_put_new`
+   self-narrows away from side-effecting values.)
 3. **Backfill T2 (29)** via `assert_equivalent_module`; **PROBE (26)** turn on `probe_effects`.
 4. **Stamp T3a (8) + T3b (2)** with cosmetic/unconstructible marks + reasons. Resolve the
    two flagged rules. Drive the T3b/unconstructible pile to minimum.

@@ -9,14 +9,14 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
   end
 
   describe "NoMapThenAggregate check" do
-    test "detects Enum.map |> Enum.max in pipeline" do
+    test "detects Enum.map |> Enum.sum in a chunked pipeline" do
       code = """
       defmodule Bad do
-        def max_sum(numbers, k) do
+        def total(numbers, k) do
           numbers
           |> Enum.chunk_every(k, 1, :discard)
           |> Enum.map(&Enum.sum/1)
-          |> Enum.max()
+          |> Enum.sum()
         end
       end
       """
@@ -24,12 +24,12 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       [issue] = check(code)
       assert issue.rule == :no_map_then_aggregate
       assert issue.message =~ "Enum.map"
-      assert issue.message =~ "Enum.max"
+      assert issue.message =~ "Enum.sum"
     end
 
-    test "detects Enum.map |> Enum.min in pipeline" do
+    test "does not flag Enum.map |> Enum.min (selection — not fusable)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def cheapest(items) do
           items
           |> Enum.map(& &1.price)
@@ -38,8 +38,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      [issue] = check(code)
-      assert issue.message =~ "Enum.min"
+      assert check(code) == []
     end
 
     test "detects Enum.map |> Enum.sum in pipeline" do
@@ -57,30 +56,29 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       assert issue.message =~ "Enum.sum"
     end
 
-    test "detects two-step pipeline: Enum.map(list, f) |> Enum.max()" do
+    test "detects two-step pipeline: Enum.map(list, f) |> Enum.sum()" do
       code = """
       defmodule Bad do
-        def biggest(list) do
-          Enum.map(list, &String.length/1) |> Enum.max()
+        def total(list) do
+          Enum.map(list, &String.length/1) |> Enum.sum()
         end
       end
       """
 
       [issue] = check(code)
-      assert issue.message =~ "Enum.max"
+      assert issue.message =~ "Enum.sum"
     end
 
-    test "detects direct nesting: Enum.max(Enum.map(list, f))" do
+    test "does not flag direct nesting Enum.max(Enum.map(list, f)) (selection — not fusable)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def biggest(list) do
           Enum.max(Enum.map(list, &String.length/1))
         end
       end
       """
 
-      [issue] = check(code)
-      assert issue.message =~ "Enum.max"
+      assert check(code) == []
     end
 
     test "detects direct nesting: Enum.sum(Enum.map(list, f))" do
@@ -99,10 +97,10 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
     test "detects with anonymous function in map" do
       code = """
       defmodule Bad do
-        def hottest(readings) do
+        def total(readings) do
           readings
           |> Enum.map(fn {_, temp} -> temp end)
-          |> Enum.max()
+          |> Enum.sum()
         end
       end
       """

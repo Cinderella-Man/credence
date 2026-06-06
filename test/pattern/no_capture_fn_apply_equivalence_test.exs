@@ -1,41 +1,19 @@
 defmodule Credence.Pattern.NoCaptureFnApplyEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression). An immediately-applied capture `(& &1 + &2).(a, b)` → `a + b`:
+  inlining the capture body with the actual arguments. Battery drives the args,
+  including a value-kind pair.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoCaptureFnApply
 
-  # Firing snippets lifted from no_capture_fn_apply_check_test.exs:
-  #   defmodule Good do
-  #       def process(el, col) do
-  #         Enum.at(el, col)
-  #       end
-  #     end
-  #   defmodule Good do
-  #       def process(x) do
-  #         fun = fn y -> y * 2 end
-  #         fun.(x)
-  #       end
-  #     end
-  #   defmodule Good do
-  #       def process(list) do
-  #         (&Enum.map/2).(list, &(&1 + 1))
-  #       end
-  #     end
-
-  test "no_capture_fn_apply: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "(& &1 + &2).(a, b) → a + b preserves value+type" do
+    assert_equivalent("(& &1 + &2).(a, b)",
       rule: NoCaptureFnApply,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:a, :b],
+      inputs: [{1, 2}, {3, 4}, {1.0, 2}, {-5, 5}, {0, 0}]
     )
   end
 end

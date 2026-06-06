@@ -1,49 +1,27 @@
 defmodule Credence.Pattern.PreferRegexMatchEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
-
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  Tier 1 (expression).
+  `case Regex.run(re, s) do [_ | _] -> a; nil -> b end` → `if Regex.match?(re, s), do: a, else: b`.
+  `Regex.run` returns a non-empty list (matched) or nil (no match), exactly the
+  boolean `Regex.match?`. Battery covers match, no-match, and empty string.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.PreferRegexMatch
 
-  # Firing snippets lifted from prefer_regex_match_check_test.exs:
-  #   defmodule M do
-  #       def match?(s) do
-  #         case Regex.run(~r/ab{3,}/, s) do
-  #           [_ | _] -> "Found a match!"
-  #           _ -> "Not matched!"
-  #         end
-  #       end
-  #     end
-  #   defmodule M do
-  #       def match?(s) do
-  #         case Regex.run(~r/\d+/, s) do
-  #           [_ | _] -> :found
-  #           nil -> :not_found
-  #         end
-  #       end
-  #     end
-  #   defmodule M do
-  #       def match?(s) do
-  #         case Regex.run(~r/[a-z]+/, s) do
-  #           nil -> :no
-  #           [_ | _] -> :yes
-  #         end
-  #       end
-  #     end
+  @expr """
+  case Regex.run(~r/ab+/, s) do
+    [_ | _] -> :yes
+    nil -> :no
+  end
+  """
 
-  test "prefer_regex_match: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "case Regex.run → if Regex.match? preserves the branch" do
+    assert_equivalent(@expr,
       rule: PreferRegexMatch,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:s],
+      inputs: ["abbb", "xyz", "", "ab", "zzab"]
     )
   end
 end
