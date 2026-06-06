@@ -1,5 +1,3 @@
-lib/pattern/no_reverse_then_find.ex
-test/pattern/no_reverse_then_find_test.exs
 lib/pattern/no_reverse_uniq_reverse.ex
 test/pattern/no_reverse_uniq_reverse_test.exs
 lib/pattern/no_starts_with_own_prefix.ex

@@ -186,3 +186,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_repeated_length_in_recursion_test.exs`
 - Reason: fix requires adding a parameter (arity change) and rewriting every entry call site, which is an out-of-scope interface change and double-evaluates side-effecting call-site exprs; no arity-preserving rewrite removes the recompute, so no safe core.
 
+## no_reverse_then_find — 2026-06-06
+- Files:
+  - `lib/pattern/no_reverse_then_find.ex`
+  - `test/pattern/no_reverse_then_find_test.exs`
+- Reason: removing the reverse forces a forward pass that evaluates pred on all elements, breaking reverse|>find's short-circuit-from-end; diverges (returns vs raises) on partial/side-effecting predicates, no static narrowing isolates a real safe core.
+
