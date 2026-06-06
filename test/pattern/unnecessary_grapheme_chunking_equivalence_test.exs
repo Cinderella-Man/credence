@@ -1,49 +1,34 @@
 defmodule Credence.Pattern.UnnecessaryGraphemeChunkingEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
+  Tier 1 (expression), bounds + Unicode dimension.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  `string |> String.graphemes() |> Enum.chunk_every(n, 1, :discard) |> Enum.map(&Enum.join/1)`
+  → `for i <- 0..(String.length(string) - n)//1, do: String.slice(string, i, n)`.
+
+  Regression note: the original fix omitted the `//1` step, so when the string
+  was shorter than the chunk size the range descended (`0..-1` = `[0, -1]`) and
+  emitted bogus slices instead of `[]` (see docs/07). The battery includes
+  `len < n`, `len == n`, and a multi-codepoint grapheme string.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.UnnecessaryGraphemeChunking
 
-  # Firing snippets lifted from unnecessary_grapheme_chunking_check_test.exs:
-  #   defmodule Example do
-  #       def ngrams(string, n) do
-  #         string
-  #         |> String.graphemes()
-  #         |> Enum.chunk_every(n, 1, :discard)
-  #         |> Enum.map(&Enum.join/1)
-  #       end
-  #     end
-  #   defmodule Example do
-  #       def ngrams(string, n) do
-  #         string
-  #         |> String.graphemes()
-  #         |> Enum.chunk_every(n, 1, :discard)
-  #         |> Enum.map(fn chunk -> Enum.join(chunk) end)
-  #       end
-  #     end
-  #   defmodule Example do
-  #       def ngrams(string, n) do
-  #         string
-  #         |> String.graphemes()
-  #         |> Enum.chunk_every(n, 1, :discard)
-  #         |> Enum.map(fn x -> Enum.join(x, "") end)
-  #       end
-  #     end
+  @expr "string |> String.graphemes() |> Enum.chunk_every(n, 1, :discard) |> Enum.map(&Enum.join/1)"
 
-  test "unnecessary_grapheme_chunking: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "grapheme chunking → for/String.slice preserves behaviour incl. len < n and Unicode" do
+    assert_equivalent(@expr,
       rule: UnnecessaryGraphemeChunking,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:string, :n],
+      inputs: [
+        {"abcde", 2},
+        {"abc", 1},
+        {"ab", 3},
+        {"a", 2},
+        {"", 2},
+        {:unicode.characters_to_nfd_binary("café"), 2}
+      ]
     )
   end
 end

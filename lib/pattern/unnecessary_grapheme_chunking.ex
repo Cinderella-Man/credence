@@ -14,13 +14,15 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
 
   ## Good
 
-      for i <- 0..(String.length(string) - n) do
+      for i <- 0..(String.length(string) - n)//1 do
         String.slice(string, i, n)
       end
 
-  `String.length/1` and `String.slice/3` both operate on grapheme clusters,
-  so this replacement is semantically equivalent for the common case where
-  the string length >= chunk size.
+  `String.length/1` and `String.slice/3` both operate on grapheme clusters, so
+  this is grapheme-equivalent. The `//1` step keeps it equivalent even when the
+  string is shorter than the chunk size: the range is then empty, matching
+  `Enum.chunk_every(_, n, 1, :discard)` (a stepless `0..-k` would descend and
+  emit bogus slices).
   """
 
   use Credence.Pattern.Rule
@@ -149,13 +151,19 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
   end
 
   # Replacement builder
-  # Builds: for i <- 0..(String.length(subject) - n), do: String.slice(subject, i, n)
+  # Builds: for i <- 0..(String.length(subject) - n)//1, do: String.slice(subject, i, n)
+  #
+  # The `//1` step is load-bearing: when `String.length(subject) < n` the end is
+  # negative, and a stepless `0..-k` range descends (`0..-1` = `[0, -1]`),
+  # producing bogus slices. With `//1` the range is empty for any negative end —
+  # matching `Enum.chunk_every(_, n, 1, :discard)`, which yields `[]` when the
+  # string is shorter than the chunk size.
   defp build_replacement(subject, n) do
     length_call =
       {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], [subject]}
 
     range =
-      {:.., [], [0, {:-, [], [length_call, n]}]}
+      {:"..//", [], [0, {:-, [], [length_call, n]}, 1]}
 
     body =
       {{:., [], [{:__aliases__, [], [:String]}, :slice]}, [], [subject, {:i, [], nil}, n]}

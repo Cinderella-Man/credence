@@ -1,36 +1,25 @@
 defmodule Credence.Pattern.PreferDescSortOverNegativeTakeEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
+  Tier 1 (expression), order-preservation dimension.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  `Enum.sort(nums) |> Enum.take(-3)` → `Enum.sort(nums, :desc) |> Enum.take(3) |> Enum.reverse()`.
+
+  Regression note: the original fix omitted the trailing `Enum.reverse/1`, so it
+  reversed the result order (n largest ascending vs descending) — see docs/07.
+  The reverse restores the order, making the rewrite behaviour-preserving. The
+  battery covers empty, ties, the `1`/`1.0` value-kind case, and fewer-than-n
+  elements.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.PreferDescSortOverNegativeTake
 
-  # Firing snippets lifted from prefer_desc_sort_over_negative_take_check_test.exs:
-  #   nums
-  #     |> Enum.sort()
-  #     |> Enum.take(-3)
-  #   Enum.sort(nums) |> Enum.take(-3)
-  #   defmodule Example do
-  #       def run(nums) do
-  #         nums
-  #         |> Enum.sort()
-  #         |> Enum.take(-5)
-  #       end
-  #     end
-
-  test "prefer_desc_sort_over_negative_take: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "sort |> take(-3) → desc sort + take + reverse preserves the result exactly" do
+    assert_equivalent("Enum.sort(nums) |> Enum.take(-3)",
       rule: PreferDescSortOverNegativeTake,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:nums],
+      inputs: [[], [1], [1, 2], [3, 1, 2, 1, 3, 2], [5, 4, 3, 2, 1], [1, 1.0, 2], Enum.to_list(1..20)]
     )
   end
 end

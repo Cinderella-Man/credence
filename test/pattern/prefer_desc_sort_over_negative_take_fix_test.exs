@@ -21,6 +21,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       nums
       |> Enum.sort(:desc)
       |> Enum.take(3)
+      |> Enum.reverse()
       """
 
       assert fix(input) == expected
@@ -38,7 +39,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       expected = """
       defmodule Example do
         def run(nums) do
-          Enum.sort(nums, :desc) |> Enum.take(3)
+          Enum.sort(nums, :desc) |> Enum.take(3) |> Enum.reverse()
         end
       end
       """
@@ -63,6 +64,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
           nums
           |> Enum.sort(:desc)
           |> Enum.take(5)
+          |> Enum.reverse()
         end
       end
       """
@@ -83,6 +85,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       |> Enum.map(&(&1 * 2))
       |> Enum.sort(:desc)
       |> Enum.take(3)
+      |> Enum.reverse()
       """
 
       assert fix(input) == expected
@@ -98,8 +101,8 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
 
       expected = """
       defmodule Example do
-        def a(nums), do: nums |> Enum.sort(:desc) |> Enum.take(3)
-        def b(nums), do: nums |> Enum.sort(:desc) |> Enum.take(5)
+        def a(nums), do: nums |> Enum.sort(:desc) |> Enum.take(3) |> Enum.reverse()
+        def b(nums), do: nums |> Enum.sort(:desc) |> Enum.take(5) |> Enum.reverse()
       end
       """
 
@@ -158,6 +161,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
           nums
           |> Enum.sort(:desc)
           |> Enum.take(3)
+          |> Enum.reverse()
         end
       end
       """
@@ -177,7 +181,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       expected = """
       defmodule TestFix do
         def run(nums) do
-          Enum.sort(nums, :desc) |> Enum.take(3)
+          Enum.sort(nums, :desc) |> Enum.take(3) |> Enum.reverse()
         end
       end
       """

@@ -1,8 +1,14 @@
 defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
   @moduledoc """
-  Prefer `Enum.sort(nums, :desc) |> Enum.take(n)`
+  Prefer `Enum.sort(nums, :desc) |> Enum.take(n) |> Enum.reverse()`
   over `Enum.sort(nums) |> Enum.take(-n)`.
-  This is about readability and intent clarity, not performance.
+
+  `Enum.take(list, -n)` must walk the whole list to reach the last `n`;
+  `Enum.take(list, n)` stops after `n`. The trailing `Enum.reverse/1` is
+  **load-bearing for correctness**: `sort |> take(-n)` returns the n largest in
+  *ascending* order, while `sort(:desc) |> take(n)` returns them *descending*,
+  so the reverse restores the original order. The rewrite is behaviour-preserving
+  and reverses only `n` elements.
 
   ## Bad
 
@@ -17,8 +23,9 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
       nums
       |> Enum.sort(:desc)
       |> Enum.take(3)
+      |> Enum.reverse()
 
-      Enum.sort(nums, :desc) |> Enum.take(3)
+      Enum.sort(nums, :desc) |> Enum.take(3) |> Enum.reverse()
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
@@ -60,11 +67,29 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
     end)
   end
 
-  defp transform_pipeline({:|>, meta, [left, right]}) do
-    {:|>, meta, [transform_pipeline(left), transform_step(right)]}
+  # Rebuild the flattened pipeline: rewrite `sort`→`sort(:desc)` and
+  # `take(-n)`→`take(n)`, and insert `Enum.reverse()` immediately after the
+  # rewritten take. `sort |> take(-n)` yields the n largest in ASCENDING order;
+  # `sort(:desc) |> take(n)` yields them DESCENDING, so the trailing reverse
+  # restores the original order — making the rewrite behaviour-preserving
+  # (and still cheaper: take(n) from the front + reversing n elements beats
+  # take(-n) traversing the whole list).
+  defp transform_pipeline(node) do
+    node
+    |> flatten_pipeline()
+    |> Enum.flat_map(fn step ->
+      if negative_take?(step),
+        do: [transform_step(step), enum_reverse_step()],
+        else: [transform_step(step)]
+    end)
+    |> pipe_from_steps()
   end
 
-  defp transform_pipeline(node), do: transform_step(node)
+  defp pipe_from_steps([first | rest]),
+    do: Enum.reduce(rest, first, fn step, acc -> {:|>, [], [acc, step]} end)
+
+  defp enum_reverse_step,
+    do: {{:., [], [{:__aliases__, [], [:Enum]}, :reverse]}, [], []}
 
   # Enum.sort() → Enum.sort(:desc)  (piped, 0 args)
   defp transform_step({{:., dm, [{:__aliases__, am, [:Enum]}, :sort]}, cm, []}) do
@@ -167,9 +192,9 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTake do
     %Issue{
       rule: :prefer_desc_sort_over_negative_take,
       message: """
-      Prefer `Enum.sort(nums, :desc) |> Enum.take(3)`
-      over `Enum.sort(nums) |> Enum.take(-3)`.
-      This is about readability and intent clarity, not performance.
+      Prefer `Enum.sort(nums, :desc) |> Enum.take(3) |> Enum.reverse()`
+      over `Enum.sort(nums) |> Enum.take(-3)`: take(n) from the front avoids
+      walking the whole list, and the reverse keeps the result order identical.
       """,
       meta: %{line: Keyword.get(meta, :line)}
     }

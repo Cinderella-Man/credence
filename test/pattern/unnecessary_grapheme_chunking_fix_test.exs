@@ -26,7 +26,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       expected = """
       defmodule Example do
         def ngrams(string, n) do
-          for i <- 0..(String.length(string) - n) do
+          for i <- 0..(String.length(string) - n)//1 do
             String.slice(string, i, n)
           end
         end
@@ -51,7 +51,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       expected = """
       defmodule Example do
         def trigrams(string) do
-          for i <- 0..(String.length(string) - 3) do
+          for i <- 0..(String.length(string) - 3)//1 do
             String.slice(string, i, 3)
           end
         end
@@ -76,7 +76,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       expected = """
       defmodule Example do
         def ngrams(string, n) do
-          for i <- 0..(String.length(string) - n) do
+          for i <- 0..(String.length(string) - n)//1 do
             String.slice(string, i, n)
           end
         end
@@ -101,7 +101,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       expected = """
       defmodule Example do
         def ngrams(string, n) do
-          for i <- 0..(String.length(string) - n) do
+          for i <- 0..(String.length(string) - n)//1 do
             String.slice(string, i, n)
           end
         end
@@ -133,7 +133,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
                       string
                       |> String.trim()
                       |> String.downcase()
-                    ) - n) do
+                    ) - n)//1 do
             String.slice(
               string
               |> String.trim()
@@ -163,12 +163,12 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       expected = """
       defmodule Example do
         def bigrams(s),
-          do: for(i <- 0..(String.length(s) - 2)) do
+          do: for(i <- 0..(String.length(s) - 2)//1) do
           String.slice(s, i, 2)
         end
 
         def trigrams(s),
-          do: for(i <- 0..(String.length(s) - 3)) do
+          do: for(i <- 0..(String.length(s) - 3)//1) do
           String.slice(s, i, 3)
         end
       end
@@ -205,7 +205,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       defmodule Example do
         def all_ngrams(list, n) do
           Enum.map(list, fn s ->
-            for i <- 0..(String.length(s) - n) do
+            for i <- 0..(String.length(s) - n)//1 do
               String.slice(s, i, n)
             end
           end)

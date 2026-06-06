@@ -1157,7 +1157,7 @@ defmodule CredenceTest do
               Enum.frequencies_by(words, fn word -> String.downcase(word) end)
 
             sorted_desc = Enum.sort(words, :desc)
-            top_3 = Enum.sort(words, :desc) |> Enum.take(3)
+            top_3 = Enum.sort(words, :desc) |> Enum.take(3) |> Enum.reverse()
 
             sorted_desc_reversed = Enum.reverse(sorted_desc)
             [last, second_last | _] = sorted_desc_reversed

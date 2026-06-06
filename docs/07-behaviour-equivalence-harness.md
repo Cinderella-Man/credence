@@ -89,6 +89,26 @@ opt-outs remain; nothing is unconstructible.
   input with no assumption. Updated: rule fix + moduledoc, ~all `no_sort_then_at_fix_test` expectations,
   equivalence test (battery leads with `[]`). **Follow-on:** sibling `no_sort_for_top_k` (and any
   `sort |> hd/first/at` rule) likely shares the empty hazard — check during its fill.
+- **`unnecessary_grapheme_chunking` — was UNSAFE, now RESOLVED (`//1` step).** The fix's range
+  `for i <- 0..(String.length(s) - n)` descends when `len < n` (`0..-1` = `[0,-1]`), emitting bogus
+  slices instead of `[]`. Fixed by emitting a stepped range `0..(...)//1` (empty for negative end,
+  matching `chunk_every(_, n, 1, :discard)`). Behaviour-preserving for every input incl. multi-codepoint
+  graphemes; no assumption. Updated rule + moduledoc + fix-test expectations + equivalence test (battery
+  covers `len<n`, `len==n`, NFD).
+- **`no_sort_for_top_k` — was UNSAFE, now RESOLVED (narrowed + empty-safe).** Two bugs: `sort |> take(1)`
+  → `Enum.min` changed return type (list `[min]` vs scalar `min`) — wrong on every input; `hd`/`at(0)`
+  diverged on `[]`. Fixed by narrowing to the **`Enum.at(0)` terminal only** (dropped `take(1)` and `hd`
+  and their `reverse|>` variants — no behaviour-preserving min form exists for them) and emitting the
+  empty_fallback `Enum.min(c, fn -> nil end)` / `Enum.max(...)`. Updated rule + moduledoc + check_test
+  (take(1)/hd moved to negative cases) + fix_test + equivalence test. Note: the fallback must be built
+  via `Sourceror.parse_string!("fn -> nil end")` — a hand-built `{:fn,...}` AST crashes the formatter
+  inside `patches_from_ast_transform` (this rule's render path; `no_sort_then_at` uses postwalk so its
+  hand-built node is fine).
+- **`prefer_desc_sort_over_negative_take` — was UNSAFE, now RESOLVED (added reverse).** `sort |> take(-3)`
+  (n largest ascending) → `sort(:desc) |> take(3)` (descending) reversed the order. Fixed by appending
+  `|> Enum.reverse()`, which restores ascending order — behaviour-preserving and still cheaper (`take(n)`
+  from the front + reversing n beats `take(-n)` walking the whole list). Updated rule (rebuild pipeline +
+  insert reverse) + moduledoc + fix_test + equivalence test + 2 showcase golden tests.
 - `no_piped_regex_replace` — investigated, **SAFE** (only the piped, crashing form is rewritten;
   `String.replace ≡ Regex.replace` on all probed inputs). Kept as T2; not a divergence.
 
@@ -180,11 +200,15 @@ above is the human worklist.)
    suite stays green: 4493 tests / 117 excluded). The 2 cosmetics are pre-filled and pass now.
    Remaining work = the fill pass: replace each TODO snippet/battery and drop the tag, highest-risk
    T1 first, then T2, then probe. Each divergence on a shipped rule → narrow/drop (decision 2).
-   **Filled so far (11/125):** 6 exemplars + first high-risk T1 batch — `no_enum_take_negative`,
-   `no_enum_drop_negative` (bounds, safe), `no_manual_string_reverse` (Unicode, safe — grapheme-based),
-   `no_redundant_case_nil_clause` (nil/term-ordering, safe — smart guard rewrite), `no_sort_then_at`
-   (empty-list divergence → fixed). 2 cosmetics done. Suite green: 4499 tests / 112 excluded.
-   **2 shipped bugs found & fixed so far** (`redundant_list_guard`, `no_sort_then_at`).
+   **Filled so far (16/125):** 6 exemplars + 10 backfill. Batch 1: `no_enum_take_negative`,
+   `no_enum_drop_negative` (bounds, safe), `no_manual_string_reverse` (Unicode, safe),
+   `no_redundant_case_nil_clause` (nil/term-ordering, safe), `no_sort_then_at` (empty → fixed).
+   Batch 2: `no_grapheme_palindrome_check`, `no_string_length_for_char_check` (Unicode, safe),
+   `unnecessary_grapheme_chunking` (len<n → fixed via `//1`), `no_sort_for_top_k` (narrowed to at(0)
+   + empty_fallback), `prefer_desc_sort_over_negative_take` (added trailing reverse). 2 cosmetics done.
+   Suite green: 4504 tests / 107 excluded.
+   **5 shipped bugs found, all fixed in-session** (`redundant_list_guard`, `no_sort_then_at`,
+   `unnecessary_grapheme_chunking`, `no_sort_for_top_k`, `prefer_desc_sort_over_negative_take`).
 3. **Backfill T2 (29)** via `assert_equivalent_module`; **PROBE (26)** turn on `probe_effects`.
 4. **Stamp T3a (8) + T3b (2)** with cosmetic/unconstructible marks + reasons. Resolve the
    two flagged rules. Drive the T3b/unconstructible pile to minimum.

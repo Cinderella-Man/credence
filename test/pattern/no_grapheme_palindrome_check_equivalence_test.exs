@@ -1,26 +1,27 @@
 defmodule Credence.Pattern.NoGraphemePalindromeCheckEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
+  Tier 1 (expression), Unicode dimension — always safe.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  `graphemes = String.graphemes(s); graphemes == Enum.reverse(graphemes)` →
+  `s == String.reverse(s)`. Both sides compare by grapheme, so they agree on
+  every string, including decomposed accents and flags. No assumption needed.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoGraphemePalindromeCheck
 
-  # Firing snippets lifted from no_grapheme_palindrome_check_check_test.exs:
-  #   (none auto-extracted — see the check test)
+  @expr """
+  graphemes = String.graphemes(s)
+  graphemes == Enum.reverse(graphemes)
+  """
 
-  test "no_grapheme_palindrome_check: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "grapheme palindrome check → String.reverse comparison preserves behaviour over Unicode" do
+    assert_equivalent(@expr,
       rule: NoGraphemePalindromeCheck,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:s],
+      inputs: B.unicode_strings()
     )
   end
 end
