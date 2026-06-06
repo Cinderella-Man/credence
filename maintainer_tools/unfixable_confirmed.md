@@ -138,3 +138,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_manual_sorted_merge_test.exs`
 - Reason: Enum.sort(a++b) equals the manual merge only for already-sorted inputs (a runtime invariant); on unsorted inputs it differs (merge([3,1],[2])=[2,3,1] vs [1,2,3]), and no syntactic subset can guarantee sortedness.
 
+## no_manual_top_k_reduce — 2026-06-06
+- Files:
+  - `lib/pattern/no_manual_top_k_reduce.ex`
+  - `test/pattern/no_manual_top_k_reduce_test.exs`
+- Reason: reduce returns a tuple but the only replacement (sort|>take) returns a list — value-type change; and check is purely structural (any </>/<=/>= + any 2-tuple body), never verifying aggregation, comparison direction, init ordering, or list-ness, so no same-answer fix exists for the admitted inputs.
+
