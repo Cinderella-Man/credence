@@ -334,3 +334,9 @@ Items pulled out of the candidate queue that need dedicated human attention
 ## test/pattern/debug_ast_test.exs — 2026-06-05
 - Reason: orphan test — no owning rule in tree or sister.
 
+## no_manual_list_reverse — 2026-06-06
+- Files:
+  - `lib/pattern/no_manual_list_reverse.ex`
+  - `test/pattern/no_manual_list_reverse_test.exs`
+- Reason: duplicates already-promoted no_manual_list_reduce (manual reverse is a fold with update [h|acc]; its own fix test "cons-building update" already flags+fixes this exact shape) — fold/drop
+

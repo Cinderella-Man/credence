@@ -1,5 +1,3 @@
-lib/pattern/no_manual_list_reverse.ex
-test/pattern/no_manual_list_reverse_test.exs
 lib/pattern/no_manual_sorted_merge.ex
 test/pattern/no_manual_sorted_merge_test.exs
 lib/pattern/no_manual_top_k_reduce.ex
