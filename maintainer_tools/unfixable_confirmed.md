@@ -156,3 +156,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_min_max_reduce_with_index_test.exs`
 - Reason: reduce's seed accumulator is an extra candidate that can be returned (proven {0,0} vs {3,1}); min_by/max_by has no seed, and check never constrains init to the enumerable's first element.
 
+## no_reduce_for_partition — 2026-06-06
+- Files:
+  - `lib/pattern/no_reduce_for_partition.ex`
+  - `test/pattern/no_reduce_for_partition_test.exs`
+- Reason: check flags only the reduce node, whose value is reversed-order lists (or {list,int}); no Enum.split_with reproduces it, and matching the trailing reverses is unsafe (guard swallows errors a predicate raises)
+
