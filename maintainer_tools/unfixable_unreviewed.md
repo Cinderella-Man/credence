@@ -1,5 +1,3 @@
-lib/pattern/no_starts_with_own_prefix.ex
-test/pattern/no_starts_with_own_prefix_test.exs
 lib/pattern/no_trivial_delegation.ex
 test/pattern/no_trivial_delegation_check_test.exs
 lib/pattern/no_uniq_then_count.ex

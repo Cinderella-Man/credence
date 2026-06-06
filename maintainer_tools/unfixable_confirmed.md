@@ -198,3 +198,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_reverse_uniq_reverse_test.exs`
 - Reason: reverse|>uniq|>reverse keeps last occurrence (order-preserved); Enum.uniq keeps first, so the only replacement changes which elements survive — no same-answer fix.
 
+## no_starts_with_own_prefix — 2026-06-06
+- Files:
+  - `lib/pattern/no_starts_with_own_prefix.ex`
+  - `test/pattern/no_starts_with_own_prefix_test.exs`
+- Reason: only fix is replacing the call with constant `true`, but subject is always an unprovable variable so non-binary `x` / negative length turn a raise into true under :strict
+
