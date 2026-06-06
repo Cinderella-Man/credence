@@ -9,9 +9,9 @@ defmodule Credence.Pattern.NoEnumCountForLengthTest do
   end
 
   describe "NoEnumCountForLength" do
-    test "detects Enum.count(var) on a list variable" do
+    test "does not flag Enum.count on a bare variable (type unknown — could be a range/map/stream)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
         def process(input) do
           chars = String.graphemes(input)
           total = Enum.count(chars)
@@ -20,10 +20,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthTest do
       end
       """
 
-      [issue] = check(code)
-      assert issue.rule == :no_enum_count_for_length
-
-      assert issue.message =~ "length/1"
+      assert check(code) == []
     end
 
     test "detects Enum.count in a pipeline" do
@@ -58,7 +55,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthTest do
       code = """
       defmodule Bad do
         def check(list, min_size) do
-          if Enum.count(list) >= min_size, do: :ok, else: :error
+          if Enum.count(String.graphemes(list)) >= min_size, do: :ok, else: :error
         end
       end
       """
@@ -71,7 +68,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthTest do
       code = """
       defmodule Bad do
         def compare(a, b) do
-          Enum.count(a) == Enum.count(b)
+          Enum.count(String.graphemes(a)) == Enum.count(String.graphemes(b))
         end
       end
       """
@@ -84,7 +81,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthTest do
       code = """
       defmodule Bad do
         def process(items) do
-          n = Enum.count(items)
+          n = Enum.count(String.graphemes(items))
           Enum.reduce(0..(n - 1), 0, fn i, acc -> acc + i end)
         end
       end

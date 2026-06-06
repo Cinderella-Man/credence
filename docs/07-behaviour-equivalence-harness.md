@@ -130,6 +130,15 @@ opt-outs remain; nothing is unconstructible.
   — `max(1, 1.0) == 1` but the manual form yields `1.0` (caught only by the new strict `===`). Narrowed
   both rules to the **non-strict forms only** (the subset that equals `max`/`min` exactly). Updated both
   rules' moduledocs + check/fix tests (strict positives → negatives) + 1 integration golden test.
+- **`no_enum_count_for_length` — was UNSAFE (enumerable-type), now NARROWED (no new switch).**
+  `Enum.count(x)` → `length(x)` only when `x` is a list (`length(1..5)` raises; `Enum.count(1..5)` is
+  `5`). Maintainer chose narrow-over-assumption: the rule now fires only when the arg is **provably a
+  list** — a list literal, a `++`, or a (possibly piped) call to a list-returning function (whitelist:
+  `Enum.map/filter/sort/...`, `String.graphemes/split/...`, `Map.keys/values`, `List.*`, ...). A bare
+  `Enum.count(var)` no longer fires. Added `provably_list?/1` + a `@list_returning` whitelist; updated
+  the rule's test (bare-var positives → negatives, structural-context tests given provably-list args)
+  + 3 golden tests (bare-var `Enum.count` retained). Gotcha: Sourceror wraps list literals as
+  `{:__block__, _, [[...]]}`, so `provably_list?` unwraps that.
 - `no_piped_regex_replace` — investigated, **SAFE** (only the piped, crashing form is rewritten;
   `String.replace ≡ Regex.replace` on all probed inputs). Kept as T2; not a divergence.
 
@@ -235,8 +244,11 @@ above is the human worklist.)
    `no_redundant_dedup_before_mapset` (safe — `Enum.uniq`/`MapSet` both strict `===`); `no_manual_max`
    + `no_manual_min` NARROWED to non-strict forms (strict `>`/`<` diverged on `max(1,1.0)`). Suite green:
    4422 tests / 97 excluded.
-   **Bugs found: 9 fixed/narrowed in-session, 1 rule dropped, 1 pair merged** (the `===` upgrade keeps
-   exposing value-kind bugs). Rule count 125→123.
+   Batch 5 (enumerable-type + eval-order): `no_list_fold` (safe — `foldr` fix reverses to keep order),
+   `no_map_put_get_increment`, `no_reduce_while_without_halt`, `no_redundant_enum_join_separator` (safe);
+   `no_enum_count_for_length` NARROWED to provably-list args (enumerable-type). Suite green: 4429 / 92 excluded.
+   **Bugs found: 10 fixed/narrowed in-session, 1 dropped, 1 merged** (the `===` upgrade keeps
+   exposing value-kind/enumerable-type bugs). Rule count 125→123.
 3. **Backfill T2 (29)** via `assert_equivalent_module`; **PROBE (26)** turn on `probe_effects`.
 4. **Stamp T3a (8) + T3b (2)** with cosmetic/unconstructible marks + reasons. Resolve the
    two flagged rules. Drive the T3b/unconstructible pile to minimum.

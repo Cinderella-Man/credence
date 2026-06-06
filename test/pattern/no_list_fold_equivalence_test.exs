@@ -1,28 +1,31 @@
 defmodule Credence.Pattern.NoListFoldEquivalenceTest do
   @moduledoc """
-  Tier 1 (expression) — wrap before/after in `fn <vars> -> expr end`.
+  Tier 1 (expression), eval-order dimension.
 
-  AUTO-GENERATED SKELETON (docs/07 Phase 2). Fill the snippet + battery, confirm
-  the tier, then delete the `@moduletag :equivalence_todo` line.
+  `List.foldl(list, acc, fun)` → `Enum.reduce(list, acc, fun)` (same left-to-right
+  order). `List.foldr(list, acc, fun)` → `Enum.reduce(Enum.reverse(list), acc, fun)`
+  — the fix reverses the list to preserve `foldr`'s right-to-left order, which a
+  bare `Enum.reduce` would not. Both directions verified over lists.
   """
   use ExUnit.Case, async: true
-  @moduletag :equivalence_todo
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceBatteries, as: B
   alias Credence.Pattern.NoListFold
 
-  # Firing snippets lifted from no_list_fold_check_test.exs:
-  #   List.foldl(list, 0, fn x, acc -> acc + x end)
-  #   List.foldr(list, [], fn x, acc -> [x | acc] end)
-  #   Enum.reduce(list, 0, fn x, acc -> acc + x end)
-
-  test "no_list_fold: fix preserves behaviour over the battery" do
-    assert_equivalent(
-      "TODO: firing expression (bind its free vars below)",
+  test "List.foldl → Enum.reduce preserves accumulation (left-to-right)" do
+    assert_equivalent("List.foldl(list, 0, fn x, acc -> acc + x end)",
       rule: NoListFold,
-      vars: [:todo],
-      inputs: B.term_lists()
+      vars: [:list],
+      inputs: B.signed_integers()
+    )
+  end
+
+  test "List.foldr → Enum.reduce(Enum.reverse(...)) preserves order (right-to-left)" do
+    assert_equivalent("List.foldr(list, [], fn x, acc -> [x * 2 | acc] end)",
+      rule: NoListFold,
+      vars: [:list],
+      inputs: B.signed_integers()
     )
   end
 end

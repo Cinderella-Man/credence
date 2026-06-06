@@ -1151,7 +1151,7 @@ defmodule CredenceTest do
             char_count = String.length(text)
 
             total_length = Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)
-            avg_length = :erlang.float(total_length / length(words))
+            avg_length = :erlang.float(total_length / Enum.count(words))
 
             frequencies =
               Enum.frequencies_by(words, fn word -> String.downcase(word) end)
