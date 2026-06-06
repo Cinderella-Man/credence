@@ -168,3 +168,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_reduce_range_with_elem_test.exs`
 - Reason: reduce-over-range+elem → zip/Tuple.to_list can't preserve answer; range bound never statically equals tuple_size (out-of-bounds elem raises while rewrite truncates), even the slimmest core diverges on the empty tuple (raises vs []), bodies/accumulators are arbitrary, and the order-fixing Enum.reverse is outside the flagged node.
 
+## no_redundant_rem_guard — 2026-06-06
+- Files:
+  - `lib/pattern/no_redundant_rem_guard.ex`
+  - `test/pattern/no_redundant_rem_guard_test.exs`
+- Reason: only fix drops the parity guard, broadening the clause so negative-odd and non-integer inputs return a value instead of raising FunctionClauseError (raise→value, a kind change); proving those inputs are pre-empted needs non-local clause-coverage analysis no static rule can do.
+
