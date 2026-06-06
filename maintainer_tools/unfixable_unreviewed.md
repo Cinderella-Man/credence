@@ -1,5 +1,3 @@
-lib/pattern/no_map_then_reduce.ex
-test/pattern/no_map_then_reduce_test.exs
 lib/pattern/no_min_max_reduce_with_index.ex
 test/pattern/no_min_max_reduce_with_index_test.exs
 lib/pattern/no_nested_then.ex

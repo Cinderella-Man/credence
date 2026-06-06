@@ -144,3 +144,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_manual_top_k_reduce_test.exs`
 - Reason: reduce returns a tuple but the only replacement (sort|>take) returns a list — value-type change; and check is purely structural (any </>/<=/>= + any 2-tuple body), never verifying aggregation, comparison direction, init ordering, or list-ness, so no same-answer fix exists for the admitted inputs.
 
+## no_map_then_reduce — 2026-06-06
+- Files:
+  - `lib/pattern/no_map_then_reduce.ex`
+  - `test/pattern/no_map_then_reduce_test.exs`
+- Reason: fusing map-then-reduce reorders map/reduce side effects (mmmrrr→mrmrmr) and the 2-arity reduce form leaves the first source element unmapped ({4,3}); no safe core without an undecidable purity guarantee :strict forbids.
+
