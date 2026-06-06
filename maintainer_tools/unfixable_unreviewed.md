@@ -1,5 +1,3 @@
-lib/pattern/no_redundant_sort_comparator.ex
-test/pattern/no_redundant_sort_comparator_check_test.exs
 lib/pattern/no_repeated_div_rem.ex
 test/pattern/no_repeated_div_rem_test.exs
 lib/pattern/no_repeated_length_in_recursion.ex

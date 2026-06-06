@@ -174,3 +174,9 @@ Each entry records the rule path, its test file(s), the agent's reason, and the 
   - `test/pattern/no_redundant_rem_guard_test.exs`
 - Reason: only fix drops the parity guard, broadening the clause so negative-odd and non-integer inputs return a value instead of raising FunctionClauseError (raise→value, a kind change); proving those inputs are pre-empted needs non-local clause-coverage analysis no static rule can do.
 
+## no_redundant_sort_comparator — 2026-06-06
+- Files:
+  - `lib/pattern/no_redundant_sort_comparator.ex`
+  - `test/pattern/no_redundant_sort_comparator_check_test.exs`
+- Reason: Enum.sort/1 differs from every flagged comparator on runtime-only facts static analysis can't exclude — strict `<` is unstable and reorders int/float value-equal-but-not-`===` elements ([1,2] vs [1.0,2]), crashes (FunctionClauseError) on wrong-arity/typed elements where sort/1 succeeds, and the `<=` variant short-circuits to a different ordering entirely.
+
