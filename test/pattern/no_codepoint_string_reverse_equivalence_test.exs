@@ -10,7 +10,7 @@ defmodule Credence.Pattern.NoCodepointStringReverseEquivalenceTest do
   equivalence inside the assumption's domain, and that the suite *catches* the
   divergence outside it (the reason the assumption exists).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

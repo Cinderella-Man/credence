@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.PreferGuardOverIfFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferGuardOverIf
-
-  defp apply_fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(PreferGuardOverIf, code)
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # SAFE CORE — rewritten into two guarded clauses
@@ -31,7 +27,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == expected
+    assert fix(PreferGuardOverIf, code) == expected
   end
 
   test "is_nil type-check guard" do
@@ -54,7 +50,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == expected
+    assert fix(PreferGuardOverIf, code) == expected
   end
 
   test "preserves and combines an existing guard" do
@@ -77,7 +73,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == expected
+    assert fix(PreferGuardOverIf, code) == expected
   end
 
   test "keyword-syntax if" do
@@ -96,7 +92,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == expected
+    assert fix(PreferGuardOverIf, code) == expected
   end
 
   test "underscores params unused in each clause" do
@@ -119,7 +115,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == expected
+    assert fix(PreferGuardOverIf, code) == expected
   end
 
   test "underscores all params in a constant catch-all clause" do
@@ -142,7 +138,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == expected
+    assert fix(PreferGuardOverIf, code) == expected
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -160,7 +156,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == code
+    assert fix(PreferGuardOverIf, code) == code
   end
 
   test "arithmetic condition is left alone (rem can raise; guard would swallow it)" do
@@ -174,7 +170,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == code
+    assert fix(PreferGuardOverIf, code) == code
   end
 
   test "`not` over a bare variable is left alone (truthiness/raise mismatch)" do
@@ -188,7 +184,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == code
+    assert fix(PreferGuardOverIf, code) == code
   end
 
   test "bare-variable condition is left alone (truthiness mismatch)" do
@@ -202,7 +198,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == code
+    assert fix(PreferGuardOverIf, code) == code
   end
 
   test "local function call in condition is left alone" do
@@ -216,7 +212,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == code
+    assert fix(PreferGuardOverIf, code) == code
   end
 
   test "remote function call in condition is left alone" do
@@ -230,6 +226,6 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     end
     """
 
-    assert apply_fix(code) == code
+    assert fix(PreferGuardOverIf, code) == code
   end
 end

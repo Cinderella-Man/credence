@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoEnumTakeNegativeCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoEnumTakeNegative
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoEnumTakeNegative.check(ast, [])
-  end
 
   describe "NoEnumTakeNegative check" do
     test "detects Enum.take with negative literal" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEnumTakeNegative, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert %Issue{} = issue
@@ -37,7 +32,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEnumTakeNegative, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_enum_take_negative
     end
@@ -49,22 +44,27 @@ defmodule Credence.Pattern.NoEnumTakeNegativeCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEnumTakeNegative, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "-1"
     end
 
     test "passes Enum.take with positive count" do
-      assert check("defmodule G do\n  def f(l), do: Enum.sort(l, :desc) |> Enum.take(3)\nend") ==
+      assert check(
+               NoEnumTakeNegative,
+               "defmodule G do\n  def f(l), do: Enum.sort(l, :desc) |> Enum.take(3)\nend"
+             ) ==
                []
     end
 
     test "passes Enum.take with variable count" do
-      assert check("defmodule G do\n  def f(l, n), do: Enum.take(l, n)\nend") == []
+      assert check(NoEnumTakeNegative, "defmodule G do\n  def f(l, n), do: Enum.take(l, n)\nend") ==
+               []
     end
 
     test "passes Enum.take with zero" do
-      assert check("defmodule G do\n  def f(l), do: Enum.take(l, 0)\nend") == []
+      assert check(NoEnumTakeNegative, "defmodule G do\n  def f(l), do: Enum.take(l, 0)\nend") ==
+               []
     end
   end
 end

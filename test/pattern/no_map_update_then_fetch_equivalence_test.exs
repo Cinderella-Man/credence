@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchEquivalenceTest do
   dropping the redundant re-fetch. Input set covers key absent (uses `init`) and
   present (applies `fun`), incl. a value-kind value.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoMapUpdateThenFetch

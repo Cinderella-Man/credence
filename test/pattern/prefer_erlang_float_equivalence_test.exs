@@ -13,7 +13,7 @@ defmodule Credence.Pattern.PreferErlangFloatEquivalenceTest do
   the value-kind risk lives. A non-number operand raises in both forms (only the
   exception module differs — intentionally out of scope; see the rule moduledoc).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.PreferErlangFloat

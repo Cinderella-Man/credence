@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoTautologicalIfEquivalenceTest do
   could raise). The input set drives the (total) condition both ways; the value is
   the same regardless, as the fix asserts.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoTautologicalIf

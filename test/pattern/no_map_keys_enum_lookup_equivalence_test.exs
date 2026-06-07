@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupEquivalenceTest do
   iteration order between `Map.keys/1` and direct map traversal (for >32-key maps)
   doesn't affect the boolean. Input set includes a 40-key map.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoMapKeysEnumLookup

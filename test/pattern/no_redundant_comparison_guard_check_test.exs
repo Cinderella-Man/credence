@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantComparisonGuard
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRedundantComparisonGuard.check(ast, [])
-  end
 
   describe "check — positive cases (should flag)" do
     test "flags n >= 0 when earlier clause has n < 0 with same type guard" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantComparisonGuard, code)
       assert issue.rule == :no_redundant_comparison_guard
       assert issue.message =~ ">= 0"
       assert issue.message =~ "Redundant"
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantComparisonGuard, code)
       assert issue.message =~ "<= 0"
     end
 
@@ -44,7 +39,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantComparisonGuard, code)
       assert issue.message =~ "> 5"
     end
 
@@ -56,7 +51,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantComparisonGuard, code)
       assert issue.message =~ "< 10"
     end
 
@@ -75,7 +70,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantComparisonGuard, code)
       assert issue.rule == :no_redundant_comparison_guard
       assert issue.message =~ ">= 0"
     end
@@ -88,7 +83,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantComparisonGuard, code)
       assert issue.message =~ ">= 0"
     end
 
@@ -101,7 +96,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       """
 
       # 0 <= n is n >= 0, which is complementary to n < 0
-      [issue] = check(code)
+      [issue] = check(NoRedundantComparisonGuard, code)
       assert issue.rule == :no_redundant_comparison_guard
     end
 
@@ -113,7 +108,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantComparisonGuard, code)
       assert issue.rule == :no_redundant_comparison_guard
     end
   end
@@ -127,7 +122,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantComparisonGuard, code) == []
     end
 
     test "does not flag different type guards" do
@@ -138,7 +133,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantComparisonGuard, code) == []
     end
 
     test "does not flag different variables" do
@@ -149,7 +144,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantComparisonGuard, code) == []
     end
 
     test "does not flag different literals" do
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantComparisonGuard, code) == []
     end
 
     test "does not flag non-complementary operators" do
@@ -171,7 +166,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantComparisonGuard, code) == []
     end
 
     test "does not flag single-clause functions" do
@@ -181,7 +176,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantComparisonGuard, code) == []
     end
 
     test "does not flag unrelated guards" do
@@ -192,7 +187,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantComparisonGuard, code) == []
     end
 
     test "does not flag when guard has additional constraints" do
@@ -203,7 +198,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantComparisonGuard, code) == []
     end
 
     test "does not flag clauses without guards" do
@@ -214,7 +209,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantComparisonGuard, code) == []
     end
   end
 end

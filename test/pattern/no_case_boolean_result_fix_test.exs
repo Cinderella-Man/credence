@@ -1,17 +1,7 @@
 defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCaseBooleanResult
-
-  defp fix(code) do
-    ast = Sourceror.parse_string!(code)
-    patches = NoCaseBooleanResult.fix_patches(ast, source: code)
-
-    case patches do
-      [] -> code
-      _ -> Sourceror.patch_string(code, patches)
-    end
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # FIXABLE — specific pattern, then trailing wildcard → match?/2
@@ -30,7 +20,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       match?(:ok, result)
       """
 
-      assert fix(code) == expected
+      assert fix(NoCaseBooleanResult, code) == expected
     end
 
     test "atom pattern -> false; _ -> true" do
@@ -45,7 +35,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       not match?(:ok, result)
       """
 
-      assert fix(code) == expected
+      assert fix(NoCaseBooleanResult, code) == expected
     end
 
     test "tuple pattern -> true; _ -> false" do
@@ -60,7 +50,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       match?({:ok, _}, File.read(path))
       """
 
-      assert fix(code) == expected
+      assert fix(NoCaseBooleanResult, code) == expected
     end
 
     test "integer pattern -> true; _ -> false" do
@@ -75,7 +65,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       match?(0, status)
       """
 
-      assert fix(code) == expected
+      assert fix(NoCaseBooleanResult, code) == expected
     end
 
     test "piped case with trailing wildcard" do
@@ -96,7 +86,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       )
       """
 
-      assert fix(code) == expected
+      assert fix(NoCaseBooleanResult, code) == expected
     end
   end
 
@@ -113,7 +103,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoCaseBooleanResult, code) == code
     end
 
     test "variable pattern, then wildcard (case is constant)" do
@@ -124,7 +114,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoCaseBooleanResult, code) == code
     end
 
     test "wildcard FIRST, false then true (second clause is dead)" do
@@ -135,7 +125,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoCaseBooleanResult, code) == code
     end
 
     test "wildcard FIRST, true then false (second clause is dead)" do
@@ -146,7 +136,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoCaseBooleanResult, code) == code
     end
   end
 end

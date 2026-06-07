@@ -1,16 +1,7 @@
 defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListConcatWithRecursiveResult
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoListConcatWithRecursiveResult, code, [])
-  end
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListConcatWithRecursiveResult.check(ast, [])
-  end
 
   describe "rewrites [literal] ++ recursive_result to a cons" do
     test "single-element literal ++ direct self-call" do
@@ -34,7 +25,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoListConcatWithRecursiveResult, code) == expected
     end
 
     test "multi-element literal ++ self-call on a single-line clause" do
@@ -52,7 +43,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoListConcatWithRecursiveResult, code) == expected
     end
 
     test "literal ++ variable bound to a recursive call" do
@@ -78,7 +69,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoListConcatWithRecursiveResult, code) == expected
     end
 
     test "fixes only the literal-prefix clause, leaves the others" do
@@ -114,7 +105,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoListConcatWithRecursiveResult, code) == expected
     end
   end
 
@@ -136,7 +127,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListConcatWithRecursiveResult, code) == code
     end
 
     test "recursive_result ++ [literal] unchanged" do
@@ -150,7 +141,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListConcatWithRecursiveResult, code) == code
     end
 
     test "empty list literal ++ recursive result unchanged" do
@@ -164,7 +155,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListConcatWithRecursiveResult, code) == code
     end
   end
 
@@ -177,7 +168,8 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoListConcatWithRecursiveResult, fix(NoListConcatWithRecursiveResult, code)) ==
+               []
     end
 
     test "fixed code is valid Elixir" do
@@ -188,7 +180,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(NoListConcatWithRecursiveResult, code))
     end
   end
 end

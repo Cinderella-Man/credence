@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipEquivalenceTest do
   `1` vs `1.0` value-kind case agrees (a `1` key is not matched by `1.0`). Input set
   includes value-kind keys, a present key, an absent key, and an atom key.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoMapKeysForMembership

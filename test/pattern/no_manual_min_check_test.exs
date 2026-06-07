@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoManualMinCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualMin
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoManualMin.check(ast, [])
-  end
 
   describe "NoManualMin check" do
     test "does not flag strict if a < b, do: a, else: b (value-kind unsafe on ties)" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMin, code) == []
     end
 
     test "detects if a <= b, do: a, else: b" do
@@ -30,7 +25,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualMin, code)
       assert issue.message =~ "min/2"
     end
 
@@ -43,7 +38,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMin, code) == []
     end
 
     test "detects if b >= a, do: a, else: b (flipped with >=)" do
@@ -55,7 +50,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualMin, code)
       assert issue.message =~ "min/2"
     end
 
@@ -68,7 +63,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualMin, code)
       assert issue.message =~ "min/2"
     end
 
@@ -81,7 +76,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualMin, code)
       assert issue.message =~ "min/2"
     end
 
@@ -98,7 +93,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualMin, code)
       assert issue.message =~ "min/2"
     end
 
@@ -113,7 +108,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoManualMin, code)
       assert length(issues) == 2
     end
 
@@ -124,7 +119,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMin, code) == []
     end
 
     test "does not flag max pattern (different rule)" do
@@ -136,7 +131,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMin, code) == []
     end
 
     test "does not flag if with non-comparison condition" do
@@ -148,7 +143,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMin, code) == []
     end
 
     test "does not flag if with mismatched branches" do
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMin, code) == []
     end
 
     test "does not flag if without else" do
@@ -172,7 +167,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMin, code) == []
     end
 
     test "does not flag if where branches are swapped (would be max)" do
@@ -184,7 +179,7 @@ defmodule Credence.Pattern.NoManualMinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMin, code) == []
     end
   end
 end

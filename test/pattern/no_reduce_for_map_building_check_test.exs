@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoReduceForMapBuilding
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoReduceForMapBuilding.check(ast, [])
-  end
 
   describe "check — positive cases" do
     test "detects Enum.reduce building a map with Map.put" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForMapBuilding, code)
       assert issue.rule == :no_reduce_for_map_building
       assert issue.message =~ "Map.new/2"
     end
@@ -37,7 +32,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForMapBuilding, code)
       assert issue.rule == :no_reduce_for_map_building
     end
 
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForMapBuilding, code)
       assert issue.rule == :no_reduce_for_map_building
     end
 
@@ -67,7 +62,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForMapBuilding, code)
       assert issue.rule == :no_reduce_for_map_building
       assert issue.message =~ "MapSet.new/1"
     end
@@ -84,7 +79,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForMapBuilding, code)
       assert issue.rule == :no_reduce_for_map_building
       assert issue.message =~ "MapSet.new/1"
     end
@@ -98,7 +93,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForMapBuilding, code)
       assert issue.rule == :no_reduce_for_map_building
       assert issue.message =~ "MapSet.new/1"
     end
@@ -113,7 +108,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForMapBuilding, code)
       assert issue.rule == :no_reduce_for_map_building
       assert issue.message =~ "MapSet.new/1"
     end
@@ -131,7 +126,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag when value references acc" do
@@ -145,7 +140,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag when key references acc" do
@@ -159,7 +154,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag when body has multiple statements" do
@@ -174,7 +169,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag Enum.reduce with sum accumulation" do
@@ -186,7 +181,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag Map.new (already idiomatic)" do
@@ -198,7 +193,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag Enum.into" do
@@ -210,7 +205,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag MapSet.new (already idiomatic)" do
@@ -222,7 +217,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag non-empty MapSet initial" do
@@ -236,7 +231,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag MapSet.put when value references acc" do
@@ -250,7 +245,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag MapSet.put when value is not the element" do
@@ -264,7 +259,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag Map.put with MapSet initial" do
@@ -278,7 +273,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     # `Enum.reduce/2` over a literal `%{}` is *not* the same shape: its first
@@ -296,7 +291,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
 
     test "does not flag bare Enum.reduce/2 over an empty MapSet literal" do
@@ -310,7 +305,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForMapBuilding, code) == []
     end
   end
 end

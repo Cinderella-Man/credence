@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeEquivalenceTest do
   pipe-friendly form. The single clause binds the piped value and computes the same
   result, so behaviour is preserved.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoCaseDestructureInPipe

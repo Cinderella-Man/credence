@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoGuardEqualityForPatternMatch
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoGuardEqualityForPatternMatch.check(ast, [])
-  end
 
   describe "check" do
     test "passes code that pattern matches directly in the head" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "passes guards with non-equality comparisons" do
@@ -30,7 +25,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "passes guards comparing two variables" do
@@ -41,7 +36,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "does not flag integer literal (== matches 2.0 but the pattern head would not)" do
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "detects when var == atom_literal in guard (and reports metadata)" do
@@ -63,7 +58,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
 
       assert length(issues) == 1
       issue = hd(issues)
@@ -83,7 +78,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
 
       assert length(issues) == 1
       assert hd(issues).message =~ ":stop"
@@ -97,7 +92,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
 
       assert length(issues) == 1
       assert hd(issues).message =~ "world"
@@ -111,7 +106,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
 
       assert length(issues) == 1
       assert hd(issues).message =~ ~s(s == "zero")
@@ -126,7 +121,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "detects only def/defp, not fn" do
@@ -138,7 +133,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "detects reversed equality (literal == var)" do
@@ -149,7 +144,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "n == :two"
     end
@@ -161,7 +156,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 2
 
       messages = Enum.map(issues, & &1.message)
@@ -176,7 +171,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 2
     end
 
@@ -187,7 +182,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "flags true atom in guard" do
@@ -197,7 +192,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "true"
     end
@@ -209,7 +204,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "nil"
     end
@@ -221,7 +216,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "detects equality mixed with other guards in and" do
@@ -231,7 +226,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "n == :two"
     end
@@ -244,7 +239,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 1
       assert hd(issues).message =~ ":answer"
     end
@@ -258,7 +253,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "n == :zero"
     end
@@ -270,7 +265,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 2
 
       messages = Enum.map(issues, & &1.message)
@@ -287,7 +282,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "does not flag charlist literal" do
@@ -297,7 +292,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "flags empty string literal" do
@@ -307,7 +302,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 1
     end
 
@@ -321,7 +316,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "detects equality for each guarded clause independently" do
@@ -333,7 +328,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGuardEqualityForPatternMatch, code)
       assert length(issues) == 2
 
       messages = Enum.map(issues, & &1.message)

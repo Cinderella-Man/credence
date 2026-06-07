@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoDoubleFilterEquivalenceTest do
   → `split_with(p)`. `split_with` yields `{kept, rejected}` in input order, matching
   the two filters exactly.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoDoubleFilter

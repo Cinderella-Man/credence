@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoStringConcatInLoop
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoStringConcatInLoop.check(ast, [])
-  end
 
   describe "check/2 — positive cases" do
     test "flags Enum.reduce with simple <> concatenation" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoStringConcatInLoop, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_string_concat_in_loop
     end
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoStringConcatInLoop, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_string_concat_in_loop
     end
@@ -46,7 +41,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoStringConcatInLoop, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_string_concat_in_loop
     end
@@ -62,7 +57,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoStringConcatInLoop, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_string_concat_in_loop
     end
@@ -76,7 +71,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoStringConcatInLoop, code)
       assert length(issues) == 1
     end
 
@@ -87,7 +82,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoStringConcatInLoop, code)
       assert length(issues) == 1
     end
 
@@ -98,7 +93,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoStringConcatInLoop, code)) == 1
     end
 
     test "flags block body where acc only appears in final <>" do
@@ -113,7 +108,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoStringConcatInLoop, code)) == 1
     end
 
     test "flags block body in pipeline" do
@@ -129,7 +124,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoStringConcatInLoop, code)) == 1
     end
   end
 
@@ -143,7 +138,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringConcatInLoop, code) == []
     end
 
     test "does not flag non-empty initial acc" do
@@ -155,7 +150,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringConcatInLoop, code) == []
     end
 
     test "does not flag Enum.reduce_while" do
@@ -169,7 +164,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringConcatInLoop, code) == []
     end
 
     test "does not flag for comprehension" do
@@ -183,7 +178,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringConcatInLoop, code) == []
     end
 
     test "does not flag recursive function" do
@@ -196,7 +191,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringConcatInLoop, code) == []
     end
 
     test "does not flag block body when acc referenced in preceding statements" do
@@ -211,7 +206,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringConcatInLoop, code) == []
     end
 
     test "does not flag Enum.join" do
@@ -223,7 +218,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringConcatInLoop, code) == []
     end
 
     test "does not flag <> outside loops" do
@@ -235,7 +230,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringConcatInLoop, code) == []
     end
 
     test "does not flag when acc referenced in right of <>" do
@@ -247,7 +242,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringConcatInLoop, code) == []
     end
   end
 end

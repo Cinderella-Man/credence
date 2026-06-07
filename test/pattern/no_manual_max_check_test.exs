@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoManualMaxCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualMax
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoManualMax.check(ast, [])
-  end
 
   describe "NoManualMax check" do
     test "does not flag strict if a > b, do: a, else: b (value-kind unsafe on ties)" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMax, code) == []
     end
 
     test "detects if a >= b, do: a, else: b" do
@@ -30,7 +25,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualMax, code)
       assert issue.message =~ "max/2"
     end
 
@@ -43,7 +38,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMax, code) == []
     end
 
     test "detects if b <= a, do: a, else: b (flipped with <=)" do
@@ -55,7 +50,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualMax, code)
       assert issue.message =~ "max/2"
     end
 
@@ -70,7 +65,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoManualMax, code)
       assert length(issues) == 2
     end
 
@@ -87,7 +82,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualMax, code)
       assert issue.message =~ "max/2"
     end
 
@@ -99,7 +94,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMax, code) == []
     end
 
     test "does not flag if with unrelated branches" do
@@ -111,7 +106,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMax, code) == []
     end
 
     test "does not flag if with non-comparison condition" do
@@ -123,7 +118,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMax, code) == []
     end
 
     test "does not flag if with mismatched branches" do
@@ -135,7 +130,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMax, code) == []
     end
 
     test "does not flag if without else" do
@@ -147,7 +142,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMax, code) == []
     end
 
     test "does not flag cond expressions" do
@@ -162,7 +157,7 @@ defmodule Credence.Pattern.NoManualMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualMax, code) == []
     end
   end
 end

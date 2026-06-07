@@ -1,10 +1,8 @@
 defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoManualFrequencies
-
-  defp check(code), do: NoManualFrequencies.check(Sourceror.parse_string!(code), [])
 
   describe "fires on the safe frequency-counting shapes" do
     test "identity key, piped" do
@@ -20,7 +18,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoManualFrequencies, code)
       assert length(issues) == 1
       assert %Issue{rule: :no_manual_frequencies} = hd(issues)
       assert hd(issues).meta.line != nil
@@ -33,7 +31,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoManualFrequencies, code)) == 1
     end
 
     test "derived key (String.downcase)" do
@@ -43,7 +41,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoManualFrequencies, code)) == 1
     end
 
     test "fn-form increment (fn n -> n + 1 end)" do
@@ -53,7 +51,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoManualFrequencies, code)) == 1
     end
   end
 
@@ -63,7 +61,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       string |> String.graphemes() |> Enum.frequencies()
       """
 
-      assert check(code) == []
+      assert check(NoManualFrequencies, code) == []
     end
 
     test "non-empty initial accumulator" do
@@ -73,7 +71,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert check(code) == []
+      assert check(NoManualFrequencies, code) == []
     end
 
     test "no Map.update (Map.put)" do
@@ -83,7 +81,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert check(code) == []
+      assert check(NoManualFrequencies, code) == []
     end
 
     test "group-by pattern (list default, not a count)" do
@@ -93,7 +91,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert check(code) == []
+      assert check(NoManualFrequencies, code) == []
     end
 
     test "non-1 default" do
@@ -103,7 +101,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert check(code) == []
+      assert check(NoManualFrequencies, code) == []
     end
 
     test "weighted increment (+2 is not a plain count)" do
@@ -113,7 +111,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert check(code) == []
+      assert check(NoManualFrequencies, code) == []
     end
 
     test "Map.update! variant (raises on the first, missing key)" do
@@ -123,7 +121,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert check(code) == []
+      assert check(NoManualFrequencies, code) == []
     end
 
     test "key references the accumulator (can't extract to a key function)" do
@@ -133,7 +131,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
       end)
       """
 
-      assert check(code) == []
+      assert check(NoManualFrequencies, code) == []
     end
   end
 end

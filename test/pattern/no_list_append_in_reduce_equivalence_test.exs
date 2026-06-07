@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoListAppendInReduceEquivalenceTest do
   Prepend-then-reverse yields the same order as repeated append, in O(n) instead
   of O(n²). Input set covers empty and several elements.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoListAppendInReduce

@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoUnnecessaryCatchAllRaise
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoUnnecessaryCatchAllRaise, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix/2" do
     test "removes simple keyword-style catch-all raise" do
@@ -27,7 +20,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "removes catch-all with do...end block" do
@@ -46,7 +39,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "removes multiple catch-all clauses" do
@@ -62,7 +55,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "removes defp catch-all" do
@@ -79,7 +72,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "removes catch-all with underscore-prefixed names" do
@@ -96,7 +89,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "removes catch-all raising a bare module" do
@@ -113,7 +106,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "removes catch-all that is only function in module" do
@@ -128,7 +121,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "removes catch-all do-block that is only function in module" do
@@ -145,7 +138,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "removes catch-all with single-arg raise (no message)" do
@@ -164,7 +157,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "preserves non-catch-all clauses when removing others" do
@@ -183,7 +176,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoUnnecessaryCatchAllRaise, input) == expected
     end
 
     test "no-op when no catch-all raises present" do
@@ -194,7 +187,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUnnecessaryCatchAllRaise, code) == code
     end
 
     test "no-op for guarded wildcard clauses" do
@@ -206,7 +199,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUnnecessaryCatchAllRaise, code) == code
     end
 
     test "no-op for zero-arity functions that raise" do
@@ -216,7 +209,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUnnecessaryCatchAllRaise, code) == code
     end
 
     test "no-op for catch-all with logic before raise" do
@@ -230,7 +223,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUnnecessaryCatchAllRaise, code) == code
     end
 
     test "no-op for catch-all returning error tuple" do
@@ -241,7 +234,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUnnecessaryCatchAllRaise, code) == code
     end
 
     test "no-op for pattern-matched arguments with some wildcards" do
@@ -251,7 +244,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUnnecessaryCatchAllRaise, code) == code
     end
 
     test "no-op for normal functions without raise" do
@@ -261,7 +254,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUnnecessaryCatchAllRaise, code) == code
     end
   end
 end

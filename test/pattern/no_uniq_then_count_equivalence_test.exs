@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoUniqThenCountEquivalenceTest do
   value-kind case agrees (both keep `1` and `1.0` as distinct). Input set includes
   a value-kind list, empty, and duplicates.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

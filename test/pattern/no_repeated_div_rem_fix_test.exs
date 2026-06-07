@@ -1,16 +1,7 @@
 defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRepeatedDivRem
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoRepeatedDivRem, code, [])
-  end
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRepeatedDivRem.check(ast, [])
-  end
 
   describe "reuses the anchor binding" do
     test "rem bound then recomputed verbatim" do
@@ -34,7 +25,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRepeatedDivRem, code) == expected
     end
 
     test "div recomputed inside a later call" do
@@ -60,7 +51,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRepeatedDivRem, code) == expected
     end
 
     test "anchor recomputed three times" do
@@ -86,7 +77,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRepeatedDivRem, code) == expected
     end
 
     test "variable divisor recomputed" do
@@ -108,7 +99,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRepeatedDivRem, code) == expected
     end
   end
 
@@ -123,7 +114,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRepeatedDivRem, code) == code
     end
 
     test "single-expression body" do
@@ -135,7 +126,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRepeatedDivRem, code) == code
     end
 
     test "argument variable rebound" do
@@ -149,7 +140,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRepeatedDivRem, code) == code
     end
 
     test "argument shadowed inside a closure occurrence" do
@@ -163,7 +154,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRepeatedDivRem, code) == code
     end
 
     test "side-effecting argument" do
@@ -176,7 +167,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRepeatedDivRem, code) == code
     end
   end
 
@@ -193,7 +184,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoRepeatedDivRem, fix(NoRepeatedDivRem, code)) == []
     end
 
     test "fixed code is valid Elixir" do
@@ -207,7 +198,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(NoRepeatedDivRem, code))
     end
   end
 end

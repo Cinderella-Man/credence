@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.PreferEnumSliceFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferEnumSlice
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferEnumSlice.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(PreferEnumSlice, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix" do
     test "fixes Enum.drop |> Enum.take pipeline to Enum.slice" do
@@ -36,7 +24,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferEnumSlice, input) == expected
     end
 
     test "fixes nested Enum.take(Enum.drop(...)) to Enum.slice" do
@@ -56,7 +44,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferEnumSlice, input) == expected
     end
 
     test "fixes single pipe Enum.drop |> Enum.take to Enum.slice" do
@@ -76,7 +64,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferEnumSlice, input) == expected
     end
 
     test "fixes pipeline with preceding steps" do
@@ -103,7 +91,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferEnumSlice, input) == expected
     end
 
     test "fixes multiple occurrences in the same file" do
@@ -127,7 +115,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferEnumSlice, input) == expected
     end
 
     test "fix inside anonymous function" do
@@ -146,7 +134,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end)
       """
 
-      assert fix(input) == expected
+      assert fix(PreferEnumSlice, input) == expected
     end
 
     test "does not modify non-literal (field-access) amounts — could be negative" do
@@ -158,7 +146,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSlice, code) == code
     end
 
     test "does not modify code without the pattern" do
@@ -171,7 +159,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSlice, code) == code
     end
 
     test "does not modify reversed order" do
@@ -185,7 +173,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSlice, code) == code
     end
 
     test "does not modify Stream" do
@@ -199,7 +187,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSlice, code) == code
     end
 
     test "fix is idempotent" do
@@ -213,8 +201,8 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      first_pass = fix(input)
-      second_pass = fix(first_pass)
+      first_pass = fix(PreferEnumSlice, input)
+      second_pass = fix(PreferEnumSlice, first_pass)
       assert first_pass == second_pass
     end
 
@@ -229,7 +217,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert check(fix(input)) == []
+      assert check(PreferEnumSlice, fix(PreferEnumSlice, input)) == []
     end
 
     test "fixed nested call passes check" do
@@ -241,7 +229,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert check(fix(input)) == []
+      assert check(PreferEnumSlice, fix(PreferEnumSlice, input)) == []
     end
 
     test "fixed single pipe passes check" do
@@ -253,7 +241,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert check(fix(input)) == []
+      assert check(PreferEnumSlice, fix(PreferEnumSlice, input)) == []
     end
   end
 end

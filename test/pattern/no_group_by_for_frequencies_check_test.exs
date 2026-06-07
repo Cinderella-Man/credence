@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoGroupByForFrequencies
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoGroupByForFrequencies.check(ast, [])
-  end
 
   describe "flags the manual frequency-by-key pattern" do
     test "piped group_by/2 |> Map.new with length" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGroupByForFrequencies, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_group_by_for_frequencies
       assert hd(issues).message =~ "Enum.frequencies_by"
@@ -35,7 +30,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGroupByForFrequencies, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_group_by_for_frequencies
     end
@@ -51,7 +46,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoGroupByForFrequencies, code)) == 1
     end
 
     test "Kernel.length remote-call variant" do
@@ -65,7 +60,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoGroupByForFrequencies, code)) == 1
     end
 
     test "extra leading pipe steps before group_by" do
@@ -80,7 +75,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoGroupByForFrequencies, code)) == 1
     end
 
     test "reports exactly once when a trailing pipe step follows Map.new" do
@@ -95,7 +90,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoGroupByForFrequencies, code)) == 1
     end
   end
 
@@ -111,7 +106,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGroupByForFrequencies, code) == []
     end
 
     test "arithmetic on length" do
@@ -125,7 +120,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGroupByForFrequencies, code) == []
     end
 
     test "Map.new on a non-group_by source" do
@@ -137,7 +132,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGroupByForFrequencies, code) == []
     end
 
     test "group_by alone, without Map.new" do
@@ -149,7 +144,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGroupByForFrequencies, code) == []
     end
   end
 
@@ -170,7 +165,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGroupByForFrequencies, code) == []
     end
 
     test "direct Map.new(Enum.group_by/3, ...) with a value_fun" do
@@ -182,7 +177,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGroupByForFrequencies, code) == []
     end
 
     # Head-position group_by in a pipe: `Enum.group_by(enum, kf) |> Map.new(...)`.
@@ -199,7 +194,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGroupByForFrequencies, code) == []
     end
   end
 end

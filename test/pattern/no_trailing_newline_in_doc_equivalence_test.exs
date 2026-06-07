@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocEquivalenceTest do
   `@doc` is compile-time documentation metadata; trimming a trailing newline
   changes neither runtime behaviour nor the dispatch of any function.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
   import Credence.BehaviourEquivalence
 
   test "no_trailing_newline_in_doc: cosmetic — edits @doc text only, no runtime behaviour" do

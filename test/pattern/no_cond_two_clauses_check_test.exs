@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCondTwoClauses
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoCondTwoClauses.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — should flag
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
 
   describe "flags cond with exactly 2 clauses where second is true" do
     test "basic case" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(x) do
                cond do
                  x > 0 -> :positive
@@ -28,7 +20,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "complex first guard" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(x, y) do
                cond do
                  x > 0 and y > 0 -> :both_positive
@@ -39,7 +31,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "function call as first guard" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(list) do
                cond do
                  Enum.empty?(list) -> :empty
@@ -50,7 +42,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "multi-line bodies" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(low, high, target) do
                cond do
                  low > high ->
@@ -64,7 +56,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "inside a module" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              defmodule Search do
                def binary_search(low, high) do
                  cond do
@@ -77,7 +69,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "used as expression" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(x) do
                result = cond do
                  x > 0 -> :positive
@@ -102,11 +94,11 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoCondTwoClauses, code)) == 2
     end
 
     test "inside other constructs" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(x) do
                case x do
                  {:ok, val} ->
@@ -123,7 +115,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
 
   describe "flags cond with exactly 2 clauses where second is the complement" do
     test "complementary guards — <= and >" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(x, target) do
                cond do
                  x <= target -> :left
@@ -134,7 +126,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "complementary guards — < and >=" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(x, y) do
                cond do
                  x < y -> :less
@@ -145,7 +137,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "complementary guards — == and !=" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(x, y) do
                cond do
                  x == y -> :equal
@@ -156,7 +148,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "complementary guards — reversed order (first is >, second is <=)" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def run(x, target) do
                cond do
                  x > target -> :right
@@ -167,7 +159,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "complementary guards in binary search pattern — idx=61326" do
-      assert flagged?("""
+      assert flagged?(NoCondTwoClauses, """
              def search(tuple, target, low, high) do
                mid = div(low + high, 2)
                mid_char = elem(tuple, mid)
@@ -192,7 +184,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
 
   describe "does not flag cond with 3+ clauses" do
     test "three clauses with true catch-all" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x) do
                cond do
                  x > 0 -> :positive
@@ -204,7 +196,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "four clauses" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x) do
                cond do
                  x > 10 -> :high
@@ -219,7 +211,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
 
   describe "does not flag cond with 2 clauses where second is not true" do
     test "non-complementary guards" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x) do
                cond do
                  x > 100 -> :high
@@ -230,7 +222,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "second guard is a function call" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x) do
                cond do
                  x > 0 -> :positive
@@ -247,7 +239,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     # operands could observe different state on the re-run, so they are not
     # flagged even though the operators are complementary.
     test "left operand is a function call" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(target) do
                cond do
                  next_id() <= target -> :left
@@ -258,7 +250,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "right operand is a function call" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x) do
                cond do
                  x == fetch() -> :equal
@@ -269,7 +261,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "operand is an arithmetic expression" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x, y) do
                cond do
                  x + 1 <= y -> :left
@@ -282,7 +274,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
 
   describe "does not flag cond with 1 clause" do
     test "single clause" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x) do
                cond do
                  x > 0 -> :positive
@@ -294,7 +286,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
 
   describe "does not flag non-cond constructs" do
     test "if/else" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x) do
                if x > 0 do
                  :positive
@@ -306,7 +298,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "case with two clauses" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x) do
                case x > 0 do
                  true -> :positive
@@ -317,7 +309,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
     end
 
     test "plain function" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              defmodule M do
                def run(x), do: x * 2
              end
@@ -327,7 +319,7 @@ defmodule Credence.Pattern.NoCondTwoClausesCheckTest do
 
   describe "does not flag first clause being true" do
     test "true as first guard — unreachable second clause" do
-      assert clean?("""
+      assert clean?(NoCondTwoClauses, """
              def run(x) do
                cond do
                  true -> :always

@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoFilterThenFirstEquivalenceTest do
   Both return the first element satisfying `pred` (or `nil`), applying `pred` in
   order and short-circuiting. Input set covers match, no-match, and empty.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoFilterThenFirst

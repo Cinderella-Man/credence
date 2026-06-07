@@ -12,7 +12,7 @@ defmodule Credence.Pattern.NoSortForTopKEquivalenceTest do
   shapes are no longer fixed, and the `at(0)` shapes now use the empty_fallback.
   Input set leads with `[]`.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

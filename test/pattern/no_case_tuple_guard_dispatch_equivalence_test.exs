@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchEquivalenceTest do
   becomes guarded function heads. The clause order, tuple patterns, and guards are
   preserved, so dispatch is identical (including the value-kind `{1, 1.0}` case).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoCaseTupleGuardDispatch

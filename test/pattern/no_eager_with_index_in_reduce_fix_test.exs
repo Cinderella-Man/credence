@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoEagerWithIndexInReduce
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoEagerWithIndexInReduce.check(ast, [])
-  end
-
-  defp fix(code, opts \\ []) do
-    Credence.RuleHelpers.apply_rule_fix(NoEagerWithIndexInReduce, code, opts)
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix/2 :stream strategy" do
     test "fixes direct form: Enum.with_index → Stream.with_index" do
@@ -37,7 +25,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEagerWithIndexInReduce, input) == expected
     end
 
     test "fixes pipe form: Enum.with_index → Stream.with_index" do
@@ -61,7 +49,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEagerWithIndexInReduce, input) == expected
     end
 
     test "preserves fn body unchanged" do
@@ -85,7 +73,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEagerWithIndexInReduce, input) == expected
     end
 
     test "does not touch Enum.with_index outside reduce" do
@@ -96,7 +84,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoEagerWithIndexInReduce, code) == code
     end
 
     test "round-trip: fixed code has zero issues" do
@@ -107,7 +95,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoEagerWithIndexInReduce, fix(NoEagerWithIndexInReduce, code)) == []
     end
   end
 
@@ -136,7 +124,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(input, fix_strategy: :reduce) == expected
+      assert fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce) == expected
     end
   end
 
@@ -166,7 +154,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(input, fix_strategy: :reduce) == expected
+      assert fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce) == expected
     end
 
     test "strips with_index from pipe, keeps upstream steps" do
@@ -192,7 +180,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(input, fix_strategy: :reduce) == expected
+      assert fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce) == expected
     end
   end
 
@@ -218,7 +206,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(input, fix_strategy: :reduce) == expected
+      assert fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce) == expected
     end
   end
 
@@ -234,7 +222,10 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert check(fix(code, fix_strategy: :reduce)) == []
+      assert check(
+               NoEagerWithIndexInReduce,
+               fix(NoEagerWithIndexInReduce, code, fix_strategy: :reduce)
+             ) == []
     end
 
     test "round-trip: pipe form produces zero issues" do
@@ -248,7 +239,10 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert check(fix(code, fix_strategy: :reduce)) == []
+      assert check(
+               NoEagerWithIndexInReduce,
+               fix(NoEagerWithIndexInReduce, code, fix_strategy: :reduce)
+             ) == []
     end
   end
 
@@ -274,7 +268,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEagerWithIndexInReduce, input) == expected
     end
 
     test ":stream and :reduce produce different output" do
@@ -288,7 +282,8 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      refute fix(code, fix_strategy: :stream) == fix(code, fix_strategy: :reduce)
+      refute fix(NoEagerWithIndexInReduce, code, fix_strategy: :stream) ==
+               fix(NoEagerWithIndexInReduce, code, fix_strategy: :reduce)
     end
 
     test "both strategies produce zero check issues for same input" do
@@ -299,7 +294,10 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       """
 
       for strategy <- [:stream, :reduce] do
-        assert check(fix(code, fix_strategy: strategy)) == [],
+        assert check(
+                 NoEagerWithIndexInReduce,
+                 fix(NoEagerWithIndexInReduce, code, fix_strategy: strategy)
+               ) == [],
                "Strategy #{strategy} left issues"
       end
     end
@@ -328,18 +326,16 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
         def length_of_longest_substring(input_string) do
           graphemes = String.graphemes(input_string)
 
-          Enum.reduce(
-            Stream.with_index(graphemes),
-            %{left: 0, last_seen: %{}, max_length: 0},
-            fn {grapheme, current_index}, acc ->
-              %{acc | max_length: max(acc.max_length, current_index)}
-            end
-          )
+          Enum.reduce(Stream.with_index(graphemes), %{left: 0, last_seen: %{}, max_length: 0}, fn {grapheme,
+                                                                                                   current_index},
+                                                                                                  acc ->
+            %{acc | max_length: max(acc.max_length, current_index)}
+          end)
         end
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEagerWithIndexInReduce, input) == expected
     end
 
     test "preserves String.graphemes in pipe form" do
@@ -371,7 +367,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEagerWithIndexInReduce, input) == expected
     end
 
     test "output compiles for graphemes pattern" do
@@ -391,7 +387,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert {:ok, _ast} = Sourceror.parse_string(fix(code))
+      assert {:ok, _ast} = Sourceror.parse_string(fix(NoEagerWithIndexInReduce, code))
     end
   end
 end

@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoKernelOpInPipeline
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoKernelOpInPipeline.check(ast, [])
-  end
 
   describe "check/2 — positive cases" do
     test "flags |> Kernel.==(x)" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoKernelOpInPipeline, code)
       assert issue.rule == :no_kernel_op_in_pipeline
       assert issue.message =~ "Kernel.=="
     end
@@ -30,7 +25,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoKernelOpInPipeline, code)
       assert issue.message =~ "Kernel.!="
     end
 
@@ -41,7 +36,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoKernelOpInPipeline, code)
       assert issue.message =~ "Kernel.>="
     end
 
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoKernelOpInPipeline, code)
       assert issue.message =~ "Kernel.<"
     end
 
@@ -63,7 +58,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoKernelOpInPipeline, code)
       assert issue.message =~ "Kernel.==="
     end
 
@@ -74,7 +69,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoKernelOpInPipeline, code)
       assert issue.message =~ "Kernel.and"
     end
 
@@ -85,7 +80,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoKernelOpInPipeline, code)
       assert issue.message =~ "Kernel.or"
     end
 
@@ -102,7 +97,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoKernelOpInPipeline, code)
       assert length(issues) == 2
     end
 
@@ -118,7 +113,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoKernelOpInPipeline, code)
       assert issue.rule == :no_kernel_op_in_pipeline
     end
   end
@@ -131,7 +126,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoKernelOpInPipeline, code) == []
     end
 
     test "does not flag normal operator usage" do
@@ -141,7 +136,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoKernelOpInPipeline, code) == []
     end
 
     test "does not flag piped Enum/String calls" do
@@ -151,7 +146,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoKernelOpInPipeline, code) == []
     end
 
     test "does not flag Kernel arithmetic ops in pipeline" do
@@ -161,7 +156,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoKernelOpInPipeline, code) == []
     end
 
     test "does not flag infix operator usage" do
@@ -171,7 +166,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoKernelOpInPipeline, code) == []
     end
   end
 end

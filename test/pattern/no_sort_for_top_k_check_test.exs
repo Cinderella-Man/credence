@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoSortForTopKCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoSortForTopK
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoSortForTopK.check(ast, [])
-  end
 
   describe "check — positive cases (Enum.at(0) terminal only)" do
     test "flags sort |> Enum.at(0)" do
@@ -16,7 +11,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoSortForTopK, code)
       assert issue.rule == :no_sort_for_top_k
       assert issue.message =~ "Enum.min"
     end
@@ -28,7 +23,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoSortForTopK, code)
       assert issue.message =~ "Enum.max"
     end
 
@@ -37,7 +32,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       Enum.map(list, fn x -> Enum.sort(x) |> Enum.at(0) end)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoSortForTopK, code)) == 1
     end
 
     test "flags with longer pipeline before sort (multiline)" do
@@ -50,7 +45,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoSortForTopK, code)) == 1
     end
 
     test "flags nested pipeline in tuple" do
@@ -58,7 +53,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       Enum.map(list, &{&1, Enum.sort(&1) |> Enum.at(0)})
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoSortForTopK, code)) == 1
     end
   end
 
@@ -70,7 +65,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
 
     test "does not flag sort |> hd() (hd([]) raises ArgumentError, not Enum.EmptyError)" do
@@ -80,7 +75,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
 
     test "does not flag sort |> reverse |> take(1)" do
@@ -90,7 +85,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
 
     test "does not flag sort |> reverse |> hd()" do
@@ -100,7 +95,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
 
     test "does not flag sort |> take(k>1)" do
@@ -110,7 +105,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
 
     test "does not flag sort |> at(1)" do
@@ -120,7 +115,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
 
     test "does not flag sort |> at(0) followed by more steps" do
@@ -128,7 +123,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       Enum.sort(list) |> Enum.at(0) |> to_string()
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
 
     test "does not flag unrelated pipelines" do
@@ -138,7 +133,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
 
     test "does not flag Enum.min directly" do
@@ -148,7 +143,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
 
     test "does not flag sort stored then accessed separately" do
@@ -161,7 +156,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortForTopK, code) == []
     end
   end
 end

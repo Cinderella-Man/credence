@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternEquivalenceTest do
   A proper list has `length > 0` iff it is a cons, so the pattern selects exactly
   the same inputs; the empty list still falls through to the next clause.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoLengthGuardToPattern

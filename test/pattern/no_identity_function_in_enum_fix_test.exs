@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoIdentityFunctionInEnum
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoIdentityFunctionInEnum, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix/2 — direct calls" do
     test "fixes Enum.uniq_by(list, fn x -> x end) → Enum.uniq(list)" do
@@ -24,7 +17,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIdentityFunctionInEnum, input) == expected
     end
 
     test "fixes Enum.sort_by(list, fn x -> x end) → Enum.sort(list)" do
@@ -40,7 +33,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIdentityFunctionInEnum, input) == expected
     end
 
     test "fixes Enum.min_by(list, fn x -> x end) → Enum.min(list)" do
@@ -56,7 +49,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIdentityFunctionInEnum, input) == expected
     end
 
     test "fixes Enum.max_by(list, & &1) → Enum.max(list)" do
@@ -72,7 +65,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIdentityFunctionInEnum, input) == expected
     end
 
     test "fixes Enum.dedup_by(list, fn x -> x end) → Enum.dedup(list)" do
@@ -88,7 +81,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIdentityFunctionInEnum, input) == expected
     end
   end
 
@@ -106,7 +99,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIdentityFunctionInEnum, input) == expected
     end
 
     test "fixes in a longer pipeline" do
@@ -126,7 +119,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIdentityFunctionInEnum, input) == expected
     end
 
     test "fixes piped & &1" do
@@ -142,7 +135,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIdentityFunctionInEnum, input) == expected
     end
   end
 
@@ -154,7 +147,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoIdentityFunctionInEnum, code) == code
     end
 
     test "returns source unchanged when nothing to fix" do
@@ -164,7 +157,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoIdentityFunctionInEnum, code) == code
     end
 
     test "preserves surrounding code" do
@@ -184,7 +177,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIdentityFunctionInEnum, input) == expected
     end
   end
 end

@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantComparisonGuard
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoRedundantComparisonGuard, code, [])
-  end
 
   describe "fix — removes the redundant comparison conjunct, keeps the type guard" do
     test "n >= 0 after n < 0 (with intermediate pattern clause)" do
@@ -25,7 +21,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRedundantComparisonGuard, code) == expected
     end
 
     test "n <= 0 after n > 0" do
@@ -43,7 +39,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRedundantComparisonGuard, code) == expected
     end
 
     test "n > 5 after n <= 5 with is_integer" do
@@ -61,7 +57,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRedundantComparisonGuard, code) == expected
     end
 
     test "reversed operand order (0 <= n)" do
@@ -79,7 +75,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRedundantComparisonGuard, code) == expected
     end
 
     test "multi-line clause bodies preserve structure" do
@@ -111,7 +107,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRedundantComparisonGuard, code) == expected
     end
 
     test "defp clause" do
@@ -129,7 +125,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoRedundantComparisonGuard, code) == expected
     end
   end
 
@@ -142,7 +138,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantComparisonGuard, code) == code
     end
 
     test "bare comparisons without type guards left untouched" do
@@ -153,7 +149,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantComparisonGuard, code) == code
     end
 
     test "non-complementary operators left untouched" do
@@ -164,7 +160,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantComparisonGuard, code) == code
     end
   end
 end

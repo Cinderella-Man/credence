@@ -6,13 +6,14 @@ defmodule Credence.Pattern.NoReduceForMapBuildingEquivalenceTest do
   element's key/value in order; on a duplicate key, last-write-wins for both. Inputs
   cover empty, duplicate keys, and a normal list.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoReduceForMapBuilding
 
   test "reduce(%{}, Map.put) → Map.new preserves the map (incl. duplicate-key last-write-wins)" do
-    assert_equivalent("Enum.reduce(list, %{}, fn x, acc -> Map.put(acc, x, String.length(x)) end)",
+    assert_equivalent(
+      "Enum.reduce(list, %{}, fn x, acc -> Map.put(acc, x, String.length(x)) end)",
       rule: NoReduceForMapBuilding,
       vars: [:list],
       inputs: [[], ["a", "bb", "ccc"], ["x", "x"], ["a", "bb", "a"], ["", "z", ""]]

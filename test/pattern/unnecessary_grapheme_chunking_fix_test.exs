@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.UnnecessaryGraphemeChunking
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(UnnecessaryGraphemeChunking, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix" do
     test "replaces pipeline with for + String.slice comprehension" do
@@ -33,7 +26,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(UnnecessaryGraphemeChunking, input) == expected
     end
 
     test "fixes pipeline with literal chunk size" do
@@ -58,7 +51,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(UnnecessaryGraphemeChunking, input) == expected
     end
 
     test "fixes pipeline with fn join" do
@@ -83,7 +76,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(UnnecessaryGraphemeChunking, input) == expected
     end
 
     test "fixes pipeline with implicit discard" do
@@ -108,7 +101,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(UnnecessaryGraphemeChunking, input) == expected
     end
 
     test "preserves pipeline stages before graphemes" do
@@ -146,7 +139,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(UnnecessaryGraphemeChunking, input) == expected
     end
 
     test "fixes multiple pipelines in the same module" do
@@ -163,18 +156,18 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       expected = """
       defmodule Example do
         def bigrams(s),
-          do: for(i <- 0..(String.length(s) - 2)//1) do
-          String.slice(s, i, 2)
-        end
+          do: for i <- 0..(String.length(s) - 2)//1 do
+            String.slice(s, i, 2)
+          end
 
         def trigrams(s),
-          do: for(i <- 0..(String.length(s) - 3)//1) do
-          String.slice(s, i, 3)
-        end
+          do: for i <- 0..(String.length(s) - 3)//1 do
+            String.slice(s, i, 3)
+          end
       end
       """
 
-      assert fix(input) == expected
+      assert fix(UnnecessaryGraphemeChunking, input) == expected
     end
 
     test "does not modify code without the pattern" do
@@ -184,7 +177,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(UnnecessaryGraphemeChunking, code) == code
     end
 
     test "fix inside nested anonymous function" do
@@ -213,7 +206,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(UnnecessaryGraphemeChunking, input) == expected
     end
   end
 end

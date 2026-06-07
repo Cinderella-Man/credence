@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoManualListReduceFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualListReduce
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(NoManualListReduce, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   describe "collapse to Enum.reduce/3" do
     test "canonical arity-2 sum" do
@@ -31,7 +26,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualListReduce, code) == expected
     end
 
     test "arity-3 with a threaded-through parameter" do
@@ -49,7 +44,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualListReduce, code) == expected
     end
 
     test "clauses in reversed order collapse at the first clause position" do
@@ -66,7 +61,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualListReduce, code) == expected
     end
 
     test "cons-building update" do
@@ -83,7 +78,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualListReduce, code) == expected
     end
   end
 
@@ -95,7 +90,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualListReduce, code) == code
     end
 
     test "leaves an existing Enum.reduce/3 call untouched" do
@@ -105,7 +100,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualListReduce, code) == code
     end
 
     test "leaves an update that reads the tail untouched" do
@@ -116,7 +111,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualListReduce, code) == code
     end
 
     test "leaves a multi-statement recursive body untouched" do
@@ -130,7 +125,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualListReduce, code) == code
     end
   end
 end

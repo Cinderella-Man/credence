@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardEquivalenceTest do
   (`palindrome?`) and updates its in-module call sites. A consistent rename —
   behaviour-preserving for the computation; only the function name changes.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
   import Credence.BehaviourEquivalence
 
   test "no_is_prefix_for_non_guard: cosmetic — `is_foo` → `foo?` rename" do

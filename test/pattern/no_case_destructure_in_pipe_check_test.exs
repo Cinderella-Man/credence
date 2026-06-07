@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoCaseDestructureInPipe
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoCaseDestructureInPipe.check(ast, [])
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # FLAGGED — single-clause case in a pipe with an irrefutable variable
@@ -28,7 +23,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoCaseDestructureInPipe, code)
 
       assert length(issues) == 1
       issue = hd(issues)
@@ -51,7 +46,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoCaseDestructureInPipe, code)) == 1
     end
 
     test "underscore-prefixed variable pattern" do
@@ -67,7 +62,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoCaseDestructureInPipe, code)) == 1
     end
   end
 
@@ -92,7 +87,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaseDestructureInPipe, code) == []
     end
 
     test "tagged-tuple pattern" do
@@ -108,7 +103,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaseDestructureInPipe, code) == []
     end
 
     test "literal atom pattern" do
@@ -124,7 +119,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaseDestructureInPipe, code) == []
     end
 
     test "guarded variable pattern" do
@@ -140,7 +135,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaseDestructureInPipe, code) == []
     end
 
     test "pinned variable pattern" do
@@ -156,7 +151,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaseDestructureInPipe, code) == []
     end
   end
 
@@ -179,7 +174,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaseDestructureInPipe, code) == []
     end
 
     test "single-clause case NOT in a pipe" do
@@ -193,7 +188,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaseDestructureInPipe, code) == []
     end
 
     test "then/1 already in pipe" do
@@ -207,7 +202,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaseDestructureInPipe, code) == []
     end
   end
 end

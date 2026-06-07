@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoMapUpdateThenFetchCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoMapUpdateThenFetch
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoMapUpdateThenFetch.check(ast, [])
-  end
 
   describe "check" do
     test "passes code that uses Map.get then Map.put" do
@@ -21,7 +16,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapUpdateThenFetch, code) == []
     end
 
     test "passes Map.fetch! on a variable not from Map.update" do
@@ -33,7 +28,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapUpdateThenFetch, code) == []
     end
 
     test "detects Map.update followed by Map.fetch! on same variable" do
@@ -47,7 +42,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMapUpdateThenFetch, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert %Issue{} = issue
@@ -68,7 +63,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMapUpdateThenFetch, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "counts"
     end
@@ -84,7 +79,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapUpdateThenFetch, code) == []
     end
 
     test "ignores Map.update without a following fetch" do
@@ -96,7 +91,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapUpdateThenFetch, code) == []
     end
   end
 end

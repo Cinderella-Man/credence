@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeEquivalenceTest do
   lists where "take the last 2" has fewer than 2 elements; the input set covers
   `[]`, `[1]`, and value-kind lists.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoEmptyMapNew
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoEmptyMapNew.check(ast, [])
-  end
 
   describe "flags zero-argument Map.new()" do
     test "detects Map.new() with no arguments" do
@@ -14,7 +9,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       memo = Map.new()
       """
 
-      [issue] = check(code)
+      [issue] = check(NoEmptyMapNew, code)
       assert issue.rule == :no_empty_map_new
       assert issue.message =~ "%{}"
     end
@@ -24,7 +19,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       solve(coins, amount, Map.new())
       """
 
-      [issue] = check(code)
+      [issue] = check(NoEmptyMapNew, code)
       assert issue.rule == :no_empty_map_new
     end
 
@@ -33,7 +28,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       memo = Map.new
       """
 
-      [issue] = check(code)
+      [issue] = check(NoEmptyMapNew, code)
       assert issue.rule == :no_empty_map_new
     end
 
@@ -42,7 +37,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       Map.new() |> foo()
       """
 
-      [issue] = check(code)
+      [issue] = check(NoEmptyMapNew, code)
       assert issue.rule == :no_empty_map_new
     end
 
@@ -57,7 +52,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEmptyMapNew, code)
       assert length(issues) == 2
       assert Enum.all?(issues, &(&1.rule == :no_empty_map_new))
     end
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       Map.new(list, fn x -> {x, true} end)
       """
 
-      assert check(code) == []
+      assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag Map.new(enum)" do
@@ -77,7 +72,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       Map.new(pairs)
       """
 
-      assert check(code) == []
+      assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag piped Map.new() (the pipe supplies an argument)" do
@@ -85,7 +80,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       list |> Map.new()
       """
 
-      assert check(code) == []
+      assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag a chained pipe into Map.new()" do
@@ -93,7 +88,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       a |> b |> Map.new()
       """
 
-      assert check(code) == []
+      assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag the %{} literal" do
@@ -101,7 +96,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       memo = %{}
       """
 
-      assert check(code) == []
+      assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag Map.put" do
@@ -109,7 +104,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
       Map.put(map, :key, value)
       """
 
-      assert check(code) == []
+      assert check(NoEmptyMapNew, code) == []
     end
   end
 end

@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoManualListReduceEquivalenceTest do
   fold collapses to `Enum.reduce/3`. The accumulator order and per-element update
   are preserved, so the result matches incl. the value-kind sum case.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoManualListReduce

@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoSortForTopKFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoSortForTopK
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoSortForTopK, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix (Enum.at(0) terminal → Enum.min/max with empty_fallback)" do
     test "sort |> Enum.at(0) → Enum.min(_, fn -> nil end)" do
@@ -20,7 +13,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       Enum.min(list, fn -> nil end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoSortForTopK, input) == expected
     end
 
     test "sort |> reverse |> Enum.at(0) → Enum.max(_, fn -> nil end)" do
@@ -32,7 +25,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       Enum.max(list, fn -> nil end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoSortForTopK, input) == expected
     end
 
     test "sort |> reverse |> reverse |> Enum.at(0) → Enum.min (double reverse is no-op)" do
@@ -44,7 +37,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       Enum.min(list, fn -> nil end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoSortForTopK, input) == expected
     end
 
     test "fixes pattern inside function body" do
@@ -60,7 +53,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoSortForTopK, input) == expected
     end
 
     test "fixes pattern inside Enum.map" do
@@ -72,7 +65,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       Enum.map(lists, fn l -> Enum.min(l, fn -> nil end) end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoSortForTopK, input) == expected
     end
 
     test "fixes multiple occurrences" do
@@ -96,7 +89,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoSortForTopK, input) == expected
     end
 
     test "fixes sort |> Enum.at(0) in assignment" do
@@ -108,7 +101,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       result = Enum.min(list, fn -> nil end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoSortForTopK, input) == expected
     end
   end
 
@@ -118,7 +111,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       Enum.sort(list) |> Enum.take(1)
       """
 
-      assert fix(code) == code
+      assert fix(NoSortForTopK, code) == code
     end
 
     test "does not change sort |> hd() (exception type mismatch on [])" do
@@ -126,7 +119,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       Enum.sort(list) |> hd()
       """
 
-      assert fix(code) == code
+      assert fix(NoSortForTopK, code) == code
     end
 
     test "does not change sort |> reverse |> take(1)" do
@@ -134,7 +127,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       Enum.sort(list) |> Enum.reverse() |> Enum.take(1)
       """
 
-      assert fix(code) == code
+      assert fix(NoSortForTopK, code) == code
     end
 
     test "does not change non-fixable take(k>1)" do
@@ -142,7 +135,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       Enum.sort(list) |> Enum.take(2)
       """
 
-      assert fix(code) == code
+      assert fix(NoSortForTopK, code) == code
     end
 
     test "does not change sort |> Enum.at(0) followed by more steps" do
@@ -150,7 +143,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       Enum.sort(list) |> Enum.at(0) |> to_string()
       """
 
-      assert fix(code) == code
+      assert fix(NoSortForTopK, code) == code
     end
 
     test "does not change code without fixable patterns" do
@@ -160,7 +153,7 @@ defmodule Credence.Pattern.NoSortForTopKFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoSortForTopK, code) == code
     end
   end
 end

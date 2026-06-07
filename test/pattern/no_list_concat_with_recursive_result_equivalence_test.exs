@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultEquivalenceTest do
   `[h] ++ rest` is exactly `[h | rest]`, so the constructed list is identical for
   every input (and avoids the per-step concat traversal).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoListConcatWithRecursiveResult

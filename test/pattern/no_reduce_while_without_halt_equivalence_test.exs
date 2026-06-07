@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltEquivalenceTest do
   `{:cont, _}` (never halts), `reduce_while` is exactly `reduce`. Verified over
   lists including empty and value-kind.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

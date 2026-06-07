@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualCountWithPredicate
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoManualCountWithPredicate.check(ast, [])
-  end
 
   describe "3-clause guard pattern — flagged" do
     test "detects the exact hand-rolled count pattern" do
@@ -28,7 +23,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.rule == :no_manual_count_with_predicate
       assert issue.message =~ "do_count/3"
       assert issue.message =~ "Enum.count"
@@ -43,7 +38,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.message =~ "count_match/3"
     end
 
@@ -56,7 +51,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.message =~ "def my_count/3"
     end
 
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.message =~ "tally/3"
     end
 
@@ -82,7 +77,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.message =~ "cnt/3"
     end
 
@@ -97,7 +92,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.message =~ "count_above/3"
     end
 
@@ -110,7 +105,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.message =~ "cnt/3"
     end
   end
@@ -132,7 +127,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.rule == :no_manual_count_with_predicate
       assert issue.message =~ "do_count/3"
       assert issue.message =~ "Enum.count"
@@ -149,7 +144,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.message =~ "count_positive/2"
     end
 
@@ -165,7 +160,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.message =~ "do_count/3"
     end
 
@@ -180,7 +175,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualCountWithPredicate, code)
       assert issue.message =~ "tally/2"
     end
   end
@@ -193,7 +188,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag when base case does not return accumulator" do
@@ -205,7 +200,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag when increment is not by 1" do
@@ -217,7 +212,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag when skip clause also increments" do
@@ -229,7 +224,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag when guarded clause does not recurse" do
@@ -241,7 +236,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag when guard-triple arity is not 3" do
@@ -253,7 +248,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag functions with more than 3 clauses" do
@@ -267,7 +262,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag when guarded clause has no guard" do
@@ -279,7 +274,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag when base case is not empty list" do
@@ -291,7 +286,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag 2-clause if when do branch is not acc + 1" do
@@ -305,7 +300,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag 2-clause if when else branch is not acc" do
@@ -319,7 +314,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag 2-clause if when body has extra expressions" do
@@ -334,7 +329,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag 2-clause if when base case does not return acc" do
@@ -348,7 +343,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
   end
 
@@ -371,7 +366,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag a guard with raising arithmetic operand" do
@@ -383,7 +378,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag a guard with non-whitelisted call (hd)" do
@@ -395,7 +390,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag guard-triple when the bound changes during recursion" do
@@ -407,7 +402,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag if-pattern when empty/cons positions differ" do
@@ -421,7 +416,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
 
     test "does not flag if-pattern when a bound changes during recursion" do
@@ -435,7 +430,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualCountWithPredicate, code) == []
     end
   end
 end

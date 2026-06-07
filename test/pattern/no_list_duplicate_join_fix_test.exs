@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoListDuplicateJoinFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListDuplicateJoin
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoListDuplicateJoin, code)
-  end
 
   test "rewrites piped form with variable count" do
     code = """
@@ -26,7 +22,7 @@ defmodule Credence.Pattern.NoListDuplicateJoinFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoListDuplicateJoin, code) == expected
   end
 
   test "rewrites piped form with integer literal count" do
@@ -48,7 +44,7 @@ defmodule Credence.Pattern.NoListDuplicateJoinFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoListDuplicateJoin, code) == expected
   end
 
   test "rewrites nested form with variable count" do
@@ -68,7 +64,7 @@ defmodule Credence.Pattern.NoListDuplicateJoinFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoListDuplicateJoin, code) == expected
   end
 
   test "rewrites nested form with integer literal count" do
@@ -88,7 +84,7 @@ defmodule Credence.Pattern.NoListDuplicateJoinFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoListDuplicateJoin, code) == expected
   end
 
   test "leaves a non-literal first argument untouched" do
@@ -100,7 +96,7 @@ defmodule Credence.Pattern.NoListDuplicateJoinFixTest do
     end
     """
 
-    assert fix(code) == code
+    assert fix(NoListDuplicateJoin, code) == code
   end
 
   test "leaves an integer first argument untouched" do
@@ -112,7 +108,7 @@ defmodule Credence.Pattern.NoListDuplicateJoinFixTest do
     end
     """
 
-    assert fix(code) == code
+    assert fix(NoListDuplicateJoin, code) == code
   end
 
   test "leaves Enum.join with a separator untouched" do
@@ -126,6 +122,6 @@ defmodule Credence.Pattern.NoListDuplicateJoinFixTest do
     end
     """
 
-    assert fix(code) == code
+    assert fix(NoListDuplicateJoin, code) == code
   end
 end

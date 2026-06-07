@@ -1,9 +1,7 @@
 defmodule Credence.Pattern.NoReduceForGroupByFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoReduceForGroupBy
-
-  defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(NoReduceForGroupBy, code, [])
 
   test "rewrites reduce |> Map.new(reverse) with inline key to Enum.group_by" do
     code = """
@@ -20,7 +18,7 @@ defmodule Credence.Pattern.NoReduceForGroupByFixTest do
     )
     """
 
-    assert fix(code) == expected
+    assert fix(NoReduceForGroupBy, code) == expected
   end
 
   test "rewrites reduce with single key binding to Enum.group_by" do
@@ -39,7 +37,7 @@ defmodule Credence.Pattern.NoReduceForGroupByFixTest do
     )
     """
 
-    assert fix(code) == expected
+    assert fix(NoReduceForGroupBy, code) == expected
   end
 
   test "rewrites the piped reduce form to Enum.group_by" do
@@ -58,7 +56,7 @@ defmodule Credence.Pattern.NoReduceForGroupByFixTest do
     )
     """
 
-    assert fix(code) == expected
+    assert fix(NoReduceForGroupBy, code) == expected
   end
 
   test "preserves surrounding code" do
@@ -90,7 +88,7 @@ defmodule Credence.Pattern.NoReduceForGroupByFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoReduceForGroupBy, code) == expected
   end
 
   test "no-op on bare reduce without the trailing reverse" do
@@ -100,7 +98,7 @@ defmodule Credence.Pattern.NoReduceForGroupByFixTest do
     end)
     """
 
-    assert fix(code) == code
+    assert fix(NoReduceForGroupBy, code) == code
   end
 
   test "no-op when the trailing Map.new does not reverse the value list" do
@@ -111,6 +109,6 @@ defmodule Credence.Pattern.NoReduceForGroupByFixTest do
     |> Map.new(fn {k, v} -> {k, v} end)
     """
 
-    assert fix(code) == code
+    assert fix(NoReduceForGroupBy, code) == code
   end
 end

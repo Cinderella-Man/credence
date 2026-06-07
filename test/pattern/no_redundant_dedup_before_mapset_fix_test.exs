@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantDedupBeforeMapset
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoRedundantDedupBeforeMapset, code, [])
-  end
 
   test "Enum.dedup(x) |> MapSet.new() -> MapSet.new(x)" do
     code = """
@@ -16,7 +12,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     MapSet.new(items)
     """
 
-    assert fix(code) == expected
+    assert fix(NoRedundantDedupBeforeMapset, code) == expected
   end
 
   test "x |> Enum.dedup() |> MapSet.new() -> MapSet.new(x)" do
@@ -28,7 +24,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     MapSet.new(items)
     """
 
-    assert fix(code) == expected
+    assert fix(NoRedundantDedupBeforeMapset, code) == expected
   end
 
   test "MapSet.new(Enum.dedup(x)) -> MapSet.new(x)" do
@@ -40,7 +36,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     MapSet.new(items)
     """
 
-    assert fix(code) == expected
+    assert fix(NoRedundantDedupBeforeMapset, code) == expected
   end
 
   test "Enum.uniq(x) |> MapSet.new() -> MapSet.new(x)" do
@@ -52,7 +48,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     MapSet.new(items)
     """
 
-    assert fix(code) == expected
+    assert fix(NoRedundantDedupBeforeMapset, code) == expected
   end
 
   test "MapSet.new(Enum.uniq(x)) -> MapSet.new(x)" do
@@ -64,7 +60,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     MapSet.new(items)
     """
 
-    assert fix(code) == expected
+    assert fix(NoRedundantDedupBeforeMapset, code) == expected
   end
 
   test "preserves surrounding code, fixes multiple occurrences" do
@@ -88,7 +84,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoRedundantDedupBeforeMapset, code) == expected
   end
 
   test "fixed code produces no further issues" do
@@ -100,7 +96,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     end
     """
 
-    fixed = fix(code)
+    fixed = fix(NoRedundantDedupBeforeMapset, code)
     {:ok, fixed_ast} = Sourceror.parse_string(fixed)
     assert NoRedundantDedupBeforeMapset.check(fixed_ast, []) == []
   end
@@ -111,7 +107,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     Enum.uniq(items) |> Enum.sort() |> MapSet.new()
     """
 
-    assert fix(code) == code
+    assert fix(NoRedundantDedupBeforeMapset, code) == code
   end
 
   test "items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new() is left alone" do
@@ -119,6 +115,6 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new()
     """
 
-    assert fix(code) == code
+    assert fix(NoRedundantDedupBeforeMapset, code) == code
   end
 end

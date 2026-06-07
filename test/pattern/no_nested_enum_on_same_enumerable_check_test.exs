@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoNestedEnumOnSameEnumerable
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoNestedEnumOnSameEnumerable.check(ast, [])
-  end
 
   describe "check/2" do
     test "detects member? inside map" do
@@ -21,7 +16,7 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoNestedEnumOnSameEnumerable, code)
       assert %Issue{} = issue
       assert issue.rule == :no_nested_enum_on_same_enumerable
       assert issue.message =~ "MapSet"
@@ -39,7 +34,7 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoNestedEnumOnSameEnumerable, code) == []
     end
 
     test "does not flag sibling def clauses sharing a parameter name" do
@@ -50,7 +45,7 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoNestedEnumOnSameEnumerable, code) == []
     end
 
     test "does not flag siblings inside separate function bodies" do
@@ -61,7 +56,7 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoNestedEnumOnSameEnumerable, code) == []
     end
 
     test "still flags real nested Enum on the same enumerable" do
@@ -75,7 +70,8 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_nested_enum_on_same_enumerable}] = check(code)
+      assert [%Issue{rule: :no_nested_enum_on_same_enumerable}] =
+               check(NoNestedEnumOnSameEnumerable, code)
     end
   end
 end

@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoTrivialDelegationEquivalenceTest do
   at the call site — a whole-module rewrite, so behaviour is observable only by
   compiling the before/after module and calling the surviving function.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoTrivialDelegation

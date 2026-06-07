@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoDestructureReconstructFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoDestructureReconstruct
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoDestructureReconstruct.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoDestructureReconstruct, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix/2 — case branches" do
     test "replaces reconstructed list with binding variable" do
@@ -36,7 +24,6 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
           case String.split(ip, ".") do
             [_, _, _, _] = items ->
               Enum.all?(items, &valid_octet?/1)
-
             _ ->
               false
           end
@@ -44,7 +31,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoDestructureReconstruct, input) == expected
     end
 
     test "fixes two-variable case" do
@@ -70,7 +57,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoDestructureReconstruct, input) == expected
     end
   end
 
@@ -92,7 +79,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoDestructureReconstruct, input) == expected
     end
 
     test "fixes defp function head" do
@@ -112,7 +99,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoDestructureReconstruct, input) == expected
     end
 
     test "fixes guarded function head" do
@@ -132,7 +119,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoDestructureReconstruct, input) == expected
     end
   end
 
@@ -159,7 +146,6 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
             [a, _, _] = items ->
               Logger.info(a)
               Enum.max(items)
-
             _ ->
               :error
           end
@@ -167,7 +153,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoDestructureReconstruct, input) == expected
     end
 
     test "keeps multiple individually-used variables" do
@@ -197,7 +183,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoDestructureReconstruct, input) == expected
     end
   end
 
@@ -211,7 +197,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoDestructureReconstruct, code) == code
     end
 
     test "does not touch already-idiomatic code" do
@@ -229,7 +215,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoDestructureReconstruct, code) == code
     end
 
     test "round-trip: case branch fix produces zero issues" do
@@ -246,7 +232,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoDestructureReconstruct, fix(NoDestructureReconstruct, code)) == []
     end
 
     test "round-trip: function head fix produces zero issues" do
@@ -258,7 +244,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoDestructureReconstruct, fix(NoDestructureReconstruct, code)) == []
     end
   end
 end

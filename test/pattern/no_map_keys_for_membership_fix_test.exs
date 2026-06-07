@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoMapKeysForMembershipFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMapKeysForMembership
-
-  defp apply_fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoMapKeysForMembership, code)
-  end
 
   test "x not in Map.keys(m) → not Map.has_key?(m, x) inside a capture" do
     code = """
@@ -24,7 +20,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipFixTest do
     end
     """
 
-    assert apply_fix(code) == expected
+    assert fix(NoMapKeysForMembership, code) == expected
   end
 
   test "x in Map.keys(m) → Map.has_key?(m, x) inside an if" do
@@ -44,7 +40,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipFixTest do
     end
     """
 
-    assert apply_fix(code) == expected
+    assert fix(NoMapKeysForMembership, code) == expected
   end
 
   test "no-op when left operand is side-effecting (function call)" do
@@ -56,6 +52,6 @@ defmodule Credence.Pattern.NoMapKeysForMembershipFixTest do
     end
     """
 
-    assert apply_fix(code) == code
+    assert fix(NoMapKeysForMembership, code) == code
   end
 end

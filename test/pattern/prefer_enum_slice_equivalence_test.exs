@@ -10,7 +10,7 @@ defmodule Credence.Pattern.PreferEnumSliceEquivalenceTest do
   (`drop(-1) |> take(2)` vs `slice(-1, 2)`; `take(-2)` vs `slice(_, -2)` which
   raises). Narrowed to non-negative integer literals only.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.PreferEnumSlice

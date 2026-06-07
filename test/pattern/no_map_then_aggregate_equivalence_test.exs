@@ -9,7 +9,7 @@ defmodule Credence.Pattern.NoMapThenAggregateEquivalenceTest do
   (`[5] |> map(f) |> max()` → `f.(5)` but the fused `reduce/2` gave `5`). Narrowed
   to `:sum` only — selection has no identity to seed a mapped reduce.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoMapThenAggregate

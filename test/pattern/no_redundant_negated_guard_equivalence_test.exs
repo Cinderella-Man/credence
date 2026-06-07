@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardEquivalenceTest do
   any input reaching it already failed the first — so it can be dropped. Dispatch is
   unchanged because the earlier clause still catches the positive case.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRedundantNegatedGuard

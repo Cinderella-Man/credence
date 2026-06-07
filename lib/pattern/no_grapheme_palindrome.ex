@@ -1,4 +1,4 @@
-defmodule Credence.Pattern.NoGraphemePalindromeCheck do
+defmodule Credence.Pattern.NoGraphemePalindrome do
   @moduledoc """
   Readability & performance rule: Detects the pattern of decomposing a string
   into graphemes, only to compare it with its own `Enum.reverse`.
@@ -302,7 +302,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheck do
 
   defp build_issue(meta) do
     %Issue{
-      rule: :no_grapheme_palindrome_check,
+      rule: :no_grapheme_palindrome,
       message:
         "Avoid decomposing a string into graphemes just to compare with `Enum.reverse/1`. " <>
           "Use `str == String.reverse(str)` instead — it is clearer and avoids creating an intermediate list.",

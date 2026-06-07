@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoParamRebindingCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoParamRebinding
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoParamRebinding.check(ast, [])
-  end
 
   describe "check" do
     test "passes code with no parameter rebinding" do
@@ -22,7 +17,7 @@ defmodule Credence.Pattern.NoParamRebindingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoParamRebinding, code) == []
     end
 
     test "detects simple variable rebinding in fn body" do
@@ -38,7 +33,7 @@ defmodule Credence.Pattern.NoParamRebindingCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoParamRebinding, code)
       assert length(issues) == 2
       messages = Enum.map(issues, & &1.message)
       assert Enum.any?(messages, &(&1 =~ "q"))
@@ -57,7 +52,7 @@ defmodule Credence.Pattern.NoParamRebindingCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoParamRebinding, code)
       refute Enum.empty?(issues)
       issue = hd(issues)
       assert issue.message =~ "q"
@@ -77,7 +72,7 @@ defmodule Credence.Pattern.NoParamRebindingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoParamRebinding, code) == []
     end
 
     test "ignores underscore-prefixed parameters" do
@@ -91,7 +86,7 @@ defmodule Credence.Pattern.NoParamRebindingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoParamRebinding, code) == []
     end
   end
 end

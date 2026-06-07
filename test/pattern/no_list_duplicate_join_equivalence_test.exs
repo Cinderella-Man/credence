@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoListDuplicateJoinEquivalenceTest do
   module differs (`FunctionClauseError` vs `ArgumentError`), so it is not
   asserted here.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoListDuplicateJoin

@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMapUpdateThenFetch
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoMapUpdateThenFetch, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix" do
     test "fixes Map.update/4 followed by Map.fetch! (no-bang fetch, Map.put)" do
@@ -25,19 +18,17 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       expected = """
       defmodule BadDoubleTraversal do
         def increment(map, key) do
-          val =
-            case Map.fetch(map, key) do
-              {:ok, v} -> (&(&1 + 1)).(v)
-              :error -> 1
-            end
-
+          val = case Map.fetch(map, key) do
+            {:ok, v} -> (&(&1 + 1)).(v)
+            :error -> 1
+          end
           map = Map.put(map, key, val)
           {map, val}
         end
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapUpdateThenFetch, input) == expected
     end
 
     test "fixes Map.update!/3 followed by Map.get (Map.put + Map.fetch!)" do
@@ -61,7 +52,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapUpdateThenFetch, input) == expected
     end
 
     test "fixes Map.update/4 followed by Map.get" do
@@ -78,19 +69,17 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       expected = """
       defmodule UpdateThenGet do
         def increment(map, key) do
-          val =
-            case Map.fetch(map, key) do
-              {:ok, v} -> (&(&1 + 1)).(v)
-              :error -> 1
-            end
-
+          val = case Map.fetch(map, key) do
+            {:ok, v} -> (&(&1 + 1)).(v)
+            :error -> 1
+          end
           map = Map.put(map, key, val)
           {map, val}
         end
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapUpdateThenFetch, input) == expected
     end
 
     test "fixes with intervening code that doesn't reference the map variable" do
@@ -108,12 +97,10 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       expected = """
       defmodule InterveningCode do
         def increment(map, key) do
-          val =
-            case Map.fetch(map, key) do
-              {:ok, v} -> (&(&1 + 1)).(v)
-              :error -> 1
-            end
-
+          val = case Map.fetch(map, key) do
+            {:ok, v} -> (&(&1 + 1)).(v)
+            :error -> 1
+          end
           map = Map.put(map, key, val)
           IO.puts("Updated!")
           {map, val}
@@ -121,7 +108,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapUpdateThenFetch, input) == expected
     end
 
     test "fixes multiple update+fetch pairs in the same function" do
@@ -140,27 +127,22 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       expected = """
       defmodule MultiplePairs do
         def process(map) do
-          vx =
-            case Map.fetch(map, :x) do
-              {:ok, v} -> (&(&1 + 1)).(v)
-              :error -> 0
-            end
-
+          vx = case Map.fetch(map, :x) do
+            {:ok, v} -> (&(&1 + 1)).(v)
+            :error -> 0
+          end
           map = Map.put(map, :x, vx)
-
-          vy =
-            case Map.fetch(map, :y) do
-              {:ok, v} -> (&(&1 * 2)).(v)
-              :error -> 0
-            end
-
+          vy = case Map.fetch(map, :y) do
+            {:ok, v} -> (&(&1 * 2)).(v)
+            :error -> 0
+          end
           map = Map.put(map, :y, vy)
           {map, vx, vy}
         end
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapUpdateThenFetch, input) == expected
     end
 
     test "does not modify code without Map.update" do
@@ -170,7 +152,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoMapUpdateThenFetch, code) == code
     end
 
     test "does not modify code with only Map.update and no following fetch" do
@@ -182,7 +164,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoMapUpdateThenFetch, code) == code
     end
 
     test "does not modify when fetch is on a different variable" do
@@ -196,7 +178,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoMapUpdateThenFetch, code) == code
     end
 
     test "does not modify when fetch is on a different key" do
@@ -210,7 +192,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoMapUpdateThenFetch, code) == code
     end
 
     test "does not modify when intervening code references the map variable" do
@@ -225,7 +207,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoMapUpdateThenFetch, code) == code
     end
   end
 end

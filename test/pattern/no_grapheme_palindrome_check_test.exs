@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
-  alias Credence.Pattern.NoGraphemePalindromeCheck
+  alias Credence.Pattern.NoGraphemePalindrome
   alias Credence.Issue
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoGraphemePalindromeCheck.check(ast, [])
-  end
 
   describe "check" do
     test "passes code that compares strings directly with String.reverse" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGraphemePalindrome, code) == []
     end
 
     test "detects graphemes == Enum.reverse(graphemes)" do
@@ -34,12 +29,12 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGraphemePalindrome, code)
 
       assert length(issues) == 1
       issue = hd(issues)
       assert %Issue{} = issue
-      assert issue.rule == :no_grapheme_palindrome_check
+      assert issue.rule == :no_grapheme_palindrome
 
       assert issue.message =~ "String.reverse"
       assert issue.meta.line != nil
@@ -57,7 +52,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGraphemePalindrome, code) == []
     end
 
     test "detects pipe chain ending in String.graphemes then reverse compare" do
@@ -75,10 +70,10 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoGraphemePalindrome, code)
 
       assert length(issues) == 1
-      assert hd(issues).rule == :no_grapheme_palindrome_check
+      assert hd(issues).rule == :no_grapheme_palindrome
     end
 
     test "fires when a bare-variable graphemes list is also used elsewhere" do
@@ -91,7 +86,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoGraphemePalindrome, code)) == 1
     end
 
     test "does NOT fire for a pipe-built variable that is used elsewhere" do
@@ -107,7 +102,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGraphemePalindrome, code) == []
     end
 
     test "ignores Enum.reverse used for non-palindrome purposes" do
@@ -120,7 +115,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGraphemePalindrome, code) == []
     end
 
     test "ignores list reverse comparison when not from graphemes" do
@@ -132,7 +127,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoGraphemePalindrome, code) == []
     end
   end
 end

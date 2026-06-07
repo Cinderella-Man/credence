@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoIfTrueFalseFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoIfTrueFalse
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(NoIfTrueFalse, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # BASIC FIXES — if...true...else...false → condition
@@ -30,7 +25,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "with complex condition" do
@@ -50,7 +45,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "inline form" do
@@ -66,7 +61,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "reversed branches (false/true) — negated" do
@@ -86,7 +81,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
   end
 
@@ -112,7 +107,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "boolean and in do body" do
@@ -132,7 +127,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "not expression in do body" do
@@ -152,7 +147,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "inline comparison form" do
@@ -168,7 +163,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "comparison in do body with else true" do
@@ -188,7 +183,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "false in do body with comparison in else" do
@@ -208,7 +203,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "true in do body with comparison in else" do
@@ -228,7 +223,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "true in do body with Enum.all? in else" do
@@ -248,7 +243,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "Enum.any? in do body with else false" do
@@ -268,7 +263,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "is_nil in do body with else false" do
@@ -288,7 +283,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "match? in do body with else false" do
@@ -308,7 +303,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "function call in do body with else false — NOT fixed" do
@@ -322,7 +317,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
   end
 
@@ -352,7 +347,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "preserves surrounding code" do
@@ -374,7 +369,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "used as expression assignment" do
@@ -396,7 +391,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
   end
 
@@ -434,7 +429,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
   end
 
@@ -464,7 +459,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
   end
 
@@ -495,7 +490,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "not (a == b) becomes a != b" do
@@ -515,7 +510,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "not (a < b) becomes a >= b" do
@@ -535,7 +530,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
 
     test "not (a === b) becomes a !== b" do
@@ -555,7 +550,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
   end
 
@@ -589,7 +584,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoIfTrueFalse, input) == expected
     end
   end
 
@@ -609,7 +604,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
 
     test "if with computed returns" do
@@ -623,7 +618,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
   end
 
@@ -639,7 +634,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
 
     test "bare variable condition with expr/false branches" do
@@ -653,7 +648,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
 
     test "function-call condition with true/false branches" do
@@ -667,7 +662,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
 
     test "not of a bare variable condition" do
@@ -681,7 +676,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
 
     test "and of bare variables condition" do
@@ -695,7 +690,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
   end
 
@@ -709,7 +704,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
   end
 
@@ -721,7 +716,7 @@ defmodule Credence.Pattern.NoIfTrueFalseFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoIfTrueFalse, input) == input
     end
   end
 end

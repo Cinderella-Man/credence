@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListPopAtForAccess
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListPopAtForAccess.check(ast, [])
-  end
 
   describe "check — flagged shapes (have a safe, same-answer fix)" do
     test "flags fully piped List.pop_at(0) |> elem(0) for the head" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListPopAtForAccess, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert issue.rule == :no_list_pop_at_for_access
@@ -34,7 +29,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListPopAtForAccess, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert issue.rule == :no_list_pop_at_for_access
@@ -50,7 +45,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListPopAtForAccess, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_list_pop_at_for_access
     end
@@ -64,7 +59,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListPopAtForAccess, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_list_pop_at_for_access
     end
@@ -78,7 +73,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListPopAtForAccess, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "List.first"
     end
@@ -94,7 +89,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListPopAtForAccess, code) == []
     end
 
     # elem(2) and beyond are out of the {popped, rest} tuple's range — there
@@ -108,7 +103,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListPopAtForAccess, code) == []
     end
 
     test "does not flag List.pop_at without an elem extraction" do
@@ -121,7 +116,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListPopAtForAccess, code) == []
     end
 
     test "does not flag elem on a non-List.pop_at expression" do
@@ -133,7 +128,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListPopAtForAccess, code) == []
     end
 
     test "does not flag direct hd/1 or tl/1" do
@@ -144,7 +139,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListPopAtForAccess, code) == []
     end
 
     test "does not flag pattern matching for head and tail" do
@@ -156,7 +151,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListPopAtForAccess, code) == []
     end
   end
 end

@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerEquivalenceTest do
   module that calls them WITHOUT the require does not compile. So there is no
   runnable "before" to compare against — the fix makes invalid code compile.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
   import Credence.BehaviourEquivalence
 
   test "no_missing_require_logger: unconstructible — module without the require does not compile" do

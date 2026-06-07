@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceEquivalenceTest do
   case agrees and the `1` init is the `*` identity. Input set covers empty, ints,
   floats, value-kind, and a zero.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoExplicitProductReduce

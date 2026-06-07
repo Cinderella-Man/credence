@@ -207,6 +207,18 @@ over the same list).
   `<round>.ex` runs that round; `<round>/rule.ex` is the kind-of-rule module.
 - `test/<round>/<rule>_test.exs` — paired one-to-one with the rule files. Some
   rules split into `<rule>_check_test.exs` + `<rule>_fix_test.exs`.
+- `test/support/rule_case.ex` — `Credence.RuleCase`, the one case template every
+  per-rule test uses. `use Credence.RuleCase` (add `async: true`) pulls in
+  `ExUnit.Case`, the rule verbs, and the equivalence harness. The verbs take the
+  rule as their first argument: `check(rule, code)`, `flagged?(rule, code)`,
+  `clean?(rule, code)`, `fix(rule, code)` (and `fix(rule, code, opts)` for the few
+  rules whose fix takes a strategy). `fix/2` is **byte-exact** — it returns
+  `apply_rule_fix`'s output verbatim, exactly what the pipeline ships, with no
+  re-formatting. So `expected` is the real shipped bytes, and a rule that mangles
+  the layout of lines it didn't touch is caught by the plain `== expected` (there
+  is no formatter to launder it). This replaces the per-file `defp check`/`defp
+  fix` helpers, which had drifted into several incompatible shapes — including
+  ones that re-formatted the output and so tested bytes production never emits.
 - `test/credence_pipeline_test.exs` — end-to-end tests, including the
   after-the-fix check (with on-purpose `BrokenFixRule` / `UnparseableFixRule`
   test rules).
@@ -246,13 +258,14 @@ over the same list).
   Sourceror tree; rules pattern-match its wrapped shape directly. Building little
   bits of code inside a rule uses `Sourceror.parse_string!/1`, not
   `Code.string_to_quoted!/1`.
-- **No `normalize_sourceror_ast/1` inside rules.** Every Pattern rule walks
-  Sourceror's wrapped tree from start to finish. The `normalize_sourceror_ast/1`
-  helper still exists in `RuleHelpers`, but only test helpers (`norm/1`) use it,
-  to compare trees for sameness via `Macro.to_string/1` — never real rule logic.
-  It used to be used as a shortcut inside three rules; that was removed because
-  it smuggled the built-in tree shape into a project that's meant to be Sourceror
-  only.
+- **No `normalize_sourceror_ast/1` anywhere — rules or tests.** Every Pattern rule
+  walks Sourceror's wrapped tree from start to finish. The helper still exists in
+  `RuleHelpers` but is now unused: it used to be a shortcut inside three rules
+  (removed because it smuggled the built-in tree shape into a Sourceror-only
+  project), and a `norm`/`assert_fix` round-trip inside two fix tests (removed when
+  those went byte-exact). Fix tests compare the rule's exact bytes with `==`; a
+  normalized round-trip would launder a real layout regression. `FixMetaTest`
+  forbids it (and `=~`/substring matching) so it can't creep back.
 - **Rules don't re-parse the source to dodge a shape.** If a matcher doesn't fit,
   fix the matcher. Don't re-parse the text with a different parser to get a shape
   that does.

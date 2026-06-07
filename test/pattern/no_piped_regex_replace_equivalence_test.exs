@@ -11,7 +11,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceEquivalenceTest do
   So the "before" has no valid runtime behaviour to preserve; this is a
   correction, not a behaviour-preserving rewrite. See `mark_equivalence_repair/1`.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
   import Credence.BehaviourEquivalence
 
   test "no_piped_regex_replace: repair — piped `Regex.replace` arg-order bug crashes on every input" do

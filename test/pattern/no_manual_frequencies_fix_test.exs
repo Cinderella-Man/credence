@@ -1,10 +1,7 @@
 defmodule Credence.Pattern.NoManualFrequenciesFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualFrequencies
-
-  defp check(code), do: NoManualFrequencies.check(Sourceror.parse_string!(code), [])
-  defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(NoManualFrequencies, code, [])
 
   describe "fix output (whole-string compare)" do
     test "identity key collapses to Enum.frequencies/1, surrounding code preserved" do
@@ -32,7 +29,7 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualFrequencies, code) == expected
     end
 
     test "piped identity key collapses to Enum.frequencies/1" do
@@ -52,7 +49,7 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualFrequencies, code) == expected
     end
 
     test "derived key becomes Enum.frequencies_by/2 (key carried over verbatim)" do
@@ -72,7 +69,7 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualFrequencies, code) == expected
     end
 
     test "non-frequency reduce is left unchanged" do
@@ -84,7 +81,7 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualFrequencies, code) == code
     end
   end
 
@@ -106,8 +103,8 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
       end
       """
 
-      assert check(fix(identity)) == []
-      assert check(fix(derived)) == []
+      assert check(NoManualFrequencies, fix(NoManualFrequencies, identity)) == []
+      assert check(NoManualFrequencies, fix(NoManualFrequencies, derived)) == []
     end
   end
 
@@ -121,9 +118,10 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
   end
 
   defp assert_preserves(reduce_expr, inputs) do
-    assert check(reduce_expr) != [], "expected the rule to fire on: #{reduce_expr}"
+    assert check(NoManualFrequencies, reduce_expr) != [],
+           "expected the rule to fire on: #{reduce_expr}"
 
-    fixed = fix(reduce_expr)
+    fixed = fix(NoManualFrequencies, reduce_expr)
     assert fixed != reduce_expr, "expected the rule to rewrite the reduce:\n#{fixed}"
 
     orig = eval1(reduce_expr)

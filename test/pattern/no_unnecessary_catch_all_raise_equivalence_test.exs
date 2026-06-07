@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseEquivalenceTest do
   `FunctionClauseError` — both raise, an error-type-only difference outside the
   function's domain. The input set pins the in-domain (list) behaviour.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoUnnecessaryCatchAllRaise

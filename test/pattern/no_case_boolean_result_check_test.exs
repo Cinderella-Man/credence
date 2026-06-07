@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCaseBooleanResult
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoCaseBooleanResult.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — specific pattern, then trailing wildcard, opposite booleans
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
 
   describe "flags wildcard-last boolean cases" do
     test "atom pattern, true then false" do
-      assert flagged?("""
+      assert flagged?(NoCaseBooleanResult, """
              case result do
                :ok -> true
                _ -> false
@@ -26,7 +18,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "atom pattern, false then true" do
-      assert flagged?("""
+      assert flagged?(NoCaseBooleanResult, """
              case result do
                :ok -> false
                _ -> true
@@ -35,7 +27,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "tuple pattern, true then false" do
-      assert flagged?("""
+      assert flagged?(NoCaseBooleanResult, """
              case File.read(path) do
                {:ok, _} -> true
                _ -> false
@@ -44,11 +36,11 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "inline case" do
-      assert flagged?(~S"case check(x) do :ok -> true; _ -> false end")
+      assert flagged?(NoCaseBooleanResult, ~S"case check(x) do :ok -> true; _ -> false end")
     end
 
     test "nested in function def" do
-      assert flagged?("""
+      assert flagged?(NoCaseBooleanResult, """
              defp is_increasing?([head | tail]) do
                case check_increasing(tail, head) do
                  :ok -> true
@@ -77,13 +69,13 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoCaseBooleanResult, code)) == 2
     end
   end
 
   describe "flags piped wildcard-last case" do
     test "simple pipe into case" do
-      assert flagged?("""
+      assert flagged?(NoCaseBooleanResult, """
              check(x)
              |> case do
                :ok -> true
@@ -93,7 +85,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "pipe chain into case" do
-      assert flagged?("""
+      assert flagged?(NoCaseBooleanResult, """
              x
              |> validate()
              |> normalize()
@@ -111,7 +103,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
 
   describe "does not flag shapes without a safe fix" do
     test "two specific patterns (CaseClauseError vs false differ)" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case result do
                :ok -> true
                :no -> false
@@ -120,7 +112,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "tuple pair, both specific" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case File.read(path) do
                {:ok, _} -> true
                {:error, _} -> false
@@ -129,7 +121,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "wildcard FIRST, false then true (second clause dead → constant)" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case result do
                _ -> false
                :ok -> true
@@ -138,7 +130,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "wildcard FIRST, true then false (second clause dead → constant)" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case result do
                _ -> true
                :ok -> false
@@ -147,7 +139,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "bare variable pattern then wildcard (constant)" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case result do
                x -> true
                _ -> false
@@ -158,7 +150,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
 
   describe "does not flag other legitimate case statements" do
     test "case with boolean patterns (handled by no_case_true_false)" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case x > 0 do
                true -> :positive
                false -> :negative
@@ -167,7 +159,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "case with non-boolean results" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case result do
                :ok -> :success
                _ -> :failure
@@ -176,7 +168,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "case with three clauses" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case result do
                :ok -> true
                :error -> false
@@ -186,7 +178,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "case with tuple patterns and complex bodies" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case File.read(path) do
                {:ok, content} -> content
                _ -> raise "nope"
@@ -195,7 +187,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "case with single clause" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case x do
                :ok -> true
              end
@@ -203,7 +195,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "case with both same boolean result" do
-      assert clean?("""
+      assert clean?(NoCaseBooleanResult, """
              case x do
                :ok -> true
                _ -> true

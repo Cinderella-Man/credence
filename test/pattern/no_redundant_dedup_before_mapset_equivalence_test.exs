@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetEquivalenceTest do
   (both kept distinct either way). Input set includes a value-kind list, empty,
   and duplicates.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

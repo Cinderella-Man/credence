@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoIsPrefixForNonGuard
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoIsPrefixForNonGuard, code, [])
-  end
 
   describe "fix/2" do
     test "renames simple def is_palindrome to palindrome?" do
@@ -21,7 +17,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "renames defp is_valid to valid?" do
@@ -37,7 +33,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "renames multi-word is_valid_email to valid_email?" do
@@ -53,7 +49,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "renames function with guard and preserves Erlang guards" do
@@ -75,7 +71,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "renames recursive calls" do
@@ -95,7 +91,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "renames call sites in other functions within the same module" do
@@ -119,7 +115,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "does not rename qualified calls to other modules" do
@@ -139,7 +135,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "returns source unchanged when nothing to fix" do
@@ -150,7 +146,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoIsPrefixForNonGuard, code) == code
     end
 
     test "does not rename Erlang guard BIF wrappers" do
@@ -160,7 +156,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoIsPrefixForNonGuard, code) == code
     end
 
     test "renames multiple different is_ functions in one module" do
@@ -186,7 +182,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "renames function used in pipeline" do
@@ -210,7 +206,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "handles function with multi-line body" do
@@ -232,7 +228,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "renames capture references" do
@@ -256,7 +252,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "auto_fix_public: false skips public `def` (external callers invisible)" do
@@ -331,7 +327,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
 
     test "renames is_empty? to empty? (strip prefix, keep ?)" do
@@ -355,7 +351,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoIsPrefixForNonGuard, code) == expected
     end
   end
 end

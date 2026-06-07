@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.PreferRegexMatchFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferRegexMatch
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(PreferRegexMatch, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   describe "rewrites case Regex.run/2 to if Regex.match?/2" do
     test "[_ | _] then catch-all" do
@@ -33,7 +28,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferRegexMatch, code) == expected
     end
 
     test "[_ | _] then nil" do
@@ -60,7 +55,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferRegexMatch, code) == expected
     end
 
     test "nil then [_ | _] (bodies map by pattern, not source order)" do
@@ -87,7 +82,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferRegexMatch, code) == expected
     end
 
     test "multi-statement branch bodies" do
@@ -121,7 +116,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferRegexMatch, code) == expected
     end
   end
 
@@ -138,7 +133,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferRegexMatch, code) == code
     end
 
     test "bound head is untouched" do
@@ -153,7 +148,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferRegexMatch, code) == code
     end
 
     test "leading catch-all shadowing [_ | _] is untouched" do
@@ -168,7 +163,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferRegexMatch, code) == code
     end
 
     test "single [_ | _] clause is untouched" do
@@ -182,7 +177,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferRegexMatch, code) == code
     end
 
     test "bound captures are untouched" do
@@ -197,7 +192,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferRegexMatch, code) == code
     end
 
     test "named catch-all is untouched" do
@@ -212,7 +207,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferRegexMatch, code) == code
     end
 
     test "Regex.match? is untouched" do
@@ -222,7 +217,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferRegexMatch, code) == code
     end
   end
 end

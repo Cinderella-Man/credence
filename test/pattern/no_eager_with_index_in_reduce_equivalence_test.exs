@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceEquivalenceTest do
   is rewritten to thread the index without the eager `Enum.with_index/1` materialisation.
   The same `{val, idx}` pairs are folded in the same order, so the result is identical.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoEagerWithIndexInReduce

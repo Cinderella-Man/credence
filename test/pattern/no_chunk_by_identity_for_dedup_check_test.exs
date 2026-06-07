@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoChunkByIdentityForDedup
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoChunkByIdentityForDedup.check(ast, [])
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # CHECK — positive cases
@@ -24,7 +19,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoChunkByIdentityForDedup, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_chunk_by_identity_for_dedup
       assert hd(issues).message =~ "Enum.dedup"
@@ -41,7 +36,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoChunkByIdentityForDedup, code)) == 1
     end
 
     test "flags chunk_by |> Enum.map_join(&List.first/1)" do
@@ -55,7 +50,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoChunkByIdentityForDedup, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_chunk_by_identity_for_dedup
     end
@@ -67,7 +62,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoChunkByIdentityForDedup, code)) == 1
     end
 
     test "flags direct call: Enum.map_join(Enum.chunk_by(list, & &1), &List.first/1)" do
@@ -77,7 +72,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoChunkByIdentityForDedup, code)) == 1
     end
 
     test "flags inside a longer pipeline" do
@@ -93,7 +88,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoChunkByIdentityForDedup, code)) == 1
     end
 
     test "flags chunk_by(fn item -> item end)" do
@@ -107,7 +102,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoChunkByIdentityForDedup, code)) == 1
     end
 
     test "flags & hd(&1) as the first-extractor" do
@@ -121,7 +116,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoChunkByIdentityForDedup, code)) == 1
     end
   end
 
@@ -137,7 +132,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoChunkByIdentityForDedup, code) == []
     end
 
     test "does not flag chunk_by with a non-identity function" do
@@ -147,7 +142,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoChunkByIdentityForDedup, code) == []
     end
 
     test "does not flag chunk_by(identity) with a different map function" do
@@ -157,7 +152,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoChunkByIdentityForDedup, code) == []
     end
 
     test "does not flag Enum.dedup |> Enum.join" do
@@ -167,7 +162,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoChunkByIdentityForDedup, code) == []
     end
 
     test "does not flag chunk_by(identity) extracting last instead of first" do
@@ -177,7 +172,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoChunkByIdentityForDedup, code) == []
     end
   end
 end

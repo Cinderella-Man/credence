@@ -1,10 +1,7 @@
 defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoGroupByForFrequencies
-
-  defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(NoGroupByForFrequencies, code, [])
 
   describe "rewrites to Enum.frequencies_by/2" do
     test "piped group_by/2 |> Map.new(length)" do
@@ -18,7 +15,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       Enum.frequencies_by(words, &String.downcase/1)
       """
 
-      assert fix(code) == expected
+      assert fix(NoGroupByForFrequencies, code) == expected
     end
 
     test "direct Map.new(Enum.group_by/2, ...)" do
@@ -30,7 +27,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       Enum.frequencies_by(words, &String.downcase/1)
       """
 
-      assert fix(code) == expected
+      assert fix(NoGroupByForFrequencies, code) == expected
     end
 
     test "Enum.count variant" do
@@ -44,7 +41,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       Enum.frequencies_by(list, & &1)
       """
 
-      assert fix(code) == expected
+      assert fix(NoGroupByForFrequencies, code) == expected
     end
 
     test "Kernel.length variant" do
@@ -58,7 +55,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       Enum.frequencies_by(list, fn x -> x end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoGroupByForFrequencies, code) == expected
     end
 
     test "preserves leading pipe steps as the enum source" do
@@ -73,7 +70,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       Enum.frequencies_by(data |> Enum.map(fn x -> x.name end), &String.downcase/1)
       """
 
-      assert fix(code) == expected
+      assert fix(NoGroupByForFrequencies, code) == expected
     end
 
     test "preserves a trailing pipe step after Map.new" do
@@ -89,7 +86,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       |> Enum.sort()
       """
 
-      assert fix(code) == expected
+      assert fix(NoGroupByForFrequencies, code) == expected
     end
 
     test "preserves surrounding code" do
@@ -121,7 +118,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoGroupByForFrequencies, code) == expected
     end
   end
 
@@ -133,7 +130,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       |> Map.new(fn {key, items} -> {key, hd(items)} end)
       """
 
-      assert fix(code) == code
+      assert fix(NoGroupByForFrequencies, code) == code
     end
 
     test "piped group_by/3 with a value_fun" do
@@ -143,7 +140,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       |> Map.new(fn {k, g} -> {k, length(g)} end)
       """
 
-      assert fix(code) == code
+      assert fix(NoGroupByForFrequencies, code) == code
     end
 
     test "head-position group_by in a pipe" do
@@ -152,7 +149,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       |> Map.new(fn {key, group} -> {key, length(group)} end)
       """
 
-      assert fix(code) == code
+      assert fix(NoGroupByForFrequencies, code) == code
     end
   end
 
@@ -164,7 +161,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       |> Map.new(fn {key, group} -> {key, length(group)} end)
       """
 
-      fixed = fix(code)
+      fixed = fix(NoGroupByForFrequencies, code)
       ast = Sourceror.parse_string!(fixed)
       assert NoGroupByForFrequencies.check(ast, []) == []
     end

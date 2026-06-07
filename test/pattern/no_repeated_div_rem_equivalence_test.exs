@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemEquivalenceTest do
   same scope collapse to a single binding reused. `rem`/`div` are pure, so the
   deduplicated value is identical.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRepeatedDivRem

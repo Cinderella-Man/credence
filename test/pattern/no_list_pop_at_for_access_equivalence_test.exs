@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessEquivalenceTest do
     * `|> elem(1)` (the rest)        → `List.delete_at(list, 0)`
   Both forms verified incl. empty and single-element lists.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

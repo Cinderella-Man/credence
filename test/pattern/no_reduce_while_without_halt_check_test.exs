@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoReduceWhileWithoutHalt
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoReduceWhileWithoutHalt.check(ast, [])
-  end
 
   describe "fires" do
     test "detects reduce_while with single {:cont, _} clause" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoReduceWhileWithoutHalt, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_reduce_while_without_halt
     end
@@ -38,7 +33,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoReduceWhileWithoutHalt, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_reduce_while_without_halt
     end
@@ -55,7 +50,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoReduceWhileWithoutHalt, code)
       assert length(issues) == 1
     end
 
@@ -70,7 +65,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoReduceWhileWithoutHalt, code)
       assert length(issues) == 2
     end
   end
@@ -85,7 +80,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceWhileWithoutHalt, code) == []
     end
 
     test "passes when callback has a :halt clause" do
@@ -99,7 +94,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceWhileWithoutHalt, code) == []
     end
 
     test "passes when multi-clause fn has a :halt clause" do
@@ -114,7 +109,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceWhileWithoutHalt, code) == []
     end
 
     test "passes when callback returns bare :halt" do
@@ -129,7 +124,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceWhileWithoutHalt, code) == []
     end
 
     # Deliberately skipped: the last expression is a `case`, not a literal
@@ -150,7 +145,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceWhileWithoutHalt, code) == []
     end
 
     # Deliberately skipped: an `if` whose branches both return cont is not a
@@ -166,7 +161,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceWhileWithoutHalt, code) == []
     end
 
     test "passes unrelated code" do
@@ -176,7 +171,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceWhileWithoutHalt, code) == []
     end
   end
 end

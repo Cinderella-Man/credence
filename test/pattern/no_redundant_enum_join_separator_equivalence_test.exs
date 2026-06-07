@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorEquivalenceTest do
   `""`, so dropping it is exact. Input set covers strings, integers (stringified),
   empty, and a value-kind list (`1` vs `1.0` both stringify, joined identically).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRedundantEnumJoinSeparator

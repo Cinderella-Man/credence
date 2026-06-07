@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoTautologicalIfFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoTautologicalIf
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(NoTautologicalIf, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # BASIC FIXES
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoTautologicalIf, input) == expected
     end
 
     test "inline form" do
@@ -48,7 +43,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoTautologicalIf, input) == expected
     end
   end
 
@@ -68,7 +63,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTautologicalIf, code) == code
     end
 
     test "condition that binds a variable" do
@@ -82,7 +77,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTautologicalIf, code) == code
     end
 
     test "body binds a variable" do
@@ -98,7 +93,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTautologicalIf, code) == code
     end
   end
 end

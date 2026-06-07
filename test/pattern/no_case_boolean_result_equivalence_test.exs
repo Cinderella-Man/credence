@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultEquivalenceTest do
   boolean test itself. The catch-all `_ -> false` makes it total, so the rewrite
   matches for every input.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoCaseBooleanResult

@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoTautologicalIfCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoTautologicalIf
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoTautologicalIf.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — should flag
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
 
   describe "flags if/else with identical branches" do
     test "simple variable in both branches" do
-      assert flagged?("""
+      assert flagged?(NoTautologicalIf, """
              defp do_pass(list) do
                {swapped, result} = do_pass_recursive(list, false, [])
                if swapped do
@@ -30,7 +22,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
     end
 
     test "function call in both branches" do
-      assert flagged?("""
+      assert flagged?(NoTautologicalIf, """
              def check(x) do
                if x > 0 do
                  process(x)
@@ -42,7 +34,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
     end
 
     test "inline form" do
-      assert flagged?("""
+      assert flagged?(NoTautologicalIf, """
              def check(x) do
                if x > 0, do: value, else: value
              end
@@ -50,7 +42,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
     end
 
     test "nested expression in both branches" do
-      assert flagged?("""
+      assert flagged?(NoTautologicalIf, """
              def check(x) do
                if condition do
                  Enum.map(list, fn i -> i + 1 end)
@@ -68,7 +60,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
 
   describe "does not flag" do
     test "different branches" do
-      assert clean?("""
+      assert clean?(NoTautologicalIf, """
              def check(x) do
                if x > 0 do
                  x
@@ -80,7 +72,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
     end
 
     test "if without else" do
-      assert clean?("""
+      assert clean?(NoTautologicalIf, """
              def check(x) do
                if x > 0 do
                  IO.puts("positive")
@@ -90,7 +82,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
     end
 
     test "boolean branches (handled by no_if_true_false)" do
-      assert clean?("""
+      assert clean?(NoTautologicalIf, """
              def check(x) do
                if x > 0 do
                  true
@@ -108,7 +100,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
 
   describe "does not flag (unsafe to fix — narrowed out)" do
     test "side-effecting condition: dropping it would skip the call" do
-      assert clean?("""
+      assert clean?(NoTautologicalIf, """
              def check(x) do
                if launch_missiles() do
                  :ok
@@ -120,7 +112,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
     end
 
     test "condition that may raise: dropping it would skip the exception" do
-      assert clean?("""
+      assert clean?(NoTautologicalIf, """
              def check(x) do
                if hd(x) do
                  :ok
@@ -132,7 +124,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
     end
 
     test "binding condition: dropping it would lose the assignment" do
-      assert clean?("""
+      assert clean?(NoTautologicalIf, """
              def check(x) do
                if (y = compute(x)) do
                  y
@@ -144,7 +136,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
     end
 
     test "comparison with impure operand is not pure" do
-      assert clean?("""
+      assert clean?(NoTautologicalIf, """
              def check(x) do
                if size(x) > 0 do
                  :ok
@@ -156,7 +148,7 @@ defmodule Credence.Pattern.NoTautologicalIfCheckTest do
     end
 
     test "body binds a variable that could shadow an outer one" do
-      assert clean?("""
+      assert clean?(NoTautologicalIf, """
              def check(x) do
                if flag do
                  y = compute(x)

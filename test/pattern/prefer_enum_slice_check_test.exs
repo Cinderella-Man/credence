@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.PreferEnumSliceCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.PreferEnumSlice
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferEnumSlice.check(ast, [])
-  end
 
   describe "PreferEnumSlice" do
     test "passes when using Enum.slice" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
 
     test "detects Enum.drop |> Enum.take pipeline" do
@@ -34,7 +29,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(PreferEnumSlice, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert %Issue{} = issue
@@ -56,7 +51,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(PreferEnumSlice, code)
       assert length(issues) == 1
     end
 
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(PreferEnumSlice, code)
       assert length(issues) == 1
       assert hd(issues).rule == :prefer_enum_slice
     end
@@ -83,7 +78,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(PreferEnumSlice, code)
       assert length(issues) == 1
       assert hd(issues).rule == :prefer_enum_slice
     end
@@ -97,7 +92,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(PreferEnumSlice, code)) == 1
     end
 
     test "detects multiple occurrences" do
@@ -111,7 +106,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(PreferEnumSlice, code)
       assert length(issues) == 2
     end
 
@@ -128,7 +123,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
 
     test "ignores drop/take with Stream" do
@@ -142,7 +137,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
 
     test "ignores standalone Enum.drop" do
@@ -152,7 +147,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
 
     test "ignores standalone Enum.take" do
@@ -162,7 +157,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
 
     test "ignores Enum.drop piped into something other than Enum.take" do
@@ -176,7 +171,7 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
 
     test "ignores something other than Enum.drop piped into Enum.take" do
@@ -190,24 +185,24 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
 
     # --- NARROWING: only non-negative literal amounts (slice-equivalent) ---
 
     test "ignores variable amounts (could be negative at runtime)" do
       code = "Enum.drop(list, start) |> Enum.take(len)"
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
 
     test "ignores negative drop amount" do
       code = "Enum.drop(list, -1) |> Enum.take(2)"
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
 
     test "ignores negative take amount" do
       code = "Enum.drop(list, 1) |> Enum.take(-2)"
-      assert check(code) == []
+      assert check(PreferEnumSlice, code) == []
     end
   end
 end

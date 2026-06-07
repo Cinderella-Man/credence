@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoUnlessElseEquivalenceTest do
   Tier 1 (expression). `unless cond, do: a, else: b` → `if cond, do: b, else: a`
   (branches swapped). Input set drives the condition both ways.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoUnlessElse

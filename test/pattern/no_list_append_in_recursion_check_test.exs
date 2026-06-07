@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoListAppendInRecursionCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListAppendInRecursion
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListAppendInRecursion.check(ast, [])
-  end
 
   describe "NoListAppendInRecursion check" do
     # --- POSITIVE CASES ---
@@ -22,7 +17,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListAppendInRecursion, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert issue.rule == :no_list_append_in_recursion
@@ -41,7 +36,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListAppendInRecursion, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_list_append_in_recursion
     end
@@ -57,7 +52,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListAppendInRecursion, code)
       assert length(issues) == 1
     end
 
@@ -73,7 +68,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInRecursion, code) == []
     end
 
     test "does not flag when ++ is indirect (assigned to variable)" do
@@ -86,7 +81,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInRecursion, code) == []
     end
 
     test "does not flag idiomatic prepend" do
@@ -97,7 +92,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInRecursion, code) == []
     end
 
     test "does not flag ++ in Enum.reduce" do
@@ -111,7 +106,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInRecursion, code) == []
     end
   end
 end

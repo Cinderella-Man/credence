@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoFilterThenCountCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoFilterThenCount
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoFilterThenCount.check(ast, [])
-  end
 
   describe "NoFilterThenCount check" do
     test "detects Enum.filter |> length() in pipeline" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoFilterThenCount, code)
       assert issue.rule == :no_filter_then_count
       assert issue.message =~ "Enum.filter"
       assert issue.message =~ "length"
@@ -38,7 +33,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoFilterThenCount, code)
       assert issue.rule == :no_filter_then_count
     end
 
@@ -53,7 +48,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoFilterThenCount, code)
       assert issue.rule == :no_filter_then_count
     end
 
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoFilterThenCount, code)
       assert issue.rule == :no_filter_then_count
     end
 
@@ -82,7 +77,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoFilterThenCount, code)
       assert issue.rule == :no_filter_then_count
     end
 
@@ -95,7 +90,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoFilterThenCount, code)
       assert issue.rule == :no_filter_then_count
     end
 
@@ -110,7 +105,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoFilterThenCount, code)
       assert length(issues) == 2
     end
 
@@ -126,7 +121,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenCount, code) == []
     end
 
     test "does not flag Enum.count with predicate (already idiomatic)" do
@@ -138,7 +133,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenCount, code) == []
     end
 
     test "does not flag Enum.count in pipeline with predicate" do
@@ -150,7 +145,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenCount, code) == []
     end
 
     test "does not flag length without filter" do
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenCount, code) == []
     end
 
     test "does not flag Enum.filter |> Enum.map" do
@@ -174,7 +169,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenCount, code) == []
     end
 
     test "does not flag Enum.filter |> hd" do
@@ -188,7 +183,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenCount, code) == []
     end
 
     # ---- Narrowed-away cases: check must agree with fix ----
@@ -203,7 +198,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenCount, code) == []
     end
 
     test "does not flag nested Enum.count(Enum.filter(x)) with single-arg filter" do
@@ -213,7 +208,7 @@ defmodule Credence.Pattern.NoFilterThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenCount, code) == []
     end
   end
 end

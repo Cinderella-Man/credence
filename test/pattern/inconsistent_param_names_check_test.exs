@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.InconsistentParamNames
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    InconsistentParamNames.check(ast, [])
-  end
 
   describe "flags inconsistent parameter names" do
     test "name drift in do_fibonacci (current vs prev)" do
@@ -21,7 +16,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [issue, issue2] = check(code)
+      [issue, issue2] = check(InconsistentParamNames, code)
       assert issue.rule == :inconsistent_param_names
       assert issue.message =~ "current"
       assert issue.message =~ "prev"
@@ -40,7 +35,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(InconsistentParamNames, code)
       assert length(issues) == 2
 
       messages = Enum.map(issues, & &1.message)
@@ -63,7 +58,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(InconsistentParamNames, code)
       assert length(issues) == 2
       assert hd(issues).message =~ "position 1"
     end
@@ -76,7 +71,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      assert length(check(code)) == 3
+      assert length(check(InconsistentParamNames, code)) == 3
     end
 
     test "drift across three clauses" do
@@ -88,7 +83,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(InconsistentParamNames, code)
       assert length(issues) == 2
 
       pos1 = Enum.find(issues, &(&1.message =~ "position 1"))
@@ -110,7 +105,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      assert length(check(code)) == 3
+      assert length(check(InconsistentParamNames, code)) == 3
     end
 
     test "_number vs banana (base name number vs banana)" do
@@ -121,7 +116,9 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [%Issue{rule: :inconsistent_param_names, message: msg}] = check(code)
+      [%Issue{rule: :inconsistent_param_names, message: msg}] =
+        check(InconsistentParamNames, code)
+
       assert msg =~ "position 1"
     end
 
@@ -133,14 +130,14 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [%Issue{message: msg}] = check(code)
+      [%Issue{message: msg}] = check(InconsistentParamNames, code)
       assert msg =~ "position 1"
     end
   end
 
   describe "does NOT flag" do
     test "consistent names" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                defp do_fibonacci(prev, _current, 0), do: prev
 
@@ -152,7 +149,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "_number vs number (same base name)" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def process(_number, opts), do: opts
                def process(number, opts), do: {number, opts}
@@ -161,7 +158,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "patterns that differ (legitimate dispatch)" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def handle({:ok, result}), do: result
                def handle({:error, reason}), do: raise(reason)
@@ -170,7 +167,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "literals at a position" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def factorial(0, acc), do: acc
                def factorial(n, acc), do: factorial(n - 1, n * acc)
@@ -179,7 +176,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "single-clause functions" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                defp helper(data, count), do: {data, count}
              end
@@ -187,7 +184,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "different functions that share names" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def process(data), do: data
                def transform(input), do: input
@@ -196,7 +193,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "functions with different arities" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def foo(alpha), do: alpha
                def foo(first, second), do: {first, second}
@@ -205,7 +202,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "list/cons patterns at a position" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def count([], acc), do: acc
                def count([_h | t], acc), do: count(t, acc + 1)
@@ -214,7 +211,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "map/struct patterns at a position" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def get(%{key: val}, default), do: val || default
                def get(container, default), do: {container, default}
@@ -223,7 +220,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "pinned variables" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def match(^expected, val), do: val
                def match(other, val), do: {other, val}
@@ -232,7 +229,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "bare _ (always skips position)" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def process(_, opts), do: opts
                def process(banana, opts), do: {banana, opts}
@@ -257,7 +254,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
 
   describe "does NOT flag — argument pattern-match equality" do
     test "two args share the same name in the first clause" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def equal_pair(x, x), do: x
                def equal_pair(a, b), do: {a, b}
@@ -266,7 +263,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "two args share the same name in a later clause" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def equal_pair(a, b), do: {a, b}
                def equal_pair(x, x), do: x
@@ -275,7 +272,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "three args share the same name" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def triple(x, x, x), do: x
                def triple(a, b, c), do: {a, b, c}
@@ -284,7 +281,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "underscored pinning (_x appearing twice in a clause)" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(_x, _x), do: :equal
                def f(a, b), do: {a, b}
@@ -293,7 +290,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "mixed underscored vs non-underscored sharing the same base" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(answer, _answer), do: answer
                def f(a, b), do: {a, b}
@@ -302,7 +299,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "original validate_answers_match example" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def validate_answers_match(errors, question, answer, answer)
                    when is_binary(question) and is_binary(answer), do: errors
@@ -318,7 +315,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "every clause has pinning at the same positions" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(a, a), do: a
                def f(b, b), do: b
@@ -327,7 +324,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "clauses have pinning at different positions" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(x, x, z), do: {x, z}
                def f(a, b, b), do: {a, b}
@@ -336,7 +333,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "pinning at every position" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(x, x), do: x
                def f(a, a), do: a
@@ -346,7 +343,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "pinning detected in any one of three+ clauses skips that position globally" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(a, b), do: {a, b}
                def f(x, x), do: x
@@ -356,7 +353,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "symmetric-pair case across clauses" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def swap(a, b), do: {a, b}
                def swap(x, x), do: x
@@ -367,7 +364,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
 
   describe "does NOT flag — nested pattern equality" do
     test "name shared with a tuple element at another position" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(x, {x, _other}), do: x
                def f(alpha, {beta, _other}), do: {alpha, beta}
@@ -376,7 +373,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "name shared with a list-head element" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(h, [h | _t]), do: h
                def f(first, [_head | _tail]), do: first
@@ -385,7 +382,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "name shared with a list-tail variable" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(t, [_h | t]), do: t
                def f(tail, [_h | _other]), do: tail
@@ -394,7 +391,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "name shared with a map value at another position" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(v, %{key: v}), do: v
                def f(value, %{key: _other}), do: value
@@ -403,7 +400,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "name shared with a struct field at another position" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(id, %User{id: id}), do: id
                def f(uid, %User{id: _other}), do: uid
@@ -412,7 +409,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "name shared with a deeply nested element" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(x, {:ok, {x, _meta}}), do: x
                def f(alpha, {:ok, {_beta, _meta}}), do: alpha
@@ -421,7 +418,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "name shared inside a binary pattern" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(n, <<n::8, _rest::binary>>), do: n
                def f(byte, <<_b::8, _rest::binary>>), do: byte
@@ -430,7 +427,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "underscored name shared between top-level and nested" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f(_answer, %{value: _answer}), do: :ok
                def f(answer, %{value: _other}), do: answer
@@ -439,7 +436,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "sharing across two non-variable positions (tuple/tuple)" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Good do
                def f({x, _}, {x, _}), do: x
                def f({a, _}, {b, _}), do: {a, b}
@@ -457,7 +454,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [%Issue{message: msg}] = check(code)
+      [%Issue{message: msg}] = check(InconsistentParamNames, code)
       assert msg =~ "position 3"
       assert msg =~ "alpha"
       assert msg =~ "beta"
@@ -471,7 +468,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [%Issue{message: msg}] = check(code)
+      [%Issue{message: msg}] = check(InconsistentParamNames, code)
       assert msg =~ "position 2"
     end
 
@@ -483,7 +480,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [%Issue{message: msg}] = check(code)
+      [%Issue{message: msg}] = check(InconsistentParamNames, code)
       assert msg =~ "position 3"
     end
 
@@ -495,7 +492,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [%Issue{message: msg}] = check(code)
+      [%Issue{message: msg}] = check(InconsistentParamNames, code)
       assert msg =~ "position 2"
     end
   end
@@ -512,7 +509,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [%Issue{message: msg}] = check(code)
+      [%Issue{message: msg}] = check(InconsistentParamNames, code)
       assert msg =~ "position 3"
       assert msg =~ "state"
       assert msg =~ "server_state"
@@ -529,7 +526,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [%Issue{message: msg}] = check(code)
+      [%Issue{message: msg}] = check(InconsistentParamNames, code)
       assert msg =~ "position 1"
     end
 
@@ -547,14 +544,14 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
       end
       """
 
-      [%Issue{message: msg}] = check(code)
+      [%Issue{message: msg}] = check(InconsistentParamNames, code)
       assert msg =~ "position 1"
     end
   end
 
   describe "does NOT flag with attributes when names are consistent" do
     test "@impl + consistently named state across clauses" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Server do
                @impl true
                def handle_call(:get, _from, state), do: {:reply, state, state}
@@ -566,7 +563,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "@impl-annotated clauses with pattern-match equality (pinning)" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Pinned do
                @impl true
                def f(x, x), do: x
@@ -578,7 +575,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "separate callback functions (handle_call vs handle_cast) are not grouped" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Two do
                @impl true
                def handle_call(_msg, _from, state), do: {:reply, :ok, state}
@@ -592,7 +589,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
 
   describe "does NOT flag — real-world idiomatic patterns" do
     test "Phoenix-style handle_event with string discriminator" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Live do
                def handle_event("save", %{"user" => params}, socket) do
                  {:noreply, assign(socket, :params, params)}
@@ -610,7 +607,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "GenServer-style handle_call with tag discriminator" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Server do
                def handle_call({:get, key}, _from, state), do: {:reply, Map.get(state, key), state}
                def handle_call({:put, key, value}, _from, state), do: {:reply, :ok, Map.put(state, key, value)}
@@ -620,7 +617,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "classic recursive list processing with accumulator" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Lists do
                def reverse([], acc), do: acc
                def reverse([h | t], acc), do: reverse(t, [h | acc])
@@ -629,7 +626,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "tagged-tuple result dispatch" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Result do
                def unwrap({:ok, value}), do: value
                def unwrap({:error, reason}), do: raise(reason)
@@ -638,7 +635,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "guarded numeric dispatch" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Math do
                def sign(n) when n > 0, do: 1
                def sign(n) when n < 0, do: -1
@@ -648,7 +645,7 @@ defmodule Credence.Pattern.InconsistentParamNamesCheckTest do
     end
 
     test "binary-prefix routing" do
-      assert check("""
+      assert check(InconsistentParamNames, """
              defmodule Route do
                def handle("/api/" <> rest, conn), do: {:api, rest, conn}
                def handle("/admin/" <> rest, conn), do: {:admin, rest, conn}

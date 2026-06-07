@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMapKeysEnumLookup
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoMapKeysEnumLookup, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix (value-returning Enum functions)" do
     test "fixes Map.keys |> Enum.all? with access syntax" do
@@ -20,7 +13,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.all?(word_freqs, fn {char, v} -> Map.get(letter_freqs, char, 0) >= v end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes Map.keys |> Enum.map with Map.get(var, key, default)" do
@@ -32,7 +25,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.map(counts, fn {k, v} -> {k, v * 2} end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes Map.keys |> Enum.any? with access lookup" do
@@ -44,7 +37,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.any?(config, fn {k, v} -> v == nil end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes Map.keys |> Enum.each with access lookup" do
@@ -56,7 +49,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.each(scores, fn {k, v} -> IO.puts(v) end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes Map.keys |> Enum.flat_map with access lookup" do
@@ -68,7 +61,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.flat_map(groups, fn {k, v} -> v end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes Map.keys |> Enum.all? with Map.fetch! lookup" do
@@ -80,7 +73,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.all?(data, fn {k, v} -> v > 0 end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes Map.keys |> Enum.map with Map.fetch lookup (returns {:ok, v})" do
@@ -92,7 +85,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.map(data, fn {k, v} -> {k, {:ok, v}} end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes callback with guard" do
@@ -104,7 +97,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.map(m, fn {k, v} when is_atom(k) -> {k, v} end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes longer pipeline after Map.keys |> Enum.map" do
@@ -119,7 +112,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       |> Enum.sort()
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "preserves non-lookup references to the map variable" do
@@ -131,7 +124,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.map(m, fn {k, v} -> {k, v, map_size(m)} end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "only replaces lookups with matching key variable" do
@@ -143,7 +136,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.map(m, fn {k, v} -> v + m[:default] end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
   end
 
@@ -157,7 +150,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       freqs |> Enum.all?(fn {k, v} -> other[k] >= v end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes var |> Map.keys() |> Enum.map with Map.get" do
@@ -169,7 +162,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       counts |> Enum.map(fn {k, v} -> {k, v} end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes three-step with longer pipeline" do
@@ -186,7 +179,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       |> Enum.sort()
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
   end
 
@@ -200,7 +193,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.all?(word_freqs, fn {char, v} -> Map.get(letter_freqs, char, 0) >= v end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes Enum.map(Map.keys(var), callback)" do
@@ -212,7 +205,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.map(m, fn {k, v} -> {k, v} end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
   end
 
@@ -226,7 +219,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.filter(data, fn {k, v} -> v > 100 end) |> Enum.map(fn {k, _v} -> k end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes Map.keys |> Enum.reject (adds Enum.map to extract keys)" do
@@ -238,7 +231,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.reject(freq, fn {k, v} -> v == 0 end) |> Enum.map(fn {k, _v} -> k end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes three-step with Enum.filter" do
@@ -250,7 +243,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       data |> Enum.filter(fn {k, v} -> v > 100 end) |> Enum.map(fn {k, _v} -> k end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes direct call Enum.filter(Map.keys(var), callback)" do
@@ -262,7 +255,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.filter(data, fn {k, v} -> v > 100 end) |> Enum.map(fn {k, _v} -> k end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "fixes Enum.filter with pipeline continuation" do
@@ -274,7 +267,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.filter(data, fn {k, v} -> v > 100 end) |> Enum.map(fn {k, _v} -> k end) |> Enum.sort()
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
   end
 
@@ -288,7 +281,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.map(m, fn {k, v} -> v + v end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
 
     test "replaces access but leaves Map.fetch for different key expressions" do
@@ -300,7 +293,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Enum.map(m, fn {k, v} -> v + m[k + 1] end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapKeysEnumLookup, input) == expected
     end
   end
 
@@ -310,7 +303,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       Map.keys(config) |> Enum.sort()
       """
 
-      assert fix(code) == code
+      assert fix(NoMapKeysEnumLookup, code) == code
     end
 
     test "returns source unchanged for multi-clause callback" do
@@ -322,7 +315,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
       end)
       """
 
-      assert fix(code) == code
+      assert fix(NoMapKeysEnumLookup, code) == code
     end
   end
 end

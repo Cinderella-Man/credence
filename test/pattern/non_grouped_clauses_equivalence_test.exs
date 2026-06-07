@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NonGroupedClausesEquivalenceTest do
   in between move), so dispatch for every function is unchanged. Input set exercises
   both the regrouped function and the one that was moved.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NonGroupedClauses

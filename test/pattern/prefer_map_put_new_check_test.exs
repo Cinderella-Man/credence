@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.PreferMapPutNewCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferMapPutNew
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferMapPutNew.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — must flag (pure key + value, exact-equivalent rewrite)
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
 
   describe "flags if Map.has_key? ... Map.put pattern" do
     test "standard if-has_key-else-put" do
-      assert flagged?("""
+      assert flagged?(PreferMapPutNew, """
              def run(map, key, val) do
                if Map.has_key?(map, key) do
                  map
@@ -29,7 +21,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     end
 
     test "inside Enum.reduce" do
-      assert flagged?("""
+      assert flagged?(PreferMapPutNew, """
              def run(list) do
                Enum.reduce(list, %{}, fn {k, v}, acc ->
                  if Map.has_key?(acc, k) do
@@ -43,7 +35,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     end
 
     test "with variable binding" do
-      assert flagged?("""
+      assert flagged?(PreferMapPutNew, """
              def run(map, key, val) do
                new_map =
                  if Map.has_key?(map, key) do
@@ -58,7 +50,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     end
 
     test "negated condition with swapped branches" do
-      assert flagged?("""
+      assert flagged?(PreferMapPutNew, """
              def run(map, key, val) do
                if !Map.has_key?(map, key) do
                  Map.put(map, key, val)
@@ -70,7 +62,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     end
 
     test "unless variant" do
-      assert flagged?("""
+      assert flagged?(PreferMapPutNew, """
              def run(map, key, val) do
                unless Map.has_key?(map, key) do
                  Map.put(map, key, val)
@@ -82,7 +74,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     end
 
     test "scalar literal value" do
-      assert flagged?("""
+      assert flagged?(PreferMapPutNew, """
              def run(map, key) do
                if Map.has_key?(map, key) do
                  map
@@ -100,7 +92,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
 
   describe "does not flag when already using Map.put_new" do
     test "Map.put_new directly" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map, key, val) do
                Map.put_new(map, key, val)
              end
@@ -110,7 +102,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
 
   describe "does not flag when branches don't match" do
     test "key-exists branch does work instead of returning map" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map, key, val) do
                if Map.has_key?(map, key) do
                  Map.update!(map, key, &(&1 + 1))
@@ -122,7 +114,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     end
 
     test "different map in put" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map_a, map_b, key, val) do
                if Map.has_key?(map_a, key) do
                  map_a
@@ -134,7 +126,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     end
 
     test "different key in put" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map, key_a, key_b, val) do
                if Map.has_key?(map, key_a) do
                  map
@@ -146,7 +138,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     end
 
     test "condition is not Map.has_key?" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map, key, val) do
                if map != nil do
                  map
@@ -169,7 +161,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     # behave differently when the key is present (`Map.put_new_lazy/3` exists
     # for exactly that reason).
     test "impure value (function call) is left alone" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map, key) do
                if Map.has_key?(map, key) do
                  map
@@ -181,7 +173,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     end
 
     test "impure value (raise) is left alone" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map, key) do
                if Map.has_key?(map, key) do
                  map
@@ -194,7 +186,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
 
     # The `if` form evaluates `key` twice (condition + Map.put); put_new once.
     test "impure key (function call) is left alone" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map) do
                if Map.has_key?(map, next_key()) do
                  map
@@ -209,7 +201,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
     # runs when the key is PRESENT, so this means "overwrite if present", which
     # is the opposite of put_new.
     test "double-negated condition is left alone" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map, key, val) do
                if !!Map.has_key?(map, key) do
                  Map.put(map, key, val)
@@ -222,7 +214,7 @@ defmodule Credence.Pattern.PreferMapPutNewCheckTest do
 
     # `unless !Map.has_key?` ≡ `if Map.has_key?` → "overwrite if present".
     test "unless with negated condition is left alone" do
-      assert clean?("""
+      assert clean?(PreferMapPutNew, """
              def run(map, key, val) do
                unless !Map.has_key?(map, key) do
                  Map.put(map, key, val)

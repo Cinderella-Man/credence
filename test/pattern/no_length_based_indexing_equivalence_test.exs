@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingEquivalenceTest do
   `Enum.at(list, -1)` = `nil`, which matches `List.last([])` = `nil`. So they agree
   on every list incl. empty.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoLengthBasedIndexing

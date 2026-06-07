@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoManualStringReverseCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoManualStringReverse
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoManualStringReverse.check(ast, [])
-  end
 
   describe "NoManualStringReverse - check" do
     # --- POSITIVE CASES (should flag) ---
@@ -23,7 +18,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoManualStringReverse, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert %Issue{} = issue
@@ -41,7 +36,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoManualStringReverse, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_manual_string_reverse
     end
@@ -59,7 +54,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoManualStringReverse, code)) == 1
     end
 
     test "detects direct graphemes call piped into reverse and join" do
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoManualStringReverse, code)) == 1
     end
 
     test "detects multiple occurrences in the same module" do
@@ -83,7 +78,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoManualStringReverse, code)) == 2
     end
 
     test "detects inside Enum.map" do
@@ -93,7 +88,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoManualStringReverse, code)) == 1
     end
 
     # --- NEGATIVE CASES (should NOT flag) ---
@@ -108,7 +103,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualStringReverse, code) == []
     end
 
     test "ignores Enum.reverse used on non-grapheme lists" do
@@ -120,7 +115,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualStringReverse, code) == []
     end
 
     test "ignores String.graphemes used without reverse+join" do
@@ -132,7 +127,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualStringReverse, code) == []
     end
 
     test "ignores when there is an intermediate step between reverse and join" do
@@ -148,7 +143,7 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualStringReverse, code) == []
     end
   end
 
@@ -157,17 +152,17 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
       code =
         ~s[def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()]
 
-      assert [%Issue{rule: :no_manual_string_reverse}] = check(code)
+      assert [%Issue{rule: :no_manual_string_reverse}] = check(NoManualStringReverse, code)
     end
 
     test "detects nested IO.iodata_to_binary(Enum.reverse(String.graphemes(...)))" do
       code = ~s[def reverse(str), do: IO.iodata_to_binary(Enum.reverse(String.graphemes(str)))]
-      assert [%Issue{rule: :no_manual_string_reverse}] = check(code)
+      assert [%Issue{rule: :no_manual_string_reverse}] = check(NoManualStringReverse, code)
     end
 
     test "does NOT touch codepoints (handled by NoCodepointStringReverse)" do
       code = ~s[def reverse(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()]
-      assert check(code) == []
+      assert check(NoManualStringReverse, code) == []
     end
   end
 end

@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.UseMapJoinCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.UseMapJoin
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    UseMapJoin.check(ast, [])
-  end
 
   describe "check" do
     test "detects Enum.map |> Enum.join() pipeline (default separator)" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(UseMapJoin, code)
       assert issue.rule == :use_map_join
       assert issue.message =~ "Enum.map_join/3"
     end
@@ -36,7 +31,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(UseMapJoin, code)
       assert issue.rule == :use_map_join
     end
 
@@ -49,7 +44,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(UseMapJoin, code)
       assert issue.rule == :use_map_join
     end
 
@@ -62,7 +57,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(UseMapJoin, code)
       assert issue.rule == :use_map_join
     end
 
@@ -75,7 +70,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(UseMapJoin, code)
       assert issue.rule == :use_map_join
     end
 
@@ -91,7 +86,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(UseMapJoin, code)
       assert issue.rule == :use_map_join
     end
 
@@ -106,7 +101,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(UseMapJoin, code)
       assert issue.rule == :use_map_join
     end
 
@@ -121,7 +116,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UseMapJoin, code) == []
     end
 
     test "does not flag when map and join are on separate variables" do
@@ -134,7 +129,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UseMapJoin, code) == []
     end
 
     test "does not flag when there's an intervening step between map and join" do
@@ -149,7 +144,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UseMapJoin, code) == []
     end
 
     test "does not flag Enum.map without join" do
@@ -161,7 +156,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UseMapJoin, code) == []
     end
 
     test "does not flag Enum.join without map" do
@@ -173,7 +168,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UseMapJoin, code) == []
     end
 
     test "does not flag non-Enum map piped into Enum.join" do
@@ -187,7 +182,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UseMapJoin, code) == []
     end
 
     test "does not flag Enum.map piped into non-Enum join" do
@@ -201,7 +196,7 @@ defmodule Credence.Pattern.UseMapJoinCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UseMapJoin, code) == []
     end
   end
 end

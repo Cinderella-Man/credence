@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.PreferEnumSplitFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferEnumSplit
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(PreferEnumSplit, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   describe "collapse to Enum.split/2" do
     test "adjacent take/drop with a literal count" do
@@ -29,7 +24,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferEnumSplit, code) == expected
     end
 
     test "literal count of zero" do
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferEnumSplit, code) == expected
     end
 
     test "drop's bound var equals the source var" do
@@ -75,7 +70,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferEnumSplit, code) == expected
     end
   end
 
@@ -91,7 +86,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSplit, code) == code
     end
 
     test "negative literal count is untouched" do
@@ -105,7 +100,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSplit, code) == code
     end
 
     test "reverse-wrapped drop is untouched" do
@@ -119,7 +114,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSplit, code) == code
     end
 
     test "piped take/drop is untouched" do
@@ -133,7 +128,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSplit, code) == code
     end
 
     test "non-adjacent take/drop is untouched" do
@@ -148,7 +143,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSplit, code) == code
     end
 
     test "take rebinding the source is untouched" do
@@ -162,7 +157,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSplit, code) == code
     end
 
     test "already uses Enum.split" do
@@ -175,7 +170,7 @@ defmodule Credence.Pattern.PreferEnumSplitFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferEnumSplit, code) == code
     end
   end
 end

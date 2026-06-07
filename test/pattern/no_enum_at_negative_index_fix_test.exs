@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoEnumAtNegativeIndex
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(NoEnumAtNegativeIndex, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   # ── Single -1 → List.last ──────────────────────────────────────────────
 
@@ -30,7 +25,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "piped assignment" do
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "two -1 on different lists" do
@@ -76,7 +71,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
   end
 
@@ -98,7 +93,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "piped in expression" do
@@ -114,7 +109,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
   end
 
@@ -142,7 +137,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "three accesses same list" do
@@ -167,7 +162,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "non-consecutive indices fill gaps with _" do
@@ -191,7 +186,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "single -2 gets reverse + pattern" do
@@ -214,7 +209,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "single -3 gets reverse + pattern" do
@@ -237,7 +232,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "depth 5 with gaps" do
@@ -261,7 +256,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "pipe-form assignments grouped" do
@@ -285,7 +280,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
   end
 
@@ -322,7 +317,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "different list variables independent" do
@@ -346,7 +341,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "same list grouped + different list standalone" do
@@ -372,7 +367,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
   end
 
@@ -403,7 +398,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "single -2 in expression gets reverse + pattern" do
@@ -427,7 +422,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
 
     test "single -1 in expression becomes List.last" do
@@ -449,7 +444,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
   end
 
@@ -466,7 +461,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoEnumAtNegativeIndex, input) == input
     end
 
     test "variable index unchanged" do
@@ -479,7 +474,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoEnumAtNegativeIndex, input) == input
     end
 
     test "no Enum.at at all" do
@@ -489,7 +484,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoEnumAtNegativeIndex, input) == input
     end
 
     test "complex list expression skipped" do
@@ -502,7 +497,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoEnumAtNegativeIndex, input) == input
     end
 
     test "duplicate LHS variable names skipped for grouping" do
@@ -530,7 +525,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumAtNegativeIndex, input) == expected
     end
   end
 end

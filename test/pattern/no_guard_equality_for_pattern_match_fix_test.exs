@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoGuardEqualityForPatternMatch
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoGuardEqualityForPatternMatch, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix" do
     test "does not modify integer guard (== matches 2.0 but the pattern head would not)" do
@@ -16,7 +9,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       defp do_count(n, _a, b) when n == 2, do: b
       """
 
-      assert fix(code) == code
+      assert fix(NoGuardEqualityForPatternMatch, code) == code
     end
 
     test "removes atom guard and substitutes parameter" do
@@ -28,7 +21,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def process(:stop), do: :halted
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "removes string guard and substitutes parameter" do
@@ -40,7 +33,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def greet("world"), do: "hi"
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "handles reversed equality (literal == var)" do
@@ -52,7 +45,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(:two), do: :ok
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "keeps remaining condition in and-guard when var not referenced elsewhere" do
@@ -64,7 +57,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(:two, m) when m > 0, do: m
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "removes entire guard when all and-conditions are equalities" do
@@ -76,7 +69,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(:a, :b), do: :ok
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "does not modify or-guard" do
@@ -84,7 +77,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(n) when n == 2 or n == 3, do: :ok
       """
 
-      assert fix(code) == code
+      assert fix(NoGuardEqualityForPatternMatch, code) == code
     end
 
     test "does not modify when matched var appears in remaining guard" do
@@ -92,7 +85,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(n) when is_integer(n) and n == 2, do: :ok
       """
 
-      assert fix(code) == code
+      assert fix(NoGuardEqualityForPatternMatch, code) == code
     end
 
     test "does not modify when matched var appears in function body" do
@@ -100,7 +93,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(n) when n == 2, do: n + 1
       """
 
-      assert fix(code) == code
+      assert fix(NoGuardEqualityForPatternMatch, code) == code
     end
 
     test "does not modify when any of multiple matched vars appears in body" do
@@ -108,7 +101,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(n, m) when n == 2 and m == 3, do: n + m
       """
 
-      assert fix(code) == code
+      assert fix(NoGuardEqualityForPatternMatch, code) == code
     end
 
     test "fixes only the guarded clause in multi-clause function" do
@@ -126,7 +119,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "does not modify functions without guard equalities" do
@@ -137,7 +130,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoGuardEqualityForPatternMatch, code) == code
     end
 
     test "fixes multiple functions in same module" do
@@ -155,7 +148,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "preserves non-parameter patterns in function head" do
@@ -167,7 +160,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(:two, {a, b}), do: {a, b}
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "works with defp" do
@@ -179,7 +172,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       defp helper(:answer), do: :found
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "works with reversed literal in compound and-guard" do
@@ -191,7 +184,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(:two, m) when m > 0, do: m
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "does not modify when var appears in nested expression in body" do
@@ -199,7 +192,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(n) when n == 2, do: {:ok, n}
       """
 
-      assert fix(code) == code
+      assert fix(NoGuardEqualityForPatternMatch, code) == code
     end
 
     test "fixes when body uses other variables but not the matched one" do
@@ -211,7 +204,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def foo(:two, m), do: m * 2
       """
 
-      assert fix(input) == expected
+      assert fix(NoGuardEqualityForPatternMatch, input) == expected
     end
 
     test "does not modify comparison to composite types" do
@@ -219,7 +212,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       def check(n) when n == %{a: 1}, do: :ok
       """
 
-      assert fix(code) == code
+      assert fix(NoGuardEqualityForPatternMatch, code) == code
     end
   end
 end

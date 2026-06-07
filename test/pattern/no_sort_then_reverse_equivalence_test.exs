@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoSortThenReverseEquivalenceTest do
   in input order, and `sort |> reverse` vs `sort(:desc)` must agree on the
   whole result (including the relative order of equal values).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

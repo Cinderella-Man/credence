@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoManualMinEquivalenceTest do
   pairs (`{1, 1.0}`, `{1.0, 1}`) — where the strict `<` form would have diverged
   (`min(1, 1.0) == 1`, but `if 1 < 1.0` yields `1.0`).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoManualMin

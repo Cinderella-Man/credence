@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoParamRebindingEquivalenceTest do
   → the inner `acc` becomes `new_acc`. A pure alpha-rename within the closure —
   behaviour identical for every input.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoParamRebinding

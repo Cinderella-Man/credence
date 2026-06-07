@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoListFoldEquivalenceTest do
   — the fix reverses the list to preserve `foldr`'s right-to-left order, which a
   bare `Enum.reduce` would not. Both directions verified over lists.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

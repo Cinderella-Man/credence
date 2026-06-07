@@ -11,7 +11,7 @@ defmodule Credence.Pattern.RedundantListGuardEquivalenceTest do
   This mirrors the `no_codepoint_string_reverse` dual exemplar: pass within the
   assumption's domain, and prove the suite *catches* the divergence outside it.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.RedundantListGuard

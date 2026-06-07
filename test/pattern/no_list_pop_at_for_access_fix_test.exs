@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
-  alias Credence.RuleHelpers
-
-  defp fix(code) do
-    RuleHelpers.apply_rule_fix(Credence.Pattern.NoListPopAtForAccess, code)
-  end
+  alias Credence.Pattern.NoListPopAtForAccess
 
   describe "fix — elem(0) head extraction => List.first/1" do
     test "fully piped form" do
@@ -25,7 +21,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoListPopAtForAccess, code) == expected
     end
 
     test "direct pop_at piped into elem(0)" do
@@ -45,7 +41,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoListPopAtForAccess, code) == expected
     end
 
     test "nested form" do
@@ -65,7 +61,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoListPopAtForAccess, code) == expected
     end
   end
 
@@ -87,7 +83,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoListPopAtForAccess, code) == expected
     end
 
     test "nested form" do
@@ -107,7 +103,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoListPopAtForAccess, code) == expected
     end
   end
 
@@ -121,7 +117,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListPopAtForAccess, code) == code
     end
 
     test "elem index outside {popped, rest} is a no-op" do
@@ -133,7 +129,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListPopAtForAccess, code) == code
     end
 
     test "plain elem on a tuple is a no-op" do
@@ -145,7 +141,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListPopAtForAccess, code) == code
     end
   end
 end

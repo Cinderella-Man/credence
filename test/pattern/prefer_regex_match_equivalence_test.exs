@@ -5,7 +5,7 @@ defmodule Credence.Pattern.PreferRegexMatchEquivalenceTest do
   `Regex.run` returns a non-empty list (matched) or nil (no match), exactly the
   boolean `Regex.match?`. Input set covers match, no-match, and empty string.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.PreferRegexMatch

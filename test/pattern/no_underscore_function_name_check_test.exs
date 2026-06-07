@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoUnderscoreFunctionName
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoUnderscoreFunctionName.check(ast, [])
-  end
 
   describe "NoUnderscoreFunctionName — check" do
     test "detects defp with underscore prefix" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoUnderscoreFunctionName, code)
       assert length(issues) == 1
       assert Enum.all?(issues, &(&1.rule == :no_underscore_function_name))
       assert Enum.all?(issues, &(&1.message =~ "_factorial"))
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUnderscoreFunctionName, code)
       assert issue.message =~ "def _helper/1"
     end
 
@@ -45,7 +40,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUnderscoreFunctionName, code)
       assert issue.message =~ "_fibonacci"
       assert issue.message =~ "do_fibonacci"
     end
@@ -57,7 +52,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUnderscoreFunctionName, code)
       assert issue.message =~ "_do_largest_cont_sum"
     end
 
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoUnderscoreFunctionName, code)
       assert length(issues) == 2
     end
 
@@ -81,7 +76,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnderscoreFunctionName, code) == []
     end
 
     test "does not flag regular function names" do
@@ -92,7 +87,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnderscoreFunctionName, code) == []
     end
 
     test "does not flag names with underscores in the middle" do
@@ -103,7 +98,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnderscoreFunctionName, code) == []
     end
 
     test "does not flag dunder names (__using__, __before_compile__)" do
@@ -115,7 +110,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnderscoreFunctionName, code) == []
     end
 
     test "does not flag zero-arity functions" do
@@ -126,7 +121,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnderscoreFunctionName, code) == []
     end
   end
 end

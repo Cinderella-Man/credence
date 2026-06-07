@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoCaptureFnApply
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoCaptureFnApply.check(ast, [])
-  end
 
   describe "no issue" do
     test "passes normal function calls" do
@@ -19,7 +14,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaptureFnApply, code) == []
     end
 
     test "passes anonymous function application" do
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaptureFnApply, code) == []
     end
 
     test "passes function reference capture applied (no &N placeholders)" do
@@ -44,7 +39,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaptureFnApply, code) == []
     end
 
     # The cases below COULD be inlined textually, but the rewrite would change the
@@ -60,7 +55,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaptureFnApply, code) == []
     end
 
     test "skips a dropped (unreferenced) side-effecting arg" do
@@ -73,7 +68,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaptureFnApply, code) == []
     end
 
     test "skips out-of-order placeholders with side-effecting args" do
@@ -86,7 +81,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaptureFnApply, code) == []
     end
 
     test "skips a single call-valued arg" do
@@ -98,7 +93,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaptureFnApply, code) == []
     end
 
     test "skips a non-scalar (tuple) literal arg" do
@@ -110,7 +105,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoCaptureFnApply, code) == []
     end
   end
 
@@ -124,7 +119,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoCaptureFnApply, code)
 
       assert length(issues) == 1
       issue = hd(issues)
@@ -143,7 +138,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoCaptureFnApply, code)) == 1
     end
 
     test "detects a duplicated placeholder when the arg is a pure variable" do
@@ -155,7 +150,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoCaptureFnApply, code)) == 1
     end
 
     test "detects out-of-order placeholders when the args are pure variables" do
@@ -167,7 +162,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoCaptureFnApply, code)) == 1
     end
 
     test "detects multiple capture applications" do
@@ -181,7 +176,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoCaptureFnApply, code)) == 2
     end
   end
 end

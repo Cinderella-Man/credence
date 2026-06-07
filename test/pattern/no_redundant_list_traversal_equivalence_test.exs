@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalEquivalenceTest do
   the same comparison as `min`/`max`, so the pair matches — including the value-kind
   `[1, 1.0]` case — and the empty list raises in both (`Enum.EmptyError`).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRedundantListTraversal

@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoDoubleFilterFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoDoubleFilter
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoDoubleFilter, code, [])
-  end
 
   describe "rewrites adjacent complementary filters to split_with" do
     test "ge / lt" do
@@ -24,7 +20,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoDoubleFilter, code) == expected
     end
 
     test "eq / neq" do
@@ -43,7 +39,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoDoubleFilter, code) == expected
     end
 
     test "operand is a bound variable" do
@@ -62,7 +58,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoDoubleFilter, code) == expected
     end
   end
 
@@ -76,7 +72,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoDoubleFilter, code) == code
     end
 
     test "non-adjacent filters is a no-op" do
@@ -89,7 +85,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoDoubleFilter, code) == code
     end
 
     test "single filter is a no-op" do
@@ -100,7 +96,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoDoubleFilter, code) == code
     end
   end
 end

@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableEquivalenceTest do
   `Enum.map(list, …)` over the same list (O(n²)) is rewritten to hoist a membership
   set. The membership result is identical, so the mapped output is preserved.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoNestedEnumOnSameEnumerable

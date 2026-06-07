@@ -4,7 +4,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountEquivalenceTest do
   `String.length(string)`. Both count graphemes, so they agree on every string
   including decomposed accents and flags.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

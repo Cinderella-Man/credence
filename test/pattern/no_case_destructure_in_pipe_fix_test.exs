@@ -1,17 +1,7 @@
 defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCaseDestructureInPipe
-
-  defp fix(code) do
-    ast = Sourceror.parse_string!(code)
-    patches = NoCaseDestructureInPipe.fix_patches(ast, source: code)
-
-    case patches do
-      [] -> code
-      _ -> Sourceror.patch_string(code, patches)
-    end
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # FIXABLE — irrefutable variable patterns rewrite to then/1.
@@ -41,7 +31,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoCaseDestructureInPipe, code) == expected
     end
 
     test "underscore wildcard pattern" do
@@ -67,7 +57,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoCaseDestructureInPipe, code) == expected
     end
   end
 
@@ -89,7 +79,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoCaseDestructureInPipe, code) == code
     end
 
     test "tagged-tuple pattern (refutable)" do
@@ -105,7 +95,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoCaseDestructureInPipe, code) == code
     end
 
     test "guarded variable pattern (refutable)" do
@@ -121,7 +111,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoCaseDestructureInPipe, code) == code
     end
 
     test "multi-clause case in pipe" do
@@ -138,7 +128,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoCaseDestructureInPipe, code) == code
     end
   end
 end

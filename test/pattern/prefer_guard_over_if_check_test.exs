@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferGuardOverIf
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferGuardOverIf.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — should flag
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
 
   describe "flags function clause with guard-eligible if/else body" do
     test "comparison operator in condition" do
-      assert flagged?("""
+      assert flagged?(PreferGuardOverIf, """
              defp accumulate_run(last_val, [head | tail] = list, current_run) do
                if head > last_val do
                  accumulate_run(head, tail, [head | current_run])
@@ -29,7 +21,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "equality check in condition is not flagged (prefer pattern matching)" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp handle(x, acc) do
                if x == 0 do
                  acc
@@ -41,7 +33,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "is_nil guard in condition" do
-      assert flagged?("""
+      assert flagged?(PreferGuardOverIf, """
              defp process(val, default) do
                if is_nil(val) do
                  default
@@ -53,7 +45,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "compound guard condition with and" do
-      assert flagged?("""
+      assert flagged?(PreferGuardOverIf, """
              defp check(x, y) do
                if x > 0 and y > 0 do
                  :both_positive
@@ -65,7 +57,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "compound guard condition with or" do
-      assert flagged?("""
+      assert flagged?(PreferGuardOverIf, """
              defp check(x) do
                if x > 0 or x == 0 do
                  :non_negative
@@ -77,7 +69,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "not over a comparison in condition" do
-      assert flagged?("""
+      assert flagged?(PreferGuardOverIf, """
              defp check(x) do
                if not (x > 0) do
                  :off
@@ -89,7 +81,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "def (not defp) with guard-eligible if" do
-      assert flagged?("""
+      assert flagged?(PreferGuardOverIf, """
              def process(x) do
                if x > 0 do
                  :positive
@@ -101,7 +93,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "function with existing guard and if body" do
-      assert flagged?("""
+      assert flagged?(PreferGuardOverIf, """
              defp run(x) when is_integer(x) do
                if x > 0 do
                  :positive
@@ -113,7 +105,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "multi-clause function with guardable if in one clause" do
-      assert flagged?("""
+      assert flagged?(PreferGuardOverIf, """
              defp run([], acc), do: acc
              defp run([h | t], acc) do
                if h > 0 do
@@ -126,7 +118,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "if/else with keyword syntax" do
-      assert flagged?("""
+      assert flagged?(PreferGuardOverIf, """
              defp check(x) do
                if x > 0, do: :positive, else: :non_positive
              end
@@ -140,7 +132,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
 
   describe "does not flag if without else" do
     test "if without else branch" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp run(x) do
                if x > 0 do
                  IO.puts("positive")
@@ -152,7 +144,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
 
   describe "does not flag if with non-guard-eligible condition" do
     test "function call in condition" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp process(data) do
                if valid?(data) do
                  transform(data)
@@ -164,7 +156,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "remote function call in condition" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp process(list) do
                if Enum.empty?(list) do
                  :empty
@@ -176,7 +168,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "String.contains? in condition" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp check(str) do
                if String.contains?(str, "foo") do
                  :found
@@ -193,7 +185,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
   # propagates errors and accepts any truthy value.
   describe "does not flag guard-shaped but unsafe conditions" do
     test "arithmetic that can raise (rem by zero) — if raises, a guard would fall through" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp classify(x, y) do
                if rem(x, y) == 0 do
                  :divisible
@@ -205,7 +197,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "bare variable — `if` is truthy, a guard requires strict `true`" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp check(flag) do
                if flag do
                  :on
@@ -217,7 +209,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "not over a bare variable — truthiness/raise mismatch" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp check(flag) do
                if not flag do
                  :off
@@ -229,7 +221,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "and over a bare variable operand" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp check(flag, x) do
                if flag and x > 0 do
                  :yes
@@ -241,7 +233,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "length builtin can raise on a non-list" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp check(x) do
                if length(x) > 0 do
                  :non_empty
@@ -255,7 +247,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
 
   describe "does not flag when if is not the sole body expression" do
     test "if after assignment" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp run(x) do
                result = compute(x)
                if result > 0 do
@@ -268,7 +260,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "if inside a pipeline" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp run(x) do
                x
                |> transform()
@@ -284,7 +276,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "if as part of a block with multiple expressions" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp run(x) do
                log(x)
                if x > 0 do
@@ -299,7 +291,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
 
   describe "does not flag non-function constructs" do
     test "standalone if/else in module body" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              if System.get_env("DEBUG") do
                Logger.debug("enabled")
              else
@@ -309,7 +301,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "if/else inside case clause" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp run(x) do
                case x do
                  {:ok, val} ->
@@ -325,7 +317,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "cond expression" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp run(x) do
                cond do
                  x > 0 -> :positive
@@ -337,7 +329,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
     end
 
     test "case expression" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp run(x) do
                case x do
                  0 -> :zero
@@ -351,13 +343,13 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
 
   describe "does not flag function with non-if body" do
     test "simple expression body" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp double(x), do: x * 2
              """)
     end
 
     test "case in body" do
-      assert clean?("""
+      assert clean?(PreferGuardOverIf, """
              defp run(x) do
                case x do
                  :a -> 1

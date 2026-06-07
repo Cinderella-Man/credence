@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.RedundantListGuardFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.RedundantListGuard
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(RedundantListGuard, code, [])
-  end
 
   describe "fix" do
     test "removes simple is_list guard on cons tail" do
@@ -25,7 +21,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "removes is_list from compound and guard" do
@@ -45,7 +41,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "removes is_list from compound and guard reversed order" do
@@ -65,7 +61,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "removes entire when clause when all guards are redundant" do
@@ -85,7 +81,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "removes entire when clause for or guard with redundant is_list" do
@@ -105,7 +101,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "handles nested cons pattern" do
@@ -125,7 +121,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "handles inline do: syntax" do
@@ -141,7 +137,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "does not change code without redundant guards" do
@@ -151,7 +147,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(RedundantListGuard, input) == input
     end
 
     test "handles longer compound guard with three clauses" do
@@ -171,7 +167,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "fixes multiple functions in same module" do
@@ -189,7 +185,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "does not touch functions without cons-tail guards" do
@@ -200,7 +196,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(RedundantListGuard, input) == input
     end
 
     test "or with non-redundant side still removes entire guard" do
@@ -221,7 +217,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
 
     test "compound or inside and simplifies correctly" do
@@ -243,7 +239,7 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(RedundantListGuard, input) == expected
     end
   end
 end

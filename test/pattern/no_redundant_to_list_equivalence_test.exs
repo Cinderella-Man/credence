@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoRedundantToListEquivalenceTest do
   including for a non-list enumerable (a range). Input set mixes lists, a range,
   empty, and a value-kind list.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRedundantToList

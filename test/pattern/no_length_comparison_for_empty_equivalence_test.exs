@@ -9,7 +9,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyEquivalenceTest do
   returns `false`; that input is already-broken code — not asserted here, the
   input set is proper lists.)
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

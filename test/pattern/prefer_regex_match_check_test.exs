@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.PreferRegexMatchCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.PreferRegexMatch
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferRegexMatch.check(ast, [])
-  end
 
   describe "flags Regex.run/2 used only as a boolean match check" do
     test "flags [_ | _] then catch-all" do
@@ -22,7 +17,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert [%Issue{rule: :prefer_regex_match}] = check(code)
+      assert [%Issue{rule: :prefer_regex_match}] = check(PreferRegexMatch, code)
     end
 
     test "flags [_ | _] then nil" do
@@ -37,7 +32,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert [%Issue{rule: :prefer_regex_match}] = check(code)
+      assert [%Issue{rule: :prefer_regex_match}] = check(PreferRegexMatch, code)
     end
 
     test "flags nil then [_ | _] (disjoint, either order)" do
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert [%Issue{rule: :prefer_regex_match}] = check(code)
+      assert [%Issue{rule: :prefer_regex_match}] = check(PreferRegexMatch, code)
     end
   end
 
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
 
     test "does not flag when the head is bound" do
@@ -84,7 +79,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
 
     test "does not flag a specific-capture list pattern" do
@@ -99,7 +94,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
   end
 
@@ -116,7 +111,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
 
     test "does not flag a leading catch-all that shadows [_ | _]" do
@@ -131,7 +126,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
 
     test "does not flag a single [_ | _] clause (no-match would raise)" do
@@ -145,7 +140,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
 
     test "does not flag a named catch-all (body may read the bound value)" do
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
 
     test "does not flag a guarded [_ | _] clause" do
@@ -175,7 +170,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
 
     test "does not flag three clauses" do
@@ -191,7 +186,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
   end
 
@@ -203,7 +198,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
 
     test "does not flag Regex.run outside a case" do
@@ -213,7 +208,7 @@ defmodule Credence.Pattern.PreferRegexMatchCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferRegexMatch, code) == []
     end
   end
 end

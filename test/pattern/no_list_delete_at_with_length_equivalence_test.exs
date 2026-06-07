@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthEquivalenceTest do
   Tier 1 (expression). `List.delete_at(tail, length(tail) - 1)` → `List.delete_at(tail, -1)`
   (delete the last element). Equivalent for every list incl. empty and single.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

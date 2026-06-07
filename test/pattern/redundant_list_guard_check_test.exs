@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.RedundantListGuardCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.RedundantListGuard
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    RedundantListGuard.check(ast, [])
-  end
 
   describe "RedundantListGuard check" do
     # --- POSITIVE CASES (should flag) ---
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(RedundantListGuard, code)
       assert issue.rule == :redundant_list_guard
       assert issue.message =~ "rest"
       assert issue.message =~ "Redundant"
@@ -33,7 +28,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(RedundantListGuard, code)
       assert issue.message =~ "tail"
     end
 
@@ -46,7 +41,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(RedundantListGuard, code)
       assert issue.message =~ "rest"
     end
 
@@ -59,7 +54,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(RedundantListGuard, code)
       assert issue.message =~ "rest"
     end
 
@@ -72,7 +67,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(RedundantListGuard, code)
       assert issue.message =~ "rest"
     end
 
@@ -85,7 +80,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(RedundantListGuard, code)
       assert length(issues) == 2
       names = Enum.map(issues, & &1.message)
       assert Enum.any?(names, &(&1 =~ "t1"))
@@ -101,7 +96,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(RedundantListGuard, code)
       assert issue.message =~ "t"
     end
 
@@ -114,7 +109,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(RedundantListGuard, code) == []
     end
 
     test "does not flag is_list on a first element of a cons pattern" do
@@ -124,7 +119,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(RedundantListGuard, code) == []
     end
 
     test "does not flag non-is_list guards on cons tail" do
@@ -134,7 +129,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(RedundantListGuard, code) == []
     end
 
     test "does not flag functions without guards" do
@@ -144,7 +139,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(RedundantListGuard, code) == []
     end
 
     test "does not flag functions without cons patterns" do
@@ -154,7 +149,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(RedundantListGuard, code) == []
     end
 
     test "does not flag is_list on head variable" do
@@ -164,7 +159,7 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(RedundantListGuard, code) == []
     end
   end
 end

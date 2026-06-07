@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeEquivalenceTest do
   lists where "drop the last 2" removes more than the list holds; the input set
   covers `[]`, `[1]`, and value-kind lists.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

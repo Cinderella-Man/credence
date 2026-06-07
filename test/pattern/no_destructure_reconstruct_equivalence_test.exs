@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoDestructureReconstructEquivalenceTest do
   (`[_, _, _, _] = items`) and reuse it. Same elements, same order — the reconstructed
   list is identical to the matched one.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoDestructureReconstruct

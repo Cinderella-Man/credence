@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoCondTwoClausesEquivalenceTest do
   `if/else`. `cond do c -> a; true -> b end` → `if c, do: a, else: b`. Input set
   drives the condition both ways and over edge values.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoCondTwoClauses

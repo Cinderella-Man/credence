@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesEquivalenceTest do
   `Enum.frequencies_by(words, f)`. Grouping then taking each group's length is
   exactly a frequency count keyed by `f`. Input set covers duplicates and empty.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoGroupByForFrequencies

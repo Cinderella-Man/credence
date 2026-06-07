@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoExplicitSumReduceCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoExplicitSumReduce
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoExplicitSumReduce.check(ast, [])
-  end
 
   describe "NoExplicitSumReduce" do
     test "passes code that uses Enum.sum/1 instead of reduce" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitSumReduce, code) == []
     end
 
     test "passes code that uses Enum.sum_by/2" do
@@ -30,7 +25,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitSumReduce, code) == []
     end
 
     test "detects if x + acc pattern inside reduce" do
@@ -44,7 +39,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoExplicitSumReduce, code)
 
       assert length(issues) == 1
       assert hd(issues).rule == :no_explicit_sum_reduce
@@ -61,7 +56,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitSumReduce, code) == []
     end
 
     test "does NOT detect tuple-based state reducers" do
@@ -75,7 +70,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitSumReduce, code) == []
     end
 
     test "detects multiple explicit Sum calls inside separate reduces" do
@@ -89,7 +84,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoExplicitSumReduce, code)
 
       assert length(issues) == 2
     end
@@ -107,7 +102,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitSumReduce, code) == []
     end
   end
 end

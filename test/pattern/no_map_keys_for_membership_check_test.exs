@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMapKeysForMembership
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoMapKeysForMembership.check(ast, [])
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # SHOULD fire — left operand is side-effect-free
@@ -22,7 +17,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMapKeysForMembership, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_map_keys_for_membership
     end
@@ -36,7 +31,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMapKeysForMembership, code)
       assert length(issues) == 1
     end
 
@@ -49,7 +44,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMapKeysForMembership, code)
       assert length(issues) == 1
     end
   end
@@ -64,7 +59,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMapKeysForMembership, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_map_keys_for_membership
     end
@@ -78,7 +73,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMapKeysForMembership, code)
       assert length(issues) == 1
     end
   end
@@ -97,7 +92,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysForMembership, code) == []
     end
 
     test "Map.keys in a non-membership context" do
@@ -109,7 +104,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysForMembership, code) == []
     end
 
     test "Map.has_key? already used" do
@@ -121,7 +116,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysForMembership, code) == []
     end
 
     # Deliberately NOT flagged: the left operand has side effects, so the
@@ -136,7 +131,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysForMembership, code) == []
     end
 
     test "left operand of not in is a function call (side-effecting)" do
@@ -148,7 +143,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysForMembership, code) == []
     end
   end
 end

@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetEquivalenceTest do
   Both build a MapSet from the enumerable (strict `===` dedup), so the value-kind
   `1` vs `1.0` case agrees. Input set covers value-kind, empty, duplicates.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

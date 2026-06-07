@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoStringLengthForCharCheckCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoStringLengthForCharCheck
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoStringLengthForCharCheck.check(ast, [])
-  end
 
   describe "NoStringLengthForCharCheck" do
     test "passes code that uses pattern matching for single char" do
@@ -19,7 +14,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringLengthForCharCheck, code) == []
     end
 
     test "detects String.length(x) != 1" do
@@ -34,7 +29,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoStringLengthForCharCheck, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert %Issue{} = issue
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoStringLengthForCharCheck, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_string_length_for_char_check
     end
@@ -66,7 +61,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoStringLengthForCharCheck, code)
       assert length(issues) == 1
     end
 
@@ -79,7 +74,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringLengthForCharCheck, code) == []
     end
 
     test "ignores length/1 (not String.length)" do
@@ -91,7 +86,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoStringLengthForCharCheck, code) == []
     end
   end
 end

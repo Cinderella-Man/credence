@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoIfTrueFalseEquivalenceTest do
   the rule fires only when the condition is already boolean (a comparison), so
   returning it directly equals the if/else. Input set drives the condition both ways.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoIfTrueFalse

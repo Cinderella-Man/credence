@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoParamRebindingFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoParamRebinding
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoParamRebinding, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix" do
     test "renames simple parameter rebinding in Enum.reduce" do
@@ -28,7 +21,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "renames destructuring rebinding" do
@@ -46,7 +39,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "handles multiple parameters rebound independently" do
@@ -66,7 +59,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "preserves parameter references in RHS" do
@@ -84,7 +77,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "does not modify code without rebinding" do
@@ -96,7 +89,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end)
       """
 
-      assert fix(code) == code
+      assert fix(NoParamRebinding, code) == code
     end
 
     test "renames references in all subsequent expressions" do
@@ -116,7 +109,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "preserves nested fn parameters when names collide" do
@@ -136,7 +129,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "renames parameter references inside nested fn body" do
@@ -156,7 +149,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "does not touch standalone code without fn" do
@@ -164,7 +157,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       Enum.map(list, fn x -> x + 1 end)
       """
 
-      assert fix(code) == code
+      assert fix(NoParamRebinding, code) == code
     end
 
     test "avoids collision with variable names already in the body" do
@@ -184,7 +177,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "fixes rebinding inside complete module" do
@@ -212,7 +205,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "handles single-expression fn body" do
@@ -224,7 +217,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       fn q -> new_q = f(q) end
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
 
     test "renames pinned references after rebinding" do
@@ -241,7 +234,6 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       expected = """
       fn q ->
         new_q = f(q)
-
         case x do
           ^new_q -> :matched
           _ -> :unmatched
@@ -249,7 +241,7 @@ defmodule Credence.Pattern.NoParamRebindingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoParamRebinding, input) == expected
     end
   end
 end

@@ -4,7 +4,7 @@ defmodule Credence.Pattern.PreferEnumSplitEquivalenceTest do
   same source merge into `Enum.split(list, n)`. For a non-negative literal `n`,
   `{take(n), drop(n)} == split(n)` for every list incl. shorter-than-n and empty.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.PreferEnumSplit

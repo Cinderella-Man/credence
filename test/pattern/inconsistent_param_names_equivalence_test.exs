@@ -4,7 +4,7 @@ defmodule Credence.Pattern.InconsistentParamNamesEquivalenceTest do
   consistent name across clauses. A parameter is local to its clause, so this is a
   capture-avoiding alpha-rename — the computation each clause performs is unchanged.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
   import Credence.BehaviourEquivalence
 
   test "inconsistent_param_names: cosmetic — alpha-rename of a clause-local parameter" do

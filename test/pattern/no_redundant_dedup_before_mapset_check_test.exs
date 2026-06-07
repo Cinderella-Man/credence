@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantDedupBeforeMapset
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRedundantDedupBeforeMapset.check(ast, [])
-  end
 
   describe "fires on the safe core (dedup/uniq directly before MapSet.new)" do
     test "Enum.dedup(x) |> MapSet.new()" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoRedundantDedupBeforeMapset, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_redundant_dedup_before_mapset
     end
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoRedundantDedupBeforeMapset, code)) == 1
     end
 
     test "MapSet.new(Enum.dedup(x))" do
@@ -44,7 +39,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoRedundantDedupBeforeMapset, code)) == 1
     end
 
     test "Enum.uniq(x) |> MapSet.new()" do
@@ -56,7 +51,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoRedundantDedupBeforeMapset, code)) == 1
     end
 
     test "MapSet.new(Enum.uniq(x))" do
@@ -68,7 +63,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoRedundantDedupBeforeMapset, code)) == 1
     end
 
     test "multiple occurrences in same module" do
@@ -82,7 +77,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoRedundantDedupBeforeMapset, code)) == 2
     end
   end
 
@@ -96,7 +91,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantDedupBeforeMapset, code) == []
     end
 
     test "Enum.dedup used alone" do
@@ -108,7 +103,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantDedupBeforeMapset, code) == []
     end
 
     test "Enum.dedup piped to a non-MapSet function" do
@@ -120,7 +115,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantDedupBeforeMapset, code) == []
     end
 
     test "Enum.sort alone piped to MapSet.new" do
@@ -132,7 +127,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantDedupBeforeMapset, code) == []
     end
   end
 
@@ -150,7 +145,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantDedupBeforeMapset, code) == []
     end
 
     test "items |> Enum.uniq() |> Enum.sort() |> MapSet.new()" do
@@ -162,7 +157,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantDedupBeforeMapset, code) == []
     end
 
     test "Enum.dedup(x) |> Enum.sort() |> MapSet.new()" do
@@ -174,7 +169,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantDedupBeforeMapset, code) == []
     end
 
     test "items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new()" do
@@ -186,7 +181,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantDedupBeforeMapset, code) == []
     end
   end
 end

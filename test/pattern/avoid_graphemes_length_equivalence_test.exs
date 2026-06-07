@@ -3,7 +3,7 @@ defmodule Credence.Pattern.AvoidGraphemesLengthEquivalenceTest do
   Tier 1 (expression), Unicode. `length(String.graphemes(string))` →
   `String.length(string)`. Both count graphemes; agree on all Unicode.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

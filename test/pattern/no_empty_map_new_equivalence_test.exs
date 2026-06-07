@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoEmptyMapNewEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `Map.new()` → `%{}`. Both are the empty map; no free vars.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoEmptyMapNew

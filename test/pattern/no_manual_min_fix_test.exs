@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoManualMinFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualMin
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoManualMin, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "NoManualMin fix" do
     test "does not modify strict if a < b (value-kind unsafe on ties)" do
@@ -18,7 +11,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualMin, code) == code
     end
 
     test "if a <= b, do: a, else: b → min(a, b)" do
@@ -34,7 +27,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualMin, input) == expected
     end
 
     test "does not modify strict if b > a (value-kind unsafe on ties)" do
@@ -44,7 +37,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualMin, code) == code
     end
 
     test "if b >= a, do: a, else: b → min(a, b)" do
@@ -60,7 +53,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualMin, input) == expected
     end
 
     test "if a >= b, do: b, else: a → min(b, a)" do
@@ -76,7 +69,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualMin, input) == expected
     end
 
     test "with do/end block syntax" do
@@ -100,7 +93,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualMin, input) == expected
     end
 
     test "complex expressions" do
@@ -120,7 +113,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualMin, input) == expected
     end
 
     test "multiple instances in one module" do
@@ -144,7 +137,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualMin, input) == expected
     end
 
     test "in assignment context" do
@@ -166,7 +159,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualMin, input) == expected
     end
 
     test "inside function call argument" do
@@ -186,7 +179,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualMin, input) == expected
     end
 
     test "does not modify already correct code" do
@@ -196,7 +189,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualMin, code) == code
     end
 
     test "does not modify max pattern" do
@@ -208,7 +201,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualMin, code) == code
     end
 
     test "does not modify if with non-comparison condition" do
@@ -220,7 +213,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualMin, code) == code
     end
 
     test "does not modify if without else" do
@@ -232,7 +225,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualMin, code) == code
     end
 
     test "does not modify if with mismatched branches" do
@@ -244,7 +237,7 @@ defmodule Credence.Pattern.NoManualMinFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualMin, code) == code
     end
   end
 end

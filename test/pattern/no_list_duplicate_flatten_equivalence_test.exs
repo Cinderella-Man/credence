@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoListDuplicateFlattenEquivalenceTest do
   Both produce `list` repeated 3 times concatenated. Input set covers empty,
   value-kind, and a normal list.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoHdTlWhenConsBound
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoHdTlWhenConsBound.check(ast, [])
-  end
 
   describe "check — flags hd/tl on anonymous-cons-bound params" do
     test "flags hd(var) when var is bound as var = [_ | _]" do
@@ -16,7 +11,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoHdTlWhenConsBound, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_hd_tl_when_cons_bound
       assert hd(issues).message =~ "hd(list)"
@@ -29,7 +24,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoHdTlWhenConsBound, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "tl(list)"
     end
@@ -41,7 +36,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoHdTlWhenConsBound, code)) == 2
     end
 
     test "flags reversed cons binding [_ | _] = var" do
@@ -51,7 +46,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoHdTlWhenConsBound, code)) == 1
     end
 
     test "flags hd/tl across two clauses with guards" do
@@ -67,7 +62,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert length(check(code)) == 4
+      assert length(check(NoHdTlWhenConsBound, code)) == 4
     end
 
     test "still flags when the var is also used elsewhere (binding kept)" do
@@ -77,7 +72,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoHdTlWhenConsBound, code)) == 1
     end
 
     test "flags even when the natural name collides with another param" do
@@ -87,7 +82,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoHdTlWhenConsBound, code)) == 1
     end
   end
 
@@ -101,7 +96,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
 
       # Named cons already binds the parts; reusing/renaming those bindings is
       # outside the safe core, so this is left alone.
-      assert check(code) == []
+      assert check(NoHdTlWhenConsBound, code) == []
     end
 
     test "no issue for underscore-named cons pattern [_head | _tail] = var" do
@@ -111,7 +106,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoHdTlWhenConsBound, code) == []
     end
 
     test "no issue when param is not cons-bound" do
@@ -121,7 +116,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoHdTlWhenConsBound, code) == []
     end
 
     test "no issue when already pattern matching in the head" do
@@ -131,7 +126,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoHdTlWhenConsBound, code) == []
     end
 
     test "no issue for hd/tl on a non-parameter variable" do
@@ -144,7 +139,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoHdTlWhenConsBound, code) == []
     end
 
     test "no issue when the cons-bound var is never referenced" do
@@ -154,7 +149,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoHdTlWhenConsBound, code) == []
     end
 
     test "no issue when the body rebinds with = (could shadow the var)" do
@@ -167,7 +162,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoHdTlWhenConsBound, code) == []
     end
 
     test "no issue when the body contains an anonymous fn (could shadow the var)" do
@@ -177,7 +172,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoHdTlWhenConsBound, code) == []
     end
 
     test "no issue when the body contains a case (could shadow the var)" do
@@ -191,7 +186,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoHdTlWhenConsBound, code) == []
     end
   end
 end

@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoAttrBeforeDefmoduleEquivalenceTest do
   relocating them attaches the docs to the module but does not change any function's
   runtime behaviour or dispatch.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
   import Credence.BehaviourEquivalence
 
   test "no_attr_before_defmodule: cosmetic — relocates doc/spec metadata, no runtime behaviour" do

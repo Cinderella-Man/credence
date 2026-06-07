@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoRedundantToListCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantToList
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRedundantToList.check(ast, [])
-  end
 
   describe "fires" do
     test "Enum.to_list(x) |> MapSet.new()" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoRedundantToList, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_redundant_to_list
     end
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoRedundantToList, code)) == 1
     end
 
     test "MapSet.new(Enum.to_list(x))" do
@@ -44,7 +39,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoRedundantToList, code)) == 1
     end
 
     test "Enum.to_list(x) |> Map.new()" do
@@ -56,7 +51,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoRedundantToList, code)) == 1
     end
 
     test "non-pipe /2 form keeps fix safe, so it still fires" do
@@ -68,7 +63,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoRedundantToList, code)) == 1
     end
 
     test "multiple occurrences in same module" do
@@ -82,7 +77,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoRedundantToList, code)) == 2
     end
   end
 
@@ -96,7 +91,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantToList, code) == []
     end
 
     test "Enum.to_list used alone" do
@@ -108,7 +103,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantToList, code) == []
     end
 
     test "Enum.to_list piped to arbitrary function" do
@@ -120,7 +115,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantToList, code) == []
     end
 
     # Deliberately NOT fired: the pipe /2 form would drop the extra arg
@@ -136,7 +131,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantToList, code) == []
     end
 
     test "Enum.to_list(x) |> Map.new(fun) — unsafe pipe /2, skipped" do
@@ -148,7 +143,7 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantToList, code) == []
     end
   end
 end

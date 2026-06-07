@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantNegatedGuard
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoRedundantNegatedGuard, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix" do
     test "removes != guard when preceded by == guard" do
@@ -26,7 +19,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantNegatedGuard, input) == expected
     end
 
     test "removes !== guard when preceded by === guard" do
@@ -44,7 +37,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantNegatedGuard, input) == expected
     end
 
     test "removes != guard in def (not just defp)" do
@@ -62,7 +55,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantNegatedGuard, input) == expected
     end
 
     test "removes guard in longer function with multiple clauses" do
@@ -82,7 +75,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantNegatedGuard, input) == expected
     end
 
     test "handles multi-line guard clause" do
@@ -101,15 +94,15 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       expected = """
       defmodule Bad do
         defp compare([v1 | t1], [v2 | t2])
-             when v1 == v2,
-             do: compare(t1, t2)
+            when v1 == v2,
+            do: compare(t1, t2)
 
         defp compare([v1 | _], [v2 | _]),
-          do: v1
+            do: v1
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantNegatedGuard, input) == expected
     end
 
     # ── Fix: preserves code without redundant guards ────────────
@@ -123,7 +116,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantNegatedGuard, code) == code
     end
 
     test "preserves clause without guard following equality guard" do
@@ -134,7 +127,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantNegatedGuard, code) == code
     end
 
     test "preserves negated guard without preceding equality" do
@@ -145,7 +138,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantNegatedGuard, code) == code
     end
 
     test "preserves different variable names in guards" do
@@ -156,7 +149,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantNegatedGuard, code) == code
     end
 
     test "preserves compound guards" do
@@ -167,7 +160,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantNegatedGuard, code) == code
     end
 
     test "preserves pattern matching (correct approach)" do
@@ -178,7 +171,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantNegatedGuard, code) == code
     end
 
     test "preserves single-clause functions" do
@@ -188,7 +181,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantNegatedGuard, code) == code
     end
 
     test "preserves different function names" do
@@ -199,7 +192,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantNegatedGuard, code) == code
     end
 
     test "does not remove guard when variable names differ across clauses" do
@@ -210,7 +203,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoRedundantNegatedGuard, code) == code
     end
   end
 end

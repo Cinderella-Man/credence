@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoEnumDropNegative
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoEnumDropNegative.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoEnumDropNegative, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "NoEnumDropNegative fix" do
     test "fixes direct Enum.drop(list, -1) to Enum.slice" do
@@ -33,7 +21,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumDropNegative, input) == expected
     end
 
     test "fixes piped list |> Enum.drop(-1) to list |> Enum.slice" do
@@ -53,7 +41,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumDropNegative, input) == expected
     end
 
     test "fixes Enum.drop(list, -2) with correct range end" do
@@ -73,7 +61,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumDropNegative, input) == expected
     end
 
     test "fixes Enum.drop(list, -5) with correct range end" do
@@ -93,7 +81,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumDropNegative, input) == expected
     end
 
     test "fixes piped Enum.drop(-3) with correct range end" do
@@ -113,7 +101,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumDropNegative, input) == expected
     end
 
     test "fixes multiple negative drops in one file" do
@@ -137,7 +125,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumDropNegative, input) == expected
     end
 
     test "does not modify Enum.drop with positive count" do
@@ -147,7 +135,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoEnumDropNegative, code) == code
     end
 
     test "does not modify Enum.drop with variable count" do
@@ -157,7 +145,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoEnumDropNegative, code) == code
     end
 
     test "fixes drop at the end of a longer pipeline" do
@@ -183,7 +171,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumDropNegative, input) == expected
     end
 
     test "fixes direct call with complex first argument" do
@@ -203,7 +191,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumDropNegative, input) == expected
     end
 
     test "fixed code has no remaining issues" do
@@ -215,7 +203,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoEnumDropNegative, fix(NoEnumDropNegative, code)) == []
     end
 
     test "fixed piped code has no remaining issues" do
@@ -227,7 +215,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoEnumDropNegative, fix(NoEnumDropNegative, code)) == []
     end
   end
 end

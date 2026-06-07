@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoTrailingNewlineInDoc
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoTrailingNewlineInDoc.check(ast, [])
-  end
 
   defp check_with_source(code) do
     ast = Sourceror.parse_string!(code)
@@ -22,7 +17,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTrailingNewlineInDoc, code)
       assert issue.rule == :no_trailing_newline_in_doc
       assert issue.message =~ "@doc"
       assert issue.message =~ "trailing"
@@ -36,7 +31,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTrailingNewlineInDoc, code)
       assert issue.rule == :no_trailing_newline_in_doc
       assert issue.message =~ "@moduledoc"
     end
@@ -49,7 +44,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTrailingNewlineInDoc, code)
       assert issue.message =~ "@typedoc"
     end
 
@@ -63,7 +58,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoTrailingNewlineInDoc, code)
       assert length(issues) == 2
     end
 
@@ -75,7 +70,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTrailingNewlineInDoc, code)
       assert issue.rule == :no_trailing_newline_in_doc
     end
   end
@@ -89,7 +84,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTrailingNewlineInDoc, code) == []
     end
 
     test "does not flag @doc false" do
@@ -100,7 +95,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTrailingNewlineInDoc, code) == []
     end
 
     test "does not flag @moduledoc false" do
@@ -111,7 +106,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTrailingNewlineInDoc, code) == []
     end
 
     test "does not flag multi-line doc string with trailing newline" do
@@ -122,7 +117,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTrailingNewlineInDoc, code) == []
     end
 
     test "does not flag unrelated module attributes" do
@@ -133,7 +128,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTrailingNewlineInDoc, code) == []
     end
 
     test "does not flag @doc with only internal newlines" do
@@ -144,7 +139,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTrailingNewlineInDoc, code) == []
     end
   end
 

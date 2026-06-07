@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchEquivalenceTest do
   are preserved, so dispatch is identical (CaseClauseError ⇄ FunctionClauseError is
   the only out-of-domain difference, and the case here is total).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoCaseOnParamDispatch

@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoLiteralListTypespecEquivalenceTest do
   (a literal-list spec) does not even compile, so no input can witness a
   difference between before and after.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
 

@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoTrivialDelegationFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoTrivialDelegation
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoTrivialDelegation, code, [])
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # REWRITES — inline the stdlib call, delete the wrapper
@@ -27,7 +23,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoTrivialDelegation, code) == expected
     end
 
     test "multiple call sites, Enum.count/1" do
@@ -47,7 +43,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoTrivialDelegation, code) == expected
     end
 
     test "Kernel.length/1 stays a local call" do
@@ -65,7 +61,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoTrivialDelegation, code) == expected
     end
 
     test "multi-arg wrapper, Map.get/2" do
@@ -83,7 +79,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoTrivialDelegation, code) == expected
     end
   end
 
@@ -101,7 +97,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTrivialDelegation, code) == code
     end
 
     test "public function" do
@@ -113,7 +109,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTrivialDelegation, code) == code
     end
 
     test "wrapper with a guard" do
@@ -125,7 +121,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTrivialDelegation, code) == code
     end
 
     test "wrapper with multiple clauses" do
@@ -138,7 +134,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTrivialDelegation, code) == code
     end
 
     test "captured wrapper" do
@@ -152,7 +148,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTrivialDelegation, code) == code
     end
 
     test "piped call with an elided argument" do
@@ -164,7 +160,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTrivialDelegation, code) == code
     end
 
     test "name appears as a bare atom (apply/3)" do
@@ -176,7 +172,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTrivialDelegation, code) == code
     end
 
     test "local-call wrapper sharing a Kernel name (recursion)" do
@@ -188,7 +184,7 @@ defmodule Credence.Pattern.NoTrivialDelegationFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoTrivialDelegation, code) == code
     end
   end
 end

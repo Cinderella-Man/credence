@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoManualFindEquivalenceTest do
   find([]) -> default` collapses to `Enum.find/2` (with the default preserved).
   `is_list/1` holds for improper lists too, so the rewrite keeps the exact domain.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoManualFind

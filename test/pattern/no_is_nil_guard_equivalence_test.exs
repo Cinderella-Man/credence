@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoIsNilGuardEquivalenceTest do
   true exactly for `nil`, so the pattern clause matches the same inputs — `false`
   and other falsy-but-not-nil values still fall through to the next clause.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoIsNilGuard

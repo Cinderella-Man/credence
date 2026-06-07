@@ -3,7 +3,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateEquivalenceTest d
   Tier 1 (expression), Unicode. `String.graphemes(str) |> Enum.count(&(&1 == "a"))`
   → `String.count(str, "a")`. Both count occurrences of the single grapheme "a".
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.AvoidGraphemesEnumCountWithPredicate

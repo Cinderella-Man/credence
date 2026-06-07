@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceEquivalenceTest do
   agrees (`2.0` both) and the `0` init is the `+` identity. Input set covers empty,
   ints, floats, value-kind, and negatives.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoExplicitSumReduce

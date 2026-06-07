@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoIdentityFunctionInEnum
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoIdentityFunctionInEnum.check(ast, [])
-  end
 
   describe "check/2 — detects identity fn in _by variants" do
     test "flags Enum.uniq_by with fn x -> x end" do
@@ -16,7 +11,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.rule == :no_identity_function_in_enum
       assert issue.message =~ "Enum.uniq"
     end
@@ -28,7 +23,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.message =~ "Enum.sort"
     end
 
@@ -39,7 +34,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.message =~ "Enum.min"
     end
 
@@ -50,7 +45,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.message =~ "Enum.max"
     end
 
@@ -61,7 +56,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.message =~ "Enum.dedup"
     end
 
@@ -72,7 +67,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.rule == :no_identity_function_in_enum
     end
 
@@ -83,7 +78,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.message =~ "Enum.sort"
     end
 
@@ -94,7 +89,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.rule == :no_identity_function_in_enum
     end
 
@@ -105,7 +100,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.rule == :no_identity_function_in_enum
     end
 
@@ -118,7 +113,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIdentityFunctionInEnum, code)
       assert issue.rule == :no_identity_function_in_enum
     end
   end
@@ -131,7 +126,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIdentityFunctionInEnum, code) == []
     end
 
     test "does not flag non-identity function" do
@@ -141,7 +136,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIdentityFunctionInEnum, code) == []
     end
 
     test "does not flag uniq_by with a transformation" do
@@ -151,7 +146,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIdentityFunctionInEnum, code) == []
     end
 
     test "does not flag uniq_by with field access" do
@@ -161,7 +156,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIdentityFunctionInEnum, code) == []
     end
 
     test "does not flag fn with different variables in arg and body" do
@@ -171,7 +166,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIdentityFunctionInEnum, code) == []
     end
 
     test "does not flag multi-clause fn" do
@@ -186,7 +181,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIdentityFunctionInEnum, code) == []
     end
   end
 end

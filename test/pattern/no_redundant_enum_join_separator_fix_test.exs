@@ -1,53 +1,22 @@
 defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantEnumJoinSeparator
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRedundantEnumJoinSeparator.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoRedundantEnumJoinSeparator, code, [])
-  end
-
-  defp assert_fix(input, expected) do
-    result = fix(input)
-
-    norm = fn s ->
-      s
-      |> Sourceror.parse_string!()
-      |> Credence.RuleHelpers.normalize_sourceror_ast()
-      |> Macro.to_string()
-    end
-
-    assert norm.(result) == norm.(expected),
-           "Fix mismatch.\nInput:    #{input}\nExpected: #{expected}\nGot:      #{result}"
-  end
 
   # ── Enum.join ──────────────────────────────────────────────────
 
   describe "Enum.join" do
     test "direct: Enum.join(list, \"\") → Enum.join(list)" do
-      assert_fix(
-        "Enum.join(list, \"\")",
-        "Enum.join(list)"
-      )
+      assert fix(NoRedundantEnumJoinSeparator, "Enum.join(list, \"\")") == "Enum.join(list)"
     end
 
     test "single-step pipe collapses: list |> Enum.join(\"\") → Enum.join(list)" do
-      assert_fix(
-        "list |> Enum.join(\"\")",
-        "Enum.join(list)"
-      )
+      assert fix(NoRedundantEnumJoinSeparator, "list |> Enum.join(\"\")") == "Enum.join(list)"
     end
 
     test "multi-step pipe keeps pipe: list |> Enum.reverse() |> Enum.join(\"\") → ... |> Enum.join()" do
-      assert_fix(
-        "list |> Enum.reverse() |> Enum.join(\"\")",
-        "list |> Enum.reverse() |> Enum.join()"
-      )
+      assert fix(NoRedundantEnumJoinSeparator, "list |> Enum.reverse() |> Enum.join(\"\")") ==
+               "list |> Enum.reverse() |> Enum.join()"
     end
   end
 
@@ -55,37 +24,27 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
   describe "Enum.map_join" do
     test "direct: Enum.map_join(list, \"\", mapper) → Enum.map_join(list, mapper)" do
-      assert_fix(
-        "Enum.map_join(list, \"\", &to_string/1)",
-        "Enum.map_join(list, &to_string/1)"
-      )
+      assert fix(NoRedundantEnumJoinSeparator, "Enum.map_join(list, \"\", &to_string/1)") ==
+               "Enum.map_join(list, &to_string/1)"
     end
 
     test "single-step pipe collapses: list |> Enum.map_join(\"\", mapper) → Enum.map_join(list, mapper)" do
-      assert_fix(
-        "list |> Enum.map_join(\"\", &to_string/1)",
-        "Enum.map_join(list, &to_string/1)"
-      )
+      assert fix(NoRedundantEnumJoinSeparator, "list |> Enum.map_join(\"\", &to_string/1)") ==
+               "Enum.map_join(list, &to_string/1)"
     end
 
     test "multi-step pipe keeps pipe" do
-      assert_fix(
-        "list |> Enum.reverse() |> Enum.map_join(\"\", &to_string/1)",
-        "list |> Enum.reverse() |> Enum.map_join(&to_string/1)"
-      )
+      assert fix(
+               NoRedundantEnumJoinSeparator,
+               "list |> Enum.reverse() |> Enum.map_join(\"\", &to_string/1)"
+             ) == "list |> Enum.reverse() |> Enum.map_join(&to_string/1)"
     end
 
     test "inline fn mapper" do
-      result = fix("Enum.map_join(list, \"\", fn x -> String.upcase(x) end)")
-
-      norm = fn s ->
-        s
-        |> Sourceror.parse_string!()
-        |> Credence.RuleHelpers.normalize_sourceror_ast()
-        |> Macro.to_string()
-      end
-
-      assert norm.(result) == norm.("Enum.map_join(list, fn x -> String.upcase(x) end)")
+      assert fix(
+               NoRedundantEnumJoinSeparator,
+               "Enum.map_join(list, \"\", fn x -> String.upcase(x) end)"
+             ) == "Enum.map_join(list, fn x -> String.upcase(x) end)"
     end
   end
 
@@ -93,30 +52,31 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
   describe "all four patterns together" do
     test "fixes all in one module" do
-      assert_fix(
-        """
-        defmodule M do
-          def f(a, b) do
-            x = Enum.join(a, "")
-            y = b |> Enum.join("")
-            z = Enum.map_join(a, "", &to_string/1)
-            w = b |> Enum.map_join("", &to_string/1)
-            {x, y, z, w}
-          end
+      input = """
+      defmodule M do
+        def f(a, b) do
+          x = Enum.join(a, "")
+          y = b |> Enum.join("")
+          z = Enum.map_join(a, "", &to_string/1)
+          w = b |> Enum.map_join("", &to_string/1)
+          {x, y, z, w}
         end
-        """,
-        """
-        defmodule M do
-          def f(a, b) do
-            x = Enum.join(a)
-            y = Enum.join(b)
-            z = Enum.map_join(a, &to_string/1)
-            w = Enum.map_join(b, &to_string/1)
-            {x, y, z, w}
-          end
+      end
+      """
+
+      expected = """
+      defmodule M do
+        def f(a, b) do
+          x = Enum.join(a)
+          y = Enum.join(b)
+          z = Enum.map_join(a, &to_string/1)
+          w = Enum.map_join(b, &to_string/1)
+          {x, y, z, w}
         end
-        """
-      )
+      end
+      """
+
+      assert fix(NoRedundantEnumJoinSeparator, input) == expected
     end
   end
 
@@ -124,29 +84,28 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
   describe "no-ops" do
     test "preserves non-empty separator" do
-      assert_fix(
-        "Enum.join(list, \", \")",
-        "Enum.join(list, \", \")"
-      )
+      assert fix(NoRedundantEnumJoinSeparator, "Enum.join(list, \", \")") ==
+               "Enum.join(list, \", \")"
     end
 
     test "preserves surrounding code" do
-      assert_fix(
-        """
-        defmodule M do
-          @moduledoc "Test module"
-          def process(list), do: Enum.join(list, "")
-          def other(x), do: x + 1
-        end
-        """,
-        """
-        defmodule M do
-          @moduledoc "Test module"
-          def process(list), do: Enum.join(list)
-          def other(x), do: x + 1
-        end
-        """
-      )
+      input = """
+      defmodule M do
+        @moduledoc "Test module"
+        def process(list), do: Enum.join(list, "")
+        def other(x), do: x + 1
+      end
+      """
+
+      expected = """
+      defmodule M do
+        @moduledoc "Test module"
+        def process(list), do: Enum.join(list)
+        def other(x), do: x + 1
+      end
+      """
+
+      assert fix(NoRedundantEnumJoinSeparator, input) == expected
     end
   end
 
@@ -166,8 +125,8 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       end
       """
 
-      first = fix(input)
-      assert fix(first) == first
+      first = fix(NoRedundantEnumJoinSeparator, input)
+      assert fix(NoRedundantEnumJoinSeparator, first) == first
     end
   end
 
@@ -202,7 +161,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       """
 
       # Exact compare proves the @doc heredoc is preserved (not collapsed to a string).
-      assert fix(input) == expected
+      assert fix(NoRedundantEnumJoinSeparator, input) == expected
     end
 
     test "fix does not collapse @moduledoc heredoc" do
@@ -231,7 +190,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       """
 
       # Exact compare proves the @moduledoc heredoc is preserved.
-      assert fix(input) == expected
+      assert fix(NoRedundantEnumJoinSeparator, input) == expected
     end
   end
 
@@ -248,7 +207,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoRedundantEnumJoinSeparator, fix(NoRedundantEnumJoinSeparator, code)) == []
     end
 
     test "fixed code is valid Elixir" do
@@ -259,7 +218,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(NoRedundantEnumJoinSeparator, code))
     end
   end
 end

@@ -11,7 +11,7 @@ defmodule Credence.Pattern.NoSortThenAtEquivalenceTest do
   Regression note: the bare-`Enum.min/1` fix diverged here (nil vs raise on `[]`);
   see docs/07. This test pins the empty-safe form.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

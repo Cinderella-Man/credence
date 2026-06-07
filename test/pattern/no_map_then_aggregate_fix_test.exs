@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoMapThenAggregateFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMapThenAggregate
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoMapThenAggregate, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "NoMapThenAggregate fix" do
     test "does not flag Enum.map |> Enum.max (selection — unmapped seed, not fusable)" do
@@ -16,7 +9,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       list |> Enum.map(&String.length/1) |> Enum.max()
       """
 
-      assert fix(code) == code
+      assert fix(NoMapThenAggregate, code) == code
     end
 
     test "does not flag Enum.map |> Enum.min (selection — unmapped seed, not fusable)" do
@@ -24,7 +17,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       list |> Enum.map(&String.length/1) |> Enum.min()
       """
 
-      assert fix(code) == code
+      assert fix(NoMapThenAggregate, code) == code
     end
 
     test "fixes basic pipeline: Enum.map |> Enum.sum" do
@@ -36,7 +29,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       list |> Enum.reduce(0, fn el, acc -> acc + byte_size(el) end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "fixes three-step pipeline with preceding step" do
@@ -55,7 +48,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "fixes two-step pipeline (explicit source)" do
@@ -67,7 +60,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       Enum.reduce(list, 0, fn el, acc -> acc + String.length(el) end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "does not flag direct nesting Enum.max(Enum.map(...)) (selection — not fusable)" do
@@ -75,7 +68,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       Enum.max(Enum.map(list, &String.length/1))
       """
 
-      assert fix(code) == code
+      assert fix(NoMapThenAggregate, code) == code
     end
 
     test "fixes direct nesting: Enum.sum(Enum.map(enum, f))" do
@@ -87,7 +80,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       Enum.reduce(list, 0, fn el, acc -> acc + el * el end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "fixes pipeline with anonymous function" do
@@ -104,7 +97,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "fixes pipeline with capture syntax" do
@@ -116,7 +109,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       strings |> Enum.reduce(0, fn el, acc -> acc + byte_size(el) end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "fix does not modify code without map-aggregate pattern" do
@@ -124,7 +117,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       list |> Enum.map(&(&1 * 2)) |> Enum.filter(&(&1 > 0))
       """
 
-      assert fix(code) == code
+      assert fix(NoMapThenAggregate, code) == code
     end
   end
 
@@ -159,7 +152,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "keeps the replacement multi-line when the original pipeline was multi-line" do
@@ -184,7 +177,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
   end
 
@@ -198,7 +191,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       clients |> Enum.reduce(0, fn el, acc -> acc + Enum.at(el.delivery, dim, 0) end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "substitutes closure parameter through a chained dot-access (r.inner.field)" do
@@ -210,7 +203,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       records |> Enum.reduce(0, fn el, acc -> acc + el.inner.field end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "substitutes closure parameter inside a remote-call argument" do
@@ -222,7 +215,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       strings |> Enum.reduce(0, fn el, acc -> acc + String.length(el) end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
 
     test "full module repro from the GitHub issue compiles" do
@@ -247,7 +240,7 @@ defmodule Credence.Pattern.NoMapThenAggregateFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoMapThenAggregate, input) == expected
     end
   end
 end

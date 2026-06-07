@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoChunkByIdentityForDedup
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoChunkByIdentityForDedup, code, [])
-  end
 
   describe "fix/2 — pipeline forms" do
     test "fixes |> chunk_by(& &1) |> map(&List.first/1) → |> dedup()" do
@@ -28,7 +24,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoChunkByIdentityForDedup, code) == expected
     end
 
     test "fixes |> chunk_by(& &1) |> map_join(&List.first/1) → |> dedup() |> join()" do
@@ -52,7 +48,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoChunkByIdentityForDedup, code) == expected
     end
 
     test "fixes in a longer pipeline preserving surrounding steps" do
@@ -79,7 +75,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoChunkByIdentityForDedup, code) == expected
     end
 
     test "fixes chunk_by(fn x -> x end) pipeline" do
@@ -102,7 +98,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoChunkByIdentityForDedup, code) == expected
     end
 
     test "fixes & hd(&1) extractor pipeline" do
@@ -125,7 +121,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoChunkByIdentityForDedup, code) == expected
     end
   end
 
@@ -143,7 +139,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoChunkByIdentityForDedup, code) == expected
     end
 
     test "fixes Enum.map_join(Enum.chunk_by(list, & &1), &List.first/1)" do
@@ -159,7 +155,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoChunkByIdentityForDedup, code) == expected
     end
   end
 
@@ -171,7 +167,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoChunkByIdentityForDedup, code) == code
     end
 
     test "returns source unchanged when nothing to fix" do
@@ -181,7 +177,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoChunkByIdentityForDedup, code) == code
     end
 
     test "does not touch chunk_by(identity) extracting last" do
@@ -191,7 +187,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoChunkByIdentityForDedup, code) == code
     end
 
     test "preserves surrounding code" do
@@ -222,7 +218,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoChunkByIdentityForDedup, code) == expected
     end
   end
 end

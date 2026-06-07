@@ -4,7 +4,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoEquivalenceTest do
   `Enum.reverse/2` is defined as `reverse(acc) ++ tail`, so it is exact. Input set
   covers empty/non-empty acc and tail, and a value-kind list.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.PreferEnumReverseTwo

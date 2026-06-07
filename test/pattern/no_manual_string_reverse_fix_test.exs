@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoManualStringReverseFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualStringReverse
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoManualStringReverse, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "NoManualStringReverse - fix" do
     test "fixes simple pipeline" do
@@ -24,7 +17,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualStringReverse, input) == expected
     end
 
     test "fixes nested call form" do
@@ -40,7 +33,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualStringReverse, input) == expected
     end
 
     test "fixes pipeline with preceding steps" do
@@ -66,7 +59,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualStringReverse, input) == expected
     end
 
     test "fixes direct graphemes call in pipeline" do
@@ -82,7 +75,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualStringReverse, input) == expected
     end
 
     test "fixes multiple occurrences" do
@@ -106,7 +99,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualStringReverse, input) == expected
     end
 
     test "preserves pipeline steps after Enum.join" do
@@ -122,7 +115,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualStringReverse, input) == expected
     end
 
     test "preserves pipeline steps before graphemes" do
@@ -150,7 +143,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualStringReverse, input) == expected
     end
 
     test "fixes inside fn body" do
@@ -166,7 +159,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualStringReverse, input) == expected
     end
 
     test "does not modify code already using String.reverse/1" do
@@ -179,7 +172,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualStringReverse, code) == code
     end
 
     test "does not modify Enum.join with separator" do
@@ -189,7 +182,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualStringReverse, code) == code
     end
 
     test "does not modify unrelated pipelines" do
@@ -199,7 +192,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualStringReverse, code) == code
     end
   end
 
@@ -213,7 +206,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       def reverse(str), do: String.reverse(str)
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualStringReverse, input) == expected
     end
 
     test "does NOT touch codepoints (handled by NoCodepointStringReverse)" do
@@ -221,7 +214,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       def reverse(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()
       """
 
-      assert fix(code) == code
+      assert fix(NoManualStringReverse, code) == code
     end
   end
 end

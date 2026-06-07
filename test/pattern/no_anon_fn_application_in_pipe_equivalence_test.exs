@@ -9,7 +9,7 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeEquivalenceTest do
   `value |> (then(fn ... end)`. The range is now extended one column left to
   swallow that `(`; verified valid for single, chained, and multi-line forms.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoAnonFnApplicationInPipe

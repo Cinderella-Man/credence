@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentEquivalenceTest do
   `tmp` → `expr` (the binding is redundant; the block's value is the last expr).
   Input set drives the computed expression over varied inputs.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRedundantAssignment

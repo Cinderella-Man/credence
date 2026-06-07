@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineEquivalenceTest do
   the piped `Kernel.>=/2` is the infix operator. Input set drives the comparison
   true, false, and equal.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoKernelOpInPipeline

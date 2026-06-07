@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoLengthGuardToPattern
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoLengthGuardToPattern.check(ast, [])
-  end
 
   describe "NoLengthGuardToPattern check" do
     # --- POSITIVE CASES (should flag) ---
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoLengthGuardToPattern, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert issue.rule == :no_length_guard_to_pattern
@@ -37,7 +32,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoLengthGuardToPattern, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_length_guard_to_pattern
       assert hd(issues).message =~ "== 3"
@@ -51,7 +46,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
         end
         """
 
-        issues = check(code)
+        issues = check(NoLengthGuardToPattern, code)
         assert length(issues) == 1, "expected issue for length(list) == #{n}"
         assert hd(issues).rule == :no_length_guard_to_pattern
       end
@@ -66,7 +61,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoLengthGuardToPattern, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_length_guard_to_pattern
     end
@@ -80,7 +75,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoLengthGuardToPattern, code) == []
     end
 
     test "does not flag length(list) > N where N is not 0" do
@@ -90,7 +85,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoLengthGuardToPattern, code) == []
     end
 
     test "does not flag k <= length(nums)" do
@@ -100,7 +95,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoLengthGuardToPattern, code) == []
     end
 
     test "does not flag length in function body" do
@@ -112,7 +107,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoLengthGuardToPattern, code) == []
     end
 
     test "does not flag code without guards" do
@@ -123,7 +118,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoLengthGuardToPattern, code) == []
     end
   end
 end

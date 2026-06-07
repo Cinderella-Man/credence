@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoKernelShadowingEquivalenceTest do
   call resolves unambiguously: `fn x, max -> max(x, max) end` → `fn x, max_value -> max(x, max_value) end`.
   A pure alpha-rename — behaviour is identical for every input.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

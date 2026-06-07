@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupEquivalenceTest do
   value-kind `1` vs `1.0` case agrees. Input set covers consecutive duplicates,
   value-kind, and empty.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoChunkByIdentityForDedup

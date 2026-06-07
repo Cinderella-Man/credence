@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoReduceForGroupByEquivalenceTest do
   insertion order — exactly `Enum.group_by`'s within-group order. Input set covers
   multiple groups, multi-per-group, and empty.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoReduceForGroupBy
@@ -21,7 +21,12 @@ defmodule Credence.Pattern.NoReduceForGroupByEquivalenceTest do
     assert_equivalent(@expr,
       rule: NoReduceForGroupBy,
       vars: [:list],
-      inputs: [[], ["apple", "avocado", "banana"], ["a", "ab", "ac", "b"], ["x", "y", "x", "z", "y"]]
+      inputs: [
+        [],
+        ["apple", "avocado", "banana"],
+        ["a", "ab", "ac", "b"],
+        ["x", "y", "x", "z", "y"]
+      ]
     )
   end
 end

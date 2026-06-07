@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
-  alias Credence.Pattern.NoGraphemePalindromeCheck
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoGraphemePalindromeCheck.check(ast, [])
-  end
-
-  defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(NoGraphemePalindromeCheck, code, [])
+  alias Credence.Pattern.NoGraphemePalindrome
 
   describe "fix — bare variable, used only in the comparison (inline + drop binding)" do
     test "inlines the original string and drops the binding" do
@@ -22,7 +14,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       s == String.reverse(s)
       """
 
-      assert fix(code) == expected
+      assert fix(NoGraphemePalindrome, code) == expected
     end
 
     test "handles reversed comparison order" do
@@ -35,7 +27,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       String.reverse(s) == s
       """
 
-      assert fix(code) == expected
+      assert fix(NoGraphemePalindrome, code) == expected
     end
 
     test "drops the binding inside a function body and preserves surrounding code" do
@@ -56,7 +48,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoGraphemePalindrome, code) == expected
     end
   end
 
@@ -76,7 +68,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       {pal, count}
       """
 
-      assert fix(code) == expected
+      assert fix(NoGraphemePalindrome, code) == expected
     end
   end
 
@@ -92,7 +84,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       normalized == String.reverse(normalized)
       """
 
-      assert fix(code) == expected
+      assert fix(NoGraphemePalindrome, code) == expected
     end
   end
 
@@ -105,7 +97,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       {pal, count}
       """
 
-      assert fix(code) == code
+      assert fix(NoGraphemePalindrome, code) == code
     end
 
     test "does NOT rewrite the String.to_charlist form" do
@@ -114,7 +106,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       chars == Enum.reverse(chars)
       """
 
-      assert fix(code) == code
+      assert fix(NoGraphemePalindrome, code) == code
     end
 
     test "does not modify unrelated list comparisons" do
@@ -123,7 +115,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       list == Enum.reverse(list)
       """
 
-      assert fix(code) == code
+      assert fix(NoGraphemePalindrome, code) == code
     end
   end
 
@@ -138,7 +130,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       end
       """
 
-      assert code |> fix() |> check() == []
+      assert clean?(NoGraphemePalindrome, fix(NoGraphemePalindrome, code))
     end
   end
 end

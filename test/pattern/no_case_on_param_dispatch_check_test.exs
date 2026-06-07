@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCaseOnParamDispatch
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoCaseOnParamDispatch.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — single-parameter, total `case` on that parameter
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "flags single-param case dispatch" do
     test "literal + variable catch-all" do
-      assert flagged?("""
+      assert flagged?(NoCaseOnParamDispatch, """
              def run(x) do
                case x do
                  0 -> :zero
@@ -28,7 +20,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "list patterns with `_` catch-all (pick_coins style)" do
-      assert flagged?("""
+      assert flagged?(NoCaseOnParamDispatch, """
              def pick_coins(coins) do
                case coins do
                  [] -> 0
@@ -41,7 +33,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "map patterns with `_` catch-all" do
-      assert flagged?("""
+      assert flagged?(NoCaseOnParamDispatch, """
              def handle(msg) do
                case msg do
                  %{type: :ping} -> :pong
@@ -53,7 +45,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "defp with a clause guard and `_` catch-all" do
-      assert flagged?("""
+      assert flagged?(NoCaseOnParamDispatch, """
              defp classify(x) do
                case x do
                  0 -> :zero
@@ -65,7 +57,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "catch-all is a bound variable (not `_`)" do
-      assert flagged?("""
+      assert flagged?(NoCaseOnParamDispatch, """
              def last(list) do
                case list do
                  [] -> nil
@@ -76,7 +68,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "one-liner def body that is a case" do
-      assert flagged?("""
+      assert flagged?(NoCaseOnParamDispatch, """
              def run(x), do: (case x do
                0 -> :zero
                _ -> :other
@@ -91,7 +83,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "does not flag multi-parameter / tuple dispatch (out of scope)" do
     test "case on a tuple of two params (gcd style)" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def gcd(x, y) do
                case {x, y} do
                  {0, y} -> y
@@ -103,7 +95,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "case on a tuple of three params" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def merge(a, b, c) do
                case {a, b, c} do
                  {nil, nil, nil} -> :empty
@@ -114,7 +106,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "case on a tuple with reversed param order" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def swap(x, y) do
                case {y, x} do
                  {0, 0} -> :zero
@@ -127,7 +119,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "does not flag a non-total case (exception type would change)" do
     test "no catch-all clause" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def f(x) do
                case x do
                  0 -> :a
@@ -138,7 +130,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "the only would-be catch-all is itself guarded" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def f(x) do
                case x do
                  0 -> :a
@@ -151,7 +143,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "does not flag a function-head guard" do
     test "def with a `when` guard on the head" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def f(x) when is_integer(x) do
                case x do
                  0 -> :zero
@@ -164,7 +156,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "does not flag a pinned pattern" do
     test "`^` pin cannot become an unbound function-head pattern" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def f(x) do
                case x do
                  ^x -> :same
@@ -177,7 +169,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "does not flag when the body is more than just the case" do
     test "single param but with pre-computation" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def run(x) do
                y = x + 1
                case x do
@@ -189,7 +181,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "case with a trailing rescue clause" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def f(x) do
                case x do
                  0 -> :a
@@ -204,7 +196,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "does not flag case on non-parameter values" do
     test "case on a computed value" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def run(x, y) do
                result = x + y
                case result do
@@ -216,7 +208,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
     end
 
     test "case on a function call" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def run(x) do
                case do_something(x) do
                  :ok -> :done
@@ -229,7 +221,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "does not flag fewer than two clauses" do
     test "single-clause case" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def f(x) do
                case x do
                  _ -> :always
@@ -241,7 +233,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "does not flag multi-clause functions" do
     test "already idiomatic" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              def gcd(0, y), do: y
              def gcd(x, 0), do: x
              def gcd(x, y), do: gcd(y, rem(x, y))
@@ -251,7 +243,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchCheckTest do
 
   describe "does not flag non-function constructs" do
     test "case in a module body (not a function)" do
-      assert clean?("""
+      assert clean?(NoCaseOnParamDispatch, """
              defmodule M do
                x = 1
                case {x} do

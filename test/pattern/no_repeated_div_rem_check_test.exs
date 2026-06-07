@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRepeatedDivRem
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRepeatedDivRem.check(ast, [])
-  end
 
   describe "flags an anchored, recomputed div/rem" do
     test "rem bound then recomputed verbatim" do
@@ -20,10 +15,12 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRepeatedDivRem, code)
       assert issue.rule == :no_repeated_div_rem
-      assert issue.message == "`rem(x, 2)` is already bound to `a` and recomputed " <>
-               "later in the same scope. Reuse `a` instead."
+
+      assert issue.message ==
+               "`rem(x, 2)` is already bound to `a` and recomputed " <>
+                 "later in the same scope. Reuse `a` instead."
     end
 
     test "div bound then recomputed inside a later call" do
@@ -38,7 +35,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert [%{rule: :no_repeated_div_rem}] = check(code)
+      assert [%{rule: :no_repeated_div_rem}] = check(NoRepeatedDivRem, code)
     end
 
     test "anchor recomputed three times" do
@@ -53,7 +50,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert [%{rule: :no_repeated_div_rem}] = check(code)
+      assert [%{rule: :no_repeated_div_rem}] = check(NoRepeatedDivRem, code)
     end
 
     test "literal divisor that is a variable is still anchored" do
@@ -66,7 +63,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert [%{rule: :no_repeated_div_rem}] = check(code)
+      assert [%{rule: :no_repeated_div_rem}] = check(NoRepeatedDivRem, code)
     end
   end
 
@@ -83,7 +80,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "single-expression body with repeated call (no anchor binding)" do
@@ -95,7 +92,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "argument variable is rebound in the body" do
@@ -109,7 +106,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "anchor variable is rebound later" do
@@ -123,7 +120,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "argument variable is shadowed inside a closure that holds an occurrence" do
@@ -137,7 +134,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "non-trivial (side-effecting) argument" do
@@ -150,7 +147,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "single div call" do
@@ -163,7 +160,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "different second argument" do
@@ -176,7 +173,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "div and rem with same args are different calls" do
@@ -189,7 +186,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "occurrences live in different clauses" do
@@ -207,7 +204,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
 
     test "repeated non-arithmetic call is not flagged" do
@@ -220,7 +217,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRepeatedDivRem, code) == []
     end
   end
 end

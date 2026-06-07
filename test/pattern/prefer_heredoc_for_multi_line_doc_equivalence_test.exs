@@ -4,7 +4,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocEquivalenceTest do
   syntax. This changes only the *source representation* of compile-time doc
   metadata (the string value is equivalent); no runtime behaviour is affected.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
   import Credence.BehaviourEquivalence
 
   test "prefer_heredoc_for_multi_line_doc: cosmetic — doc source representation only" do

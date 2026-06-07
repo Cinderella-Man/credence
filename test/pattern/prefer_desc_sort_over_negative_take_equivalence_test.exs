@@ -10,7 +10,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeEquivalenceTest do
   input set covers empty, ties, the `1`/`1.0` value-kind case, and fewer-than-n
   elements.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.PreferDescSortOverNegativeTake
@@ -19,7 +19,15 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeEquivalenceTest do
     assert_equivalent("Enum.sort(nums) |> Enum.take(-3)",
       rule: PreferDescSortOverNegativeTake,
       vars: [:nums],
-      inputs: [[], [1], [1, 2], [3, 1, 2, 1, 3, 2], [5, 4, 3, 2, 1], [1, 1.0, 2], Enum.to_list(1..20)]
+      inputs: [
+        [],
+        [1],
+        [1, 2],
+        [3, 1, 2, 1, 3, 2],
+        [5, 4, 3, 2, 1],
+        [1, 1.0, 2],
+        Enum.to_list(1..20)
+      ]
     )
   end
 end

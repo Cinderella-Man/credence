@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoListDeleteAtLengthEquivalenceTest do
   the last element). Equivalent for every list — including `[]` (both return
   `[]`) and single-element lists. Input set covers empty, single, and value-kind.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

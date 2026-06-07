@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundEquivalenceTest do
   the bound head/tail. The cons pattern guarantees a non-empty list, so the bound
   element equals `hd`/`tl` exactly.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoHdTlWhenConsBound

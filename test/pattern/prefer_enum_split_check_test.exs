@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.PreferEnumSplitCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.PreferEnumSplit
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferEnumSplit.check(ast, [])
-  end
 
   describe "fires on the safe core" do
     test "adjacent take/drop, same var, same literal count" do
@@ -21,7 +16,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(PreferEnumSplit, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert %Issue{} = issue
@@ -40,7 +35,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(PreferEnumSplit, code)) == 1
     end
 
     test "reports the issue at the Enum.drop line" do
@@ -54,7 +49,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      issue = hd(check(code))
+      issue = hd(check(PreferEnumSplit, code))
       assert issue.meta.line == 4
     end
 
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(PreferEnumSplit, code)) == 1
     end
   end
 
@@ -84,7 +79,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "Enum.take alone" do
@@ -96,7 +91,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "Enum.drop alone" do
@@ -108,7 +103,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "different enumerables" do
@@ -122,7 +117,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "different counts" do
@@ -136,7 +131,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "unbound take/drop calls" do
@@ -149,7 +144,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
   end
 
@@ -165,7 +160,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "negative literal count is not flagged" do
@@ -179,7 +174,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "Enum.reverse(Enum.drop(...)) is not flagged" do
@@ -193,7 +188,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "piped take/drop is not flagged" do
@@ -207,7 +202,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "non-adjacent take/drop is not flagged" do
@@ -222,7 +217,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "take rebinding the source (a == src) is not flagged" do
@@ -236,7 +231,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
 
     test "same bound var on both (a == b) is not flagged" do
@@ -250,7 +245,7 @@ defmodule Credence.Pattern.PreferEnumSplitCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumSplit, code) == []
     end
   end
 end

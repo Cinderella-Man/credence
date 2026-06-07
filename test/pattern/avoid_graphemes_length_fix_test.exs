@@ -1,32 +1,25 @@
 defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.AvoidGraphemesLength
 
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(AvoidGraphemesLength, code, [])
-  end
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    AvoidGraphemesLength.check(ast, [])
-  end
-
   describe "replaces with String.length" do
     test "nested call" do
-      assert fix("length(String.graphemes(str))") == "String.length(str)"
+      assert fix(AvoidGraphemesLength, "length(String.graphemes(str))") == "String.length(str)"
     end
 
     test "two-step pipe" do
-      assert fix("String.graphemes(str) |> length()") == "String.length(str)"
+      assert fix(AvoidGraphemesLength, "String.graphemes(str) |> length()") ==
+               "String.length(str)"
     end
 
     test "three-step pipe collapses to direct call" do
-      assert fix("s |> String.graphemes() |> length()") == "String.length(s)"
+      assert fix(AvoidGraphemesLength, "s |> String.graphemes() |> length()") ==
+               "String.length(s)"
     end
 
     test "keeps upstream pipeline, replaces last two steps" do
-      assert fix("s |> String.trim() |> String.graphemes() |> length()") ==
+      assert fix(AvoidGraphemesLength, "s |> String.trim() |> String.graphemes() |> length()") ==
                "s |> String.trim() |> String.length()"
     end
 
@@ -47,22 +40,22 @@ defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(AvoidGraphemesLength, code) == expected
     end
   end
 
   describe "no-ops" do
     test "String.length unchanged" do
-      assert fix("String.length(str)") == "String.length(str)"
+      assert fix(AvoidGraphemesLength, "String.length(str)") == "String.length(str)"
     end
 
     test "unrelated length unchanged" do
-      assert fix("length(list)") == "length(list)"
+      assert fix(AvoidGraphemesLength, "length(list)") == "length(list)"
     end
 
     test "graphemes piped to something else unchanged" do
       code = "String.graphemes(str) |> Enum.reverse()"
-      assert fix(code) == code
+      assert fix(AvoidGraphemesLength, code) == code
     end
   end
 
@@ -76,11 +69,14 @@ defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(AvoidGraphemesLength, fix(AvoidGraphemesLength, code)) == []
     end
 
     test "fixed code is valid Elixir" do
-      assert {:ok, _} = Sourceror.parse_string(fix("String.graphemes(str) |> length()"))
+      assert {:ok, _} =
+               Sourceror.parse_string(
+                 fix(AvoidGraphemesLength, "String.graphemes(str) |> length()")
+               )
     end
   end
 end

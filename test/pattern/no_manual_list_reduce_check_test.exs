@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoManualListReduceCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualListReduce
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoManualListReduce.check(ast, [])
-  end
 
   describe "flagged — manual recursive folds" do
     test "canonical arity-2 sum" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListReduce, code)
       assert issue.rule == :no_manual_list_reduce
       assert issue.message =~ "sum/2"
       assert issue.message =~ "Enum.reduce"
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListReduce, code)
       assert issue.message =~ "scale/3"
     end
 
@@ -44,7 +39,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListReduce, code)
       assert issue.message =~ "def sum/2"
     end
 
@@ -56,7 +51,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListReduce, code)
       assert issue.message =~ "sum/2"
     end
 
@@ -68,7 +63,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListReduce, code)
       assert issue.message =~ "build/2"
     end
 
@@ -80,7 +75,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListReduce, code)
       assert issue.message =~ "count/2"
     end
   end
@@ -93,7 +88,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
 
     test "does not flag when the base does not return the accumulator" do
@@ -104,7 +99,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
 
     test "does not flag when the base pattern is not an empty list" do
@@ -115,7 +110,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
 
     test "does not flag a three-clause function" do
@@ -127,7 +122,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
 
     test "does not flag arity-1 functions" do
@@ -138,7 +133,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
 
     test "does not flag when the accumulator is not the last parameter" do
@@ -149,7 +144,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
 
     test "does not flag when a threaded parameter changes during recursion" do
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
   end
 
@@ -180,7 +175,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
 
     test "does not flag a multi-statement recursive body" do
@@ -196,7 +191,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
 
     test "does not flag a repeated-variable head (equality-constraint match)" do
@@ -209,7 +204,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
 
     test "does not flag a multi-statement base body" do
@@ -224,7 +219,7 @@ defmodule Credence.Pattern.NoManualListReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListReduce, code) == []
     end
   end
 end

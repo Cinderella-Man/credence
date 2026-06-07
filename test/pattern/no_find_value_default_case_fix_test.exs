@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoFindValueDefaultCase
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoFindValueDefaultCase, code, [])
-  end
 
   describe "rewrites the safe core" do
     test "case Enum.find_value/2 -> Enum.find_value/3" do
@@ -20,7 +16,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       Enum.find_value(list, :default, &process/1)
       """
 
-      assert fix(code) == expected
+      assert fix(NoFindValueDefaultCase, code) == expected
     end
 
     test "Enum.find_value/2 || default -> Enum.find_value/3" do
@@ -32,7 +28,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       Enum.find_value(list, :default, &process/1)
       """
 
-      assert fix(code) == expected
+      assert fix(NoFindValueDefaultCase, code) == expected
     end
 
     test "piped case Enum.find_value/2 -> Enum.find_value/3" do
@@ -48,7 +44,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       Enum.find_value(list, :default, fun)
       """
 
-      assert fix(code) == expected
+      assert fix(NoFindValueDefaultCase, code) == expected
     end
 
     test "1-arg pipe case -> Enum.find_value/3" do
@@ -65,7 +61,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       Enum.find_value(list, :default, fun)
       """
 
-      assert fix(code) == expected
+      assert fix(NoFindValueDefaultCase, code) == expected
     end
 
     test "preserves surrounding code" do
@@ -98,7 +94,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoFindValueDefaultCase, code) == expected
     end
 
     test "round-trip: fixed code produces no issues" do
@@ -109,7 +105,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      fixed = fix(code)
+      fixed = fix(NoFindValueDefaultCase, code)
       ast = Sourceror.parse_string!(fixed)
       assert NoFindValueDefaultCase.check(ast, []) == []
     end
@@ -124,7 +120,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoFindValueDefaultCase, code) == code
     end
 
     test "Enum.find/2 nil-identity unchanged" do
@@ -135,7 +131,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoFindValueDefaultCase, code) == code
     end
 
     test "Enum.find/2 || default unchanged" do
@@ -143,7 +139,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       Enum.find(list, &valid?/1) || :not_found
       """
 
-      assert fix(code) == code
+      assert fix(NoFindValueDefaultCase, code) == code
     end
 
     test "Enum.find/2 tuple extraction unchanged" do
@@ -154,7 +150,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoFindValueDefaultCase, code) == code
     end
   end
 end

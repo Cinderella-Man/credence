@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoIfTrueFalse
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoIfTrueFalse.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — should flag
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
 
   describe "flags if...do true...else false" do
     test "basic block form" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(x) do
                if x > 0 do
                  true
@@ -29,7 +21,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "with function call condition" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(list) do
                if Enum.all?(list, &valid?/1) do
                  true
@@ -41,7 +33,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "with complex boolean condition" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(parts) do
                if match?([_, _, _, _], parts) and Enum.all?(parts, &valid_octet?/1) do
                  true
@@ -53,7 +45,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "inline form" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(x) do
                if x > 0, do: true, else: false
              end
@@ -61,7 +53,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "reversed boolean branches (false/true)" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(x) do
                if x > 0 do
                  false
@@ -73,7 +65,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "comparison in do body with else true" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def run(x, y) do
                if x > 0 do
                  y == 1
@@ -85,7 +77,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "false in do body with comparison in else" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def run(x, y) do
                if x > 0 do
                  false
@@ -97,7 +89,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "true in do body with comparison in else" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def run(x, y) do
                if x > 0 do
                  true
@@ -109,7 +101,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "inside a module" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              defmodule Validator do
                def valid?(items) do
                  if length(items) == 4 do
@@ -123,7 +115,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "used as expression assignment" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def run(x) do
                result = if x > 0 do
                  true
@@ -152,11 +144,11 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoIfTrueFalse, code)) == 2
     end
 
     test "comparison in do body with else false" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(x, y) do
                if x > 0 do
                  y == 1
@@ -168,7 +160,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "boolean operator in do body with else false" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(x, a, b) do
                if x > 0 do
                  a and b
@@ -180,7 +172,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "not expression in do body with else false" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(x, y) do
                if x > 0 do
                  not y
@@ -192,7 +184,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "inline comparison form" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(x, y) do
                if x > 0, do: y == 1, else: false
              end
@@ -218,11 +210,11 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoIfTrueFalse, code)) == 2
     end
 
     test "true in do with Enum.all? in else" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(list) do
                if list == [] do
                  true
@@ -234,7 +226,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "Enum.any? in do with else false" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(list) do
                if list == [] do
                  Enum.any?(list, &positive?/1)
@@ -246,7 +238,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "Enum.empty? in do with else true" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(map) do
                if map == %{} do
                  Enum.empty?(map)
@@ -258,7 +250,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "is_nil in do with else false" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(x) do
                if x > 0 do
                  is_nil(x)
@@ -270,7 +262,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "match? in do with else false" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(x) do
                if x > 0 do
                  match?({:ok, _}, x)
@@ -282,7 +274,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "piped Enum.all? in else" do
-      assert flagged?("""
+      assert flagged?(NoIfTrueFalse, """
              def check(list) do
                if list == [] do
                  true
@@ -300,7 +292,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
 
   describe "does not flag if with non-boolean returns" do
     test "if with non-boolean values" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x) do
                if x > 0 do
                  :positive
@@ -312,7 +304,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "if with computed values" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x) do
                if x > 0 do
                  x * 2
@@ -324,7 +316,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "if with string returns" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x) do
                if x > 0 do
                  "yes"
@@ -336,7 +328,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "comparison in do body with non-boolean else" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x, y) do
                if x > 0 do
                  y == 1
@@ -348,7 +340,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "function call in do body with else false — not flagged (may not return bool)" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x) do
                if x > 0 do
                  some_check(x)
@@ -360,7 +352,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "arithmetic in do body with else false — not flagged" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x, y) do
                if x > 0 do
                  y + 1
@@ -384,7 +376,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
 
   describe "does not flag if with non-boolean condition" do
     test "bare variable condition with true/false branches" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x) do
                if x do
                  true
@@ -396,7 +388,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "bare variable condition with expr/false branches" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x, y) do
                if x do
                  y == 1
@@ -408,7 +400,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "function-call condition with true/false branches" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x) do
                if some_check(x) do
                  true
@@ -420,7 +412,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "not of a bare variable condition" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(y) do
                if not y do
                  false
@@ -432,7 +424,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "and of bare variables condition (and does not guarantee a boolean)" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(a, b) do
                if a and b do
                  true
@@ -446,7 +438,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
 
   describe "does not flag if without else" do
     test "bare if block" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x) do
                if x > 0 do
                  IO.puts("positive")
@@ -458,7 +450,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
 
   describe "does not flag code without if" do
     test "plain function" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              defmodule M do
                def run(x), do: x * 2
              end
@@ -466,7 +458,7 @@ defmodule Credence.Pattern.NoIfTrueFalseCheckTest do
     end
 
     test "case expression" do
-      assert clean?("""
+      assert clean?(NoIfTrueFalse, """
              def run(x) do
                case x do
                  :a -> 1

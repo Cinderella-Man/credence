@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckEquivalenceTest do
   and multi-codepoint graphemes (decomposed accents, flags) which are one
   grapheme. No assumption needed.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

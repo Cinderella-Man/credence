@@ -9,7 +9,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseEquivalenceTest do
   instead of `0`. The input set includes `nil` plus values across types that
   exercise the guard.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRedundantCaseNilClause

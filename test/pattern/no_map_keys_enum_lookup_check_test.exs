@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMapKeysEnumLookup
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoMapKeysEnumLookup.check(ast, [])
-  end
 
   describe "NoMapKeysEnumLookup — check" do
     # ---- Pipeline form: Map.keys(var) |> Enum.xxx(fn ... var[k] ...) ----
@@ -23,7 +18,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.rule == :no_map_keys_enum_lookup
       assert issue.message =~ "word_freqs"
       assert issue.message =~ "Enum.all?"
@@ -39,7 +34,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.message =~ "counts"
       assert issue.message =~ "Enum.map"
     end
@@ -54,7 +49,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.message =~ "data"
       assert issue.message =~ "Enum.filter"
     end
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.message =~ "config"
       assert issue.message =~ "Enum.any?"
     end
@@ -84,7 +79,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.message =~ "scores"
       assert issue.message =~ "Enum.each"
     end
@@ -99,7 +94,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.message =~ "freq"
     end
 
@@ -113,7 +108,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.message =~ "groups"
     end
 
@@ -130,7 +125,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.message =~ "freqs"
     end
 
@@ -147,7 +142,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.message =~ "word_freqs"
       assert issue.message =~ "Enum.all?"
     end
@@ -161,7 +156,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapKeysEnumLookup, code)
       assert issue.message =~ "Enum.map"
     end
 
@@ -176,7 +171,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysEnumLookup, code) == []
     end
 
     test "does not flag Map.keys |> Enum.join (not a flagged function)" do
@@ -188,7 +183,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysEnumLookup, code) == []
     end
 
     test "does not flag Map.keys when callback doesn't reference source map" do
@@ -201,7 +196,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysEnumLookup, code) == []
     end
 
     test "does not flag Map.keys when callback references a different map" do
@@ -214,7 +209,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysEnumLookup, code) == []
     end
 
     test "does not flag direct map iteration (correct pattern)" do
@@ -228,7 +223,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysEnumLookup, code) == []
     end
 
     test "does not flag Map.keys with Enum.count (not flagged)" do
@@ -238,7 +233,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysEnumLookup, code) == []
     end
 
     test "does not flag Map.keys stored in a variable" do
@@ -251,7 +246,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysEnumLookup, code) == []
     end
 
     test "does not flag non-Map module keys function" do
@@ -263,7 +258,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapKeysEnumLookup, code) == []
     end
   end
 end

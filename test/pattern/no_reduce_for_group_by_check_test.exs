@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoReduceForGroupBy
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoReduceForGroupBy.check(ast, [])
-  end
 
   describe "flags the full reduce |> Map.new(reverse) pipeline" do
     test "inline key, direct reduce" do
@@ -21,7 +16,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForGroupBy, code)
       assert issue.rule == :no_reduce_for_group_by
       assert issue.message =~ "Enum.group_by"
     end
@@ -39,7 +34,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForGroupBy, code)
       assert issue.rule == :no_reduce_for_group_by
     end
 
@@ -56,7 +51,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoReduceForGroupBy, code)
       assert issue.rule == :no_reduce_for_group_by
     end
   end
@@ -76,7 +71,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
 
     test "bare reduce without the trailing reverse (piped)" do
@@ -91,7 +86,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
 
     # Map.new that does NOT reverse the value list keeps reverse insertion
@@ -108,7 +103,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
 
     # The Map.update is not the returned value (a later statement is), so the
@@ -127,7 +122,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
 
     # Extra side-effecting statement before Map.update would be dropped by any
@@ -146,7 +141,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
   end
 
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
 
     test "Enum.reduce with Map.put" do
@@ -175,7 +170,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
 
     test "Enum.reduce with non-empty initial map" do
@@ -190,7 +185,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
 
     test "Enum.reduce with different default value" do
@@ -205,7 +200,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
 
     test "Enum.reduce with append instead of prepend" do
@@ -220,7 +215,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
 
     test "Map.new (already idiomatic)" do
@@ -232,7 +227,7 @@ defmodule Credence.Pattern.NoReduceForGroupByCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoReduceForGroupBy, code) == []
     end
   end
 end

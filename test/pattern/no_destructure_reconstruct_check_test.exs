@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoDestructureReconstruct
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoDestructureReconstruct.check(ast, [])
-  end
 
   describe "NoDestructureReconstruct" do
     test "detects destructure-reconstruct in case branch" do
@@ -23,7 +18,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoDestructureReconstruct, code)
       assert issue.rule == :no_destructure_reconstruct
 
       assert issue.message =~ "p1"
@@ -43,7 +38,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoDestructureReconstruct, code)
       assert issue.message =~ "a, b"
     end
 
@@ -58,7 +53,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoDestructureReconstruct, code)
       assert issue.message =~ "x, y, z"
     end
 
@@ -71,7 +66,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoDestructureReconstruct, code)
       assert issue.message =~ "a, b, c"
     end
 
@@ -84,7 +79,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoDestructureReconstruct, code)
       assert issue.message =~ "first, second"
     end
 
@@ -97,7 +92,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoDestructureReconstruct, code)
       assert issue.message =~ "a, b, c, d"
     end
 
@@ -116,7 +111,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoDestructureReconstruct, code)
       assert issue.message =~ "a, b, c"
     end
 
@@ -136,7 +131,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDestructureReconstruct, code) == []
     end
 
     test "does not flag when bound as a whole with =" do
@@ -153,7 +148,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDestructureReconstruct, code) == []
     end
 
     test "does not flag when list order differs" do
@@ -168,7 +163,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDestructureReconstruct, code) == []
     end
 
     test "does not flag when pattern contains literals" do
@@ -183,7 +178,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDestructureReconstruct, code) == []
     end
 
     test "does not flag when pattern contains underscore variables" do
@@ -198,7 +193,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDestructureReconstruct, code) == []
     end
 
     test "does not flag single-element list patterns" do
@@ -212,7 +207,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDestructureReconstruct, code) == []
     end
 
     test "does not flag when pattern is not a list" do
@@ -224,7 +219,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDestructureReconstruct, code) == []
     end
 
     test "does not flag when body list has different length" do
@@ -239,7 +234,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDestructureReconstruct, code) == []
     end
 
     test "does not flag non-list function args" do
@@ -251,7 +246,7 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDestructureReconstruct, code) == []
     end
   end
 end

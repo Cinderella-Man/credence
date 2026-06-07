@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateEquivalenceTest do
   discards `@doc` on a private function entirely, so removing it changes no
   emitted code; no input can witness a difference.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
 

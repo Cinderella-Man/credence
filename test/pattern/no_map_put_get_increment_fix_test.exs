@@ -1,10 +1,7 @@
 defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMapPutGetIncrement
-
-  defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(NoMapPutGetIncrement, code, [])
 
   describe "rewrites the safe core" do
     test "bare Map.put/Map.get + 1" do
@@ -16,7 +13,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       Map.update(freqs, char, 1, fn x -> x + 1 end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoMapPutGetIncrement, code) == expected
     end
 
     test "piped form keeps the pipe" do
@@ -28,7 +25,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       freqs |> Map.update(key, 1, fn x -> x + 1 end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoMapPutGetIncrement, code) == expected
     end
 
     test "integer increment other than 1 carries through to default and fun" do
@@ -40,7 +37,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       Map.update(m, k, 5, fn x -> x + 5 end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoMapPutGetIncrement, code) == expected
     end
 
     test "preserves surrounding code" do
@@ -62,7 +59,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoMapPutGetIncrement, code) == expected
     end
 
     test "rewrites multiple instances" do
@@ -86,7 +83,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoMapPutGetIncrement, code) == expected
     end
 
     test "round-trip: fixed code is no longer flagged" do
@@ -94,7 +91,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       Map.put(freqs, char, Map.get(freqs, char, 0) + 1)
       """
 
-      fixed = fix(code)
+      fixed = fix(NoMapPutGetIncrement, code)
       ast = Sourceror.parse_string!(fixed)
       assert NoMapPutGetIncrement.check(ast, []) == []
     end
@@ -106,7 +103,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       Map.update(freqs, char, 1, &(&1 + 1))
       """
 
-      assert fix(code) == code
+      assert fix(NoMapPutGetIncrement, code) == code
     end
 
     test "different literal keys are not rewritten" do
@@ -114,7 +111,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       Map.put(m, :a, Map.get(m, :b, 0) + 1)
       """
 
-      assert fix(code) == code
+      assert fix(NoMapPutGetIncrement, code) == code
     end
 
     test "variable increment is not rewritten" do
@@ -122,7 +119,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       Map.put(m, k, Map.get(m, k, 0) + n)
       """
 
-      assert fix(code) == code
+      assert fix(NoMapPutGetIncrement, code) == code
     end
 
     test "float increment is not rewritten" do
@@ -130,7 +127,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       Map.put(m, k, Map.get(m, k, 0) + 1.0)
       """
 
-      assert fix(code) == code
+      assert fix(NoMapPutGetIncrement, code) == code
     end
 
     test "float default is not rewritten" do
@@ -138,7 +135,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       Map.put(m, k, Map.get(m, k, 0.0) + 1)
       """
 
-      assert fix(code) == code
+      assert fix(NoMapPutGetIncrement, code) == code
     end
   end
 end

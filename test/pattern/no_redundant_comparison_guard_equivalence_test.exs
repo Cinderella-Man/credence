@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardEquivalenceTest do
   reaching it is already ≥ 0). The retained `is_number(n)` keeps non-numbers out, so
   dispatch — including the FunctionClauseError on a non-number — is preserved.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRedundantComparisonGuard

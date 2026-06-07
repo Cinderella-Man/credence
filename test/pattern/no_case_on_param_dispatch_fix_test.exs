@@ -1,10 +1,7 @@
 defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCaseOnParamDispatch
-  alias Credence.RuleHelpers
-
-  defp fix(code), do: RuleHelpers.apply_rule_fix(NoCaseOnParamDispatch, code)
 
   # ═══════════════════════════════════════════════════════════════════
   # REWRITES — case-on-param → multi-clause function heads
@@ -25,7 +22,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     def run(n), do: {:ok, n}
     """
 
-    assert fix(code) == expected
+    assert fix(NoCaseOnParamDispatch, code) == expected
   end
 
   test "list patterns, catch-all body refers to the parameter (kept via `_ = v`)" do
@@ -47,7 +44,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     def pick_coins(_ = coins), do: do_pick_coins(coins, 0, 0)
     """
 
-    assert fix(code) == expected
+    assert fix(NoCaseOnParamDispatch, code) == expected
   end
 
   test "map patterns and a defp" do
@@ -67,7 +64,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     def handle(_), do: :unknown
     """
 
-    assert fix(code) == expected
+    assert fix(NoCaseOnParamDispatch, code) == expected
   end
 
   test "clause guards are preserved as head guards" do
@@ -87,7 +84,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     defp classify(_), do: :negative
     """
 
-    assert fix(code) == expected
+    assert fix(NoCaseOnParamDispatch, code) == expected
   end
 
   test "catch-all bound variable equal to the subject is used as-is" do
@@ -105,7 +102,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     def last(list), do: List.last(list)
     """
 
-    assert fix(code) == expected
+    assert fix(NoCaseOnParamDispatch, code) == expected
   end
 
   test "literal clause whose body refers to the parameter keeps it via `pattern = v`" do
@@ -123,7 +120,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     def f(n), do: n
     """
 
-    assert fix(code) == expected
+    assert fix(NoCaseOnParamDispatch, code) == expected
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -141,7 +138,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     end
     """
 
-    assert fix(code) == code
+    assert fix(NoCaseOnParamDispatch, code) == code
   end
 
   test "no-op: non-total case (no catch-all)" do
@@ -154,7 +151,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     end
     """
 
-    assert fix(code) == code
+    assert fix(NoCaseOnParamDispatch, code) == code
   end
 
   test "no-op: function-head guard" do
@@ -167,7 +164,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     end
     """
 
-    assert fix(code) == code
+    assert fix(NoCaseOnParamDispatch, code) == code
   end
 
   test "no-op: pinned pattern" do
@@ -180,6 +177,6 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     end
     """
 
-    assert fix(code) == code
+    assert fix(NoCaseOnParamDispatch, code) == code
   end
 end

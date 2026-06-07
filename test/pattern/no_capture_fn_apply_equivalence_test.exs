@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyEquivalenceTest do
   inlining the capture body with the actual arguments. Input set drives the args,
   including a value-kind pair.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoCaptureFnApply

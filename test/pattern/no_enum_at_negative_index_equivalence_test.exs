@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexEquivalenceTest do
   Tier 1 (expression). `Enum.at(list, -1)` → `List.last(list)`.
   Proves the harness end-to-end on the simplest expression rewrite.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

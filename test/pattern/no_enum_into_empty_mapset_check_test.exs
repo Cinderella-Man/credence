@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoEnumIntoEmptyMapset
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoEnumIntoEmptyMapset.check(ast, [])
-  end
 
   describe "flags" do
     test "Enum.into(enum, MapSet.new())" do
@@ -14,7 +9,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       Enum.into(list, MapSet.new())
       """
 
-      [issue] = check(code)
+      [issue] = check(NoEnumIntoEmptyMapset, code)
       assert issue.rule == :no_enum_into_empty_mapset
       assert issue.message =~ "MapSet.new"
     end
@@ -24,7 +19,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       Enum.into(list, MapSet.new(), fn x -> x * 2 end)
       """
 
-      [issue] = check(code)
+      [issue] = check(NoEnumIntoEmptyMapset, code)
       assert issue.rule == :no_enum_into_empty_mapset
       assert issue.message =~ "MapSet.new"
     end
@@ -34,7 +29,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       list |> Enum.into(MapSet.new())
       """
 
-      [issue] = check(code)
+      [issue] = check(NoEnumIntoEmptyMapset, code)
       assert issue.rule == :no_enum_into_empty_mapset
     end
 
@@ -43,7 +38,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       list |> Enum.into(MapSet.new(), fn x -> x * 2 end)
       """
 
-      [issue] = check(code)
+      [issue] = check(NoEnumIntoEmptyMapset, code)
       assert issue.rule == :no_enum_into_empty_mapset
     end
 
@@ -54,7 +49,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       |> Enum.into(MapSet.new(), fn {r, i} -> {i, r} end)
       """
 
-      [issue] = check(code)
+      [issue] = check(NoEnumIntoEmptyMapset, code)
       assert issue.rule == :no_enum_into_empty_mapset
     end
 
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEnumIntoEmptyMapset, code)
       assert length(issues) == 2
       assert Enum.all?(issues, &(&1.rule == :no_enum_into_empty_mapset))
     end
@@ -81,7 +76,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       Enum.into(list, existing_set)
       """
 
-      assert check(code) == []
+      assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "Enum.into with a variable target and a transform fun" do
@@ -89,7 +84,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       Enum.into(list, my_mapset, fn x -> x * 2 end)
       """
 
-      assert check(code) == []
+      assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "MapSet.new/1" do
@@ -97,7 +92,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       MapSet.new(list)
       """
 
-      assert check(code) == []
+      assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "MapSet.new/2" do
@@ -105,7 +100,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       MapSet.new(list, fn x -> x * 2 end)
       """
 
-      assert check(code) == []
+      assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "Enum.into with an empty map literal" do
@@ -113,7 +108,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       Enum.into(list, %{})
       """
 
-      assert check(code) == []
+      assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "Enum.into with a list" do
@@ -121,7 +116,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       Enum.into(map, [], fn {k, v} -> {k, v} end)
       """
 
-      assert check(code) == []
+      assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "Enum.into targeting MapSet.new(seed) with a seed argument" do
@@ -129,7 +124,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
       Enum.into(list, MapSet.new([0]))
       """
 
-      assert check(code) == []
+      assert check(NoEnumIntoEmptyMapset, code) == []
     end
   end
 end

@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantListTraversal
-
-  defp fix(code) do
-    result =
-      Credence.RuleHelpers.apply_rule_fix(NoRedundantListTraversal, code, [])
-
-    # Sourceror.to_string/1 omits trailing newline; heredocs always include one.
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # length + Enum.sum → NOT auto-fixed (readability downgrade)
@@ -25,7 +17,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "Enum.count + Enum.sum" do
@@ -37,7 +29,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "preserves intervening code" do
@@ -50,7 +42,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "flipped order — sum first, then length" do
@@ -62,7 +54,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "inside a full module" do
@@ -76,7 +68,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 
@@ -101,7 +93,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantListTraversal, input) == expected
     end
 
     test "flipped order — max first" do
@@ -120,7 +112,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantListTraversal, input) == expected
     end
 
     test "with intervening code" do
@@ -141,7 +133,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantListTraversal, input) == expected
     end
   end
 
@@ -158,7 +150,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "Enum.sum + Enum.count for average" do
@@ -169,7 +161,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "Enum.min + Enum.max in same expression" do
@@ -180,7 +172,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "Enum.sum + length added together" do
@@ -191,7 +183,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 
@@ -205,7 +197,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 
@@ -220,7 +212,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 
@@ -236,7 +228,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 
@@ -253,7 +245,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "bare length + inline Enum.sum in assignment RHS" do
@@ -265,7 +257,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "bare Enum.sum + inline length in assignment RHS" do
@@ -277,7 +269,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "bare Enum.min + inline Enum.max" do
@@ -295,7 +287,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantListTraversal, input) == expected
     end
 
     test "bare Enum.max + inline Enum.min in assignment" do
@@ -315,7 +307,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoRedundantListTraversal, input) == expected
     end
   end
 
@@ -328,7 +320,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 
@@ -342,7 +334,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "field access as argument" do
@@ -354,7 +346,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 
@@ -368,7 +360,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 
@@ -382,7 +374,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 
@@ -394,7 +386,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
 
     test "already uses Enum.min_max" do
@@ -405,7 +397,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoRedundantListTraversal, input) == input
     end
   end
 end

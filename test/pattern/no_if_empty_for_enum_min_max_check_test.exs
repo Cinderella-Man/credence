@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoIfEmptyForEnumMinMax
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoIfEmptyForEnumMinMax.check(ast, [])
-  end
 
   describe "check — flagged Enum.empty? forms" do
     test "detects if Enum.empty?(var) then default else Enum.min(var)" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoIfEmptyForEnumMinMax, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_if_empty_for_enum_min_max
     end
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoIfEmptyForEnumMinMax, code)) == 1
     end
 
     test "detects if !Enum.empty?(var) then Enum.min(var) else default" do
@@ -44,7 +39,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoIfEmptyForEnumMinMax, code)) == 1
     end
 
     test "detects if not Enum.empty?(var) then Enum.max(var) else default" do
@@ -56,7 +51,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoIfEmptyForEnumMinMax, code)) == 1
     end
   end
 
@@ -70,7 +65,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIfEmptyForEnumMinMax, code) == []
     end
 
     test "does NOT fire on plain Enum.min/1 call" do
@@ -82,7 +77,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIfEmptyForEnumMinMax, code) == []
     end
 
     test "does NOT fire when Enum.empty? uses a different variable than the Enum call" do
@@ -94,7 +89,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIfEmptyForEnumMinMax, code) == []
     end
   end
 
@@ -114,7 +109,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIfEmptyForEnumMinMax, code) == []
     end
 
     test "does NOT fire on if var != [] then Enum.max(var) else default" do
@@ -126,7 +121,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIfEmptyForEnumMinMax, code) == []
     end
 
     test "does NOT fire on case var do [] -> default; v -> Enum.min(v) end" do
@@ -141,7 +136,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIfEmptyForEnumMinMax, code) == []
     end
 
     test "does NOT fire on case with wildcard _ using subject in Enum.max" do
@@ -156,7 +151,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIfEmptyForEnumMinMax, code) == []
     end
   end
 end

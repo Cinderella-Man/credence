@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListAppendInRecursion
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListAppendInRecursion.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoListAppendInRecursion, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "NoListAppendInRecursion fix" do
     test "fixes simple two-clause recursive function" do
@@ -37,7 +25,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoListAppendInRecursion, input) == expected
     end
 
     test "fixes guarded recursive clause" do
@@ -61,7 +49,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoListAppendInRecursion, input) == expected
     end
 
     test "fixes multi-expression recursive body" do
@@ -87,7 +75,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoListAppendInRecursion, input) == expected
     end
 
     test "does not fix when no base case exists" do
@@ -100,7 +88,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       """
 
       # No base case to add reverse to — cannot fix safely.
-      assert fix(code) == code
+      assert fix(NoListAppendInRecursion, code) == code
     end
 
     test "does not fix when base case does not return accumulator directly" do
@@ -115,7 +103,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       """
 
       # Base case wraps result in tuple — cannot fix.
-      assert fix(code) == code
+      assert fix(NoListAppendInRecursion, code) == code
     end
 
     test "does not fix indirect append (assigned to variable)" do
@@ -130,7 +118,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListAppendInRecursion, code) == code
     end
 
     test "fixed code has no remaining issues" do
@@ -144,7 +132,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoListAppendInRecursion, fix(NoListAppendInRecursion, code)) == []
     end
   end
 end

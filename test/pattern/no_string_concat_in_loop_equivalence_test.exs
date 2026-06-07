@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopEquivalenceTest do
   `Enum.join(list)`. Both concatenate in order. Input set covers empty, single, and
   multi-element string lists.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoStringConcatInLoop

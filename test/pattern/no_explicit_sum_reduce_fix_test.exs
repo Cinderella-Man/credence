@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoExplicitSumReduceFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoExplicitSumReduce
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoExplicitSumReduce.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoExplicitSumReduce, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix" do
     test "replaces sum reduce with Enum.sum/1" do
@@ -25,7 +13,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceFixTest do
       Enum.sum(list)
       """
 
-      assert fix(input) == expected
+      assert fix(NoExplicitSumReduce, input) == expected
     end
 
     test "handles reversed operand order" do
@@ -37,7 +25,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceFixTest do
       Enum.sum(list)
       """
 
-      assert fix(input) == expected
+      assert fix(NoExplicitSumReduce, input) == expected
     end
 
     test "does not modify non-sum reductions" do
@@ -45,7 +33,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceFixTest do
       Enum.reduce(list, 1, fn x, acc -> x * acc end)
       """
 
-      assert fix(code) == code
+      assert fix(NoExplicitSumReduce, code) == code
     end
 
     test "preserves surrounding code" do
@@ -69,7 +57,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoExplicitSumReduce, input) == expected
     end
 
     test "round-trip: fixed code produces no issues" do
@@ -77,7 +65,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceFixTest do
       Enum.reduce(list, 0, fn x, acc -> x + acc end)
       """
 
-      assert check(fix(code)) == []
+      assert check(NoExplicitSumReduce, fix(NoExplicitSumReduce, code)) == []
     end
   end
 end

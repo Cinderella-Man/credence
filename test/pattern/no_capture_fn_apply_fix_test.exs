@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCaptureFnApply
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoCaptureFnApply, code)
-  end
 
   test "inlines a capture applied to a variable" do
     code = """
@@ -24,7 +20,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoCaptureFnApply, code) == expected
   end
 
   test "inlines a capture with arithmetic" do
@@ -44,7 +40,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoCaptureFnApply, code) == expected
   end
 
   test "inlines multiple capture applications on separate lines" do
@@ -68,7 +64,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoCaptureFnApply, code) == expected
   end
 
   test "leaves a capture with a side-effecting arg untouched" do
@@ -80,7 +76,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(code) == code
+    assert fix(NoCaptureFnApply, code) == code
   end
 
   test "leaves a plain anonymous-function application untouched" do
@@ -93,6 +89,6 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(code) == code
+    assert fix(NoCaptureFnApply, code) == code
   end
 end

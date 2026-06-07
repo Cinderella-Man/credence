@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.PreferEnumReverseTwoCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferEnumReverseTwo
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferEnumReverseTwo.check(ast, [])
-  end
 
   describe "PreferEnumReverseTwo" do
     test "detects Enum.reverse(acc) ++ tail" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(PreferEnumReverseTwo, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert issue.rule == :prefer_enum_reverse_two
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumReverseTwo, code) == []
     end
 
     test "ignores standard concatenation without reverse" do
@@ -42,7 +37,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumReverseTwo, code) == []
     end
 
     test "ignores Enum.reverse/1 when not used with ++" do
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferEnumReverseTwo, code) == []
     end
   end
 end

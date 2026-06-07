@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoFilterThenFirst
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoFilterThenFirst.check(ast, [])
-  end
 
   # ── FLAGGED: Stream.filter pipeline forms ──────────────────────────────
   #
@@ -23,7 +18,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+      assert [%Issue{rule: :no_filter_then_first}] = check(NoFilterThenFirst, code)
     end
 
     test "flags with predicate function reference" do
@@ -37,7 +32,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+      assert [%Issue{rule: :no_filter_then_first}] = check(NoFilterThenFirst, code)
     end
 
     test "flags inside longer pipeline" do
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+      assert [%Issue{rule: :no_filter_then_first}] = check(NoFilterThenFirst, code)
     end
   end
 
@@ -66,7 +61,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_filter_then_first}] = check(code)
+      assert [%Issue{rule: :no_filter_then_first}] = check(NoFilterThenFirst, code)
     end
   end
 
@@ -84,7 +79,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenFirst, code) == []
     end
 
     test "does not flag nested Enum.at(Enum.filter(...), 0)" do
@@ -94,7 +89,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenFirst, code) == []
     end
   end
 
@@ -108,7 +103,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenFirst, code) == []
     end
 
     test "does not flag Stream.filter |> Enum.at(-1)" do
@@ -118,7 +113,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenFirst, code) == []
     end
   end
 
@@ -132,7 +127,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenFirst, code) == []
     end
   end
 
@@ -146,7 +141,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenFirst, code) == []
     end
 
     test "does not flag plain Stream.filter without at(0)" do
@@ -156,7 +151,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenFirst, code) == []
     end
 
     test "does not flag plain Enum.at without filter" do
@@ -166,7 +161,7 @@ defmodule Credence.Pattern.NoFilterThenFirstCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFilterThenFirst, code) == []
     end
   end
 end

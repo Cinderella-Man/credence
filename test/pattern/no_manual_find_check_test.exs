@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoManualFindCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualFind
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoManualFind.check(ast, [])
-  end
 
   describe "flags the manual find pattern" do
     test "arity 1 with a literal default" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualFind, code)
       assert issue.rule == :no_manual_find
       assert issue.message =~ "defp find_positive/1"
       assert issue.message =~ "Enum.find/3"
@@ -33,7 +28,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualFind, code)
       assert issue.message =~ "defp find_first/2"
     end
 
@@ -46,7 +41,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualFind, code)
       assert issue.message =~ "def find_positive/1"
     end
 
@@ -59,7 +54,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualFind, code)
       assert issue.message =~ "find/1"
     end
 
@@ -72,7 +67,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert [_issue] = check(code)
+      assert [_issue] = check(NoManualFind, code)
     end
 
     test "compound boolean guard over the head" do
@@ -84,7 +79,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert [_issue] = check(code)
+      assert [_issue] = check(NoManualFind, code)
     end
 
     test "negative-number and empty-list literal defaults" do
@@ -104,8 +99,8 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert [_] = check(neg)
-      assert [_] = check(empty)
+      assert [_] = check(NoManualFind, neg)
+      assert [_] = check(NoManualFind, empty)
     end
   end
 
@@ -117,7 +112,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     test "match clause without a guard" do
@@ -129,7 +124,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     test "match clause transforms the head" do
@@ -141,7 +136,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     test "recurse clause calls a different function" do
@@ -153,7 +148,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     test "arity 3" do
@@ -165,7 +160,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     test "2-clause function" do
@@ -176,7 +171,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     test "4-clause function" do
@@ -189,7 +184,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     test "base case is not an empty list" do
@@ -201,7 +196,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     test "base case body is a recursive call" do
@@ -213,7 +208,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
   end
 
@@ -230,7 +225,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     # The guard compares the head to the second parameter (a "target"). The
@@ -245,7 +240,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     # An arity-1 default that is an arbitrary expression would be evaluated
@@ -260,7 +255,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     # An arity-2 base that returns a literal instead of threading its default
@@ -274,7 +269,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     # A match-clause body with a side effect before returning the head would
@@ -291,7 +286,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
 
     # A recurse-clause body with a side effect before the self-call would be
@@ -308,7 +303,7 @@ defmodule Credence.Pattern.NoManualFindCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualFind, code) == []
     end
   end
 end

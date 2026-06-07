@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMapThenAggregate
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoMapThenAggregate.check(ast, [])
-  end
 
   describe "NoMapThenAggregate check" do
     test "detects Enum.map |> Enum.sum in a chunked pipeline" do
@@ -21,7 +16,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapThenAggregate, code)
       assert issue.rule == :no_map_then_aggregate
       assert issue.message =~ "Enum.map"
       assert issue.message =~ "Enum.sum"
@@ -38,7 +33,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapThenAggregate, code) == []
     end
 
     test "detects Enum.map |> Enum.sum in pipeline" do
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapThenAggregate, code)
       assert issue.message =~ "Enum.sum"
     end
 
@@ -65,7 +60,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapThenAggregate, code)
       assert issue.message =~ "Enum.sum"
     end
 
@@ -78,7 +73,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapThenAggregate, code) == []
     end
 
     test "detects direct nesting: Enum.sum(Enum.map(list, f))" do
@@ -90,7 +85,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapThenAggregate, code)
       assert issue.message =~ "Enum.sum"
     end
 
@@ -105,7 +100,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapThenAggregate, code)
       assert issue.rule == :no_map_then_aggregate
     end
 
@@ -118,7 +113,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoMapThenAggregate, code)
       assert issue.message =~ "Enum.sum"
     end
 
@@ -133,7 +128,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapThenAggregate, code) == []
     end
 
     test "does not flag Enum.max without Enum.map" do
@@ -143,7 +138,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapThenAggregate, code) == []
     end
 
     test "does not flag Enum.map piped into non-aggregate" do
@@ -157,7 +152,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapThenAggregate, code) == []
     end
 
     test "does not flag Enum.reduce (correct single-pass approach)" do
@@ -171,7 +166,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapThenAggregate, code) == []
     end
 
     test "does not flag Enum.map piped into Enum.sort" do
@@ -183,7 +178,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapThenAggregate, code) == []
     end
 
     test "does not flag Enum.map with steps in between before aggregate" do
@@ -198,7 +193,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapThenAggregate, code) == []
     end
 
     test "does not flag non-Enum module map" do
@@ -210,7 +205,7 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoMapThenAggregate, code) == []
     end
   end
 end

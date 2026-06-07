@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoTakeWhileLengthCheck
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoTakeWhileLengthCheck.check(ast, [])
-  end
 
   describe "NoTakeWhileLengthCheck detection" do
     test "detects Enum.take_while |> length() in pipeline" do
@@ -23,7 +18,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTakeWhileLengthCheck, code)
       assert issue.rule == :no_take_while_length_check
       assert issue.message =~ "Enum.all?"
     end
@@ -39,7 +34,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTakeWhileLengthCheck, code)
       assert issue.message =~ "Enum.take_while"
     end
 
@@ -52,7 +47,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTakeWhileLengthCheck, code)
       assert issue.rule == :no_take_while_length_check
     end
 
@@ -65,7 +60,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTakeWhileLengthCheck, code)
       assert issue.rule == :no_take_while_length_check
     end
 
@@ -78,7 +73,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTakeWhileLengthCheck, code)
       assert issue.rule == :no_take_while_length_check
     end
 
@@ -91,7 +86,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoTakeWhileLengthCheck, code)
       assert issue.message =~ "Enum.all?"
     end
 
@@ -106,7 +101,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTakeWhileLengthCheck, code) == []
     end
 
     test "does not flag Enum.take_while piped into other functions" do
@@ -120,7 +115,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTakeWhileLengthCheck, code) == []
     end
 
     test "does not flag length on non-take_while result" do
@@ -132,7 +127,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTakeWhileLengthCheck, code) == []
     end
 
     test "does not flag Enum.all? (correct pattern)" do
@@ -144,7 +139,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTakeWhileLengthCheck, code) == []
     end
 
     test "does not flag Enum.reduce_while (correct pattern)" do
@@ -158,7 +153,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTakeWhileLengthCheck, code) == []
     end
 
     test "does not flag standalone length call" do
@@ -168,7 +163,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoTakeWhileLengthCheck, code) == []
     end
   end
 end

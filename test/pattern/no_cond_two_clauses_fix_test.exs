@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoCondTwoClausesFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCondTwoClauses
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(NoCondTwoClauses, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # BASIC FIXES — cond → if/else
@@ -33,7 +28,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "multi-line second body — idx=50 pattern" do
@@ -60,7 +55,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "multi-line first body" do
@@ -87,7 +82,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
   end
 
@@ -112,7 +107,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "complementary guards — < and >=" do
@@ -135,7 +130,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "complementary guards — == and !=" do
@@ -158,7 +153,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "complementary guards — binary search pattern" do
@@ -198,7 +193,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
   end
 
@@ -227,7 +222,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "function call condition" do
@@ -250,7 +245,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "negated condition" do
@@ -273,7 +268,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
   end
 
@@ -306,7 +301,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "preserves surrounding code" do
@@ -331,7 +326,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
   end
 
@@ -371,7 +366,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
   end
 
@@ -391,7 +386,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 
@@ -406,7 +401,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 
@@ -423,7 +418,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
 
     test "arithmetic-expression operand" do
@@ -436,7 +431,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 
@@ -450,7 +445,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 
@@ -466,7 +461,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
 
     test "plain function" do
@@ -476,7 +471,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 
@@ -491,7 +486,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 end

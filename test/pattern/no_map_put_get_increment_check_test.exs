@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMapPutGetIncrement
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoMapPutGetIncrement.check(ast, [])
-  end
 
   describe "fires (safe core)" do
     test "detects Map.put/Map.get + 1 pattern" do
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMapPutGetIncrement, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_map_put_get_increment
       assert hd(issues).message =~ "Map.update"
@@ -35,7 +30,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMapPutGetIncrement, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_map_put_get_increment
     end
@@ -45,7 +40,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       freqs |> Map.put(key, Map.get(freqs, key, 0) + 1)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoMapPutGetIncrement, code)) == 1
     end
 
     test "detects an integer increment other than 1" do
@@ -53,7 +48,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(m, k, Map.get(m, k, 0) + 5)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoMapPutGetIncrement, code)) == 1
     end
 
     test "detects multiple instances" do
@@ -67,7 +62,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoMapPutGetIncrement, code)) == 2
     end
   end
 
@@ -77,7 +72,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(freqs, char, Map.get(other_map, char, 0) + 1)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "non-zero default" do
@@ -85,7 +80,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(freqs, char, Map.get(freqs, char, 10) + 1)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "non-increment expression" do
@@ -93,7 +88,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(freqs, char, Map.get(freqs, char, 0) * 2)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "no Map.get at all" do
@@ -101,7 +96,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(freqs, char, some_value + 1)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "already idiomatic Map.update" do
@@ -109,7 +104,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.update(freqs, char, 1, &(&1 + 1))
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     # --- deliberately-dropped unsafe cases (locked in as "no issue") ---
@@ -120,7 +115,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(m, :a, Map.get(m, :b, 0) + 1)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "literal keys are out of the safe core (even when equal)" do
@@ -128,7 +123,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(counts, "a", Map.get(counts, "a", 0) + 1)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "non-integer (variable) increment is not safe" do
@@ -137,7 +132,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(m, k, Map.get(m, k, 0) + n)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "float increment is not safe" do
@@ -145,7 +140,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(m, k, Map.get(m, k, 0) + 1.0)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "float default 0.0 is not the integer 0 (type-changing)" do
@@ -154,7 +149,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(m, k, Map.get(m, k, 0.0) + 1)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "non-variable (call) map is out of the safe core" do
@@ -162,7 +157,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
       Map.put(build(), k, Map.get(build(), k, 0) + 1)
       """
 
-      assert check(code) == []
+      assert check(NoMapPutGetIncrement, code) == []
     end
   end
 end

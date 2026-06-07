@@ -9,7 +9,7 @@ defmodule Credence.Pattern.NoManualStringReverseEquivalenceTest do
   decomposed accents, ZWJ emoji, and flags. Unlike the codepoint variant, this
   needs no assumption: it passes over the full multi-codepoint input set.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationEquivalenceTest do
   over the same values gives the same boolean. Input set covers all-true, a false,
   and empty.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoMapKeysOrValuesForIteration

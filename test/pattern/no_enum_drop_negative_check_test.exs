@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoEnumDropNegativeCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoEnumDropNegative
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoEnumDropNegative.check(ast, [])
-  end
 
   describe "NoEnumDropNegative check" do
     # --- POSITIVE CASES (should flag) ---
@@ -21,7 +16,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEnumDropNegative, code)
 
       assert length(issues) == 1
       issue = hd(issues)
@@ -40,7 +35,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEnumDropNegative, code)
 
       assert length(issues) == 1
       assert hd(issues).rule == :no_enum_drop_negative
@@ -57,7 +52,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEnumDropNegative, code)
 
       assert length(issues) == 2
     end
@@ -71,7 +66,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoEnumDropNegative, code) == []
     end
 
     test "passes Enum.drop with variable count" do
@@ -81,7 +76,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoEnumDropNegative, code) == []
     end
 
     test "passes Enum.drop with zero" do
@@ -91,7 +86,7 @@ defmodule Credence.Pattern.NoEnumDropNegativeCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoEnumDropNegative, code) == []
     end
   end
 end

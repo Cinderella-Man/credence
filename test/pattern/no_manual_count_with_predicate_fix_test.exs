@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualCountWithPredicate
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(NoManualCountWithPredicate, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   describe "3-clause guard pattern — collapse to Enum.count/2" do
     test "canonical multi-clause count" do
@@ -39,7 +34,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualCountWithPredicate, code) == expected
     end
 
     test "inequality guard, single-line clauses" do
@@ -60,7 +55,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualCountWithPredicate, code) == expected
     end
 
     test "clauses in reversed order collapse at the first clause position" do
@@ -78,7 +73,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualCountWithPredicate, code) == expected
     end
   end
 
@@ -100,7 +95,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualCountWithPredicate, code) == expected
     end
 
     test "arity 3 with list in the middle position" do
@@ -130,7 +125,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualCountWithPredicate, code) == expected
     end
 
     test "reversed 1 + acc" do
@@ -150,7 +145,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoManualCountWithPredicate, code) == expected
     end
   end
 
@@ -163,7 +158,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualCountWithPredicate, code) == code
     end
 
     test "leaves an unsafe (raising) guard untouched" do
@@ -175,7 +170,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualCountWithPredicate, code) == code
     end
 
     test "leaves an existing Enum.count/2 call untouched" do
@@ -185,7 +180,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualCountWithPredicate, code) == code
     end
   end
 end

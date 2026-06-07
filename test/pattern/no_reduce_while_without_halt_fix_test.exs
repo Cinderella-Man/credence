@@ -1,10 +1,7 @@
 defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoReduceWhileWithoutHalt
-
-  defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(NoReduceWhileWithoutHalt, code, [])
 
   test "replaces reduce_while with reduce and unwraps {:cont, _}" do
     code = """
@@ -19,7 +16,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(code) == expected
+    assert fix(NoReduceWhileWithoutHalt, code) == expected
   end
 
   test "handles pipeline form with multi-line block body" do
@@ -39,7 +36,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(code) == expected
+    assert fix(NoReduceWhileWithoutHalt, code) == expected
   end
 
   test "preserves surrounding code" do
@@ -63,7 +60,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoReduceWhileWithoutHalt, code) == expected
   end
 
   test "unwraps every clause of a multi-clause fn" do
@@ -81,7 +78,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(code) == expected
+    assert fix(NoReduceWhileWithoutHalt, code) == expected
   end
 
   test "does not modify reduce_while with :halt" do
@@ -91,7 +88,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(code) == code
+    assert fix(NoReduceWhileWithoutHalt, code) == code
   end
 
   test "does not modify a cont buried inside a case (not the literal last expr)" do
@@ -104,7 +101,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(code) == code
+    assert fix(NoReduceWhileWithoutHalt, code) == code
   end
 
   test "round-trip: fixed code produces no issues" do
@@ -114,7 +111,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    fixed = fix(code)
+    fixed = fix(NoReduceWhileWithoutHalt, code)
     ast = Sourceror.parse_string!(fixed)
     assert NoReduceWhileWithoutHalt.check(ast, []) == []
   end

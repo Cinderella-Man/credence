@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoEnumTakeNegative
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoEnumTakeNegative.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoEnumTakeNegative, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "NoEnumTakeNegative fix" do
     test "fixes direct Enum.take(list, -1) to Enum.slice" do
@@ -33,7 +21,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumTakeNegative, input) == expected
     end
 
     test "fixes direct Enum.take(list, -3) to Enum.slice" do
@@ -53,7 +41,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumTakeNegative, input) == expected
     end
 
     test "fixes piped take after non-sort step" do
@@ -73,7 +61,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumTakeNegative, input) == expected
     end
 
     test "fixes multiple negative takes in one file" do
@@ -97,7 +85,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumTakeNegative, input) == expected
     end
 
     test "does not modify Enum.take with positive count" do
@@ -107,7 +95,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoEnumTakeNegative, code) == code
     end
 
     test "does not modify Enum.take with variable count" do
@@ -117,7 +105,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoEnumTakeNegative, code) == code
     end
 
     test "fixes direct call with complex first argument" do
@@ -137,7 +125,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumTakeNegative, input) == expected
     end
 
     test "fixed code has no remaining issues" do
@@ -149,7 +137,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoEnumTakeNegative, fix(NoEnumTakeNegative, code)) == []
     end
 
     # ── Skip behavior: sort |> take(-n) deferred ──────────────────
@@ -164,7 +152,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       """
 
       # Not converted to slice — left for PreferDescSortOverNegativeTake.
-      assert fix(code) == code
+      assert fix(NoEnumTakeNegative, code) == code
     end
 
     test "defers Enum.sort(list) |> take(-n) to PreferDescSortOverNegativeTake (direct)" do
@@ -176,7 +164,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoEnumTakeNegative, code) == code
     end
 
     test "does NOT defer when sort has comparator" do
@@ -196,7 +184,7 @@ defmodule Credence.Pattern.NoEnumTakeNegativeFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoEnumTakeNegative, input) == expected
     end
   end
 end

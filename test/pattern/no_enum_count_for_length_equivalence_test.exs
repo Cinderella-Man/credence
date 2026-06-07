@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthEquivalenceTest do
   a range/map/stream where `length/1` would raise). On a real list the two are
   identical.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.EquivalenceInputs, as: B

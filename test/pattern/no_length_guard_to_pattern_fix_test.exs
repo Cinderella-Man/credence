@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoLengthGuardToPattern
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoLengthGuardToPattern.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoLengthGuardToPattern, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "NoLengthGuardToPattern fix" do
     test "fixes length(list) > 0 into [_ | _] = list pattern" do
@@ -33,7 +21,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthGuardToPattern, input) == expected
     end
 
     test "fixes length(list) == 1 into [_] = list pattern" do
@@ -53,7 +41,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthGuardToPattern, input) == expected
     end
 
     test "fixes length(list) == 3 into [_, _, _] = list pattern" do
@@ -73,7 +61,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthGuardToPattern, input) == expected
     end
 
     test "fixes length(list) == 5 into [_, _, _, _, _] = list pattern" do
@@ -93,7 +81,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthGuardToPattern, input) == expected
     end
 
     test "preserves remaining guard in compound expression" do
@@ -113,7 +101,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthGuardToPattern, input) == expected
     end
 
     test "preserves remaining guard when length check is on the right of and" do
@@ -133,7 +121,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthGuardToPattern, input) == expected
     end
 
     test "does not modify when variable is not a direct parameter" do
@@ -146,7 +134,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       """
 
       # Cannot fix — list is nested inside a map pattern, not a top-level param.
-      assert fix(code) == code
+      assert fix(NoLengthGuardToPattern, code) == code
     end
 
     test "does not modify length(list) == N for N > 5" do
@@ -158,7 +146,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoLengthGuardToPattern, code) == code
     end
 
     test "does not modify unfixable patterns like k <= length(nums)" do
@@ -170,7 +158,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoLengthGuardToPattern, code) == code
     end
 
     test "fixed code has no remaining issues for > 0" do
@@ -182,7 +170,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoLengthGuardToPattern, fix(NoLengthGuardToPattern, code)) == []
     end
 
     test "fixed code has no remaining issues for == N" do
@@ -194,7 +182,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoLengthGuardToPattern, fix(NoLengthGuardToPattern, code)) == []
     end
   end
 end

@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoListAppendInReduceFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListAppendInReduce
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListAppendInReduce.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoListAppendInReduce, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "NoListAppendInReduce fix" do
     test "fixes standalone reduce: ++ to cons + Enum.reverse" do
@@ -38,7 +26,7 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoListAppendInReduce, input) == expected
     end
 
     test "fixes piped reduce: adds Enum.reverse stage" do
@@ -58,13 +46,12 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
           list
           |> Enum.reduce([], fn item, acc ->
             [item | acc]
-          end)
-          |> Enum.reverse()
+          end) |> Enum.reverse()
         end
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoListAppendInReduce, input) == expected
     end
 
     test "fixes multi-line lambda body (only changes last expression)" do
@@ -91,7 +78,7 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoListAppendInReduce, input) == expected
     end
 
     test "does not modify reduce with non-empty initial" do
@@ -105,7 +92,7 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListAppendInReduce, code) == code
     end
 
     test "does not modify when LHS is not the accumulator" do
@@ -119,7 +106,7 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListAppendInReduce, code) == code
     end
 
     test "does not modify when appending multi-element list" do
@@ -133,7 +120,7 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoListAppendInReduce, code) == code
     end
 
     test "fixed code has no remaining issues" do
@@ -147,7 +134,7 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoListAppendInReduce, fix(NoListAppendInReduce, code)) == []
     end
 
     test "fixed piped code has no remaining issues" do
@@ -161,7 +148,7 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoListAppendInReduce, fix(NoListAppendInReduce, code)) == []
     end
   end
 end

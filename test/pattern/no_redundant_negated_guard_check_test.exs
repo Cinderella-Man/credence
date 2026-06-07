@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantNegatedGuard
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRedundantNegatedGuard.check(ast, [])
-  end
 
   describe "NoRedundantNegatedGuard" do
     # ── Positive cases (should flag) ────────────────────────────
@@ -19,7 +14,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantNegatedGuard, code)
       assert issue.rule == :no_redundant_negated_guard
       assert issue.message =~ "Redundant"
       assert issue.message =~ "!="
@@ -33,7 +28,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantNegatedGuard, code)
       assert issue.message =~ "!=="
       assert issue.message =~ "==="
     end
@@ -46,7 +41,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantNegatedGuard, code)
       assert issue.rule == :no_redundant_negated_guard
     end
 
@@ -61,7 +56,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       """
 
       # Won't match because variable names differ (value1 vs missing_value)
-      assert check(code) == []
+      assert check(NoRedundantNegatedGuard, code) == []
     end
 
     test "detects when variable names match across clauses" do
@@ -74,7 +69,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantNegatedGuard, code)
       assert issue.message =~ "!="
     end
 
@@ -87,7 +82,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoRedundantNegatedGuard, code)
       assert issue.message =~ "Redundant"
     end
 
@@ -102,7 +97,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantNegatedGuard, code) == []
     end
 
     test "does not flag clause without guard following equality guard" do
@@ -113,7 +108,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantNegatedGuard, code) == []
     end
 
     test "does not flag negated guard without preceding equality" do
@@ -124,7 +119,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantNegatedGuard, code) == []
     end
 
     test "does not flag different variable names in guards" do
@@ -137,7 +132,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
 
       # c != d is on different vars than a == b
       # The rule compares by name, so no match → no flag
-      assert check(code) == []
+      assert check(NoRedundantNegatedGuard, code) == []
     end
 
     test "does not flag compound guards" do
@@ -149,7 +144,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       """
 
       # Compound guard — the != is part of a larger expression
-      assert check(code) == []
+      assert check(NoRedundantNegatedGuard, code) == []
     end
 
     test "does not flag pattern matching (correct approach)" do
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantNegatedGuard, code) == []
     end
 
     test "does not flag single-clause functions" do
@@ -170,7 +165,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantNegatedGuard, code) == []
     end
 
     test "does not flag different function names" do
@@ -181,7 +176,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoRedundantNegatedGuard, code) == []
     end
   end
 end

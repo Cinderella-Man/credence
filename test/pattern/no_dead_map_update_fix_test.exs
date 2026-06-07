@@ -1,10 +1,7 @@
 defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoDeadMapUpdate
-
-  defp fix(code),
-    do: Credence.RuleHelpers.apply_rule_fix(NoDeadMapUpdate, code, [])
 
   describe "fix — removes the dead identity update" do
     test "piped Map.update |> Map.drop" do
@@ -16,7 +13,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       Map.drop(map, [prev])
       """
 
-      assert fix(code) == expected
+      assert fix(NoDeadMapUpdate, code) == expected
     end
 
     test "piped Map.update |> Map.delete" do
@@ -28,7 +25,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       Map.delete(map, key)
       """
 
-      assert fix(code) == expected
+      assert fix(NoDeadMapUpdate, code) == expected
     end
 
     test "direct Map.drop(Map.update(...), [key])" do
@@ -40,7 +37,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       Map.drop(map, [key])
       """
 
-      assert fix(code) == expected
+      assert fix(NoDeadMapUpdate, code) == expected
     end
 
     test "direct Map.delete(Map.update(...), key)" do
@@ -52,7 +49,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       Map.delete(map, key)
       """
 
-      assert fix(code) == expected
+      assert fix(NoDeadMapUpdate, code) == expected
     end
 
     test "preserves other keys in the drop list" do
@@ -64,7 +61,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       Map.drop(map, [key, other])
       """
 
-      assert fix(code) == expected
+      assert fix(NoDeadMapUpdate, code) == expected
     end
 
     test "preserves surrounding code" do
@@ -92,7 +89,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoDeadMapUpdate, code) == expected
     end
 
     test "fixed code produces no further issues (round-trip)" do
@@ -100,7 +97,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       map |> Map.update(prev, 0, & &1) |> Map.drop([prev])
       """
 
-      fixed = fix(code)
+      fixed = fix(NoDeadMapUpdate, code)
       ast = Sourceror.parse_string!(fixed)
       assert NoDeadMapUpdate.check(ast, []) == []
     end
@@ -112,7 +109,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       map |> Map.update(prev, 0, &(&1 - count)) |> Map.drop([prev])
       """
 
-      assert fix(code) == code
+      assert fix(NoDeadMapUpdate, code) == code
     end
 
     test "non-literal default is not rewritten" do
@@ -120,7 +117,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       map |> Map.update(key, default(), & &1) |> Map.drop([key])
       """
 
-      assert fix(code) == code
+      assert fix(NoDeadMapUpdate, code) == code
     end
 
     test "differing key is not rewritten" do
@@ -128,7 +125,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       map |> Map.update(key_a, 0, & &1) |> Map.drop([key_b])
       """
 
-      assert fix(code) == code
+      assert fix(NoDeadMapUpdate, code) == code
     end
 
     test "lone Map.update is not rewritten" do
@@ -136,7 +133,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       map |> Map.update(key, 0, & &1)
       """
 
-      assert fix(code) == code
+      assert fix(NoDeadMapUpdate, code) == code
     end
   end
 end

@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoTrivialDelegation
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoTrivialDelegation.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # SHOULD FLAG — trivial wrappers with an inlinable call site
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
 
   describe "flags trivial delegation to a stdlib function" do
     test "String.length/1, do: form" do
-      assert flagged?("""
+      assert flagged?(NoTrivialDelegation, """
              defmodule M do
                defp string_length(str), do: String.length(str)
 
@@ -27,7 +19,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "String.length/1, multi-line do/end form" do
-      assert flagged?("""
+      assert flagged?(NoTrivialDelegation, """
              defmodule M do
                defp string_length(str) do
                  String.length(str)
@@ -39,7 +31,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "Enum.count/1" do
-      assert flagged?("""
+      assert flagged?(NoTrivialDelegation, """
              defmodule M do
                defp count_items(list), do: Enum.count(list)
 
@@ -49,7 +41,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "Kernel.length/1 as a local call" do
-      assert flagged?("""
+      assert flagged?(NoTrivialDelegation, """
              defmodule M do
                defp list_len(l), do: length(l)
 
@@ -59,7 +51,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "multi-arg Map.get/2" do
-      assert flagged?("""
+      assert flagged?(NoTrivialDelegation, """
              defmodule M do
                defp fetch(m, k), do: Map.get(m, k)
 
@@ -75,7 +67,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
 
   describe "does not flag non-passthrough bodies" do
     test "reordered args" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp my_join(list, sep), do: Enum.join(sep, list)
 
@@ -85,7 +77,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "transformed arg" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp string_length(x), do: String.length(to_string(x))
 
@@ -95,7 +87,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "more than a single call in the body" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp string_length(str) do
                  result = String.length(str)
@@ -108,7 +100,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "wrapper arity does not match the wrapped function" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp string_length(str, _opts), do: String.length(str)
 
@@ -120,7 +112,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
 
   describe "does not flag delegation to non-stdlib functions" do
     test "local function delegation" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp my_helper(x), do: other_module_func(x)
 
@@ -130,7 +122,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "project module delegation" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp process(x), do: MyProject.Processor.run(x)
 
@@ -142,7 +134,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
 
   describe "does not flag public functions" do
     test "def, not defp" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                def string_length(str), do: String.length(str)
 
@@ -159,7 +151,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
 
   describe "does not flag when the wrapper is used as a function reference" do
     test "captured with &name/arity" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                def process(list) do
                  Enum.map(list, &sum_items/1)
@@ -171,7 +163,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "captured in Stream.map" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule BatchProcessor do
                def process_in_batches(stream, batch_size) do
                  stream
@@ -188,7 +180,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
 
   describe "does not flag when the rewrite cannot be proven safe" do
     test "wrapper has a guard (drops an admitted-input check)" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp count_items(list) when is_list(list), do: Enum.count(list)
 
@@ -198,7 +190,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "wrapper has multiple clauses to dispatch on" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp first([]), do: Enum.reverse([])
                defp first(list), do: Enum.reverse(list)
@@ -209,7 +201,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "no call site to inline" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp string_length(str), do: String.length(str)
              end
@@ -217,7 +209,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "call site is a piped call with an elided argument" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp count_items(list), do: Enum.count(list)
 
@@ -227,7 +219,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "name appears as a bare atom (e.g. apply/3)" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp string_length(str), do: String.length(str)
 
@@ -237,7 +229,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "name is also used as a variable" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp string_length(str), do: String.length(str)
 
@@ -250,7 +242,7 @@ defmodule Credence.Pattern.NoTrivialDelegationCheckTest do
     end
 
     test "local-call wrapper sharing a Kernel name is recursion, not delegation" do
-      assert clean?("""
+      assert clean?(NoTrivialDelegation, """
              defmodule M do
                defp length(l), do: length(l)
 

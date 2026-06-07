@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoFindValueDefaultCase
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoFindValueDefaultCase.check(ast, [])
-  end
 
   describe "flags the safe core" do
     test "case Enum.find_value/2 with nil -> default; val -> val" do
@@ -17,7 +12,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoFindValueDefaultCase, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_find_value_default_case
     end
@@ -27,7 +22,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       Enum.find_value(list, &process/1) || :default
       """
 
-      issues = check(code)
+      issues = check(NoFindValueDefaultCase, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_find_value_default_case
     end
@@ -41,7 +36,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoFindValueDefaultCase, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_find_value_default_case
     end
@@ -56,7 +51,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoFindValueDefaultCase, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_find_value_default_case
     end
@@ -74,7 +69,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
 
     # Enum.find/2 returns the matching element, which can be nil — so the
@@ -87,7 +82,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
 
     test "Enum.find/2 || default is NOT flagged" do
@@ -95,7 +90,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       Enum.find(list, &valid?/1) || :not_found
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
 
     test "piped Enum.find/2 case is NOT flagged" do
@@ -107,7 +102,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
 
     # Tuple-extraction (find/2 -> find_value/3 with extracted element) is
@@ -120,7 +115,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
 
     test "Enum.find_value/3 (already has default) is NOT flagged" do
@@ -131,7 +126,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
 
     test "non-identity body is NOT flagged" do
@@ -142,7 +137,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
 
     test "missing nil clause is NOT flagged" do
@@ -153,7 +148,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
 
     test "bare Enum.find_value/2 without nil check is NOT flagged" do
@@ -161,7 +156,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       Enum.find_value(list, &process/1)
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
 
     test "bare Enum.find/2 without nil check is NOT flagged" do
@@ -169,7 +164,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
       Enum.find(list, &valid?/1)
       """
 
-      assert check(code) == []
+      assert check(NoFindValueDefaultCase, code) == []
     end
   end
 end

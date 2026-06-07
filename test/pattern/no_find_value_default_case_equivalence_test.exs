@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseEquivalenceTest do
   The 3-arg `find_value` returns the default `d` exactly when the 2-arg form
   returns `nil`. Input set covers found, not-found, and empty.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoFindValueDefaultCase

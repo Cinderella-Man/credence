@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoUniqThenCountCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoUniqThenCount
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoUniqThenCount.check(ast, [])
-  end
 
   describe "flags Enum.uniq piped into length/count" do
     test "piped uniq into length()" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUniqThenCount, code)
       assert issue.rule == :no_uniq_then_count
 
       assert issue.message ==
@@ -40,7 +35,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert [%{rule: :no_uniq_then_count}] = check(code)
+      assert [%{rule: :no_uniq_then_count}] = check(NoUniqThenCount, code)
     end
 
     test "uniq following a transform step" do
@@ -55,7 +50,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert [%{rule: :no_uniq_then_count}] = check(code)
+      assert [%{rule: :no_uniq_then_count}] = check(NoUniqThenCount, code)
     end
 
     test "uniq nested deeper in a longer pipeline" do
@@ -70,7 +65,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert [%{rule: :no_uniq_then_count}] = check(code)
+      assert [%{rule: :no_uniq_then_count}] = check(NoUniqThenCount, code)
     end
 
     test "head-form uniq carrying its source as an argument" do
@@ -82,7 +77,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert [%{rule: :no_uniq_then_count}] = check(code)
+      assert [%{rule: :no_uniq_then_count}] = check(NoUniqThenCount, code)
     end
 
     test "fires exactly once when more steps follow the count" do
@@ -97,7 +92,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert [%{rule: :no_uniq_then_count}] = check(code)
+      assert [%{rule: :no_uniq_then_count}] = check(NoUniqThenCount, code)
     end
   end
 
@@ -112,7 +107,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUniqThenCount, code) == []
     end
 
     test "Enum.uniq piped into Enum.map (used for further processing)" do
@@ -126,7 +121,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUniqThenCount, code) == []
     end
 
     test "Enum.uniq piped into Enum.count(predicate) — a filtered count" do
@@ -140,7 +135,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUniqThenCount, code) == []
     end
 
     test "MapSet.new piped into MapSet.size (already the target form)" do
@@ -154,7 +149,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUniqThenCount, code) == []
     end
 
     test "piped uniq with an extra argument is not Enum.uniq/1 (invalid arity)" do
@@ -168,7 +163,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUniqThenCount, code) == []
     end
 
     test "head uniq with no argument is not Enum.uniq/1 (invalid arity)" do
@@ -180,7 +175,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUniqThenCount, code) == []
     end
 
     test "uniq_by is a different operation" do
@@ -194,7 +189,7 @@ defmodule Credence.Pattern.NoUniqThenCountCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUniqThenCount, code) == []
     end
   end
 end

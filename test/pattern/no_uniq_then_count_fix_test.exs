@@ -1,16 +1,7 @@
 defmodule Credence.Pattern.NoUniqThenCountFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoUniqThenCount
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoUniqThenCount, code, [])
-  end
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoUniqThenCount.check(ast, [])
-  end
 
   describe "rewrites uniq-then-count to MapSet" do
     test "piped uniq into length()" do
@@ -34,7 +25,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoUniqThenCount, code) == expected
     end
 
     test "piped uniq into Enum.count()" do
@@ -58,7 +49,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoUniqThenCount, code) == expected
     end
 
     test "uniq following a transform step leaves the prefix untouched" do
@@ -84,7 +75,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoUniqThenCount, code) == expected
     end
 
     test "head-form uniq carries its source into MapSet.new" do
@@ -104,7 +95,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoUniqThenCount, code) == expected
     end
 
     test "trailing steps after the count are preserved" do
@@ -130,7 +121,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoUniqThenCount, code) == expected
     end
   end
 
@@ -145,7 +136,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUniqThenCount, code) == code
     end
 
     test "Enum.uniq piped into Enum.map" do
@@ -159,7 +150,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUniqThenCount, code) == code
     end
 
     test "Enum.uniq piped into Enum.count(predicate)" do
@@ -173,7 +164,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoUniqThenCount, code) == code
     end
   end
 
@@ -189,7 +180,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoUniqThenCount, fix(NoUniqThenCount, code)) == []
     end
 
     test "fixed code is valid Elixir" do
@@ -201,7 +192,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(NoUniqThenCount, code))
     end
   end
 end

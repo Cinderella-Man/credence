@@ -10,7 +10,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchEquivalenceTest do
   head `f(0)` does not, which would change dispatch. (That narrowing is pinned by
   the check/fix tests' negative cases.)
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoGuardEqualityForPatternMatch

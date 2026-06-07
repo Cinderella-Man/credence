@@ -1,17 +1,7 @@
 defmodule Credence.Pattern.NoListDuplicateFlattenFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListDuplicateFlatten
-
-  defp fix(code) do
-    ast = Sourceror.parse_string!(code)
-    patches = NoListDuplicateFlatten.fix_patches(ast, source: code)
-
-    case patches do
-      [] -> code
-      _ -> Sourceror.patch_string(code, patches)
-    end
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # FIXABLE — rewrites to Enum.flat_map(1..n, fn _ -> list end)
@@ -27,7 +17,7 @@ defmodule Credence.Pattern.NoListDuplicateFlattenFixTest do
       Enum.flat_map(1..3, fn _ -> list end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoListDuplicateFlatten, code) == expected
     end
 
     test "piped form" do
@@ -41,7 +31,7 @@ defmodule Credence.Pattern.NoListDuplicateFlattenFixTest do
       Enum.flat_map(1..3, fn _ -> list end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoListDuplicateFlatten, code) == expected
     end
   end
 
@@ -55,7 +45,7 @@ defmodule Credence.Pattern.NoListDuplicateFlattenFixTest do
       List.flatten(List.duplicate(list, 3))
       """
 
-      assert fix(code) == code
+      assert fix(NoListDuplicateFlatten, code) == code
     end
 
     test "variable repetition count" do
@@ -63,7 +53,7 @@ defmodule Credence.Pattern.NoListDuplicateFlattenFixTest do
       Enum.concat(List.duplicate(list, n))
       """
 
-      assert fix(code) == code
+      assert fix(NoListDuplicateFlatten, code) == code
     end
 
     test "zero literal count" do
@@ -71,7 +61,7 @@ defmodule Credence.Pattern.NoListDuplicateFlattenFixTest do
       Enum.concat(List.duplicate(list, 0))
       """
 
-      assert fix(code) == code
+      assert fix(NoListDuplicateFlatten, code) == code
     end
 
     test "non-variable duplicated value" do
@@ -79,7 +69,7 @@ defmodule Credence.Pattern.NoListDuplicateFlattenFixTest do
       Enum.concat(List.duplicate([1, 2, 3], 3))
       """
 
-      assert fix(code) == code
+      assert fix(NoListDuplicateFlatten, code) == code
     end
   end
 end

@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoFilterThenCountEquivalenceTest do
   Tier 1 (expression). `coll |> Enum.filter(pred) |> Enum.count()` → `Enum.count(coll, pred)`.
   Both apply the predicate once per element (same order) and count the matches.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoFilterThenCount

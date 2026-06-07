@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoListFoldFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListFold
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListFold.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoListFold, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix foldl" do
     test "replaces direct List.foldl with Enum.reduce" do
@@ -25,7 +13,7 @@ defmodule Credence.Pattern.NoListFoldFixTest do
       Enum.reduce(list, 0, fn x, acc -> acc + x end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoListFold, input) == expected
     end
 
     test "replaces piped List.foldl with Enum.reduce" do
@@ -37,7 +25,7 @@ defmodule Credence.Pattern.NoListFoldFixTest do
       list |> Enum.reduce(0, fn x, acc -> acc + x end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoListFold, input) == expected
     end
   end
 
@@ -51,7 +39,7 @@ defmodule Credence.Pattern.NoListFoldFixTest do
       Enum.reduce(Enum.reverse(list), [], fn x, acc -> [x | acc] end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoListFold, input) == expected
     end
 
     test "replaces piped List.foldr with Enum.reverse + Enum.reduce" do
@@ -63,7 +51,7 @@ defmodule Credence.Pattern.NoListFoldFixTest do
       list |> Enum.reverse() |> Enum.reduce([], fn x, acc -> [x | acc] end)
       """
 
-      assert fix(input) == expected
+      assert fix(NoListFold, input) == expected
     end
   end
 
@@ -73,7 +61,7 @@ defmodule Credence.Pattern.NoListFoldFixTest do
       Enum.reduce(list, 0, fn x, acc -> acc + x end)
       """
 
-      assert fix(code) == code
+      assert fix(NoListFold, code) == code
     end
 
     test "preserves surrounding code" do
@@ -95,7 +83,7 @@ defmodule Credence.Pattern.NoListFoldFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoListFold, input) == expected
     end
   end
 
@@ -105,7 +93,7 @@ defmodule Credence.Pattern.NoListFoldFixTest do
       List.foldl(list, 0, fn x, acc -> acc + x end)
       """
 
-      assert check(fix(code)) == []
+      assert check(NoListFold, fix(NoListFold, code)) == []
     end
 
     test "fixed foldr produces no issues" do
@@ -113,7 +101,7 @@ defmodule Credence.Pattern.NoListFoldFixTest do
       List.foldr(list, [], fn x, acc -> [x | acc] end)
       """
 
-      assert check(fix(code)) == []
+      assert check(NoListFold, fix(NoListFold, code)) == []
     end
   end
 end

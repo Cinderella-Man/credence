@@ -1,9 +1,7 @@
 defmodule Credence.Pattern.NoEmptyMapNewFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoEmptyMapNew
-
-  defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(NoEmptyMapNew, code, [])
 
   test "replaces Map.new() with %{}" do
     code = """
@@ -14,7 +12,7 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
     memo = %{}
     """
 
-    assert fix(code) == expected
+    assert fix(NoEmptyMapNew, code) == expected
   end
 
   test "replaces Map.new() in a function argument" do
@@ -26,7 +24,7 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
     solve(coins, amount, %{})
     """
 
-    assert fix(code) == expected
+    assert fix(NoEmptyMapNew, code) == expected
   end
 
   test "replaces Map.new without parentheses" do
@@ -38,7 +36,7 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
     memo = %{}
     """
 
-    assert fix(code) == expected
+    assert fix(NoEmptyMapNew, code) == expected
   end
 
   test "replaces standalone Map.new() on the left of a pipe" do
@@ -50,7 +48,7 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
     %{} |> foo()
     """
 
-    assert fix(code) == expected
+    assert fix(NoEmptyMapNew, code) == expected
   end
 
   test "replaces every occurrence and preserves surrounding code" do
@@ -72,7 +70,7 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
     end
     """
 
-    assert fix(code) == expected
+    assert fix(NoEmptyMapNew, code) == expected
   end
 
   describe "no-op" do
@@ -81,7 +79,7 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
       list |> Map.new()
       """
 
-      assert fix(code) == code
+      assert fix(NoEmptyMapNew, code) == code
     end
 
     test "leaves Map.new(enum) alone" do
@@ -89,7 +87,7 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
       Map.new(pairs)
       """
 
-      assert fix(code) == code
+      assert fix(NoEmptyMapNew, code) == code
     end
 
     test "leaves the %{} literal alone" do
@@ -97,19 +95,19 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
       memo = %{}
       """
 
-      assert fix(code) == code
+      assert fix(NoEmptyMapNew, code) == code
     end
   end
 
   describe "fix round-trip produces no issues" do
     test "single assignment" do
-      fixed = fix("memo = Map.new()\n")
+      fixed = fix(NoEmptyMapNew, "memo = Map.new()\n")
       ast = Sourceror.parse_string!(fixed)
       assert NoEmptyMapNew.check(ast, []) == []
     end
 
     test "function argument" do
-      fixed = fix("solve(coins, amount, Map.new())\n")
+      fixed = fix(NoEmptyMapNew, "solve(coins, amount, Map.new())\n")
       ast = Sourceror.parse_string!(fixed)
       assert NoEmptyMapNew.check(ast, []) == []
     end

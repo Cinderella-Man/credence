@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoExplicitProductReduce
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoExplicitProductReduce.check(ast, [])
-  end
 
   describe "flags explicit product reductions" do
     test "detects x * acc pattern inside reduce" do
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoExplicitProductReduce, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_explicit_product_reduce
     end
@@ -36,7 +31,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoExplicitProductReduce, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_explicit_product_reduce
     end
@@ -50,7 +45,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoExplicitProductReduce, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_explicit_product_reduce
     end
@@ -60,7 +55,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       Enum.reduce(list, 1, fn x, acc -> x * acc end)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoExplicitProductReduce, code)) == 1
     end
 
     test "detects multiple explicit product calls inside separate reduces" do
@@ -74,7 +69,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoExplicitProductReduce, code)) == 2
     end
   end
 
@@ -88,7 +83,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     test "sum reductions" do
@@ -100,7 +95,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     test "reduce with non-1 initial accumulator" do
@@ -112,7 +107,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     test "reduce with float 1.0 accumulator (would change result type)" do
@@ -120,7 +115,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       Enum.reduce(list, 1.0, fn x, acc -> x * acc end)
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     test "map-based reductions" do
@@ -132,7 +127,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     test "multiplication outside reduce" do
@@ -144,7 +139,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     test "product of something other than the two reducer params" do
@@ -152,7 +147,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       Enum.reduce(list, 1, fn x, acc -> x * x end)
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     test "multiplication by a literal, not the accumulator" do
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       Enum.reduce(list, 1, fn x, acc -> x * 2 end)
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     # Narrowed-away unsafe case: `x()` is a zero-arity CALL to a function named
@@ -171,7 +166,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       Enum.reduce(list, 1, fn x, acc -> x() * acc end)
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     # Narrowed-away unsafe case: a fn with two identically-named params requires
@@ -182,7 +177,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       Enum.reduce(list, 1, fn x, x -> x * x end)
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
 
     test "no issue: multi-statement reducer body" do
@@ -193,7 +188,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
       end)
       """
 
-      assert check(code) == []
+      assert check(NoExplicitProductReduce, code) == []
     end
   end
 end

@@ -12,7 +12,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyEquivalenceTest do
   preserve — it always crashes — so this is a correction, not a behaviour-preserving
   rewrite. See `mark_equivalence_repair/1`.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
   import Credence.BehaviourEquivalence
 
   test "no_keyword_get_integer_key: repair — integer key to Keyword.get/2 crashes on every input" do

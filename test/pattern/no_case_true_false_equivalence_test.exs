@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseEquivalenceTest do
   The `true`/`false` clauses require a boolean subject, so the `if` is exactly
   equivalent. Input set drives the boolean both ways.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoCaseTrueFalse

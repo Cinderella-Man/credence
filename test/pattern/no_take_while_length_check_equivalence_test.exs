@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckEquivalenceTest do
   of `pred`-true elements and short-circuit identically. Input set drives the
   predicate to pass-all, fail-early, and fail-first.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoTakeWhileLengthCheck

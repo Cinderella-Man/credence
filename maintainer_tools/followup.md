@@ -57,9 +57,11 @@ Items pulled out of the candidate queue that need dedicated human attention
   - `test/pattern/no_filter_then_map_test.exs`
 - Reason: filter|>map is two-pass (all preds, then all transforms); `for` interleaves, so on admitted inputs like [2,:sym] (pred rem(x,2)==0, transform hd(x)) it raises a different exception (ArithmeticError vs ArgumentError); destructuring patterns also turn a FunctionClauseError into a silent skip — no safe narrowable core under :strict.
 
-## no_grapheme_palindrome_check — 2026-06-04
+## no_grapheme_palindrome — 2026-06-04
+- Renamed 2026-06-07 from `no_grapheme_palindrome_check` (dropped the redundant
+  `Check` suffix; atom is now `:no_grapheme_palindrome`).
 - Files:
-  - `lib/pattern/no_grapheme_palindrome_check.ex`
+  - `lib/pattern/no_grapheme_palindrome.ex`
   - `test/pattern/no_grapheme_palindrome_check_test.exs`
 - Reason: delta re-adds String.to_charlist form (codepoint reverse) and rewrites it to String.reverse (grapheme reverse) — diverges on multi-codepoint graphemes, behavior-changing; accepted version deliberately excluded this
 

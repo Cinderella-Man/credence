@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.UnnecessaryGraphemeChunking
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    UnnecessaryGraphemeChunking.check(ast, [])
-  end
 
   describe "check — positive cases" do
     test "flags graphemes + chunk_every(n, 1, :discard) + &Enum.join/1" do
@@ -21,7 +16,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(UnnecessaryGraphemeChunking, code)
       assert length(issues) == 1
       assert hd(issues).rule == :unnecessary_grapheme_chunking
     end
@@ -38,7 +33,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(UnnecessaryGraphemeChunking, code)) == 1
     end
 
     test "flags with fn x -> Enum.join(x, \"\") end" do
@@ -53,7 +48,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(UnnecessaryGraphemeChunking, code)) == 1
     end
 
     test "flags with &Enum.join(&1) capture syntax" do
@@ -68,7 +63,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(UnnecessaryGraphemeChunking, code)) == 1
     end
 
     test "flags with implicit discard (no leftover arg)" do
@@ -83,7 +78,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(UnnecessaryGraphemeChunking, code)) == 1
     end
 
     test "flags with literal chunk size" do
@@ -98,7 +93,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(UnnecessaryGraphemeChunking, code)) == 1
     end
 
     test "flags with longer pipeline before graphemes" do
@@ -115,7 +110,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(UnnecessaryGraphemeChunking, code)) == 1
     end
 
     test "flags inside nested anonymous function" do
@@ -132,14 +127,14 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(UnnecessaryGraphemeChunking, code)) == 1
     end
 
     test "flags one-liner form" do
       code =
         "def ngrams(s, n), do: s |> String.graphemes() |> Enum.chunk_every(n, 1, :discard) |> Enum.map(&Enum.join/1)"
 
-      assert length(check(code)) == 1
+      assert length(check(UnnecessaryGraphemeChunking, code)) == 1
     end
 
     test "flags multiple pipelines in same module" do
@@ -153,7 +148,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(UnnecessaryGraphemeChunking, code)) == 2
     end
   end
 
@@ -165,7 +160,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
 
     test "does not flag graphemes without chunking" do
@@ -175,7 +170,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
 
     test "does not flag chunking without graphemes" do
@@ -185,7 +180,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
 
     test "does not flag String.codepoints variant" do
@@ -200,7 +195,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
 
     test "does not flag Enum.chunk_by variant" do
@@ -215,7 +210,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
 
     test "does not flag non-join map" do
@@ -230,7 +225,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
 
     test "does not flag step != 1" do
@@ -245,7 +240,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
 
     test "does not flag :trim leftover option" do
@@ -260,7 +255,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
 
     test "does not flag when intermediate step between chunk and map" do
@@ -276,7 +271,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
 
     test "does not flag graphemes stored then chunked" do
@@ -291,7 +286,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(UnnecessaryGraphemeChunking, code) == []
     end
   end
 end

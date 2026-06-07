@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoDoubleSortSameListCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoDoubleSortSameList
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoDoubleSortSameList.check(ast, [])
-  end
 
   describe "NoDoubleSortSameList" do
     test "passes code that sorts once and reverses" do
@@ -21,7 +16,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDoubleSortSameList, code) == []
     end
 
     test "passes code that sorts a single direction" do
@@ -33,7 +28,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDoubleSortSameList, code) == []
     end
 
     test "passes code that sorts different lists" do
@@ -47,7 +42,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDoubleSortSameList, code) == []
     end
 
     test "detects Enum.sort(x) and Enum.sort(x, :desc) on same variable" do
@@ -63,7 +58,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoDoubleSortSameList, code)
 
       assert length(issues) == 1
       issue = hd(issues)
@@ -87,7 +82,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoDoubleSortSameList, code)
 
       assert length(issues) == 1
       assert hd(issues).rule == :no_double_sort_same_list
@@ -111,7 +106,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoDoubleSortSameList, code)
 
       assert length(issues) == 1
       assert hd(issues).message =~ "arr"
@@ -128,7 +123,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoDoubleSortSameList, code) == []
     end
   end
 end

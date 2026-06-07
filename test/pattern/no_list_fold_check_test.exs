@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoListFoldCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListFold
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListFold.check(ast, [])
-  end
 
   describe "NoListFold" do
     test "detects List.foldl/3" do
@@ -24,7 +19,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoListFold, code)
       assert issue.rule == :no_list_fold
 
       assert issue.message =~ "List.foldl/3"
@@ -40,7 +35,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoListFold, code)
       assert issue.message =~ "List.foldr/3"
       assert issue.message =~ "Enum.reduce/3"
       assert issue.message =~ "reverse"
@@ -59,7 +54,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListFold, code)
       assert length(issues) == 2
       rules = Enum.map(issues, & &1.rule)
       assert Enum.all?(rules, &(&1 == :no_list_fold))
@@ -74,7 +69,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoListFold, code)
       assert issue.message =~ "List.foldl/3"
     end
 
@@ -89,7 +84,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListFold, code) == []
     end
 
     test "does not flag :lists.foldl (Erlang direct call)" do
@@ -101,7 +96,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListFold, code) == []
     end
 
     test "does not flag List.first or other List functions" do
@@ -113,7 +108,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListFold, code) == []
     end
 
     test "does not flag custom module named List" do
@@ -125,7 +120,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListFold, code) == []
     end
 
     test "does not flag unrelated code" do
@@ -139,7 +134,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListFold, code) == []
     end
   end
 
@@ -149,7 +144,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       List.foldl(list, 0, fn x, acc -> acc + x end)
       """
 
-      issues = check(code)
+      issues = check(NoListFold, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_list_fold
       assert hd(issues).message =~ "foldl"
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       List.foldr(list, [], fn x, acc -> [x | acc] end)
       """
 
-      issues = check(code)
+      issues = check(NoListFold, code)
       assert length(issues) == 1
       assert hd(issues).message =~ "foldr"
     end
@@ -170,7 +165,7 @@ defmodule Credence.Pattern.NoListFoldCheckTest do
       Enum.reduce(list, 0, fn x, acc -> acc + x end)
       """
 
-      assert check(code) == []
+      assert check(NoListFold, code) == []
     end
   end
 end

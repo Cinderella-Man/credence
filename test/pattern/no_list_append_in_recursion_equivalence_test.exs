@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionEquivalenceTest do
   (O(n²)) is rewritten to prepend `[x | acc]` and reverse at the base case — same
   output order, O(n). Input set covers empty and several elements.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoListAppendInRecursion
@@ -20,7 +20,13 @@ defmodule Credence.Pattern.NoListAppendInRecursionEquivalenceTest do
     assert_equivalent_module(@before,
       rule: NoListAppendInRecursion,
       call: {:build, 2},
-      inputs: [{[], []}, {[1], []}, {[1, 2, 3], []}, {[-1, -2, -3], []}, {Enum.to_list(1..20), []}]
+      inputs: [
+        {[], []},
+        {[1], []},
+        {[1, 2, 3], []},
+        {[-1, -2, -3], []},
+        {Enum.to_list(1..20), []}
+      ]
     )
   end
 end

@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoIsPrefixForNonGuard
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoIsPrefixForNonGuard.check(ast, [])
-  end
 
   describe "check/2" do
     # --- POSITIVE CASES (should flag) ---
@@ -18,7 +13,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIsPrefixForNonGuard, code)
       assert issue.rule == :no_is_prefix_for_non_guard
 
       assert issue.message =~ "is_palindrome"
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIsPrefixForNonGuard, code)
       assert issue.message =~ "defp"
       assert issue.message =~ "palindrome?"
     end
@@ -47,7 +42,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIsPrefixForNonGuard, code)
       assert issue.message =~ "is_valid_ipv4"
       assert issue.message =~ "valid_ipv4?"
     end
@@ -61,7 +56,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoIsPrefixForNonGuard, code)
       assert length(issues) == 3
       assert Enum.all?(issues, &(&1.message =~ "power_of_two?"))
     end
@@ -76,7 +71,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIsPrefixForNonGuard, code)
       assert issue.message =~ "is_anagram"
       assert issue.message =~ "anagram?"
     end
@@ -90,7 +85,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIsPrefixForNonGuard, code)
       assert issue.message =~ "is_permutation"
       assert issue.message =~ "permutation?"
     end
@@ -105,7 +100,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIsPrefixForNonGuard, code)
       assert issue.message =~ "perfect_square?"
     end
 
@@ -116,7 +111,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIsPrefixForNonGuard, code)
       assert issue.message =~ "valid_email?"
     end
 
@@ -129,7 +124,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIsPrefixForNonGuard, code)
       assert issue.rule == :no_is_prefix_for_non_guard
       assert issue.message =~ "is_empty?"
       assert issue.message =~ "empty?"
@@ -145,7 +140,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoIsPrefixForNonGuard, code)
       assert issue.rule == :no_is_prefix_for_non_guard
       assert issue.message =~ "is_palindrome?"
       assert issue.message =~ "palindrome?"
@@ -161,7 +156,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIsPrefixForNonGuard, code) == []
     end
 
     test "does not flag defguard" do
@@ -171,7 +166,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIsPrefixForNonGuard, code) == []
     end
 
     test "does not flag defguardp" do
@@ -181,7 +176,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIsPrefixForNonGuard, code) == []
     end
 
     test "does not flag defmacro" do
@@ -193,7 +188,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIsPrefixForNonGuard, code) == []
     end
 
     test "does not flag functions without is_ prefix" do
@@ -204,7 +199,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIsPrefixForNonGuard, code) == []
     end
 
     test "does not flag Erlang guard BIFs (is_list, is_binary, ...)" do
@@ -215,7 +210,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIsPrefixForNonGuard, code) == []
     end
 
     test "does not flag non-function nodes" do
@@ -226,7 +221,7 @@ defmodule Credence.Pattern.NoIsPrefixForNonGuardCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoIsPrefixForNonGuard, code) == []
     end
   end
 end

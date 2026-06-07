@@ -6,7 +6,7 @@ defmodule Credence.Pattern.HallucinatedGuardEquivalenceTest do
   is no runnable "before" to compare against. No behaviour-equivalence input set
   applies; the value is making invalid code compile.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
 

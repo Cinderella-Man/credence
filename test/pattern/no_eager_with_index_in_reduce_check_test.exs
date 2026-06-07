@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoEagerWithIndexInReduce
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoEagerWithIndexInReduce.check(ast, [])
-  end
 
   describe "check/2" do
     # --- POSITIVE CASES ---
@@ -23,7 +18,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEagerWithIndexInReduce, code)
 
       assert length(issues) == 1
       issue = hd(issues)
@@ -48,7 +43,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoEagerWithIndexInReduce, code)
 
       assert length(issues) == 1
       assert hd(issues).rule == :no_eager_with_index_in_reduce
@@ -66,7 +61,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoEagerWithIndexInReduce, code)) == 1
     end
 
     test "detects multiple violations in same module" do
@@ -77,7 +72,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoEagerWithIndexInReduce, code)) == 2
     end
 
     # --- NEGATIVE CASES ---
@@ -93,7 +88,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoEagerWithIndexInReduce, code) == []
     end
 
     test "passes index tracked in accumulator" do
@@ -107,7 +102,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoEagerWithIndexInReduce, code) == []
     end
 
     test "passes Enum.with_index used without reduce" do
@@ -119,7 +114,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoEagerWithIndexInReduce, code) == []
     end
 
     test "passes Enum.with_index piped into Enum.map (not reduce)" do
@@ -133,7 +128,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoEagerWithIndexInReduce, code) == []
     end
 
     test "passes Enum.with_index piped into Enum.each" do
@@ -147,7 +142,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoEagerWithIndexInReduce, code) == []
     end
   end
 end

@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateEquivalenceTest do
   The identity `Map.update` only touches `key`, which is then dropped, so it is
   dead. Input set covers key present (int/float value) and key absent.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoDeadMapUpdate

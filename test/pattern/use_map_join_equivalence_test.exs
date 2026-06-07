@@ -9,7 +9,7 @@ defmodule Credence.Pattern.UseMapJoinEquivalenceTest do
   hole (a recording fn) and assert the call-trace (order + count) is identical
   between original and fixed.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.UseMapJoin

@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameEquivalenceTest do
   behaviour-preserving for the computation — every call still resolves to the same
   body. (The function's name is the only observable that changes.)
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
   import Credence.BehaviourEquivalence
 
   test "no_underscore_function_name: cosmetic — whole-module function rename" do

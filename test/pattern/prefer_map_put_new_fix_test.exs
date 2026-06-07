@@ -1,10 +1,7 @@
 defmodule Credence.Pattern.PreferMapPutNewFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferMapPutNew
-  alias Credence.RuleHelpers
-
-  defp fix(code), do: RuleHelpers.apply_rule_fix(PreferMapPutNew, code)
 
   describe "fix rewrites the if/unless form into Map.put_new" do
     test "standard if-has_key-else-put with surrounding binding" do
@@ -30,7 +27,7 @@ defmodule Credence.Pattern.PreferMapPutNewFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferMapPutNew, code) == expected
     end
 
     test "inside Enum.reduce" do
@@ -54,7 +51,7 @@ defmodule Credence.Pattern.PreferMapPutNewFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferMapPutNew, code) == expected
     end
 
     test "negated condition with swapped branches" do
@@ -74,7 +71,7 @@ defmodule Credence.Pattern.PreferMapPutNewFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferMapPutNew, code) == expected
     end
 
     test "unless variant" do
@@ -94,7 +91,7 @@ defmodule Credence.Pattern.PreferMapPutNewFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferMapPutNew, code) == expected
     end
 
     test "scalar literal value" do
@@ -114,7 +111,7 @@ defmodule Credence.Pattern.PreferMapPutNewFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(PreferMapPutNew, code) == expected
     end
   end
 
@@ -130,7 +127,7 @@ defmodule Credence.Pattern.PreferMapPutNewFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferMapPutNew, code) == code
     end
 
     test "double-negated condition is left unchanged" do
@@ -144,7 +141,7 @@ defmodule Credence.Pattern.PreferMapPutNewFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferMapPutNew, code) == code
     end
 
     test "unless with negated condition is left unchanged" do
@@ -158,7 +155,7 @@ defmodule Credence.Pattern.PreferMapPutNewFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferMapPutNew, code) == code
     end
 
     test "already Map.put_new is left unchanged" do
@@ -168,7 +165,7 @@ defmodule Credence.Pattern.PreferMapPutNewFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(PreferMapPutNew, code) == code
     end
   end
 end

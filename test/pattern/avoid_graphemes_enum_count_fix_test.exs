@@ -1,32 +1,29 @@
 defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.AvoidGraphemesEnumCount
 
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    AvoidGraphemesEnumCount.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(AvoidGraphemesEnumCount, code, [])
-  end
-
   describe "no predicate → String.length" do
     test "nested call" do
-      assert fix("Enum.count(String.graphemes(str))") == "String.length(str)"
+      assert fix(AvoidGraphemesEnumCount, "Enum.count(String.graphemes(str))") ==
+               "String.length(str)"
     end
 
     test "two-step pipe" do
-      assert fix("String.graphemes(str) |> Enum.count()") == "String.length(str)"
+      assert fix(AvoidGraphemesEnumCount, "String.graphemes(str) |> Enum.count()") ==
+               "String.length(str)"
     end
 
     test "three-step pipe collapses to direct call" do
-      assert fix("str |> String.graphemes() |> Enum.count()") == "String.length(str)"
+      assert fix(AvoidGraphemesEnumCount, "str |> String.graphemes() |> Enum.count()") ==
+               "String.length(str)"
     end
 
     test "keeps upstream pipeline, replaces last two steps" do
-      assert fix("str |> String.trim() |> String.graphemes() |> Enum.count()") ==
+      assert fix(
+               AvoidGraphemesEnumCount,
+               "str |> String.trim() |> String.graphemes() |> Enum.count()"
+             ) ==
                "str |> String.trim() |> String.length()"
     end
   end
@@ -34,22 +31,22 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
   describe "no-ops" do
     test "String.length unchanged" do
       code = "String.length(str)"
-      assert fix(code) == code
+      assert fix(AvoidGraphemesEnumCount, code) == code
     end
 
     test "Enum.count on non-graphemes unchanged" do
       code = "Enum.count(list)"
-      assert fix(code) == code
+      assert fix(AvoidGraphemesEnumCount, code) == code
     end
 
     test "predicate case passes through unchanged" do
       code = "String.graphemes(str) |> Enum.count(&(&1 == \"a\"))"
-      assert fix(code) == code
+      assert fix(AvoidGraphemesEnumCount, code) == code
     end
 
     test "nested predicate case passes through unchanged" do
       code = "Enum.count(String.graphemes(str), &(&1 == \"a\"))"
-      assert fix(code) == code
+      assert fix(AvoidGraphemesEnumCount, code) == code
     end
   end
 
@@ -63,7 +60,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(AvoidGraphemesEnumCount, fix(AvoidGraphemesEnumCount, code)) == []
     end
 
     test "fixed code is valid Elixir" do
@@ -74,7 +71,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(AvoidGraphemesEnumCount, code))
     end
   end
 end

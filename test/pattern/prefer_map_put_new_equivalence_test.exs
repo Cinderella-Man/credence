@@ -7,7 +7,7 @@ defmodule Credence.Pattern.PreferMapPutNewEquivalenceTest do
   observationally identical to the if/else's lazy evaluation. Input set covers key
   present (int/float value) and absent.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.PreferMapPutNew
@@ -24,7 +24,13 @@ defmodule Credence.Pattern.PreferMapPutNewEquivalenceTest do
     assert_equivalent(@expr,
       rule: PreferMapPutNew,
       vars: [:map, :key, :value],
-      inputs: [{%{a: 1}, :a, 9}, {%{a: 1.0}, :a, 9}, {%{}, :a, 9}, {%{b: 2}, :a, 9}, {%{"k" => 5}, "k", 7}]
+      inputs: [
+        {%{a: 1}, :a, 9},
+        {%{a: 1.0}, :a, 9},
+        {%{}, :a, 9},
+        {%{b: 2}, :a, 9},
+        {%{"k" => 5}, "k", 7}
+      ]
     )
   end
 end

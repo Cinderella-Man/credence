@@ -1,30 +1,21 @@
 defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoKeywordGetIntegerKey
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoKeywordGetIntegerKey.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoKeywordGetIntegerKey, code, [])
-  end
 
   # ── index -1 → List.last ──────────────────────────────────────
 
   describe "index -1 → List.last" do
     test "direct call" do
-      assert fix("Keyword.get(acc, -1)") == "List.last(acc)"
+      assert fix(NoKeywordGetIntegerKey, "Keyword.get(acc, -1)") == "List.last(acc)"
     end
 
     test "in assignment" do
-      assert fix("prev = Keyword.get(acc, -1)") == "prev = List.last(acc)"
+      assert fix(NoKeywordGetIntegerKey, "prev = Keyword.get(acc, -1)") == "prev = List.last(acc)"
     end
 
     test "piped" do
-      assert fix("acc |> Keyword.get(-1)") == "acc |> List.last()"
+      assert fix(NoKeywordGetIntegerKey, "acc |> Keyword.get(-1)") == "acc |> List.last()"
     end
   end
 
@@ -32,11 +23,11 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
 
   describe "index 0 → List.first" do
     test "direct call" do
-      assert fix("Keyword.get(list, 0)") == "List.first(list)"
+      assert fix(NoKeywordGetIntegerKey, "Keyword.get(list, 0)") == "List.first(list)"
     end
 
     test "piped" do
-      assert fix("list |> Keyword.get(0)") == "list |> List.first()"
+      assert fix(NoKeywordGetIntegerKey, "list |> Keyword.get(0)") == "list |> List.first()"
     end
   end
 
@@ -44,19 +35,19 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
 
   describe "general integer → Enum.at" do
     test "positive index" do
-      assert fix("Keyword.get(list, 3)") == "Enum.at(list, 3)"
+      assert fix(NoKeywordGetIntegerKey, "Keyword.get(list, 3)") == "Enum.at(list, 3)"
     end
 
     test "negative index" do
-      assert fix("Keyword.get(list, -2)") == "Enum.at(list, -2)"
+      assert fix(NoKeywordGetIntegerKey, "Keyword.get(list, -2)") == "Enum.at(list, -2)"
     end
 
     test "piped positive" do
-      assert fix("list |> Keyword.get(3)") == "list |> Enum.at(3)"
+      assert fix(NoKeywordGetIntegerKey, "list |> Keyword.get(3)") == "list |> Enum.at(3)"
     end
 
     test "piped negative" do
-      assert fix("list |> Keyword.get(-2)") == "list |> Enum.at(-2)"
+      assert fix(NoKeywordGetIntegerKey, "list |> Keyword.get(-2)") == "list |> Enum.at(-2)"
     end
   end
 
@@ -82,11 +73,12 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoKeywordGetIntegerKey, code) == expected
     end
 
     test "the actual pattern from the LLM log" do
-      assert fix("prev_value = Keyword.get(acc, -1)") == "prev_value = List.last(acc)"
+      assert fix(NoKeywordGetIntegerKey, "prev_value = Keyword.get(acc, -1)") ==
+               "prev_value = List.last(acc)"
     end
   end
 
@@ -95,22 +87,22 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
   describe "no-ops" do
     test "atom key unchanged" do
       code = "Keyword.get(opts, :name)"
-      assert fix(code) == code
+      assert fix(NoKeywordGetIntegerKey, code) == code
     end
 
     test "variable key unchanged" do
       code = "Keyword.get(opts, key)"
-      assert fix(code) == code
+      assert fix(NoKeywordGetIntegerKey, code) == code
     end
 
     test "Map.get with integer key unchanged" do
       code = "Map.get(map, -1)"
-      assert fix(code) == code
+      assert fix(NoKeywordGetIntegerKey, code) == code
     end
 
     test "no Keyword.get at all" do
       code = "List.last(acc)"
-      assert fix(code) == code
+      assert fix(NoKeywordGetIntegerKey, code) == code
     end
   end
 
@@ -126,7 +118,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoKeywordGetIntegerKey, fix(NoKeywordGetIntegerKey, code)) == []
     end
 
     test "fixed code is valid Elixir" do
@@ -138,7 +130,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(NoKeywordGetIntegerKey, code))
     end
   end
 end

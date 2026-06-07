@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateEquivalenceTest do
   `{:ok, n}` branch's `Map.update!` to the equivalent direct put. Input set covers
   key present (int/float value) and absent.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoFetchThenUpdate

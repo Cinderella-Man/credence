@@ -6,7 +6,7 @@ defmodule Credence.Pattern.PreferGuardOverIfEquivalenceTest do
   condition contains a call that could raise (verified: `if hd(x) > 0` is left
   alone), so moving it into a guard can't swallow an error or change a truthiness.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.PreferGuardOverIf

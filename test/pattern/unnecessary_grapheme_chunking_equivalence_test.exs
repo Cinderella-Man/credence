@@ -10,7 +10,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingEquivalenceTest do
   emitted bogus slices instead of `[]` (see docs/07). The input set includes
   `len < n`, `len == n`, and a multi-codepoint grapheme string.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.UnnecessaryGraphemeChunking

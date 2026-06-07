@@ -1,10 +1,7 @@
 defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoFetchThenUpdate
-  alias Credence.RuleHelpers
-
-  defp fix(code), do: RuleHelpers.apply_rule_fix(NoFetchThenUpdate, code)
 
   describe "rewrites the safe core" do
     test "Map.update! -> Map.put applying the captured fun to the bound value" do
@@ -36,7 +33,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoFetchThenUpdate, code) == expected
     end
 
     test "Map.update/4 -> Map.put (default dropped, fun applied to bound value)" do
@@ -68,7 +65,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoFetchThenUpdate, code) == expected
     end
 
     test "literal atom key" do
@@ -94,7 +91,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(NoFetchThenUpdate, code) == expected
     end
   end
 
@@ -111,7 +108,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoFetchThenUpdate, code) == code
     end
 
     test "no-op when the :ok value is bound to _" do
@@ -126,7 +123,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoFetchThenUpdate, code) == code
     end
 
     test "no-op when the branch rebinds the map" do
@@ -145,7 +142,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoFetchThenUpdate, code) == code
     end
 
     test "no-op when the fetched map is a non-simple expression" do
@@ -160,7 +157,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoFetchThenUpdate, code) == code
     end
   end
 end

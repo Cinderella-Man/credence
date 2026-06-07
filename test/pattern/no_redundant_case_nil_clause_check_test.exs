@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantCaseNilClause
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRedundantCaseNilClause.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — should flag
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
 
   describe "flags redundant nil clause" do
     test "nil clause with identical wildcard body" do
-      assert flagged?("""
+      assert flagged?(NoRedundantCaseNilClause, """
              case Map.get(map, key) do
                nil ->
                  default_action()
@@ -32,7 +24,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "single-line bodies" do
-      assert flagged?(~S"""
+      assert flagged?(NoRedundantCaseNilClause, ~S"""
              case x do
                nil -> 0
                n when n > 0 -> n
@@ -42,7 +34,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "multi-line identical bodies" do
-      assert flagged?("""
+      assert flagged?(NoRedundantCaseNilClause, """
              case Map.get(m, k) do
                nil ->
                  a = compute_default()
@@ -60,7 +52,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "piped case" do
-      assert flagged?("""
+      assert flagged?(NoRedundantCaseNilClause, """
              map
              |> Map.get(key)
              |> case do
@@ -72,7 +64,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "nested in function" do
-      assert flagged?("""
+      assert flagged?(NoRedundantCaseNilClause, """
              defp process(char, positions, idx) do
                case Map.get(positions, char) do
                  nil ->
@@ -95,7 +87,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
 
   describe "does not flag legitimate case statements" do
     test "nil and wildcard with different bodies" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case Map.get(map, key) do
                nil -> :not_found
                val when val > 0 -> {:ok, val}
@@ -105,7 +97,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "no guard on middle clause" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :a
                :special -> :b
@@ -115,7 +107,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "only two clauses" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :nothing
                val -> {:ok, val}
@@ -124,7 +116,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "four clauses" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :a
                :one -> :b
@@ -135,7 +127,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "nil is not first clause" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                val when val > 0 -> :positive
                nil -> :zero
@@ -145,7 +137,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "wildcard is not last clause" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :a
                _ -> :a
@@ -155,7 +147,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "guard clause uses different variable" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case Map.get(m, k) do
                nil -> :default
                x when x > 0 -> :positive
@@ -165,7 +157,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "no nil clause" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                :a -> 1
                n when n > 0 -> n
@@ -175,7 +167,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "pattern match instead of wildcard" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :a
                n when n > 0 -> :b
@@ -194,7 +186,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
 
   describe "does not flag non-bare-variable middle patterns" do
     test "tuple pattern middle" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :a
                {:ok, v} when v > 0 -> :b
@@ -204,7 +196,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "map pattern middle" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :a
                %{k: v} when v > 0 -> :b
@@ -214,7 +206,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "match pattern middle (= banned in guards)" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :a
                r = {:ok, v} when v > 0 -> :a
@@ -224,7 +216,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "bare wildcard middle (is_nil(_) would not compile)" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :a
                _ when external > 0 -> :b
@@ -234,7 +226,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseCheckTest do
     end
 
     test "underscore-prefixed middle variable" do
-      assert clean?("""
+      assert clean?(NoRedundantCaseNilClause, """
              case x do
                nil -> :a
                _x when external > 0 -> :b

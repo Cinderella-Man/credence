@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoFetchThenUpdate
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoFetchThenUpdate.check(ast, [])
-  end
 
   describe "flags the safe core" do
     test "Map.update! inside case Map.fetch :ok branch on same map and key" do
@@ -25,7 +20,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoFetchThenUpdate, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert %Issue{} = issue
@@ -48,7 +43,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoFetchThenUpdate, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_fetch_then_update
     end
@@ -65,7 +60,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(NoFetchThenUpdate, code)) == 1
     end
   end
 
@@ -82,7 +77,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFetchThenUpdate, code) == []
     end
 
     test "Map.update without a preceding Map.fetch" do
@@ -94,7 +89,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFetchThenUpdate, code) == []
     end
 
     test "Map.update on a different map variable" do
@@ -109,7 +104,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFetchThenUpdate, code) == []
     end
 
     test "Map.update on a different key" do
@@ -124,7 +119,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFetchThenUpdate, code) == []
     end
 
     # --- Deliberately dropped unsafe shapes (locked in as "no issue") ---
@@ -141,7 +136,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFetchThenUpdate, code) == []
     end
 
     test "no issue when the branch rebinds the map (= makes the rewrite unsafe)" do
@@ -160,7 +155,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFetchThenUpdate, code) == []
     end
 
     test "no issue when the update sits inside a nested fn" do
@@ -178,7 +173,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFetchThenUpdate, code) == []
     end
 
     test "no issue when the fetched map is a non-simple expression (call)" do
@@ -193,7 +188,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoFetchThenUpdate, code) == []
     end
   end
 end

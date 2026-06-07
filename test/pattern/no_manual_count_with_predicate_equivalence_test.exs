@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicateEquivalenceTest do
   and `==` predicate are preserved, so the count matches — including the value-kind
   case (`1 == 1.0` counts both, in both forms).
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoManualCountWithPredicate

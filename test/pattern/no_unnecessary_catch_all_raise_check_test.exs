@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoUnnecessaryCatchAllRaise
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoUnnecessaryCatchAllRaise.check(ast, [])
-  end
 
   describe "NoUnnecessaryCatchAllRaise" do
     # --- POSITIVE CASES (should flag) ---
@@ -20,7 +15,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUnnecessaryCatchAllRaise, code)
       assert issue.rule == :no_unnecessary_catch_all_raise
       assert issue.message =~ "missing_number/1"
       assert issue.message =~ "FunctionClauseError"
@@ -34,7 +29,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUnnecessaryCatchAllRaise, code)
       assert issue.message =~ "foo/1"
     end
 
@@ -46,7 +41,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUnnecessaryCatchAllRaise, code)
       assert issue.message =~ "defp"
       assert issue.message =~ "process/1"
     end
@@ -59,7 +54,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUnnecessaryCatchAllRaise, code)
       assert issue.message =~ "compute/2"
     end
 
@@ -73,7 +68,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUnnecessaryCatchAllRaise, code)
       assert issue.message =~ "run/1"
     end
 
@@ -85,7 +80,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoUnnecessaryCatchAllRaise, code)
       assert issue.message =~ "parse/1"
     end
 
@@ -97,7 +92,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoUnnecessaryCatchAllRaise, code)
       assert length(issues) == 2
       names = Enum.map(issues, & &1.message)
       assert Enum.any?(names, &(&1 =~ "foo/1"))
@@ -114,7 +109,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnnecessaryCatchAllRaise, code) == []
     end
 
     test "does not flag catch-all returning a default value" do
@@ -125,7 +120,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnnecessaryCatchAllRaise, code) == []
     end
 
     test "does not flag clauses with non-wildcard arguments" do
@@ -135,7 +130,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnnecessaryCatchAllRaise, code) == []
     end
 
     test "does not flag guarded wildcard clauses" do
@@ -147,7 +142,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnnecessaryCatchAllRaise, code) == []
     end
 
     test "does not flag zero-arity functions that raise" do
@@ -157,7 +152,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnnecessaryCatchAllRaise, code) == []
     end
 
     test "does not flag catch-all with logic before raise" do
@@ -171,7 +166,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnnecessaryCatchAllRaise, code) == []
     end
 
     test "does not flag pattern-matched arguments even if some are wildcards" do
@@ -181,7 +176,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnnecessaryCatchAllRaise, code) == []
     end
 
     test "does not flag normal functions without raise" do
@@ -191,7 +186,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoUnnecessaryCatchAllRaise, code) == []
     end
   end
 end

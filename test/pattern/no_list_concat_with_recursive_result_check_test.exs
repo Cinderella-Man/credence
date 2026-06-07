@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoListConcatWithRecursiveResult
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListConcatWithRecursiveResult.check(ast, [])
-  end
 
   describe "flags [literal] ++ recursive_result" do
     test "single-element literal ++ direct self-call" do
@@ -21,7 +16,8 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_list_concat_with_recursive_result}] = check(code)
+      assert [%Issue{rule: :no_list_concat_with_recursive_result}] =
+               check(NoListConcatWithRecursiveResult, code)
     end
 
     test "single-line clause with literal ++ self-call" do
@@ -32,7 +28,8 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_list_concat_with_recursive_result}] = check(code)
+      assert [%Issue{rule: :no_list_concat_with_recursive_result}] =
+               check(NoListConcatWithRecursiveResult, code)
     end
 
     test "literal ++ variable bound to a recursive call" do
@@ -47,7 +44,8 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_list_concat_with_recursive_result}] = check(code)
+      assert [%Issue{rule: :no_list_concat_with_recursive_result}] =
+               check(NoListConcatWithRecursiveResult, code)
     end
 
     test "only the literal-prefix clause is flagged in a multi-clause function" do
@@ -69,7 +67,8 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
 
       # The `flatten(h, []) ++ rest` clause (recursion on the left) is NOT
       # flagged — only the `[h] ++ rest` clause is.
-      assert [%Issue{rule: :no_list_concat_with_recursive_result}] = check(code)
+      assert [%Issue{rule: :no_list_concat_with_recursive_result}] =
+               check(NoListConcatWithRecursiveResult, code)
     end
   end
 
@@ -93,7 +92,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListConcatWithRecursiveResult, code) == []
     end
 
     test "recursive_result ++ [literal] (recursion on the left)" do
@@ -108,7 +107,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListConcatWithRecursiveResult, code) == []
     end
 
     test "empty list literal ++ recursive result" do
@@ -123,7 +122,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListConcatWithRecursiveResult, code) == []
     end
 
     test "non-recursive function" do
@@ -133,7 +132,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListConcatWithRecursiveResult, code) == []
     end
 
     test "recursive function without ++ in return" do
@@ -144,7 +143,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListConcatWithRecursiveResult, code) == []
     end
 
     test "literal ++ literal, no recursive operand" do
@@ -157,7 +156,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListConcatWithRecursiveResult, code) == []
     end
 
     test "acc ++ [expr] in tail-call position" do
@@ -169,7 +168,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       """
 
       # Handled by no_list_append_in_recursion, not here.
-      assert check(code) == []
+      assert check(NoListConcatWithRecursiveResult, code) == []
     end
 
     test "literal ++ recursive in non-return position" do
@@ -184,7 +183,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListConcatWithRecursiveResult, code) == []
     end
   end
 end

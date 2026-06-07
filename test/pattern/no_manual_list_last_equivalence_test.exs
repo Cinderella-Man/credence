@@ -10,7 +10,7 @@ defmodule Credence.Pattern.NoManualListLastEquivalenceTest do
   would silently return `nil` on `[]`, a real behaviour change). The input set uses
   non-empty lists to pin the value-preserving domain.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoManualListLast

@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoManualListLastCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualListLast
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoManualListLast.check(ast, [])
-  end
 
   describe "NoManualListLast" do
     test "detects the exact hand-rolled pattern" do
@@ -17,7 +12,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListLast, code)
       assert issue.rule == :no_manual_list_last
       assert issue.message =~ "get_last_element/1"
       assert issue.message =~ "List.last/1"
@@ -31,7 +26,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListLast, code)
       assert issue.message =~ "last_item/1"
     end
 
@@ -43,7 +38,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListLast, code)
       assert issue.message =~ "tail_val/1"
     end
 
@@ -55,7 +50,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListLast, code)
       assert issue.message =~ "def final/1"
     end
 
@@ -67,7 +62,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(NoManualListLast, code)
       assert issue.message =~ "my_last/1"
     end
 
@@ -80,7 +75,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListLast, code) == []
     end
 
     test "does not flag functions with more than 2 clauses" do
@@ -92,7 +87,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListLast, code) == []
     end
 
     test "does not flag guarded clauses" do
@@ -103,7 +98,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListLast, code) == []
     end
 
     test "does not flag when base case returns something other than the variable" do
@@ -114,7 +109,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListLast, code) == []
     end
 
     test "does not flag when recursive case does more than recurse" do
@@ -125,7 +120,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListLast, code) == []
     end
 
     test "does not flag when head is used (not ignored)" do
@@ -136,7 +131,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListLast, code) == []
     end
 
     test "does not flag multi-arity functions" do
@@ -147,7 +142,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListLast, code) == []
     end
 
     test "does not flag functions that don't recurse" do
@@ -158,7 +153,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListLast, code) == []
     end
 
     test "does not flag pattern matching on non-list arguments" do
@@ -169,7 +164,7 @@ defmodule Credence.Pattern.NoManualListLastCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoManualListLast, code) == []
     end
   end
 end

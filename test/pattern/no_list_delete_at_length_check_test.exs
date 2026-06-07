@@ -1,23 +1,18 @@
 defmodule Credence.Pattern.NoListDeleteAtLengthCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoListDeleteAtLength
 
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListDeleteAtLength.check(ast, [])
-  end
-
   describe "flags delete-the-last-element via length" do
     test "bare call with length(x) - 1" do
       assert [%Issue{rule: :no_list_delete_at_length}] =
-               check("List.delete_at(list, length(list) - 1)")
+               check(NoListDeleteAtLength, "List.delete_at(list, length(list) - 1)")
     end
 
     test "Kernel.length/1 form" do
       assert [%Issue{rule: :no_list_delete_at_length}] =
-               check("List.delete_at(list, Kernel.length(list) - 1)")
+               check(NoListDeleteAtLength, "List.delete_at(list, Kernel.length(list) - 1)")
     end
 
     test "the pattern from the row log" do
@@ -32,7 +27,7 @@ defmodule Credence.Pattern.NoListDeleteAtLengthCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_list_delete_at_length}] = check(code)
+      assert [%Issue{rule: :no_list_delete_at_length}] = check(NoListDeleteAtLength, code)
     end
   end
 
@@ -42,35 +37,35 @@ defmodule Credence.Pattern.NoListDeleteAtLengthCheckTest do
     # deletes from the end, while -K is out of range and deletes nothing.
     # No constant-index rewrite is behaviour-preserving, so K >= 2 is dropped.
     test "length(x) - 2 (offset other than 1)" do
-      assert check("List.delete_at(list, length(list) - 2)") == []
+      assert check(NoListDeleteAtLength, "List.delete_at(list, length(list) - 2)") == []
     end
 
     test "length(x) - 3 (offset other than 1)" do
-      assert check("List.delete_at(list, length(list) - 3)") == []
+      assert check(NoListDeleteAtLength, "List.delete_at(list, length(list) - 3)") == []
     end
 
     test "different variable's length" do
-      assert check("List.delete_at(list, length(other) - 1)") == []
+      assert check(NoListDeleteAtLength, "List.delete_at(list, length(other) - 1)") == []
     end
 
     test "literal index" do
-      assert check("List.delete_at(list, 0)") == []
+      assert check(NoListDeleteAtLength, "List.delete_at(list, 0)") == []
     end
 
     test "variable index" do
-      assert check("List.delete_at(list, idx)") == []
+      assert check(NoListDeleteAtLength, "List.delete_at(list, idx)") == []
     end
 
     test "already negative literal index" do
-      assert check("List.delete_at(list, -1)") == []
+      assert check(NoListDeleteAtLength, "List.delete_at(list, -1)") == []
     end
 
     test "Enum.at with length (covered by no_length_based_indexing)" do
-      assert check("Enum.at(list, length(list) - 1)") == []
+      assert check(NoListDeleteAtLength, "Enum.at(list, length(list) - 1)") == []
     end
 
     test "addition rather than subtraction" do
-      assert check("List.delete_at(list, length(list) + 1)") == []
+      assert check(NoListDeleteAtLength, "List.delete_at(list, length(list) + 1)") == []
     end
   end
 end

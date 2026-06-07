@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListAppendInReduce
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoListAppendInReduce.check(ast, [])
-  end
 
   describe "NoListAppendInReduce check" do
     # --- POSITIVE CASES ---
@@ -22,7 +17,7 @@ defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListAppendInReduce, code)
       assert length(issues) == 1
       issue = hd(issues)
       assert issue.rule == :no_list_append_in_reduce
@@ -41,7 +36,7 @@ defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListAppendInReduce, code)
       assert length(issues) == 1
       assert hd(issues).rule == :no_list_append_in_reduce
     end
@@ -58,7 +53,7 @@ defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoListAppendInReduce, code)
       assert length(issues) == 1
     end
 
@@ -76,7 +71,7 @@ defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInReduce, code) == []
     end
 
     test "does not flag reduce with non-empty initial accumulator" do
@@ -90,7 +85,7 @@ defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInReduce, code) == []
     end
 
     test "does not flag when appending multi-element list" do
@@ -104,7 +99,7 @@ defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInReduce, code) == []
     end
 
     test "does not flag when LHS is not the accumulator variable" do
@@ -118,7 +113,7 @@ defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInReduce, code) == []
     end
 
     test "does not flag when ++ is not the return expression" do
@@ -133,7 +128,7 @@ defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInReduce, code) == []
     end
 
     test "does not flag ++ outside of Enum.reduce" do
@@ -143,7 +138,7 @@ defmodule Credence.Pattern.NoListAppendInReduceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoListAppendInReduce, code) == []
     end
   end
 end

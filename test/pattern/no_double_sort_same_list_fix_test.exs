@@ -1,19 +1,7 @@
 defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoDoubleSortSameList
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoDoubleSortSameList.check(ast, [])
-  end
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoDoubleSortSameList, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix/2" do
     test "replaces desc sort with Enum.reverse of the asc binding" do
@@ -27,7 +15,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       desc = Enum.reverse(asc)
       """
 
-      assert fix(input) == expected
+      assert fix(NoDoubleSortSameList, input) == expected
     end
 
     test "replaces piped desc sort with Enum.reverse" do
@@ -41,7 +29,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       desc = Enum.reverse(asc)
       """
 
-      assert fix(input) == expected
+      assert fix(NoDoubleSortSameList, input) == expected
     end
 
     test "does not modify code that sorts different lists" do
@@ -50,7 +38,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       sorted_b = Enum.sort(b, :desc)
       """
 
-      assert fix(code) == code
+      assert fix(NoDoubleSortSameList, code) == code
     end
 
     test "does not modify code with custom comparator" do
@@ -59,7 +47,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       by_age = Enum.sort(items, &(&1.age <= &2.age))
       """
 
-      assert fix(code) == code
+      assert fix(NoDoubleSortSameList, code) == code
     end
 
     test "fixes the real-world maximum_product example" do
@@ -91,7 +79,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoDoubleSortSameList, input) == expected
     end
 
     test "preserves single-direction sorts" do
@@ -99,7 +87,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       sorted = Enum.sort(list)
       """
 
-      assert fix(code) == code
+      assert fix(NoDoubleSortSameList, code) == code
     end
 
     test "fixed code produces no issues" do
@@ -113,7 +101,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(NoDoubleSortSameList, fix(NoDoubleSortSameList, code)) == []
     end
   end
 end

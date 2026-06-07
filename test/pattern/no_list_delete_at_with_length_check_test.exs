@@ -1,13 +1,7 @@
 defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoListDeleteAtWithLength
-
-  defp check(source) do
-    source
-    |> Sourceror.parse_string!()
-    |> NoListDeleteAtWithLength.check([])
-  end
 
   describe "flagged shapes" do
     test "flags List.delete_at(x, length(x) - 1)" do
@@ -19,7 +13,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
       end
       """
 
-      issues = check(source)
+      issues = check(NoListDeleteAtWithLength, source)
       assert length(issues) == 1
       assert hd(issues).rule == :no_list_delete_at_with_length
       assert hd(issues).message =~ "List.delete_at(list, -1)"
@@ -34,7 +28,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
       end
       """
 
-      assert length(check(source)) == 1
+      assert length(check(NoListDeleteAtWithLength, source)) == 1
     end
 
     test "flags the pattern from the row log" do
@@ -49,7 +43,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
       end
       """
 
-      issues = check(source)
+      issues = check(NoListDeleteAtWithLength, source)
       assert length(issues) == 1
       assert hd(issues).rule == :no_list_delete_at_with_length
     end
@@ -70,7 +64,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
       end
       """
 
-      assert check(source) == []
+      assert check(NoListDeleteAtWithLength, source) == []
     end
 
     test "does not flag offset of 3" do
@@ -82,7 +76,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
       end
       """
 
-      assert check(source) == []
+      assert check(NoListDeleteAtWithLength, source) == []
     end
 
     test "does not flag List.delete_at with a literal index" do
@@ -94,7 +88,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
       end
       """
 
-      assert check(source) == []
+      assert check(NoListDeleteAtWithLength, source) == []
     end
 
     test "does not flag when the length variable differs" do
@@ -106,7 +100,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
       end
       """
 
-      assert check(source) == []
+      assert check(NoListDeleteAtWithLength, source) == []
     end
 
     test "does not flag a non-literal offset" do
@@ -118,7 +112,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
       end
       """
 
-      assert check(source) == []
+      assert check(NoListDeleteAtWithLength, source) == []
     end
 
     test "does not flag Enum.at with length (handled by no_length_based_indexing)" do
@@ -130,7 +124,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthCheckTest do
       end
       """
 
-      assert check(source) == []
+      assert check(NoListDeleteAtWithLength, source) == []
     end
   end
 

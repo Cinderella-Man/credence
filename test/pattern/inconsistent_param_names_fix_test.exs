@@ -1,16 +1,7 @@
 defmodule Credence.Pattern.InconsistentParamNamesFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.InconsistentParamNames
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(InconsistentParamNames, code, [])
-  end
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    InconsistentParamNames.check(ast, [])
-  end
 
   describe "renames later clauses to match the first" do
     test "two-clause rename in pattern" do
@@ -28,7 +19,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "renames variables in the body too" do
@@ -46,7 +37,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "renames across three clauses" do
@@ -66,7 +57,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "renames in guarded clauses (guard and body)" do
@@ -94,7 +85,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "renames recursive calls in the body" do
@@ -112,7 +103,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
   end
 
@@ -132,7 +123,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "first clause underscore establishes canonical base" do
@@ -150,7 +141,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
   end
 
@@ -163,7 +154,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "bare underscore at a position lets other clauses keep their name there" do
@@ -181,7 +172,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
   end
 
@@ -194,7 +185,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "leaves the original validate_answers_match example unchanged" do
@@ -212,7 +203,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "does not invent pinning by renaming a free name into a pinned one" do
@@ -223,7 +214,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "preserves pinning between top-level arg and nested pattern element" do
@@ -234,7 +225,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "underscored pinning (_x, _x) is preserved verbatim" do
@@ -245,7 +236,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "still renames at non-pinned positions in a function that has pinning elsewhere" do
@@ -263,7 +254,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "still renames around nested pinning" do
@@ -281,7 +272,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "intra-arg duplication leaves position 1 alone, fixes position 2" do
@@ -299,7 +290,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
   end
 
@@ -312,7 +303,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "single-clause function unchanged" do
@@ -322,7 +313,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "separate functions in same module unchanged" do
@@ -333,7 +324,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
   end
 
@@ -359,7 +350,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "renames across @doc-annotated clauses" do
@@ -383,7 +374,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "renames across @spec-annotated clauses (including the guard)" do
@@ -407,7 +398,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "renames across mixed @doc + @spec + @impl annotations" do
@@ -437,7 +428,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "@moduledoc at the top does not interfere with clause grouping below" do
@@ -459,7 +450,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
+      assert fix(InconsistentParamNames, code) == expected
     end
 
     test "separate callback functions are not grouped together" do
@@ -473,7 +464,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "pinning is still respected when attributes are present" do
@@ -487,7 +478,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
   end
 
@@ -504,7 +495,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
 
       # The rule must NOT rename `end_index` to the reserved word `end`; it leaves
       # the whole clause untouched. Exact compare pins the entire output.
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "canonical base is `do` from `_do` — does not rename to `do`" do
@@ -516,7 +507,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       """
 
       # Must NOT rename `done` to the reserved word `do`; nothing else changes.
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
   end
 
@@ -539,7 +530,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
 
       # Fix must NOT rename `prev_prev` to `prev` (that would bind `prev` twice);
       # the whole clause is left untouched.
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
 
     test "canonical name clashes with map pattern variable" do
@@ -552,7 +543,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
 
       # `val_extra` must NOT be renamed to `val` (clashes with `%{key: val}`);
       # the whole clause is left untouched.
-      assert fix(code) == code
+      assert fix(InconsistentParamNames, code) == code
     end
   end
 
@@ -565,7 +556,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(InconsistentParamNames, fix(InconsistentParamNames, code)) == []
     end
 
     test "fibonacci — fix skips rename that would create duplicate binding" do
@@ -587,8 +578,8 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert fix(code) == expected
-      assert length(check(fix(code))) >= 1
+      assert fix(InconsistentParamNames, code) == expected
+      assert length(check(InconsistentParamNames, fix(InconsistentParamNames, code))) >= 1
     end
 
     test "fixed code produces zero issues (original validate_answers_match bug)" do
@@ -606,7 +597,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert check(fix(code)) == []
+      assert check(InconsistentParamNames, fix(InconsistentParamNames, code)) == []
     end
 
     test "fixed code is valid Elixir (guarded mixed clauses)" do
@@ -622,7 +613,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(InconsistentParamNames, code))
     end
 
     test "fixed code is valid Elixir (pinned tuple + scalar args)" do
@@ -633,7 +624,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(code))
+      assert {:ok, _} = Sourceror.parse_string(fix(InconsistentParamNames, code))
     end
   end
 end

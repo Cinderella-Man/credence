@@ -1,14 +1,7 @@
 defmodule Credence.Pattern.NoManualListLastFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoManualListLast
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoManualListLast, code, [])
-    |> Code.format_string!()
-    |> IO.iodata_to_binary()
-    |> Kernel.<>("\n")
-  end
 
   describe "fix" do
     test "replaces hand-rolled function with hd(Enum.reverse/1) delegation" do
@@ -27,7 +20,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "replaces direct calls to the function" do
@@ -50,7 +43,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "replaces pipe calls" do
@@ -73,7 +66,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "does not modify code without the pattern" do
@@ -83,7 +76,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualListLast, code) == code
     end
 
     test "handles clauses in reverse order" do
@@ -102,7 +95,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "handles def (public) functions" do
@@ -121,7 +114,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "handles function called inside nested expression" do
@@ -144,7 +137,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "handles function called inside fn" do
@@ -167,7 +160,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "handles function called inside case" do
@@ -200,7 +193,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "handles multiple matching functions" do
@@ -226,7 +219,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "preserves other functions in the module" do
@@ -249,7 +242,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "returns original source when no matches found" do
@@ -259,7 +252,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualListLast, code) == code
     end
 
     test "handles longer pipeline before the function call" do
@@ -290,7 +283,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "handles function with non-adjacent clauses" do
@@ -312,7 +305,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "handles function called in a tuple" do
@@ -335,7 +328,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoManualListLast, input) == expected
     end
 
     test "does not affect functions with similar but different patterns" do
@@ -348,7 +341,7 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
-      assert fix(code) == code
+      assert fix(NoManualListLast, code) == code
     end
   end
 end

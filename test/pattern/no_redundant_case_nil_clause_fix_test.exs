@@ -1,9 +1,7 @@
 defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantCaseNilClause
-
-  defp fix(code), do: Credence.RuleHelpers.apply_rule_fix(NoRedundantCaseNilClause, code)
 
   test "removes nil clause and folds not is_nil into the guard" do
     input = """
@@ -29,7 +27,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(input) == expected
+    assert fix(NoRedundantCaseNilClause, input) == expected
   end
 
   test "single-line bodies" do
@@ -48,7 +46,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(input) == expected
+    assert fix(NoRedundantCaseNilClause, input) == expected
   end
 
   test "preserves multi-line bodies" do
@@ -80,7 +78,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(input) == expected
+    assert fix(NoRedundantCaseNilClause, input) == expected
   end
 
   test "fixes piped case" do
@@ -103,7 +101,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(input) == expected
+    assert fix(NoRedundantCaseNilClause, input) == expected
   end
 
   test "wraps the original guard so precedence is preserved" do
@@ -122,7 +120,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(input) == expected
+    assert fix(NoRedundantCaseNilClause, input) == expected
   end
 
   test "result is valid, compilable code" do
@@ -157,7 +155,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    output = fix(input)
+    output = fix(NoRedundantCaseNilClause, input)
     assert output == expected
     assert {:ok, _} = Code.string_to_quoted(output)
   end
@@ -173,7 +171,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(input) == input
+    assert fix(NoRedundantCaseNilClause, input) == input
   end
 
   test "leaves non-bare-variable middle pattern unchanged" do
@@ -187,6 +185,6 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(input) == input
+    assert fix(NoRedundantCaseNilClause, input) == input
   end
 end

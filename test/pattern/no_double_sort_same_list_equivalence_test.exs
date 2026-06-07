@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListEquivalenceTest do
   for the default total order — verified even on value-kind ties (`[1, 1.0]`), since
   equal terms are indistinguishable in the result.
   """
-  use ExUnit.Case, async: true
+  use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoDoubleSortSameList

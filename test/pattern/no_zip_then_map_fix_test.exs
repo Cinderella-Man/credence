@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.NoZipThenMapFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoZipThenMap
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoZipThenMap, code, [])
-  end
 
   # ── Pipeline form ─────────────────────────────────────────────────────
 
@@ -20,7 +16,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       Enum.zip_with(names, scores, fn name, score -> {name, score * 2} end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoZipThenMap, code) == expected
     end
 
     test "multiline fn body" do
@@ -35,7 +31,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       Enum.zip_with(keys, values, fn k, v -> Map.put(acc, k, v) end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoZipThenMap, code) == expected
     end
 
     test "zip in longer pipeline" do
@@ -52,7 +48,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.zip_with(other, fn a, b -> a + b end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoZipThenMap, code) == expected
     end
 
     test "zip from variable piped to map" do
@@ -67,7 +63,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.zip_with(other, fn x, y -> x + y end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoZipThenMap, code) == expected
     end
   end
 
@@ -85,7 +81,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       Enum.zip_with(names, scores, fn name, score -> {name, score * 2} end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoZipThenMap, code) == expected
     end
 
     test "single-line nested form" do
@@ -97,7 +93,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       Enum.zip_with(a, b, fn x, y -> x + y end)
       """
 
-      assert fix(code) == expected
+      assert fix(NoZipThenMap, code) == expected
     end
   end
 
@@ -110,7 +106,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.map(fn {name, age} when is_binary(name) -> {name, age} end)
       """
 
-      assert fix(code) == code
+      assert fix(NoZipThenMap, code) == code
     end
   end
 
@@ -120,7 +116,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       Enum.zip_with(names, scores, fn name, score -> {name, score} end)
       """
 
-      assert fix(code) == code
+      assert fix(NoZipThenMap, code) == code
     end
   end
 
@@ -131,7 +127,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.map(fn pair -> pair end)
       """
 
-      assert fix(code) == code
+      assert fix(NoZipThenMap, code) == code
     end
   end
 
@@ -144,7 +140,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.map(fn {a, b} -> a + b end)
       """
 
-      assert fix(code) == code
+      assert fix(NoZipThenMap, code) == code
     end
   end
 end

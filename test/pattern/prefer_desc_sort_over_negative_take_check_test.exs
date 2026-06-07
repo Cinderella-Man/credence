@@ -1,11 +1,6 @@
 defmodule Credence.Pattern.PreferDescSortOverNegativeTakeCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
   alias Credence.Pattern.PreferDescSortOverNegativeTake
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferDescSortOverNegativeTake.check(ast, [])
-  end
 
   describe "check" do
     test "flags Enum.sort() |> Enum.take(-n) pipeline" do
@@ -15,7 +10,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeCheckTest do
       |> Enum.take(-3)
       """
 
-      issues = check(code)
+      issues = check(PreferDescSortOverNegativeTake, code)
       assert length(issues) == 1
     end
 
@@ -24,7 +19,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeCheckTest do
       Enum.sort(nums) |> Enum.take(-3)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(PreferDescSortOverNegativeTake, code)) == 1
     end
 
     test "flags inside a defmodule" do
@@ -38,7 +33,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeCheckTest do
       end
       """
 
-      assert length(check(code)) == 1
+      assert length(check(PreferDescSortOverNegativeTake, code)) == 1
     end
 
     test "flags with longer pipeline before sort" do
@@ -49,27 +44,32 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeCheckTest do
       |> Enum.take(-3)
       """
 
-      assert length(check(code)) == 1
+      assert length(check(PreferDescSortOverNegativeTake, code)) == 1
     end
 
     test "does not flag Enum.sort(:desc) |> Enum.take(n)" do
-      assert check("nums |> Enum.sort(:desc) |> Enum.take(3)") == []
+      assert check(PreferDescSortOverNegativeTake, "nums |> Enum.sort(:desc) |> Enum.take(3)") ==
+               []
     end
 
     test "does not flag Enum.sort() |> Enum.take(positive n)" do
-      assert check("nums |> Enum.sort() |> Enum.take(3)") == []
+      assert check(PreferDescSortOverNegativeTake, "nums |> Enum.sort() |> Enum.take(3)") == []
     end
 
     test "does not flag Enum.sort(comparator) |> Enum.take(-n)" do
-      assert check("nums |> Enum.sort(&(&1 >= &2)) |> Enum.take(-3)") == []
+      assert check(
+               PreferDescSortOverNegativeTake,
+               "nums |> Enum.sort(&(&1 >= &2)) |> Enum.take(-3)"
+             ) == []
     end
 
     test "does not flag unrelated Enum.sort()" do
-      assert check("nums |> Enum.sort() |> Enum.map(&(&1 * 2))") == []
+      assert check(PreferDescSortOverNegativeTake, "nums |> Enum.sort() |> Enum.map(&(&1 * 2))") ==
+               []
     end
 
     test "does not flag standalone Enum.take(-n)" do
-      assert check("nums |> Enum.take(-3)") == []
+      assert check(PreferDescSortOverNegativeTake, "nums |> Enum.take(-3)") == []
     end
   end
 end
