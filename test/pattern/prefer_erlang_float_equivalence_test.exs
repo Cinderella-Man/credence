@@ -21,7 +21,10 @@ defmodule Credence.Pattern.PreferErlangFloatEquivalenceTest do
   @numbers [0, 1, -1, 7, -7, 42, 1000, 1_000_000, 1.0, 2.5, -3.5, 0.0]
 
   test "bare var: n * 1.0 → :erlang.float(n) preserves value+type over numbers" do
-    assert_equivalent("n * 1.0",
+    assert_equivalent(
+      """
+      n * 1.0
+      """,
       rule: PreferErlangFloat,
       vars: [:n],
       inputs: @numbers
@@ -29,7 +32,10 @@ defmodule Credence.Pattern.PreferErlangFloatEquivalenceTest do
   end
 
   test "compound operand: abs(n) * 1.0 → :erlang.float(abs(n)) preserves value+type" do
-    assert_equivalent("abs(n) * 1.0",
+    assert_equivalent(
+      """
+      abs(n) * 1.0
+      """,
       rule: PreferErlangFloat,
       vars: [:n],
       inputs: @numbers
@@ -37,7 +43,10 @@ defmodule Credence.Pattern.PreferErlangFloatEquivalenceTest do
   end
 
   test "division operand: (n / 2) + 0.0 → :erlang.float(n / 2) preserves value+type" do
-    assert_equivalent("(n / 2) + 0.0",
+    assert_equivalent(
+      """
+      (n / 2) + 0.0
+      """,
       rule: PreferErlangFloat,
       vars: [:n],
       inputs: @numbers

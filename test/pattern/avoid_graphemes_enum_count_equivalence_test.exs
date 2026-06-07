@@ -11,7 +11,10 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountEquivalenceTest do
   alias Credence.Pattern.AvoidGraphemesEnumCount
 
   test "graphemes |> count → String.length preserves the count over Unicode" do
-    assert_equivalent("string |> String.graphemes() |> Enum.count()",
+    assert_equivalent(
+      """
+      string |> String.graphemes() |> Enum.count()
+      """,
       rule: AvoidGraphemesEnumCount,
       vars: [:string],
       inputs: B.unicode_strings()

@@ -48,28 +48,38 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeCheckTest do
     end
 
     test "does not flag Enum.sort(:desc) |> Enum.take(n)" do
-      assert check(PreferDescSortOverNegativeTake, "nums |> Enum.sort(:desc) |> Enum.take(3)") ==
+      assert check(PreferDescSortOverNegativeTake, """
+             nums |> Enum.sort(:desc) |> Enum.take(3)
+             """) ==
                []
     end
 
     test "does not flag Enum.sort() |> Enum.take(positive n)" do
-      assert check(PreferDescSortOverNegativeTake, "nums |> Enum.sort() |> Enum.take(3)") == []
+      assert check(PreferDescSortOverNegativeTake, """
+             nums |> Enum.sort() |> Enum.take(3)
+             """) == []
     end
 
     test "does not flag Enum.sort(comparator) |> Enum.take(-n)" do
       assert check(
                PreferDescSortOverNegativeTake,
-               "nums |> Enum.sort(&(&1 >= &2)) |> Enum.take(-3)"
+               """
+               nums |> Enum.sort(&(&1 >= &2)) |> Enum.take(-3)
+               """
              ) == []
     end
 
     test "does not flag unrelated Enum.sort()" do
-      assert check(PreferDescSortOverNegativeTake, "nums |> Enum.sort() |> Enum.map(&(&1 * 2))") ==
+      assert check(PreferDescSortOverNegativeTake, """
+             nums |> Enum.sort() |> Enum.map(&(&1 * 2))
+             """) ==
                []
     end
 
     test "does not flag standalone Enum.take(-n)" do
-      assert check(PreferDescSortOverNegativeTake, "nums |> Enum.take(-3)") == []
+      assert check(PreferDescSortOverNegativeTake, """
+             nums |> Enum.take(-3)
+             """) == []
     end
   end
 end

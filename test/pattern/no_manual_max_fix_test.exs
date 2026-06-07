@@ -321,7 +321,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
     end
 
     test "preserves comment formatting" do
-      input = ~S'''
+      input = """
       defmodule Example do
         # This is an important comment
         # that spans multiple lines
@@ -329,9 +329,10 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
           if a >= b, do: a, else: b
         end
       end
-      '''
 
-      expected = ~S'''
+      """
+
+      expected = """
       defmodule Example do
         # This is an important comment
         # that spans multiple lines
@@ -339,7 +340,8 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
           max(a, b)
         end
       end
-      '''
+
+      """
 
       assert fix(NoManualMax, input) == expected
     end

@@ -8,7 +8,9 @@ defmodule Credence.Semantic.UsedUnderscoreVariableCheckTest do
       diag = %{
         severity: :warning,
         message:
-          ~s(the underscored variable "_target_n" is used after being set. ) <>
+          """
+          the underscored variable "_target_n" is used after being set. 
+          """ <>
             "A leading underscore indicates that the value of the variable should be ignored.",
         position: {38, 90}
       }
@@ -19,7 +21,9 @@ defmodule Credence.Semantic.UsedUnderscoreVariableCheckTest do
     test "matches shorter form of the message" do
       diag = %{
         severity: :warning,
-        message: ~s(variable "_x" is used after being set),
+        message: """
+        variable "_x" is used after being set
+        """,
         position: {5, 1}
       }
 
@@ -29,7 +33,9 @@ defmodule Credence.Semantic.UsedUnderscoreVariableCheckTest do
     test "does not match error severity" do
       diag = %{
         severity: :error,
-        message: ~s(variable "_x" is used after being set),
+        message: """
+        variable "_x" is used after being set
+        """,
         position: {5, 1}
       }
 
@@ -39,7 +45,9 @@ defmodule Credence.Semantic.UsedUnderscoreVariableCheckTest do
     test "does not match unused variable warning" do
       diag = %{
         severity: :warning,
-        message: ~s(variable "x" is unused),
+        message: """
+        variable "x" is unused
+        """,
         position: {5, 6}
       }
 
@@ -61,7 +69,9 @@ defmodule Credence.Semantic.UsedUnderscoreVariableCheckTest do
     test "builds issue with correct rule and line from tuple position" do
       diag = %{
         severity: :warning,
-        message: ~s(variable "_target_n" is used after being set),
+        message: """
+        variable "_target_n" is used after being set
+        """,
         position: {38, 90}
       }
 
@@ -74,7 +84,9 @@ defmodule Credence.Semantic.UsedUnderscoreVariableCheckTest do
     test "builds issue with bare integer position" do
       diag = %{
         severity: :warning,
-        message: ~s(variable "_x" is used after being set),
+        message: """
+        variable "_x" is used after being set
+        """,
         position: 5
       }
 

@@ -7,17 +7,23 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountCheckTest do
   describe "flags graphemes piped to Enum.count (no predicate)" do
     test "three-step pipe" do
       assert [%Issue{rule: :avoid_graphemes_enum_count}] =
-               check(AvoidGraphemesEnumCount, "str |> String.graphemes() |> Enum.count()")
+               check(AvoidGraphemesEnumCount, """
+               str |> String.graphemes() |> Enum.count()
+               """)
     end
 
     test "two-step pipe" do
       assert [%Issue{rule: :avoid_graphemes_enum_count}] =
-               check(AvoidGraphemesEnumCount, "String.graphemes(str) |> Enum.count()")
+               check(AvoidGraphemesEnumCount, """
+               String.graphemes(str) |> Enum.count()
+               """)
     end
 
     test "nested call" do
       assert [%Issue{rule: :avoid_graphemes_enum_count}] =
-               check(AvoidGraphemesEnumCount, "Enum.count(String.graphemes(str))")
+               check(AvoidGraphemesEnumCount, """
+               Enum.count(String.graphemes(str))
+               """)
     end
 
     test "longer pipeline before graphemes" do
@@ -46,15 +52,21 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountCheckTest do
 
   describe "does NOT flag" do
     test "String.length/1" do
-      assert check(AvoidGraphemesEnumCount, "String.length(str)") == []
+      assert check(AvoidGraphemesEnumCount, """
+             String.length(str)
+             """) == []
     end
 
     test "Enum.count on non-graphemes" do
-      assert check(AvoidGraphemesEnumCount, "Enum.count(list)") == []
+      assert check(AvoidGraphemesEnumCount, """
+             Enum.count(list)
+             """) == []
     end
 
     test "graphemes piped to something other than Enum.count" do
-      assert check(AvoidGraphemesEnumCount, "String.graphemes(str) |> Enum.reverse()") == []
+      assert check(AvoidGraphemesEnumCount, """
+             String.graphemes(str) |> Enum.reverse()
+             """) == []
     end
 
     test "intermediate step between graphemes and count" do
@@ -93,16 +105,22 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountCheckTest do
     end
 
     test "String.codepoints piped to Enum.count" do
-      assert check(AvoidGraphemesEnumCount, "String.codepoints(str) |> Enum.count()") == []
+      assert check(AvoidGraphemesEnumCount, """
+             String.codepoints(str) |> Enum.count()
+             """) == []
     end
 
     test "Enum.count/2 with predicate (handled by separate rule)" do
-      assert check(AvoidGraphemesEnumCount, ~s[Enum.count(String.graphemes(str), &(&1 == "a"))]) ==
+      assert check(AvoidGraphemesEnumCount, """
+             Enum.count(String.graphemes(str), &(&1 == "a"))
+             """) ==
                []
     end
 
     test "pipe with predicate (handled by separate rule)" do
-      assert check(AvoidGraphemesEnumCount, ~s[String.graphemes(str) |> Enum.count(&(&1 == "a"))]) ==
+      assert check(AvoidGraphemesEnumCount, """
+             String.graphemes(str) |> Enum.count(&(&1 == "a"))
+             """) ==
                []
     end
   end

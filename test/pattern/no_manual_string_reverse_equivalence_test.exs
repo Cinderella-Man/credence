@@ -16,7 +16,10 @@ defmodule Credence.Pattern.NoManualStringReverseEquivalenceTest do
   alias Credence.Pattern.NoManualStringReverse
 
   test "graphemes |> reverse |> join → String.reverse preserves behaviour over all Unicode" do
-    assert_equivalent("str |> String.graphemes() |> Enum.reverse() |> Enum.join()",
+    assert_equivalent(
+      """
+      str |> String.graphemes() |> Enum.reverse() |> Enum.join()
+      """,
       rule: NoManualStringReverse,
       vars: [:str],
       inputs: B.unicode_strings()

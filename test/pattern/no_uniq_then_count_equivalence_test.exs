@@ -14,7 +14,10 @@ defmodule Credence.Pattern.NoUniqThenCountEquivalenceTest do
   alias Credence.Pattern.NoUniqThenCount
 
   test "uniq |> length → MapSet size preserves the count incl. value-kind dedup" do
-    assert_equivalent("items |> Enum.uniq() |> length()",
+    assert_equivalent(
+      """
+      items |> Enum.uniq() |> length()
+      """,
       rule: NoUniqThenCount,
       vars: [:items],
       inputs: B.term_lists()

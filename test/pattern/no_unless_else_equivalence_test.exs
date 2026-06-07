@@ -9,7 +9,10 @@ defmodule Credence.Pattern.NoUnlessElseEquivalenceTest do
   alias Credence.Pattern.NoUnlessElse
 
   test "unless cond, do: a, else: b → if cond, do: b, else: a preserves the branch" do
-    assert_equivalent("unless x > 0, do: :neg, else: :pos",
+    assert_equivalent(
+      """
+      unless x > 0, do: :neg, else: :pos
+      """,
       rule: NoUnlessElse,
       vars: [:x],
       inputs: [1, -1, 0, 5, -5]

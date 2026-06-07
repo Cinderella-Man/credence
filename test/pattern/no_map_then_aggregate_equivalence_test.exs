@@ -15,7 +15,10 @@ defmodule Credence.Pattern.NoMapThenAggregateEquivalenceTest do
   alias Credence.Pattern.NoMapThenAggregate
 
   test "map(f) |> sum → reduce(0, acc + f) preserves the total incl. value-kind" do
-    assert_equivalent("numbers |> Enum.map(fn x -> x * 2 end) |> Enum.sum()",
+    assert_equivalent(
+      """
+      numbers |> Enum.map(fn x -> x * 2 end) |> Enum.sum()
+      """,
       rule: NoMapThenAggregate,
       vars: [:numbers],
       inputs: [[], [1, 2, 3], [1.0, 2.0], [1, 1.0, 2], [-1, -2, -3], Enum.to_list(1..30)]

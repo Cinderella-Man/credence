@@ -8,27 +8,51 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
 
   describe "exactly N" do
     test "length(l) == 0 → l == []" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) == 0") == "l == []"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) == 0
+             """) == """
+             l == []
+             """
     end
 
     test "length(l) == 1 → match?([_], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) == 1") == "match?([_], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) == 1
+             """) == """
+             match?([_], l)
+             """
     end
 
     test "length(l) == 3 → match?([_, _, _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) == 3") == "match?([_, _, _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) == 3
+             """) == """
+             match?([_, _, _], l)
+             """
     end
 
     test "length(l) == 5 → match?([_, _, _, _, _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) == 5") == "match?([_, _, _, _, _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) == 5
+             """) == """
+             match?([_, _, _, _, _], l)
+             """
     end
 
     test "length(l) != 0 → l != []" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) != 0") == "l != []"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) != 0
+             """) == """
+             l != []
+             """
     end
 
     test "length(l) != 2 → !match?([_, _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) != 2") == "!match?([_, _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) != 2
+             """) == """
+             !match?([_, _], l)
+             """
     end
   end
 
@@ -36,23 +60,43 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
 
   describe "at least N" do
     test "length(l) > 0 → l != []" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) > 0") == "l != []"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) > 0
+             """) == """
+             l != []
+             """
     end
 
     test "length(l) >= 1 → l != []" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) >= 1") == "l != []"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) >= 1
+             """) == """
+             l != []
+             """
     end
 
     test "length(l) >= 2 → match?([_, _ | _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) >= 2") == "match?([_, _ | _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) >= 2
+             """) == """
+             match?([_, _ | _], l)
+             """
     end
 
     test "length(l) > 2 → match?([_, _, _ | _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) > 2") == "match?([_, _, _ | _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) > 2
+             """) == """
+             match?([_, _, _ | _], l)
+             """
     end
 
     test "length(l) >= 5 → match?([_, _, _, _, _ | _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) >= 5") == "match?([_, _, _, _, _ | _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) >= 5
+             """) == """
+             match?([_, _, _, _, _ | _], l)
+             """
     end
   end
 
@@ -60,23 +104,43 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
 
   describe "fewer than N" do
     test "length(l) < 1 → l == []" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) < 1") == "l == []"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) < 1
+             """) == """
+             l == []
+             """
     end
 
     test "length(l) <= 0 → l == []" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) <= 0") == "l == []"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) <= 0
+             """) == """
+             l == []
+             """
     end
 
     test "length(l) < 2 → !match?([_, _ | _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) < 2") == "!match?([_, _ | _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) < 2
+             """) == """
+             !match?([_, _ | _], l)
+             """
     end
 
     test "length(l) <= 2 → !match?([_, _, _ | _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) <= 2") == "!match?([_, _, _ | _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) <= 2
+             """) == """
+             !match?([_, _, _ | _], l)
+             """
     end
 
     test "length(l) < 5 → !match?([_, _, _, _, _ | _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "length(l) < 5") == "!match?([_, _, _, _, _ | _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             length(l) < 5
+             """) == """
+             !match?([_, _, _, _, _ | _], l)
+             """
     end
   end
 
@@ -84,15 +148,27 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
 
   describe "reversed operands" do
     test "0 == length(l) → l == []" do
-      assert fix(NoLengthComparisonForEmpty, "0 == length(l)") == "l == []"
+      assert fix(NoLengthComparisonForEmpty, """
+             0 == length(l)
+             """) == """
+             l == []
+             """
     end
 
     test "2 <= length(l) → match?([_, _ | _], l)" do
-      assert fix(NoLengthComparisonForEmpty, "2 <= length(l)") == "match?([_, _ | _], l)"
+      assert fix(NoLengthComparisonForEmpty, """
+             2 <= length(l)
+             """) == """
+             match?([_, _ | _], l)
+             """
     end
 
     test "0 < length(l) → l != []" do
-      assert fix(NoLengthComparisonForEmpty, "0 < length(l)") == "l != []"
+      assert fix(NoLengthComparisonForEmpty, """
+             0 < length(l)
+             """) == """
+             l != []
+             """
     end
   end
 
@@ -148,22 +224,34 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
 
   describe "no-ops" do
     test "returns source unchanged when nothing to fix" do
-      code = "def run(list), do: list == []"
+      code = """
+      def run(list), do: list == []
+      """
+
       assert fix(NoLengthComparisonForEmpty, code) == code
     end
 
     test "does not touch length(l) > 5 (above max)" do
-      code = "length(l) > 5"
+      code = """
+      length(l) > 5
+      """
+
       assert fix(NoLengthComparisonForEmpty, code) == code
     end
 
     test "does not touch length(&1) > 1 (non-variable arg)" do
-      code = "Enum.filter(groups, &(length(&1) > 1))"
+      code = """
+      Enum.filter(groups, &(length(&1) > 1))
+      """
+
       assert fix(NoLengthComparisonForEmpty, code) == code
     end
 
     test "does not touch qualified calls like String.length(s) >= 2" do
-      code = "if String.length(query) >= 2, do: :ok"
+      code = """
+      if String.length(query) >= 2, do: :ok
+      """
+
       assert fix(NoLengthComparisonForEmpty, code) == code
     end
   end

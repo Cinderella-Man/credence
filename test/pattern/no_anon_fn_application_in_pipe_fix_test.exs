@@ -69,7 +69,10 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeFixTest do
     end
 
     test ".(extra) — then/2 cannot carry extra args" do
-      code = "x |> (fn a, b -> a + b end).(y)"
+      code = """
+      x |> (fn a, b -> a + b end).(y)
+      """
+
       assert fix(NoAnonFnApplicationInPipe, code) == code
     end
   end

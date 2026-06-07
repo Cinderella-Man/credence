@@ -10,7 +10,10 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexEquivalenceTest do
   alias Credence.Pattern.NoEnumAtNegativeIndex
 
   test "Enum.at(x, -1) → List.last(x) preserves behaviour over term lists" do
-    assert_equivalent("Enum.at(list, -1)",
+    assert_equivalent(
+      """
+      Enum.at(list, -1)
+      """,
       rule: NoEnumAtNegativeIndex,
       vars: [:list],
       inputs: B.term_lists()

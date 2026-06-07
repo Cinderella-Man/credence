@@ -35,15 +35,27 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
     end
 
     test "detects -=" do
-      assert length(analyze("value -= delta")) == 1
+      assert length(
+               analyze("""
+               value -= delta
+               """)
+             ) == 1
     end
 
     test "detects *=" do
-      assert length(analyze("total *= factor")) == 1
+      assert length(
+               analyze("""
+               total *= factor
+               """)
+             ) == 1
     end
 
     test "detects /=" do
-      assert length(analyze("value /= divisor")) == 1
+      assert length(
+               analyze("""
+               value /= divisor
+               """)
+             ) == 1
     end
 
     test "detects multiple augmented assignments across lines" do
@@ -73,59 +85,102 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
     end
 
     test "code without augmented assignment" do
-      assert analyze("y = x + 1") == []
+      assert analyze("""
+             y = x + 1
+             """) == []
     end
 
     test "operator inside a string literal" do
-      assert analyze(~s|x = "a += b"|) == []
-      assert analyze(~s|msg = "5/=2 ratio"|) == []
+      assert analyze("""
+             x = "a += b"
+             """) == []
+
+      assert analyze("""
+             msg = "5/=2 ratio"
+             """) == []
     end
 
     test "qualified (dotted) left-hand side — cannot be rebound" do
-      assert analyze("socket.assigns.count += 1") == []
+      assert analyze("""
+             socket.assigns.count += 1
+             """) == []
     end
 
     test "indexed left-hand side — not a bare variable" do
-      assert analyze("arr[i] += 1") == []
+      assert analyze("""
+             arr[i] += 1
+             """) == []
     end
 
     test "augmented op that is not the leading statement" do
-      assert analyze("z = a += b") == []
+      assert analyze("""
+             z = a += b
+             """) == []
     end
 
     test "no right-hand side" do
-      assert analyze("x += ") == []
+      assert analyze("""
+             x += 
+             """) == []
     end
   end
 
   describe "fix/1 — bare-variable rewrites (RHS parenthesised)" do
     test "fixes += with simple variable" do
-      assert fix("count += 1") == "count = count + (1)"
+      assert fix("""
+             count += 1
+             """) == """
+             count = count + (1)
+             """
     end
 
     test "fixes += with no surrounding spaces" do
-      assert fix("x+=1") == "x = x + (1)"
+      assert fix("""
+             x+=1
+             """) == """
+             x = x + (1)
+             """
     end
 
     test "fixes += with a complex right-hand side" do
-      assert fix("count += Map.get(prefix_counts, new_sum - goal, 0)") ==
-               "count = count + (Map.get(prefix_counts, new_sum - goal, 0))"
+      assert fix("""
+             count += Map.get(prefix_counts, new_sum - goal, 0)
+             """) ==
+               """
+               count = count + (Map.get(prefix_counts, new_sum - goal, 0))
+               """
     end
 
     test "fixes -= with simple variable" do
-      assert fix("value -= delta") == "value = value - (delta)"
+      assert fix("""
+             value -= delta
+             """) == """
+             value = value - (delta)
+             """
     end
 
     test "fixes *= with simple variable" do
-      assert fix("total *= factor") == "total = total * (factor)"
+      assert fix("""
+             total *= factor
+             """) == """
+             total = total * (factor)
+             """
     end
 
     test "fixes /= with simple variable" do
-      assert fix("value /= divisor") == "value = value / (divisor)"
+      assert fix("""
+             value /= divisor
+             """) == """
+             value = value / (divisor)
+             """
     end
 
     test "preserves leading indentation" do
-      assert fix("    count += 1") == "    count = count + (1)"
+      assert fix("""
+                 count += 1
+             """) == """
+                 count = count + (1)
+             """
     end
 
     test "fixes multiple augmented assignments across lines" do
@@ -167,19 +222,35 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
     # Python `x *= 3 + 4` means `x = x * (3 + 4)` (== 14), NOT `x = x * 3 + 4`
     # (== 10). The naive unparenthesised rewrite would change the answer.
     test "*= with a lower-precedence right-hand side" do
-      assert fix("x *= 3 + 4") == "x = x * (3 + 4)"
+      assert fix("""
+             x *= 3 + 4
+             """) == """
+             x = x * (3 + 4)
+             """
     end
 
     test "-= with a subtraction right-hand side" do
-      assert fix("x -= 3 - 1") == "x = x - (3 - 1)"
+      assert fix("""
+             x -= 3 - 1
+             """) == """
+             x = x - (3 - 1)
+             """
     end
 
     test "/= with a lower-precedence right-hand side" do
-      assert fix("x /= a + b") == "x = x / (a + b)"
+      assert fix("""
+             x /= a + b
+             """) == """
+             x = x / (a + b)
+             """
     end
 
     test "-= with a negative literal" do
-      assert fix("x -= -1") == "x = x - (-1)"
+      assert fix("""
+             x -= -1
+             """) == """
+             x = x - (-1)
+             """
     end
   end
 
@@ -203,27 +274,42 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
     end
 
     test "operator inside a string literal unchanged" do
-      code = ~s|x = "a += b"|
+      code = """
+      x = "a += b"
+      """
+
       assert fix(code) == code
     end
 
     test "string literal containing /= unchanged" do
-      code = ~s|msg = "5/=2 ratio"|
+      code = """
+      msg = "5/=2 ratio"
+      """
+
       assert fix(code) == code
     end
 
     test "qualified left-hand side unchanged" do
-      code = "socket.assigns.count += 1"
+      code = """
+      socket.assigns.count += 1
+      """
+
       assert fix(code) == code
     end
 
     test "indexed left-hand side unchanged" do
-      code = "arr[i] += 1"
+      code = """
+      arr[i] += 1
+      """
+
       assert fix(code) == code
     end
 
     test "augmented op not leading the statement unchanged" do
-      code = "z = a += b"
+      code = """
+      z = a += b
+      """
+
       assert fix(code) == code
     end
   end

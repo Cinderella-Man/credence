@@ -10,7 +10,10 @@ defmodule Credence.Pattern.NoKernelOpInPipelineEquivalenceTest do
   alias Credence.Pattern.NoKernelOpInPipeline
 
   test "score |> Kernel.>=(threshold) → score >= threshold preserves the boolean" do
-    assert_equivalent("score |> Kernel.>=(threshold)",
+    assert_equivalent(
+      """
+      score |> Kernel.>=(threshold)
+      """,
       rule: NoKernelOpInPipeline,
       vars: [:score, :threshold],
       inputs: [{5, 3}, {3, 5}, {5, 5}, {-1, 0}, {1.0, 1}]

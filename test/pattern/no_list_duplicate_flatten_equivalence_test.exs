@@ -12,7 +12,10 @@ defmodule Credence.Pattern.NoListDuplicateFlattenEquivalenceTest do
   alias Credence.Pattern.NoListDuplicateFlatten
 
   test "Enum.concat(List.duplicate(list, 3)) → flat_map preserves the concatenation" do
-    assert_equivalent("Enum.concat(List.duplicate(list, 3))",
+    assert_equivalent(
+      """
+      Enum.concat(List.duplicate(list, 3))
+      """,
       rule: NoListDuplicateFlatten,
       vars: [:list],
       inputs: B.term_lists()

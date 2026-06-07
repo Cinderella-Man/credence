@@ -11,23 +11,34 @@ defmodule Credence.Pattern.NoCodepointStringReverseCheckTest do
   describe "check — detects codepoint decompose (both reassembles)" do
     test "codepoints |> reverse |> IO.iodata_to_binary pipeline" do
       code =
-        ~s[def r(str), do: str |> String.codepoints() |> Enum.reverse() |> IO.iodata_to_binary()]
+        """
+        def r(str), do: str |> String.codepoints() |> Enum.reverse() |> IO.iodata_to_binary()
+        """
 
       assert [%Issue{rule: :no_codepoint_string_reverse}] = check(NoCodepointStringReverse, code)
     end
 
     test "codepoints |> reverse |> Enum.join pipeline" do
-      code = ~s[def r(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()]
+      code = """
+      def r(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()
+      """
+
       assert [%Issue{rule: :no_codepoint_string_reverse}] = check(NoCodepointStringReverse, code)
     end
 
     test "nested IO.iodata_to_binary(Enum.reverse(String.codepoints(...)))" do
-      code = ~s[def r(str), do: IO.iodata_to_binary(Enum.reverse(String.codepoints(str)))]
+      code = """
+      def r(str), do: IO.iodata_to_binary(Enum.reverse(String.codepoints(str)))
+      """
+
       assert [%Issue{rule: :no_codepoint_string_reverse}] = check(NoCodepointStringReverse, code)
     end
 
     test "nested Enum.join(Enum.reverse(String.codepoints(...)))" do
-      code = ~s[def r(str), do: Enum.join(Enum.reverse(String.codepoints(str)))]
+      code = """
+      def r(str), do: Enum.join(Enum.reverse(String.codepoints(str)))
+      """
+
       assert [%Issue{rule: :no_codepoint_string_reverse}] = check(NoCodepointStringReverse, code)
     end
 
@@ -46,14 +57,19 @@ defmodule Credence.Pattern.NoCodepointStringReverseCheckTest do
 
   describe "check — does NOT flag" do
     test "graphemes decompose (handled by NoManualStringReverse)" do
-      code = ~s[def r(str), do: str |> String.graphemes() |> Enum.reverse() |> Enum.join()]
+      code = """
+      def r(str), do: str |> String.graphemes() |> Enum.reverse() |> Enum.join()
+      """
+
       assert check(NoCodepointStringReverse, code) == []
     end
 
     test "codepoints used without the reverse pattern" do
       assert check(
                NoCodepointStringReverse,
-               ~s[def r(s), do: s |> String.codepoints() |> length()]
+               """
+               def r(s), do: s |> String.codepoints() |> length()
+               """
              ) == []
     end
   end

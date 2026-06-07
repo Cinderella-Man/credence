@@ -38,7 +38,9 @@ defmodule Credence.Semantic.OutdentedHeredocCheckTest do
     test "does not match unused variable warning" do
       diag = %{
         severity: :warning,
-        message: ~s(variable "x" is unused),
+        message: """
+        variable "x" is unused
+        """,
         position: {5, 6}
       }
 

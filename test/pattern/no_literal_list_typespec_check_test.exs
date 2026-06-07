@@ -7,7 +7,9 @@ defmodule Credence.Pattern.NoLiteralListTypespecCheckTest do
   describe "detects" do
     test "two-element type-call list return type" do
       issues =
-        check(NoLiteralListTypespec, "@spec foo(integer()) :: [pos_integer(), pos_integer()]")
+        check(NoLiteralListTypespec, """
+        @spec foo(integer()) :: [pos_integer(), pos_integer()]
+        """)
 
       assert [%Issue{rule: :no_literal_list_typespec}] = issues
     end
@@ -16,28 +18,38 @@ defmodule Credence.Pattern.NoLiteralListTypespecCheckTest do
       assert [%Issue{}] =
                check(
                  NoLiteralListTypespec,
-                 "@spec foo(integer()) :: [atom(), integer(), string()]"
+                 """
+                 @spec foo(integer()) :: [atom(), integer(), string()]
+                 """
                )
     end
 
     test "different element types" do
       assert [%Issue{}] =
-               check(NoLiteralListTypespec, "@spec foo(integer()) :: [atom(), integer()]")
+               check(NoLiteralListTypespec, """
+               @spec foo(integer()) :: [atom(), integer()]
+               """)
     end
 
     test "bang function name" do
       assert [%Issue{}] =
-               check(NoLiteralListTypespec, "@spec foo!(integer()) :: [atom(), integer()]")
+               check(NoLiteralListTypespec, """
+               @spec foo!(integer()) :: [atom(), integer()]
+               """)
     end
 
     test "question-mark function name" do
       assert [%Issue{}] =
-               check(NoLiteralListTypespec, "@spec foo?(integer()) :: [atom(), integer()]")
+               check(NoLiteralListTypespec, """
+               @spec foo?(integer()) :: [atom(), integer()]
+               """)
     end
 
     test "remote type elements" do
       assert [%Issue{}] =
-               check(NoLiteralListTypespec, "@spec foo(integer()) :: [String.t(), atom()]")
+               check(NoLiteralListTypespec, """
+               @spec foo(integer()) :: [String.t(), atom()]
+               """)
     end
 
     test "inside a module, only the return type" do
@@ -66,36 +78,52 @@ defmodule Credence.Pattern.NoLiteralListTypespecCheckTest do
 
   describe "does not flag (deliberately out of scope)" do
     test "single-element list type (valid: list of type)" do
-      assert check(NoLiteralListTypespec, "@spec foo(integer()) :: [pos_integer()]") == []
+      assert check(NoLiteralListTypespec, """
+             @spec foo(integer()) :: [pos_integer()]
+             """) == []
     end
 
     test "non-empty list type `[type, ...]` (valid)" do
-      assert check(NoLiteralListTypespec, "@spec foo(integer()) :: [pos_integer(), ...]") == []
+      assert check(NoLiteralListTypespec, """
+             @spec foo(integer()) :: [pos_integer(), ...]
+             """) == []
     end
 
     test "keyword-list type (valid)" do
-      assert check(NoLiteralListTypespec, "@spec foo(integer()) :: [ok: integer(), err: atom()]") ==
+      assert check(NoLiteralListTypespec, """
+             @spec foo(integer()) :: [ok: integer(), err: atom()]
+             """) ==
                []
     end
 
     test "literal-atom list (ambiguous: likely a `:ok | :error` union)" do
-      assert check(NoLiteralListTypespec, "@spec foo(integer()) :: [:ok, :error]") == []
+      assert check(NoLiteralListTypespec, """
+             @spec foo(integer()) :: [:ok, :error]
+             """) == []
     end
 
     test "tuple return type" do
-      assert check(NoLiteralListTypespec, "@spec foo(integer()) :: {atom(), integer()}") == []
+      assert check(NoLiteralListTypespec, """
+             @spec foo(integer()) :: {atom(), integer()}
+             """) == []
     end
 
     test "simple return type" do
-      assert check(NoLiteralListTypespec, "@spec foo(integer()) :: integer()") == []
+      assert check(NoLiteralListTypespec, """
+             @spec foo(integer()) :: integer()
+             """) == []
     end
 
     test "union return type" do
-      assert check(NoLiteralListTypespec, "@spec foo(integer()) :: :ok | :error") == []
+      assert check(NoLiteralListTypespec, """
+             @spec foo(integer()) :: :ok | :error
+             """) == []
     end
 
     test "list literal in a function body, not a spec" do
-      assert check(NoLiteralListTypespec, "def foo(x), do: [x, x]") == []
+      assert check(NoLiteralListTypespec, """
+             def foo(x), do: [x, x]
+             """) == []
     end
   end
 end

@@ -11,7 +11,10 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxEquivalenceTest do
   alias Credence.Pattern.NoIfEmptyForEnumMinMax
 
   test "if Enum.empty? default else Enum.min → Enum.min(_, fn -> default end) incl. empty" do
-    assert_equivalent("if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)",
+    assert_equivalent(
+      """
+      if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)
+      """,
       rule: NoIfEmptyForEnumMinMax,
       vars: [:lengths],
       inputs: [[], [3, 1, 2], [5], [1, 1.0, 2], [-3, -1]]

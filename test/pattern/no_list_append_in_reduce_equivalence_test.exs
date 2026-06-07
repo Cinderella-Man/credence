@@ -12,7 +12,10 @@ defmodule Credence.Pattern.NoListAppendInReduceEquivalenceTest do
   alias Credence.Pattern.NoListAppendInReduce
 
   test "acc ++ [f(item)] reduce → prepend + reverse preserves the order" do
-    assert_equivalent("Enum.reduce(list, [], fn item, acc -> acc ++ [item * 2] end)",
+    assert_equivalent(
+      """
+      Enum.reduce(list, [], fn item, acc -> acc ++ [item * 2] end)
+      """,
       rule: NoListAppendInReduce,
       vars: [:list],
       inputs: [[], [1], [1, 2, 3], [-1, -2, -3], Enum.to_list(1..20)]

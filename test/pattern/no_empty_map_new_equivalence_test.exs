@@ -8,7 +8,10 @@ defmodule Credence.Pattern.NoEmptyMapNewEquivalenceTest do
   alias Credence.Pattern.NoEmptyMapNew
 
   test "Map.new() → %{} is the empty map" do
-    assert_equivalent("Map.new()",
+    assert_equivalent(
+      """
+      Map.new()
+      """,
       rule: NoEmptyMapNew,
       vars: [],
       inputs: [nil],

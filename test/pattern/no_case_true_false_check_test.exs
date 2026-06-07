@@ -57,7 +57,9 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
     end
 
     test "inline case" do
-      assert flagged?(NoCaseTrueFalse, ~S"case is_nil(x) do true -> 0; false -> x end")
+      assert flagged?(NoCaseTrueFalse, """
+             case is_nil(x) do true -> 0; false -> x end
+             """)
     end
 
     test "nested inside a def" do

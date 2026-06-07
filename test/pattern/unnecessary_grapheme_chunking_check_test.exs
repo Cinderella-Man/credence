@@ -132,7 +132,9 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingCheckTest do
 
     test "flags one-liner form" do
       code =
-        "def ngrams(s, n), do: s |> String.graphemes() |> Enum.chunk_every(n, 1, :discard) |> Enum.map(&Enum.join/1)"
+        """
+        def ngrams(s, n), do: s |> String.graphemes() |> Enum.chunk_every(n, 1, :discard) |> Enum.map(&Enum.join/1)
+        """
 
       assert length(check(UnnecessaryGraphemeChunking, code)) == 1
     end

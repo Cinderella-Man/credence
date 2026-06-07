@@ -7,7 +7,9 @@ defmodule Credence.Pattern.NoKernelShadowingCheckTest do
   describe "flags shadowing variables" do
     test "max in fn parameter" do
       assert [%Issue{rule: :no_kernel_shadowing}] =
-               check(NoKernelShadowing, "Enum.reduce(list, 0, fn x, max -> max(x, max) end)")
+               check(NoKernelShadowing, """
+               Enum.reduce(list, 0, fn x, max -> max(x, max) end)
+               """)
     end
 
     test "min in match assignment" do
@@ -34,12 +36,18 @@ defmodule Credence.Pattern.NoKernelShadowingCheckTest do
     end
 
     test "max and min together" do
-      refute Enum.empty?(check(NoKernelShadowing, "{max, min} = {100, 0}"))
+      refute Enum.empty?(
+               check(NoKernelShadowing, """
+               {max, min} = {100, 0}
+               """)
+             )
     end
 
     test "hd in fn parameter" do
       assert [%Issue{rule: :no_kernel_shadowing}] =
-               check(NoKernelShadowing, "Enum.map(list, fn hd -> hd + 1 end)")
+               check(NoKernelShadowing, """
+               Enum.map(list, fn hd -> hd + 1 end)
+               """)
     end
 
     test "length in match" do
@@ -71,16 +79,22 @@ defmodule Credence.Pattern.NoKernelShadowingCheckTest do
     test "idiomatic variable names" do
       assert check(
                NoKernelShadowing,
-               "Enum.reduce(list, 0, fn x, max_val -> max(x, max_val) end)"
+               """
+               Enum.reduce(list, 0, fn x, max_val -> max(x, max_val) end)
+               """
              ) == []
     end
 
     test "atom keys in maps" do
-      assert check(NoKernelShadowing, "data = %{max: 10, min: 0}") == []
+      assert check(NoKernelShadowing, """
+             data = %{max: 10, min: 0}
+             """) == []
     end
 
     test "keyword list keys" do
-      assert check(NoKernelShadowing, "opts = [max: 5, min: 1]") == []
+      assert check(NoKernelShadowing, """
+             opts = [max: 5, min: 1]
+             """) == []
     end
   end
 end

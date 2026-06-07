@@ -12,7 +12,10 @@ defmodule Credence.Pattern.NoEnumDropNegativeEquivalenceTest do
   alias Credence.Pattern.NoEnumDropNegative
 
   test "Enum.drop(list, -2) → Enum.slice preserves behaviour incl. short/empty lists" do
-    assert_equivalent("Enum.drop(list, -2)",
+    assert_equivalent(
+      """
+      Enum.drop(list, -2)
+      """,
       rule: NoEnumDropNegative,
       vars: [:list],
       inputs: B.term_lists()

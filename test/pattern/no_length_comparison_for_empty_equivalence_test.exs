@@ -16,7 +16,10 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyEquivalenceTest do
   alias Credence.Pattern.NoLengthComparisonForEmpty
 
   test "length(l) == 0 → l == [] preserves the boolean over proper lists" do
-    assert_equivalent("length(l) == 0",
+    assert_equivalent(
+      """
+      length(l) == 0
+      """,
       rule: NoLengthComparisonForEmpty,
       vars: [:l],
       inputs: B.term_lists()

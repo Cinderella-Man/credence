@@ -36,7 +36,9 @@ defmodule Credence.Pattern.NoCaseBooleanResultCheckTest do
     end
 
     test "inline case" do
-      assert flagged?(NoCaseBooleanResult, ~S"case check(x) do :ok -> true; _ -> false end")
+      assert flagged?(NoCaseBooleanResult, """
+             case check(x) do :ok -> true; _ -> false end
+             """)
     end
 
     test "nested in function def" do

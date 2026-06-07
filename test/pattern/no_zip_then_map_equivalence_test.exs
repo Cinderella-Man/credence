@@ -11,7 +11,10 @@ defmodule Credence.Pattern.NoZipThenMapEquivalenceTest do
   alias Credence.Pattern.NoZipThenMap
 
   test "zip |> map → zip_with preserves the paired result incl. unequal lengths" do
-    assert_equivalent("Enum.zip(a, b) |> Enum.map(fn {x, y} -> x + y end)",
+    assert_equivalent(
+      """
+      Enum.zip(a, b) |> Enum.map(fn {x, y} -> x + y end)
+      """,
       rule: NoZipThenMap,
       vars: [:a, :b],
       inputs: [

@@ -226,16 +226,19 @@ over the same list).
   (heredoc fixtures are exempt — the gate is AST-based). Only `test/support` may
   touch the parser. Syntax/semantic tests (`use ExUnit.Case`, not `RuleCase`) reach
   `valid_syntax?` via `import Credence.RuleCase, only: [valid_syntax?: 1]`.
-  Code fixtures carry **no string escaping**: multi-line code uses a **heredoc**
-  (never `"...\n...\n..."`), and a nested quote uses a **`~s` sigil** (never
-  `"Enum.join(list, \"\")"` → `~s[Enum.join(list, "")]`).
-  `test/fixture_string_escaping_test.exs` enforces both (Sourceror delimiter-aware)
-  and exempts what those forms can't carry — the `test`/`describe` name, a fixture
-  whose code contains `"""` or `\#{`, a string ending in a blank line (`mix format`
-  trims a heredoc's trailing blank), a pure-`"\n"` separator — plus a tiny reasoned
-  allow-list (a line-number-sensitive diagnostic fixture). Heredocs add a trailing
-  `\n`; since `fix/2` mirrors it, fix-test `input`/`expected` convert as a pair
-  (sigils don't, so single-line nested-quote fixtures need no pairing).
+  **Every code fixture is a `"""` heredoc** — never an escaped `"...\n..."` /
+  `"...\""` string, never a `~s`/`~S` sigil. Even one-liners:
+  `check(rule, """\n  length(list)\n  """)`. `test/fixture_string_escaping_test.exs`
+  enforces it (three checks: no multi-line escaped string, no `\"` escape, no
+  sigil — Sourceror delimiter-aware). Exempt — what a heredoc can't carry: the
+  `test`/`describe` name; code containing `"""`; an interpolated `~s[...\#{x}...]`;
+  a `~S\"""..."""` sigil-heredoc (already triple quotes, raw for `\#{}` code). Plus
+  a small reasoned file allow-list — fixtures a heredoc breaks structurally (the
+  fix drops/transforms the trailing newline, a line-number-sensitive diagnostic, a
+  forced trailing blank line, `=~` message-substring assertions). Heredocs add a
+  trailing `\n`; since `fix/2` mirrors it, a fix test's `input`/`expected` convert
+  as a pair. Converting non-fixture strings (`=~` substrings, `#{}` fragments) is
+  the trap — they are NOT fixtures and must stay plain.
 - `test/credence_pipeline_test.exs` — end-to-end tests, including the
   after-the-fix check (with on-purpose `BrokenFixRule` / `UnparseableFixRule`
   test rules).

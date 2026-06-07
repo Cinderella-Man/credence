@@ -12,7 +12,10 @@ defmodule Credence.Pattern.NoEnumTakeNegativeEquivalenceTest do
   alias Credence.Pattern.NoEnumTakeNegative
 
   test "Enum.take(list, -2) → Enum.slice preserves behaviour incl. short/empty lists" do
-    assert_equivalent("Enum.take(list, -2)",
+    assert_equivalent(
+      """
+      Enum.take(list, -2)
+      """,
       rule: NoEnumTakeNegative,
       vars: [:list],
       inputs: B.term_lists()

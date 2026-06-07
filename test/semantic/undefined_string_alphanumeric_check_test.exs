@@ -49,7 +49,9 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericCheckTest do
     test "does not match unrelated warning" do
       diag = %{
         severity: :warning,
-        message: ~s(variable "x" is unused),
+        message: """
+        variable "x" is unused
+        """,
         position: {5, 6}
       }
 

@@ -10,7 +10,10 @@ defmodule Credence.Pattern.NoFilterThenFirstEquivalenceTest do
   alias Credence.Pattern.NoFilterThenFirst
 
   test "Enum.at(Stream.filter(nums, pred), 0) → Enum.find(nums, pred) preserves the first match" do
-    assert_equivalent("Enum.at(Stream.filter(nums, fn x -> rem(x, 2) == 0 end), 0)",
+    assert_equivalent(
+      """
+      Enum.at(Stream.filter(nums, fn x -> rem(x, 2) == 0 end), 0)
+      """,
       rule: NoFilterThenFirst,
       vars: [:nums],
       inputs: [[], [1, 3, 5], [1, 2, 3, 4], [2, 4], [-3, -2, -1]]

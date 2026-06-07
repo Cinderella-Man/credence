@@ -97,7 +97,9 @@ defmodule Credence.Pattern.NoManualFrequenciesEquivalenceTest do
 
   test "derived key rem(x, 3) → frequencies_by, incl. negatives and zero" do
     assert_equivalent(
-      "Enum.reduce(list, %{}, fn x, acc -> Map.update(acc, rem(x, 3), 1, &(&1 + 1)) end)",
+      """
+      Enum.reduce(list, %{}, fn x, acc -> Map.update(acc, rem(x, 3), 1, &(&1 + 1)) end)
+      """,
       rule: NoManualFrequencies,
       vars: [:list],
       inputs: [
@@ -112,7 +114,9 @@ defmodule Credence.Pattern.NoManualFrequenciesEquivalenceTest do
 
   test "derived key with an arithmetic expression → frequencies_by" do
     assert_equivalent(
-      "Enum.reduce(list, %{}, fn x, acc -> Map.update(acc, x * x, 1, &(&1 + 1)) end)",
+      """
+      Enum.reduce(list, %{}, fn x, acc -> Map.update(acc, x * x, 1, &(&1 + 1)) end)
+      """,
       rule: NoManualFrequencies,
       vars: [:list],
       inputs: [[], [-2, 2, -3, 3], [0, 1, 2, 2, 2], Enum.to_list(1..100)]

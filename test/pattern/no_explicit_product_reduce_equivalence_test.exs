@@ -11,7 +11,10 @@ defmodule Credence.Pattern.NoExplicitProductReduceEquivalenceTest do
   alias Credence.Pattern.NoExplicitProductReduce
 
   test "reduce(*) → Enum.product preserves the product incl. value-kind" do
-    assert_equivalent("Enum.reduce(list, 1, fn x, acc -> acc * x end)",
+    assert_equivalent(
+      """
+      Enum.reduce(list, 1, fn x, acc -> acc * x end)
+      """,
       rule: NoExplicitProductReduce,
       vars: [:list],
       inputs: [[], [1, 2, 3], [1.0, 2.0], [1, 1.0, 2], [0, 5], [-1, -2, 3]]

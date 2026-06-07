@@ -176,12 +176,13 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
     end
 
     test "single-line @doc with \\n escapes IS still flagged" do
-      code = ~S'''
+      code = """
       defmodule Example do
-        @doc "Line one.\nLine two."
+        @doc "Line one.\\nLine two."
         def foo, do: :ok
       end
-      '''
+
+      """
 
       assert Enum.any?(
                check(PreferHeredocForMultiLineDoc, code),

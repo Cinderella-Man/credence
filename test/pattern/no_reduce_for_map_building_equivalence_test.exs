@@ -13,7 +13,9 @@ defmodule Credence.Pattern.NoReduceForMapBuildingEquivalenceTest do
 
   test "reduce(%{}, Map.put) → Map.new preserves the map (incl. duplicate-key last-write-wins)" do
     assert_equivalent(
-      "Enum.reduce(list, %{}, fn x, acc -> Map.put(acc, x, String.length(x)) end)",
+      """
+      Enum.reduce(list, %{}, fn x, acc -> Map.put(acc, x, String.length(x)) end)
+      """,
       rule: NoReduceForMapBuilding,
       vars: [:list],
       inputs: [[], ["a", "bb", "ccc"], ["x", "x"], ["a", "bb", "a"], ["", "z", ""]]

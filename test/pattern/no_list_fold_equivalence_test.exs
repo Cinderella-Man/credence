@@ -14,7 +14,10 @@ defmodule Credence.Pattern.NoListFoldEquivalenceTest do
   alias Credence.Pattern.NoListFold
 
   test "List.foldl → Enum.reduce preserves accumulation (left-to-right)" do
-    assert_equivalent("List.foldl(list, 0, fn x, acc -> acc + x end)",
+    assert_equivalent(
+      """
+      List.foldl(list, 0, fn x, acc -> acc + x end)
+      """,
       rule: NoListFold,
       vars: [:list],
       inputs: B.signed_integers()
@@ -22,7 +25,10 @@ defmodule Credence.Pattern.NoListFoldEquivalenceTest do
   end
 
   test "List.foldr → Enum.reduce(Enum.reverse(...)) preserves order (right-to-left)" do
-    assert_equivalent("List.foldr(list, [], fn x, acc -> [x * 2 | acc] end)",
+    assert_equivalent(
+      """
+      List.foldr(list, [], fn x, acc -> [x * 2 | acc] end)
+      """,
       rule: NoListFold,
       vars: [:list],
       inputs: B.signed_integers()

@@ -16,7 +16,10 @@ defmodule Credence.Pattern.PreferEnumSliceEquivalenceTest do
   alias Credence.Pattern.PreferEnumSlice
 
   test "Enum.drop(list, 1) |> Enum.take(2) → Enum.slice(list, 1, 2) over varied lengths" do
-    assert_equivalent("Enum.drop(list, 1) |> Enum.take(2)",
+    assert_equivalent(
+      """
+      Enum.drop(list, 1) |> Enum.take(2)
+      """,
       rule: PreferEnumSlice,
       vars: [:list],
       inputs: [[], [1], [1, 2], [1, 2, 3, 4, 5], [:a, :b, :c], [1, 1.0, 2, 3]]
@@ -24,7 +27,10 @@ defmodule Credence.Pattern.PreferEnumSliceEquivalenceTest do
   end
 
   test "Enum.drop(list, 0) |> Enum.take(3) (start 0) → Enum.slice(list, 0, 3)" do
-    assert_equivalent("Enum.drop(list, 0) |> Enum.take(3)",
+    assert_equivalent(
+      """
+      Enum.drop(list, 0) |> Enum.take(3)
+      """,
       rule: PreferEnumSlice,
       vars: [:list],
       inputs: [[], [1], [1, 2, 3, 4, 5]]

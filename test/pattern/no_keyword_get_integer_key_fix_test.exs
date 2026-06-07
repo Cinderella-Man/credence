@@ -7,15 +7,27 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
 
   describe "index -1 → List.last" do
     test "direct call" do
-      assert fix(NoKeywordGetIntegerKey, "Keyword.get(acc, -1)") == "List.last(acc)"
+      assert fix(NoKeywordGetIntegerKey, """
+             Keyword.get(acc, -1)
+             """) == """
+             List.last(acc)
+             """
     end
 
     test "in assignment" do
-      assert fix(NoKeywordGetIntegerKey, "prev = Keyword.get(acc, -1)") == "prev = List.last(acc)"
+      assert fix(NoKeywordGetIntegerKey, """
+             prev = Keyword.get(acc, -1)
+             """) == """
+             prev = List.last(acc)
+             """
     end
 
     test "piped" do
-      assert fix(NoKeywordGetIntegerKey, "acc |> Keyword.get(-1)") == "acc |> List.last()"
+      assert fix(NoKeywordGetIntegerKey, """
+             acc |> Keyword.get(-1)
+             """) == """
+             acc |> List.last()
+             """
     end
   end
 
@@ -23,11 +35,19 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
 
   describe "index 0 → List.first" do
     test "direct call" do
-      assert fix(NoKeywordGetIntegerKey, "Keyword.get(list, 0)") == "List.first(list)"
+      assert fix(NoKeywordGetIntegerKey, """
+             Keyword.get(list, 0)
+             """) == """
+             List.first(list)
+             """
     end
 
     test "piped" do
-      assert fix(NoKeywordGetIntegerKey, "list |> Keyword.get(0)") == "list |> List.first()"
+      assert fix(NoKeywordGetIntegerKey, """
+             list |> Keyword.get(0)
+             """) == """
+             list |> List.first()
+             """
     end
   end
 
@@ -35,19 +55,35 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
 
   describe "general integer → Enum.at" do
     test "positive index" do
-      assert fix(NoKeywordGetIntegerKey, "Keyword.get(list, 3)") == "Enum.at(list, 3)"
+      assert fix(NoKeywordGetIntegerKey, """
+             Keyword.get(list, 3)
+             """) == """
+             Enum.at(list, 3)
+             """
     end
 
     test "negative index" do
-      assert fix(NoKeywordGetIntegerKey, "Keyword.get(list, -2)") == "Enum.at(list, -2)"
+      assert fix(NoKeywordGetIntegerKey, """
+             Keyword.get(list, -2)
+             """) == """
+             Enum.at(list, -2)
+             """
     end
 
     test "piped positive" do
-      assert fix(NoKeywordGetIntegerKey, "list |> Keyword.get(3)") == "list |> Enum.at(3)"
+      assert fix(NoKeywordGetIntegerKey, """
+             list |> Keyword.get(3)
+             """) == """
+             list |> Enum.at(3)
+             """
     end
 
     test "piped negative" do
-      assert fix(NoKeywordGetIntegerKey, "list |> Keyword.get(-2)") == "list |> Enum.at(-2)"
+      assert fix(NoKeywordGetIntegerKey, """
+             list |> Keyword.get(-2)
+             """) == """
+             list |> Enum.at(-2)
+             """
     end
   end
 
@@ -77,8 +113,12 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
     end
 
     test "the actual pattern from the LLM log" do
-      assert fix(NoKeywordGetIntegerKey, "prev_value = Keyword.get(acc, -1)") ==
-               "prev_value = List.last(acc)"
+      assert fix(NoKeywordGetIntegerKey, """
+             prev_value = Keyword.get(acc, -1)
+             """) ==
+               """
+               prev_value = List.last(acc)
+               """
     end
   end
 
@@ -86,22 +126,34 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
 
   describe "no-ops" do
     test "atom key unchanged" do
-      code = "Keyword.get(opts, :name)"
+      code = """
+      Keyword.get(opts, :name)
+      """
+
       assert fix(NoKeywordGetIntegerKey, code) == code
     end
 
     test "variable key unchanged" do
-      code = "Keyword.get(opts, key)"
+      code = """
+      Keyword.get(opts, key)
+      """
+
       assert fix(NoKeywordGetIntegerKey, code) == code
     end
 
     test "Map.get with integer key unchanged" do
-      code = "Map.get(map, -1)"
+      code = """
+      Map.get(map, -1)
+      """
+
       assert fix(NoKeywordGetIntegerKey, code) == code
     end
 
     test "no Keyword.get at all" do
-      code = "List.last(acc)"
+      code = """
+      List.last(acc)
+      """
+
       assert fix(NoKeywordGetIntegerKey, code) == code
     end
   end

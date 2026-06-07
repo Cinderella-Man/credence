@@ -11,7 +11,10 @@ defmodule Credence.Pattern.NoKernelShadowingEquivalenceTest do
   alias Credence.Pattern.NoKernelShadowing
 
   test "renaming the shadowing var preserves the fold result" do
-    assert_equivalent("Enum.reduce(list, 0, fn x, max -> max(x, max) end)",
+    assert_equivalent(
+      """
+      Enum.reduce(list, 0, fn x, max -> max(x, max) end)
+      """,
       rule: NoKernelShadowing,
       vars: [:list],
       inputs: B.signed_integers()

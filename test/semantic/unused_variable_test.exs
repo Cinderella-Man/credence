@@ -6,7 +6,14 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
   describe "match?/1" do
     test "matches unused variable warning" do
-      diag = %{severity: :warning, message: ~s(variable "x" is unused), position: {5, 6}}
+      diag = %{
+        severity: :warning,
+        message: """
+        variable "x" is unused
+        """,
+        position: {5, 6}
+      }
+
       assert UnusedVariable.match?(diag)
     end
 
@@ -16,7 +23,14 @@ defmodule Credence.Semantic.UnusedVariableTest do
     end
 
     test "does not match error severity" do
-      diag = %{severity: :error, message: ~s(variable "x" is unused), position: {5, 6}}
+      diag = %{
+        severity: :error,
+        message: """
+        variable "x" is unused
+        """,
+        position: {5, 6}
+      }
+
       refute UnusedVariable.match?(diag)
     end
 
@@ -37,7 +51,9 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
       diag = %{
         severity: :warning,
-        message: ~s(variable "current" is unused),
+        message: """
+        variable "current" is unused
+        """,
         position: {2, 4}
       }
 
@@ -61,7 +77,9 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
       diag = %{
         severity: :warning,
-        message: ~s(variable "_current" is unused),
+        message: """
+        variable "_current" is unused
+        """,
         position: {2, 4}
       }
 
@@ -78,7 +96,9 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
       diag = %{
         severity: :warning,
-        message: ~s(variable "extra" is unused),
+        message: """
+        variable "extra" is unused
+        """,
         position: {2, 9}
       }
 
@@ -99,7 +119,9 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
       diag = %{
         severity: :warning,
-        message: ~s(variable "x" is unused),
+        message: """
+        variable "x" is unused
+        """,
         position: 1
       }
 
@@ -114,7 +136,9 @@ defmodule Credence.Semantic.UnusedVariableTest do
     test "builds issue with correct rule and line" do
       diag = %{
         severity: :warning,
-        message: ~s(variable "foo" is unused),
+        message: """
+        variable "foo" is unused
+        """,
         position: {7, 4}
       }
 
@@ -478,11 +502,16 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
   describe "fix/2 — safety guards" do
     test "no column AND var name appears more than once on the line — skip" do
-      source = ~s|  %{"foo" => foo} = params\n|
+      source = """
+        %{"foo" => foo} = params
+
+      """
 
       diag = %{
         severity: :warning,
-        message: ~s(variable "foo" is unused),
+        message: """
+        variable "foo" is unused
+        """,
         position: 1
       }
 
@@ -497,7 +526,9 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
       diag = %{
         severity: :warning,
-        message: ~s(variable "x" is unused),
+        message: """
+        variable "x" is unused
+        """,
         position: {1, 100}
       }
 
@@ -512,7 +543,9 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
       diag = %{
         severity: :warning,
-        message: ~s(variable "x" is unused),
+        message: """
+        variable "x" is unused
+        """,
         position: {1, 1}
       }
 

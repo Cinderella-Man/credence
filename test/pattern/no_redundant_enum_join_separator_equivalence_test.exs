@@ -12,7 +12,10 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorEquivalenceTest do
   alias Credence.Pattern.NoRedundantEnumJoinSeparator
 
   test "Enum.join(list, \"\") → Enum.join(list) preserves the joined string" do
-    assert_equivalent(~S|Enum.join(list, "")|,
+    assert_equivalent(
+      """
+      Enum.join(list, "")
+      """,
       rule: NoRedundantEnumJoinSeparator,
       vars: [:list],
       inputs: [[], [1, 2, 3], ["a", "b", "c"], [1, 1.0, 2], [:a, :b]]

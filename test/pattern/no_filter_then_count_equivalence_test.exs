@@ -9,7 +9,10 @@ defmodule Credence.Pattern.NoFilterThenCountEquivalenceTest do
   alias Credence.Pattern.NoFilterThenCount
 
   test "filter(pred) |> count → Enum.count(coll, pred) preserves the count" do
-    assert_equivalent("numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end) |> Enum.count()",
+    assert_equivalent(
+      """
+      numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end) |> Enum.count()
+      """,
       rule: NoFilterThenCount,
       vars: [:numbers],
       inputs: [[], [1, 2, 3, 4], [1, 3, 5], [2, 4, 6], Enum.to_list(-10..10)]

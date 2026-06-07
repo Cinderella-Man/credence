@@ -16,7 +16,10 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeEquivalenceTest do
   alias Credence.Pattern.PreferDescSortOverNegativeTake
 
   test "sort |> take(-3) → desc sort + take + reverse preserves the result exactly" do
-    assert_equivalent("Enum.sort(nums) |> Enum.take(-3)",
+    assert_equivalent(
+      """
+      Enum.sort(nums) |> Enum.take(-3)
+      """,
       rule: PreferDescSortOverNegativeTake,
       vars: [:nums],
       inputs: [

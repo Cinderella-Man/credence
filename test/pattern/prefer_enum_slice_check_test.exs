@@ -191,17 +191,26 @@ defmodule Credence.Pattern.PreferEnumSliceCheckTest do
     # --- NARROWING: only non-negative literal amounts (slice-equivalent) ---
 
     test "ignores variable amounts (could be negative at runtime)" do
-      code = "Enum.drop(list, start) |> Enum.take(len)"
+      code = """
+      Enum.drop(list, start) |> Enum.take(len)
+      """
+
       assert check(PreferEnumSlice, code) == []
     end
 
     test "ignores negative drop amount" do
-      code = "Enum.drop(list, -1) |> Enum.take(2)"
+      code = """
+      Enum.drop(list, -1) |> Enum.take(2)
+      """
+
       assert check(PreferEnumSlice, code) == []
     end
 
     test "ignores negative take amount" do
-      code = "Enum.drop(list, 1) |> Enum.take(-2)"
+      code = """
+      Enum.drop(list, 1) |> Enum.take(-2)
+      """
+
       assert check(PreferEnumSlice, code) == []
     end
   end

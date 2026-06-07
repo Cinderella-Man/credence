@@ -9,7 +9,10 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxEquivalenceTest do
   alias Credence.Pattern.NoRedundantBinarySyntax
 
   test "<<\"hello\">> → \"hello\" is the same binary" do
-    assert_equivalent(~S|<<"hello">>|,
+    assert_equivalent(
+      """
+      <<"hello">>
+      """,
       rule: NoRedundantBinarySyntax,
       vars: [],
       inputs: [nil],

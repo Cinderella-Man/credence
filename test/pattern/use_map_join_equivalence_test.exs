@@ -16,7 +16,9 @@ defmodule Credence.Pattern.UseMapJoinEquivalenceTest do
 
   test "map |> join → map_join preserves mapper call order and count" do
     assert_effect_trace_equivalent(
-      "Enum.map(list, fn x -> effect.(x) end) |> Enum.join(sep)",
+      """
+      Enum.map(list, fn x -> effect.(x) end) |> Enum.join(sep)
+      """,
       rule: UseMapJoin,
       vars: [:list, :sep],
       inputs: [

@@ -11,7 +11,10 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetEquivalenceTest do
   alias Credence.Pattern.NoEnumIntoEmptyMapset
 
   test "Enum.into(list, MapSet.new()) → MapSet.new(list) builds the same set" do
-    assert_equivalent("Enum.into(list, MapSet.new())",
+    assert_equivalent(
+      """
+      Enum.into(list, MapSet.new())
+      """,
       rule: NoEnumIntoEmptyMapset,
       vars: [:list],
       inputs: B.term_lists()

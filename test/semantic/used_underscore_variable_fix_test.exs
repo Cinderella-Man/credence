@@ -209,7 +209,9 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
 
       bare_diag = %{
         severity: :warning,
-        message: ~s(variable "_x" is used after being set),
+        message: """
+        variable "_x" is used after being set
+        """,
         position: 1
       }
 
@@ -226,7 +228,9 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
 
       weird_diag = %{
         severity: :warning,
-        message: ~s(variable "x" is used after being set),
+        message: """
+        variable "x" is used after being set
+        """,
         position: {1, 1}
       }
 
@@ -241,7 +245,9 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
 
       bad_diag = %{
         severity: :warning,
-        message: ~s(variable "_x" is used after being set),
+        message: """
+        variable "_x" is used after being set
+        """,
         position: nil
       }
 

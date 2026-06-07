@@ -18,7 +18,10 @@ defmodule Credence.Pattern.NoSortThenAtEquivalenceTest do
   alias Credence.Pattern.NoSortThenAt
 
   test "sort |> at(0) → Enum.min(_, fn -> nil end) preserves behaviour incl. empty list" do
-    assert_equivalent("Enum.sort(nums) |> Enum.at(0)",
+    assert_equivalent(
+      """
+      Enum.sort(nums) |> Enum.at(0)
+      """,
       rule: NoSortThenAt,
       vars: [:nums],
       inputs: B.term_lists()
@@ -26,7 +29,10 @@ defmodule Credence.Pattern.NoSortThenAtEquivalenceTest do
   end
 
   test "sort |> at(-1) → Enum.max(_, fn -> nil end) preserves behaviour incl. empty list" do
-    assert_equivalent("Enum.sort(nums) |> Enum.at(-1)",
+    assert_equivalent(
+      """
+      Enum.sort(nums) |> Enum.at(-1)
+      """,
       rule: NoSortThenAt,
       vars: [:nums],
       inputs: B.term_lists()

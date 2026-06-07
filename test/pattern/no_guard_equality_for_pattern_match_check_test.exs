@@ -109,7 +109,8 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       issues = check(NoGuardEqualityForPatternMatch, code)
 
       assert length(issues) == 1
-      assert hd(issues).message =~ ~s(s == "zero")
+
+      assert hd(issues).message =~ "s == \"zero\""
     end
 
     test "ignores non-param variables in guard equality" do
@@ -332,8 +333,16 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       assert length(issues) == 2
 
       messages = Enum.map(issues, & &1.message)
-      assert Enum.any?(messages, &(&1 =~ ~s("/admin")))
-      assert Enum.any?(messages, &(&1 =~ ~s("/login")))
+
+      assert Enum.any?(
+               messages,
+               &(&1 =~ "\"/admin\"")
+             )
+
+      assert Enum.any?(
+               messages,
+               &(&1 =~ "\"/login\"")
+             )
     end
   end
 end
