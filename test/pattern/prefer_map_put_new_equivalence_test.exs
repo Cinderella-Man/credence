@@ -4,7 +4,7 @@ defmodule Credence.Pattern.PreferMapPutNewEquivalenceTest do
   `if Map.has_key?(map, key), do: map, else: Map.put(map, key, value)` → `Map.put_new(map, key, value)`.
   Equivalent because the rule only fires when `value` is pure — it does NOT fire on
   a side-effecting value (verified) — so `put_new`'s eager evaluation of `value` is
-  observationally identical to the if/else's lazy evaluation. Battery covers key
+  observationally identical to the if/else's lazy evaluation. Input set covers key
   present (int/float value) and absent.
   """
   use ExUnit.Case, async: true

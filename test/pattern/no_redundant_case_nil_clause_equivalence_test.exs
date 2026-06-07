@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseEquivalenceTest do
   explicit `nil ->` clause but **adds `not is_nil(n)`** to the intermediate
   guard. That guard is load-bearing: term ordering makes `nil > 0` *true*, so a
   naive deletion would let `nil` fall into `n when n > 0` and return `nil`
-  instead of `0`. The battery includes `nil` plus values across types that
+  instead of `0`. The input set includes `nil` plus values across types that
   exercise the guard.
   """
   use ExUnit.Case, async: true

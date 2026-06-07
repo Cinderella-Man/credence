@@ -3,12 +3,12 @@ defmodule Credence.Pattern.NoListDeleteAtLengthEquivalenceTest do
   Tier 1 (expression), bounds dimension.
   `List.delete_at(list, length(list) - 1)` → `List.delete_at(list, -1)` (delete
   the last element). Equivalent for every list — including `[]` (both return
-  `[]`) and single-element lists. Battery covers empty, single, and value-kind.
+  `[]`) and single-element lists. Input set covers empty, single, and value-kind.
   """
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoListDeleteAtLength
 
   test "delete_at(list, length-1) → delete_at(list, -1) preserves behaviour incl. empty" do

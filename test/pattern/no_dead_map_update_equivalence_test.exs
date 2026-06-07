@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateEquivalenceTest do
   Tier 1 (expression).
   `map |> Map.update(key, 0, & &1) |> Map.drop([key])` → `Map.drop(map, [key])`.
   The identity `Map.update` only touches `key`, which is then dropped, so it is
-  dead. Battery covers key present (int/float value) and key absent.
+  dead. Input set covers key present (int/float value) and key absent.
   """
   use ExUnit.Case, async: true
 

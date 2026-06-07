@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoEnumAtNegativeIndexEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoEnumAtNegativeIndex
 
   test "Enum.at(x, -1) → List.last(x) preserves behaviour over term lists" do

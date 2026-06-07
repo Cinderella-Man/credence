@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseEquivalenceTest do
   Tier 1 (expression).
   `case Enum.find_value(list, f) do nil -> d; v -> v end` → `Enum.find_value(list, d, f)`.
   The 3-arg `find_value` returns the default `d` exactly when the 2-arg form
-  returns `nil`. Battery covers found, not-found, and empty.
+  returns `nil`. Input set covers found, not-found, and empty.
   """
   use ExUnit.Case, async: true
 

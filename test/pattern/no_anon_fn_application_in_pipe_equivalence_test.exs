@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `value |> (fn x -> ... end).()` → `value |> then(fn x -> ... end)`.
   Both apply the anonymous function to the piped value exactly once, so the result
-  is identical. Battery covers several piped values.
+  is identical. Input set covers several piped values.
 
   Regression note: the fix's patch range used to start at the `fn` keyword,
   stranding the parenthesized fn's leading `(` and producing the uncompilable

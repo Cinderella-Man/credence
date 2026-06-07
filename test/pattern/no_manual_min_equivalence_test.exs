@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoManualMinEquivalenceTest do
   Tier 1 (expression), value-kind dimension.
 
   `if a <= b, do: a, else: b` → `min(a, b)`. Narrowed to the non-strict form,
-  which equals `min/2` exactly. The battery includes equal-value-different-type
+  which equals `min/2` exactly. The input set includes equal-value-different-type
   pairs (`{1, 1.0}`, `{1.0, 1}`) — where the strict `<` form would have diverged
   (`min(1, 1.0) == 1`, but `if 1 < 1.0` yields `1.0`).
   """

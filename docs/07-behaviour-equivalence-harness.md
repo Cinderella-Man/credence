@@ -12,7 +12,7 @@ imagined, so they miss exactly these.
 
 **This is NOT a new "harness" or judge.** It is a third kind of per-rule test case,
 living in `test/pattern/`, run by plain `mix test` alongside `_check`/`_fix`: run the
-before- and after-code over a curated battery of adversarial inputs and assert
+before- and after-code over a curated input set of adversarial inputs and assert
 identical outcomes (incl. exception parity). Its job in Credence: a **permanent
 regression safety net** over all 125 shipped rules (and any future rule).
 
@@ -40,16 +40,36 @@ generalizes that one block into shared, mandatory, gate-enforced support.
    - **T3a cosmetic** — provably no runtime effect (param rename, attr move, doc text, typespec) → `mark_equivalence_cosmetic(reason)`. Before and after are behaviourally identical.
    - **T3b unconstructible** — behavioural but no self-contained callable example (cross-module/macro/compile-time) → `mark_equivalence_unconstructible(reason)`.
    - **T3c repair** — the firing precondition is a *broken* input (does-not-compile, e.g. a hallucinated guard or a missing `require Logger`; **or** always-fails — compiles but raises on *every* input, e.g. an arg-order bug like `s |> Regex.replace(...)`) → `mark_equivalence_repair(reason)`. **Deliberately NOT behaviour-preserving** — sound because the "before" has no input that yields a valid result; the fix is a *correction*. This is the principled home for the whole "fix broken → working" family (which by definition changes behaviour). The reason must state the broken precondition (and, for always-fails, that *no* input avoids the crash). A rule whose "before" returns a valid—even if undesired—value on some input is NOT a repair: it is a behaviour change and must be narrowed, gated, or dropped (e.g. `no_map_get_sentinel`, dropped). `unconstructible` is the preferred wording for the does-not-compile flavour and stays a distinct mark.
-4. **No ETS / no global attestation.** Anti-stub teeth come from `assert_equivalent` itself (asserts rule fires + a rewrite happened + battery ≥ 3). Meta-gate only checks per-rule file existence + that the file references the rule.
+4. **No ETS / no global attestation.** Anti-stub checks come from `assert_equivalent` itself (asserts rule fires + a rewrite happened + input set ≥ 3). Meta-gate only checks per-rule file existence + that the file references the rule.
 5. **In-process eval + `try/rescue/catch`** (no spawn/timeout). Outcome tagged `{:ok,v}` | `{:raise,Module}` | `{:throw|:exit,term}`. Exception compared **module-only** (`compare_messages: true` opt-in). Per-rule timeout wrapper documented as an escape hatch, unused by default.
    - **Value comparison is strict `===`, not `==`** (upgraded after the exemplar's `==`): `6 == 6.0` is true, so `==` would miss int↔float value-kind changes — the doc's #1 rejection class. `===` catches them. Re-verified: all prior filled rules stay green under `===`.
-6. **Effect probe is a helper mode, not a phase.** `probe_effects: true` injects an effect-recording expr into the rule's predicate/transform hole (in-eval, via process dict) and asserts effect-trace equality (order + count). Used by the 26 PROBE rules.
-7. **Curated batteries only** gate; StreamData stays additive/non-gating (last phase).
+6. **Checking call order is an optional extra, used only where it matters (Decision A).**
+   Some rules move a function the user passed in — a test like `fn x -> x > 0 end`, or a mapper
+   like `fn x -> x * 2 end` — from one place to another. For those, two things could go wrong: the
+   final answer could change, OR the answer could stay the same while that function gets called in
+   a different order, or more or fewer times. `assert_equivalent` checks the final answer;
+   `assert_effect_trace_equivalent` additionally records every call to the function and checks the
+   order and count match. (These rules are flagged "PROBE" in the worklist.)
+
+   In practice only one rule, `use_map_join`, needs the call-order check. Every other such rule
+   calls the function **once per element, in the original order** (or stops early at the same point
+   in both versions), so if the final answers match there is no room left for the call order or
+   count to differ — the answer check already covers it. We confirmed that element by element, rule
+   by rule, while writing the tests (and the test inputs use plain functions with no side effects).
+   So of the 26 rules flagged: **1** (`use_map_join`) uses the call-order check, **2** were deleted
+   (`no_explicit_max_reduce`, `no_explicit_min_reduce`), and the other **23** are covered by the
+   answer check, with the reason given per group in the PROBE section below. No rule is described as
+   call-order-checked when it is only answer-checked.
+
+   *(We considered adding the call-order check to all 23 and decided against it: several have no
+   user-passed function to watch, so it would be incomplete anyway, and it catches nothing the
+   answer check misses. If ever added, keep the answer check too.)*
+7. **Curated input sets only** gate; StreamData stays additive/non-gating (last phase).
 8. **Backfill authored** by a throwaway scaffold script under `maintainer_tools/` (reads `default_rules/0`, lifts `_check_test.exs` snippets into skeletons, stamps guessed tier), then a human/agent fill pass tier-by-tier. No `mix` task in `lib`, no loop, no shared-doc edit.
 
 ## Files
 - add `test/support/behaviour_equivalence.ex` — `Credence.BehaviourEquivalence`: `assert_equivalent/2`, T2 `assert_equivalent_module/2`, `mark_equivalence_cosmetic/1`, `mark_equivalence_unconstructible/1`, `eval_outcome/2`, effect probe. (`test/support` already in `elixirc_paths(:test)`.)
-- add `test/support/equivalence_batteries.ex` — curated dimensions by data-shape; reuse `assumption_generators.ex:single_codepoint_string`.
+- add `test/support/equivalence_inputs.ex` — curated dimensions by data-shape; reuse `assumption_generators.ex:single_codepoint_string`.
 - add `test/equivalence_meta_test.exs` — gate (mirror `test/assumptions_meta_test.exs`): per rule in `Credence.Pattern.default_rules()`, `test/pattern/<snake>_equivalence_test.exs` exists AND references the rule.
 - add `test/pattern/<base>_equivalence_test.exs` ×125 (snippets from `_check_test.exs`).
 - modify `test/pattern/no_manual_frequencies_fix_test.exs` — port exemplar block to the helper (or move into its new `_equivalence_test.exs`).
@@ -57,12 +77,12 @@ generalizes that one block into shared, mandatory, gate-enforced support.
 - **NOT modified:** `credence_evolution/prompt.md` (other repo, out of scope).
 
 ## Support module — `Credence.BehaviourEquivalence`
-- `assert_equivalent(before_expr, opts)`, opts = `rule:` module, `vars:` (ordered free-var names; single scalar auto-wrapped), `inputs:` (battery list), `probe_effects:`, `compare_messages:`, `tiny_battery_ok:`. Steps:
+- `assert_equivalent(before_expr, opts)`, opts = `rule:` module, `vars:` (ordered free-var names; single scalar auto-wrapped), `inputs:` (input set list), `probe_effects:`, `compare_messages:`, `allow_few_inputs:`. Steps:
   1. assert `rule.check(parse(before)) != []` (rule fires — anti-dead-snippet),
   2. `fixed = RuleHelpers.apply_rule_fix(rule, before)`; assert `fixed != before` (rewrite happened),
-  3. assert `length(inputs) >= 3` unless `tiny_battery_ok:`,
+  3. assert `length(inputs) >= 3` unless `allow_few_inputs:`,
   4. compile `fn <vars> -> before end` / `fn <vars> -> fixed end` once each; for every input assert `eval_outcome(orig,in) == eval_outcome(fixed,in)`.
-- `assert_equivalent_module(before_module_src, opts)` (T2): opts add `call:` (`{fun, arity}` or builder) — compile both module sources under unique names, apply `fun` over each battery input, compare `eval_outcome`.
+- `assert_equivalent_module(before_module_src, opts)` (T2): opts add `call:` (`{fun, arity}` or builder) — compile both module sources under unique names, apply `fun` over each input set input, compare `eval_outcome`.
 - `eval_outcome/2` — `try/rescue/catch` → `{:ok,v}` | `{:raise,mod}` | `{:throw,t}` | `{:exit,t}`. Suppress eval warnings via `ExUnit.CaptureIO` only if noisy.
 
 ## Coverage worklist — all 125 rules
@@ -89,13 +109,13 @@ opt-outs remain; nothing is unconstructible.
   Fixed by emitting the empty_fallback form `Enum.min(c, fn -> nil end)` / `Enum.max(c, fn -> nil end)` —
   the maintainer's existing idiom (`no_if_empty_for_enum_min_max`), behaviour-preserving for every
   input with no assumption. Updated: rule fix + moduledoc, ~all `no_sort_then_at_fix_test` expectations,
-  equivalence test (battery leads with `[]`). **Follow-on:** sibling `no_sort_for_top_k` (and any
+  equivalence test (input set leads with `[]`). **Follow-on:** sibling `no_sort_for_top_k` (and any
   `sort |> hd/first/at` rule) likely shares the empty hazard — check during its fill.
 - **`unnecessary_grapheme_chunking` — was UNSAFE, now RESOLVED (`//1` step).** The fix's range
   `for i <- 0..(String.length(s) - n)` descends when `len < n` (`0..-1` = `[0,-1]`), emitting bogus
   slices instead of `[]`. Fixed by emitting a stepped range `0..(...)//1` (empty for negative end,
   matching `chunk_every(_, n, 1, :discard)`). Behaviour-preserving for every input incl. multi-codepoint
-  graphemes; no assumption. Updated rule + moduledoc + fix-test expectations + equivalence test (battery
+  graphemes; no assumption. Updated rule + moduledoc + fix-test expectations + equivalence test (input set
   covers `len<n`, `len==n`, NFD).
 - **`no_sort_for_top_k` — was UNSAFE, now RESOLVED (narrowed + empty-safe).** Two bugs: `sort |> take(1)`
   → `Enum.min` changed return type (list `[min]` vs scalar `min`) — wrong on every input; `hd`/`at(0)`
@@ -126,7 +146,7 @@ opt-outs remain; nothing is unconstructible.
   (124→123 rules; drops its priority-coordination hack). Value-kind is now fully preserved. The only
   residual is the exception *module* on a non-number operand (`ArithmeticError` vs `ArgumentError`) on
   already-crashing code — **maintainer accepted this (error type doesn't matter), so no assumption added.**
-  Equivalence test uses a numeric battery (where value-kind risk lives) + a moduledoc note on the
+  Equivalence test uses a numeric input set (where value-kind risk lives) + a moduledoc note on the
   non-number edge. Updated rule + moduledoc + both rules' check/fix tests merged + 4 showcase golden tests.
 - **`no_manual_max` + `no_manual_min` — was UNSAFE on strict forms, now NARROWED.** Both fired on
   strict (`>`/`<`) and non-strict (`>=`/`<=`) comparison forms, but `max`/`min` use `>=`/`<=` and keep
@@ -218,7 +238,7 @@ opt-outs remain; nothing is unconstructible.
   the correct call. Not behaviour-preserving (crash → work); marked `mark_equivalence_repair` (T3c).
   (Earlier "SAFE/T2" note was wrong — there is no valid before-behaviour.)
 
-### T2 module-call (37) — compile before/after module, invoke fn over battery
+### T2 module-call (37) — compile before/after module, invoke fn over input set
 Structural / cross-statement: no_case_on_param_dispatch, no_destructure_reconstruct,
 no_double_filter, no_double_sort_same_list, no_enum_at_midpoint_access,
 no_guard_equality_for_pattern_match, no_hd_tl_when_cons_bound, no_is_nil_guard,
@@ -245,16 +265,41 @@ no_literal_list_typespec (`@spec` is compile-only; the original doesn't even com
 ### T3b unconstructible (0)
 None — deep-dive converted both former candidates to T2.
 
-### PROBE ⚑ rules (26) — need `probe_effects: true` (eval-order/double-eval)
-no_anon_fn_application_in_pipe, no_case_destructure_in_pipe, no_eager_with_index_in_reduce,
-no_explicit_max_reduce, no_explicit_min_reduce, no_explicit_product_reduce,
-no_explicit_sum_reduce, no_filter_then_count, no_filter_then_first,
-no_find_value_default_case, no_group_by_for_frequencies, no_if_empty_for_enum_min_max,
-no_list_append_in_reduce, no_manual_count_with_predicate, no_manual_find,
-no_manual_list_reduce, no_map_keys_enum_lookup, no_map_keys_or_values_for_iteration,
-no_map_then_aggregate, no_reduce_for_group_by, no_reduce_for_map_building,
-no_string_concat_in_loop, no_take_while_length_check, no_zip_then_map,
-prefer_map_put_new, use_map_join.
+### PROBE rules (26 flagged → 1 needs the call-order check, 23 covered by the answer check, 2 deleted)
+These 26 rules move a user-passed function (a test or a mapper) from one place to another, so
+they were flagged as possibly needing the call-order check. Per **Decision A** (above), only
+`use_map_join` actually needs it; for the rest, checking the final answer is enough, because the
+function is called the same number of times in the same order in both versions. Here is why, group
+by group (the four groups plus the deleted ones add up to 26):
+
+- **(A) Uses the call-order check — 1.** `use_map_join` — `Enum.map(list, f) |> Enum.join(s)`
+  becomes `Enum.map_join(list, s, f)`. Here `join` takes over calling `f`, so we record every call
+  to `f` and confirm the order and count are unchanged. (This is the one worked example of the check.)
+
+- **(B) Function runs once per element, in order → the answer check is enough — 17.**
+  no_explicit_sum_reduce, no_explicit_product_reduce, no_map_then_aggregate (sum only),
+  no_manual_list_reduce, no_list_append_in_reduce, no_reduce_for_map_building,
+  no_reduce_for_group_by, no_group_by_for_frequencies, no_map_keys_enum_lookup,
+  no_map_keys_or_values_for_iteration (limited to operations where order doesn't matter),
+  no_zip_then_map, no_take_while_length_check, no_eager_with_index_in_reduce,
+  no_case_destructure_in_pipe, no_anon_fn_application_in_pipe, no_filter_then_count,
+  no_manual_count_with_predicate. Each one walks every element once, in order, in both versions —
+  nothing is skipped or reordered — so if the answers match, the calls did too.
+
+- **(C) Both versions stop early at the same point → same calls — 3.**
+  no_manual_find, no_filter_then_first, no_find_value_default_case. The original already stops at
+  the first match (for example, `no_filter_then_first` only applies to the *lazy* `Stream.filter |>
+  at(0)`, not the eager `Enum.filter`), so the `Enum.find` version visits exactly the same elements
+  before stopping — same calls, not just the same answer.
+
+- **(D) No user-passed function to watch → answer check only, regardless — 3.**
+  no_string_concat_in_loop (the joining is built in, there's no passed function), prefer_map_put_new
+  (only applies when the value has no side effects, so it doesn't matter that `Map.put_new` computes
+  it up front), no_if_empty_for_enum_min_max (the only function is the "what to return when empty"
+  fallback, and it stays only-when-empty in both versions).
+
+- **(Deleted) — 2.** no_explicit_max_reduce, no_explicit_min_reduce — removed because their rewrite
+  changed behaviour (see "Confirmed divergences"). Not tested, not shipped.
 
 ### T1 expression (86) — `fn <vars> -> expr end`
 All remaining rules. High-risk first (taxonomy witnesses): no_enum_at_negative_index,
@@ -284,13 +329,13 @@ prefer_enum_slice, prefer_enum_split, prefer_regex_match, no_kernel_shadowing
 above is the human worklist.)
 
 ## Phasing (gate flips hard only at the end)
-1. **Support + battery + 6 proof tests — DONE (all modes proven, full suite green: 4488/0).**
+1. **Support + input set + 6 proof tests — DONE (all modes proven, full suite green: 4488/0).**
    - `test/support/behaviour_equivalence.ex` — `assert_equivalent/2` (T1), `assert_equivalent_module/2`
      (T2, compiles before/after under unique names, arity-aware args), `assert_effect_trace_equivalent/2`
      (PROBE, process-dict trace), `eval_outcome/2` (exception parity), `mark_equivalence_cosmetic/1`,
-     `mark_equivalence_unconstructible/1`. Anti-stub teeth (fires + rewrote + battery ≥ 3) verified
+     `mark_equivalence_unconstructible/1`. Anti-stub checks (fires + rewrote + input set ≥ 3) verified
      by negative controls.
-   - `test/support/equivalence_batteries.ex` — `term_lists`, `signed_integers`, `unicode_strings`,
+   - `test/support/equivalence_inputs.ex` — `term_lists`, `signed_integers`, `unicode_strings`,
      `single_codepoint_strings`, `multi_codepoint_strings`, `stability_lists`.
    - Proof tests: `no_enum_at_negative_index` (T1), `no_codepoint_string_reverse` (T1 — **dual
      exemplar**: passes on single-codepoint strings, and the suite *catches* the divergence on
@@ -304,7 +349,7 @@ above is the human worklist.)
    Each skeleton is stamped with its confirmed tier, seeded with firing snippets lifted from the
    `_check_test.exs`, tagged `@moduletag :equivalence_todo` (excluded via `test_helper.exs`, so the
    suite stays green: 4493 tests / 117 excluded). The 2 cosmetics are pre-filled and pass now.
-   Remaining work = the fill pass: replace each TODO snippet/battery and drop the tag, highest-risk
+   Remaining work = the fill pass: replace each TODO snippet/input set and drop the tag, highest-risk
    T1 first, then T2, then probe. Each divergence on a shipped rule → narrow/drop (decision 2).
    **Filled so far (16/125):** 6 exemplars + 10 backfill. Batch 1: `no_enum_take_negative`,
    `no_enum_drop_negative` (bounds, safe), `no_manual_string_reverse` (Unicode, safe),
@@ -356,7 +401,7 @@ above is the human worklist.)
    Batch 11 (10 T2 module-call rules): `no_manual_count_with_predicate`, `no_manual_find`,
    `no_manual_list_reduce`, `no_case_on_param_dispatch`, `prefer_enum_split`, `no_redundant_negated_guard`,
    `no_redundant_comparison_guard`, `no_is_nil_guard`, `no_double_filter` (all safe — verified by compiling
-   before/after modules and invoking the entry fn over adversarial batteries);
+   before/after modules and invoking the entry fn over adversarial input sets);
    `no_manual_list_last` autofix diverged on `[]` (`List.last` → `nil` vs manual raise), FIXED to
    `hd(Enum.reverse/1)`. Suite green: 4420 / 32 excluded.
    Batch 12 (10 T2 rules): `no_case_boolean_result`, `no_hd_tl_when_cons_bound`, `no_length_guard_to_pattern`,
@@ -408,7 +453,7 @@ above is the human worklist.)
    (coverage checked by module name — no filename guessing), plus that no equivalence test is still tagged
    `:equivalence_todo`. The `:equivalence_todo` exclude was dropped from `test_helper.exs` (`ExUnit.start()`
    with no excludes), so a newly-added rule shipped without a real equivalence test now **fails the suite**.
-   Teeth verified: hiding one rule's test makes the gate fail naming that rule; restoring greens it.
+   Checks verified: hiding one rule's test makes the gate fail naming that rule; restoring greens it.
    Suite green with no excludes: **4347 tests, 0 failures**.
 - StreamData layer (additive, fixed-seed, non-gating) — optional, future enhancement now that the gate holds.
 
@@ -418,22 +463,48 @@ above is the human worklist.)
   the `proper_lists` assumption it passes in-domain (proper lists) and the out-of-domain `assert_raise`
   demo pins the divergence. Also craft `no_enum_take_negative` with a count that swaps halves / a
   sort rule on equal-key tuples → must fail with witness.
-- **Exception parity:** snippet where original raises `ArithmeticError` and fixed `ArgumentError`
-  must fail — proves `eval_outcome` compares raises module-only.
+- **Exception parity — ★ DONE.** Covered by the `no_integer_to_string_contains` case in
+  `test/equivalence_regression_test.exs`: on a non-integer, the original raises `ArgumentError` and
+  the rewrite raises `FunctionClauseError`, and the two come out as different — proving `eval_outcome`
+  tells two different crash types apart (it compares the error type only).
 - **Effect probe:** a reorder/double-eval snippet must fail on trace mismatch.
-- **Anti-stub:** an empty `<base>_equivalence_test.exs` or `[]`/`<3` battery must fail
-  (helper assertion + meta-gate file/reference check).
-- **Historical regression check:** for ≥5 rules in `unfixable_confirmed.md`/`followup.md`,
-  write the equivalence test against their *original (rejected)* fix and confirm the battery
-  reproduces the documented divergence — i.e. the suite would have caught each.
+- **Checking the safety checks work — ★ DONE.** `test/behaviour_equivalence_self_test.exs` confirms
+  `assert_equivalent` refuses a broken test setup, with one test per safety check (each expects an
+  error): fewer than 3 inputs; a snippet the rule does not apply to; and a snippet the rewrite leaves
+  unchanged (using a fake rule that finds a problem but offers no fix, since every real rule does fix
+  what it finds). A fourth test feeds a correct setup and confirms it passes, so the first three
+  aren't failing for some unrelated reason. (The separate check that every rule has a test file was
+  verified earlier by hiding one and watching it fail.)
+- **Proving the checks can catch a bad rewrite — ★ DONE.** `test/equivalence_regression_test.exs`
+  takes **8** rules that were tried and rejected (listed in `unfixable_confirmed.md`; still present
+  in the sister project `../credence_evolution`), rebuilds the rejected rewrite as a before/`broken`
+  pair, and shows the two give **different results** on one chosen input. We run the snippets
+  directly (not the rule — most only flagged the problem and never wrote a fix) and assert the two
+  results are not equal. A passing test here means the difference was reproduced — so the checks
+  would have caught it. The 8 are chosen to cover every way the checker spots a difference: a changed
+  return value, a value vs. a crash, and one crash type vs. a different crash type. Rules covered
+  (input → difference):
+  - `avoid_charlist_for_iteration` — input `"abc"` → numbers `[97,98,99]` vs letters `["a","b","c"]`.
+  - `no_reverse_uniq_reverse` — input `[1,2,1,3]` → `[2,1,3]` (keeps last copy) vs `[1,2,3]` (keeps first).
+  - `no_group_by_identity` — input `[1,1]` → grouped `%{1=>[1,1]}` vs counts `%{1=>2}`.
+  - `no_redundant_sort_comparator` — input `[[1],[2]]` → crashes (`FunctionClauseError`) vs sorts to `[[1],[2]]`.
+    (The reason file also notes a number-ordering difference, but that one varies run to run, so we use
+    this reliable crash-vs-sorts case.)
+  - `no_starts_with_own_prefix` — input `:abc` (not a string) → crashes (`FunctionClauseError`) vs `true`.
+  - `avoid_graphemes_for_byte_iteration` — input `"é"` (multi-byte) → crashes (`FunctionClauseError`) vs `[233]`.
+    (Plain ASCII gives the same answer either way, so the input must be a multi-byte character.)
+  - `no_integer_to_string_contains` — input `:x` (not an integer) → crashes with `ArgumentError` vs
+    `FunctionClauseError` (the "two different crash types" case; also satisfies Exception parity above).
+  - `no_enum_at_in_reduce` — input `[1,2,3]` with index `-1` → last element `3` vs a crash, and index
+    `9` → `nil` vs a crash. (Stands in for the largest family of rejected rules: `Enum.at` → `elem`.)
 - `mix test` green after each phase; hard-flip green only at 100% backfill + empty divergence list.
 
 ## Unresolved questions
 1. **T2 callable synthesis:** for def/module rules whose `_check` snippet is a fragment (not a
    full module), do we (a) hand-wrap each into a minimal callable `defmodule`, or (b) have the
    scaffold script synthesize a wrapper from the rule's expected shape? (a) is safer, (b) scales.
-2. **Battery↔tier defaults:** should the scaffold auto-attach default battery dimensions per
-   rule from its `assumptions/0` (so fill = confirm), or leave batteries blank (so fill = author)?
+2. **Input set↔tier defaults:** should the scaffold auto-attach default input set dimensions per
+   rule from its `assumptions/0` (so fill = confirm), or leave input sets blank (so fill = author)?
 3. ~~`redundant_list_guard` fix~~ — RESOLVED: narrowed behind the new `proper_lists` assumption
    (default on, off under `:strict`); tests green. Loop firing confirmed: the rule-creation/review
    flow runs `:default`, where `proper_lists` is on, so the rule fires unchanged.

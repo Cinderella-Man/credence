@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoZipThenMapEquivalenceTest do
   @moduledoc """
   Tier 1 (expression).
   `Enum.zip(a, b) |> Enum.map(fn {x, y} -> x + y end)` → `Enum.zip_with(a, b, fn x, y -> x + y end)`.
-  Both pair-and-map in order, stopping at the shorter list. Battery covers equal,
+  Both pair-and-map in order, stopping at the shorter list. Input set covers equal,
   unequal, and empty lengths.
   """
   use ExUnit.Case, async: true

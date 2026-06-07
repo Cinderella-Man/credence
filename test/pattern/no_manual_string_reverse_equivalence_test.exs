@@ -7,12 +7,12 @@ defmodule Credence.Pattern.NoManualStringReverseEquivalenceTest do
 
   Both sides reverse by **grapheme**, so they agree on every string — including
   decomposed accents, ZWJ emoji, and flags. Unlike the codepoint variant, this
-  needs no assumption: it passes over the full multi-codepoint battery.
+  needs no assumption: it passes over the full multi-codepoint input set.
   """
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoManualStringReverse
 
   test "graphemes |> reverse |> join → String.reverse preserves behaviour over all Unicode" do

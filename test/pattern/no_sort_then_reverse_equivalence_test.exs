@@ -11,7 +11,7 @@ defmodule Credence.Pattern.NoSortThenReverseEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoSortThenReverse
 
   test "sort |> reverse → sort(:desc) preserves ordering incl. ties" do

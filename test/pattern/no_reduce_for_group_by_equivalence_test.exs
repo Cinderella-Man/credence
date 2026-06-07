@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoReduceForGroupByEquivalenceTest do
   `Enum.reduce(list, %{}, fn x, acc -> Map.update(acc, key(x), [x], &[x | &1]) end) |> Map.new(fn {k, v} -> {k, Enum.reverse(v)} end)`
   → `Enum.group_by(list, key)`. The rule requires the trailing `Map.new(reverse)`:
   the reduce prepends (`[x | &1]`, reversed groups) and the reverse restores
-  insertion order — exactly `Enum.group_by`'s within-group order. Battery covers
+  insertion order — exactly `Enum.group_by`'s within-group order. Input set covers
   multiple groups, multi-per-group, and empty.
   """
   use ExUnit.Case, async: true

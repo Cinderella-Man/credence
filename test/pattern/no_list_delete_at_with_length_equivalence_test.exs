@@ -6,7 +6,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoListDeleteAtWithLength
 
   test "delete_at(tail, length-1) → delete_at(tail, -1) preserves behaviour incl. empty" do

@@ -10,7 +10,7 @@ defmodule Credence.Pattern.NoListFoldEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoListFold
 
   test "List.foldl → Enum.reduce preserves accumulation (left-to-right)" do

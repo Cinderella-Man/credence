@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoManualMaxEquivalenceTest do
 
   `if a >= b, do: a, else: b` → `max(a, b)`. The rule is narrowed to the
   non-strict form, which equals `max/2` exactly (both keep the first arg on a
-  tie). The battery includes equal-value-different-type pairs (`{1, 1.0}`,
+  tie). The input set includes equal-value-different-type pairs (`{1, 1.0}`,
   `{1.0, 1}`) — the case where the strict `>` form would have diverged
   (`max(1, 1.0) == 1`, but `if 1 > 1.0` yields `1.0`).
   """

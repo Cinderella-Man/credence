@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipEquivalenceTest do
   @moduledoc """
   Tier 1 (expression), value-kind dimension.
   `x in Map.keys(m)` → `Map.has_key?(m, x)`. Both use strict key equality, so the
-  `1` vs `1.0` value-kind case agrees (a `1` key is not matched by `1.0`). Battery
+  `1` vs `1.0` value-kind case agrees (a `1` key is not matched by `1.0`). Input set
   includes value-kind keys, a present key, an absent key, and an atom key.
   """
   use ExUnit.Case, async: true

@@ -6,7 +6,7 @@ defmodule Credence.Pattern.AvoidGraphemesLengthEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.AvoidGraphemesLength
 
   test "length(String.graphemes(string)) → String.length preserves the count over Unicode" do

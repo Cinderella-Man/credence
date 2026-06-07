@@ -4,13 +4,13 @@ defmodule Credence.Pattern.NoUniqThenCountEquivalenceTest do
 
   `items |> Enum.uniq() |> length()` → `items |> MapSet.new() |> MapSet.size()`.
   Both `Enum.uniq/1` and `MapSet` dedup by strict `===`, so the `1` vs `1.0`
-  value-kind case agrees (both keep `1` and `1.0` as distinct). Battery includes
+  value-kind case agrees (both keep `1` and `1.0` as distinct). Input set includes
   a value-kind list, empty, and duplicates.
   """
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoUniqThenCount
 
   test "uniq |> length → MapSet size preserves the count incl. value-kind dedup" do

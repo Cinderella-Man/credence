@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementEquivalenceTest do
 
   `Map.put(freqs, char, Map.get(freqs, char, 0) + 1)` → `Map.update(freqs, char, 1, &(&1 + 1))`.
   Present key: both compute `value + 1`; absent key: `Map.get` default `0` + 1 == `Map.update`
-  initial `1`. Battery covers absent key, present int, present float value, and non-atom key.
+  initial `1`. Input set covers absent key, present int, present float value, and non-atom key.
   """
   use ExUnit.Case, async: true
 

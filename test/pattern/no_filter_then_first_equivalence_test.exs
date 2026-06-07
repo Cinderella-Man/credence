@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoFilterThenFirstEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `Enum.at(Stream.filter(nums, pred), 0)` → `Enum.find(nums, pred)`.
   Both return the first element satisfying `pred` (or `nil`), applying `pred` in
-  order and short-circuiting. Battery covers match, no-match, and empty.
+  order and short-circuiting. Input set covers match, no-match, and empty.
   """
   use ExUnit.Case, async: true
 

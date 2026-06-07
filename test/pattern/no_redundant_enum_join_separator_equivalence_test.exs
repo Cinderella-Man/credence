@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorEquivalenceTest do
   Tier 1 (expression).
 
   `Enum.join(list, "")` → `Enum.join(list)`. The default separator already is
-  `""`, so dropping it is exact. Battery covers strings, integers (stringified),
+  `""`, so dropping it is exact. Input set covers strings, integers (stringified),
   empty, and a value-kind list (`1` vs `1.0` both stringify, joined identically).
   """
   use ExUnit.Case, async: true

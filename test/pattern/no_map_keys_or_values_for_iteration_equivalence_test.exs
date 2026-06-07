@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationEquivalenceTest do
   Tier 1 (expression).
   `Enum.all?(Map.values(m), fn v -> ... end)` → `Enum.all?(m, fn {_k, v} -> ... end)`.
   For order-independent predicates (`all?`/`any?`), iterating the map directly
-  over the same values gives the same boolean. Battery covers all-true, a false,
+  over the same values gives the same boolean. Input set covers all-true, a false,
   and empty.
   """
   use ExUnit.Case, async: true

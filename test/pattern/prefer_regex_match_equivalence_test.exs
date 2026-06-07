@@ -3,7 +3,7 @@ defmodule Credence.Pattern.PreferRegexMatchEquivalenceTest do
   Tier 1 (expression).
   `case Regex.run(re, s) do [_ | _] -> a; nil -> b end` → `if Regex.match?(re, s), do: a, else: b`.
   `Regex.run` returns a non-empty list (matched) or nil (no match), exactly the
-  boolean `Regex.match?`. Battery covers match, no-match, and empty string.
+  boolean `Regex.match?`. Input set covers match, no-match, and empty string.
   """
   use ExUnit.Case, async: true
 

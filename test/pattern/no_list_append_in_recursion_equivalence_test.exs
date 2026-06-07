@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionEquivalenceTest do
   @moduledoc """
   Tier 2 (module-call). A tail-recursive accumulator that appends with `acc ++ [x]`
   (O(n²)) is rewritten to prepend `[x | acc]` and reverse at the base case — same
-  output order, O(n). Battery covers empty and several elements.
+  output order, O(n). Input set covers empty and several elements.
   """
   use ExUnit.Case, async: true
 

@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaiseEquivalenceTest do
   (here, lists) dispatch is unchanged. The only difference is on out-of-domain input
   (a non-list): the explicit `raise ArgumentError` becomes the natural
   `FunctionClauseError` — both raise, an error-type-only difference outside the
-  function's domain. The battery pins the in-domain (list) behaviour.
+  function's domain. The input set pins the in-domain (list) behaviour.
   """
   use ExUnit.Case, async: true
 

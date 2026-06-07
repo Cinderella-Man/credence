@@ -1,6 +1,6 @@
 defmodule Credence.AssumptionsMetaTest do
   @moduledoc """
-  Whole-suite teeth for the safety story (decisions 11 and 18). These turn two
+  Whole-suite checks for the safety story (decisions 11 and 18). These turn two
   silent holes into red builds:
 
     * a rule tagging a switch that does not exist (a rule-side typo), and

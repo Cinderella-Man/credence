@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NonGroupedClausesEquivalenceTest do
   @moduledoc """
   Tier 2 (module-call). Moves a function's scattered clauses to be adjacent. The
   *relative* order of each function's own clauses is preserved (only unrelated defs
-  in between move), so dispatch for every function is unchanged. Battery exercises
+  in between move), so dispatch for every function is unchanged. Input set exercises
   both the regrouped function and the one that was moved.
   """
   use ExUnit.Case, async: true

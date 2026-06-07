@@ -3,7 +3,7 @@ defmodule Credence.Pattern.PreferEnumSliceEquivalenceTest do
   Tier 1 (expression), bounds dimension.
   `Enum.drop(list, s) |> Enum.take(l)` → `Enum.slice(list, s, l)` — equivalent
   only for non-negative `s`, `l`, which is exactly what the (now-narrowed) rule
-  fires on. Battery covers in-range, past-the-end, single, and empty lists.
+  fires on. Input set covers in-range, past-the-end, single, and empty lists.
 
   Regression note: the rule used to fire on negative drop/take and on variable
   amounts (which could be negative) — both diverge from `Enum.slice/3`

@@ -1,7 +1,7 @@
 defmodule Credence.Pattern.NoCaptureFnApplyEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). An immediately-applied capture `(& &1 + &2).(a, b)` → `a + b`:
-  inlining the capture body with the actual arguments. Battery drives the args,
+  inlining the capture body with the actual arguments. Input set drives the args,
   including a value-kind pair.
   """
   use ExUnit.Case, async: true

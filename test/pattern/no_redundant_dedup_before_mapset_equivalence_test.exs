@@ -5,13 +5,13 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetEquivalenceTest do
   `items |> Enum.uniq() |> MapSet.new()` → `MapSet.new(items)`. `MapSet`
   deduplicates by strict `===`, exactly as `Enum.uniq/1` does, so dropping the
   pre-dedup yields the same set — including the `1` vs `1.0` value-kind case
-  (both kept distinct either way). Battery includes a value-kind list, empty,
+  (both kept distinct either way). Input set includes a value-kind list, empty,
   and duplicates.
   """
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoRedundantDedupBeforeMapset
 
   test "items |> Enum.uniq() |> MapSet.new() → MapSet.new(items) preserves the set" do

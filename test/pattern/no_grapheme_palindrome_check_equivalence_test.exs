@@ -9,7 +9,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeCheckEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoGraphemePalindromeCheck
 
   @expr """

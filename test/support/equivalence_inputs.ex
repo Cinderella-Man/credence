@@ -1,14 +1,14 @@
-defmodule Credence.EquivalenceBatteries do
+defmodule Credence.EquivalenceInputs do
   @moduledoc """
-  Curated, deterministic adversarial input batteries for behaviour-equivalence
+  Curated, deterministic adversarial input sets for behaviour-equivalence
   tests, grouped by data shape. Each function returns a list of inputs an
   author picks by recognizing their rule's risk dimension.
 
   Curated-only feeds the assertions (no random seed flakes). A StreamData layer,
   if added later, stays additive and non-gating.
 
-  Annotated with the taxonomy class each dimension witnesses, so picking a
-  battery is "which way could *this* fix break?", not guesswork.
+  Annotated with the taxonomy class each dimension witnesses, so picking an
+  input set is "which way could *this* fix break?", not guesswork.
   """
 
   @doc """

@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoIfTrueFalseEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `if cond do true else false end` → `cond` — safe because
   the rule fires only when the condition is already boolean (a comparison), so
-  returning it directly equals the if/else. Battery drives the condition both ways.
+  returning it directly equals the if/else. Input set drives the condition both ways.
   """
   use ExUnit.Case, async: true
 

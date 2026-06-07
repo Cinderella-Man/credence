@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoKernelShadowingEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoKernelShadowing
 
   test "renaming the shadowing var preserves the fold result" do

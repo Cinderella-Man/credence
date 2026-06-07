@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `case bool do true -> a; false -> b end` → `if bool, do: a, else: b`.
   The `true`/`false` clauses require a boolean subject, so the `if` is exactly
-  equivalent. Battery drives the boolean both ways.
+  equivalent. Input set drives the boolean both ways.
   """
   use ExUnit.Case, async: true
 

@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoTautologicalIfEquivalenceTest do
   Dropping the condition is safe only when evaluating it has no observable
   effect — the rule already narrows to conditions that are pure and total (it
   does NOT fire when the condition contains a function call like `hd(x)` that
-  could raise). The battery drives the (total) condition both ways; the value is
+  could raise). The input set drives the (total) condition both ways; the value is
   the same regardless, as the fix asserts.
   """
   use ExUnit.Case, async: true

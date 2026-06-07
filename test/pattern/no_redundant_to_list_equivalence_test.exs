@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoRedundantToListEquivalenceTest do
 
   `Enum.to_list(items) |> MapSet.new()` → `MapSet.new(items)`. `MapSet.new/1`
   already accepts any enumerable, so dropping the `Enum.to_list/1` is exact —
-  including for a non-list enumerable (a range). Battery mixes lists, a range,
+  including for a non-list enumerable (a range). Input set mixes lists, a range,
   empty, and a value-kind list.
   """
   use ExUnit.Case, async: true

@@ -10,12 +10,12 @@ defmodule Credence.Pattern.NoSortForTopKEquivalenceTest do
   `hd` (ArgumentError vs Enum.EmptyError on `[]`) to `Enum.min` — both
   behaviour-changing — and used bare `Enum.min/1` which raised on `[]`. Those
   shapes are no longer fixed, and the `at(0)` shapes now use the empty_fallback.
-  Battery leads with `[]`.
+  Input set leads with `[]`.
   """
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoSortForTopK
 
   test "sort |> at(0) → Enum.min(_, fn -> nil end) preserves behaviour incl. empty list" do

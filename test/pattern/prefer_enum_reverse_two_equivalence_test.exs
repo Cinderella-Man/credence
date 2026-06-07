@@ -1,7 +1,7 @@
 defmodule Credence.Pattern.PreferEnumReverseTwoEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `Enum.reverse(acc) ++ tail` → `Enum.reverse(acc, tail)`.
-  `Enum.reverse/2` is defined as `reverse(acc) ++ tail`, so it is exact. Battery
+  `Enum.reverse/2` is defined as `reverse(acc) ++ tail`, so it is exact. Input set
   covers empty/non-empty acc and tail, and a value-kind list.
   """
   use ExUnit.Case, async: true

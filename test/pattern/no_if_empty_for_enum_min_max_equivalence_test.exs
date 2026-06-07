@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxEquivalenceTest do
   Tier 1 (expression).
   `if Enum.empty?(x), do: default, else: Enum.min(x)` → `Enum.min(x, fn -> default end)`.
   `Enum.empty?/1` reports emptiness for every enumerable, matching `Enum.min/2`'s
-  empty_fallback exactly. Battery leads with the empty list (where the fallback fires).
+  empty_fallback exactly. Input set leads with the empty list (where the fallback fires).
   """
   use ExUnit.Case, async: true
 

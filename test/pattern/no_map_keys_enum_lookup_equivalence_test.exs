@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupEquivalenceTest do
   `Map.keys(m) |> Enum.all?(fn k -> ...lookup... end)` → `Enum.all?(m, fn {k, v} -> ... end)`.
   Fires only on order-independent terminals (`all?`/`any?`), so the differing
   iteration order between `Map.keys/1` and direct map traversal (for >32-key maps)
-  doesn't affect the boolean. Battery includes a 40-key map.
+  doesn't affect the boolean. Input set includes a 40-key map.
   """
   use ExUnit.Case, async: true
 

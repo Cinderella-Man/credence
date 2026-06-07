@@ -9,7 +9,7 @@ defmodule Credence.Pattern.PreferErlangFloatEquivalenceTest do
   This is the merge of the old `prefer_erlang_float` (bare vars) and
   `no_identity_float_coercion` (compound, which used to *remove* the coercion).
   Removal was a value-kind bug — `6.0` became `6`; wrapping preserves the float
-  exactly. The battery is numeric (int / float / negative / zero / big), where
+  exactly. The input set is numeric (int / float / negative / zero / big), where
   the value-kind risk lives. A non-number operand raises in both forms (only the
   exception module differs — intentionally out of scope; see the rule moduledoc).
   """

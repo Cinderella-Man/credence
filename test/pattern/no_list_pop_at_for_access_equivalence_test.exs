@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoListPopAtForAccess
 
   test "List.pop_at(list, 0) |> elem(0) → List.first(list)" do

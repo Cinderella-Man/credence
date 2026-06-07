@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoListAppendInReduceEquivalenceTest do
   `Enum.reduce(list, [], fn item, acc -> acc ++ [f(item)] end)` →
   `Enum.reduce(list, [], fn item, acc -> [f(item) | acc] end) |> Enum.reverse()`.
   Prepend-then-reverse yields the same order as repeated append, in O(n) instead
-  of O(n²). Battery covers empty and several elements.
+  of O(n²). Input set covers empty and several elements.
   """
   use ExUnit.Case, async: true
 

@@ -10,7 +10,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoReduceWhileWithoutHalt
 
   test "reduce_while (all :cont) → reduce preserves the accumulation" do

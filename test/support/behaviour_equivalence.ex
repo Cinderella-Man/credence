@@ -5,7 +5,7 @@ defmodule Credence.BehaviourEquivalence do
   A rule's fix is only correct if `eval(original)` and `eval(fixed)` produce
   the *same outcome* on every input — not just the inputs the author imagined.
   These assertions run the before- and after-code over a curated adversarial
-  battery and assert identical outcomes, **including exception parity**
+  input set and assert identical outcomes, **including exception parity**
   (an `ArithmeticError`-vs-`ArgumentError` swap is a divergence, not a pass).
 
   This is plain `mix test` machinery — a third kind of per-rule test alongside
@@ -28,11 +28,11 @@ defmodule Credence.BehaviourEquivalence do
   (provably inert) or `mark_equivalence_unconstructible/1` (behavioural but no
   self-contained callable example) — both demand a reason.
 
-  ## Anti-stub teeth (no external gate needed)
+  ## Anti-stub checks (no external gate needed)
 
   Every assertion first proves the rule *fires* on the snippet and that a
-  *rewrite actually happened*, and enforces a battery floor of 3 inputs
-  (override with `tiny_battery_ok: true`). A stub test therefore fails here,
+  *rewrite actually happened*, and enforces a minimum of 3 inputs
+  (override with `allow_few_inputs: true`). A stub test therefore fails here,
   not in some meta-test.
 
   Generalized from `no_manual_frequencies_fix_test.exs` (the `eval1` /
@@ -43,7 +43,7 @@ defmodule Credence.BehaviourEquivalence do
 
   alias Credence.RuleHelpers
 
-  @battery_floor 3
+  @min_inputs 3
 
   # ── T1: expression-level ──────────────────────────────────────────────
 
@@ -54,11 +54,11 @@ defmodule Credence.BehaviourEquivalence do
   Opts:
     * `:rule` (req) — the rule module.
     * `:vars` (req) — ordered free-var names, e.g. `[:list]` or `[:list, :idx]`.
-    * `:inputs` (req) — battery. For a single var, each element is the arg.
+    * `:inputs` (req) — input set. For a single var, each element is the arg.
       For multiple vars, each element is a tuple/list of args.
     * `:compare_messages` — also compare exception messages (default false:
       module-only).
-    * `:tiny_battery_ok` — allow < #{@battery_floor} inputs (visible in review).
+    * `:allow_few_inputs` — allow < #{@min_inputs} inputs (visible in review).
   """
   def assert_equivalent(before_expr, opts) do
     rule = Keyword.fetch!(opts, :rule)
@@ -93,9 +93,9 @@ defmodule Credence.BehaviourEquivalence do
   Opts:
     * `:rule` (req) — the rule module.
     * `:call` (req) — `{fun_atom, arity}`; the function to invoke.
-    * `:inputs` (req) — battery. Each element is the args (a tuple/list for
+    * `:inputs` (req) — input set. Each element is the args (a tuple/list for
       arity > 1, or a bare value for arity 1).
-    * `:compare_messages`, `:tiny_battery_ok` — as `assert_equivalent/2`.
+    * `:compare_messages`, `:allow_few_inputs` — as `assert_equivalent/2`.
   """
   def assert_equivalent_module(before_module, opts) do
     rule = Keyword.fetch!(opts, :rule)
@@ -131,7 +131,7 @@ defmodule Credence.BehaviourEquivalence do
   assert both the final value-outcome and the recorded call-trace match.
 
   Opts:
-    * `:rule` (req), `:inputs` (req), `:tiny_battery_ok`.
+    * `:rule` (req), `:inputs` (req), `:allow_few_inputs`.
     * `:vars` — ordered *data* free-var names (excluding `effect`, which is
       appended last). Defaults to `[:list]`.
   """
@@ -228,10 +228,10 @@ defmodule Credence.BehaviourEquivalence do
     assert String.trim(fixed) != String.trim(source),
            "expected #{inspect(rule)} to rewrite the source, but it was unchanged:\n#{source}"
 
-    unless Keyword.get(opts, :tiny_battery_ok, false) do
-      assert length(inputs) >= @battery_floor,
-             "battery floor: #{inspect(rule)} needs >= #{@battery_floor} inputs " <>
-               "(got #{length(inputs)}); pass tiny_battery_ok: true to override"
+    unless Keyword.get(opts, :allow_few_inputs, false) do
+      assert length(inputs) >= @min_inputs,
+             "too few inputs: #{inspect(rule)} needs >= #{@min_inputs} inputs " <>
+               "(got #{length(inputs)}); pass allow_few_inputs: true to override"
     end
 
     fixed

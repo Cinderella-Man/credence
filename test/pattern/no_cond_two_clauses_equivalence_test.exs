@@ -1,7 +1,7 @@
 defmodule Credence.Pattern.NoCondTwoClausesEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). A two-clause `cond` whose second clause is `true ->` is an
-  `if/else`. `cond do c -> a; true -> b end` → `if c, do: a, else: b`. Battery
+  `if/else`. `cond do c -> a; true -> b end` → `if c, do: a, else: b`. Input set
   drives the condition both ways and over edge values.
   """
   use ExUnit.Case, async: true

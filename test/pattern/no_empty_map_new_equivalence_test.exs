@@ -12,7 +12,7 @@ defmodule Credence.Pattern.NoEmptyMapNewEquivalenceTest do
       rule: NoEmptyMapNew,
       vars: [],
       inputs: [nil],
-      tiny_battery_ok: true
+      allow_few_inputs: true
     )
   end
 end

@@ -1,7 +1,7 @@
 defmodule Credence.Pattern.NoKernelOpInPipelineEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `score |> Kernel.>=(threshold)` → `score >= threshold`:
-  the piped `Kernel.>=/2` is the infix operator. Battery drives the comparison
+  the piped `Kernel.>=/2` is the infix operator. Input set drives the comparison
   true, false, and equal.
   """
   use ExUnit.Case, async: true

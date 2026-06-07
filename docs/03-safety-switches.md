@@ -399,7 +399,7 @@ add a new default-on switch, an app that upgrades could see its code rewritten i
 That's a behaviour change tied to a version, so it must be written down where upgraders look —
 which is exactly what a changelog is for.
 
-**And it gets teeth, not just trust.** "Require a changelog line" is the same kind of thing
+**And it gets enforcement, not just trust.** "Require a changelog line" is the same kind of thing
 §18 says humans forget under deadline — so we enforce it the same way, with the lightest check
 that works: a CI step that fails if the `@registry` defaults in `lib/assumptions.ex` changed in
 a commit and `CHANGELOG.md` did **not**. Like §18's property-test check, it can't judge whether
@@ -541,11 +541,11 @@ broken generator would otherwise turn every property test green while proving no
   (§9); the `config :credence` place is respected and the call options can override it; a
   missing config place does nothing. *(This single test file checks decisions 2, 6, 7, 8, 9,
   and 11 end-to-end through the real public API.)*
-- **Changelog guard (§16 teeth)** — a CI step asserting that if the `@registry` defaults in
+- **Changelog guard (§16 checks)** — a CI step asserting that if the `@registry` defaults in
   `lib/assumptions.ex` changed in a commit, `CHANGELOG.md` changed too.
 - **Whole-suite check** — every rule's `assumptions/0` only names real switches
-  (`⊆ Assumptions.names()`). *(The teeth on decision 11's rule-typo case.)*
-- **Whole-suite check (the teeth on "every promised rule is proven")** — for every rule that
+  (`⊆ Assumptions.names()`). *(The checks on decision 11's rule-typo case.)*
+- **Whole-suite check (the checks on "every promised rule is proven")** — for every rule that
   names a switch, a property-test exists for it. We use a naming convention so this is
   checkable in CI: each such rule has a module like `Credence.Pattern.<Rule>PropertyTest` (in
   `test/pattern/<rule>_property_test.exs`), and a meta-test asserts that module loads for
@@ -682,14 +682,14 @@ their check/fix tests are ported from `evolution`
     call overrides it; missing config is a no-op.
 18. `rule_status/1` test: right on/off + missing-promise values under different options.
 
-## Phase I — Meta-tests (the CI teeth)
-19. Whole-suite: every rule's `assumptions/0` ⊆ `Assumptions.names()` (§11 rule-typo teeth).
+## Phase I — Meta-tests (the CI checks)
+19. Whole-suite: every rule's `assumptions/0` ⊆ `Assumptions.names()` (§11 rule-typo checks).
 20. Whole-suite: every rule with non-empty `assumptions/0` has a loadable
     `Credence.Pattern.<Rule>PropertyTest` in `test/pattern/<rule>_property_test.exs` (§18).
 
 ## Phase J — Changelog guard
 21. CI step: if `@registry` defaults in `lib/assumptions.ex` changed in the commit and
-    `CHANGELOG.md` did not, fail the build (§16 teeth).
+    `CHANGELOG.md` did not, fail the build (§16 checks).
 
 ## Phase K — Docs
 22. `CONTEXT.md` and `docs/02_rule-review-process.md`: replace the old "identical output for

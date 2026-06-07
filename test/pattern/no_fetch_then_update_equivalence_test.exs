@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). A `case Map.fetch(map, key)` that increments on `{:ok, n}`
   and inserts on `:error`, returning `{old, updated_map}`. The fix rewrites the
-  `{:ok, n}` branch's `Map.update!` to the equivalent direct put. Battery covers
+  `{:ok, n}` branch's `Map.update!` to the equivalent direct put. Input set covers
   key present (int/float value) and absent.
   """
   use ExUnit.Case, async: true

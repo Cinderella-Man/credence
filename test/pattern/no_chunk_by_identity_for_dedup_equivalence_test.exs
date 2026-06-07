@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupEquivalenceTest do
   Tier 1 (expression).
   `Enum.chunk_by(list, & &1) |> Enum.map(&List.first/1)` → `Enum.dedup(list)`.
   Both collapse runs of consecutive equal elements (strict `===`), so the
-  value-kind `1` vs `1.0` case agrees. Battery covers consecutive duplicates,
+  value-kind `1` vs `1.0` case agrees. Input set covers consecutive duplicates,
   value-kind, and empty.
   """
   use ExUnit.Case, async: true

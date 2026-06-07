@@ -3,8 +3,8 @@ defmodule Credence.Pattern.NoReduceForMapBuildingEquivalenceTest do
   Tier 1 (expression).
   `Enum.reduce(list, %{}, fn x, acc -> Map.put(acc, key(x), val(x)) end)` →
   `Map.new(list, fn x -> {key(x), val(x)} end)`. Both build a map by inserting each
-  element's key/value in order; on a duplicate key, last-write-wins for both. Battery
-  covers empty, duplicate keys, and a normal list.
+  element's key/value in order; on a duplicate key, last-write-wins for both. Inputs
+  cover empty, duplicate keys, and a normal list.
   """
   use ExUnit.Case, async: true
 

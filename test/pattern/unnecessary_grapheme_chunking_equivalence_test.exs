@@ -7,7 +7,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingEquivalenceTest do
 
   Regression note: the original fix omitted the `//1` step, so when the string
   was shorter than the chunk size the range descended (`0..-1` = `[0, -1]`) and
-  emitted bogus slices instead of `[]` (see docs/07). The battery includes
+  emitted bogus slices instead of `[]` (see docs/07). The input set includes
   `len < n`, `len == n`, and a multi-codepoint grapheme string.
   """
   use ExUnit.Case, async: true

@@ -13,7 +13,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxEquivalenceTest do
       rule: NoRedundantBinarySyntax,
       vars: [],
       inputs: [nil],
-      tiny_battery_ok: true
+      allow_few_inputs: true
     )
   end
 end

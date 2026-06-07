@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckEquivalenceTest do
   Tier 1 (expression).
   `range |> Enum.take_while(pred) |> length() == n` → a `reduce_while` that counts
   matches and halts on the first false, compared to `n`. Both count the leading run
-  of `pred`-true elements and short-circuit identically. Battery drives the
+  of `pred`-true elements and short-circuit identically. Input set drives the
   predicate to pass-all, fail-early, and fail-first.
   """
   use ExUnit.Case, async: true

@@ -1,7 +1,7 @@
 defmodule Credence.Pattern.NoStringConcatInLoopEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `Enum.reduce(list, "", fn char, acc -> acc <> char end)` →
-  `Enum.join(list)`. Both concatenate in order. Battery covers empty, single, and
+  `Enum.join(list)`. Both concatenate in order. Input set covers empty, single, and
   multi-element string lists.
   """
   use ExUnit.Case, async: true

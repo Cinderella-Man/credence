@@ -13,7 +13,7 @@ defmodule Credence.Pattern.NoCodepointStringReverseEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoCodepointStringReverse
 
   @expr "str |> String.codepoints() |> Enum.reverse() |> Enum.join()"

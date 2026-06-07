@@ -7,7 +7,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeEquivalenceTest do
   Regression note: the original fix omitted the trailing `Enum.reverse/1`, so it
   reversed the result order (n largest ascending vs descending) — see docs/07.
   The reverse restores the order, making the rewrite behaviour-preserving. The
-  battery covers empty, ties, the `1`/`1.0` value-kind case, and fewer-than-n
+  input set covers empty, ties, the `1`/`1.0` value-kind case, and fewer-than-n
   elements.
   """
   use ExUnit.Case, async: true

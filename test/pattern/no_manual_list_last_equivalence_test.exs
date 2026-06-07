@@ -7,7 +7,7 @@ defmodule Credence.Pattern.NoManualListLastEquivalenceTest do
   manual form has no `[]` clause → `FunctionClauseError`; `hd(Enum.reverse([]))` →
   `ArgumentError`) — an error-type-only difference on the degenerate input, which
   is why the fix uses `hd(Enum.reverse/1)` rather than `List.last/1` (the latter
-  would silently return `nil` on `[]`, a real behaviour change). The battery uses
+  would silently return `nil` on `[]`, a real behaviour change). The input set uses
   non-empty lists to pin the value-preserving domain.
   """
   use ExUnit.Case, async: true

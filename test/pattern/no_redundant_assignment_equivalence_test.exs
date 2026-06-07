@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). A block whose last two statements are `tmp = expr` then
   `tmp` → `expr` (the binding is redundant; the block's value is the last expr).
-  Battery drives the computed expression over varied inputs.
+  Input set drives the computed expression over varied inputs.
   """
   use ExUnit.Case, async: true
 

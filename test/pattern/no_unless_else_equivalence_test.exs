@@ -1,7 +1,7 @@
 defmodule Credence.Pattern.NoUnlessElseEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `unless cond, do: a, else: b` → `if cond, do: b, else: a`
-  (branches swapped). Battery drives the condition both ways.
+  (branches swapped). Input set drives the condition both ways.
   """
   use ExUnit.Case, async: true
 

@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoManualFrequenciesEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoManualFrequencies
 
   test "manual Map.update reduce → Enum.frequencies preserves the map incl. value-kind keys" do

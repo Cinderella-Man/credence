@@ -1,13 +1,13 @@
 defmodule Credence.Pattern.NoIdentityFunctionInEnumEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `Enum.uniq_by(list, fn x -> x end)` → `Enum.uniq(list)`:
-  a `_by` variant with an identity key function is the plain variant. Battery
+  a `_by` variant with an identity key function is the plain variant. Input set
   covers value-kind and duplicates.
   """
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoIdentityFunctionInEnum
 
   test "Enum.uniq_by(list, fn x -> x end) → Enum.uniq(list) preserves the result" do

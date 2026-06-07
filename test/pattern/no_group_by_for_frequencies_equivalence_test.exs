@@ -3,7 +3,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesEquivalenceTest do
   Tier 2 (module-call).
   `words |> Enum.group_by(f) |> Map.new(fn {k, group} -> {k, length(group)} end)` →
   `Enum.frequencies_by(words, f)`. Grouping then taking each group's length is
-  exactly a frequency count keyed by `f`. Battery covers duplicates and empty.
+  exactly a frequency count keyed by `f`. Input set covers duplicates and empty.
   """
   use ExUnit.Case, async: true
 

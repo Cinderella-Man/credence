@@ -7,12 +7,12 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyEquivalenceTest do
   so writing `length(l)` already asserts `l` is a proper list. On that domain
   `length(l) == 0` ⟺ `l == []`. (Outside it the original raises and the rewrite
   returns `false`; that input is already-broken code — not asserted here, the
-  battery is proper lists.)
+  input set is proper lists.)
   """
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoLengthComparisonForEmpty
 
   test "length(l) == 0 → l == [] preserves the boolean over proper lists" do

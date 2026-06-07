@@ -11,7 +11,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoEnumCountForLength
 
   test "Enum.count(list-returning call) → length(...) preserves the count" do

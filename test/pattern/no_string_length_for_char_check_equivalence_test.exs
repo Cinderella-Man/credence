@@ -10,7 +10,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckEquivalenceTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.EquivalenceBatteries, as: B
+  alias Credence.EquivalenceInputs, as: B
   alias Credence.Pattern.NoStringLengthForCharCheck
 
   test "String.length(s) == 1 → match?([_], graphemes) preserves the boolean over Unicode" do

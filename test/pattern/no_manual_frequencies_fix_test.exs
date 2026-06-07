@@ -112,7 +112,7 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
   end
 
   # ── behaviour preservation ─────────────────────────────────────────
-  # The strongest guarantee: run the original and fixed code over input batteries
+  # The strongest guarantee: run the original and fixed code over input sets
   # and assert the resulting maps are element-for-element identical.
 
   defp eval1(expr) do
