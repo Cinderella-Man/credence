@@ -39,7 +39,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateCheckTest do
     end
 
     test "fires for each non-numeric literal default" do
-      for default <- ["0", "nil", ":none", "\"\"", "[]", "-1"] do
+      for default <- ["0", "nil", ":none", ~s(""), "[]", "-1"] do
         code = "map |> Map.update(key, #{default}, & &1) |> Map.drop([key])\n"
         assert length(check(NoDeadMapUpdate, code)) == 1, "expected fire for default #{default}"
       end

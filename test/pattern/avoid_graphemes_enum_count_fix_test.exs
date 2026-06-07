@@ -40,12 +40,12 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
     end
 
     test "predicate case passes through unchanged" do
-      code = "String.graphemes(str) |> Enum.count(&(&1 == \"a\"))"
+      code = ~s[String.graphemes(str) |> Enum.count(&(&1 == "a"))]
       assert fix(AvoidGraphemesEnumCount, code) == code
     end
 
     test "nested predicate case passes through unchanged" do
-      code = "Enum.count(String.graphemes(str), &(&1 == \"a\"))"
+      code = ~s[Enum.count(String.graphemes(str), &(&1 == "a"))]
       assert fix(AvoidGraphemesEnumCount, code) == code
     end
   end

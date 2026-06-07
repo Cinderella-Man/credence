@@ -8,7 +8,7 @@ defmodule Credence.Semantic.OutdentedHeredocCheckTest do
       diag = %{
         severity: :warning,
         message:
-          "outdented heredoc line. The contents inside the heredoc should be indented at the same level as the closing \"\"\".",
+          ~s(outdented heredoc line. The contents inside the heredoc should be indented at the same level as the closing """.),
         position: {3, 8}
       }
 

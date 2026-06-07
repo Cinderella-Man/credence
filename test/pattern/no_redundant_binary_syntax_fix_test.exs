@@ -7,23 +7,23 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
 
   describe "single string literal" do
     test "single char" do
-      assert fix(NoRedundantBinarySyntax, "<<\"b\">>") == "\"b\""
+      assert fix(NoRedundantBinarySyntax, ~s(<<"b">>)) == ~s("b")
     end
 
     test "multi-char" do
-      assert fix(NoRedundantBinarySyntax, "<<\"hello\">>") == "\"hello\""
+      assert fix(NoRedundantBinarySyntax, ~s(<<"hello">>)) == ~s("hello")
     end
 
     test "empty string" do
-      assert fix(NoRedundantBinarySyntax, "<<\"\">>") == "\"\""
+      assert fix(NoRedundantBinarySyntax, ~s(<<"">>)) == ~s("")
     end
 
     test "string with spaces" do
-      assert fix(NoRedundantBinarySyntax, "<<\"hello world\">>") == "\"hello world\""
+      assert fix(NoRedundantBinarySyntax, ~s(<<"hello world">>)) == ~s("hello world")
     end
 
     test "with spaces inside <<>>" do
-      assert fix(NoRedundantBinarySyntax, "<< \"b\" >>") == "\"b\""
+      assert fix(NoRedundantBinarySyntax, ~s(<< "b" >>)) == ~s("b")
     end
   end
 
@@ -43,9 +43,9 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
 
   describe "realistic context" do
     test "fixes binary syntax inside assert" do
-      code = "assert Mod.func(\"banana\") == [<<\"b\">>, <<\"a\">>, <<\"n\">>]"
+      code = ~s{assert Mod.func("banana") == [<<"b">>, <<"a">>, <<"n">>]}
       fixed = fix(NoRedundantBinarySyntax, code)
-      assert fixed == "assert Mod.func(\"banana\") == [\"b\", \"a\", \"n\"]"
+      assert fixed == ~s{assert Mod.func("banana") == ["b", "a", "n"]}
     end
 
     test "preserves surrounding code" do
@@ -91,7 +91,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
 
   describe "no-ops" do
     test "returns source unchanged when nothing to fix" do
-      code = "x = \"hello\""
+      code = ~s(x = "hello")
       assert fix(NoRedundantBinarySyntax, code) == code
     end
 
@@ -101,12 +101,12 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
     end
 
     test "does not touch multiple string segments" do
-      code = "<<\"a\", \"b\">>"
+      code = ~s(<<"a", "b">>)
       assert fix(NoRedundantBinarySyntax, code) == code
     end
 
     test "does not touch pattern with rest" do
-      code = "<<\"a\", rest::binary>>"
+      code = ~s(<<"a", rest::binary>>)
       assert fix(NoRedundantBinarySyntax, code) == code
     end
 
@@ -116,12 +116,12 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
     end
 
     test "does not touch string with type specifier" do
-      code = "<<\"a\"::binary>>"
+      code = ~s(<<"a"::binary>>)
       assert fix(NoRedundantBinarySyntax, code) == code
     end
 
     test "does not touch regex sigils" do
-      code = "String.replace(text, ~r/[^a-z0-9]/, \"\")"
+      code = ~s{String.replace(text, ~r/[^a-z0-9]/, "")}
       assert fix(NoRedundantBinarySyntax, code) == code
     end
 

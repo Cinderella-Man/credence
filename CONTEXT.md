@@ -226,13 +226,16 @@ over the same list).
   (heredoc fixtures are exempt — the gate is AST-based). Only `test/support` may
   touch the parser. Syntax/semantic tests (`use ExUnit.Case`, not `RuleCase`) reach
   `valid_syntax?` via `import Credence.RuleCase, only: [valid_syntax?: 1]`.
-  Multi-line code fixtures use **heredocs**, never escaped `"...\n...\n..."` strings.
-  `test/heredoc_fixtures_test.exs` enforces it (Sourceror delimiter-aware) and
-  exempts what a heredoc can't carry — the `test`/`describe` name, a fixture whose
-  code contains `"""` or `\#{`, a string ending in a blank line (`mix format` trims
-  a heredoc's trailing blank), a pure-`"\n"` separator — plus a tiny reasoned
+  Code fixtures carry **no string escaping**: multi-line code uses a **heredoc**
+  (never `"...\n...\n..."`), and a nested quote uses a **`~s` sigil** (never
+  `"Enum.join(list, \"\")"` → `~s[Enum.join(list, "")]`).
+  `test/fixture_string_escaping_test.exs` enforces both (Sourceror delimiter-aware)
+  and exempts what those forms can't carry — the `test`/`describe` name, a fixture
+  whose code contains `"""` or `\#{`, a string ending in a blank line (`mix format`
+  trims a heredoc's trailing blank), a pure-`"\n"` separator — plus a tiny reasoned
   allow-list (a line-number-sensitive diagnostic fixture). Heredocs add a trailing
-  `\n`; since `fix/2` mirrors it, fix-test `input`/`expected` convert as a pair.
+  `\n`; since `fix/2` mirrors it, fix-test `input`/`expected` convert as a pair
+  (sigils don't, so single-line nested-quote fixtures need no pairing).
 - `test/credence_pipeline_test.exs` — end-to-end tests, including the
   after-the-fix check (with on-purpose `BrokenFixRule` / `UnparseableFixRule`
   test rules).

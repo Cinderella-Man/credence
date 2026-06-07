@@ -97,12 +97,12 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountCheckTest do
     end
 
     test "Enum.count/2 with predicate (handled by separate rule)" do
-      assert check(AvoidGraphemesEnumCount, "Enum.count(String.graphemes(str), &(&1 == \"a\"))") ==
+      assert check(AvoidGraphemesEnumCount, ~s[Enum.count(String.graphemes(str), &(&1 == "a"))]) ==
                []
     end
 
     test "pipe with predicate (handled by separate rule)" do
-      assert check(AvoidGraphemesEnumCount, "String.graphemes(str) |> Enum.count(&(&1 == \"a\"))") ==
+      assert check(AvoidGraphemesEnumCount, ~s[String.graphemes(str) |> Enum.count(&(&1 == "a"))]) ==
                []
     end
   end

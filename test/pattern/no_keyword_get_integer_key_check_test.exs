@@ -64,7 +64,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
     end
 
     test "atom key with default" do
-      assert check(NoKeywordGetIntegerKey, "Keyword.get(opts, :name, \"default\")") == []
+      assert check(NoKeywordGetIntegerKey, ~s[Keyword.get(opts, :name, "default")]) == []
     end
 
     test "variable key" do

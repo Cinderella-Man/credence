@@ -9,23 +9,23 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
   describe "flags single string literal in binary syntax" do
     test "single char" do
       assert [%Issue{rule: :no_redundant_binary_syntax}] =
-               check(NoRedundantBinarySyntax, "<<\"b\">>")
+               check(NoRedundantBinarySyntax, ~s(<<"b">>))
     end
 
     test "multi-char" do
-      assert [%Issue{}] = check(NoRedundantBinarySyntax, "<<\"hello\">>")
+      assert [%Issue{}] = check(NoRedundantBinarySyntax, ~s(<<"hello">>))
     end
 
     test "empty string" do
-      assert [%Issue{}] = check(NoRedundantBinarySyntax, "<<\"\">>")
+      assert [%Issue{}] = check(NoRedundantBinarySyntax, ~s(<<"">>))
     end
 
     test "string with spaces" do
-      assert [%Issue{}] = check(NoRedundantBinarySyntax, "<<\"hello world\">>")
+      assert [%Issue{}] = check(NoRedundantBinarySyntax, ~s(<<"hello world">>))
     end
 
     test "with spaces inside <<>>" do
-      assert [%Issue{}] = check(NoRedundantBinarySyntax, "<< \"b\" >>")
+      assert [%Issue{}] = check(NoRedundantBinarySyntax, ~s(<< "b" >>))
     end
   end
 
@@ -38,15 +38,15 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
     end
 
     test "in assignment" do
-      assert [%Issue{}] = check(NoRedundantBinarySyntax, "x = <<\"hello\">>")
+      assert [%Issue{}] = check(NoRedundantBinarySyntax, ~s(x = <<"hello">>))
     end
 
     test "in function argument" do
-      assert [%Issue{}] = check(NoRedundantBinarySyntax, "String.length(<<\"hello\">>)")
+      assert [%Issue{}] = check(NoRedundantBinarySyntax, ~s[String.length(<<"hello">>)])
     end
 
     test "in comparison" do
-      assert [%Issue{}] = check(NoRedundantBinarySyntax, "x == <<\"hello\">>")
+      assert [%Issue{}] = check(NoRedundantBinarySyntax, ~s(x == <<"hello">>))
     end
 
     test "in case expression" do
@@ -80,7 +80,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
 
   describe "does NOT flag" do
     test "bare string without <<>>" do
-      assert check(NoRedundantBinarySyntax, "\"hello\"") == []
+      assert check(NoRedundantBinarySyntax, ~s("hello")) == []
     end
 
     test "byte values" do
@@ -92,7 +92,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
     end
 
     test "pattern with rest" do
-      assert check(NoRedundantBinarySyntax, "<<\"a\", rest::binary>>") == []
+      assert check(NoRedundantBinarySyntax, ~s(<<"a", rest::binary>>)) == []
     end
 
     test "variable with type specifier" do
@@ -108,11 +108,11 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
     end
 
     test "string with type specifier" do
-      assert check(NoRedundantBinarySyntax, "<<\"a\"::binary>>") == []
+      assert check(NoRedundantBinarySyntax, ~s(<<"a"::binary>>)) == []
     end
 
     test "mixed string and integer" do
-      assert check(NoRedundantBinarySyntax, "<<\"a\", 0>>") == []
+      assert check(NoRedundantBinarySyntax, ~s(<<"a", 0>>)) == []
     end
   end
 
@@ -165,7 +165,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
 
   describe "metadata" do
     test "meta.line is set" do
-      [issue] = check(NoRedundantBinarySyntax, "<<\"hello\">>")
+      [issue] = check(NoRedundantBinarySyntax, ~s(<<"hello">>))
       assert issue.meta.line != nil
     end
   end

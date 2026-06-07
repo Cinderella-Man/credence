@@ -398,22 +398,22 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
   describe "join" do
     test "Enum.join(Map.values(m))" do
       assert fix(NoMapKeysOrValuesForIteration, "Enum.join(Map.values(m))") ==
-               "Enum.map_join(m, \"\", fn {_, v} -> v end)"
+               ~s[Enum.map_join(m, "", fn {_, v} -> v end)]
     end
 
     test "Enum.join(Map.keys(m))" do
       assert fix(NoMapKeysOrValuesForIteration, "Enum.join(Map.keys(m))") ==
-               "Enum.map_join(m, \"\", fn {k, _} -> k end)"
+               ~s[Enum.map_join(m, "", fn {k, _} -> k end)]
     end
 
     test "Enum.join with separator" do
-      assert fix(NoMapKeysOrValuesForIteration, "Enum.join(Map.values(m), \",\")") ==
-               "Enum.map_join(m, \",\", fn {_, v} -> v end)"
+      assert fix(NoMapKeysOrValuesForIteration, ~s[Enum.join(Map.values(m), ",")]) ==
+               ~s[Enum.map_join(m, ",", fn {_, v} -> v end)]
     end
 
     test "pipe collapses to nested call" do
       assert fix(NoMapKeysOrValuesForIteration, "Map.keys(map) |> Enum.join()") ==
-               "Enum.map_join(map, \"\", fn {k, _} -> k end)"
+               ~s[Enum.map_join(map, "", fn {k, _} -> k end)]
     end
   end
 
