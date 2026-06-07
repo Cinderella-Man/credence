@@ -78,4 +78,23 @@ defmodule Credence.RuleCase do
   def fix(rule, code, opts \\ []) do
     RuleHelpers.apply_rule_fix(rule, code, opts)
   end
+
+  @doc """
+  True when `code` parses as valid Elixir, via Sourceror (the project's only
+  parser). Lets a test assert a fix produced parseable output without reaching
+  for `Sourceror`/`Code` itself.
+  """
+  def valid_syntax?(code), do: match?({:ok, _}, Sourceror.parse_string(code))
+
+  @doc """
+  True when `code` compiles. Use to assert a fix turned non-compiling input
+  (e.g. an attribute outside a module) into a compiling module — hiding the
+  `Code.compile_string` reach from the test.
+  """
+  def compiles?(code) do
+    Code.compile_string(code)
+    true
+  rescue
+    _ -> false
+  end
 end

@@ -206,7 +206,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(NoLengthComparisonForEmpty, code))
+      assert valid_syntax?(fix(NoLengthComparisonForEmpty, code))
     end
   end
 
@@ -221,7 +221,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyFixTest do
       output = fix(NoLengthComparisonForEmpty, code)
 
       assert output == code
-      assert {:ok, _} = Sourceror.parse_string(output)
+      assert valid_syntax?(output)
       # And the fixed output must still compile (the actual symptom).
       assert RuleHelpers.compiles?(output)
     end

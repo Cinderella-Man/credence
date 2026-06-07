@@ -176,7 +176,8 @@ defmodule Credence.Pattern.NoStringConcatInLoop do
                {:__block__, _, stmts}
              ]}
           ]}
-       ) when length(stmts) > 1 do
+       )
+       when length(stmts) > 1 do
     {preceding, [last]} = Enum.split(stmts, -1)
 
     case last do

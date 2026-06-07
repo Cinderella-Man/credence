@@ -155,7 +155,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(NoRedundantBinarySyntax, code))
+      assert valid_syntax?(fix(NoRedundantBinarySyntax, code))
     end
   end
 end

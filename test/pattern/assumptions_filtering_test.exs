@@ -23,8 +23,6 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
 
   defp fix(code, opts \\ []), do: Credence.fix(code, opts).code
 
-  defp fmt(s), do: s |> Code.format_string!() |> IO.iodata_to_binary()
-
   defp issue_rules(code, opts \\ []),
     do: Credence.analyze(code, opts).issues |> Enum.map(& &1.rule)
 
@@ -38,7 +36,7 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
   describe "default (helpful) mode" do
     test "a switched rule runs: the pattern is reported and fixed" do
       assert :avoid_graphemes_enum_count_with_predicate in issue_rules(@switched)
-      assert fmt(fix(@switched)) == fmt(@switched_fixed)
+      assert fix(@switched) == @switched_fixed
     end
   end
 
@@ -70,7 +68,7 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
       Application.put_env(:credence, :assumptions, :strict)
 
       assert fix(@switched) == @switched
-      assert fmt(fix(@switched, assumptions: :default)) == fmt(@switched_fixed)
+      assert fix(@switched, assumptions: :default) == @switched_fixed
     end
   end
 
@@ -82,13 +80,13 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
       assert fix(@switched) == @switched
 
       # call re-enables just this switch for this run
-      assert fmt(fix(@switched, assumptions: %{single_codepoint_graphemes: true})) ==
-               fmt(@switched_fixed)
+      assert fix(@switched, assumptions: %{single_codepoint_graphemes: true}) ==
+               @switched_fixed
     end
 
     test "a missing config place does nothing (default behaviour)" do
       # no config set in this test
-      assert fmt(fix(@switched)) == fmt(@switched_fixed)
+      assert fix(@switched) == @switched_fixed
     end
   end
 

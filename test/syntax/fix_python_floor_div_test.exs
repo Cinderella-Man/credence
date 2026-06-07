@@ -245,17 +245,29 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
     end
 
     test "range step 0..-2//1 unchanged" do
-      code = "middle = Enum.slice(list, 0..-2//1)\n"
+      code = """
+      middle = Enum.slice(list, 0..-2//1)
+
+      """
+
       assert fix(code) == code
     end
 
     test "range step 1..10//2 unchanged" do
-      code = "evens = Enum.to_list(1..10//2)\n"
+      code = """
+      evens = Enum.to_list(1..10//2)
+
+      """
+
       assert fix(code) == code
     end
 
     test "range step with variable bounds unchanged" do
-      code = "Enum.reduce(n..m//-1, 0, fn i, acc -> i + acc end)\n"
+      code = """
+      Enum.reduce(n..m//-1, 0, fn i, acc -> i + acc end)
+
+      """
+
       assert fix(code) == code
     end
   end

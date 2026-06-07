@@ -3,11 +3,6 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
 
   alias Credence.Pattern.NoTrailingNewlineInDoc
 
-  defp check_with_source(code) do
-    ast = Sourceror.parse_string!(code)
-    NoTrailingNewlineInDoc.check(ast, source: code)
-  end
-
   describe "flags single-line docs with trailing newline" do
     test "flags @doc with trailing newline" do
       code = """
@@ -154,7 +149,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       '''
 
-      assert check_with_source(code) == []
+      assert check(NoTrailingNewlineInDoc, code) == []
     end
 
     test "does not flag single-line heredoc @moduledoc" do
@@ -167,7 +162,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       '''
 
-      assert check_with_source(code) == []
+      assert check(NoTrailingNewlineInDoc, code) == []
     end
 
     test "does not flag multi-line heredoc @doc" do
@@ -185,7 +180,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       '''
 
-      assert check_with_source(code) == []
+      assert check(NoTrailingNewlineInDoc, code) == []
     end
 
     test "still flags single-line string @doc even with source available" do
@@ -196,7 +191,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocCheckTest do
       end
       """
 
-      [issue] = check_with_source(code)
+      [issue] = check(NoTrailingNewlineInDoc, code)
       assert issue.rule == :no_trailing_newline_in_doc
     end
   end

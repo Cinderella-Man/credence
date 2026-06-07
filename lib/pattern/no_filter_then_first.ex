@@ -67,8 +67,8 @@ defmodule Credence.Pattern.NoFilterThenFirst do
   # Nested: Enum.at(Stream.filter(coll, pred), 0)
   defp build_patch(
          {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _,
-          [{{:., _, [{:__aliases__, _, [mod]}, :filter]}, _, [coll, pred]}, {:__block__, _, [0]}]}
-         = node
+          [{{:., _, [{:__aliases__, _, [mod]}, :filter]}, _, [coll, pred]}, {:__block__, _, [0]}]} =
+           node
        )
        when mod == :Stream do
     find_call = make_find_call(coll, pred)
@@ -166,8 +166,7 @@ defmodule Credence.Pattern.NoFilterThenFirst do
 
   defp check_node(
          {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, meta,
-          [{{:., _, [mod, :filter]}, _, [_coll, _pred]} = filter_call,
-           {:__block__, _, [0]}]}
+          [{{:., _, [mod, :filter]}, _, [_coll, _pred]} = filter_call, {:__block__, _, [0]}]}
        ) do
     if filter_module?(mod) do
       {:ok, build_issue_from_nested(meta, filter_call)}
@@ -184,10 +183,8 @@ defmodule Credence.Pattern.NoFilterThenFirst do
 
   defp filter_step?(_), do: false
 
-  defp at_zero_step?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{:__block__, _, [0]}]}
-       ),
-       do: true
+  defp at_zero_step?({{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{:__block__, _, [0]}]}),
+    do: true
 
   defp at_zero_step?(_), do: false
 

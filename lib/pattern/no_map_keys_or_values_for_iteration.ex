@@ -375,8 +375,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
           [default, cb] ->
             if function?(cb),
-              do:
-                {:ok, nil_or_extract_case(enum_call(:find, [map_expr, cb]), map_fn, default)},
+              do: {:ok, nil_or_extract_case(enum_call(:find, [map_expr, cb]), map_fn, default)},
               else: :no
 
           _ ->
@@ -495,8 +494,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   defp wrap_cb({:&, capture_meta, [{:/, _, [ref, {:__block__, _, [1]}]}]}, map_fn) do
     arg_var = {:x, [], nil}
 
-    {:fn, capture_meta,
-     [{:->, [], [[kv_pattern(arg_var, map_fn)], rebuild_call(ref, arg_var)]}]}
+    {:fn, capture_meta, [{:->, [], [[kv_pattern(arg_var, map_fn)], rebuild_call(ref, arg_var)]}]}
   end
 
   # `&(expr using &1)`  →  `fn x -> expr end`
@@ -641,14 +639,10 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   #     :keys    →  fn {k, _} -> k end
   #     :values  →  fn {_, v} -> v end
   defp extractor_lambda(:values),
-    do:
-      {:fn, [],
-       [{:->, [], [[wrap_tuple({{:_, [], nil}, {:v, [], nil}})], {:v, [], nil}]}]}
+    do: {:fn, [], [{:->, [], [[wrap_tuple({{:_, [], nil}, {:v, [], nil}})], {:v, [], nil}]}]}
 
   defp extractor_lambda(:keys),
-    do:
-      {:fn, [],
-       [{:->, [], [[wrap_tuple({{:k, [], nil}, {:_, [], nil}})], {:k, [], nil}]}]}
+    do: {:fn, [], [{:->, [], [[wrap_tuple({{:k, [], nil}, {:_, [], nil}})], {:k, [], nil}]}]}
 
   # The destructuring tuple pattern used inside a case clause when we
   # need to extract just-keys / just-values after `find` / `at`.

@@ -37,9 +37,17 @@ defmodule Credence.Semantic.UndefinedFunction.AddArgFixTest do
     end
 
     test "only on reported line" do
-      input = "a = List.first(xs)\nb = List.second(xs)\nc = List.last(xs)"
+      input = """
+      a = List.first(xs)
+      b = List.second(xs)
+      c = List.last(xs)
+      """
 
-      assert fix(input, @msg, 2) == "a = List.first(xs)\nb = Enum.at(xs, 1)\nc = List.last(xs)"
+      assert fix(input, @msg, 2) == """
+             a = List.first(xs)
+             b = Enum.at(xs, 1)
+             c = List.last(xs)
+             """
     end
 
     test "realistic context from LLM log" do

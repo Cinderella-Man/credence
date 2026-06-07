@@ -161,10 +161,8 @@ defmodule Credence.Pattern.PreferMapPutNew do
   end
 
   # Matches exactly `Map.has_key?(map, key)` (no leading negation).
-  defp bare_has_key(
-         {{:., _, [{:__aliases__, _, [:Map]}, :has_key?]}, _, [map, key]}
-       ),
-       do: {:ok, map, key}
+  defp bare_has_key({{:., _, [{:__aliases__, _, [:Map]}, :has_key?]}, _, [map, key]}),
+    do: {:ok, map, key}
 
   defp bare_has_key(_), do: :none
 
@@ -202,10 +200,8 @@ defmodule Credence.Pattern.PreferMapPutNew do
   defp put_match?(_, _, _), do: false
 
   # Extracts the value argument from Map.put(_, _, val)
-  defp extract_put_value(
-         {{:., _, [{:__aliases__, _, [:Map]}, :put]}, _, [_, _, val]}
-       ),
-       do: val
+  defp extract_put_value({{:., _, [{:__aliases__, _, [:Map]}, :put]}, _, [_, _, val]}),
+    do: val
 
   # Checks if the AST is a plain variable reference matching target
   defp var_matches?({name_a, _, ctx_a}, {name_b, _, ctx_b})

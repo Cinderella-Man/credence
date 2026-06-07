@@ -60,8 +60,7 @@ defmodule Credence.Pattern.NoListDeleteAtLength do
       {{:., _, [{:__aliases__, _, [:List]}, :delete_at]}, meta,
        [list_arg, {:-, _, [length_call, k_arg]}]} = node ->
         if delete_last?(list_arg, length_call, k_arg) do
-          {{:., meta, [{:__aliases__, [], [:List]}, :delete_at]}, meta,
-           [list_arg, {:-, [], [1]}]}
+          {{:., meta, [{:__aliases__, [], [:List]}, :delete_at]}, meta, [list_arg, {:-, [], [1]}]}
         else
           node
         end

@@ -278,7 +278,12 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
 
   describe "metadata" do
     test "reports correct line number" do
-      code = "x = 1\nremainder = n % 2\ny = 3"
+      code = """
+      x = 1
+      remainder = n % 2
+      y = 3
+      """
+
       [issue] = analyze(code)
       assert issue.meta.line == 2
     end

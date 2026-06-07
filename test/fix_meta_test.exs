@@ -72,7 +72,14 @@ defmodule Credence.FixMetaTest do
         }
 
       :error ->
-        %{rule: rule, path: path, asserts: false, references_rule: false, whole_string: false, has_transform: false}
+        %{
+          rule: rule,
+          path: path,
+          asserts: false,
+          references_rule: false,
+          whole_string: false,
+          has_transform: false
+        }
     end
   end
 

@@ -197,8 +197,15 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
 
   describe "fix/2 — position formats" do
     test "handles bare integer position" do
-      source = "def check(_x, y) when y > _x, do: :ok\n"
-      expected = "def check(x, y) when y > x, do: :ok\n"
+      source = """
+      def check(_x, y) when y > _x, do: :ok
+
+      """
+
+      expected = """
+      def check(x, y) when y > x, do: :ok
+
+      """
 
       bare_diag = %{
         severity: :warning,
@@ -212,7 +219,10 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
 
   describe "fix/2 — no-ops" do
     test "returns source unchanged when variable has no underscore" do
-      source = "def check(x, y) when y > x, do: :ok\n"
+      source = """
+      def check(x, y) when y > x, do: :ok
+
+      """
 
       weird_diag = %{
         severity: :warning,
@@ -224,7 +234,10 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
     end
 
     test "returns source unchanged when position is nil" do
-      source = "some code\n"
+      source = """
+      some code
+
+      """
 
       bad_diag = %{
         severity: :warning,
@@ -236,7 +249,10 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
     end
 
     test "returns source unchanged when message has no variable name" do
-      source = "some code\n"
+      source = """
+      some code
+
+      """
 
       bad_diag = %{
         severity: :warning,

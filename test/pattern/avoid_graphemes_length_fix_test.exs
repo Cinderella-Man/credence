@@ -73,10 +73,7 @@ defmodule Credence.Pattern.AvoidGraphemesLengthFixTest do
     end
 
     test "fixed code is valid Elixir" do
-      assert {:ok, _} =
-               Sourceror.parse_string(
-                 fix(AvoidGraphemesLength, "String.graphemes(str) |> length()")
-               )
+      assert valid_syntax?(fix(AvoidGraphemesLength, "String.graphemes(str) |> length()"))
     end
   end
 end

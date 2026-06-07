@@ -96,12 +96,13 @@ defmodule Credence.Pattern.NoLiteralListTypespecFixTest do
 
   describe "round-trip" do
     test "the fixed spec produces zero check issues" do
-      ast =
-        Sourceror.parse_string!(
-          fix(NoLiteralListTypespec, "@spec foo(integer()) :: [pos_integer(), pos_integer()]")
-        )
-
-      assert NoLiteralListTypespec.check(ast, []) == []
+      assert clean?(
+               NoLiteralListTypespec,
+               fix(
+                 NoLiteralListTypespec,
+                 "@spec foo(integer()) :: [pos_integer(), pos_integer()]"
+               )
+             )
     end
   end
 end

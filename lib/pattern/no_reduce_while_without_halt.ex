@@ -45,6 +45,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHalt do
         {{:., _, _} = dot, meta, args} = node, issues when is_list(args) ->
           if reduce_while_call?(dot) and length(args) >= 2 do
             fn_node = List.last(args)
+
             if all_cont?(fn_node) do
               {node, [build_issue(meta) | issues]}
             else
@@ -71,7 +72,10 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHalt do
   defp reduce_while_call?({:., _, [:Enum, :reduce_while]}), do: true
   defp reduce_while_call?(_), do: false
 
-  defp reduce_call({:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :reduce_while]}, call_meta) do
+  defp reduce_call(
+         {:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :reduce_while]},
+         call_meta
+       ) do
     {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :reduce]}, call_meta}
   end
 
@@ -143,6 +147,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHalt do
        ) do
     if reduce_while_call?(dot) and length(args) >= 2 do
       fn_node = List.last(args)
+
       if all_cont?(fn_node) do
         {new_dot, _} = reduce_call(dot, call_meta)
         new_args = List.update_at(args, -1, &unwrap_cont_fn/1)
@@ -170,7 +175,9 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHalt do
   # Sourceror wraps 2-tuples: {:cont, v} → {{:__block__, _, [:cont]}, v}
   defp unwrap_cont_body({{:__block__, _, [:cont]}, value}), do: value
   defp unwrap_cont_body({:__block__, meta, [{:cont, value}]}), do: {:__block__, meta, [value]}
-  defp unwrap_cont_body({:__block__, meta, [{{:__block__, _, [:cont]}, value}]}), do: {:__block__, meta, [value]}
+
+  defp unwrap_cont_body({:__block__, meta, [{{:__block__, _, [:cont]}, value}]}),
+    do: {:__block__, meta, [value]}
 
   defp unwrap_cont_body({:__block__, meta, stmts}) when is_list(stmts) do
     {init, [last]} = Enum.split(stmts, -1)

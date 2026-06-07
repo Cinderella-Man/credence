@@ -98,8 +98,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       """
 
       fixed = fix(NoDeadMapUpdate, code)
-      ast = Sourceror.parse_string!(fixed)
-      assert NoDeadMapUpdate.check(ast, []) == []
+      assert clean?(NoDeadMapUpdate, fixed)
     end
   end
 

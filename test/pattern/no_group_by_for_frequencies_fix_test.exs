@@ -162,8 +162,7 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       """
 
       fixed = fix(NoGroupByForFrequencies, code)
-      ast = Sourceror.parse_string!(fixed)
-      assert NoGroupByForFrequencies.check(ast, []) == []
+      assert clean?(NoGroupByForFrequencies, fixed)
     end
   end
 end

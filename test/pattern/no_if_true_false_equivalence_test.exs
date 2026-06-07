@@ -10,7 +10,14 @@ defmodule Credence.Pattern.NoIfTrueFalseEquivalenceTest do
   alias Credence.Pattern.NoIfTrueFalse
 
   test "if x > 0 do true else false end → (x > 0) preserves the boolean" do
-    assert_equivalent("if x > 0 do\n  true\nelse\n  false\nend",
+    assert_equivalent(
+      """
+      if x > 0 do
+        true
+      else
+        false
+      end
+      """,
       rule: NoIfTrueFalse,
       vars: [:x],
       inputs: [1, -1, 0, 100, -100]

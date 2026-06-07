@@ -165,9 +165,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicate do
   end
 
   # Extract literal from Enum.count/2 in a pipe (only pred arg present)
-  defp extract_enum_count_pred_literal(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [pred]}
-       ) do
+  defp extract_enum_count_pred_literal({{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [pred]}) do
     equality_literal(pred)
   end
 

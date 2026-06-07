@@ -92,10 +92,7 @@ defmodule Credence.Pattern.NoListDeleteAtLengthFixTest do
     end
 
     test "fixed code is valid Elixir" do
-      assert {:ok, _} =
-               Sourceror.parse_string(
-                 fix(NoListDeleteAtLength, "List.delete_at(list, length(list) - 1)")
-               )
+      assert valid_syntax?(fix(NoListDeleteAtLength, "List.delete_at(list, length(list) - 1)"))
     end
   end
 end

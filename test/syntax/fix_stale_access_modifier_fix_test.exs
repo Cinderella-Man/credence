@@ -9,8 +9,16 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "garbled prefixes" do
     test "pprivate defp → defp" do
-      assert fix("pprivate defp calculate(x) do\n  x * 2\nend") ==
-               "defp calculate(x) do\n  x * 2\nend"
+      assert fix("""
+             pprivate defp calculate(x) do
+               x * 2
+             end
+             """) ==
+               """
+               defp calculate(x) do
+                 x * 2
+               end
+               """
     end
 
     test "pprivate defp one-liner" do
@@ -23,13 +31,29 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "redundant prefixes" do
     test "private defp → defp" do
-      assert fix("private defp calculate(x) do\n  x * 2\nend") ==
-               "defp calculate(x) do\n  x * 2\nend"
+      assert fix("""
+             private defp calculate(x) do
+               x * 2
+             end
+             """) ==
+               """
+               defp calculate(x) do
+                 x * 2
+               end
+               """
     end
 
     test "public def → def" do
-      assert fix("public def calculate(x) do\n  x * 2\nend") ==
-               "def calculate(x) do\n  x * 2\nend"
+      assert fix("""
+             public def calculate(x) do
+               x * 2
+             end
+             """) ==
+               """
+               def calculate(x) do
+                 x * 2
+               end
+               """
     end
   end
 
@@ -95,13 +119,29 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "macro definitions" do
     test "private defmacro → defmacro" do
-      assert fix("private defmacro my_macro(x) do\n  x\nend") ==
-               "defmacro my_macro(x) do\n  x\nend"
+      assert fix("""
+             private defmacro my_macro(x) do
+               x
+             end
+             """) ==
+               """
+               defmacro my_macro(x) do
+                 x
+               end
+               """
     end
 
     test "private defmacrop → defmacrop" do
-      assert fix("private defmacrop my_macro(x) do\n  x\nend") ==
-               "defmacrop my_macro(x) do\n  x\nend"
+      assert fix("""
+             private defmacrop my_macro(x) do
+               x
+             end
+             """) ==
+               """
+               defmacrop my_macro(x) do
+                 x
+               end
+               """
     end
   end
 

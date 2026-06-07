@@ -123,9 +123,7 @@ defmodule Credence.Pattern.NoEmptyMapNew do
 
   # ── check helpers ────────────────────────────────────────────────
 
-  defp check_node(
-         {{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _, []}
-       ) do
+  defp check_node({{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _, []}) do
     {:ok, build_issue(meta)}
   end
 

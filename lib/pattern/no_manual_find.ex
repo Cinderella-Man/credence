@@ -226,7 +226,15 @@ defmodule Credence.Pattern.NoManualFind do
            {:ok, head, guard} <- match_role(match, arity),
            true <- recurse_role(recurse, fn_name, arity),
            {:ok, info} <-
-             build_clause(elem(match, 2), fn_name, arity, head, guard, default_spec, line_of(match)) do
+             build_clause(
+               elem(match, 2),
+               fn_name,
+               arity,
+               head,
+               guard,
+               default_spec,
+               line_of(match)
+             ) do
         {:ok, info}
       else
         _ -> nil

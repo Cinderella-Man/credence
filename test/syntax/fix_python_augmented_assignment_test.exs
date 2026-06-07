@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Syntax.FixPythonAugmentedAssignment
 
   defp analyze(code), do: FixPythonAugmentedAssignment.analyze(code)
@@ -183,12 +185,20 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
 
   describe "fix/1 — no-ops (must not corrupt valid code)" do
     test "comment line unchanged" do
-      code = "# x += 1 is Python\n"
+      code = """
+      # x += 1 is Python
+
+      """
+
       assert fix(code) == code
     end
 
     test "code without augmented assignment unchanged" do
-      code = "y = x + 1\n"
+      code = """
+      y = x + 1
+
+      """
+
       assert fix(code) == code
     end
 
@@ -230,7 +240,7 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
       """
 
       fixed = fix(code)
-      assert {:ok, _ast} = Code.string_to_quoted(fixed)
+      assert valid_syntax?(fixed)
       assert analyze(fixed) == []
     end
   end

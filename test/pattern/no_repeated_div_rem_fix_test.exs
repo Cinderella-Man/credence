@@ -198,7 +198,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(NoRepeatedDivRem, code))
+      assert valid_syntax?(fix(NoRepeatedDivRem, code))
     end
   end
 end

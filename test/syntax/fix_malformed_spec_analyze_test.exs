@@ -89,7 +89,12 @@ defmodule Credence.Syntax.FixMalformedSpecAnalyzeTest do
 
   describe "metadata" do
     test "reports the correct line number" do
-      code = "def foo, do: :ok\n@spec bar(integer() :: string())\ndef bar(x), do: x"
+      code = """
+      def foo, do: :ok
+      @spec bar(integer() :: string())
+      def bar(x), do: x
+      """
+
       [issue] = analyze(code)
       assert issue.meta.line == 2
     end

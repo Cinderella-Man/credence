@@ -163,7 +163,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunking do
       {{:., [], [{:__aliases__, [], [:String]}, :length]}, [], [subject]}
 
     range =
-      {:"..//", [], [0, {:-, [], [length_call, n]}, 1]}
+      {:..//, [], [0, {:-, [], [length_call, n]}, 1]}
 
     body =
       {{:., [], [{:__aliases__, [], [:String]}, :slice]}, [], [subject, {:i, [], nil}, n]}

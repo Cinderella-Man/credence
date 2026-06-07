@@ -52,18 +52,30 @@ defmodule Credence.Pattern.NoEnumTakeNegativeCheckTest do
     test "passes Enum.take with positive count" do
       assert check(
                NoEnumTakeNegative,
-               "defmodule G do\n  def f(l), do: Enum.sort(l, :desc) |> Enum.take(3)\nend"
+               """
+               defmodule G do
+                 def f(l), do: Enum.sort(l, :desc) |> Enum.take(3)
+               end
+               """
              ) ==
                []
     end
 
     test "passes Enum.take with variable count" do
-      assert check(NoEnumTakeNegative, "defmodule G do\n  def f(l, n), do: Enum.take(l, n)\nend") ==
+      assert check(NoEnumTakeNegative, """
+             defmodule G do
+               def f(l, n), do: Enum.take(l, n)
+             end
+             """) ==
                []
     end
 
     test "passes Enum.take with zero" do
-      assert check(NoEnumTakeNegative, "defmodule G do\n  def f(l), do: Enum.take(l, 0)\nend") ==
+      assert check(NoEnumTakeNegative, """
+             defmodule G do
+               def f(l), do: Enum.take(l, 0)
+             end
+             """) ==
                []
     end
   end

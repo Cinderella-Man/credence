@@ -387,7 +387,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert {:ok, _ast} = Sourceror.parse_string(fix(NoEagerWithIndexInReduce, code))
+      assert valid_syntax?(fix(NoEagerWithIndexInReduce, code))
     end
   end
 end

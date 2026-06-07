@@ -180,7 +180,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(NoListConcatWithRecursiveResult, code))
+      assert valid_syntax?(fix(NoListConcatWithRecursiveResult, code))
     end
   end
 end

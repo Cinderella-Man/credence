@@ -10,7 +10,13 @@ defmodule Credence.Pattern.NoCaseTrueFalseEquivalenceTest do
   alias Credence.Pattern.NoCaseTrueFalse
 
   test "case bool true/false → if/else preserves the branch" do
-    assert_equivalent("case x > 0 do\n  true -> :pos\n  false -> :nonpos\nend",
+    assert_equivalent(
+      """
+      case x > 0 do
+        true -> :pos
+        false -> :nonpos
+      end
+      """,
       rule: NoCaseTrueFalse,
       vars: [:x],
       inputs: [1, -1, 0, 5, -5]

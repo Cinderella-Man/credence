@@ -3,11 +3,6 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
 
   alias Credence.Pattern.PreferHeredocForMultiLineDoc
 
-  defp check_with_source(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferHeredocForMultiLineDoc.check(ast, source: code)
-  end
-
   defp analyze(code) do
     Credence.analyze(code, [])
   end
@@ -150,8 +145,8 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       '''
 
       heredoc_issues =
-        code
-        |> check_with_source()
+        PreferHeredocForMultiLineDoc
+        |> check(code)
         |> Enum.filter(&(&1.rule == :prefer_heredoc_for_multi_line_doc))
 
       assert heredoc_issues == []
@@ -189,7 +184,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       '''
 
       assert Enum.any?(
-               check_with_source(code),
+               check(PreferHeredocForMultiLineDoc, code),
                &(&1.rule == :prefer_heredoc_for_multi_line_doc)
              )
     end

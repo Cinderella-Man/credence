@@ -371,7 +371,13 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
     end
 
     test "n * 1.0e5 unchanged" do
-      code = "defmodule E do\n  def run(n), do: n * 1.0e5\nend\n"
+      code = """
+      defmodule E do
+        def run(n), do: n * 1.0e5
+      end
+
+      """
+
       assert fix(PreferErlangFloat, code) == code
     end
   end
@@ -387,7 +393,13 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
     end
 
     test "no coercion at all" do
-      code = "defmodule E do\n  def run(n), do: n + 1\nend\n"
+      code = """
+      defmodule E do
+        def run(n), do: n + 1
+      end
+
+      """
+
       assert fix(PreferErlangFloat, code) == code
     end
   end

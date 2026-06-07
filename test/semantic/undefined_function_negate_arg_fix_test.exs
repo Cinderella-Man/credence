@@ -42,10 +42,18 @@ defmodule Credence.Semantic.UndefinedFunction.NegateArgFixTest do
     end
 
     test "only on reported line" do
-      input = "a = Enum.take(xs, 3)\nb = Enum.take_last(xs, 2)\nc = Enum.drop(xs, 1)"
+      input = """
+      a = Enum.take(xs, 3)
+      b = Enum.take_last(xs, 2)
+      c = Enum.drop(xs, 1)
+      """
 
       assert fix(input, @msg, 2) ==
-               "a = Enum.take(xs, 3)\nb = Enum.take(xs, -2)\nc = Enum.drop(xs, 1)"
+               """
+               a = Enum.take(xs, 3)
+               b = Enum.take(xs, -2)
+               c = Enum.drop(xs, 1)
+               """
     end
 
     test "bare variable count — no parens needed" do

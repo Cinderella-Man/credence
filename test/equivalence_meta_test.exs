@@ -24,7 +24,11 @@ defmodule Credence.EquivalenceMetaTest do
   use ExUnit.Case, async: true
 
   @assert_fns [:assert_equivalent, :assert_equivalent_module, :assert_effect_trace_equivalent]
-  @mark_fns [:mark_equivalence_cosmetic, :mark_equivalence_unconstructible, :mark_equivalence_repair]
+  @mark_fns [
+    :mark_equivalence_cosmetic,
+    :mark_equivalence_unconstructible,
+    :mark_equivalence_repair
+  ]
 
   defp rules, do: Credence.RuleHelpers.discover_rules(Credence.Pattern.Rule)
 

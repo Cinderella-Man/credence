@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.FixDivRemTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Syntax.FixDivRem
 
   describe "analyze/1" do
@@ -241,7 +243,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       """
 
       fixed = FixDivRem.fix(source)
-      assert {:ok, _} = Sourceror.parse_string(fixed)
+      assert valid_syntax?(fixed)
     end
   end
 end

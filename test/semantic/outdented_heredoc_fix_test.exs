@@ -220,13 +220,21 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
 
   describe "fix/2 — no-ops" do
     test "returns source unchanged when position is nil" do
-      source = "some code\n"
+      source = """
+      some code
+
+      """
+
       bad_diag = %{severity: :warning, message: "outdented heredoc line", position: nil}
       assert OutdentedHeredoc.fix(source, bad_diag) == source
     end
 
     test "returns source unchanged when no closing delimiter found" do
-      source = "not a heredoc at all\n"
+      source = """
+      not a heredoc at all
+
+      """
+
       assert OutdentedHeredoc.fix(source, diag(1)) == source
     end
 

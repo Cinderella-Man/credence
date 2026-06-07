@@ -216,7 +216,11 @@ defmodule Credence.Pattern.NoReduceForMapBuilding do
   defp extract_parts(_), do: :error
 
   # 3-arg form: [enum, MapSet.new(), fn ...]
-  defp extract_mapset_parts([enum, {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, []}, fn_ast]) do
+  defp extract_mapset_parts([
+         enum,
+         {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, []},
+         fn_ast
+       ]) do
     case extract_mapset_fn_parts(fn_ast) do
       {:ok, _} -> {:ok, enum}
       :error -> :error
@@ -264,8 +268,7 @@ defmodule Credence.Pattern.NoReduceForMapBuilding do
   defp extract_mapset_fn_parts(
          {:&, _,
           [
-            {{:., _, [{:__aliases__, _, [:MapSet]}, :put]}, _,
-             [{:&, _, [2]}, {:&, _, [1]}]}
+            {{:., _, [{:__aliases__, _, [:MapSet]}, :put]}, _, [{:&, _, [2]}, {:&, _, [1]}]}
           ]}
        ) do
     {:ok, :capture}
@@ -289,8 +292,7 @@ defmodule Credence.Pattern.NoReduceForMapBuilding do
 
   # Matches MapSet.put(acc, value) where acc matches the reduce accumulator.
   defp extract_mapset_put(
-         {{:., _, [{:__aliases__, _, [:MapSet]}, :put]}, _,
-          [{acc_name, _, acc_ctx}, value_expr]},
+         {{:., _, [{:__aliases__, _, [:MapSet]}, :put]}, _, [{acc_name, _, acc_ctx}, value_expr]},
          acc_name
        )
        when is_atom(acc_ctx),

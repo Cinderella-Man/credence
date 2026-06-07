@@ -5,17 +5,47 @@ defmodule Credence.Pattern.NoAttrBeforeDefmoduleFixTest do
 
   describe "moves attrs into the module" do
     test "single @moduledoc" do
-      code = "@moduledoc \"some doc\"\ndefmodule Foo do\n  def bar, do: :ok\nend\n"
-      expected = "defmodule Foo do\n  @moduledoc \"some doc\"\n  def bar, do: :ok\nend\n"
+      code = """
+      @moduledoc "some doc"
+      defmodule Foo do
+        def bar, do: :ok
+      end
+
+      """
+
+      expected = """
+      defmodule Foo do
+        @moduledoc "some doc"
+        def bar, do: :ok
+      end
+
+      """
+
       assert fix(NoAttrBeforeDefmodule, code) == expected
     end
 
     test "multiple doc/spec attrs, in order" do
       code =
-        "@moduledoc \"m\"\n@doc \"f\"\n@spec foo() :: :ok\ndefmodule Foo do\n  def foo, do: :ok\nend\n"
+        """
+        @moduledoc "m"
+        @doc "f"
+        @spec foo() :: :ok
+        defmodule Foo do
+          def foo, do: :ok
+        end
+
+        """
 
       expected =
-        "defmodule Foo do\n  @moduledoc \"m\"\n  @doc \"f\"\n  @spec foo() :: :ok\n  def foo, do: :ok\nend\n"
+        """
+        defmodule Foo do
+          @moduledoc "m"
+          @doc "f"
+          @spec foo() :: :ok
+          def foo, do: :ok
+        end
+
+        """
 
       assert fix(NoAttrBeforeDefmodule, code) == expected
     end
@@ -30,11 +60,26 @@ defmodule Credence.Pattern.NoAttrBeforeDefmoduleFixTest do
     end
 
     test "non-attr code before the attrs stays at the top level" do
-      code = "IO.puts(\"hi\")\n@moduledoc \"d\"\ndefmodule Foo do\n  def bar, do: :ok\nend\n"
+      code = """
+      IO.puts("hi")
+      @moduledoc "d"
+      defmodule Foo do
+        def bar, do: :ok
+      end
+
+      """
 
       # the blank line left where the attr was is cosmetic (mix format runs after rules)
       expected =
-        "IO.puts(\"hi\")\n\ndefmodule Foo do\n  @moduledoc \"d\"\n  def bar, do: :ok\nend\n"
+        """
+        IO.puts("hi")
+
+        defmodule Foo do
+          @moduledoc "d"
+          def bar, do: :ok
+        end
+
+        """
 
       assert fix(NoAttrBeforeDefmodule, code) == expected
     end
@@ -42,22 +87,47 @@ defmodule Credence.Pattern.NoAttrBeforeDefmoduleFixTest do
 
   describe "leaves code unchanged" do
     test "attribute already inside the module" do
-      code = "defmodule Foo do\n  @moduledoc \"d\"\n  def bar, do: :ok\nend\n"
+      code = """
+      defmodule Foo do
+        @moduledoc "d"
+        def bar, do: :ok
+      end
+
+      """
+
       assert fix(NoAttrBeforeDefmodule, code) == code
     end
 
     test "no defmodule at all" do
-      code = "@moduledoc \"d\"\ndef foo, do: :ok\n"
+      code = """
+      @moduledoc "d"
+      def foo, do: :ok
+
+      """
+
       assert fix(NoAttrBeforeDefmodule, code) == code
     end
 
     test "non doc/spec attribute (@impl)" do
-      code = "@impl true\ndefmodule Foo do\n  def bar, do: :ok\nend\n"
+      code = """
+      @impl true
+      defmodule Foo do
+        def bar, do: :ok
+      end
+
+      """
+
       assert fix(NoAttrBeforeDefmodule, code) == code
     end
 
     test "plain module with no leading attrs" do
-      code = "defmodule Foo do\n  def bar, do: :ok\nend\n"
+      code = """
+      defmodule Foo do
+        def bar, do: :ok
+      end
+
+      """
+
       assert fix(NoAttrBeforeDefmodule, code) == code
     end
   end
@@ -65,13 +135,20 @@ defmodule Credence.Pattern.NoAttrBeforeDefmoduleFixTest do
   describe "round-trip" do
     test "fixed code compiles and has no remaining issues" do
       code =
-        "@moduledoc \"d\"\n@spec rt_foo() :: :ok\ndefmodule RtAttrFoo do\n  def rt_foo, do: :ok\nend\n"
+        """
+        @moduledoc "d"
+        @spec rt_foo() :: :ok
+        defmodule RtAttrFoo do
+          def rt_foo, do: :ok
+        end
+
+        """
 
       fixed = fix(NoAttrBeforeDefmodule, code)
 
-      assert NoAttrBeforeDefmodule.check(Sourceror.parse_string!(fixed), []) == []
+      assert clean?(NoAttrBeforeDefmodule, fixed)
       # the original does not compile (attr outside module); the fixed code must
-      assert [{RtAttrFoo, _bytecode}] = Code.compile_string(fixed)
+      assert compiles?(fixed)
     end
   end
 end

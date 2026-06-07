@@ -92,8 +92,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       """
 
       fixed = fix(NoMapPutGetIncrement, code)
-      ast = Sourceror.parse_string!(fixed)
-      assert NoMapPutGetIncrement.check(ast, []) == []
+      assert clean?(NoMapPutGetIncrement, fixed)
     end
   end
 

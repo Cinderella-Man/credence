@@ -123,9 +123,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapset do
        do: {:ok, expr}
 
   # x |> Enum.dedup() or x |> Enum.uniq()
-  defp extract_dedup_expr(
-         {:|>, _, [expr, {{:., _, [{:__aliases__, _, [:Enum]}, func]}, _, _}]}
-       )
+  defp extract_dedup_expr({:|>, _, [expr, {{:., _, [{:__aliases__, _, [:Enum]}, func]}, _, _}]})
        when func in @dedup_funcs,
        do: {:ok, expr}
 

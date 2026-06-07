@@ -133,7 +133,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
         literal = unwrap_literal(literal_ast)
         reversed = reverse_op(op)
 
-        if is_number(literal) and reversed && reversed in Map.keys(@complementary) do
+        if (is_number(literal) and reversed) && reversed in Map.keys(@complementary) do
           {:ok, %{op: reversed, var: var_name, literal: literal, type_guard: nil}}
         else
           :error

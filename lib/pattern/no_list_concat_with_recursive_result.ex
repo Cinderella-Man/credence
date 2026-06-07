@@ -138,9 +138,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResult do
     RuleHelpers.rewrap_list(wrapper, init ++ [{:|, [], [last, rhs]}])
   end
 
-  defp apply_fix(
-         {kind, meta, [{:when, _, [{name, _, params}, _guard]} = head, body_kw]} = node
-       )
+  defp apply_fix({kind, meta, [{:when, _, [{name, _, params}, _guard]} = head, body_kw]} = node)
        when kind in [:def, :defp] and is_atom(name) and is_list(params) do
     fix_clause(node, kind, meta, head, body_kw, name)
   end

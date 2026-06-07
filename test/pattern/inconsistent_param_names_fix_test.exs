@@ -613,7 +613,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(InconsistentParamNames, code))
+      assert valid_syntax?(fix(InconsistentParamNames, code))
     end
 
     test "fixed code is valid Elixir (pinned tuple + scalar args)" do
@@ -624,7 +624,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(InconsistentParamNames, code))
+      assert valid_syntax?(fix(InconsistentParamNames, code))
     end
   end
 end

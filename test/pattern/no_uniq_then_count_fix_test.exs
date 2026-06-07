@@ -192,7 +192,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(NoUniqThenCount, code))
+      assert valid_syntax?(fix(NoUniqThenCount, code))
     end
   end
 end

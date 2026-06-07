@@ -157,7 +157,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
 
     output = fix(NoRedundantCaseNilClause, input)
     assert output == expected
-    assert {:ok, _} = Code.string_to_quoted(output)
+    assert valid_syntax?(output)
   end
 
   # ── no-op: shapes the rule must leave untouched ──────────────────────

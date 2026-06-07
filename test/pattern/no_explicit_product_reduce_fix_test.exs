@@ -70,7 +70,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceFixTest do
       """
 
       fixed = fix(NoExplicitProductReduce, code)
-      assert NoExplicitProductReduce.check(Sourceror.parse_string!(fixed), []) == []
+      assert clean?(NoExplicitProductReduce, fixed)
     end
   end
 

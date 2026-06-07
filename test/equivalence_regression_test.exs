@@ -206,7 +206,9 @@ defmodule Credence.EquivalenceRegressionTest do
       assert n === {:raise, ArgumentError}
 
       # Same rewrite, index past the end: Enum.at returns nil, elem crashes.
-      {o2, n2} = assert_diverges("Enum.at(list, 9)", "elem(List.to_tuple(list), 9)", :list, [1, 2, 3])
+      {o2, n2} =
+        assert_diverges("Enum.at(list, 9)", "elem(List.to_tuple(list), 9)", :list, [1, 2, 3])
+
       assert o2 === {:ok, nil}
       assert n2 === {:raise, ArgumentError}
     end

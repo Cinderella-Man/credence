@@ -10,7 +10,10 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocEquivalenceTest do
   test "prefer_heredoc_for_multi_line_doc: cosmetic — doc source representation only" do
     assert :ok =
              mark_equivalence_cosmetic(
-               "Converts a \\n-escaped @doc string to heredoc syntax — source-representation " <>
+               """
+               Converts a \
+               -escaped @doc string to heredoc syntax — source-representation 
+               """ <>
                  "change to compile-time documentation, no runtime behaviour impact."
              )
   end

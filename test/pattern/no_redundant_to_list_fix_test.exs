@@ -62,8 +62,7 @@ defmodule Credence.Pattern.NoRedundantToListFixTest do
     """
 
     fixed = fix(NoRedundantToList, code)
-    fixed_ast = Sourceror.parse_string!(fixed)
-    assert NoRedundantToList.check(fixed_ast, []) == []
+    assert clean?(NoRedundantToList, fixed)
   end
 
   # Narrowed-out unsafe case: the rule must NOT touch it (would drop the arg).

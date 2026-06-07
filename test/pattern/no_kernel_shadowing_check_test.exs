@@ -11,12 +11,25 @@ defmodule Credence.Pattern.NoKernelShadowingCheckTest do
     end
 
     test "min in match assignment" do
-      code = "defmodule M do\n  def f(list) do\n    min = hd(list)\n    min\n  end\nend"
+      code = """
+      defmodule M do
+        def f(list) do
+          min = hd(list)
+          min
+        end
+      end
+      """
+
       assert [%Issue{rule: :no_kernel_shadowing}] = check(NoKernelShadowing, code)
     end
 
     test "max in def parameter" do
-      code = "defmodule M do\n  defp go([], max), do: max\nend"
+      code = """
+      defmodule M do
+        defp go([], max), do: max
+      end
+      """
+
       assert [%Issue{rule: :no_kernel_shadowing}] = check(NoKernelShadowing, code)
     end
 
@@ -31,7 +44,14 @@ defmodule Credence.Pattern.NoKernelShadowingCheckTest do
 
     test "length in match" do
       code =
-        "defmodule M do\n  def f(list) do\n    length = Enum.count(list)\n    length\n  end\nend"
+        """
+        defmodule M do
+          def f(list) do
+            length = Enum.count(list)
+            length
+          end
+        end
+        """
 
       assert [%Issue{rule: :no_kernel_shadowing}] = check(NoKernelShadowing, code)
     end
@@ -39,7 +59,12 @@ defmodule Credence.Pattern.NoKernelShadowingCheckTest do
 
   describe "does NOT flag" do
     test "Kernel function calls" do
-      code = "defmodule M do\n  def run(a, b), do: max(a, b)\nend"
+      code = """
+      defmodule M do
+        def run(a, b), do: max(a, b)
+      end
+      """
+
       assert check(NoKernelShadowing, code) == []
     end
 

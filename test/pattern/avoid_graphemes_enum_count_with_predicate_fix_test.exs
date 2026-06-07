@@ -171,7 +171,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(AvoidGraphemesEnumCountWithPredicate, code))
+      assert valid_syntax?(fix(AvoidGraphemesEnumCountWithPredicate, code))
     end
   end
 end

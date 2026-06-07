@@ -65,8 +65,13 @@ defmodule Credence.Pattern.NoGraphemePalindrome do
         Macro.prewalk(ast, [], fn
           {:==, meta, _} = node, acc ->
             case palindrome_var(node) do
-              nil -> {node, acc}
-              var -> if Map.has_key?(fixable, var), do: {node, [build_issue(meta) | acc]}, else: {node, acc}
+              nil ->
+                {node, acc}
+
+              var ->
+                if Map.has_key?(fixable, var),
+                  do: {node, [build_issue(meta) | acc]},
+                  else: {node, acc}
             end
 
           node, acc ->

@@ -101,15 +101,23 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
 
   describe "fix round-trip produces no issues" do
     test "single assignment" do
-      fixed = fix(NoEmptyMapNew, "memo = Map.new()\n")
-      ast = Sourceror.parse_string!(fixed)
-      assert NoEmptyMapNew.check(ast, []) == []
+      fixed =
+        fix(NoEmptyMapNew, """
+        memo = Map.new()
+
+        """)
+
+      assert clean?(NoEmptyMapNew, fixed)
     end
 
     test "function argument" do
-      fixed = fix(NoEmptyMapNew, "solve(coins, amount, Map.new())\n")
-      ast = Sourceror.parse_string!(fixed)
-      assert NoEmptyMapNew.check(ast, []) == []
+      fixed =
+        fix(NoEmptyMapNew, """
+        solve(coins, amount, Map.new())
+
+        """)
+
+      assert clean?(NoEmptyMapNew, fixed)
     end
   end
 end

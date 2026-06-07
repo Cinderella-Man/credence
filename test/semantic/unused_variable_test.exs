@@ -92,7 +92,10 @@ defmodule Credence.Semantic.UnusedVariableTest do
     end
 
     test "handles position as bare integer" do
-      source = "x = 1\n"
+      source = """
+      x = 1
+
+      """
 
       diag = %{
         severity: :warning,
@@ -100,7 +103,10 @@ defmodule Credence.Semantic.UnusedVariableTest do
         position: 1
       }
 
-      assert UnusedVariable.fix(source, diag) == "_x = 1\n"
+      assert UnusedVariable.fix(source, diag) == """
+             _x = 1
+
+             """
     end
   end
 
@@ -484,7 +490,10 @@ defmodule Credence.Semantic.UnusedVariableTest do
     end
 
     test "column points past the end of the line — skip" do
-      source = "x = 1\n"
+      source = """
+      x = 1
+
+      """
 
       diag = %{
         severity: :warning,
@@ -496,7 +505,10 @@ defmodule Credence.Semantic.UnusedVariableTest do
     end
 
     test "text at the given column does not start with the var name — skip" do
-      source = "y = x\n"
+      source = """
+      y = x
+
+      """
 
       diag = %{
         severity: :warning,

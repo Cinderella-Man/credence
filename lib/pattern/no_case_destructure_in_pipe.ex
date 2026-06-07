@@ -123,5 +123,4 @@ defmodule Credence.Pattern.NoCaseDestructureInPipe do
        do: true
 
   defp irrefutable_var?(_), do: false
-
 end

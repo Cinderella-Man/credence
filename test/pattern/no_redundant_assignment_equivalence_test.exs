@@ -10,7 +10,11 @@ defmodule Credence.Pattern.NoRedundantAssignmentEquivalenceTest do
   alias Credence.Pattern.NoRedundantAssignment
 
   test "tmp = expr; tmp → expr preserves the block value" do
-    assert_equivalent("tmp = y * 2 + 1\ntmp",
+    assert_equivalent(
+      """
+      tmp = y * 2 + 1
+      tmp
+      """,
       rule: NoRedundantAssignment,
       vars: [:y],
       inputs: [0, 1, -3, 100, 2.5]

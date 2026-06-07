@@ -106,8 +106,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       """
 
       fixed = fix(NoFindValueDefaultCase, code)
-      ast = Sourceror.parse_string!(fixed)
-      assert NoFindValueDefaultCase.check(ast, []) == []
+      assert clean?(NoFindValueDefaultCase, fixed)
     end
   end
 

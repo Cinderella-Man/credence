@@ -52,7 +52,14 @@ defmodule Credence.Pattern.NoLiteralListTypespecCheckTest do
     end
 
     test "reports the spec's line number" do
-      code = "defmodule M do\n  @spec foo() :: [atom(), integer()]\n  def foo, do: {1, 2}\nend\n"
+      code = """
+      defmodule M do
+        @spec foo() :: [atom(), integer()]
+        def foo, do: {1, 2}
+      end
+
+      """
+
       assert [%Issue{meta: %{line: 2}}] = check(NoLiteralListTypespec, code)
     end
   end

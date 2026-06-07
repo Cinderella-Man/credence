@@ -74,8 +74,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapset do
       # Direct 3-arg: Enum.into(enum, MapSet.new(), fun) → MapSet.new(enum, fun)
       {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :into]}, call_meta,
        [enum, {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, []}, fun]} ->
-        {{:., dot_meta, [{:__aliases__, alias_meta, [:MapSet]}, :new]}, call_meta,
-         [enum, fun]}
+        {{:., dot_meta, [{:__aliases__, alias_meta, [:MapSet]}, :new]}, call_meta, [enum, fun]}
 
       # Direct 2-arg: Enum.into(enum, MapSet.new()) → MapSet.new(enum)
       {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :into]}, call_meta,

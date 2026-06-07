@@ -75,8 +75,10 @@ defmodule Credence.Pattern.NoMapPutGetIncrement do
   # Piped form: m |> Map.put(k, Map.get(m, k, 0) + 1)
   defp match_put_get_increment(
          {:|>, _,
-          [map, {{:., _, [{:__aliases__, _, [:Map]}, :put]}, _,
-            [key, {:+, _, [get_call, increment]}]}]}
+          [
+            map,
+            {{:., _, [{:__aliases__, _, [:Map]}, :put]}, _, [key, {:+, _, [get_call, increment]}]}
+          ]}
        ) do
     verify_get_increment(map, key, get_call, increment)
   end
@@ -131,8 +133,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrement do
 
   # Piped form: Map.update(k, default, fn x -> x + n end) — no map arg
   defp build_map_update_call(key, default, increment) do
-    {{:., [], [{:__aliases__, [], [:Map]}, :update]}, [],
-     [key | update_args(default, increment)]}
+    {{:., [], [{:__aliases__, [], [:Map]}, :update]}, [], [key | update_args(default, increment)]}
   end
 
   # `check` only admits integer-literal increments, so `increment` is always an

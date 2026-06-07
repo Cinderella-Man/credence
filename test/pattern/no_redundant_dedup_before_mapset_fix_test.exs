@@ -97,8 +97,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     """
 
     fixed = fix(NoRedundantDedupBeforeMapset, code)
-    {:ok, fixed_ast} = Sourceror.parse_string(fixed)
-    assert NoRedundantDedupBeforeMapset.check(fixed_ast, []) == []
+    assert clean?(NoRedundantDedupBeforeMapset, fixed)
   end
 
   # No-op: the sort/sort_by intermediate cases are left untouched.

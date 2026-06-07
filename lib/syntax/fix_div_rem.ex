@@ -82,7 +82,10 @@ defmodule Credence.Syntax.FixDivRem do
   defp in_capture?(prefix), do: do_in_capture?(prefix, [])
 
   defp do_in_capture?("", stack), do: :capture in stack
-  defp do_in_capture?(<<?&, ?(, rest::binary>>, stack), do: do_in_capture?(rest, [:capture | stack])
+
+  defp do_in_capture?(<<?&, ?(, rest::binary>>, stack),
+    do: do_in_capture?(rest, [:capture | stack])
+
   defp do_in_capture?(<<?(, rest::binary>>, stack), do: do_in_capture?(rest, [:regular | stack])
   defp do_in_capture?(<<?), rest::binary>>, [_ | stack]), do: do_in_capture?(rest, stack)
   defp do_in_capture?(<<?), _rest::binary>>, []), do: do_in_capture?([], [])

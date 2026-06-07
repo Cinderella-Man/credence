@@ -124,15 +124,19 @@ defmodule Credence.Pattern.PreferGuardOverIf do
           {do_body, else_body} = extract_branches(body)
 
           range = Sourceror.get_range(node)
-          guard_names = if existing_guard, do: collect_var_names(existing_guard), else: MapSet.new()
+
+          guard_names =
+            if existing_guard, do: collect_var_names(existing_guard), else: MapSet.new()
 
           # Build first clause: defp call when condition do do_body end
           # Underscore-prefix any params unused in guard + condition + do_body
           first_guard = combine_guards(existing_guard, condition)
+
           first_used =
             guard_names
             |> MapSet.union(collect_var_names(condition))
             |> MapSet.union(collect_var_names(do_body))
+
           first_call = underscore_unused_params(call, first_used)
           first_head = build_head(first_call, first_guard)
           first_clause = {def_kind, [], [first_head, [do: do_body]]}
@@ -191,8 +195,14 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   defp has_clause?(kw, key) do
     case Keyword.get(kw, key) do
-      nil -> Enum.any?(kw, fn {{:__block__, _, [k]}, _} -> k == key; _ -> false end)
-      _ -> true
+      nil ->
+        Enum.any?(kw, fn
+          {{:__block__, _, [k]}, _} -> k == key
+          _ -> false
+        end)
+
+      _ ->
+        true
     end
   end
 

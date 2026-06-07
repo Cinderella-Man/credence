@@ -226,7 +226,6 @@ defmodule Credence.Pattern.NoZipThenMap do
 
   defp valid_zip_for_pipe?(_, _), do: false
 
-
   # --- extraction helpers ---
 
   defp extract_fn_vars({:fn, _meta, [{:->, _, [params, body]}]}) do

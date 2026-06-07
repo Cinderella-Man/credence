@@ -151,8 +151,7 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
           ]}
        ) do
     if is_length_of_group_fn?(callback) do
-      {:ok,
-       {{:., [], [{:__aliases__, [], [:Enum]}, :frequencies_by]}, meta, [enum, key_fn]}}
+      {:ok, {{:., [], [{:__aliases__, [], [:Enum]}, :frequencies_by]}, meta, [enum, key_fn]}}
     else
       :error
     end
@@ -181,10 +180,8 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
 
   defp group_by_step?(_), do: false
 
-  defp map_new_length_step?(
-         {{:., _, [{:__aliases__, _, [:Map]}, :new]}, _, [callback]}
-       ),
-       do: is_length_of_group_fn?(callback)
+  defp map_new_length_step?({{:., _, [{:__aliases__, _, [:Map]}, :new]}, _, [callback]}),
+    do: is_length_of_group_fn?(callback)
 
   defp map_new_length_step?(_), do: false
 

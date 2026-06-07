@@ -21,10 +21,18 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
 
     test "only on reported line" do
-      input = "Enum.at(x, 0)\nEnum.last(x)\nEnum.count(x)"
+      input = """
+      Enum.at(x, 0)
+      Enum.last(x)
+      Enum.count(x)
+      """
 
       assert fix(input, "Enum.last/1 is undefined or private", 2) ==
-               "Enum.at(x, 0)\nList.last(x)\nEnum.count(x)"
+               """
+               Enum.at(x, 0)
+               List.last(x)
+               Enum.count(x)
+               """
     end
   end
 
@@ -63,10 +71,16 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
 
     test "only on reported line" do
-      input = "x = Enum.map(list, &f/1)\n{a, b} = Enum.partition(list, &pred/1)"
+      input = """
+      x = Enum.map(list, &f/1)
+      {a, b} = Enum.partition(list, &pred/1)
+      """
 
       assert fix(input, "Enum.partition/2 is deprecated. Use Enum.split_with/2 instead", 2) ==
-               "x = Enum.map(list, &f/1)\n{a, b} = Enum.split_with(list, &pred/1)"
+               """
+               x = Enum.map(list, &f/1)
+               {a, b} = Enum.split_with(list, &pred/1)
+               """
     end
   end
 
@@ -198,10 +212,16 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
 
     test "realistic context" do
-      code = "    max_num = -Float.inf\n    second_max_num = -Float.inf"
+      code = """
+          max_num = -Float.inf
+          second_max_num = -Float.inf
+      """
 
       assert fix(code, "Float.inf/0 is undefined or private", 1) ==
-               "    max_num = :neg_infinity\n    second_max_num = -Float.inf"
+               """
+                   max_num = :neg_infinity
+                   second_max_num = -Float.inf
+               """
     end
   end
 

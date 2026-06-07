@@ -58,7 +58,8 @@ defmodule Credence.Pattern.NoLiteralListTypespec do
       {:@, attr_meta, [{:spec, spec_meta, [{:"::", colon_meta, [lhs, rhs]}]}]} = node ->
         case fixable_list(rhs) do
           {:ok, elements} ->
-            {:@, attr_meta, [{:spec, spec_meta, [{:"::", colon_meta, [lhs, to_tuple(elements)]}]}]}
+            {:@, attr_meta,
+             [{:spec, spec_meta, [{:"::", colon_meta, [lhs, to_tuple(elements)]}]}]}
 
           :no ->
             node

@@ -88,7 +88,10 @@ defmodule Credence.Pattern.PreferEnumSlice do
        ]} = node ->
         if slice_safe?(drop_amount, take_amount) do
           {:|>, pipe_meta,
-           [left, {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [], [drop_amount, take_amount]}]}
+           [
+             left,
+             {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [], [drop_amount, take_amount]}
+           ]}
         else
           node
         end
@@ -100,7 +103,8 @@ defmodule Credence.Pattern.PreferEnumSlice do
          take_amount
        ]} = node ->
         if slice_safe?(drop_amount, take_amount) do
-          {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [], [collection, drop_amount, take_amount]}
+          {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [],
+           [collection, drop_amount, take_amount]}
         else
           node
         end
@@ -112,7 +116,8 @@ defmodule Credence.Pattern.PreferEnumSlice do
          {{:., _, [{:__aliases__, _, [:Enum]}, :take]}, _, [take_amount]}
        ]} = node ->
         if slice_safe?(drop_amount, take_amount) do
-          {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [], [collection, drop_amount, take_amount]}
+          {{:., [], [{:__aliases__, [], [:Enum]}, :slice]}, [],
+           [collection, drop_amount, take_amount]}
         else
           node
         end

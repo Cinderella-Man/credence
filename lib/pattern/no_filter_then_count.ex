@@ -71,9 +71,8 @@ defmodule Credence.Pattern.NoFilterThenCount do
 
   # Nested: length(Enum.filter(enum, pred))
   defp build_patch(
-         {:length, _,
-          [{{:., _, [{:__aliases__, _, [:Enum]}, :filter]}, _, [enum, pred]}]}
-         = node
+         {:length, _, [{{:., _, [{:__aliases__, _, [:Enum]}, :filter]}, _, [enum, pred]}]} =
+           node
        ) do
     count_call = make_count_call(enum, pred)
     emit_patch_from_node(node, count_call)
@@ -82,8 +81,8 @@ defmodule Credence.Pattern.NoFilterThenCount do
   # Nested: Enum.count(Enum.filter(enum, pred))
   defp build_patch(
          {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _,
-          [{{:., _, [{:__aliases__, _, [:Enum]}, :filter]}, _, [enum, pred]}]}
-         = node
+          [{{:., _, [{:__aliases__, _, [:Enum]}, :filter]}, _, [enum, pred]}]} =
+           node
        ) do
     count_call = make_count_call(enum, pred)
     emit_patch_from_node(node, count_call)
@@ -161,10 +160,7 @@ defmodule Credence.Pattern.NoFilterThenCount do
   end
 
   # Nested: length(Enum.filter(enum, pred)) — only the 2-arg filter the fix rewrites
-  defp check_node(
-         {:length, meta,
-          [{{:., _, [{:__aliases__, _, [:Enum]}, :filter]}, _, [_, _]}]}
-       ) do
+  defp check_node({:length, meta, [{{:., _, [{:__aliases__, _, [:Enum]}, :filter]}, _, [_, _]}]}) do
     {:ok, build_issue_from_meta(meta)}
   end
 

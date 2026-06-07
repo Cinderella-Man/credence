@@ -144,8 +144,15 @@ defmodule Credence.Semantic.UndefinedFunction.RangeFixTest do
     end
 
     test "only fixes reported line" do
-      input = "x = Enum.to_list(1..10)\ny = range(0, 5)"
-      assert fix(input, msg(2), 2) == "x = Enum.to_list(1..10)\ny = 0..5 - 1"
+      input = """
+      x = Enum.to_list(1..10)
+      y = range(0, 5)
+      """
+
+      assert fix(input, msg(2), 2) == """
+             x = Enum.to_list(1..10)
+             y = 0..5 - 1
+             """
     end
   end
 end

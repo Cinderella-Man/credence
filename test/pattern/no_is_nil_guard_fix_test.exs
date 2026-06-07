@@ -200,7 +200,7 @@ defmodule Credence.Pattern.NoIsNilGuardFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(NoIsNilGuard, code))
+      assert valid_syntax?(fix(NoIsNilGuard, code))
     end
   end
 end

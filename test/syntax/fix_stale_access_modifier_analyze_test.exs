@@ -11,27 +11,51 @@ defmodule Credence.Syntax.FixStaleAccessModifierAnalyzeTest do
   describe "flags garbled prefixes" do
     test "pprivate defp" do
       assert [%Issue{rule: :stale_access_modifier}] =
-               analyze("pprivate defp calculate(x) do\n  x * 2\nend")
+               analyze("""
+               pprivate defp calculate(x) do
+                 x * 2
+               end
+               """)
     end
   end
 
   describe "flags redundant prefixes" do
     test "private defp" do
-      assert [%Issue{}] = analyze("private defp calculate(x) do\n  x * 2\nend")
+      assert [%Issue{}] =
+               analyze("""
+               private defp calculate(x) do
+                 x * 2
+               end
+               """)
     end
 
     test "public def" do
-      assert [%Issue{}] = analyze("public def calculate(x) do\n  x * 2\nend")
+      assert [%Issue{}] =
+               analyze("""
+               public def calculate(x) do
+                 x * 2
+               end
+               """)
     end
   end
 
   describe "flags contradictory prefixes" do
     test "private def (trusts the Elixir keyword)" do
-      assert [%Issue{}] = analyze("private def calculate(x) do\n  x * 2\nend")
+      assert [%Issue{}] =
+               analyze("""
+               private def calculate(x) do
+                 x * 2
+               end
+               """)
     end
 
     test "public defp" do
-      assert [%Issue{}] = analyze("public defp calculate(x) do\n  x * 2\nend")
+      assert [%Issue{}] =
+               analyze("""
+               public defp calculate(x) do
+                 x * 2
+               end
+               """)
     end
   end
 
@@ -71,11 +95,21 @@ defmodule Credence.Syntax.FixStaleAccessModifierAnalyzeTest do
 
   describe "flags macro definitions too" do
     test "private defmacro" do
-      assert [%Issue{}] = analyze("private defmacro my_macro(x) do\n  x\nend")
+      assert [%Issue{}] =
+               analyze("""
+               private defmacro my_macro(x) do
+                 x
+               end
+               """)
     end
 
     test "private defmacrop" do
-      assert [%Issue{}] = analyze("private defmacrop my_macro(x) do\n  x\nend")
+      assert [%Issue{}] =
+               analyze("""
+               private defmacrop my_macro(x) do
+                 x
+               end
+               """)
     end
   end
 
@@ -104,15 +138,27 @@ defmodule Credence.Syntax.FixStaleAccessModifierAnalyzeTest do
 
   describe "does NOT flag" do
     test "plain def" do
-      assert analyze("def calculate(x) do\n  x * 2\nend") == []
+      assert analyze("""
+             def calculate(x) do
+               x * 2
+             end
+             """) == []
     end
 
     test "plain defp" do
-      assert analyze("defp calculate(x) do\n  x * 2\nend") == []
+      assert analyze("""
+             defp calculate(x) do
+               x * 2
+             end
+             """) == []
     end
 
     test "plain defmacro" do
-      assert analyze("defmacro my_macro(x) do\n  x\nend") == []
+      assert analyze("""
+             defmacro my_macro(x) do
+               x
+             end
+             """) == []
     end
 
     test "private as variable name" do
@@ -132,7 +178,12 @@ defmodule Credence.Syntax.FixStaleAccessModifierAnalyzeTest do
 
   describe "metadata" do
     test "reports correct line number" do
-      code = "def foo, do: :ok\nprivate defp bar(x), do: x\ndef baz, do: :ok"
+      code = """
+      def foo, do: :ok
+      private defp bar(x), do: x
+      def baz, do: :ok
+      """
+
       [issue] = analyze(code)
       assert issue.meta.line == 2
     end

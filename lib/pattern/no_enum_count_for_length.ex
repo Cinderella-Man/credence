@@ -43,8 +43,7 @@ defmodule Credence.Pattern.NoEnumCountForLength do
 
   # Functions whose result is always a list. Keys are the AST alias atoms.
   @list_returning %{
-    Enum:
-      ~w(map filter reject to_list sort sort_by uniq uniq_by reverse take drop
+    Enum: ~w(map filter reject to_list sort sort_by uniq uniq_by reverse take drop
          take_while drop_while flat_map with_index dedup dedup_by concat
          intersperse chunk_every chunk_by slice map_every scan)a,
     String: ~w(graphemes codepoints split to_charlist)a,
@@ -125,7 +124,10 @@ defmodule Credence.Pattern.NoEnumCountForLength do
   defp provably_list?({:__block__, _, [inner]}), do: provably_list?(inner)
   defp provably_list?({:++, _, [_, _]}), do: true
   defp provably_list?({:|>, _, [_lhs, step]}), do: list_returning_call?(step)
-  defp provably_list?({{:., _, [{:__aliases__, _, [_mod]}, _fun]}, _, _args} = call), do: list_returning_call?(call)
+
+  defp provably_list?({{:., _, [{:__aliases__, _, [_mod]}, _fun]}, _, _args} = call),
+    do: list_returning_call?(call)
+
   defp provably_list?(_), do: false
 
   defp list_returning_call?({{:., _, [{:__aliases__, _, [mod]}, fun]}, _, _args}) do

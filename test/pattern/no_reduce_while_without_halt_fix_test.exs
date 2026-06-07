@@ -112,7 +112,6 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     """
 
     fixed = fix(NoReduceWhileWithoutHalt, code)
-    ast = Sourceror.parse_string!(fixed)
-    assert NoReduceWhileWithoutHalt.check(ast, []) == []
+    assert clean?(NoReduceWhileWithoutHalt, fixed)
   end
 end

@@ -50,25 +50,38 @@ defmodule Credence.Pattern.NoMapKeysForMembership do
   # x not in Map.keys(m) → not Map.has_key?(m, x)
   # Recurse into left + map only (NOT generically into the inner `{:in, ...}`,
   # which is subsumed by this patch).
-  defp collect_fix_patches({:not, _meta, [{:in, _, [left, {{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, [map]}]} = in_node]}) do
+  defp collect_fix_patches(
+         {:not, _meta,
+          [{:in, _, [left, {{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, [map]}]} = in_node]}
+       ) do
     # Patch at the inner `:in` node: its range spans the whole `x not in
     # Map.keys(m)` (including `x` and `not`), whereas the `:not` node's range
     # starts at `not` and would leave the left operand `x` dangling.
     with true <- safe_left?(left),
          %Sourceror.Range{} = range <- Sourceror.get_range(in_node) do
       replacement = "not " <> Sourceror.to_string(has_key_call(map, left))
-      [%{range: range, change: replacement} | collect_fix_patches(left) ++ collect_fix_patches(map)]
+
+      [
+        %{range: range, change: replacement}
+        | collect_fix_patches(left) ++ collect_fix_patches(map)
+      ]
     else
       _ -> collect_fix_patches(left) ++ collect_fix_patches(map)
     end
   end
 
   # x in Map.keys(m) → Map.has_key?(m, x)
-  defp collect_fix_patches({:in, _meta, [left, {{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, [map]}]} = node) do
+  defp collect_fix_patches(
+         {:in, _meta, [left, {{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, [map]}]} = node
+       ) do
     with true <- safe_left?(left),
          %Sourceror.Range{} = range <- Sourceror.get_range(node) do
       replacement = Sourceror.to_string(has_key_call(map, left))
-      [%{range: range, change: replacement} | collect_fix_patches(left) ++ collect_fix_patches(map)]
+
+      [
+        %{range: range, change: replacement}
+        | collect_fix_patches(left) ++ collect_fix_patches(map)
+      ]
     else
       _ -> collect_fix_patches(left) ++ collect_fix_patches(map)
     end
@@ -88,7 +101,9 @@ defmodule Credence.Pattern.NoMapKeysForMembership do
   # ── check helpers (manual walk to avoid double-counting) ──────────
 
   # x not in Map.keys(m) — must come before the bare `in` clause
-  defp find_issues({:not, meta, [{:in, _, [left, {{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, [map]}]}]}) do
+  defp find_issues(
+         {:not, meta, [{:in, _, [left, {{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, [map]}]}]}
+       ) do
     if safe_left?(left) do
       [issue(meta) | find_issues(left) ++ find_issues(map)]
     else

@@ -250,46 +250,123 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
 
   describe "find / at" do
     test "Enum.find(Map.values(m), fn ...)" do
-      assert fix(NoMapKeysOrValuesForIteration, "Enum.find(Map.values(m), fn v -> v > 0 end)") ==
-               "case Enum.find(m, fn {_k, v} -> v > 0 end) do\n  nil -> nil\n  {_k, v} -> v\nend"
+      input = """
+      Enum.find(Map.values(m), fn v -> v > 0 end)
+      """
+
+      expected = """
+      case Enum.find(m, fn {_k, v} -> v > 0 end) do
+        nil -> nil
+        {_k, v} -> v
+      end
+      """
+
+      assert fix(NoMapKeysOrValuesForIteration, input) == expected
     end
 
     test "Enum.find(Map.keys(m), fn ...)" do
-      assert fix(NoMapKeysOrValuesForIteration, "Enum.find(Map.keys(m), fn k -> k == :foo end)") ==
-               "case Enum.find(m, fn {k, _v} -> k == :foo end) do\n  nil -> nil\n  {k, _v} -> k\nend"
+      input = """
+      Enum.find(Map.keys(m), fn k -> k == :foo end)
+      """
+
+      expected = """
+      case Enum.find(m, fn {k, _v} -> k == :foo end) do
+        nil -> nil
+        {k, _v} -> k
+      end
+      """
+
+      assert fix(NoMapKeysOrValuesForIteration, input) == expected
     end
 
     test "Enum.find/3 with default" do
-      assert fix(
-               NoMapKeysOrValuesForIteration,
-               "Enum.find(Map.values(m), :not_found, fn v -> v > 0 end)"
-             ) ==
-               "case Enum.find(m, fn {_k, v} -> v > 0 end) do\n  nil -> :not_found\n  {_k, v} -> v\nend"
+      input = """
+      Enum.find(Map.values(m), :not_found, fn v -> v > 0 end)
+      """
+
+      expected = """
+      case Enum.find(m, fn {_k, v} -> v > 0 end) do
+        nil -> :not_found
+        {_k, v} -> v
+      end
+      """
+
+      assert fix(NoMapKeysOrValuesForIteration, input) == expected
     end
 
     test "Enum.at(Map.values(m), 2)" do
-      assert fix(NoMapKeysOrValuesForIteration, "Enum.at(Map.values(m), 2)") ==
-               "case Enum.at(m, 2) do\n  nil -> nil\n  {_k, v} -> v\nend"
+      input = """
+      Enum.at(Map.values(m), 2)
+      """
+
+      expected = """
+      case Enum.at(m, 2) do
+        nil -> nil
+        {_k, v} -> v
+      end
+      """
+
+      assert fix(NoMapKeysOrValuesForIteration, input) == expected
     end
 
     test "Enum.at/3 with default" do
-      assert fix(NoMapKeysOrValuesForIteration, "Enum.at(Map.values(m), 5, :out)") ==
-               "case Enum.at(m, 5) do\n  nil -> :out\n  {_k, v} -> v\nend"
+      input = """
+      Enum.at(Map.values(m), 5, :out)
+      """
+
+      expected = """
+      case Enum.at(m, 5) do
+        nil -> :out
+        {_k, v} -> v
+      end
+      """
+
+      assert fix(NoMapKeysOrValuesForIteration, input) == expected
     end
 
     test "Enum.at/3 with default false" do
-      assert fix(NoMapKeysOrValuesForIteration, "Enum.at(Map.values(m), 5, false)") ==
-               "case Enum.at(m, 5) do\n  nil -> false\n  {_k, v} -> v\nend"
+      input = """
+      Enum.at(Map.values(m), 5, false)
+      """
+
+      expected = """
+      case Enum.at(m, 5) do
+        nil -> false
+        {_k, v} -> v
+      end
+      """
+
+      assert fix(NoMapKeysOrValuesForIteration, input) == expected
     end
 
     test "pipe: Map.keys |> Enum.find" do
-      assert fix(NoMapKeysOrValuesForIteration, "Map.keys(m) |> Enum.find(fn k -> k > 0 end)") ==
-               "case Enum.find(m, fn {k, _v} -> k > 0 end) do\n  nil -> nil\n  {k, _v} -> k\nend"
+      input = """
+      Map.keys(m) |> Enum.find(fn k -> k > 0 end)
+      """
+
+      expected = """
+      case Enum.find(m, fn {k, _v} -> k > 0 end) do
+        nil -> nil
+        {k, _v} -> k
+      end
+      """
+
+      assert fix(NoMapKeysOrValuesForIteration, input) == expected
     end
 
     test "pipe: Map.values |> Enum.at(2)" do
-      assert fix(NoMapKeysOrValuesForIteration, "Map.values(map) |> Enum.at(2)") ==
-               "case Enum.at(map, 2) do\n  nil -> nil\n  {_k, v} -> v\nend"
+      input = """
+      Map.values(map) |> Enum.at(2)
+      """
+
+      expected = """
+      case Enum.at(map, 2) do
+        nil -> nil
+        {_k, v} -> v
+      end
+      """
+
+      assert fix(NoMapKeysOrValuesForIteration, input) == expected
     end
   end
 
@@ -821,7 +898,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(NoMapKeysOrValuesForIteration, code))
+      assert valid_syntax?(fix(NoMapKeysOrValuesForIteration, code))
     end
 
     test "preserves heredoc when no rewrite applies" do

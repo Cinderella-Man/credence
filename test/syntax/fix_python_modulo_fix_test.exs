@@ -329,7 +329,13 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
     end
 
     test "no modulo at all" do
-      code = "defmodule E do\n  def run(n), do: n + 1\nend\n"
+      code = """
+      defmodule E do
+        def run(n), do: n + 1
+      end
+
+      """
+
       assert fix(code) == code
     end
   end

@@ -130,7 +130,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(NoKeywordGetIntegerKey, code))
+      assert valid_syntax?(fix(NoKeywordGetIntegerKey, code))
     end
   end
 end

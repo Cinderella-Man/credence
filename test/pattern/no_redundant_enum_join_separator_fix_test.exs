@@ -218,7 +218,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       end
       """
 
-      assert {:ok, _} = Sourceror.parse_string(fix(NoRedundantEnumJoinSeparator, code))
+      assert valid_syntax?(fix(NoRedundantEnumJoinSeparator, code))
     end
   end
 end

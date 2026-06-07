@@ -59,7 +59,14 @@ defmodule Credence.CheckMetaTest do
         }
 
       :error ->
-        %{rule: rule, path: path, asserts: false, references_rule: false, positive: false, negative: false}
+        %{
+          rule: rule,
+          path: path,
+          asserts: false,
+          references_rule: false,
+          positive: false,
+          negative: false
+        }
     end
   end
 
@@ -88,7 +95,10 @@ defmodule Credence.CheckMetaTest do
            "check tests missing a direction (a check must prove it BOTH fires and stays quiet):\n" <>
              bullets(bad, fn a ->
                missing =
-                 [{a.positive, "positive (flagged?/non-empty check)"}, {a.negative, "negative (clean?/check == [])"}]
+                 [
+                   {a.positive, "positive (flagged?/non-empty check)"},
+                   {a.negative, "negative (clean?/check == [])"}
+                 ]
                  |> Enum.reject(&elem(&1, 0))
                  |> Enum.map_join(" and ", &elem(&1, 1))
 

@@ -48,9 +48,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedup do
           end
 
         # Direct: Enum.map(Enum.chunk_by(list, & &1), &List.first/1)
-        {{:., _, [{:__aliases__, _, [:Enum]}, func]}, meta,
-         [chunk_node, first_fn]} = node,
-        issues
+        {{:., _, [{:__aliases__, _, [:Enum]}, func]}, meta, [chunk_node, first_fn]} = node, issues
         when func in [:map, :map_join] ->
           if identity_chunk_by?(chunk_node) and takes_first?(first_fn) do
             {node, [build_issue(meta) | issues]}
@@ -100,8 +98,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedup do
         end
 
       # Direct: Enum.map_join(Enum.chunk_by(enum, & &1), &List.first/1)
-      {{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, _meta,
-       [chunk_node, first_fn]} = node ->
+      {{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, _meta, [chunk_node, first_fn]} = node ->
         if identity_chunk_by?(chunk_node) and takes_first?(first_fn) do
           enum = extract_enum(chunk_node)
           pipe = {:|>, [], [build_dedup_call(enum), build_join_call()]}
@@ -111,8 +108,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedup do
         end
 
       # Direct: Enum.map(Enum.chunk_by(enum, & &1), &List.first/1)
-      {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _meta,
-       [chunk_node, first_fn]} = node ->
+      {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _meta, [chunk_node, first_fn]} = node ->
         if identity_chunk_by?(chunk_node) and takes_first?(first_fn) do
           enum = extract_enum(chunk_node)
           build_dedup_call(enum)
@@ -127,9 +123,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedup do
 
   # --- Pattern matchers ---
 
-  defp identity_chunk_by?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :chunk_by]}, _meta, args}
-       ) do
+  defp identity_chunk_by?({{:., _, [{:__aliases__, _, [:Enum]}, :chunk_by]}, _meta, args}) do
     callback =
       case args do
         [_enum, cb] -> cb
@@ -185,25 +179,19 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedup do
   defp takes_first?(_), do: false
 
   # Enum.map in piped form with &List.first/1 as the mapper
-  defp first_of_chunk_map?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [first_fn]}
-       ) do
+  defp first_of_chunk_map?({{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [first_fn]}) do
     takes_first?(first_fn)
   end
 
   # Enum.map in direct form
-  defp first_of_chunk_map?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [_enum, first_fn]}
-       ) do
+  defp first_of_chunk_map?({{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [_enum, first_fn]}) do
     takes_first?(first_fn)
   end
 
   defp first_of_chunk_map?(_), do: false
 
   # Enum.map_join in piped form
-  defp first_of_chunk_join_map?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, _, [first_fn]}
-       ) do
+  defp first_of_chunk_join_map?({{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, _, [first_fn]}) do
     takes_first?(first_fn)
   end
 
@@ -230,9 +218,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedup do
     {{:., [], [{:__aliases__, [], [:Enum]}, :join]}, [], []}
   end
 
-  defp extract_enum(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :chunk_by]}, _, args}
-       ) do
+  defp extract_enum({{:., _, [{:__aliases__, _, [:Enum]}, :chunk_by]}, _, args}) do
     case args do
       [enum, _cb] -> enum
       [_cb] -> nil

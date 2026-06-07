@@ -259,7 +259,7 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   # should not be flagged or merged.
   defp all_inline_same_statement?(entries) do
     Enum.all?(entries, &(&1.mode == :inline)) and
-      (entries |> Enum.map(& &1.index) |> Enum.uniq() |> length()) == 1
+      entries |> Enum.map(& &1.index) |> Enum.uniq() |> length() == 1
   end
 
   # length(var) — Kernel BIF
