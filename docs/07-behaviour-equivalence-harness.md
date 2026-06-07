@@ -40,7 +40,7 @@ generalizes that one block into shared, mandatory, gate-enforced support.
    - **T3a cosmetic** — provably no runtime effect (param rename, attr move, doc text, typespec) → `mark_equivalence_cosmetic(reason)`. Before and after are behaviourally identical.
    - **T3b unconstructible** — behavioural but no self-contained callable example (cross-module/macro/compile-time) → `mark_equivalence_unconstructible(reason)`.
    - **T3c repair** — the firing precondition is a *broken* input (does-not-compile, e.g. a hallucinated guard or a missing `require Logger`; **or** always-fails — compiles but raises on *every* input, e.g. an arg-order bug like `s |> Regex.replace(...)`) → `mark_equivalence_repair(reason)`. **Deliberately NOT behaviour-preserving** — sound because the "before" has no input that yields a valid result; the fix is a *correction*. This is the principled home for the whole "fix broken → working" family (which by definition changes behaviour). The reason must state the broken precondition (and, for always-fails, that *no* input avoids the crash). A rule whose "before" returns a valid—even if undesired—value on some input is NOT a repair: it is a behaviour change and must be narrowed, gated, or dropped (e.g. `no_map_get_sentinel`, dropped). `unconstructible` is the preferred wording for the does-not-compile flavour and stays a distinct mark.
-4. **No ETS / no global attestation.** Anti-stub checks come from `assert_equivalent` itself (asserts rule fires + a rewrite happened + input set ≥ 3). Meta-gate only checks per-rule file existence + that the file references the rule.
+4. **No ETS / no global attestation.** Anti-stub checks come from `assert_equivalent` itself: it asserts the rule fires, a rewrite happened, there are ≥ 3 inputs, and the inputs **discriminate** — the original snippet must produce ≥ 2 distinct outcomes across them, so a constant fix can't pass (auto-skipped when the snippet has no variable to vary; opt out with `allow_constant_output: true` for a constant-by-design rule like `no_tautological_if`). A measurement over all 117 rules flagged only 3 (all genuinely constant-output), so this is a near-zero-noise forward guard for new (Mimo-authored) rules rather than a finder of existing problems. The meta-gate (`equivalence_meta_test.exs`) is purely static — it reads each rule's test file and enforces four things: (1) the rule has its own `test/pattern/<name>_equivalence_test.exs` defining `<Name>EquivalenceTest`; (2) that file actually calls a real check (`assert_equivalent*`) or an explicit opt-out mark; (3) an assertion-based test references the rule module it covers; (4) no test is still an `:equivalence_todo` skeleton. (Strengthened from the original name-only check after the hollow-module / wrong-rule / mis-named-file holes were found — none can pass now.)
 5. **In-process eval + `try/rescue/catch`** (no spawn/timeout). Outcome tagged `{:ok,v}` | `{:raise,Module}` | `{:throw|:exit,term}`. Exception compared **module-only** (`compare_messages: true` opt-in). Per-rule timeout wrapper documented as an escape hatch, unused by default.
    - **Value comparison is strict `===`, not `==`** (upgraded after the exemplar's `==`): `6 == 6.0` is true, so `==` would miss int↔float value-kind changes — the doc's #1 rejection class. `===` catches them. Re-verified: all prior filled rules stay green under `===`.
 6. **Checking call order is an optional extra, used only where it matters (Decision A).**
@@ -448,13 +448,16 @@ above is the human worklist.)
    value tests, effect-trace mode unused).
 4. ~~Stamp T3a/T3b~~ — **done**, plus the new **T3c repair** tier; all flagged divergences resolved
    (fixed / narrowed / dropped / reinstated), none pinned.
-5. **Flip gate hard — ★ DONE.** `test/equivalence_meta_test.exs` is live: it discovers every
-   `Credence.Pattern.Rule` and asserts each has a test module `Credence.Pattern.<Name>EquivalenceTest`
-   (coverage checked by module name — no filename guessing), plus that no equivalence test is still tagged
-   `:equivalence_todo`. The `:equivalence_todo` exclude was dropped from `test_helper.exs` (`ExUnit.start()`
-   with no excludes), so a newly-added rule shipped without a real equivalence test now **fails the suite**.
-   Checks verified: hiding one rule's test makes the gate fail naming that rule; restoring greens it.
-   Suite green with no excludes: **4347 tests, 0 failures**.
+5. **Flip gate hard — ★ DONE, then strengthened.** `test/equivalence_meta_test.exs` is live. It
+   discovers every `Credence.Pattern.Rule` and now enforces four checks per rule (see Decision #4):
+   (1) the rule has its own correctly-named file defining `<Name>EquivalenceTest`; (2) that file makes
+   a real check or an explicit opt-out mark — no hollow modules; (3) an assertion-based test references
+   the rule it covers — can't silently test a different rule; (4) no `:equivalence_todo` skeleton. The
+   `:equivalence_todo` exclude was dropped from `test_helper.exs` (`ExUnit.start()` with no excludes),
+   so a rule shipped without a real equivalence test **fails the suite**.
+   Each check verified by injecting its violation (hollow module / wrong-rule reference / mis-named
+   file) and confirming the matching check fails, naming the rule; restoring greens it. All 117 rules
+   already satisfy the strengthened gate. Full suite green with no excludes: **4361 tests, 0 failures**.
 - StreamData layer (additive, fixed-seed, non-gating) — optional, future enhancement now that the gate holds.
 
 ## Verification
@@ -470,11 +473,12 @@ above is the human worklist.)
 - **Effect probe:** a reorder/double-eval snippet must fail on trace mismatch.
 - **Checking the safety checks work — ★ DONE.** `test/behaviour_equivalence_self_test.exs` confirms
   `assert_equivalent` refuses a broken test setup, with one test per safety check (each expects an
-  error): fewer than 3 inputs; a snippet the rule does not apply to; and a snippet the rewrite leaves
+  error): fewer than 3 inputs; a snippet the rule does not apply to; a snippet the rewrite leaves
   unchanged (using a fake rule that finds a problem but offers no fix, since every real rule does fix
-  what it finds). A fourth test feeds a correct setup and confirms it passes, so the first three
-  aren't failing for some unrelated reason. (The separate check that every rule has a test file was
-  verified earlier by hiding one and watching it fail.)
+  what it finds); and inputs that all produce the same result (no discriminating power). Two more tests
+  feed correct setups — a normal one, and a constant-by-design one with `allow_constant_output: true` —
+  and confirm they pass, so the negative cases aren't failing for some unrelated reason. (The separate
+  check that every rule has a test file was verified earlier by hiding one and watching it fail.)
 - **Proving the checks can catch a bad rewrite — ★ DONE.** `test/equivalence_regression_test.exs`
   takes **8** rules that were tried and rejected (listed in `unfixable_confirmed.md`; still present
   in the sister project `../credence_evolution`), rebuilds the rejected rewrite as a before/`broken`

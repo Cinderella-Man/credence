@@ -17,7 +17,10 @@ defmodule Credence.Pattern.NoTautologicalIfEquivalenceTest do
     assert_equivalent("if x > 0, do: :v, else: :v",
       rule: NoTautologicalIf,
       vars: [:x],
-      inputs: [1, -1, 0, :atom, "s"]
+      inputs: [1, -1, 0, :atom, "s"],
+      # Both branches are `:v`, so the original returns `:v` for every input — the
+      # output is constant by design, not a sign of weak inputs.
+      allow_constant_output: true
     )
   end
 end

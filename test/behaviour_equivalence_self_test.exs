@@ -4,17 +4,20 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
 
   `assert_equivalent` is how we prove a rule's rewrite is safe: it runs the
   original code and the rewritten code on several inputs and checks they give the
-  same answer. Before that comparison it runs three safety checks and refuses the
-  test if any of them fails:
+  same answer. Before (and after) that comparison it runs four safety checks and
+  refuses the test if any of them fails:
 
     1. the rule must actually apply to the snippet (otherwise nothing is tested),
     2. the rewrite must actually change the code (otherwise nothing is compared),
-    3. there must be at least 3 inputs (one or two is too few to trust).
+    3. there must be at least 3 inputs (one or two is too few to trust),
+    4. the inputs must make the original behave differently (at least two distinct
+       results) — otherwise a constant fix would pass without testing anything.
 
   Without these checks, a lazy or broken test could pass while really testing
   nothing. The tests below hand `assert_equivalent` a deliberately broken setup
-  and confirm it raises an error — one test per check — plus one correct setup
-  that confirms the normal case still passes.
+  and confirm it raises an error — one test per check — plus correct setups
+  (including a constant-by-design rule that opts out of check 4) that confirm the
+  normal cases still pass.
 
   These test the checker itself, so they live outside `test/pattern/` (where the
   per-rule tests live).
@@ -24,6 +27,7 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoEnumAtNegativeIndex
+  alias Credence.Pattern.NoTautologicalIf
 
   # Check 2 needs a rule that finds a problem but offers no fix. None of the real
   # rules behave that way (they all fix what they find), so here is a fake one:
@@ -71,6 +75,19 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
         )
       end
     end
+
+    test "inputs that all produce the same result are rejected (no discriminating power)" do
+      assert_raise ExUnit.AssertionError, fn ->
+        # Both branches are `:v`, so the original returns `:v` for every input —
+        # the inputs can't tell a correct fix from a wrong one. Without an explicit
+        # opt-out, this must be rejected.
+        assert_equivalent("if x > 0, do: :v, else: :v",
+          rule: NoTautologicalIf,
+          vars: [:x],
+          inputs: [1, 2, 3]
+        )
+      end
+    end
   end
 
   describe "assert_equivalent accepts a correct test setup" do
@@ -81,6 +98,15 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
                rule: NoEnumAtNegativeIndex,
                vars: [:list],
                inputs: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+             ) == :ok
+    end
+
+    test "uniform results are allowed with an explicit allow_constant_output: true" do
+      assert assert_equivalent("if x > 0, do: :v, else: :v",
+               rule: NoTautologicalIf,
+               vars: [:x],
+               inputs: [1, 2, 3],
+               allow_constant_output: true
              ) == :ok
     end
   end

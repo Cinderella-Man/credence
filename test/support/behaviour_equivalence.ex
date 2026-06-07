@@ -30,10 +30,14 @@ defmodule Credence.BehaviourEquivalence do
 
   ## Anti-stub checks (no external gate needed)
 
-  Every assertion first proves the rule *fires* on the snippet and that a
-  *rewrite actually happened*, and enforces a minimum of 3 inputs
-  (override with `allow_few_inputs: true`). A stub test therefore fails here,
-  not in some meta-test.
+  Every assertion first proves the rule *fires* on the snippet, that a *rewrite
+  actually happened*, that there are at least 3 inputs (override with
+  `allow_few_inputs: true`), and that the inputs actually *discriminate* — the
+  original snippet must produce at least two different outcomes across them, so a
+  constant fix can't pass. That last check is auto-skipped when the snippet has no
+  variable to vary, and can be opted out with `allow_constant_output: true` for a
+  rule whose output is constant by design (e.g. identical `if` branches). A stub or
+  weak test therefore fails here, not in some meta-test.
 
   Generalized from `no_manual_frequencies_fix_test.exs` (the `eval1` /
   `assert_preserves` exemplar).
@@ -59,6 +63,8 @@ defmodule Credence.BehaviourEquivalence do
     * `:compare_messages` — also compare exception messages (default false:
       module-only).
     * `:allow_few_inputs` — allow < #{@min_inputs} inputs (visible in review).
+    * `:allow_constant_output` — allow the original to produce only one distinct
+      outcome across the inputs (for a rule whose output is constant by design).
   """
   def assert_equivalent(before_expr, opts) do
     rule = Keyword.fetch!(opts, :rule)
@@ -71,16 +77,19 @@ defmodule Credence.BehaviourEquivalence do
     orig = compile_fn!(vars, before_expr)
     new = compile_fn!(vars, fixed)
 
-    for input <- inputs do
-      args = to_args(input, vars)
-      o = eval_outcome(fn -> apply(orig, args) end, compare_messages?)
-      n = eval_outcome(fn -> apply(new, args) end, compare_messages?)
+    befores =
+      for input <- inputs do
+        args = to_args(input, vars)
+        o = eval_outcome(fn -> apply(orig, args) end, compare_messages?)
+        n = eval_outcome(fn -> apply(new, args) end, compare_messages?)
 
-      # Strict `===`: `6 == 6.0` is true but they are different values — value-kind
-      # (int↔float) changes are exactly what this suite must catch.
-      assert o === n, divergence_msg(rule, input, o, n, before_expr, fixed)
-    end
+        # Strict `===`: `6 == 6.0` is true but they are different values — value-kind
+        # (int↔float) changes are exactly what this suite must catch.
+        assert o === n, divergence_msg(rule, input, o, n, before_expr, fixed)
+        o
+      end
 
+    check_discrimination!(rule, befores, vars == [], opts)
     :ok
   end
 
@@ -95,7 +104,8 @@ defmodule Credence.BehaviourEquivalence do
     * `:call` (req) — `{fun_atom, arity}`; the function to invoke.
     * `:inputs` (req) — input set. Each element is the args (a tuple/list for
       arity > 1, or a bare value for arity 1).
-    * `:compare_messages`, `:allow_few_inputs` — as `assert_equivalent/2`.
+    * `:compare_messages`, `:allow_few_inputs`, `:allow_constant_output` — as
+      `assert_equivalent/2`.
   """
   def assert_equivalent_module(before_module, opts) do
     rule = Keyword.fetch!(opts, :rule)
@@ -108,14 +118,17 @@ defmodule Credence.BehaviourEquivalence do
     orig_mod = compile_module!(before_module, "Before")
     new_mod = compile_module!(fixed, "After")
 
-    for input <- inputs do
-      args = args_by_arity(input, arity)
-      o = eval_outcome(fn -> apply(orig_mod, fun, args) end, compare_messages?)
-      n = eval_outcome(fn -> apply(new_mod, fun, args) end, compare_messages?)
+    befores =
+      for input <- inputs do
+        args = args_by_arity(input, arity)
+        o = eval_outcome(fn -> apply(orig_mod, fun, args) end, compare_messages?)
+        n = eval_outcome(fn -> apply(new_mod, fun, args) end, compare_messages?)
 
-      assert o === n, divergence_msg(rule, input, o, n, before_module, fixed)
-    end
+        assert o === n, divergence_msg(rule, input, o, n, before_module, fixed)
+        o
+      end
 
+    check_discrimination!(rule, befores, arity == 0, opts)
     :ok
   end
 
@@ -131,7 +144,7 @@ defmodule Credence.BehaviourEquivalence do
   assert both the final value-outcome and the recorded call-trace match.
 
   Opts:
-    * `:rule` (req), `:inputs` (req), `:allow_few_inputs`.
+    * `:rule` (req), `:inputs` (req), `:allow_few_inputs`, `:allow_constant_output`.
     * `:vars` — ordered *data* free-var names (excluding `effect`, which is
       appended last). Defaults to `[:list]`.
   """
@@ -146,20 +159,24 @@ defmodule Credence.BehaviourEquivalence do
     orig = compile_fn!(vars, before_expr)
     new = compile_fn!(vars, fixed)
 
-    for input <- inputs do
-      data_args = to_args(input, data_vars)
-      {vo, trace_o} = run_with_trace(orig, data_args)
-      {vn, trace_n} = run_with_trace(new, data_args)
+    befores =
+      for input <- inputs do
+        data_args = to_args(input, data_vars)
+        {vo, trace_o} = run_with_trace(orig, data_args)
+        {vn, trace_n} = run_with_trace(new, data_args)
 
-      assert {vo, trace_o} === {vn, trace_n},
-             """
-             effect-trace divergence in #{inspect(rule)} on #{inspect(input)}
-               original => value #{inspect(vo)}, trace #{inspect(trace_o)}
-               fixed    => value #{inspect(vn)}, trace #{inspect(trace_n)}
-               fixed code: #{String.trim(fixed)}
-             """
-    end
+        assert {vo, trace_o} === {vn, trace_n},
+               """
+               effect-trace divergence in #{inspect(rule)} on #{inspect(input)}
+                 original => value #{inspect(vo)}, trace #{inspect(trace_o)}
+                 fixed    => value #{inspect(vn)}, trace #{inspect(trace_n)}
+                 fixed code: #{String.trim(fixed)}
+               """
 
+        vo
+      end
+
+    check_discrimination!(rule, befores, data_vars == [], opts)
     :ok
   end
 
@@ -235,6 +252,40 @@ defmodule Credence.BehaviourEquivalence do
     end
 
     fixed
+  end
+
+  # The inputs only have power to catch a wrong fix if the original snippet
+  # behaves *differently* on at least two of them — otherwise a constant fix would
+  # pass without testing anything. Require >= 2 distinct original outcomes, unless
+  # the snippet has no variable to vary (auto-skipped) or the author explicitly
+  # opts out for a constant-by-design rule (`allow_constant_output: true`).
+  defp check_discrimination!(rule, before_outcomes, auto_exempt?, opts) do
+    distinct = before_outcomes |> Enum.uniq() |> length()
+
+    cond do
+      auto_exempt? ->
+        :ok
+
+      before_outcomes == [] ->
+        :ok
+
+      Keyword.get(opts, :allow_constant_output, false) ->
+        :ok
+
+      distinct >= 2 ->
+        :ok
+
+      true ->
+        flunk("""
+        weak inputs for #{inspect(rule)}: the original snippet produces only ONE \
+        distinct outcome (#{inspect(hd(before_outcomes))}) across all \
+        #{length(before_outcomes)} inputs, so the test can't tell a correct fix from \
+        a wrong one. Add inputs that make the original behave differently (an empty / \
+        negative / edge / value-kind case). If the output is genuinely constant by \
+        design (identical branches, no variable), pass `allow_constant_output: true` \
+        with that reason.
+        """)
+    end
   end
 
   defp rule_fires?(rule, source) do
