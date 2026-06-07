@@ -1,22 +1,19 @@
 defmodule Credence.FixtureStringEscapingTest do
   @moduledoc """
-  The gate that keeps code fixtures as **heredocs** — no escaping, no sigils. A
-  test under `test/pattern`/`test/semantic`/`test/syntax` writes code-under-test in
-  a `\"""` heredoc, never a `"...\\n..."` / `"...\\""` escaped string and never a
-  `~s`/`~S` sigil.
+  The gate that keeps every **code fixture** a `\"""` heredoc — never an escaped
+  `"...\\n..."` / `"...\\""` string, a `~s`/`~S` sigil, or a `"a" <> "b"`
+  concatenation (a common way to sneak a multi-line string past the rule).
 
-  Introspected with Sourceror (delimiter-aware). Exempt — things a heredoc can't
-  carry:
+  Scoped to **fixture positions** (the code-under-test): a string passed to a rule
+  verb (`check`/`fix`/`clean?`/…/`assert_equivalent`), compared to one with `==`,
+  or assigned to `code`/`input`/`expected`/`source`/…. Non-fixtures — a `=~`
+  message-substring, a `mark_equivalence_*` reason, a `\#{}` fragment in a list —
+  are not checked; they legitimately stay plain.
 
-    * the `test`/`describe` **name**;
-    * code containing `\"""` (closes the heredoc);
-    * an **interpolated** fixture (`~s[...\#{x}...]`, a multi-part sigil) — kept as a
-      sigil so the interpolation survives.
-
-  Plus a small, reasoned **file allow-list** for fixtures a heredoc breaks for a
-  reason it can't express structurally (the fix drops/transforms the trailing
-  newline, the diagnostic is line-number-sensitive, or the expected ends in a
-  blank line `mix format` would trim).
+  Introspected with Sourceror (delimiter-aware). A fixture is OK when it's a
+  heredoc, a `~S\"""...\"""` sigil-heredoc (also triple quotes, raw for `\#{}` code),
+  an interpolated string/sigil, or code that contains `\"""` (can't nest in a
+  heredoc). Plus a tiny file allow-list for fixtures a heredoc breaks structurally.
   """
   use ExUnit.Case, async: true
 
@@ -24,94 +21,99 @@ defmodule Credence.FixtureStringEscapingTest do
 
   @dirs ["test/pattern", "test/semantic", "test/syntax"]
 
+  @verbs MapSet.new([
+           :check,
+           :flagged?,
+           :clean?,
+           :fix,
+           :valid_syntax?,
+           :compiles?,
+           :analyze,
+           :assert_equivalent,
+           :assert_equivalent_module,
+           :assert_effect_trace_equivalent
+         ])
+
+  @fvars MapSet.new([:code, :input, :expected, :source, :fixed, :snippet, :before, :after])
+
   @allow %{
     "test/pattern/no_redundant_binary_syntax_fix_test.exs" =>
       "the fix reprints the whole expression, dropping the input's trailing " <>
         "newline; a heredoc expected (which has one) can't match, and the quoted " <>
-        "result has no sigil-free single-line form",
-    "test/semantic/undefined_function_local_fix_test.exs" =>
-      "the diagnostic targets a specific source line; a heredoc shifts line numbers",
+        "result has no heredoc/sigil-free form",
     "test/semantic/missing_use_exunit_case_fix_test.exs" =>
-      "the fix forces a trailing blank line; mix format trims a heredoc's, changing the value",
-    "test/pattern/no_guard_equality_for_pattern_match_check_test.exs" =>
-      "asserts on message *substrings* via `=~` (`s == \"zero\"`); a heredoc's " <>
-        "trailing newline would break the substring match",
-    "test/pattern/no_dead_map_update_check_test.exs" =>
-      "builds fixtures by interpolating a list of literal-default *fragments* " <>
-        "(`\"\"`); these are not standalone fixtures"
+      "the fix forces a trailing blank line; mix format trims a heredoc's, changing the value"
   }
 
   defp files do
     @dirs |> Enum.flat_map(&Path.wildcard("#{&1}/**/*_test.exs")) |> Enum.sort()
   end
 
-  defp block_names(ast) do
+  # Collect string-like nodes sitting in a fixture position.
+  defp fixtures(ast) do
     {_, acc} =
-      Macro.prewalk(ast, [], fn
-        {k, _, [{:__block__, _, [n]} | _]} = node, acc
-        when k in [:test, :describe] and is_binary(n) ->
-          {node, [n | acc]}
+      Macro.prewalk(ast, [], fn node, acc ->
+        add =
+          case node do
+            {op, _, [l, r]} when op in [:==, :!=] ->
+              if verb_call?(l) or verb_call?(r), do: Enum.filter([l, r], &stringish?/1), else: []
 
-        node, acc ->
-          {node, acc}
+            {:=, _, [{var, _, ctx}, rhs]} when is_atom(var) and is_atom(ctx) ->
+              if MapSet.member?(@fvars, var) and stringish?(rhs), do: [rhs], else: []
+
+            {v, _, args} when is_atom(v) and is_list(args) ->
+              if MapSet.member?(@verbs, v), do: Enum.filter(args, &stringish?/1), else: []
+
+            _ ->
+              []
+          end
+
+        {node, add ++ acc}
       end)
 
-    MapSet.new(acc)
+    Enum.uniq(acc)
   end
 
-  # Multi-line code crammed into a normal "..." string.
-  defp multiline_string?({:__block__, meta, [v]}, names) when is_binary(v) do
-    unescaped = String.replace(v, "\\\"", "\"")
-    pure_ws? = v |> String.replace("\\n", "") |> String.trim() == ""
+  defp stringish?({:__block__, m, [s]}) when is_binary(s), do: Keyword.get(m, :delimiter) != nil
+  defp stringish?({:<<>>, _, _}), do: true
+  defp stringish?({sg, _, _}) when sg in [:sigil_s, :sigil_S], do: true
+  defp stringish?({:<>, _, [l, r]}), do: stringish?(l) and stringish?(r)
+  defp stringish?(_), do: false
 
-    Keyword.get(meta, :delimiter) == "\"" and String.contains?(v, "\\n") and
-      not MapSet.member?(names, v) and not String.contains?(unescaped, "\"\"\"") and
-      not String.contains?(v, "\#{") and not String.ends_with?(v, "\\n\\n") and not pure_ws?
+  defp verb_call?({v, _, a}) when is_atom(v) and is_list(a), do: MapSet.member?(@verbs, v)
+  defp verb_call?(_), do: false
+
+  # A fixture is acceptable when it's already a heredoc form, interpolated, or
+  # carries code containing `"""` (which a heredoc can't nest).
+  defp ok?({:__block__, m, [s]}) when is_binary(s) do
+    Keyword.get(m, :delimiter) == "\"\"\"" or
+      String.contains?(String.replace(s, "\\\"", "\""), "\"\"\"")
   end
 
-  defp multiline_string?(_node, _names), do: false
+  # interpolated string
+  defp ok?({:<<>>, _, _}), do: true
 
-  # Single-line normal "..." string with a nested quote (a `\"` escape).
-  defp escaped_quote?({:__block__, meta, [v]}, names) when is_binary(v) do
-    Keyword.get(meta, :delimiter) == "\"" and String.contains?(v, "\"") and
-      not String.contains?(v, "\\n") and not MapSet.member?(names, v)
+  defp ok?({sg, m, [{:<<>>, _, [b]}, _]}) when sg in [:sigil_s, :sigil_S] and is_binary(b),
+    do: Keyword.get(m, :delimiter) == "\"\"\"" or String.contains?(b, "\"\"\"")
+
+  # interpolated sigil
+  defp ok?({sg, _, _}) when sg in [:sigil_s, :sigil_S], do: true
+  # a "a" <> "b" concatenation is never a heredoc
+  defp ok?({:<>, _, _}), do: false
+  defp ok?(_), do: false
+
+  test "every code fixture is a heredoc — no escaped string, sigil, or <> concat" do
+    bad =
+      for path <- files(),
+          not Map.has_key?(@allow, path),
+          {:ok, ast} = load_ast(path),
+          node <- fixtures(ast),
+          not ok?(node),
+          uniq: true,
+          do: path
+
+    assert Enum.uniq(bad) == [],
+           "fixtures that aren't heredocs (use a \"\"\" heredoc):\n" <>
+             Enum.map_join(Enum.uniq(bad), "\n", &("  - " <> &1))
   end
-
-  defp escaped_quote?(_node, _names), do: false
-
-  # A `~s`/`~S` sigil that should be a plain heredoc: single (non-interpolated)
-  # part, code free of `\"""`, and NOT already a triple-quote sigil-heredoc
-  # (`~S\"""..."""`, which *is* triple quotes — used raw when the code has `\#{}`).
-  defp sigil?({sg, meta, [{:<<>>, _, [bin]}, _]}, _names)
-       when sg in [:sigil_s, :sigil_S] and is_binary(bin),
-       do: Keyword.get(meta, :delimiter) != "\"\"\"" and not String.contains?(bin, "\"\"\"")
-
-  defp sigil?(_node, _names), do: false
-
-  defp offenders(pred) do
-    files()
-    |> Enum.reject(&Map.has_key?(@allow, &1))
-    |> Enum.filter(fn path ->
-      {:ok, ast} = load_ast(path)
-      names = block_names(ast)
-      walk_any?(ast, &pred.(&1, names))
-    end)
-  end
-
-  test "multi-line code fixtures use heredocs, not escaped \"...\\n...\" strings" do
-    assert offenders(&multiline_string?/2) == [],
-           "use a heredoc:\n" <> list(offenders(&multiline_string?/2))
-  end
-
-  test "no \\\" escaped-quote fixtures — use a heredoc" do
-    assert offenders(&escaped_quote?/2) == [],
-           "escaped quote — use a heredoc:\n" <> list(offenders(&escaped_quote?/2))
-  end
-
-  test "no ~s/~S sigil fixtures — use a heredoc" do
-    assert offenders(&sigil?/2) == [],
-           "sigil fixture — use a heredoc:\n" <> list(offenders(&sigil?/2))
-  end
-
-  defp list(paths), do: Enum.map_join(paths, "\n", &("  - " <> &1))
 end

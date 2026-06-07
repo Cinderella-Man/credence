@@ -227,18 +227,19 @@ over the same list).
   touch the parser. Syntax/semantic tests (`use ExUnit.Case`, not `RuleCase`) reach
   `valid_syntax?` via `import Credence.RuleCase, only: [valid_syntax?: 1]`.
   **Every code fixture is a `"""` heredoc** — never an escaped `"...\n..."` /
-  `"...\""` string, never a `~s`/`~S` sigil. Even one-liners:
-  `check(rule, """\n  length(list)\n  """)`. `test/fixture_string_escaping_test.exs`
-  enforces it (three checks: no multi-line escaped string, no `\"` escape, no
-  sigil — Sourceror delimiter-aware). Exempt — what a heredoc can't carry: the
-  `test`/`describe` name; code containing `"""`; an interpolated `~s[...\#{x}...]`;
-  a `~S\"""..."""` sigil-heredoc (already triple quotes, raw for `\#{}` code). Plus
-  a small reasoned file allow-list — fixtures a heredoc breaks structurally (the
-  fix drops/transforms the trailing newline, a line-number-sensitive diagnostic, a
-  forced trailing blank line, `=~` message-substring assertions). Heredocs add a
-  trailing `\n`; since `fix/2` mirrors it, a fix test's `input`/`expected` convert
-  as a pair. Converting non-fixture strings (`=~` substrings, `#{}` fragments) is
-  the trap — they are NOT fixtures and must stay plain.
+  `"...\""` string, a `~s`/`~S` sigil, or a `"a" <> "b"` concatenation (the sneaky
+  one). Even one-liners: `check(rule, """\n  length(list)\n  """)`.
+  `test/fixture_string_escaping_test.exs` enforces it, **scoped to fixture
+  positions** — a string passed to a rule verb, compared with `==`, or assigned to
+  `code`/`input`/`expected`/`source`. Non-fixtures (a `=~` message-substring, a
+  `mark_equivalence_*` reason, a `\#{}` fragment in a list) are NOT checked and stay
+  plain — converting them is the trap (their trailing `\n` breaks `=~`/interpolation).
+  A fixture is OK as a heredoc, a `~S\"""..."""` sigil-heredoc (raw triple quotes for
+  `\#{}` code), an interpolated string/sigil, or code containing `"""` (can't nest).
+  Allow-list: two files where a heredoc breaks structurally (the fix reprints and
+  drops the trailing newline; the fix forces a trailing blank line `mix format`
+  trims). Heredocs add a trailing `\n`; since `fix/2` mirrors it, a fix test's
+  `input`/`expected` convert as a pair.
 - `test/credence_pipeline_test.exs` — end-to-end tests, including the
   after-the-fix check (with on-purpose `BrokenFixRule` / `UnparseableFixRule`
   test rules).
