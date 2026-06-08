@@ -37,7 +37,10 @@ Decisions locked with the user:
   pointing at `Credence.EquivalenceInputs`. Opt-out (`mark_equivalence_*`) is a by-hand swap
   for the rare cosmetic/repair rule.
 - **New Syntax/Semantic gates: Tier 2 + the syntax fixpoint line** (`analyze(fix(x)) == []`).
-  Fix-output-validity (`compiles?`/`valid_syntax?`) is **deferred** to a follow-up.
+  Fix-output-validity (`valid_syntax?(fix(x))`) **shipped as a follow-up** for both
+  rounds — see §3b. (`compiles?` was evaluated and rejected: it is false for correct
+  fixes whose fixtures are bare `def`/expression fragments or need a running ExUnit
+  context, so `valid_syntax?` is used uniformly — no allowlist.)
 - **Gates are union/prefix-based (Option A)** — they accept multi-file fix suites (e.g.
   `undefined_function`'s six strategy files) and single combined files, not just the canonical
   2-file split. The generator still emits the clean 2-file split for new rules.
@@ -222,16 +225,23 @@ union*:
 - *fix substance:* a real transform (`fix(A) == B`, `A != B`, whole-string `==`).
 - *fixpoint:* a line `analyze(fix(...)) == []` is present (Tier-3, kept — proven idiomatic at
   `fix_python_modulo_fix_test.exs:493`).
+- *fix-output-validity:* a `valid_syntax?(fix(...))` assertion — the repaired source parses.
 
 **Semantic** (`Credence.Semantic.<Pascal>`):
 - *Completeness:* ≥1 check-side file and ≥1 fix-side file exist.
 - *match? substance:* a positive `match?(...)` (asserted truthy) + a negative `refute match?(...)`.
 - *attribution:* `to_issue(...).rule == :<snake>` is present.
 - *fix substance:* a real transform (`fix(src, diag) == expected`, distinct).
+- *fix-output-validity:* a `valid_syntax?(fix(...))` assertion — the repaired source parses.
 
-*Fix-output-validity (`compiles?`/`valid_syntax?(fix(x))`, failure mode #5) is **deferred*** —
-it would require the `no_parser_calls`-safe RuleCase verbs and a style change to the existing
-Syntax/Semantic tests; tracked as a follow-up.
+**Fix-output-validity (failure mode #5) shipped** for both rounds via a
+`valid_syntax?(fix(x))` gate. The tests `import Credence.RuleCase, only:
+[valid_syntax?: 1]` (still `no_parser_calls`-safe — the verb hides the parser).
+`compiles?` was evaluated and rejected: empirically false for correct fixes whose
+fixtures are bare `def`/expression fragments (`UnusedVariable`, `UndefinedFunction`)
+or need a running ExUnit context (`MissingUseExunitCase`), so a `compiles?` gate
+would flag 3 correct rules. `valid_syntax?` is uniform and side-effect-free — no
+allowlist, no decision-(b) reports.
 
 All §3b predicates live in `MetaTestSupport` and are shared with the pin.
 
@@ -355,4 +365,6 @@ None blocking. Two judgment calls deferred to implementation, both already direc
 decisions:
 - The exact list of existing Syntax/Semantic rules needing a retrofit line vs. a behavior
   report (decision b) is discovered while doing Phase D step 7 — reported as encountered.
-- Fix-output-validity gate (#5) is explicitly a **follow-up**, not part of this work.
+- Fix-output-validity gate (#5) was a **follow-up** and has since shipped — a
+  `valid_syntax?(fix(x))` gate for both rounds (see §3b; `compiles?` rejected as
+  empirically false for correct fragment-fixture fixes).

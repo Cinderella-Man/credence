@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Semantic.UndefinedStringAlphanumeric
 
   defp diag(line, col \\ 1) do
@@ -205,6 +207,22 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
 
       fixed = Credence.Semantic.fix(source)
       assert fixed == source
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      source = """
+      defmodule M do
+        def clean(s) do
+          s
+          |> String.graphemes()
+          |> Enum.filter(&String.alphanumeric?/1)
+        end
+      end
+      """
+
+      assert valid_syntax?(UndefinedStringAlphanumeric.fix(source, diag(5)))
     end
   end
 end

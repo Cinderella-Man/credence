@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Syntax.FixStaleAccessModifier
   defp analyze(code), do: FixStaleAccessModifier.analyze(code)
   defp fix(code), do: FixStaleAccessModifier.fix(code)
@@ -308,6 +310,18 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
       """
 
       assert analyze(fix(code)) == []
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      assert valid_syntax?(
+               fix("""
+               pprivate defp calculate(x) do
+                 x * 2
+               end
+               """)
+             )
     end
   end
 end

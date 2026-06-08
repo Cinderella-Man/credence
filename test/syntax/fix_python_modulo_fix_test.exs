@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.FixPythonModuloFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Syntax.FixPythonModulo
   defp analyze(code), do: FixPythonModulo.analyze(code)
   defp fix(code), do: FixPythonModulo.fix(code)
@@ -497,6 +499,16 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       """
 
       assert analyze(fix(code)) == []
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      assert valid_syntax?(
+               fix("""
+               year % 4
+               """)
+             )
     end
   end
 end

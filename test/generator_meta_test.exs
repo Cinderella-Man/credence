@@ -123,11 +123,13 @@ defmodule Credence.GeneratorMetaTest do
       end
     end
 
-    test "the union proves both analyze directions, a transform, and a fixpoint", %{s: s} do
+    test "the union proves both analyze directions, transform, fixpoint, valid output",
+         %{s: s} do
       assert Enum.any?(s.asts, &analyze_positive?/1)
       assert Enum.any?(s.asts, &analyze_negative?/1)
       assert Enum.any?(s.asts, fn ast -> walk_any?(ast, &fix_source_transform?/1) end)
       assert Enum.any?(s.asts, fn ast -> walk_any?(ast, &fixpoint?/1) end)
+      assert Enum.any?(s.asts, fn ast -> walk_any?(ast, &fix_output_valid?/1) end)
       assert Enum.any?(s.asts, fn ast -> references_rule?(ast, s.rule_atom) end)
     end
   end
@@ -151,11 +153,13 @@ defmodule Credence.GeneratorMetaTest do
       end
     end
 
-    test "the union proves both match? directions, attribution, and a transform", %{s: s} do
+    test "the union proves both match? directions, attribution, transform, valid output",
+         %{s: s} do
       assert Enum.any?(s.asts, &asserts_match?/1)
       assert Enum.any?(s.asts, &refutes_match?/1)
       assert Enum.any?(s.asts, fn ast -> references_atom?(ast, s.d.atom) end)
       assert Enum.any?(s.asts, fn ast -> walk_any?(ast, &fix_source_transform?/1) end)
+      assert Enum.any?(s.asts, fn ast -> walk_any?(ast, &fix_output_valid?/1) end)
     end
   end
 end

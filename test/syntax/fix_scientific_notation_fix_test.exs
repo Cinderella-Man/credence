@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.FixScientificNotationFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Syntax.FixScientificNotation
 
   defp fix(code) do
@@ -168,6 +170,14 @@ defmodule Credence.Syntax.FixScientificNotationFixTest do
                x = 1e-10
                """)
              ) == []
+    end
+
+    test "fix output is well-formed (parses)" do
+      assert valid_syntax?(
+               fix("""
+               x = 1e-10
+               """)
+             )
     end
   end
 end

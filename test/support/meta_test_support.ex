@@ -234,6 +234,21 @@ defmodule Credence.MetaTestSupport do
   defp analyze_of_fix?({{:., _, [_, :analyze]}, _, [arg]}), do: walk_any?(arg, &fix_call1?/1)
   defp analyze_of_fix?(_), do: false
 
+  @doc """
+  A `valid_syntax?(fix(...))` assertion — the fix's *output* is well-formed code
+  (it parses), so a fix that corrupts the source into unparseable garbage is
+  caught. (We use `valid_syntax?` for both rounds rather than `compiles?`: it is
+  uniform, side-effect-free, and works on fragment fixtures — `compiles?` is false
+  for correct fixes whose fixtures are bare `def`/expression fragments or need a
+  running ExUnit context.)
+  """
+  def fix_output_valid?({:valid_syntax?, _, [arg]}), do: walk_any?(arg, &fix_call1?/1)
+
+  def fix_output_valid?({{:., _, [_, :valid_syntax?]}, _, [arg]}),
+    do: walk_any?(arg, &fix_call1?/1)
+
+  def fix_output_valid?(_), do: false
+
   @doc "Does the ast `assert` a `match?(...)` (positive — the rule matches a diagnostic)?"
   def asserts_match?(ast) do
     walk_any?(ast, fn

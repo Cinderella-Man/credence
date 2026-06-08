@@ -15,6 +15,9 @@ defmodule Credence.SyntaxMetaTest do
     4. **The fix reaches a fixpoint** — an `analyze(fix(...)) == []` assertion, so
        the fix provably clears the very thing `analyze` flags (not just changes
        bytes).
+    5. **The fix output is well-formed** — a `valid_syntax?(fix(...))` assertion,
+       so a fix that rewrites the source into unparseable garbage is caught (a
+       Syntax rule turns unparseable input into parseable output — this pins it).
 
   Attribution (the issue's `rule:` atom) is intentionally *not* gated here: unlike
   Pattern/Semantic, a Syntax rule's atom is author-chosen and unrelated to the
@@ -50,7 +53,8 @@ defmodule Credence.SyntaxMetaTest do
       positive: Enum.any?(asts, &analyze_positive?/1),
       negative: Enum.any?(asts, &analyze_negative?/1),
       transform: Enum.any?(asts, fn ast -> walk_any?(ast, &fix_source_transform?/1) end),
-      fixpoint: Enum.any?(asts, fn ast -> walk_any?(ast, &fixpoint?/1) end)
+      fixpoint: Enum.any?(asts, fn ast -> walk_any?(ast, &fixpoint?/1) end),
+      valid_output: Enum.any?(asts, fn ast -> walk_any?(ast, &fix_output_valid?/1) end)
     }
   end
 
@@ -95,6 +99,14 @@ defmodule Credence.SyntaxMetaTest do
 
     assert bad == [],
            "Syntax rules with no analyze(fix(x)) == [] assertion (the fix must clear its own flag):\n" <>
+             bullets(bad, fn r -> inspect(r.rule) end)
+  end
+
+  test "every Syntax rule proves its fix output is well-formed (valid_syntax?(fix(x)))" do
+    bad = Enum.reject(reports(), & &1.valid_output)
+
+    assert bad == [],
+           "Syntax rules with no valid_syntax?(fix(x)) assertion (the fix output must parse):\n" <>
              bullets(bad, fn r -> inspect(r.rule) end)
   end
 end

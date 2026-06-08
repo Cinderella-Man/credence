@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.UnusedVariableTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Semantic.UnusedVariable
   # ── Unit tests (rule logic with synthetic diagnostics) ──────────
 
@@ -550,6 +552,27 @@ defmodule Credence.Semantic.UnusedVariableTest do
       }
 
       assert UnusedVariable.fix(source, diag) == source
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      source = """
+      def run(list) do
+        {current, max} = compute(list)
+        max
+      end
+      """
+
+      diag = %{
+        severity: :warning,
+        message: """
+        variable "current" is unused
+        """,
+        position: {2, 4}
+      }
+
+      assert valid_syntax?(UnusedVariable.fix(source, diag))
     end
   end
 end

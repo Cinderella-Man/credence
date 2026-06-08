@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.UndefinedFunction.LocalFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Semantic.UndefinedFunction
   alias Local
 
@@ -521,6 +523,19 @@ defmodule Credence.Semantic.UndefinedFunction.LocalFixTest do
       """
 
       assert fix(source, msg("min", 2)) == source
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      assert valid_syntax?(
+               fix(
+                 """
+                 infinity()
+                 """,
+                 msg("infinity", 0)
+               )
+             )
     end
   end
 end

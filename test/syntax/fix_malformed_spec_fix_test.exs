@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.FixMalformedSpecFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Syntax.FixMalformedSpec
 
   defp analyze(code) do
@@ -268,6 +270,16 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
       """
 
       assert analyze(fix(code)) == []
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      assert valid_syntax?(
+               fix("""
+               @spec foo(integer() :: string())
+               """)
+             )
     end
   end
 end

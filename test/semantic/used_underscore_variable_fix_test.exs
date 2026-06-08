@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Semantic.UsedUnderscoreVariable
 
   defp diag(var_name, line, col \\ 1) do
@@ -318,6 +320,18 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
 
       fixed = Credence.Semantic.fix(source)
       assert fixed == source
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      source = """
+      defmodule M do
+        defp build(_target_n, index) when index > _target_n, do: index
+      end
+      """
+
+      assert valid_syntax?(UsedUnderscoreVariable.fix(source, diag("_target_n", 2)))
     end
   end
 end

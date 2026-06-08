@@ -213,6 +213,8 @@ defmodule Credence.RuleScaffold do
     defmodule __TEST_MODULE__ do
       use ExUnit.Case
 
+      import Credence.RuleCase, only: [valid_syntax?: 1]
+
       alias __RULE_MODULE__
 
       defp analyze(code), do: __RULE__.analyze(code)
@@ -236,6 +238,13 @@ defmodule Credence.RuleScaffold do
         assert analyze(fix(__TQ__
                foo(bar)
                __TQ__)) == []
+      end
+
+      test "fixed output is well-formed (parses)" do
+        # the repaired source must be valid Elixir
+        assert valid_syntax?(fix(__TQ__
+               foo(bar)
+               __TQ__))
       end
     end
     """
@@ -316,6 +325,8 @@ defmodule Credence.RuleScaffold do
     defmodule __TEST_MODULE__ do
       use ExUnit.Case
 
+      import Credence.RuleCase, only: [valid_syntax?: 1]
+
       alias __RULE_MODULE__
 
       defp fix(source, message, line \\ 1) do
@@ -334,6 +345,15 @@ defmodule Credence.RuleScaffold do
 
         message = "TODO matching message"
         assert fix(input, message) == expected
+      end
+
+      test "fixed output is well-formed (parses)" do
+        # the repaired source must be valid Elixir
+        message = "TODO matching message"
+
+        assert valid_syntax?(fix(__TQ__
+               foo(bar)
+               __TQ__, message))
       end
     end
     """

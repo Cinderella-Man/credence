@@ -270,10 +270,13 @@ over the same list).
 
 Syntax and Semantic rules carry their own completeness + substance gates too
 (`test/syntax_meta_test.exs`, `test/semantic_meta_test.exs`): each must test
-`analyze`/`match?` in both directions, a real `fix` transform, and — for Syntax —
-an `analyze(fix(x)) == []` fixpoint; Semantic must pin its issue attribution. The
-generator emits all of these shapes, and `test/generator_meta_test.exs` pins the
-generator's output against the same predicates the gates use.
+`analyze`/`match?` in both directions, a real `fix` transform, a
+`valid_syntax?(fix(x))` assertion that the repaired source parses, and — for
+Syntax — an `analyze(fix(x)) == []` fixpoint; Semantic must pin its issue
+attribution. (`valid_syntax?` comes from `import Credence.RuleCase, only:
+[valid_syntax?: 1]`.) The generator emits all of these shapes, and
+`test/generator_meta_test.exs` pins the generator's output against the same
+predicates the gates use.
 
 ## Project policy
 

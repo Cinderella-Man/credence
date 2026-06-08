@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.FixPythonFloorDivTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Syntax.FixPythonFloorDiv
 
   defp analyze(code), do: FixPythonFloorDiv.analyze(code)
@@ -336,6 +338,16 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       """
 
       assert analyze(fix(code)) == []
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      assert valid_syntax?(
+               fix("""
+               n // 2
+               """)
+             )
     end
   end
 end

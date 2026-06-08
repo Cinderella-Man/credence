@@ -16,6 +16,11 @@ defmodule Credence.SemanticMetaTest do
        its issues under the wrong name. (Semantic atoms follow the module name.)
     4. **A real fix** — at least one `fix(source, ...) == expected` where the
        output differs from the input.
+    5. **The fix output is well-formed** — a `valid_syntax?(fix(...))` assertion,
+       so a fix that rewrites the source into unparseable garbage is caught. (We
+       use `valid_syntax?` rather than `compiles?`: the latter is false for correct
+       fixes whose fixtures are bare `def`/expression fragments or need a running
+       ExUnit context.)
 
   Detection is shape-based (Sourceror); helpers live in `Credence.MetaTestSupport`
   so the generator pin asserts against this same code.
@@ -49,7 +54,8 @@ defmodule Credence.SemanticMetaTest do
       positive: Enum.any?(asts, &asserts_match?/1),
       negative: Enum.any?(asts, &refutes_match?/1),
       attribution: Enum.any?(asts, fn ast -> references_atom?(ast, atom) end),
-      transform: Enum.any?(asts, fn ast -> walk_any?(ast, &fix_source_transform?/1) end)
+      transform: Enum.any?(asts, fn ast -> walk_any?(ast, &fix_source_transform?/1) end),
+      valid_output: Enum.any?(asts, fn ast -> walk_any?(ast, &fix_output_valid?/1) end)
     }
   end
 
@@ -94,6 +100,14 @@ defmodule Credence.SemanticMetaTest do
 
     assert bad == [],
            "Semantic rules with no `fix(source, ...) == expected` where expected differs:\n" <>
+             bullets(bad, fn r -> inspect(r.rule) end)
+  end
+
+  test "every Semantic rule proves its fix output is well-formed (valid_syntax?(fix(x)))" do
+    bad = Enum.reject(reports(), & &1.valid_output)
+
+    assert bad == [],
+           "Semantic rules with no valid_syntax?(fix(x)) assertion (the fix output must parse):\n" <>
              bullets(bad, fn r -> inspect(r.rule) end)
   end
 end

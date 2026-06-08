@@ -253,5 +253,13 @@ defmodule Credence.Syntax.FixDivRemTest do
 
       assert FixDivRem.analyze(FixDivRem.fix(source)) == []
     end
+
+    test "fix output is well-formed (parses)" do
+      assert valid_syntax?(
+               FixDivRem.fix("""
+               x = a div b
+               """)
+             )
+    end
   end
 end

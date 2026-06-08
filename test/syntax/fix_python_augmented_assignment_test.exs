@@ -337,5 +337,13 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
                """)
              ) == []
     end
+
+    test "fix output is well-formed (parses)" do
+      assert valid_syntax?(
+               fix("""
+               count += 1
+               """)
+             )
+    end
   end
 end

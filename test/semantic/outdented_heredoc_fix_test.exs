@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.OutdentedHeredocFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Semantic.OutdentedHeredoc
 
   defp diag(line, col \\ 1) do
@@ -286,6 +288,21 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
 
       fixed = Credence.Semantic.fix(source)
       assert fixed == source
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      source = ~S'''
+      defmodule Example do
+        @doc """
+      Content at column 0.
+        """
+        def foo, do: :ok
+      end
+      '''
+
+      assert valid_syntax?(OutdentedHeredoc.fix(source, diag(3)))
     end
   end
 end
