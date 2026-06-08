@@ -18,18 +18,20 @@ defmodule Credence.RuleTestCompletenessTest do
   """
   use ExUnit.Case, async: true
 
-  @kinds [{"check", "CheckTest"}, {"fix", "FixTest"}, {"equivalence", "EquivalenceTest"}]
+  @kinds ["check", "fix", "equivalence"]
 
+  # Paths/module names come from `Credence.RuleName` (the one naming source of
+  # truth) and the AST membership check from `Credence.MetaTestSupport`, so the
+  # generator pin asserts against the same convention this gate enforces.
   defp specs do
     for rule <- Credence.RuleHelpers.discover_rules(Credence.Pattern.Rule),
-        {kind, suffix} <- @kinds do
-      short = rule |> Module.split() |> List.last()
-
+        derived = Credence.RuleName.from_module(rule),
+        kind <- @kinds do
       %{
         rule: rule,
         kind: kind,
-        path: "test/pattern/#{Macro.underscore(short)}_#{kind}_test.exs",
-        module: Module.concat([Credence, Pattern, :"#{short}#{suffix}"])
+        path: Credence.RuleName.test_path(derived, kind),
+        module: Credence.RuleName.test_module(derived, kind)
       }
     end
   end
@@ -37,16 +39,10 @@ defmodule Credence.RuleTestCompletenessTest do
   defp bullets(entries, line), do: Enum.map_join(entries, "\n", &("  - " <> line.(&1)))
 
   defp defines_module?(path, module) do
-    parts = Module.split(module) |> Enum.map(&String.to_atom/1)
-
-    path
-    |> File.read!()
-    |> Sourceror.parse_string!()
-    |> Macro.prewalk(false, fn
-      {:defmodule, _, [{:__aliases__, _, ^parts} | _]} = node, _ -> {node, true}
-      node, acc -> {node, acc}
-    end)
-    |> elem(1)
+    case Credence.MetaTestSupport.load_ast(path) do
+      {:ok, ast} -> Credence.MetaTestSupport.defines_module?(ast, module)
+      :error -> false
+    end
   end
 
   test "every Pattern rule has all three test files, correctly named" do

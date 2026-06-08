@@ -23,21 +23,6 @@ defmodule Credence.FixtureStringEscapingTest do
 
   @dirs ["test/pattern", "test/semantic", "test/syntax"]
 
-  @verbs MapSet.new([
-           :check,
-           :flagged?,
-           :clean?,
-           :fix,
-           :valid_syntax?,
-           :compiles?,
-           :analyze,
-           :assert_equivalent,
-           :assert_equivalent_module,
-           :assert_effect_trace_equivalent
-         ])
-
-  @fvars MapSet.new([:code, :input, :expected, :source, :fixed, :snippet, :before, :after])
-
   @allow %{
     "test/pattern/no_redundant_binary_syntax_fix_test.exs" =>
       "the fix reprints the whole expression, dropping the input's trailing " <>
@@ -51,71 +36,8 @@ defmodule Credence.FixtureStringEscapingTest do
     @dirs |> Enum.flat_map(&Path.wildcard("#{&1}/**/*_test.exs")) |> Enum.sort()
   end
 
-  # Collect string-like nodes sitting in a fixture position.
-  defp fixtures(ast) do
-    {_, acc} =
-      Macro.prewalk(ast, [], fn node, acc ->
-        add =
-          case node do
-            {op, _, [l, r]} when op in [:==, :!=] ->
-              if verb_call?(l) or verb_call?(r), do: Enum.filter([l, r], &stringish?/1), else: []
-
-            {:=, _, [{var, _, ctx}, rhs]} when is_atom(var) and is_atom(ctx) ->
-              if MapSet.member?(@fvars, var) and stringish?(rhs), do: [rhs], else: []
-
-            {v, _, args} when is_atom(v) and is_list(args) ->
-              if MapSet.member?(@verbs, v), do: Enum.filter(args, &stringish?/1), else: []
-
-            _ ->
-              []
-          end
-
-        {node, add ++ acc}
-      end)
-
-    Enum.uniq(acc)
-  end
-
-  defp stringish?({:__block__, m, [s]}) when is_binary(s), do: Keyword.get(m, :delimiter) != nil
-  defp stringish?({:<<>>, _, _}), do: true
-  defp stringish?({sg, _, _}) when sg in [:sigil_s, :sigil_S], do: true
-  defp stringish?({:<>, _, [l, r]}), do: stringish?(l) and stringish?(r)
-  defp stringish?(_), do: false
-
-  defp verb_call?({v, _, a}) when is_atom(v) and is_list(a), do: MapSet.member?(@verbs, v)
-  defp verb_call?(_), do: false
-
-  # A fixture is acceptable when it's already a heredoc form, interpolated, or
-  # carries code containing `"""` (which a heredoc can't nest).
-  defp ok?({:__block__, m, [s]}) when is_binary(s) do
-    Keyword.get(m, :delimiter) == "\"\"\"" or
-      String.contains?(String.replace(s, "\\\"", "\""), "\"\"\"")
-  end
-
-  # interpolated string — a heredoc keeps its `"""`; a single-line `"...#{x}..."`
-  # is fine, but a multi-line one (only reachable via a `\n` escape) must heredoc.
-  defp ok?({:<<>>, m, parts}),
-    do: Keyword.get(m, :delimiter) == "\"\"\"" or not multiline_interp?(parts)
-
-  defp ok?({sg, m, [{:<<>>, _, [b]}, _]}) when sg in [:sigil_s, :sigil_S] and is_binary(b),
-    do: Keyword.get(m, :delimiter) == "\"\"\"" or String.contains?(b, "\"\"\"")
-
-  # interpolated sigil — same rule as an interpolated string
-  defp ok?({sg, m, [{:<<>>, _, parts}, _]}) when sg in [:sigil_s, :sigil_S],
-    do: Keyword.get(m, :delimiter) == "\"\"\"" or not multiline_interp?(parts)
-  # a "a" <> "b" concatenation is never a heredoc
-  defp ok?({:<>, _, _}), do: false
-  defp ok?(_), do: false
-
-  # The literal segments of an interpolated string/sigil, joined (Sourceror keeps
-  # them in source form, so a newline reads as the two-char `\n` escape). A
-  # fixture that embeds one must heredoc — unless it carries `"""`, which can't
-  # nest in a heredoc and so legitimately stays an escaped string.
-  defp multiline_interp?(parts) do
-    lit = parts |> Enum.filter(&is_binary/1) |> Enum.join()
-    (String.contains?(lit, "\\n") or String.contains?(lit, "\n")) and
-      not String.contains?(lit, "\"\"\"")
-  end
+  # `fixtures/1` and `fixture_ok?/1` live in `Credence.MetaTestSupport`, so the
+  # generator pin asserts against the same code this gate enforces.
 
   test "every code fixture is a heredoc — no escaped string, sigil, or <> concat" do
     bad =
@@ -123,7 +45,7 @@ defmodule Credence.FixtureStringEscapingTest do
           not Map.has_key?(@allow, path),
           {:ok, ast} = load_ast(path),
           node <- fixtures(ast),
-          not ok?(node),
+          not fixture_ok?(node),
           uniq: true,
           do: path
 

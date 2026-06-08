@@ -137,6 +137,19 @@ need. Full reference: the `Credence.Assumptions` moduledoc.
 
 ## Writing your own rules
 
+Start by scaffolding the rule and its tests:
+
+```bash
+mix credence.gen.rule MyRule                # a Pattern rule (default)
+mix credence.gen.rule MyRule --type syntax  # or syntax / semantic
+```
+
+This writes a correctly-named rule plus its test files — heredoc fixtures, the
+right module names, already passing every structural meta gate. The generated
+tests start **red** (they carry real assertions against an empty stub), so
+`mix test` shows you exactly what to fill in: `check`/`fix` (or `analyze`/`match?`)
+and the example fixtures.
+
 Each round has its own kind of rule.
 
 ### Pattern rules

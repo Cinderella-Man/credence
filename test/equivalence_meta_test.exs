@@ -23,33 +23,30 @@ defmodule Credence.EquivalenceMetaTest do
   """
   use ExUnit.Case, async: true
 
-  @assert_fns [:assert_equivalent, :assert_equivalent_module, :assert_effect_trace_equivalent]
-  @mark_fns [
-    :mark_equivalence_cosmetic,
-    :mark_equivalence_unconstructible,
-    :mark_equivalence_repair
-  ]
+  import Credence.MetaTestSupport
 
-  defp rules, do: Credence.RuleHelpers.discover_rules(Credence.Pattern.Rule)
+  # The predicates (`defines_module?/2`, `assert_fns/0`, `mark_fns/0`,
+  # `references_rule?/2`, the Sourceror-based `load_ast/1`) live in
+  # `Credence.MetaTestSupport`, so the generator pin asserts against the same code
+  # this gate enforces — and parsing now goes through Sourceror like everything
+  # else (no `Code.string_to_quoted`).
 
   # Inspect each rule's expected test file and report what is / isn't there.
   defp analyze_all, do: Enum.map(rules(), &analyze/1)
 
   defp analyze(rule) do
-    short = rule |> Module.split() |> List.last()
-    path = "test/pattern/#{Macro.underscore(short)}_equivalence_test.exs"
-    module_parts = [:Credence, :Pattern, String.to_atom(short <> "EquivalenceTest")]
-
+    short = short(rule)
+    path = test_path(rule, "equivalence")
     base = %{rule: rule, short: short, path: path}
 
     case load_ast(path) do
       {:ok, ast} ->
         Map.merge(base, %{
           file_exists: true,
-          defines_module: defines_module?(ast, module_parts),
-          has_real_assert: calls_any?(ast, @assert_fns),
-          has_mark: calls_any?(ast, @mark_fns),
-          references_rule: references_alias?(ast, String.to_atom(short))
+          defines_module: defines_module?(ast, test_module(rule, "equivalence")),
+          has_real_assert: calls_any?(ast, assert_fns()),
+          has_mark: calls_any?(ast, mark_fns()),
+          references_rule: references_rule?(ast, String.to_atom(short))
         })
 
       :error ->
@@ -61,52 +58,6 @@ defmodule Credence.EquivalenceMetaTest do
           references_rule: false
         })
     end
-  end
-
-  defp load_ast(path) do
-    with true <- File.exists?(path),
-         {:ok, ast} <- Code.string_to_quoted(File.read!(path)) do
-      {:ok, ast}
-    else
-      _ -> :error
-    end
-  end
-
-  # Does the AST contain `defmodule <parts> do ... end`?
-  defp defines_module?(ast, parts) do
-    walk_any?(ast, fn
-      {:defmodule, _, [{:__aliases__, _, ^parts}, _]} -> true
-      _ -> false
-    end)
-  end
-
-  # Does the AST call any of `names` (bare calls — the helpers are imported)?
-  defp calls_any?(ast, names) do
-    walk_any?(ast, fn
-      {name, _, args} when is_atom(name) and is_list(args) -> name in names
-      _ -> false
-    end)
-  end
-
-  # Does any module reference (`__aliases__`) end in `last_atom`? Catches both
-  # `alias Credence.Pattern.NoFoo` and a bare `NoFoo` usage; the test module's own
-  # name ends in `NoFooEquivalenceTest`, so it never matches the rule's atom.
-  defp references_alias?(ast, last_atom) do
-    walk_any?(ast, fn
-      {:__aliases__, _, parts} when is_list(parts) -> List.last(parts) == last_atom
-      _ -> false
-    end)
-  end
-
-  defp walk_any?(ast, pred) do
-    {_, found} =
-      Macro.prewalk(ast, false, fn node, acc -> {node, acc or pred.(node)} end)
-
-    found
-  end
-
-  defp bullets(entries, line) do
-    Enum.map_join(entries, "\n", fn e -> "  - " <> line.(e) end)
   end
 
   test "1. every rule has its own <name>_equivalence_test.exs defining <Name>EquivalenceTest" do

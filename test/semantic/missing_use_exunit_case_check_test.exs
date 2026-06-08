@@ -1,7 +1,7 @@
-defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
+defmodule Credence.Semantic.MissingUseExunitCaseCheckTest do
   use ExUnit.Case
 
-  alias Credence.Semantic.MissingUseExUnitCase
+  alias Credence.Semantic.MissingUseExunitCase
 
   # ═══════════════════════════════════════════════════════════════════
   # match?/1 — diagnostic matching
@@ -15,7 +15,7 @@ defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
         position: {13, 3}
       }
 
-      assert MissingUseExUnitCase.match?(diagnostic)
+      assert MissingUseExunitCase.match?(diagnostic)
     end
 
     test "undefined function test/2" do
@@ -25,7 +25,7 @@ defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
         position: 5
       }
 
-      assert MissingUseExUnitCase.match?(diagnostic)
+      assert MissingUseExunitCase.match?(diagnostic)
     end
 
     test "undefined function test/3 (with context)" do
@@ -35,7 +35,7 @@ defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
         position: 7
       }
 
-      assert MissingUseExUnitCase.match?(diagnostic)
+      assert MissingUseExunitCase.match?(diagnostic)
     end
 
     test "undefined function setup/1" do
@@ -45,7 +45,7 @@ defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
         position: 3
       }
 
-      assert MissingUseExUnitCase.match?(diagnostic)
+      assert MissingUseExunitCase.match?(diagnostic)
     end
   end
 
@@ -57,7 +57,7 @@ defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
         position: 5
       }
 
-      refute MissingUseExUnitCase.match?(diagnostic)
+      refute MissingUseExunitCase.match?(diagnostic)
     end
 
     test "warning-level diagnostic even with matching message" do
@@ -67,7 +67,7 @@ defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
         position: 5
       }
 
-      refute MissingUseExUnitCase.match?(diagnostic)
+      refute MissingUseExunitCase.match?(diagnostic)
     end
 
     test "unrelated compile error" do
@@ -77,15 +77,15 @@ defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
         position: 10
       }
 
-      refute MissingUseExUnitCase.match?(diagnostic)
+      refute MissingUseExunitCase.match?(diagnostic)
     end
 
     test "nil diagnostic" do
-      refute MissingUseExUnitCase.match?(nil)
+      refute MissingUseExunitCase.match?(nil)
     end
 
     test "empty map" do
-      refute MissingUseExUnitCase.match?(%{})
+      refute MissingUseExunitCase.match?(%{})
     end
   end
 
@@ -101,7 +101,7 @@ defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
         position: 13
       }
 
-      issue = MissingUseExUnitCase.to_issue(diagnostic)
+      issue = MissingUseExunitCase.to_issue(diagnostic)
       assert issue.rule == :missing_use_exunit_case
       assert issue.meta.line == 13
     end
@@ -113,7 +113,7 @@ defmodule Credence.Semantic.MissingUseExUnitCaseCheckTest do
         position: {7, 3}
       }
 
-      issue = MissingUseExUnitCase.to_issue(diagnostic)
+      issue = MissingUseExunitCase.to_issue(diagnostic)
       assert issue.meta.line == 7
     end
   end

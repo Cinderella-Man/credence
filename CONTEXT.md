@@ -248,6 +248,10 @@ over the same list).
 
 ## Adding a Pattern rule — checklist
 
+0. Run `mix credence.gen.rule <Name>` to scaffold the rule + its
+   check/fix/equivalence test skeletons — correctly named, heredoc fixtures,
+   already passing every structural meta gate. The assertions start red; fill
+   them in as you go.
 1. Pick how you'll build patches: one walk-rewritable shape →
    `patches_from_postwalk`. Drops or adds siblings → `patches_from_ast_transform`.
    Needs the exact original bytes → walk and build the patches by hand.
@@ -256,12 +260,20 @@ over the same list).
 3. Write `fix_patches/2`. Pattern-match Sourceror's wrapped shape when reading
    the tree; wrap any fresh simple values (numbers, strings, tuples) you make so
    `Sourceror.to_string/1` prints them right.
-4. Write tests in `test/pattern/<rule>_test.exs`. Parse the source with
-   `Sourceror.parse_string!/1` before calling `check/2`. Use
-   `RuleHelpers.apply_rule_fix/3` to run the fix from a test.
+4. Fill in the generated tests (`test/pattern/<rule>_{check,fix,equivalence}_test.exs`).
+   Drive the rule through the `Credence.RuleCase` verbs — `check`/`flagged?`/`clean?`
+   and `fix` — not the parser directly (rule tests may not reference `Code`/`Sourceror`;
+   the `NoParserCallsInRuleTests` gate enforces it). Fixtures are heredocs.
 5. Run the whole suite. The after-the-fix check will undo any rule that makes
    code that won't compile (with a debug log) — fix the rule or the helpers,
    don't cover up the symptom.
+
+Syntax and Semantic rules carry their own completeness + substance gates too
+(`test/syntax_meta_test.exs`, `test/semantic_meta_test.exs`): each must test
+`analyze`/`match?` in both directions, a real `fix` transform, and — for Syntax —
+an `analyze(fix(x)) == []` fixpoint; Semantic must pin its issue attribution. The
+generator emits all of these shapes, and `test/generator_meta_test.exs` pins the
+generator's output against the same predicates the gates use.
 
 ## Project policy
 

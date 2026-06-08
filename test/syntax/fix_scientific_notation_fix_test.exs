@@ -160,4 +160,14 @@ defmodule Credence.Syntax.FixScientificNotationFixTest do
       assert fix(code) == code
     end
   end
+
+  describe "fix reaches a fixpoint" do
+    test "fixed output no longer flags" do
+      assert FixScientificNotation.analyze(
+               fix("""
+               x = 1e-10
+               """)
+             ) == []
+    end
+  end
 end

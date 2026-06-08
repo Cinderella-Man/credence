@@ -21,28 +21,9 @@ defmodule Credence.CheckMetaTest do
 
   import Credence.MetaTestSupport
 
-  @check_fns [:check, :flagged?, :clean?]
-
-  # A positive (rule-fires) assertion: an explicit `flagged?`, or a `check(...)`
-  # result used as anything other than `== []` (bound to a list pattern, counted,
-  # `hd`'d, compared `!= []`, …).
-  defp has_positive?(ast) do
-    calls_any?(ast, [:flagged?]) or
-      count_nodes(ast, &check_call?/1) > count_nodes(ast, &check_eq_empty?/1)
-  end
-
-  # A negative (rule-stays-quiet) assertion: an explicit `clean?`, or `check(...) == []`.
-  defp has_negative?(ast) do
-    calls_any?(ast, [:clean?]) or count_nodes(ast, &check_eq_empty?/1) > 0
-  end
-
-  defp check_call?({:check, _, args}) when is_list(args), do: true
-  defp check_call?(_), do: false
-
-  defp check_eq_empty?({:==, _, [a, b]} = node),
-    do: equals_empty_list?(node) and (check_call?(a) or check_call?(b))
-
-  defp check_eq_empty?(_), do: false
+  # The structural predicates (`has_positive?/1`, `has_negative?/1`,
+  # `check_fns/0`, …) live in `Credence.MetaTestSupport`, so the generator pin
+  # asserts against the same code this gate enforces.
 
   defp analyze(rule) do
     path = test_path(rule, "check")
@@ -52,7 +33,7 @@ defmodule Credence.CheckMetaTest do
         %{
           rule: rule,
           path: path,
-          asserts: calls_any?(ast, @check_fns),
+          asserts: calls_any?(ast, check_fns()),
           references_rule: references_rule?(ast, String.to_atom(short(rule))),
           positive: has_positive?(ast),
           negative: has_negative?(ast)

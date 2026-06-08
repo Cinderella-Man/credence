@@ -245,5 +245,13 @@ defmodule Credence.Syntax.FixDivRemTest do
       fixed = FixDivRem.fix(source)
       assert valid_syntax?(fixed)
     end
+
+    test "fix reaches a fixpoint — fixed output no longer flags" do
+      source = """
+      x = a div b
+      """
+
+      assert FixDivRem.analyze(FixDivRem.fix(source)) == []
+    end
   end
 end

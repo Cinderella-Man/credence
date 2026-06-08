@@ -329,5 +329,13 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
       assert valid_syntax?(fixed)
       assert analyze(fixed) == []
     end
+
+    test "fix reaches a fixpoint — fixed output no longer flags" do
+      assert analyze(
+               fix("""
+               count += 1
+               """)
+             ) == []
+    end
   end
 end

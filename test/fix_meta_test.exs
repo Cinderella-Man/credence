@@ -24,38 +24,9 @@ defmodule Credence.FixMetaTest do
 
   import Credence.MetaTestSupport
 
-  @banned_matchers [:contains?, :starts_with?, :ends_with?, :match?]
-
-  defp fix_call?({:fix, _, [_rule | [_code | _]]}), do: true
-  defp fix_call?(_), do: false
-
-  # `=~`, an AST-normalizing round-trip (`normalize_sourceror_ast`, which the old
-  # `norm`/`assert_fix` helpers routed through), or a qualified String/Regex
-  # partial matcher — all in real test logic, not inside a heredoc fixture.
-  defp partial_match?({:=~, _, _}), do: true
-
-  defp partial_match?({{:., _, [{:__aliases__, _, mods}, :normalize_sourceror_ast]}, _, _})
-       when is_list(mods),
-       do: true
-
-  defp partial_match?({{:., _, [{:__aliases__, _, [mod]}, fun]}, _, _})
-       when mod in [:String, :Regex] and fun in @banned_matchers,
-       do: true
-
-  defp partial_match?(_), do: false
-
-  # `fix(Rule, A) == B` where B is not structurally A — i.e. the fix changed something.
-  defp transform?({:==, _, [a, b]}) do
-    case {fix_call?(a), fix_call?(b)} do
-      {true, _} -> fix_arg(a) != src(b)
-      {_, true} -> fix_arg(b) != src(a)
-      _ -> false
-    end
-  end
-
-  defp transform?(_), do: false
-
-  defp fix_arg({:fix, _, [_rule, code | _]}), do: src(code)
+  # The structural predicates (`partial_match?/1`, `transform?/1`, `fix_call?/1`,
+  # …) live in `Credence.MetaTestSupport`, so the generator pin asserts against
+  # the same code this gate enforces.
 
   defp analyze(rule) do
     path = test_path(rule, "fix")

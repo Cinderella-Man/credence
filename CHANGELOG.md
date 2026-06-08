@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Rule scaffolding generator.** `mix credence.gen.rule <Name> [--round
+  pattern|syntax|semantic]` writes a correctly-shaped rule plus its test files
+  (heredoc fixtures, conventional names, passing every structural meta gate). The
+  generated tests start intentionally red so `mix test` shows exactly what to
+  fill in. Syntax and Semantic rules now carry their own completeness + substance
+  gates, and a pin (`test/generator_meta_test.exs`) keeps the generator's output
+  in lock-step with those gates.
+
 - **Safety switches (`assumptions`).** Rules may now declare an assumption —
   a checkable promise about the *data the program handles at runtime* — that
   their fix relies on to be behaviour-preserving. A rule runs only when all of

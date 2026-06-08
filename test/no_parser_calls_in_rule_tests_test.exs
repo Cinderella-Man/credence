@@ -22,8 +22,8 @@ defmodule Credence.NoParserCallsInRuleTestsTest do
     @dirs |> Enum.flat_map(&Path.wildcard("#{&1}/**/*_test.exs")) |> Enum.sort()
   end
 
-  defp parser_ref?({:__aliases__, _, [mod]}), do: mod in [:Code, :Sourceror]
-  defp parser_ref?(_), do: false
+  # `parser_ref?/1` lives in `Credence.MetaTestSupport`, so the generator pin
+  # asserts against the same code this gate enforces.
 
   test "no rule test references Code.* or Sourceror.* directly (route through RuleCase)" do
     offenders =
