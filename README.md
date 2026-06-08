@@ -47,7 +47,7 @@ value the code returns — we leave that rule out of the program entirely.
 ```elixir
 def deps do
 [
-  {:credence, "~> 0.4.3", only: [:dev, :test], runtime: false}
+  {:credence, "~> 0.7.1", only: [:dev, :test], runtime: false}
 ]
 end
 ```
@@ -109,6 +109,21 @@ Credence.analyze(code, rules: [
 ])
 ```
 
+**See which rules would run** for a set of options, without running them:
+
+```elixir
+# every rule across all three rounds, tagged by round, in execution order
+Credence.rule_status(assumptions: :strict)
+#=> [%{round: :pattern, name: "NoSortThenReverse", enabled: true, ...}, ...]
+
+# just the on-names
+Credence.enabled_rules(assumptions: :strict)
+```
+
+Only the Pattern round is filtered by options; Syntax and Semantic rules always
+report `enabled: true` (whether they fire at runtime depends on the code — a
+parse failure or a compiler warning — not the options).
+
 ## Safety switches
 
 A few cleanups are identical to your original code for almost every input, and
@@ -133,7 +148,8 @@ config :credence, assumptions: :strict
 ```
 
 `Credence.Pattern.rule_status/1` shows which rules are on and which promises they
-need. Full reference: the `Credence.Assumptions` moduledoc.
+need (or `Credence.rule_status/1` for the same view across all three rounds).
+Full reference: the `Credence.Assumptions` moduledoc.
 
 ## Writing your own rules
 

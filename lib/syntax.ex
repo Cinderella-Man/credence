@@ -95,7 +95,10 @@ defmodule Credence.Syntax do
     end
   end
 
-  defp rules do
+  @doc false
+  def default_rules do
     RuleHelpers.discover_rules(Credence.Syntax.Rule)
   end
+
+  defp rules, do: default_rules()
 end

@@ -204,7 +204,13 @@ over the same list).
 ## Where things live
 
 - `lib/credence.ex` — the top-level `analyze/2` and `fix/2`. Runs the rounds in
-  order.
+  order. Also `rule_status/1` / `enabled_rules/1` — the opts-only "which rules
+  would run for these options, without running them" view across all three
+  rounds (entries tagged `:round`, in execution order). Only the Pattern round
+  is opts-filtered; Syntax/Semantic rules always come back `enabled: true`
+  (their runtime gating — parse failure, compiler diagnostics — is a property of
+  the code, not the opts). The Pattern slice delegates to
+  `Credence.Pattern.rule_status/1`.
 - `lib/issue.ex` — the `%Issue{}` struct.
 - `lib/rule_helpers.ex` — shared tools: the three patch-building helpers, the
   tree-comparing machinery, the Sourceror unwrappers, the after-the-fix check,

@@ -1350,4 +1350,58 @@ defmodule CredenceTest do
       assert result.code == expected
     end
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # RULE STATUS — which rules would run for given opts (no run)
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "rule_status/1 — all rounds" do
+    test "covers every rule across all three rounds, tagged by round, in execution order" do
+      status = Credence.rule_status()
+      rounds = Enum.map(status, & &1.round) |> Enum.uniq()
+
+      # Each round's rules are contiguous and in Syntax → Semantic → Pattern order.
+      assert rounds == [:syntax, :semantic, :pattern]
+
+      counts = Enum.frequencies_by(status, & &1.round)
+      assert counts[:syntax] == length(Credence.Syntax.default_rules())
+      assert counts[:semantic] == length(Credence.Semantic.default_rules())
+      assert counts[:pattern] == length(Credence.Pattern.default_rules())
+    end
+
+    test "Syntax and Semantic rules are never opts-filtered (always enabled, no assumptions)" do
+      for entry <- Credence.rule_status(assumptions: :strict),
+          entry.round in [:syntax, :semantic] do
+        assert entry.enabled
+        assert entry.assumptions == []
+        assert entry.missing == []
+      end
+    end
+
+    test "Pattern entries mirror Credence.Pattern.rule_status/1 under the same opts" do
+      opts = [assumptions: :strict]
+
+      pattern_from_top =
+        Credence.rule_status(opts)
+        |> Enum.filter(&(&1.round == :pattern))
+        |> Enum.map(&Map.delete(&1, :round))
+
+      assert pattern_from_top == Credence.Pattern.rule_status(opts)
+    end
+
+    test ":strict turns off assumption-gated Pattern rules" do
+      defaults = Credence.enabled_rules()
+      strict = Credence.enabled_rules(assumptions: :strict)
+
+      # A grapheme rule needs single_codepoint_graphemes; off under :strict.
+      assert "NoCodepointStringReverse" in defaults
+      refute "NoCodepointStringReverse" in strict
+    end
+
+    test "enabled_rules/1 is the on-names from rule_status/1, in the same order" do
+      status = Credence.rule_status(assumptions: :strict)
+      expected = status |> Enum.filter(& &1.enabled) |> Enum.map(& &1.name)
+      assert Credence.enabled_rules(assumptions: :strict) == expected
+    end
+  end
 end
