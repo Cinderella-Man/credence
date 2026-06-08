@@ -117,6 +117,10 @@ defmodule Credence.Pattern do
 
       not RuleHelpers.compiles?(fixed) ->
         Logger.warning("[credence_fix] #{name}: fix produced non-compiling output, reverting")
+        # Visibility (Tunex `08` T1.3): log the broken before/after so a reverted
+        # fix's diff lands in the row log for the deterministic bugfix-lane seed.
+        # The revert *logic* is unchanged — `:reverted` is already a clean signal.
+        RuleHelpers.log_diff(name, source, fixed)
 
         {source, [{rule, :reverted} | applied]}
 

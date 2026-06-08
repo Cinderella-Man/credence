@@ -127,8 +127,13 @@ defmodule Credence.Semantic do
     |> Enum.reduce({source, []}, fn diagnostic, {src, applied} ->
       case find_matching_rule(diagnostic) do
         nil ->
+          # Log the FULL diagnostic (message + position + severity), not just
+          # the message — this is the new-semantic-rule signal (Tunex `07`
+          # §3.3/§3.6, `08` T1.3b): the implementer needs the position +
+          # severity to build a *real* test `diag` + `match?`, so a fabricated
+          # diagnostic can't ship a rule that's dead in production.
           Logger.debug(
-            "[credence_fix] no rule matched diagnostic: #{inspect(diagnostic.message)}"
+            "[credence_fix] no rule matched diagnostic: #{inspect(diagnostic)}"
           )
 
           {src, applied}
