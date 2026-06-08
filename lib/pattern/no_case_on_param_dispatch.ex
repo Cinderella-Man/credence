@@ -187,9 +187,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatch do
     range = Sourceror.get_range(node)
 
     change =
-      clauses
-      |> Enum.map(&clause_to_head(&1, kind, name, var, range))
-      |> Enum.join("\n")
+      Enum.map_join(clauses, "\n", &clause_to_head(&1, kind, name, var, range))
 
     %{range: range, change: change}
   end

@@ -331,9 +331,8 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   # ── 2-clause if pattern ────────────────────────────────────────────
 
   defp analyze_if_pair([a, b]) do
-    with :error <- try_if(a, b),
-         :error <- try_if(b, a) do
-      :error
+    with :error <- try_if(a, b) do
+      try_if(b, a)
     end
   end
 

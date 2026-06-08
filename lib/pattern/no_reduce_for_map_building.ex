@@ -156,9 +156,8 @@ defmodule Credence.Pattern.NoReduceForMapBuilding do
   defp check_node(_), do: :error
 
   defp check_reduce_args(args, meta) do
-    with :error <- check_map_reduce(args, meta),
-         :error <- check_mapset_reduce(args, meta) do
-      :error
+    with :error <- check_map_reduce(args, meta) do
+      check_mapset_reduce(args, meta)
     end
   end
 

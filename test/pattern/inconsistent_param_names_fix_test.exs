@@ -579,7 +579,7 @@ defmodule Credence.Pattern.InconsistentParamNamesFixTest do
       """
 
       assert fix(InconsistentParamNames, code) == expected
-      assert length(check(InconsistentParamNames, fix(InconsistentParamNames, code))) >= 1
+      assert check(InconsistentParamNames, fix(InconsistentParamNames, code)) != []
     end
 
     test "fixed code produces zero issues (original validate_answers_match bug)" do

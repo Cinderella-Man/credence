@@ -191,9 +191,8 @@ defmodule Credence.Pattern.NoManualListReduce do
   defp analyze(_), do: :error
 
   defp analyze_pair([a, b]) do
-    with :error <- try_reduce(a, b),
-         :error <- try_reduce(b, a) do
-      :error
+    with :error <- try_reduce(a, b) do
+      try_reduce(b, a)
     end
   end
 
