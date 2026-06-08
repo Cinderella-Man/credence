@@ -47,7 +47,10 @@ defmodule Credence.Pattern.NoDeadMapUpdateCheckTest do
             "[]",
             "-1"
           ] do
-        code = "map |> Map.update(key, #{default}, & &1) |> Map.drop([key])\n"
+        code = """
+        map |> Map.update(key, #{default}, & &1) |> Map.drop([key])
+        """
+
         assert length(check(NoDeadMapUpdate, code)) == 1, "expected fire for default #{default}"
       end
     end

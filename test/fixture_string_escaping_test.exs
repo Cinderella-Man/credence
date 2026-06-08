@@ -12,8 +12,10 @@ defmodule Credence.FixtureStringEscapingTest do
 
   Introspected with Sourceror (delimiter-aware). A fixture is OK when it's a
   heredoc, a `~S\"""...\"""` sigil-heredoc (also triple quotes, raw for `\#{}` code),
-  an interpolated string/sigil, or code that contains `\"""` (can't nest in a
-  heredoc). Plus a tiny file allow-list for fixtures a heredoc breaks structurally.
+  a *single-line* interpolated string/sigil, or code that contains `\"""` (can't
+  nest in a heredoc). A multi-line interpolated string (one with a `\\n` escape) is
+  **not** OK — it must heredoc, same as a multi-line plain string. Plus a tiny
+  file allow-list for fixtures a heredoc breaks structurally.
   """
   use ExUnit.Case, async: true
 
@@ -90,17 +92,30 @@ defmodule Credence.FixtureStringEscapingTest do
       String.contains?(String.replace(s, "\\\"", "\""), "\"\"\"")
   end
 
-  # interpolated string
-  defp ok?({:<<>>, _, _}), do: true
+  # interpolated string — a heredoc keeps its `"""`; a single-line `"...#{x}..."`
+  # is fine, but a multi-line one (only reachable via a `\n` escape) must heredoc.
+  defp ok?({:<<>>, m, parts}),
+    do: Keyword.get(m, :delimiter) == "\"\"\"" or not multiline_interp?(parts)
 
   defp ok?({sg, m, [{:<<>>, _, [b]}, _]}) when sg in [:sigil_s, :sigil_S] and is_binary(b),
     do: Keyword.get(m, :delimiter) == "\"\"\"" or String.contains?(b, "\"\"\"")
 
-  # interpolated sigil
-  defp ok?({sg, _, _}) when sg in [:sigil_s, :sigil_S], do: true
+  # interpolated sigil — same rule as an interpolated string
+  defp ok?({sg, m, [{:<<>>, _, parts}, _]}) when sg in [:sigil_s, :sigil_S],
+    do: Keyword.get(m, :delimiter) == "\"\"\"" or not multiline_interp?(parts)
   # a "a" <> "b" concatenation is never a heredoc
   defp ok?({:<>, _, _}), do: false
   defp ok?(_), do: false
+
+  # The literal segments of an interpolated string/sigil, joined (Sourceror keeps
+  # them in source form, so a newline reads as the two-char `\n` escape). A
+  # fixture that embeds one must heredoc — unless it carries `"""`, which can't
+  # nest in a heredoc and so legitimately stays an escaped string.
+  defp multiline_interp?(parts) do
+    lit = parts |> Enum.filter(&is_binary/1) |> Enum.join()
+    (String.contains?(lit, "\\n") or String.contains?(lit, "\n")) and
+      not String.contains?(lit, "\"\"\"")
+  end
 
   test "every code fixture is a heredoc — no escaped string, sigil, or <> concat" do
     bad =
