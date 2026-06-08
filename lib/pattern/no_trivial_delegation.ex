@@ -239,7 +239,9 @@ defmodule Credence.Pattern.NoTrivialDelegation do
           args = extract_func_args(head)
           body = extract_do_body(body_kw)
 
-          if is_atom(name) and is_list(args) and body != nil do
+          # `extract_func_name/1` returns an atom name or `nil`; reject the
+          # `nil` sentinel explicitly (`is_atom(nil)` is true, so it would not).
+          if name != nil and is_list(args) and body != nil do
             clause = %{
               type: dt,
               name: name,

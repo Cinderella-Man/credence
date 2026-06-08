@@ -2,7 +2,7 @@ defmodule Credence.Pattern do
   @moduledoc """
   Pattern phase — detects and fixes anti-patterns in Elixir code.
 
-  Delegates to the 80+ rules implementing `Credence.Pattern.Rule` behaviour.
+  Delegates to the 117 rules implementing `Credence.Pattern.Rule` behaviour.
   Rules are discovered automatically and run in priority order (lower first),
   with module name as tiebreaker for determinism.
   """
@@ -98,9 +98,8 @@ defmodule Credence.Pattern do
     {code, applied}
   end
 
-  # Dispatch to either the new patch-based interface or the legacy
-  # whole-source interface, per-rule. See
-  # `Credence.RuleHelpers.apply_rule_fix/3` for the routing logic.
+  # Apply the rule's `fix_patches/2` to the source. See
+  # `Credence.RuleHelpers.apply_rule_fix/3`.
   defp invoke_fix(rule, source, opts), do: RuleHelpers.apply_rule_fix(rule, source, opts)
 
   # Compile-output gate. A rule whose `fix/2` returns source that no

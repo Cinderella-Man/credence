@@ -88,7 +88,9 @@ defmodule Credence.Syntax.FixDivRem do
 
   defp do_in_capture?(<<?(, rest::binary>>, stack), do: do_in_capture?(rest, [:regular | stack])
   defp do_in_capture?(<<?), rest::binary>>, [_ | stack]), do: do_in_capture?(rest, stack)
-  defp do_in_capture?(<<?), _rest::binary>>, []), do: do_in_capture?([], [])
+  # Unbalanced `)` with nothing on the stack — skip it and keep scanning
+  # (a capture `&(` may still open later in the prefix).
+  defp do_in_capture?(<<?), rest::binary>>, []), do: do_in_capture?(rest, [])
   defp do_in_capture?(<<_, rest::binary>>, stack), do: do_in_capture?(rest, stack)
 
   # Rewrites `prefix left_expr div right_expr` → `prefix div(left_expr, right_expr)`

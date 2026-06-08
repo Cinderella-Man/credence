@@ -102,8 +102,10 @@ defmodule Credence.Pattern.NoFilterThenFirst do
                 rebuild_pipeline(before, find_step, after_)
               end
 
-            before != nil ->
-              # 1-arg filter in pipeline context: ... |> Stream.filter(pred)
+            before != [] ->
+              # 1-arg filter in pipeline context: ... |> Stream.filter(pred).
+              # A preceding step supplies the collection; without one (before
+              # == []) there is no enumerable for Enum.find, so skip below.
               rebuild_pipeline(before, find_step, after_)
 
             true ->

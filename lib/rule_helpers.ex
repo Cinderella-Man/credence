@@ -202,60 +202,6 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
-  Strips `Sourceror.parse_string!/1`'s `{:__block__, meta, [value]}`
-  wrappers around literals, atoms, 2-tuples, and lists — producing the
-  bare-literal shape that `Macro.to_string/1` expects for rendering.
-
-  Used by test helpers to canonicalize ASTs for structural comparison
-  (parse → normalize → `Macro.to_string` → string compare). Not used
-  by production rules — all rules pattern-match Sourceror's wrapped
-  form directly.
-
-  Unwraps:
-
-  - Literals: `{:__block__, _, [1]}` → `1`
-  - Atoms: `{:__block__, _, [:do]}` → `:do`
-  - 2-tuples: `{:__block__, _, [{a, b}]}` → `{a, b}`
-  - Lists: `{:__block__, _, [[a, b]]}` → `[a, b]`
-  """
-  @spec normalize_sourceror_ast(Macro.t()) :: Macro.t()
-  def normalize_sourceror_ast(ast) do
-    Macro.postwalk(ast, &unwrap_sourceror_node/1)
-  end
-
-  defp unwrap_sourceror_node({:__block__, _meta, [val]})
-       when is_integer(val) or is_float(val) or is_binary(val) or is_atom(val) do
-    val
-  end
-
-  # Sourceror wraps list literals in {:__block__, meta, [[elements...]]}
-  # for position tracking (closing bracket location, etc.).
-  # Standard AST has bare lists.
-  defp unwrap_sourceror_node({:__block__, _meta, [val]}) when is_list(val) do
-    val
-  end
-
-  # Sourceror wraps single-expression bodies in {:__block__, meta, [expr]}
-  # for position tracking. Standard AST has just the expression directly.
-  # Only unwrap when the child is a single AST node (3-tuple), not
-  # multi-expression blocks which have 2+ children.
-  defp unwrap_sourceror_node({:__block__, _meta, [expr]})
-       when is_tuple(expr) and tuple_size(expr) == 3 do
-    expr
-  end
-
-  defp unwrap_sourceror_node({:__block__, _meta, [{left, right}]})
-       when not (is_list(right) and is_atom(left)) do
-    # Unwrap 2-tuples that Sourceror wrapped for position metadata.
-    # Guard excludes 3-tuple AST nodes that happen to look like {atom, list}
-    # — those are real AST nodes like {:foo, [], nil} (impossible here since
-    # nil is not a list, but we guard defensively).
-    {left, right}
-  end
-
-  defp unwrap_sourceror_node(node), do: node
-
-  @doc """
   Computes a line-by-line diff between two strings.
 
   Returns a list of `{:removed, line_no, text}` and `{:added, line_no, text}`
@@ -283,14 +229,14 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
-  Invokes a Pattern rule's fix on `source`, dispatching to either the
-  new patch-based `fix_patches/2` callback (if the rule has migrated)
-  or the legacy `fix/2` callback.
+  Invokes a Pattern rule's fix on `source`: parses to a Sourceror tree,
+  calls the rule's `fix_patches/2`, applies the returned patches with
+  `Sourceror.patch_string/2`, and strips per-line trailing whitespace.
+  An empty patch list returns `source` unchanged.
 
   Used by both the orchestrator (`Credence.Pattern.run_fixable_rules/3`)
-  and rule tests, so test assertions on the post-fix source string
-  continue working unchanged regardless of which side of the
-  migration a rule is on.
+  and rule tests, so test assertions on the post-fix source string run
+  through the exact bytes the pipeline ships.
   """
   @spec apply_rule_fix(module(), String.t(), keyword()) :: String.t()
   def apply_rule_fix(rule, source, opts \\ []) do

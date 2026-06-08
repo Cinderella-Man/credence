@@ -47,7 +47,7 @@ and finds its rules by itself through `RuleHelpers.discover_rules/1`.
    yet. Rules are `String.t() -> String.t()`.
 2. **Semantic** (`lib/semantic/`) — fixes for compiler warnings. Rules match
    against `Code.with_diagnostics/1` output and patch the text.
-3. **Pattern** (`lib/pattern/`) — the bulk of Credence: 76 rules that work on
+3. **Pattern** (`lib/pattern/`) — the bulk of Credence: 117 rules that work on
    the tree.
 
 The rounds run one after another; if syntax problems are still there, the
@@ -84,7 +84,7 @@ Rules differ in *how* they work out their patches, not in what they hand back:
 
 - **`RuleHelpers.patches_from_postwalk(ast, matcher)`** — one walk over the tree
   with a matcher; the helper compares the original tree to the changed one and
-  hands back one patch per outermost change. Used by ~50 rules.
+  hands back one patch per outermost change. The most common path (~75 rules).
 - **`RuleHelpers.patches_from_ast_transform(ast, source, transform_fn)`** — any
   tree-to-tree change; the helper prints the result with `Sourceror.to_string/1`,
   re-parses, and compares. Use this when the change drops or reorders siblings,
@@ -93,6 +93,12 @@ Rules differ in *how* they work out their patches, not in what they hand back:
   `[%{range: ..., change: ...}]`. Use this when the *original bytes* of the kept
   part must stay exactly as written — usually because Sourceror's printer would
   drop them (see the surprises below).
+
+Underneath both `patches_from_*` helpers is **`RuleHelpers.patches_from_diff(orig,
+transformed)`** — the AST-diff primitive that emits one patch per outermost change.
+A rule that has already built its own transformed tree (so it needs neither a
+single-matcher walk nor a re-parse) can call it directly; `no_hd_tl_when_cons_bound`
+is the one rule that does.
 
 There is no text-level helper. `patches_from_fix_source` existed during the
 move-over and was deleted once the last rule switched off it.
@@ -295,8 +301,8 @@ predicates the gates use.
   bits of code inside a rule uses `Sourceror.parse_string!/1`, not
   `Code.string_to_quoted!/1`.
 - **No `normalize_sourceror_ast/1` anywhere — rules or tests.** Every Pattern rule
-  walks Sourceror's wrapped tree from start to finish. The helper still exists in
-  `RuleHelpers` but is now unused: it used to be a shortcut inside three rules
+  walks Sourceror's wrapped tree from start to finish. The helper has been deleted
+  from `RuleHelpers` (it was unused): it used to be a shortcut inside three rules
   (removed because it smuggled the built-in tree shape into a Sourceror-only
   project), and a `norm`/`assert_fix` round-trip inside two fix tests (removed when
   those went byte-exact). Fix tests compare the rule's exact bytes with `==`; a

@@ -9,6 +9,10 @@ defmodule Credence.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      # `:mix` carries the Mix.Task behaviour + Mix.{shell,raise}/Mix.Task.run
+      # used by the credence.gen.rule task; without it Dialyzer reports those
+      # as unknown functions.
+      dialyzer: [plt_add_apps: [:mix]],
       description:
         "An Elixir semantic linter that detects performance issues and non-idiomatic code via AST analysis.",
       package: package()
