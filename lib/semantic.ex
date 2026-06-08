@@ -173,7 +173,10 @@ defmodule Credence.Semantic do
     Enum.find(rules(), fn rule -> rule.match?(diagnostic) end)
   end
 
-  defp rules do
+  @doc false
+  def default_rules do
     RuleHelpers.discover_rules(Credence.Semantic.Rule)
   end
+
+  defp rules, do: default_rules()
 end
