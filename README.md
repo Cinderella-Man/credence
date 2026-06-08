@@ -17,7 +17,7 @@ fixes a different kind of problem:
 ```
 Credence.Syntax    → can the parser even read it?   (fixes the raw text)
 Credence.Semantic  → does the compiler accept it?   (fixes compiler warnings)
-Credence.Pattern   → is it written the Elixir way?  (~76 deeper rules)
+Credence.Pattern   → is it written the Elixir way?  (deeper idiomatic/performance rules)
 ```
 
 **Round 1 — Syntax** fixes code that won't even parse — for example
