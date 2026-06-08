@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoSortThenAtCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoSortThenAt
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoSortThenAt.check(ast, [])
-  end
 
   # ── FLAGGED: atom direction + endpoint index ────────────────────────────
 
@@ -19,7 +14,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags Enum.sort |> Enum.at(-1)" do
@@ -29,7 +24,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags Enum.sort(:desc) |> Enum.at(0)" do
@@ -39,7 +34,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags nested Enum.at(Enum.sort(...), 0)" do
@@ -49,7 +44,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags nested Enum.at(Enum.sort(...), -1)" do
@@ -59,7 +54,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
   end
 
@@ -73,7 +68,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags &<=/2 |> Enum.at(0)" do
@@ -83,7 +78,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags &>=/2 |> Enum.at(-1)" do
@@ -93,7 +88,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags nested Enum.at(Enum.sort(&>=/2), 0)" do
@@ -103,7 +98,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
   end
 
@@ -117,7 +112,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags fn a, b -> a < b end |> Enum.at(-1)" do
@@ -127,7 +122,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags flipped fn a, b -> b < a end |> Enum.at(0)" do
@@ -137,7 +132,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
 
     test "flags nested Enum.at(Enum.sort(fn), -1)" do
@@ -147,7 +142,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_sort_then_at}] = check(code)
+      assert [%Issue{rule: :no_sort_then_at}] = check(NoSortThenAt, code)
     end
   end
 
@@ -161,7 +156,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag nested Enum.at(Enum.sort(...), div(n, 2))" do
@@ -171,7 +166,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag Enum.sort |> Enum.at(mid)" do
@@ -184,7 +179,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag &>=/2 with variable index" do
@@ -194,7 +189,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag anonymous comparator with variable index" do
@@ -204,7 +199,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
   end
 
@@ -218,7 +213,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag Enum.sort |> Enum.at(3)" do
@@ -228,7 +223,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag nested Enum.at(Enum.sort(...), 2)" do
@@ -238,7 +233,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag Enum.sort |> Enum.at(-2)" do
@@ -248,7 +243,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag &>=/2 with non-endpoint literal" do
@@ -258,7 +253,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
   end
 
@@ -272,7 +267,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag variable direction |> Enum.at(-1)" do
@@ -282,7 +277,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag nested Enum.at(Enum.sort(nums, dir), 0)" do
@@ -292,7 +287,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag opaque comparator |> Enum.at(0)" do
@@ -302,7 +297,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag opaque comparator |> Enum.at(-1)" do
@@ -312,7 +307,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
   end
 
@@ -326,7 +321,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
 
     test "does not flag Enum.sort |> Enum.take" do
@@ -336,7 +331,7 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoSortThenAt, code) == []
     end
   end
 end

@@ -166,6 +166,36 @@ defmodule Credence.Pattern.NoStringConcatInLoop do
     end
   end
 
+  # Block body: fn elem, acc -> stmts...; acc <> expr end
+  defp extract_simple_concat(
+         {:fn, _,
+          [
+            {:->, _,
+             [
+               [{_elem_ctx, _, _} = elem_var, {acc_name, _, _}],
+               {:__block__, _, stmts}
+             ]}
+          ]}
+       )
+       when length(stmts) > 1 do
+    {preceding, [last]} = Enum.split(stmts, -1)
+
+    case last do
+      {:<>, _, [left, right]} ->
+        if match?({^acc_name, _, _}, left) and
+             not references_var?(right, acc_name) and
+             not Enum.any?(preceding, &references_var?(&1, acc_name)) do
+          new_body = {:__block__, [], preceding ++ [right]}
+          {:ok, elem_var, new_body}
+        else
+          :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
   defp extract_simple_concat(_), do: :error
 
   defp references_var?(ast, name) do

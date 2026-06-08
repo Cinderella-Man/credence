@@ -1,60 +1,50 @@
 defmodule Credence.Pattern.PreferErlangFloat do
   @moduledoc """
-  Replaces bare-variable float coercion tricks with explicit `:erlang.float/1`.
+  Replaces float-coercion arithmetic tricks with explicit `:erlang.float/1`.
 
-  LLMs (and developers) use `n * 1.0`, `n / 1.0`, `n + 0.0`, or `n - 0.0`
-  to coerce an integer to a float. These are arithmetic tricks borrowed from
-  Python — `:erlang.float/1` expresses the same intent explicitly and works
-  whether the input is an integer (converts) or already a float (returns it).
+  LLMs (and developers) use `x * 1.0`, `x / 1.0`, `x + 0.0`, or `x - 0.0` to
+  coerce a number to a float. These are arithmetic idioms borrowed from Python;
+  `:erlang.float/1` expresses the same intent explicitly and works whether the
+  input is an integer (converts) or already a float (returns it unchanged).
 
-  This rule only handles **bare-variable** operands. Compound expressions
-  and function calls (`(a + b) * 1.0`, `Enum.sum(list) * 1.0`) are handled
-  by `NoIdentityFloatCoercion`, which removes the identity outright — those
-  are overwhelmingly Python-isms, not intentional coercion.
+  The rewrite **preserves the float result** — it does not delete the coercion.
+  Deleting `* 1.0` (an earlier mistake of a now-merged sibling rule) would turn
+  `6.0` back into `6`, a value-kind change; wrapping in `:erlang.float/1` keeps
+  the value identical for every number.
 
-  ## Priority
-
-  This rule runs at priority 501 (above the default 500) so it processes
-  bare-variable sites **before** `NoIdentityFloatCoercion`. This matters
-  when both kinds share a line — e.g. `{n * 1.0, Enum.sum(xs) * 1.0}`.
-  Without the higher priority, `NoIdentityFloatCoercion`'s line-level regex
-  would strip all `* 1.0` on the line, including the bare-variable site
-  that should become `:erlang.float(n)`.
+  Applies to **any operand shape** — bare variables (`n * 1.0`) and compound
+  expressions alike (`Enum.sum(list) * 1.0`, `(a + b) * 1.0`).
 
   ## Detected patterns
 
-      var * 1.0      1.0 * var
-      var / 1.0
-      var + 0.0      0.0 + var
-      var - 0.0
+      x * 1.0      1.0 * x
+      x / 1.0
+      x + 0.0      0.0 + x
+      x - 0.0
 
-  Note: `0.0 - var` is NOT flagged — it negates, not coerces.
+  Note: `0.0 - x` is NOT flagged — it negates, not coerces.
+
+  ## Behaviour note
+
+  For every numeric operand the rewrite is exact (same float value). A
+  *non-number* operand raises in both forms — `x * 1.0` raises `ArithmeticError`
+  while `:erlang.float(x)` raises `ArgumentError` — so the code crashes either
+  way and only the exception module differs. (A non-number operand at a
+  float-coercion site is already-broken code.)
 
   ## Bad
 
       defp to_float(n) when is_integer(n), do: n * 1.0
-
-      count = count + 0.0
+      avg = total / count * 1.0
 
   ## Good
 
       defp to_float(n) when is_integer(n), do: :erlang.float(n)
-
-      count = :erlang.float(count)
-
-  ## Auto-fix
-
-  Replaces the identity arithmetic with `:erlang.float(var)`.
+      avg = :erlang.float(total / count)
   """
 
   use Credence.Pattern.Rule
   alias Credence.Issue
-
-  # Run before NoIdentityFloatCoercion (priority 500) so bare-variable
-  # sites are rewritten to :erlang.float(var) before the sibling rule's
-  # line-level regex strips all `* 1.0` indiscriminately.
-  @impl true
-  def priority, do: 499
 
   @impl true
   def check(ast, _opts) do
@@ -62,12 +52,12 @@ defmodule Credence.Pattern.PreferErlangFloat do
       Macro.prewalk(ast, [], fn
         {op, meta, [left, right]} = node, acc when op in [:*, :/, :+, :-] ->
           cond do
-            # bare_var OP identity (right-hand identity)
-            identity_right?(op, unwrap_float(right)) and bare_var?(left) ->
+            # operand OP identity (right-hand identity)
+            identity_right?(op, unwrap_float(right)) ->
               {node, [build_issue(meta) | acc]}
 
-            # identity OP bare_var (left-hand identity, commutative ops only)
-            op in [:*, :+] and identity_left?(op, unwrap_float(left)) and bare_var?(right) ->
+            # identity OP operand (left-hand identity, commutative ops only)
+            op in [:*, :+] and identity_left?(op, unwrap_float(left)) ->
               {node, [build_issue(meta) | acc]}
 
             true ->
@@ -86,18 +76,15 @@ defmodule Credence.Pattern.PreferErlangFloat do
     Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_to_erlang_float/1)
   end
 
-  # Replace identity arithmetic on a bare variable with `:erlang.float(var)`.
-  # AST patterns are precise enough that this rule and `NoIdentityFloatCoercion`
-  # (priority 500) cleanly partition their targets — no line-level
-  # coordination needed: this rule fires only on bare vars, the other
-  # only on non-bare expressions.
+  # Replace identity-coercion arithmetic with `:erlang.float(operand)`, where the
+  # operand is whichever side is not the `1.0` / `0.0` identity literal.
   defp maybe_to_erlang_float({op, _meta, [left, right]} = node) when op in [:*, :/, :+, :-] do
     cond do
-      identity_right?(op, unwrap_float(right)) and bare_var?(left) ->
-        erlang_float(unwrap_var(left))
+      identity_right?(op, unwrap_float(right)) ->
+        erlang_float(unwrap_block(left))
 
-      op in [:*, :+] and identity_left?(op, unwrap_float(left)) and bare_var?(right) ->
-        erlang_float(unwrap_var(right))
+      op in [:*, :+] and identity_left?(op, unwrap_float(left)) ->
+        erlang_float(unwrap_block(right))
 
       true ->
         node
@@ -106,17 +93,14 @@ defmodule Credence.Pattern.PreferErlangFloat do
 
   defp maybe_to_erlang_float(node), do: node
 
-  defp unwrap_var({:__block__, _, [inner]}), do: inner
-  defp unwrap_var(node), do: node
+  # Strip a single Sourceror `{:__block__, _, [inner]}` wrapper (around a bare
+  # variable or literal); leave compound expression nodes untouched.
+  defp unwrap_block({:__block__, _, [inner]}), do: inner
+  defp unwrap_block(node), do: node
 
-  defp erlang_float(var_node) do
-    {{:., [], [:erlang, :float]}, [], [var_node]}
+  defp erlang_float(operand_node) do
+    {{:., [], [:erlang, :float]}, [], [operand_node]}
   end
-
-  # Sourceror wraps variables in {:__block__, _, [var_node]}.
-  defp bare_var?({:__block__, _, [inner]}), do: bare_var?(inner)
-  defp bare_var?({name, _meta, ctx}) when is_atom(name) and is_atom(ctx), do: true
-  defp bare_var?(_), do: false
 
   defp identity_right?(:*, 1.0), do: true
   defp identity_right?(:/, 1.0), do: true
@@ -136,7 +120,7 @@ defmodule Credence.Pattern.PreferErlangFloat do
     %Issue{
       rule: :prefer_erlang_float,
       message:
-        "Use `:erlang.float(var)` for int → float coercion instead of " <>
+        "Use `:erlang.float(x)` for number → float coercion instead of " <>
           "arithmetic identity tricks (`* 1.0`, `/ 1.0`, `+ 0.0`, `- 0.0`).",
       meta: %{line: Keyword.get(meta, :line)}
     }

@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoPipedRegexReplace
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoPipedRegexReplace.check(ast, [])
-  end
 
   describe "flags piped Regex.replace" do
     test "flags simple pipeline" do
@@ -17,7 +12,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_piped_regex_replace}] = check(code)
+      assert [%Issue{rule: :no_piped_regex_replace}] = check(NoPipedRegexReplace, code)
     end
 
     test "flags multi-line pipeline" do
@@ -31,7 +26,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_piped_regex_replace}] = check(code)
+      assert [%Issue{rule: :no_piped_regex_replace}] = check(NoPipedRegexReplace, code)
     end
 
     test "flags pipeline with options argument" do
@@ -41,7 +36,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
       end
       """
 
-      assert [%Issue{rule: :no_piped_regex_replace}] = check(code)
+      assert [%Issue{rule: :no_piped_regex_replace}] = check(NoPipedRegexReplace, code)
     end
 
     test "flags multiple piped Regex.replace calls" do
@@ -55,7 +50,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoPipedRegexReplace, code)
       assert length(issues) == 2
     end
   end
@@ -68,7 +63,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoPipedRegexReplace, code) == []
     end
 
     test "does not flag String.replace in pipeline" do
@@ -78,7 +73,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoPipedRegexReplace, code) == []
     end
 
     test "does not flag Regex.replace inside then/2" do
@@ -90,7 +85,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoPipedRegexReplace, code) == []
     end
 
     test "does not flag unrelated pipe" do
@@ -100,7 +95,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NoPipedRegexReplace, code) == []
     end
   end
 end

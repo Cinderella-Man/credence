@@ -1,6 +1,8 @@
 defmodule Credence.Syntax.FixDivRemTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Syntax.FixDivRem
 
   describe "analyze/1" do
@@ -80,6 +82,20 @@ defmodule Credence.Syntax.FixDivRemTest do
       assert FixDivRem.analyze(source) == []
     end
 
+    test "detects infix rem inside capture" do
+      source = """
+      defmodule Example do
+        def check(list) do
+          Enum.map(list, &(&1 rem 2 == 0))
+        end
+      end
+      """
+
+      issues = FixDivRem.analyze(source)
+      assert length(issues) == 1
+      assert hd(issues).rule == :infix_rem
+    end
+
     test "no issues for div in comments" do
       source = """
       defmodule Example do
@@ -94,17 +110,27 @@ defmodule Credence.Syntax.FixDivRemTest do
 
   describe "fix/1" do
     test "fixes simple infix div" do
-      source = "x = a div b\n"
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "div(a, b)"
-      refute fixed =~ "a div b"
+      source = """
+      x = a div b
+      """
+
+      expected = """
+      x = div(a, b)
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "fixes simple infix rem" do
-      source = "x = a rem b\n"
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "rem(a, b)"
-      refute fixed =~ "a rem b"
+      source = """
+      x = a rem b
+      """
+
+      expected = """
+      x = rem(a, b)
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "fixes div with assignment" do
@@ -117,9 +143,16 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "div(n, 2)"
-      refute fixed =~ "n div 2"
+      expected = """
+      defmodule Example do
+        def half(n) do
+          result = div(n, 2)
+          result
+        end
+      end
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "fixes complex left operand" do
@@ -132,9 +165,16 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "div(n * (n + 1), 2)"
-      refute fixed =~ "div 2"
+      expected = """
+      defmodule Example do
+        def gauss(n) do
+          expected_sum = div(n * (n + 1), 2)
+          expected_sum
+        end
+      end
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "fixes both div and rem in same file" do
@@ -148,15 +188,35 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      fixed = FixDivRem.fix(source)
-      assert fixed =~ "div(a, b)"
-      assert fixed =~ "rem(a, b)"
+      expected = """
+      defmodule Example do
+        def compute(a, b) do
+          x = div(a, b)
+          y = rem(a, b)
+          {x, y}
+        end
+      end
+      """
+
+      assert FixDivRem.fix(source) == expected
     end
 
     test "does not modify valid function call syntax" do
       source = """
       defmodule Example do
         def half(n), do: div(n, 2)
+      end
+      """
+
+      assert FixDivRem.fix(source) == source
+    end
+
+    test "does not rewrite infix rem inside capture" do
+      source = """
+      defmodule Example do
+        def check(list) do
+          Enum.map(list, &(&1 rem 2 == 0))
+        end
       end
       """
 
@@ -183,7 +243,23 @@ defmodule Credence.Syntax.FixDivRemTest do
       """
 
       fixed = FixDivRem.fix(source)
-      assert {:ok, _} = Sourceror.parse_string(fixed)
+      assert valid_syntax?(fixed)
+    end
+
+    test "fix reaches a fixpoint — fixed output no longer flags" do
+      source = """
+      x = a div b
+      """
+
+      assert FixDivRem.analyze(FixDivRem.fix(source)) == []
+    end
+
+    test "fix output is well-formed (parses)" do
+      assert valid_syntax?(
+               FixDivRem.fix("""
+               x = a div b
+               """)
+             )
     end
   end
 end

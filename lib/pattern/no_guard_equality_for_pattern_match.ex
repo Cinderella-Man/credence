@@ -5,7 +5,10 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   be clearer and more idiomatic.
 
   This only flags simple `var == literal` comparisons where `var` is one of
-  the function's parameters and `literal` is an integer, atom, or string.
+  the function's parameters and `literal` is an **atom or string**. Number
+  literals are deliberately excluded: `when n == 0` matches `0.0` (value equality)
+  but the head `f(0)` does not (pattern uses `===`), so substituting a number
+  would change which clause a float-equal value routes to.
 
   ## Bad
 
@@ -140,8 +143,14 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   end
 
   # Sourceror wraps literals in :__block__ to carry position metadata.
+  #
+  # Only ATOM and STRING literals are fixable. A `when n == 0` guard uses value
+  # equality (`==`), which matches `0.0` as well as `0`, whereas the pattern head
+  # `f(0)` matches via `===` and rejects `0.0` — so substituting a *number* literal
+  # would change which clause a float-equal value routes to. Atoms and binaries
+  # have no cross-type value-equal partner, so `==` and pattern-match agree.
   defp fixable_literal({:__block__, _, [literal]})
-       when is_integer(literal) or is_atom(literal) or is_binary(literal),
+       when is_atom(literal) or is_binary(literal),
        do: {:ok, literal}
 
   defp fixable_literal(_), do: :error

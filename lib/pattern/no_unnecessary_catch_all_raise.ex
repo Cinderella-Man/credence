@@ -78,8 +78,7 @@ defmodule Credence.Pattern.NoUnnecessaryCatchAllRaise do
   end
 
   # Replace the def node — plus the trailing newline that follows it
-  # on its own line — with the empty string. Same trick as
-  # `binding_removal_patch/1` in `no_list_to_tuple_for_access.ex`.
+  # on its own line — with the empty string.
   defp removal_patch(def_node) do
     range = Sourceror.get_range(def_node)
 

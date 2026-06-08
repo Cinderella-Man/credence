@@ -1,37 +1,62 @@
 defmodule Credence.Pattern.NoSortThenAtFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoSortThenAt
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(NoSortThenAt, code, [])
-  end
 
   # ── Atom direction (existing) ───────────────────────────────────────────
 
   describe "pipeline form – atom direction" do
-    test "Enum.sort(nums) |> Enum.at(0) → Enum.min(nums)" do
-      assert fix("Enum.sort(nums) |> Enum.at(0)") == "Enum.min(nums)"
+    test "Enum.sort(nums) |> Enum.at(0) → Enum.min(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums) |> Enum.at(0)
+             """) == """
+             Enum.min(nums, fn -> nil end)
+             """
     end
 
-    test "Enum.sort(nums, :asc) |> Enum.at(0) → Enum.min(nums)" do
-      assert fix("Enum.sort(nums, :asc) |> Enum.at(0)") == "Enum.min(nums)"
+    test "Enum.sort(nums, :asc) |> Enum.at(0) → Enum.min(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, :asc) |> Enum.at(0)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.sort(nums, :desc) |> Enum.at(0) → Enum.max(nums)" do
-      assert fix("Enum.sort(nums, :desc) |> Enum.at(0)") == "Enum.max(nums)"
+    test "Enum.sort(nums, :desc) |> Enum.at(0) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, :desc) |> Enum.at(0)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.sort(nums) |> Enum.at(-1) → Enum.max(nums)" do
-      assert fix("Enum.sort(nums) |> Enum.at(-1)") == "Enum.max(nums)"
+    test "Enum.sort(nums) |> Enum.at(-1) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums) |> Enum.at(-1)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.sort(nums, :asc) |> Enum.at(-1) → Enum.max(nums)" do
-      assert fix("Enum.sort(nums, :asc) |> Enum.at(-1)") == "Enum.max(nums)"
+    test "Enum.sort(nums, :asc) |> Enum.at(-1) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, :asc) |> Enum.at(-1)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.sort(nums, :desc) |> Enum.at(-1) → Enum.min(nums)" do
-      assert fix("Enum.sort(nums, :desc) |> Enum.at(-1)") == "Enum.min(nums)"
+    test "Enum.sort(nums, :desc) |> Enum.at(-1) → Enum.min(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, :desc) |> Enum.at(-1)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
 
     test "inside def" do
@@ -46,30 +71,48 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
       expected = """
       defmodule M do
         def largest(nums) do
-          Enum.max(nums)
+          Enum.max(nums, fn -> nil end)
         end
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoSortThenAt, input) == expected
     end
   end
 
   describe "nested form – atom direction" do
-    test "Enum.at(Enum.sort(nums), 0) → Enum.min(nums)" do
-      assert fix("Enum.at(Enum.sort(nums), 0)") == "Enum.min(nums)"
+    test "Enum.at(Enum.sort(nums), 0) → Enum.min(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.at(Enum.sort(nums), 0)
+             """) == """
+             Enum.min(nums, fn -> nil end)
+             """
     end
 
-    test "Enum.at(Enum.sort(nums, :desc), 0) → Enum.max(nums)" do
-      assert fix("Enum.at(Enum.sort(nums, :desc), 0)") == "Enum.max(nums)"
+    test "Enum.at(Enum.sort(nums, :desc), 0) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.at(Enum.sort(nums, :desc), 0)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.at(Enum.sort(nums), -1) → Enum.max(nums)" do
-      assert fix("Enum.at(Enum.sort(nums), -1)") == "Enum.max(nums)"
+    test "Enum.at(Enum.sort(nums), -1) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.at(Enum.sort(nums), -1)
+             """) == """
+             Enum.max(nums, fn -> nil end)
+             """
     end
 
-    test "Enum.at(Enum.sort(nums, :desc), -1) → Enum.min(nums)" do
-      assert fix("Enum.at(Enum.sort(nums, :desc), -1)") == "Enum.min(nums)"
+    test "Enum.at(Enum.sort(nums, :desc), -1) → Enum.min(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.at(Enum.sort(nums, :desc), -1)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
 
     test "inside def" do
@@ -84,42 +127,72 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
       expected = """
       defmodule M do
         def smallest(nums) do
-          Enum.min(nums)
+          Enum.min(nums, fn -> nil end)
         end
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoSortThenAt, input) == expected
     end
   end
 
   # ── Function captures ───────────────────────────────────────────────────
 
   describe "pipeline form – function captures" do
-    test "Enum.sort(nums, &>=/2) |> Enum.at(0) → Enum.max(nums)" do
-      assert fix("Enum.sort(nums, &>=/2) |> Enum.at(0)") == "Enum.max(nums)"
+    test "Enum.sort(nums, &>=/2) |> Enum.at(0) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, &>=/2) |> Enum.at(0)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.sort(nums, &>=/2) |> Enum.at(-1) → Enum.min(nums)" do
-      assert fix("Enum.sort(nums, &>=/2) |> Enum.at(-1)") == "Enum.min(nums)"
+    test "Enum.sort(nums, &>=/2) |> Enum.at(-1) → Enum.min(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, &>=/2) |> Enum.at(-1)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.sort(nums, &<=/2) |> Enum.at(0) → Enum.min(nums)" do
-      assert fix("Enum.sort(nums, &<=/2) |> Enum.at(0)") == "Enum.min(nums)"
+    test "Enum.sort(nums, &<=/2) |> Enum.at(0) → Enum.min(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, &<=/2) |> Enum.at(0)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.sort(nums, &<=/2) |> Enum.at(-1) → Enum.max(nums)" do
-      assert fix("Enum.sort(nums, &<=/2) |> Enum.at(-1)") == "Enum.max(nums)"
+    test "Enum.sort(nums, &<=/2) |> Enum.at(-1) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, &<=/2) |> Enum.at(-1)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
   end
 
   describe "nested form – function captures" do
-    test "Enum.at(Enum.sort(nums, &>=/2), 0) → Enum.max(nums)" do
-      assert fix("Enum.at(Enum.sort(nums, &>=/2), 0)") == "Enum.max(nums)"
+    test "Enum.at(Enum.sort(nums, &>=/2), 0) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.at(Enum.sort(nums, &>=/2), 0)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.at(Enum.sort(nums, &<=/2), -1) → Enum.max(nums)" do
-      assert fix("Enum.at(Enum.sort(nums, &<=/2), -1)") == "Enum.max(nums)"
+    test "Enum.at(Enum.sort(nums, &<=/2), -1) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.at(Enum.sort(nums, &<=/2), -1)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
   end
 
@@ -127,55 +200,115 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
 
   describe "pipeline form – anonymous comparators" do
     test "fn a, b -> a > b end at(0) → Enum.max (desc + first)" do
-      assert fix("Enum.sort(nums, fn a, b -> a > b end) |> Enum.at(0)") == "Enum.max(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> a > b end) |> Enum.at(0)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
     test "fn a, b -> a >= b end at(0) → Enum.max (desc + first)" do
-      assert fix("Enum.sort(nums, fn a, b -> a >= b end) |> Enum.at(0)") == "Enum.max(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> a >= b end) |> Enum.at(0)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
     test "fn a, b -> a < b end at(0) → Enum.min (asc + first)" do
-      assert fix("Enum.sort(nums, fn a, b -> a < b end) |> Enum.at(0)") == "Enum.min(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> a < b end) |> Enum.at(0)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
 
     test "fn a, b -> a <= b end at(0) → Enum.min (asc + first)" do
-      assert fix("Enum.sort(nums, fn a, b -> a <= b end) |> Enum.at(0)") == "Enum.min(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> a <= b end) |> Enum.at(0)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
 
     test "fn a, b -> a > b end at(-1) → Enum.min (desc + last)" do
-      assert fix("Enum.sort(nums, fn a, b -> a > b end) |> Enum.at(-1)") == "Enum.min(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> a > b end) |> Enum.at(-1)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
 
     test "fn a, b -> a < b end at(-1) → Enum.max (asc + last)" do
-      assert fix("Enum.sort(nums, fn a, b -> a < b end) |> Enum.at(-1)") == "Enum.max(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> a < b end) |> Enum.at(-1)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
   end
 
   describe "pipeline form – flipped anonymous comparators" do
     test "fn a, b -> b < a end at(0) → Enum.max (desc + first)" do
-      assert fix("Enum.sort(nums, fn a, b -> b < a end) |> Enum.at(0)") == "Enum.max(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> b < a end) |> Enum.at(0)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
     test "fn a, b -> b <= a end at(0) → Enum.max (desc + first)" do
-      assert fix("Enum.sort(nums, fn a, b -> b <= a end) |> Enum.at(0)") == "Enum.max(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> b <= a end) |> Enum.at(0)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
     test "fn a, b -> b > a end at(0) → Enum.min (asc + first)" do
-      assert fix("Enum.sort(nums, fn a, b -> b > a end) |> Enum.at(0)") == "Enum.min(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> b > a end) |> Enum.at(0)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
 
     test "fn a, b -> b >= a end at(0) → Enum.min (asc + first)" do
-      assert fix("Enum.sort(nums, fn a, b -> b >= a end) |> Enum.at(0)") == "Enum.min(nums)"
+      assert fix(NoSortThenAt, """
+             Enum.sort(nums, fn a, b -> b >= a end) |> Enum.at(0)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
   end
 
   describe "nested form – anonymous comparators" do
-    test "Enum.at(Enum.sort(fn a, b -> a > b end), 0) → Enum.max(nums)" do
-      assert fix("Enum.at(Enum.sort(nums, fn a, b -> a > b end), 0)") == "Enum.max(nums)"
+    test "Enum.at(Enum.sort(fn a, b -> a > b end), 0) → Enum.max(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.at(Enum.sort(nums, fn a, b -> a > b end), 0)
+             """) ==
+               """
+               Enum.max(nums, fn -> nil end)
+               """
     end
 
-    test "Enum.at(Enum.sort(fn a, b -> a > b end), -1) → Enum.min(nums)" do
-      assert fix("Enum.at(Enum.sort(nums, fn a, b -> a > b end), -1)") == "Enum.min(nums)"
+    test "Enum.at(Enum.sort(fn a, b -> a > b end), -1) → Enum.min(nums, fn -> nil end)" do
+      assert fix(NoSortThenAt, """
+             Enum.at(Enum.sort(nums, fn a, b -> a > b end), -1)
+             """) ==
+               """
+               Enum.min(nums, fn -> nil end)
+               """
     end
   end
 
@@ -183,33 +316,51 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
 
   describe "no-ops" do
     test "leaves variable index unchanged (pipeline)" do
-      code = "Enum.sort(nums, :desc) |> Enum.at(k - 1)"
-      assert fix(code) == code
+      code = """
+      Enum.sort(nums, :desc) |> Enum.at(k - 1)
+      """
+
+      assert fix(NoSortThenAt, code) == code
     end
 
     test "leaves variable index unchanged (nested)" do
-      code = "Enum.at(Enum.sort(nums), mid)"
-      assert fix(code) == code
+      code = """
+      Enum.at(Enum.sort(nums), mid)
+      """
+
+      assert fix(NoSortThenAt, code) == code
     end
 
     test "leaves other literal index unchanged (pipeline)" do
-      code = "Enum.sort(nums) |> Enum.at(3)"
-      assert fix(code) == code
+      code = """
+      Enum.sort(nums) |> Enum.at(3)
+      """
+
+      assert fix(NoSortThenAt, code) == code
     end
 
     test "leaves other literal index unchanged (nested)" do
-      code = "Enum.at(Enum.sort(nums), 2)"
-      assert fix(code) == code
+      code = """
+      Enum.at(Enum.sort(nums), 2)
+      """
+
+      assert fix(NoSortThenAt, code) == code
     end
 
     test "leaves variable direction unchanged" do
-      code = "Enum.sort(nums, dir) |> Enum.at(0)"
-      assert fix(code) == code
+      code = """
+      Enum.sort(nums, dir) |> Enum.at(0)
+      """
+
+      assert fix(NoSortThenAt, code) == code
     end
 
     test "leaves opaque comparator unchanged" do
-      code = "Enum.sort(nums, &MyModule.compare/2) |> Enum.at(0)"
-      assert fix(code) == code
+      code = """
+      Enum.sort(nums, &MyModule.compare/2) |> Enum.at(0)
+      """
+
+      assert fix(NoSortThenAt, code) == code
     end
   end
 end

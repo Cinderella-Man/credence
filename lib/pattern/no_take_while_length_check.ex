@@ -162,12 +162,14 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
     nil
   end
 
+  # The predicate is wrapped in parens — `(#{fun_text}).(elem)` — so a captured
+  # function like `&is_integer/1` is applied, not parsed as `is_integer / 1.(elem)`.
   defp build_reduce_while_text(enum_mod, fun_text, nil) do
-    "#{enum_mod}.reduce_while(0, fn elem, acc -> if #{fun_text}.(elem), do: {:cont, acc + 1}, else: {:halt, acc} end)"
+    "#{enum_mod}.reduce_while(0, fn elem, acc -> if (#{fun_text}).(elem), do: {:cont, acc + 1}, else: {:halt, acc} end)"
   end
 
   defp build_reduce_while_text(enum_mod, fun_text, enum_text) do
-    "#{enum_mod}.reduce_while(#{enum_text}, 0, fn elem, acc -> if #{fun_text}.(elem), do: {:cont, acc + 1}, else: {:halt, acc} end)"
+    "#{enum_mod}.reduce_while(#{enum_text}, 0, fn elem, acc -> if (#{fun_text}).(elem), do: {:cont, acc + 1}, else: {:halt, acc} end)"
   end
 
   defp check_node({:|>, meta, _} = node) do

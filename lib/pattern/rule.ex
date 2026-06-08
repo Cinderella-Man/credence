@@ -3,8 +3,7 @@ defmodule Credence.Pattern.Rule do
   Behaviour for pattern-level rules that detect and auto-fix anti-patterns.
 
   Every Pattern rule fixes the issue it detects — there is no "warn-only"
-  mode. Rules that could only detect but not fix were archived to
-  `docs/unfixable_rules/` and removed from compilation.
+  mode. Rules that could only detect but not fix are deleted, not shipped.
 
   ## Interface
 
@@ -58,6 +57,17 @@ defmodule Credence.Pattern.Rule do
   @doc "Auto-fix via byte-range patches. Returns a list of patches; `[]` means no change."
   @callback fix_patches(ast :: Macro.t(), opts :: keyword()) :: [patch()]
 
+  @doc """
+  The assumptions (safety switches) this rule's fix relies on to be
+  behaviour-preserving. Returns a list of switch names from
+  `Credence.Assumptions`; `[]` (the default) means the fix is correct for
+  *every* input and is never filtered out.
+
+  A rule only runs when **all** of its named assumptions are currently on
+  (see `Credence.RuleHelpers.filter_by_assumptions/3`). Defaults to `[]`.
+  """
+  @callback assumptions() :: [atom()]
+
   defmacro __using__(_opts) do
     quote do
       @behaviour Credence.Pattern.Rule
@@ -66,7 +76,10 @@ defmodule Credence.Pattern.Rule do
       @impl true
       def priority, do: 500
 
-      defoverridable priority: 0
+      @impl true
+      def assumptions, do: []
+
+      defoverridable priority: 0, assumptions: 0
     end
   end
 end

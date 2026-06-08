@@ -1,7 +1,7 @@
 defmodule Credence.FixShowcaseTest do
   @moduledoc """
   End-to-end integration test: feeds a realistic LLM-generated module
-  through Credence.fix/2 and verifies every transformation applied.
+  through Credence.fix/2 and pins the full idiomatic output.
   """
   use ExUnit.Case
 
@@ -59,133 +59,76 @@ defmodule Credence.FixShowcaseTest do
   end
   """
 
+  @expected ~S'''
+  defmodule Solution do
+    @moduledoc "Provides text analysis utilities for processing and analyzing strings."
+    @doc """
+    Analyzes the given text and returns a map of statistics.
+
+    Returns word count, character count, average word length,
+    frequency map, and other derived metrics.
+    """
+    @spec analyze(String.t()) :: map()
+    def analyze(text) do
+      words = String.split(text)
+
+      if words == [] do
+        %{words: 0, chars: 0, avg_length: 0.0}
+      else
+        char_count = String.length(text)
+
+        total_length = Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)
+        avg_length = :erlang.float(total_length / Enum.count(words))
+
+        frequencies =
+          Enum.frequencies_by(words, fn word -> String.downcase(word) end)
+
+        sorted_desc = Enum.sort(words, :desc)
+        top_3 = Enum.sort(words, :desc) |> Enum.take(3) |> Enum.reverse()
+
+        sorted_desc_reversed = Enum.reverse(sorted_desc)
+        [last, second_last | _] = sorted_desc_reversed
+
+        unique_words = words |> Enum.uniq()
+        unique_csv = Enum.map_join(unique_words, ",", fn w -> String.upcase(w) end)
+
+        %{
+          char_count: char_count,
+          avg_length: avg_length,
+          frequencies: frequencies,
+          top_3: top_3,
+          last: last,
+          second_last: second_last,
+          unique_csv: unique_csv,
+          palindrome: palindrome?(text)
+        }
+      end
+    end
+
+    def palindrome?(text) do
+      cleaned = text |> String.downcase() |> String.replace(~r/[^a-z0-9]/, "")
+      reversed = String.reverse(cleaned)
+      cleaned == reversed
+    end
+
+    defp normalize_words([], acc), do: Enum.reverse(acc)
+    defp normalize_words([h | t], acc), do: normalize_words(t, [String.downcase(h) | acc])
+  end
+  '''
+
   setup do
-    result = Credence.fix(@input, [])
-    %{result: result}
+    %{result: Credence.fix(@input, [])}
   end
 
   describe "Credence.fix/2 showcase — 19 anti-patterns in, idiomatic Elixir out" do
-    # ── Doc formatting ──────────────────────────────────────────────
-
-    test "strips trailing \\n from @moduledoc", %{result: %{code: code}} do
-      assert code =~
-               ~S|@moduledoc "Provides text analysis utilities for processing and analyzing strings."|
-
-      refute code =~ ~S|strings.\n"|
+    test "fully fixed output", %{result: %{code: code}} do
+      assert code == @expected
     end
-
-    test "converts multi-line @doc to heredoc", %{result: %{code: code}} do
-      assert code =~ ~S|@doc """|
-      assert code =~ "  Analyzes the given text and returns a map of statistics."
-      assert code =~ "  Returns word count, character count, average word length,"
-    end
-
-    # ── Emptiness & length checks ─────────────────────────────────
-
-    test "replaces length(words) == 0 with words == []", %{result: %{code: code}} do
-      assert code =~ "words == []"
-      refute code =~ "length(words) == 0"
-    end
-
-    test "replaces String.graphemes |> length with String.length", %{result: %{code: code}} do
-      assert code =~ "String.length(text)"
-      refute code =~ "String.graphemes(text) |> length()"
-    end
-
-    test "replaces Enum.count(words) with length(words)", %{result: %{code: code}} do
-      assert code =~ "length(words)"
-      refute code =~ "Enum.count(words)"
-    end
-
-    # ── Arithmetic ────────────────────────────────────────────────
-
-    test "removes * 1.0", %{result: %{code: code}} do
-      refute code =~ "* 1.0"
-    end
-
-    # ── Collection operations ─────────────────────────────────────
-
-    test "fuses Enum.map |> Enum.sum into Enum.reduce", %{result: %{code: code}} do
-      assert code =~ "Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)"
-      refute code =~ "Enum.map(words, fn w -> String.length(w) end) |> Enum.sum()"
-    end
-
-    test "replaces manual frequency reduce with Enum.frequencies", %{result: %{code: code}} do
-      assert code =~ "Enum.frequencies"
-      refute code =~ "Map.update(acc"
-    end
-
-    test "replaces Enum.sort |> Enum.reverse with Enum.sort(:desc)", %{result: %{code: code}} do
-      assert code =~ "Enum.sort(words, :desc)"
-      refute code =~ "Enum.sort(words) |> Enum.reverse()"
-    end
-
-    test "replaces Enum.sort |> Enum.take(-3) with desc sort + positive take",
-         %{result: %{code: code}} do
-      assert code =~ "Enum.sort(words, :desc) |> Enum.take(3)"
-      refute code =~ "Enum.take(-3)"
-    end
-
-    test "groups negative Enum.at calls into reverse + pattern match",
-         %{result: %{code: code}} do
-      assert code =~ "Enum.reverse(sorted_desc)"
-      assert code =~ "[last, second_last | _]"
-      refute code =~ "Enum.at(sorted_desc, -1)"
-      refute code =~ "Enum.at(sorted_desc, -2)"
-    end
-
-    test "simplifies Enum.uniq_by(fn w -> w end) to Enum.uniq()", %{result: %{code: code}} do
-      assert code =~ "Enum.uniq()"
-      refute code =~ "Enum.uniq_by"
-    end
-
-    test "fuses Enum.map |> Enum.join into Enum.map_join", %{result: %{code: code}} do
-      assert code =~ "Enum.map_join"
-      refute Regex.match?(~r/Enum\.map\(.*\) \|> Enum\.join/, code)
-    end
-
-    # ── Naming & style ────────────────────────────────────────────
-
-    test "renames is_palindrome to palindrome?", %{result: %{code: code}} do
-      assert code =~ "def palindrome?(text)"
-      assert code =~ "palindrome?(text)"
-      refute code =~ "is_palindrome"
-    end
-
-    test "extracts Kernel.== from pipeline to infix", %{result: %{code: code}} do
-      assert code =~ "cleaned == reversed"
-      refute code =~ "Kernel.=="
-    end
-
-    test "replaces manual string reverse with String.reverse", %{result: %{code: code}} do
-      assert code =~ "String.reverse(cleaned)"
-      refute code =~ "String.graphemes(cleaned) |> Enum.reverse()"
-    end
-
-    test "removes @doc false on private function", %{result: %{code: code}} do
-      refute code =~ "@doc false"
-    end
-
-    test "fixes list append in recursion to prepend", %{result: %{code: code}} do
-      assert code =~ "[String.downcase(h) | acc]"
-      refute code =~ "acc ++ [String.downcase(h)]"
-    end
-
-    # ── Remaining issues (expected) ───────────────────────────────
 
     test "no issues remain after fix", %{result: %{issues: issues}} do
-      # Project stance: every rule either auto-fixes its anti-pattern
-      # or it doesn't exist. After running `Credence.fix/2`, no
-      # outstanding issues should remain. (The unfixable companion
-      # rules that previously reported residual cases have been
-      # archived to `docs/unfixable_rules/`.)
+      # Project stance: every rule either auto-fixes its anti-pattern or it
+      # doesn't exist. After Credence.fix/2, no outstanding issues should remain.
       assert issues |> Enum.map(& &1.rule) |> Enum.sort() == []
-    end
-
-    # ── Sanity ────────────────────────────────────────────────────
-
-    test "output is valid Elixir", %{result: %{code: code}} do
-      assert {:ok, _ast} = Sourceror.parse_string(code)
     end
   end
 end

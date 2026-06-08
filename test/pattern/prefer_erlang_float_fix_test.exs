@@ -1,11 +1,7 @@
 defmodule Credence.Pattern.PreferErlangFloatFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferErlangFloat
-
-  defp fix(code) do
-    Credence.RuleHelpers.apply_rule_fix(PreferErlangFloat, code, [])
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # MULTIPLY BY 1.0 → :erlang.float()
@@ -13,19 +9,35 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
   describe "var * 1.0 → :erlang.float(var)" do
     test "trailing * 1.0" do
-      assert fix("n * 1.0") == ":erlang.float(n)"
+      assert fix(PreferErlangFloat, """
+             n * 1.0
+             """) == """
+             :erlang.float(n)
+             """
     end
 
     test "leading 1.0 *" do
-      assert fix("1.0 * n") == ":erlang.float(n)"
+      assert fix(PreferErlangFloat, """
+             1.0 * n
+             """) == """
+             :erlang.float(n)
+             """
     end
 
     test "longer variable name" do
-      assert fix("my_value * 1.0") == ":erlang.float(my_value)"
+      assert fix(PreferErlangFloat, """
+             my_value * 1.0
+             """) == """
+             :erlang.float(my_value)
+             """
     end
 
     test "underscore-prefixed variable" do
-      assert fix("_n * 1.0") == ":erlang.float(_n)"
+      assert fix(PreferErlangFloat, """
+             _n * 1.0
+             """) == """
+             :erlang.float(_n)
+             """
     end
   end
 
@@ -35,7 +47,11 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
   describe "var / 1.0 → :erlang.float(var)" do
     test "trailing / 1.0" do
-      assert fix("n / 1.0") == ":erlang.float(n)"
+      assert fix(PreferErlangFloat, """
+             n / 1.0
+             """) == """
+             :erlang.float(n)
+             """
     end
   end
 
@@ -45,11 +61,19 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
   describe "var + 0.0 → :erlang.float(var)" do
     test "trailing + 0.0" do
-      assert fix("n + 0.0") == ":erlang.float(n)"
+      assert fix(PreferErlangFloat, """
+             n + 0.0
+             """) == """
+             :erlang.float(n)
+             """
     end
 
     test "leading 0.0 +" do
-      assert fix("0.0 + n") == ":erlang.float(n)"
+      assert fix(PreferErlangFloat, """
+             0.0 + n
+             """) == """
+             :erlang.float(n)
+             """
     end
   end
 
@@ -59,7 +83,11 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
   describe "var - 0.0 → :erlang.float(var)" do
     test "trailing - 0.0" do
-      assert fix("n - 0.0") == ":erlang.float(n)"
+      assert fix(PreferErlangFloat, """
+             n - 0.0
+             """) == """
+             :erlang.float(n)
+             """
     end
   end
 
@@ -87,7 +115,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
 
     test "n = 1.0 * n → n = :erlang.float(n)" do
@@ -109,7 +137,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
 
     test "n = n + 0.0 → n = :erlang.float(n)" do
@@ -131,7 +159,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
   end
 
@@ -153,7 +181,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
 
     test "one-liner def" do
@@ -169,7 +197,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
 
     test "bare var at end of multi-line body" do
@@ -191,7 +219,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
 
     test "in case branch" do
@@ -217,7 +245,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
   end
 
@@ -243,7 +271,7 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
   end
 
@@ -269,30 +297,41 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
   # MIXED BARE + NON-BARE ON SAME LINE
-  # (PreferErlangFloat only rewrites bare-var sites; non-bare stays
-  #  for NoIdentityFloatCoercion to handle in its own pass)
+  # (after the merge, EVERY coercion site is wrapped in :erlang.float)
   # ═══════════════════════════════════════════════════════════════════
 
   describe "mixed bare and non-bare on same line" do
-    test "rewrites bare var, leaves non-bare intact" do
-      assert fix("{n * 1.0, Enum.sum(xs) * 1.0}") ==
-               "{:erlang.float(n), Enum.sum(xs) * 1.0}"
+    test "wraps both bare var and function call" do
+      assert fix(PreferErlangFloat, """
+             {n * 1.0, Enum.sum(xs) * 1.0}
+             """) ==
+               """
+               {:erlang.float(n), :erlang.float(Enum.sum(xs))}
+               """
     end
 
-    test "rewrites both bare vars, leaves non-bare intact" do
-      assert fix("{n * 1.0, Enum.sum(xs) * 1.0, m + 0.0}") ==
-               "{:erlang.float(n), Enum.sum(xs) * 1.0, :erlang.float(m)}"
+    test "wraps all three sites" do
+      assert fix(PreferErlangFloat, """
+             {n * 1.0, Enum.sum(xs) * 1.0, m + 0.0}
+             """) ==
+               """
+               {:erlang.float(n), :erlang.float(Enum.sum(xs)), :erlang.float(m)}
+               """
     end
 
-    test "rewrites leading identity bare var, leaves non-bare intact" do
-      assert fix("{1.0 * n, Enum.sum(xs) * 1.0}") ==
-               "{:erlang.float(n), Enum.sum(xs) * 1.0}"
+    test "wraps leading-identity bare var and non-bare" do
+      assert fix(PreferErlangFloat, """
+             {1.0 * n, Enum.sum(xs) * 1.0}
+             """) ==
+               """
+               {:erlang.float(n), :erlang.float(Enum.sum(xs))}
+               """
     end
 
     test "in function context" do
@@ -304,37 +343,50 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
       expected = """
       defmodule Example do
-        def foo(n, xs), do: {:erlang.float(n), Enum.sum(xs) * 1.0}
+        def foo(n, xs), do: {:erlang.float(n), :erlang.float(Enum.sum(xs))}
       end
       """
 
-      assert fix(input) == expected
+      assert fix(PreferErlangFloat, input) == expected
     end
 
     test "division and addition mixed" do
-      assert fix("{n / 1.0, Enum.count(xs) / 1.0}") ==
-               "{:erlang.float(n), Enum.count(xs) / 1.0}"
+      assert fix(PreferErlangFloat, """
+             {n / 1.0, Enum.count(xs) / 1.0}
+             """) ==
+               """
+               {:erlang.float(n), :erlang.float(Enum.count(xs))}
+               """
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # NO-OPS — non-bare operands (handled by NoIdentityFloatCoercion)
+  # WRAPS — compound / non-bare operands (merged in; wrapped, not removed)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "does not touch non-bare operands" do
-    test "function call * 1.0 unchanged" do
-      code = "Enum.at(list, 0) * 1.0"
-      assert fix(code) == code
+  describe "wraps non-bare operands in :erlang.float" do
+    test "function call * 1.0" do
+      assert fix(PreferErlangFloat, """
+             Enum.at(list, 0) * 1.0
+             """) == """
+             :erlang.float(Enum.at(list, 0))
+             """
     end
 
-    test "compound expression * 1.0 unchanged" do
-      code = "(a + b) * 1.0"
-      assert fix(code) == code
+    test "compound expression * 1.0" do
+      assert fix(PreferErlangFloat, """
+             (a + b) * 1.0
+             """) == """
+             :erlang.float(a + b)
+             """
     end
 
-    test "1.0 * function call unchanged" do
-      code = "1.0 * Enum.sum(list)"
-      assert fix(code) == code
+    test "1.0 * function call" do
+      assert fix(PreferErlangFloat, """
+             1.0 * Enum.sum(list)
+             """) == """
+             :erlang.float(Enum.sum(list))
+             """
     end
   end
 
@@ -344,43 +396,70 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
   describe "does not touch real arithmetic" do
     test "n * 2.0 unchanged" do
-      code = "def run(n), do: n * 2.0"
-      assert fix(code) == code
+      code = """
+      def run(n), do: n * 2.0
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
 
     test "n * 1.05 unchanged" do
-      code = "def run(n), do: n * 1.05"
-      assert fix(code) == code
+      code = """
+      def run(n), do: n * 1.05
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
 
     test "n * 1 (integer) unchanged" do
-      code = "def run(n), do: n * 1"
-      assert fix(code) == code
+      code = """
+      def run(n), do: n * 1
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
 
     test "n / 2.0 unchanged" do
-      code = "def run(n), do: n / 2.0"
-      assert fix(code) == code
+      code = """
+      def run(n), do: n / 2.0
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
 
     test "n + 1.0 unchanged" do
-      code = "def run(n), do: n + 1.0"
-      assert fix(code) == code
+      code = """
+      def run(n), do: n + 1.0
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
 
     test "n - 1.0 unchanged" do
-      code = "def run(n), do: n - 1.0"
-      assert fix(code) == code
+      code = """
+      def run(n), do: n - 1.0
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
 
     test "0.0 - n (negation) unchanged" do
-      code = "def run(n), do: 0.0 - n"
-      assert fix(code) == code
+      code = """
+      def run(n), do: 0.0 - n
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
 
     test "n * 1.0e5 unchanged" do
-      code = "defmodule E do\n  def run(n), do: n * 1.0e5\nend\n"
-      assert fix(code) == code
+      code = """
+      defmodule E do
+        def run(n), do: n * 1.0e5
+      end
+
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
   end
 
@@ -390,13 +469,22 @@ defmodule Credence.Pattern.PreferErlangFloatFixTest do
 
   describe "does not touch already-correct code" do
     test ":erlang.float(n) unchanged" do
-      code = "def to_float(n), do: :erlang.float(n)"
-      assert fix(code) == code
+      code = """
+      def to_float(n), do: :erlang.float(n)
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
 
     test "no coercion at all" do
-      code = "defmodule E do\n  def run(n), do: n + 1\nend\n"
-      assert fix(code) == code
+      code = """
+      defmodule E do
+        def run(n), do: n + 1
+      end
+
+      """
+
+      assert fix(PreferErlangFloat, code) == code
     end
   end
 end

@@ -28,8 +28,14 @@ defmodule Credence.Pattern.NoManualListLast do
 
   ## Auto-fix
 
-  Replaces the hand-rolled function with a `List.last/1` delegation and
-  rewrites call sites within the same source file.
+  Replaces the hand-rolled function with `hd(Enum.reverse(list))` and rewrites
+  call sites within the same source file.
+
+  We deliberately avoid `List.last/1`: the hand-rolled form has no `[]` clause, so
+  it raises on the empty list, whereas `List.last([])` returns `nil` — a behaviour
+  change. `hd(Enum.reverse([]))` raises (`ArgumentError`) like the original, so the
+  fix is behaviour-preserving (the only difference is the raised error's type on the
+  degenerate empty-list input).
   """
 
   use Credence.Pattern.Rule
@@ -200,9 +206,11 @@ defmodule Credence.Pattern.NoManualListLast do
       {:|>, pipe_meta, [lhs, {fn_name, call_meta, pipe_args}]}
       when is_atom(fn_name) and (pipe_args == [] or is_nil(pipe_args)) ->
         if MapSet.member?(match_names, fn_name) do
-          list_last_fn = {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], []}
+          # `lhs |> get_last()` → `lhs |> Enum.reverse() |> hd()`
+          reverse_fn = {{:., [], [{:__aliases__, [], [:Enum]}, :reverse]}, [], []}
+          reversed = {:|>, [], [transform_ast(lhs, match_set, match_names), reverse_fn]}
 
-          {:|>, pipe_meta, [transform_ast(lhs, match_set, match_names), list_last_fn]}
+          {:|>, pipe_meta, [reversed, {:hd, [], []}]}
         else
           {:|>, pipe_meta,
            [
@@ -247,8 +255,7 @@ defmodule Credence.Pattern.NoManualListLast do
 
       {fn_name, meta, [arg]} when is_atom(fn_name) ->
         if MapSet.member?(match_names, fn_name) do
-          transformed_arg = transform_ast(arg, match_set, match_names)
-          {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], [transformed_arg]}
+          last_via_reverse(transform_ast(arg, match_set, match_names))
         else
           {fn_name, meta, [transform_ast(arg, match_set, match_names)]}
         end
@@ -278,8 +285,14 @@ defmodule Credence.Pattern.NoManualListLast do
 
   defp make_list_last_def(def_type, meta, fn_name) do
     var = {:list, [], nil}
-    list_last_body = {{:., [], [{:__aliases__, [], [:List]}, :last]}, [], [var]}
-    {def_type, meta, [{fn_name, [], [var]}, [do: list_last_body]]}
+    {def_type, meta, [{fn_name, [], [var]}, [do: last_via_reverse(var)]]}
+  end
+
+  # `hd(Enum.reverse(arg))` — the last element, raising on `[]` like the manual
+  # form (unlike `List.last/1`, which would silently return `nil`).
+  defp last_via_reverse(arg) do
+    reverse = {{:., [], [{:__aliases__, [], [:Enum]}, :reverse]}, [], [arg]}
+    {:hd, [], [reverse]}
   end
 
   defp build_issue(def_type, fn_name, meta) do

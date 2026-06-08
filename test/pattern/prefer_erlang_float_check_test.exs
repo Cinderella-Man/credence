@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.PreferErlangFloatCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferErlangFloat
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferErlangFloat.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # MULTIPLY BY 1.0 — bare variable (flagged)
@@ -17,23 +9,33 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
 
   describe "var * 1.0" do
     test "flags n * 1.0" do
-      assert flagged?("n * 1.0")
+      assert flagged?(PreferErlangFloat, """
+             n * 1.0
+             """)
     end
 
     test "flags 1.0 * n" do
-      assert flagged?("1.0 * n")
+      assert flagged?(PreferErlangFloat, """
+             1.0 * n
+             """)
     end
 
     test "flags with longer variable name" do
-      assert flagged?("my_value * 1.0")
+      assert flagged?(PreferErlangFloat, """
+             my_value * 1.0
+             """)
     end
 
     test "flags underscore-prefixed variable" do
-      assert flagged?("_n * 1.0")
+      assert flagged?(PreferErlangFloat, """
+             _n * 1.0
+             """)
     end
 
     test "flags self-assignment var = var * 1.0" do
-      assert flagged?("count = count * 1.0")
+      assert flagged?(PreferErlangFloat, """
+             count = count * 1.0
+             """)
     end
   end
 
@@ -43,11 +45,15 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
 
   describe "var / 1.0" do
     test "flags n / 1.0" do
-      assert flagged?("n / 1.0")
+      assert flagged?(PreferErlangFloat, """
+             n / 1.0
+             """)
     end
 
     test "flags self-assignment n = n / 1.0" do
-      assert flagged?("n = n / 1.0")
+      assert flagged?(PreferErlangFloat, """
+             n = n / 1.0
+             """)
     end
   end
 
@@ -57,15 +63,21 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
 
   describe "var + 0.0" do
     test "flags n + 0.0" do
-      assert flagged?("n + 0.0")
+      assert flagged?(PreferErlangFloat, """
+             n + 0.0
+             """)
     end
 
     test "flags 0.0 + n" do
-      assert flagged?("0.0 + n")
+      assert flagged?(PreferErlangFloat, """
+             0.0 + n
+             """)
     end
 
     test "flags self-assignment n = n + 0.0" do
-      assert flagged?("n = n + 0.0")
+      assert flagged?(PreferErlangFloat, """
+             n = n + 0.0
+             """)
     end
   end
 
@@ -75,11 +87,15 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
 
   describe "var - 0.0" do
     test "flags n - 0.0" do
-      assert flagged?("n - 0.0")
+      assert flagged?(PreferErlangFloat, """
+             n - 0.0
+             """)
     end
 
     test "flags self-assignment n = n - 0.0" do
-      assert flagged?("n = n - 0.0")
+      assert flagged?(PreferErlangFloat, """
+             n = n - 0.0
+             """)
     end
   end
 
@@ -89,11 +105,15 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
 
   describe "realistic function contexts" do
     test "flags in one-liner def" do
-      assert flagged?("def to_float(n), do: n * 1.0")
+      assert flagged?(PreferErlangFloat, """
+             def to_float(n), do: n * 1.0
+             """)
     end
 
     test "flags in defp with guard" do
-      assert flagged?("defp to_float(n) when is_integer(n), do: n * 1.0")
+      assert flagged?(PreferErlangFloat, """
+             defp to_float(n) when is_integer(n), do: n * 1.0
+             """)
     end
 
     test "flags bare var at end of multi-line body" do
@@ -104,7 +124,7 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
       end
       """
 
-      assert flagged?(code)
+      assert flagged?(PreferErlangFloat, code)
     end
 
     test "flags in case branch" do
@@ -115,7 +135,7 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
       end
       """
 
-      assert flagged?(code)
+      assert flagged?(PreferErlangFloat, code)
     end
   end
 
@@ -132,7 +152,7 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(PreferErlangFloat, code)) == 2
     end
 
     test "flags mixed operators" do
@@ -144,7 +164,7 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
       end
       """
 
-      assert length(check(code)) == 3
+      assert length(check(PreferErlangFloat, code)) == 3
     end
   end
 
@@ -152,55 +172,87 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
   # MIXED BARE + NON-BARE ON SAME LINE
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "mixed bare and non-bare on same line" do
-    test "flags bare var but not function call on same line" do
-      assert flagged?("{n * 1.0, Enum.sum(xs) * 1.0}")
+  describe "mixed bare and non-bare on same line (both flagged after merge)" do
+    test "flags bare var and function call on same line" do
+      assert flagged?(PreferErlangFloat, """
+             {n * 1.0, Enum.sum(xs) * 1.0}
+             """)
     end
 
-    test "counts only bare-var hits, not non-bare" do
-      assert length(check("{n * 1.0, Enum.sum(xs) * 1.0}")) == 1
+    test "counts both bare-var and non-bare hits" do
+      assert length(
+               check(PreferErlangFloat, """
+               {n * 1.0, Enum.sum(xs) * 1.0}
+               """)
+             ) == 2
     end
 
-    test "flags both bare vars when two bare + one non-bare" do
-      assert length(check("{n * 1.0, Enum.sum(xs) * 1.0, m + 0.0}")) == 2
+    test "flags all three when two bare + one non-bare" do
+      assert length(
+               check(PreferErlangFloat, """
+               {n * 1.0, Enum.sum(xs) * 1.0, m + 0.0}
+               """)
+             ) == 3
     end
 
-    test "flags bare var with leading identity mixed with non-bare" do
-      assert length(check("{1.0 * n, Enum.sum(xs) * 1.0}")) == 1
+    test "flags bare var with leading identity plus non-bare" do
+      assert length(
+               check(PreferErlangFloat, """
+               {1.0 * n, Enum.sum(xs) * 1.0}
+               """)
+             ) == 2
     end
 
     test "in function context" do
-      assert length(check("def foo(n, xs), do: {n * 1.0, Enum.sum(xs) * 1.0}")) == 1
+      assert length(
+               check(PreferErlangFloat, """
+               def foo(n, xs), do: {n * 1.0, Enum.sum(xs) * 1.0}
+               """)
+             ) ==
+               2
     end
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # MUST NOT FLAG — non-bare operands (handled by NoIdentityFloatCoercion)
+  # FLAGGED — compound / non-bare operands (merged in from the old
+  # NoIdentityFloatCoercion; now WRAPPED in :erlang.float, not removed)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "does not flag non-bare operands" do
+  describe "flags non-bare operands" do
     test "function call * 1.0" do
-      assert clean?("Enum.at(list, 0) * 1.0")
+      assert flagged?(PreferErlangFloat, """
+             Enum.at(list, 0) * 1.0
+             """)
     end
 
     test "compound expression * 1.0" do
-      assert clean?("(a + b) * 1.0")
+      assert flagged?(PreferErlangFloat, """
+             (a + b) * 1.0
+             """)
     end
 
     test "1.0 * function call" do
-      assert clean?("1.0 * Enum.sum(list)")
+      assert flagged?(PreferErlangFloat, """
+             1.0 * Enum.sum(list)
+             """)
     end
 
     test "function call / 1.0" do
-      assert clean?("Enum.count(list) / 1.0")
+      assert flagged?(PreferErlangFloat, """
+             Enum.count(list) / 1.0
+             """)
     end
 
     test "function call + 0.0" do
-      assert clean?("Enum.sum(list) + 0.0")
+      assert flagged?(PreferErlangFloat, """
+             Enum.sum(list) + 0.0
+             """)
     end
 
     test "tuple access * 1.0" do
-      assert clean?("elem(pair, 0) * 1.0")
+      assert flagged?(PreferErlangFloat, """
+             elem(pair, 0) * 1.0
+             """)
     end
   end
 
@@ -210,43 +262,63 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
 
   describe "does not flag real arithmetic" do
     test "n * 2.0" do
-      assert clean?("n * 2.0")
+      assert clean?(PreferErlangFloat, """
+             n * 2.0
+             """)
     end
 
     test "n * 1 (integer)" do
-      assert clean?("n * 1")
+      assert clean?(PreferErlangFloat, """
+             n * 1
+             """)
     end
 
     test "n * 1.05" do
-      assert clean?("n * 1.05")
+      assert clean?(PreferErlangFloat, """
+             n * 1.05
+             """)
     end
 
     test "n / 2.0" do
-      assert clean?("n / 2.0")
+      assert clean?(PreferErlangFloat, """
+             n / 2.0
+             """)
     end
 
     test "n / 1 (integer)" do
-      assert clean?("n / 1")
+      assert clean?(PreferErlangFloat, """
+             n / 1
+             """)
     end
 
     test "n + 1.0" do
-      assert clean?("n + 1.0")
+      assert clean?(PreferErlangFloat, """
+             n + 1.0
+             """)
     end
 
     test "n - 1.0" do
-      assert clean?("n - 1.0")
+      assert clean?(PreferErlangFloat, """
+             n - 1.0
+             """)
     end
 
     test "n + 0 (integer)" do
-      assert clean?("n + 0")
+      assert clean?(PreferErlangFloat, """
+             n + 0
+             """)
     end
 
     test "n - 0 (integer)" do
-      assert clean?("n - 0")
+      assert clean?(PreferErlangFloat, """
+             n - 0
+             """)
     end
 
     test "n * 1.0e5 (scientific notation)" do
-      assert clean?("n * 1.0e5")
+      assert clean?(PreferErlangFloat, """
+             n * 1.0e5
+             """)
     end
   end
 
@@ -256,7 +328,9 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
 
   describe "does not flag negation" do
     test "0.0 - n (negation, not identity)" do
-      assert clean?("0.0 - n")
+      assert clean?(PreferErlangFloat, """
+             0.0 - n
+             """)
     end
   end
 
@@ -266,11 +340,15 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
 
   describe "does not flag already-correct code" do
     test ":erlang.float(n)" do
-      assert clean?(":erlang.float(n)")
+      assert clean?(PreferErlangFloat, """
+             :erlang.float(n)
+             """)
     end
 
     test "no coercion at all" do
-      assert clean?("def run(n), do: n + 1")
+      assert clean?(PreferErlangFloat, """
+             def run(n), do: n + 1
+             """)
     end
   end
 

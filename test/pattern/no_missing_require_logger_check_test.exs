@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoMissingRequireLogger
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoMissingRequireLogger.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — Logger macro used without require
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
 
   describe "flags Logger macro calls without require" do
     test "Logger.info" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.info("starting")
@@ -27,7 +19,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.debug" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.debug("details")
@@ -37,7 +29,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.warning" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.warning("watch out")
@@ -47,7 +39,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.error" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.error("failed")
@@ -57,7 +49,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.notice" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.notice("fyi")
@@ -67,7 +59,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.critical" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.critical("bad")
@@ -77,7 +69,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.alert" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.alert("wake up")
@@ -87,7 +79,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.emergency" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.emergency("everything is on fire")
@@ -97,7 +89,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.log/2" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run(level) do
                  Logger.log(level, "message")
@@ -107,7 +99,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "deprecated Logger.warn" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.warn("old style")
@@ -117,7 +109,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "multiple Logger calls, none require" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def start do
                  Logger.info("starting")
@@ -132,7 +124,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger in private function" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                defp log_it(msg) do
                  Logger.info(msg)
@@ -142,7 +134,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger inside control flow" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run(x) do
                  if x > 0 do
@@ -156,7 +148,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger inside case" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run(result) do
                  case result do
@@ -169,7 +161,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger with two-argument form (message + metadata)" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.info("msg", request_id: "abc")
@@ -185,7 +177,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
 
   describe "does not flag when require Logger is present" do
     test "require Logger at module top" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                require Logger
 
@@ -197,7 +189,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "require Logger after use statement" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                use GenServer
                require Logger
@@ -210,7 +202,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "require Logger among other requires" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                require Logger
                require SomeOtherMacro
@@ -225,7 +217,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
 
   describe "does not flag when import Logger is present" do
     test "import Logger satisfies require" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                import Logger
 
@@ -239,7 +231,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
 
   describe "does not flag when use Logger is present" do
     test "use Logger satisfies require" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                use Logger
 
@@ -257,7 +249,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
 
   describe "does not flag Logger function calls" do
     test "Logger.configure" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                def setup do
                  Logger.configure(level: :info)
@@ -267,7 +259,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.metadata" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  Logger.metadata(request_id: "abc")
@@ -277,7 +269,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "Logger.level" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  current = Logger.level()
@@ -294,7 +286,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
 
   describe "does not flag modules without Logger" do
     test "no Logger calls" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  IO.puts("hello")
@@ -304,14 +296,14 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "empty module" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
              end
              """)
     end
 
     test "Logger mentioned only in a string" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule MyApp do
                def run do
                  IO.puts("Use Logger.info to log")
@@ -343,14 +335,14 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
       end
       """
 
-      issues = check(code)
+      issues = check(NoMissingRequireLogger, code)
       assert length(issues) == 1
     end
   end
 
   describe "handles nested modules" do
     test "flags inner module missing require even if outer has it" do
-      assert flagged?("""
+      assert flagged?(NoMissingRequireLogger, """
              defmodule Outer do
                require Logger
 
@@ -364,7 +356,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "clean when inner module has its own require" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule Outer do
                defmodule Inner do
                  require Logger
@@ -378,7 +370,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
     end
 
     test "outer uses Logger and has require, inner does not use Logger" do
-      assert clean?("""
+      assert clean?(NoMissingRequireLogger, """
              defmodule Outer do
                require Logger
 

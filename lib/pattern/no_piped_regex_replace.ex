@@ -22,6 +22,9 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
   def priority, do: 50
 
   @impl true
+  def assumptions, do: []
+
+  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn

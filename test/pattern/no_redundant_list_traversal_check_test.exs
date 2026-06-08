@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantListTraversal
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRedundantListTraversal.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — length + Enum.sum
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "flags length + Enum.sum on same variable" do
     test "basic case" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                count = length(numbers)
                sum = Enum.sum(numbers)
@@ -27,7 +19,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "Enum.count variant" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                count = Enum.count(numbers)
                sum = Enum.sum(numbers)
@@ -37,7 +29,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "with intervening code between calls" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                count = length(numbers)
                expected = div(count * (count + 1), 2)
@@ -48,7 +40,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "flipped order — sum before length" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                sum = Enum.sum(numbers)
                count = length(numbers)
@@ -58,7 +50,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "inside a module" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              defmodule Stats do
                def average(numbers) do
                  count = length(numbers)
@@ -76,7 +68,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "flags Enum.min + Enum.max on same variable" do
     test "basic case" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                minimum = Enum.min(numbers)
                maximum = Enum.max(numbers)
@@ -86,7 +78,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "flipped order" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                maximum = Enum.max(numbers)
                minimum = Enum.min(numbers)
@@ -102,7 +94,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "flags other pairs" do
     test "length + Enum.max" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                count = length(numbers)
                maximum = Enum.max(numbers)
@@ -112,7 +104,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "Enum.sum + Enum.min" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                sum = Enum.sum(numbers)
                minimum = Enum.min(numbers)
@@ -128,7 +120,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "flags three or more traversals" do
     test "length + sum + max" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                count = length(numbers)
                sum = Enum.sum(numbers)
@@ -145,7 +137,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "flags pairs in nested blocks" do
     test "both inside an if body" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                if numbers != [] do
                  count = length(numbers)
@@ -163,7 +155,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "does not flag different variables" do
     test "length on one var, sum on another" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(a, b) do
                count = length(a)
                sum = Enum.sum(b)
@@ -179,7 +171,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "does not flag when variable is rebound" do
     test "list reassigned between length and sum" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                count = length(numbers)
                numbers = Enum.filter(numbers, &(&1 > 0))
@@ -190,7 +182,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "list reassigned via pattern match" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                count = length(numbers)
                [_ | numbers] = numbers
@@ -207,7 +199,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "does not flag calls in different blocks" do
     test "one in function body, one inside if" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                count = length(numbers)
                if count > 0 do
@@ -219,7 +211,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "one in if-true branch, one in if-false branch" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers, mode) do
                if mode == :count do
                  count = length(numbers)
@@ -233,7 +225,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "separate functions in the same module" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              defmodule Stats do
                def count(numbers), do: length(numbers)
                def total(numbers), do: Enum.sum(numbers)
@@ -248,7 +240,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "flags when one call is bare and the other is inline" do
     test "bare length + inline Enum.sum — exact idx=33 pattern" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                n = length(numbers)
                div(n * (n + 1), 2) - Enum.sum(numbers)
@@ -257,7 +249,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "bare length + inline Enum.sum in assignment RHS" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                count = length(numbers)
                doubled_sum = Enum.sum(numbers) * 2
@@ -267,7 +259,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "bare Enum.sum + inline length in assignment RHS" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                half_count = div(length(numbers), 2)
                sum = Enum.sum(numbers)
@@ -277,7 +269,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "bare Enum.min + inline Enum.max" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                minimum = Enum.min(numbers)
                minimum + Enum.max(numbers)
@@ -286,7 +278,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "bare Enum.max + inline Enum.min in assignment" do
-      assert flagged?("""
+      assert flagged?(NoRedundantListTraversal, """
              def run(numbers) do
                maximum = Enum.max(numbers)
                offset_min = Enum.min(numbers) + 10
@@ -302,7 +294,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "does not flag when argument is not a variable" do
     test "function call as argument" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run do
                count = length(get_list())
                sum = Enum.sum(get_list())
@@ -312,7 +304,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "field access as argument" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(state) do
                count = length(state.numbers)
                sum = Enum.sum(state.numbers)
@@ -322,7 +314,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "map access as argument" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(data) do
                count = length(data[:numbers])
                sum = Enum.sum(data[:numbers])
@@ -338,7 +330,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "does not flag arity-2 variants" do
     test "Enum.count with filter function" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                positives = Enum.count(numbers, &(&1 > 0))
                sum = Enum.sum(numbers)
@@ -348,7 +340,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "Enum.min with sorter" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(items) do
                smallest = Enum.min(items, &compare/2)
                largest = Enum.max(items, &compare/2)
@@ -364,7 +356,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "does not flag single traversal" do
     test "only length" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                count = length(numbers)
                count * 2
@@ -373,7 +365,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "only Enum.sum" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                sum = Enum.sum(numbers)
                sum * 2
@@ -384,7 +376,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "does not flag same function called twice" do
     test "length called twice" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                a = length(numbers)
                b = length(numbers)
@@ -396,11 +388,53 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "does not flag discarded assignments" do
     test "underscore binding for one call" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                _ = length(numbers)
                sum = Enum.sum(numbers)
                sum
+             end
+             """)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # NEGATIVE — inline calls in the same expression
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "does not flag inline calls in the same expression" do
+    test "Enum.sum + length for average" do
+      assert clean?(NoRedundantListTraversal, """
+             def run(numbers) do
+               average = Enum.sum(numbers) / length(numbers)
+               Enum.filter(numbers, &(&1 >= average))
+             end
+             """)
+    end
+
+    test "Enum.sum + Enum.count for average" do
+      assert clean?(NoRedundantListTraversal, """
+             def run(numbers) do
+               average = Enum.sum(numbers) / Enum.count(numbers)
+               average
+             end
+             """)
+    end
+
+    test "Enum.min + Enum.max in same expression" do
+      assert clean?(NoRedundantListTraversal, """
+             def run(numbers) do
+               diff = Enum.max(numbers) - Enum.min(numbers)
+               diff
+             end
+             """)
+    end
+
+    test "Enum.sum + length added together" do
+      assert clean?(NoRedundantListTraversal, """
+             def run(numbers) do
+               result = Enum.sum(numbers) + length(numbers)
+               result
              end
              """)
     end
@@ -412,7 +446,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
 
   describe "does not flag already-optimal code" do
     test "Enum.min_max already used" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                {minimum, maximum} = Enum.min_max(numbers)
                {minimum, maximum}
@@ -421,7 +455,7 @@ defmodule Credence.Pattern.NoRedundantListTraversalCheckTest do
     end
 
     test "Enum.reduce already used" do
-      assert clean?("""
+      assert clean?(NoRedundantListTraversal, """
              def run(numbers) do
                {count, sum} = Enum.reduce(numbers, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)
                {count, sum}

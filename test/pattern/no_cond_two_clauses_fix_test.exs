@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoCondTwoClausesFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoCondTwoClauses
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(NoCondTwoClauses, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # BASIC FIXES — cond → if/else
@@ -33,7 +28,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "multi-line second body — idx=50 pattern" do
@@ -60,7 +55,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "multi-line first body" do
@@ -87,7 +82,118 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
+    end
+  end
+
+  describe "rewrites complementary guard cond to if/else" do
+    test "complementary guards — <= and >" do
+      input = """
+      def run(x, target) do
+        cond do
+          x <= target -> :left
+          x > target -> :right
+        end
+      end
+      """
+
+      expected = """
+      def run(x, target) do
+        if x <= target do
+          :left
+        else
+          :right
+        end
+      end
+      """
+
+      assert fix(NoCondTwoClauses, input) == expected
+    end
+
+    test "complementary guards — < and >=" do
+      input = """
+      def run(x, y) do
+        cond do
+          x < y -> :less
+          x >= y -> :not_less
+        end
+      end
+      """
+
+      expected = """
+      def run(x, y) do
+        if x < y do
+          :less
+        else
+          :not_less
+        end
+      end
+      """
+
+      assert fix(NoCondTwoClauses, input) == expected
+    end
+
+    test "complementary guards — == and !=" do
+      input = """
+      def run(x, y) do
+        cond do
+          x == y -> :equal
+          x != y -> :not_equal
+        end
+      end
+      """
+
+      expected = """
+      def run(x, y) do
+        if x == y do
+          :equal
+        else
+          :not_equal
+        end
+      end
+      """
+
+      assert fix(NoCondTwoClauses, input) == expected
+    end
+
+    test "complementary guards — binary search pattern" do
+      input = """
+      def search(tuple, target, low, high) do
+        mid = div(low + high, 2)
+        mid_char = elem(tuple, mid)
+
+        cond do
+          mid_char <= target ->
+            search(tuple, target, mid + 1, high)
+
+          mid_char > target ->
+            if mid == 0 or elem(tuple, mid - 1) <= target do
+              mid
+            else
+              search(tuple, target, low, mid - 1)
+            end
+        end
+      end
+      """
+
+      expected = """
+      def search(tuple, target, low, high) do
+        mid = div(low + high, 2)
+        mid_char = elem(tuple, mid)
+
+        if mid_char <= target do
+          search(tuple, target, mid + 1, high)
+        else
+          if mid == 0 or elem(tuple, mid - 1) <= target do
+            mid
+          else
+            search(tuple, target, low, mid - 1)
+          end
+        end
+      end
+      """
+
+      assert fix(NoCondTwoClauses, input) == expected
     end
   end
 
@@ -116,7 +222,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "function call condition" do
@@ -139,7 +245,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "negated condition" do
@@ -162,7 +268,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
   end
 
@@ -195,7 +301,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
 
     test "preserves surrounding code" do
@@ -220,7 +326,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
   end
 
@@ -260,7 +366,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoCondTwoClauses, input) == expected
     end
   end
 
@@ -280,22 +386,52 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 
-  describe "does not modify cond with non-true second guard" do
-    test "both guards are real conditions" do
+  describe "does not modify cond with non-true non-complementary second guard" do
+    test "non-complementary guards" do
       input = """
       def run(x) do
         cond do
-          x > 0 -> :positive
-          x <= 0 -> :non_positive
+          x > 100 -> :high
+          x > 0 -> :low_positive
         end
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
+    end
+  end
+
+  describe "does not modify complementary guards with non-simple operands" do
+    # Re-evaluating a side-effecting operand in the second guard makes the
+    # rewrite unsafe, so call/expression operands are left untouched.
+    test "function-call operand" do
+      input = """
+      def run(target) do
+        cond do
+          next_id() <= target -> :left
+          next_id() > target -> :right
+        end
+      end
+      """
+
+      assert fix(NoCondTwoClauses, input) == input
+    end
+
+    test "arithmetic-expression operand" do
+      input = """
+      def run(x, y) do
+        cond do
+          x + 1 <= y -> :left
+          x + 1 > y -> :right
+        end
+      end
+      """
+
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 
@@ -309,7 +445,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 
@@ -325,7 +461,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
 
     test "plain function" do
@@ -335,7 +471,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 
@@ -350,7 +486,7 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoCondTwoClauses, input) == input
     end
   end
 end

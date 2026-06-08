@@ -3,10 +3,10 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   Detects multiple traversals of the same list that could be merged into
   a single pass.
 
-  LLMs routinely produce code like `count = length(numbers)` followed by
-  `sum = Enum.sum(numbers)` — two O(n) passes where one `Enum.reduce/3`
-  would do. Similarly, separate `Enum.min/1` and `Enum.max/1` calls can be
-  replaced by the built-in `Enum.min_max/1`.
+  Separate `Enum.min/1` and `Enum.max/1` calls can be replaced by the
+  built-in `Enum.min_max/1`. Similarly, `length/1` + `Enum.sum/1` or
+  other pairs on the same list are flagged as a hint, though the
+  `count + sum` pair is not auto-fixed (see below).
 
   Only flags calls that are:
   - bare assignments (`var = func(list)`) in the same block
@@ -23,19 +23,22 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
 
   ## Auto-fixable pairs
 
-      length/Enum.count + Enum.sum  →  single Enum.reduce/3
       Enum.min + Enum.max           →  Enum.min_max/1
+
+  The `count + sum` pair is flagged but NOT auto-fixed — merging `Enum.sum/1`
+  + `length/1` into a manual `Enum.reduce/3` with a tuple accumulator is a
+  readability downgrade. The built-in functions are the idiomatic pattern.
 
   Other combinations are flagged but not auto-fixed.
 
   ## Bad
 
-      count = length(numbers)
-      sum = Enum.sum(numbers)
+      minimum = Enum.min(numbers)
+      maximum = Enum.max(numbers)
 
   ## Good
 
-      {count, sum} = Enum.reduce(numbers, {0, 0}, fn x, {c, s} -> {c + 1, s + x} end)
+      {minimum, maximum} = Enum.min_max(numbers)
   """
 
   use Credence.Pattern.Rule
@@ -43,8 +46,11 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
   alias Credence.RuleHelpers
 
   # Pairs we know how to auto-fix
+  # Note: [:count, :sum] is NOT fixable — merging Enum.sum + length into a
+  # manual Enum.reduce with a tuple accumulator is a readability downgrade.
+  # Enum.sum/1 + length/1 is the idiomatic Elixir pattern for computing means.
+  # The check still flags it as a "consider merging" hint, but no auto-fix.
   @fixable_pairs [
-    MapSet.new([:count, :sum]),
     MapSet.new([:min, :max])
   ]
 
@@ -221,6 +227,9 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
 
   # Groups entries by list variable and returns only valid groups:
   # 2+ distinct aggregate types, no rebinding between first and last.
+  # Skips groups where all entries are inline calls in the same statement —
+  # e.g. `Enum.sum(x) / length(x)` is a natural compound expression, not a
+  # redundancy worth merging into a manual reduce.
   defp find_valid_groups(statements) do
     scan_all_calls(statements)
     |> Enum.group_by(& &1.list_var)
@@ -232,7 +241,8 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
         first_idx = hd(sorted).index
         last_idx = List.last(sorted).index
 
-        if variable_rebound?(statements, list_var, first_idx, last_idx) do
+        if all_inline_same_statement?(sorted) or
+             variable_rebound?(statements, list_var, first_idx, last_idx) do
           []
         else
           [%{list_var: list_var, entries: sorted}]
@@ -241,6 +251,15 @@ defmodule Credence.Pattern.NoRedundantListTraversal do
         []
       end
     end)
+  end
+
+  # Returns true when every entry is an inline call (not a bare assignment)
+  # and they all share the same statement index. Such pairs are part of a
+  # single natural expression (e.g. `avg = Enum.sum(x) / length(x)`) and
+  # should not be flagged or merged.
+  defp all_inline_same_statement?(entries) do
+    Enum.all?(entries, &(&1.mode == :inline)) and
+      entries |> Enum.map(& &1.index) |> Enum.uniq() |> length() == 1
   end
 
   # length(var) — Kernel BIF

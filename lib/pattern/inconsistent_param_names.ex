@@ -49,6 +49,51 @@ defmodule Credence.Pattern.InconsistentParamNames do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
+  # Elixir reserved words that cannot be used as variable names.
+  # Renaming a parameter to one of these would produce a syntax error.
+  @reserved_words MapSet.new([
+                    "after",
+                    "and",
+                    "case",
+                    "catch",
+                    "cond",
+                    "def",
+                    "defdelegate",
+                    "defexception",
+                    "defguard",
+                    "defguardp",
+                    "defimpl",
+                    "defmacro",
+                    "defmacrop",
+                    "defmodule",
+                    "defoverridable",
+                    "defp",
+                    "defprotocol",
+                    "defstruct",
+                    "do",
+                    "else",
+                    "end",
+                    "fn",
+                    "for",
+                    "if",
+                    "import",
+                    "in",
+                    "not",
+                    "or",
+                    "quote",
+                    "raise",
+                    "receive",
+                    "require",
+                    "rescue",
+                    "try",
+                    "unless",
+                    "unquote",
+                    "unquote_splicing",
+                    "use",
+                    "when",
+                    "with"
+                  ])
+
   @impl true
   def check(ast, _opts) do
     clauses = collect_clauses(ast)
@@ -300,6 +345,8 @@ defmodule Credence.Pattern.InconsistentParamNames do
   end
 
   defp build_rename_map(args, canonical) do
+    names_in_clause = collect_all_base_names_in_args(args)
+
     Enum.zip(args, canonical)
     |> Enum.reduce(%{}, fn
       # Canonical says skip — don't touch this position
@@ -319,6 +366,22 @@ defmodule Credence.Pattern.InconsistentParamNames do
           current_base == base ->
             map
 
+          # Canonical name already exists elsewhere in this clause's
+          # patterns — renaming would create a duplicate binding (e.g.
+          # def f([prev | rest], prev_prev) → def f([prev | rest], prev)
+          # binds `prev` twice). Skip to avoid breaking the clause.
+          MapSet.member?(names_in_clause, base) ->
+            map
+
+          # Same check for underscore-prefixed variant
+          MapSet.member?(names_in_clause, "_" <> base) ->
+            map
+
+          # Canonical base is a reserved word — renaming would produce
+          # a syntax error (e.g. `end`, `do`, `fn` cannot be variable names)
+          MapSet.member?(@reserved_words, base) ->
+            map
+
           # Needs rename — preserve underscore prefix
           true ->
             new_name =
@@ -333,6 +396,15 @@ defmodule Credence.Pattern.InconsistentParamNames do
       _, map ->
         map
     end)
+  end
+
+  # Collect all base names (variables) that appear anywhere in the
+  # argument patterns of one clause. Used to detect would-be collisions
+  # before renaming.
+  defp collect_all_base_names_in_args(args) do
+    args
+    |> Enum.flat_map(&collect_base_names_in_pattern/1)
+    |> MapSet.new()
   end
 
   defp apply_renames(clause, rename_map) do

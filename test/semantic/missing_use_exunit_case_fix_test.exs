@@ -1,7 +1,9 @@
-defmodule Credence.Semantic.MissingUseExUnitCaseFixTest do
+defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
   use ExUnit.Case
 
-  alias Credence.Semantic.MissingUseExUnitCase
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
+  alias Credence.Semantic.MissingUseExunitCase
   # The diagnostic is passed to fix/2 but the rule doesn't use it
   # for positioning — it finds missing `use` via AST analysis.
   @diagnostic %{
@@ -11,7 +13,7 @@ defmodule Credence.Semantic.MissingUseExUnitCaseFixTest do
   }
 
   defp fix(code) do
-    result = MissingUseExUnitCase.fix(code, @diagnostic)
+    result = MissingUseExunitCase.fix(code, @diagnostic)
     if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
   end
 
@@ -308,6 +310,22 @@ defmodule Credence.Semantic.MissingUseExUnitCaseFixTest do
       """
 
       assert fix(input) == input
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      input = """
+      defmodule MyAppTest do
+        describe "feature" do
+          test "works" do
+            assert true
+          end
+        end
+      end
+      """
+
+      assert valid_syntax?(fix(input))
     end
   end
 end

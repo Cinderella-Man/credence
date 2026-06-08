@@ -1,34 +1,36 @@
 defmodule Credence.Pattern.NoSortForTopK do
   @moduledoc """
   Detects inefficient patterns where a full sort is performed only to
-  retrieve a single element (the minimum or maximum).
+  retrieve the minimum or maximum element via `Enum.at(0)`.
 
   Sorting an entire collection is O(n log n). When only the minimum or
-  maximum element is needed, `Enum.min/1` or `Enum.max/1` provides the
-  same result in O(n) without allocating a sorted intermediate list.
+  maximum element is needed, `Enum.min`/`Enum.max` provides the same result
+  in O(n) without allocating a sorted intermediate list. The `fn -> nil end`
+  empty_fallback preserves `Enum.at(0)`'s `nil`-on-empty behaviour (bare
+  `Enum.min/1` would raise `Enum.EmptyError`).
 
   ## Flagged patterns
 
-  | Pattern                                           | Suggested replacement |
-  | ------------------------------------------------- | --------------------- |
-  | `Enum.sort/1 \|> Enum.take(1)`                    | `Enum.min/1`          |
-  | `Enum.sort/1 \|> hd/1`                            | `Enum.min/1`          |
-  | `Enum.sort/1 \|> Enum.at(0)`                      | `Enum.min/1`          |
-  | `Enum.sort/1 \|> Enum.reverse() \|> Enum.take(1)` | `Enum.max/1`          |
-  | `Enum.sort/1 \|> Enum.reverse() \|> hd/1`         | `Enum.max/1`          |
-  | `Enum.sort/1 \|> Enum.reverse() \|> Enum.at(0)`   | `Enum.max/1`          |
+  | Pattern                                         | Suggested replacement          |
+  | ----------------------------------------------- | ------------------------------ |
+  | `Enum.sort/1 \|> Enum.at(0)`                    | `Enum.min(_, fn -> nil end)`   |
+  | `Enum.sort/1 \|> Enum.reverse() \|> Enum.at(0)` | `Enum.max(_, fn -> nil end)`   |
 
-  These patterns are **automatically fixable**.
+  Only the `Enum.at(0)` terminal is rewritten. The `Enum.take(1)` and `hd/1`
+  terminals are **deliberately not fixed**: `take(1)` returns a one-element
+  *list* (`[min]`), not the scalar `Enum.min/1` returns; and `hd([])` raises
+  `ArgumentError` where `Enum.min([])` raises `Enum.EmptyError` — neither is
+  behaviour-preserving.
 
   ## Bad
 
-      Enum.sort(list) |> Enum.take(1)
-      Enum.sort(list) |> Enum.reverse() |> hd()
+      Enum.sort(list) |> Enum.at(0)
+      Enum.sort(list) |> Enum.reverse() |> Enum.at(0)
 
   ## Good
 
-      Enum.min(list)
-      Enum.max(list)
+      Enum.min(list, fn -> nil end)
+      Enum.max(list, fn -> nil end)
   """
 
   use Credence.Pattern.Rule
@@ -165,9 +167,10 @@ defmodule Credence.Pattern.NoSortForTopK do
 
     case after_reverses do
       [single] ->
+        # Only Enum.at(0) is behaviour-preservingly replaceable (with the
+        # empty_fallback). take(1) returns a list and hd/1 raises a different
+        # error on [], so neither is rewritten.
         case classify_terminal(single) do
-          {:ok, :take, 1} -> {:ok, enum_call(min_or_max(parity), arg)}
-          {:ok, :hd, _} -> {:ok, enum_call(min_or_max(parity), arg)}
           {:ok, :at, 0} -> {:ok, enum_call(min_or_max(parity), arg)}
           _ -> :error
         end
@@ -183,14 +186,6 @@ defmodule Credence.Pattern.NoSortForTopK do
   # Sourceror wraps integer literals in {:__block__, meta, [n]}.
   defp unwrap_int({:__block__, _, [n]}) when is_integer(n), do: n
   defp unwrap_int(_), do: nil
-
-  defp classify_terminal({{:., _, [mod, :take]}, _, [k_node]}) do
-    k = unwrap_int(k_node)
-
-    if k != nil and enum_module?(mod), do: {:ok, :take, k}, else: :error
-  end
-
-  defp classify_terminal({:hd, _, []}), do: {:ok, :hd, 1}
 
   defp classify_terminal({{:., _, [mod, :at]}, _, [idx_node]}) do
     idx = unwrap_int(idx_node)
@@ -211,8 +206,14 @@ defmodule Credence.Pattern.NoSortForTopK do
   defp extract_sort_1(_), do: :error
 
   defp enum_call(fun, arg) when fun in [:min, :max] do
-    {{:., [], [{:__aliases__, [], [:Enum]}, fun]}, [], [arg]}
+    {{:., [], [{:__aliases__, [], [:Enum]}, fun]}, [], [arg, empty_fallback()]}
   end
+
+  # `Enum.at(sorted, 0)` is `nil` on an empty collection; bare `Enum.min/1` would
+  # raise. Preserve nil-on-empty with the empty_fallback. Parse it (rather than
+  # hand-build the AST) so it carries the metadata Sourceror's renderer needs
+  # when this fix re-renders via `patches_from_ast_transform`.
+  defp empty_fallback, do: Sourceror.parse_string!("fn -> nil end")
 
   defp flatten_pipeline({:|>, _, [left, right]}) do
     flatten_pipeline(left) ++ [right]
@@ -262,13 +263,7 @@ defmodule Credence.Pattern.NoSortForTopK do
     end
   end
 
-  # Only match the single-element terminals this module can fix.
-  defp extract_topk({{:., _, [mod, :take]}, _, [n_node]}) do
-    if enum_module?(mod) and unwrap_int(n_node) == 1, do: {:ok, :take, 1}, else: :error
-  end
-
-  defp extract_topk({:hd, _, []}), do: {:ok, :hd, 1}
-
+  # Only match the Enum.at(0) terminal this module can fix behaviour-preservingly.
   defp extract_topk({{:., _, [mod, :at]}, _, [n_node]}) do
     if enum_module?(mod) and unwrap_int(n_node) == 0, do: {:ok, :at, 0}, else: :error
   end
@@ -279,32 +274,14 @@ defmodule Credence.Pattern.NoSortForTopK do
 
   defp extract_topk(_), do: :error
 
-  defp build_check_message(op, var, reverses) do
-    is_reversed = rem(reverses, 2) == 1
-    fun = if is_reversed, do: "Enum.max", else: "Enum.min"
+  defp build_check_message(:at, var, reverses) do
+    fun = if rem(reverses, 2) == 1, do: "Enum.max", else: "Enum.min"
 
-    case op do
-      :take ->
-        """
-        Enum.sort/1 |> Enum.take(1) on `#{var}` is unnecessary O(n log n).
-        Use #{fun}/1 instead for O(n):
-            #{fun}(#{var})
-        """
-
-      :hd ->
-        """
-        Enum.sort/1 |> hd/1 on `#{var}` is inefficient.
-        Use #{fun}/1 instead:
-            #{fun}(#{var})
-        """
-
-      :at ->
-        """
-        Enum.sort/1 |> Enum.at(0) on `#{var}` is unnecessary sorting.
-        Use #{fun}/1 instead:
-            #{fun}(#{var})
-        """
-    end
+    """
+    Enum.sort/1 |> Enum.at(0) on `#{var}` is unnecessary sorting.
+    Use #{fun} instead (empty_fallback preserves nil on []):
+        #{fun}(#{var}, fn -> nil end)
+    """
   end
 
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true

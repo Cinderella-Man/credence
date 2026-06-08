@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoRedundantAssignment
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRedundantAssignment.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # TIER 1 — simple variable
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "flags simple variable assign-and-return" do
     test "basic case" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(list) do
                result = Enum.sum(list)
                result
@@ -26,7 +18,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "function call RHS" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(x) do
                output = compute(x)
                output
@@ -35,7 +27,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "pipe chain RHS" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(list) do
                output = list |> Enum.map(&process/1) |> Enum.filter(&valid?/1)
                output
@@ -44,7 +36,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "if/else assigned then returned" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(x) do
                result = if x > 0, do: :positive, else: :non_positive
                result
@@ -53,7 +45,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "case assigned then returned" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(x) do
                result = case x do
                  :a -> 1
@@ -65,7 +57,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "inside a module" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              defmodule Example do
                def run(list) do
                  last = Enum.at(list, -1)
@@ -76,7 +68,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "inside a case arm" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(x) do
                case x do
                  :compute ->
@@ -90,7 +82,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "inside an if branch" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(x) do
                if x > 0 do
                  val = compute(x)
@@ -103,7 +95,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "last pair of multiple rebindings" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(x) do
                result = step1(x)
                result = step2(result)
@@ -114,7 +106,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "RHS references the same variable (rebinding)" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(list) do
                list = Enum.reverse(list)
                list
@@ -123,7 +115,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "arithmetic RHS" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(a, b) do
                sum = a + b
                sum
@@ -138,7 +130,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "flags tuple pattern assign-and-return" do
     test "two-element tuple" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(input) do
                {a, b} = process(input)
                {a, b}
@@ -147,7 +139,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "three-element tuple" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(input) do
                {x, y, z} = compute(input)
                {x, y, z}
@@ -158,7 +150,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "flags list pattern assign-and-return" do
     test "head-tail cons pattern" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(list) do
                [h | t] = list
                [h | t]
@@ -167,7 +159,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "flat list of variables" do
-      assert flagged?("""
+      assert flagged?(NoRedundantAssignment, """
              def run(input) do
                [a, b] = process(input)
                [a, b]
@@ -182,7 +174,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "does not flag patterns containing literals" do
     test "tuple with atom literal" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(input) do
                {:ok, result} = fetch(input)
                {:ok, result}
@@ -191,7 +183,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "tuple with integer literal" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(input) do
                {1, value} = process(input)
                {1, value}
@@ -200,7 +192,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "list with literal element" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(input) do
                [:header, data] = parse(input)
                [:header, data]
@@ -209,7 +201,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "pinned variable in pattern" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(expected, input) do
                ^expected = process(input)
                ^expected
@@ -224,7 +216,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "does not flag map patterns" do
     test "map destructure reconstructs a subset" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(user) do
                %{name: name} = user
                %{name: name}
@@ -233,7 +225,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "map with multiple keys" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(user) do
                %{name: name, age: age} = user
                %{name: name, age: age}
@@ -248,7 +240,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "does not flag when return differs from pattern" do
     test "swapped tuple elements" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(input) do
                {a, b} = process(input)
                {b, a}
@@ -257,7 +249,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "partial tuple return" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(input) do
                {a, b, c} = process(input)
                {a, b}
@@ -266,7 +258,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "different variable name" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(x) do
                result = compute(x)
                output
@@ -281,7 +273,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "does not flag when variable is used between assignment and return" do
     test "variable used mid-block" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(x) do
                result = compute(x)
                log(result)
@@ -291,7 +283,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "assignment is not second-to-last" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(x) do
                result = compute(x)
                other = transform(result)
@@ -307,7 +299,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "does not flag underscore assignments" do
     test "_ = expr then _" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(x) do
                _ = side_effect(x)
                _
@@ -318,7 +310,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "does not flag single-statement blocks" do
     test "no assignment at all" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(x) do
                compute(x)
              end
@@ -326,7 +318,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "only an assignment, no return" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(x) do
                result = compute(x)
              end
@@ -336,7 +328,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
 
   describe "does not flag already-optimal code" do
     test "direct return" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(list) do
                Enum.at(list, -1)
              end
@@ -344,7 +336,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "multiple statements with no redundant pattern" do
-      assert clean?("""
+      assert clean?(NoRedundantAssignment, """
              def run(list) do
                sorted = Enum.sort(list)
                Enum.at(sorted, -1)
@@ -372,7 +364,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoRedundantAssignment, code)) == 2
     end
   end
 end

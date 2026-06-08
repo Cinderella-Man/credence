@@ -1,19 +1,22 @@
 defmodule Credence.Pattern.NoManualStringReverse do
   @moduledoc """
   Readability & performance rule: Detects the pattern
-  `String.graphemes(s) |> Enum.reverse() |> Enum.join()` (and the nested
-  equivalent `Enum.join(Enum.reverse(String.graphemes(s)))`) which is a manual
+  `String.graphemes(s) |> Enum.reverse() |> Enum.join()` (and the
+  `IO.iodata_to_binary/1` reassemble variant) which is a manual
   reimplementation of `String.reverse/1`.
 
-  `String.reverse/1` handles Unicode grapheme clusters correctly and avoids
-  creating an intermediate list, making it both clearer and faster.
+  This rule covers only the **grapheme** decompose. Reversing a list of
+  graphemes and gluing it back is identical to `String.reverse/1` for *every*
+  input — graphemes are exactly what `String.reverse/1` reverses — so it needs
+  no assumption and runs even in `:strict` mode. The `String.codepoints/1`
+  variants are handled by `Credence.Pattern.NoCodepointStringReverse`, which
+  needs the `single_codepoint_graphemes` promise (see decision 4: the split key
+  is the *decompose* function, not the reassemble function).
 
   ## Bad
 
-      # In a pipeline
       reversed = str |> String.graphemes() |> Enum.reverse() |> Enum.join()
-
-      # As a nested call
+      reversed = str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()
       reversed = Enum.join(Enum.reverse(String.graphemes(str)))
 
   ## Good
@@ -27,20 +30,16 @@ defmodule Credence.Pattern.NoManualStringReverse do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        # Pipeline form: ... |> String.graphemes() |> Enum.reverse() |> Enum.join()
-        #
-        # `a |> b() |> c()` parses as {:|>, _, [{:|>, _, [a, b]}, c]}.
-        # So the outer pipe has `c` on the right and the inner chain on the left.
-        # We check: right == Enum.join, predecessor == Enum.reverse, predecessor's predecessor == String.graphemes.
+        # Pipeline: ... |> String.graphemes() |> Enum.reverse() |> REASSEMBLE()
         {:|>, meta, [left, right]} = node, issues ->
-          if remote_call?(right, :Enum, :join) and remote_call?(rightmost(left), :Enum, :reverse) do
+          if reassemble_call?(right) and remote_call?(rightmost(left), :Enum, :reverse) do
             grandparent =
               case left do
                 {:|>, _, [inner_left, _]} -> rightmost(inner_left)
                 _ -> nil
               end
 
-            if grandparent != nil and remote_call?(grandparent, :String, :graphemes) do
+            if grandparent != nil and decompose_call?(grandparent) do
               {node, [build_issue(meta) | issues]}
             else
               {node, issues}
@@ -49,19 +48,12 @@ defmodule Credence.Pattern.NoManualStringReverse do
             {node, issues}
           end
 
-        # Nested call form: Enum.join(Enum.reverse(String.graphemes(s)))
-        {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, meta,
-         [
-           {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _,
-            [
-              {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, _}
-            ]}
-         ]} = node,
-        issues ->
-          {node, [build_issue(meta) | issues]}
-
+        # Nested call: REASSEMBLE(Enum.reverse(String.graphemes(s)))
         node, issues ->
-          {node, issues}
+          case match_nested_manual_reverse(node) do
+            {:ok, meta, _subject} -> {node, [build_issue(meta) | issues]}
+            :error -> {node, issues}
+          end
       end)
 
     Enum.reverse(issues)
@@ -70,53 +62,35 @@ defmodule Credence.Pattern.NoManualStringReverse do
   @impl true
   def fix_patches(ast, _opts) do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      # Pipeline: ... |> String.graphemes() |> Enum.reverse() |> Enum.join()
-      #
-      # Matches the outermost `|>` whose right side is Enum.join(),
-      # then verifies the two preceding pipe stages are Enum.reverse()
-      # and String.graphemes().  Only fires when Enum.join has no
-      # explicit separator (safe replacement).
-      {:|>, _, [left, join]} = node ->
-        with true <- remote_call?(join, :Enum, :join),
-             true <- join_no_separator?(join),
+      {:|>, _, [left, reassemble]} = node ->
+        with true <- reassemble_fixable?(reassemble),
              {:|>, _, [middle, reverse]} <- left,
              true <- remote_call?(reverse, :Enum, :reverse),
-             {:ok, subject} <- graphemes_in_middle(middle) do
+             {:ok, subject} <- decompose_in_middle(middle) do
           fix_pipe_subject(subject)
         else
           _ -> node
         end
 
-      # Nested: Enum.join(Enum.reverse(String.graphemes(s)))
-      {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, [single_arg]} = node ->
-        case single_arg do
-          {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _,
-           [{{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [subject]}]} ->
-            string_reverse_call(subject)
-
-          _ ->
-            node
-        end
-
       node ->
-        node
+        case match_nested_manual_reverse(node) do
+          {:ok, _meta, subject} -> string_reverse_call(subject)
+          :error -> node
+        end
     end)
   end
 
   # Extracts the subject from String.graphemes in the middle of a pipe chain.
-  # Handles both `subject |> String.graphemes()` and `String.graphemes(subject)`.
-  defp graphemes_in_middle({:|>, _, [subject, graphemes]}) do
-    if remote_call?(graphemes, :String, :graphemes), do: {:ok, subject}, else: :error
+  defp decompose_in_middle({:|>, _, [subject, decompose]}) do
+    if decompose_call?(decompose), do: {:ok, subject}, else: :error
   end
 
-  defp graphemes_in_middle({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [subject]}) do
+  defp decompose_in_middle({{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [subject]}) do
     {:ok, subject}
   end
 
-  defp graphemes_in_middle(_), do: :error
+  defp decompose_in_middle(_), do: :error
 
-  # When the subject is already a pipeline, append String.reverse() at the end.
-  # Otherwise wrap in a direct call: String.reverse(subject).
   defp fix_pipe_subject({:|>, _, _} = pipe) do
     {:|>, [], [pipe, string_reverse_call()]}
   end
@@ -125,19 +99,14 @@ defmodule Credence.Pattern.NoManualStringReverse do
     string_reverse_call(subject)
   end
 
-  # AST for `String.reverse()` (no args – value arrives via pipe)
   defp string_reverse_call do
     {{:., [], [{:__aliases__, [], [:String]}, :reverse]}, [], []}
   end
 
-  # AST for `String.reverse(subject)`
   defp string_reverse_call(subject) do
     {{:., [], [{:__aliases__, [], [:String]}, :reverse]}, [], [subject]}
   end
 
-  # Safe to auto-fix when Enum.join has no separator or an empty-string
-  # separator (which is the default). A non-empty separator would change
-  # semantics (e.g. Enum.join(list, "-") ≠ String.reverse).
   defp join_no_separator?({{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, []}), do: true
 
   defp join_no_separator?({{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, [sep]}),
@@ -156,12 +125,41 @@ defmodule Credence.Pattern.NoManualStringReverse do
     match?({{:., _, [{:__aliases__, _, [^mod]}, ^func]}, _, _}, node)
   end
 
+  # Decompose step: String.graphemes only (codepoints is a separate rule).
+  defp decompose_call?(node), do: remote_call?(node, :String, :graphemes)
+
+  # Reassemble step: Enum.join or IO.iodata_to_binary (for check — any args).
+  defp reassemble_call?(node) do
+    remote_call?(node, :Enum, :join) or remote_call?(node, :IO, :iodata_to_binary)
+  end
+
+  # Reassemble that is safe to auto-fix (Enum.join without separator, or any
+  # IO.iodata_to_binary — it has no separator concept).
+  defp reassemble_fixable?(node) do
+    (remote_call?(node, :Enum, :join) and join_no_separator?(node)) or
+      remote_call?(node, :IO, :iodata_to_binary)
+  end
+
+  # Nested form: REASSEMBLE(Enum.reverse(String.graphemes(subject)))
+  defp match_nested_manual_reverse(
+         {{:., meta, [{:__aliases__, _, outer_mod}, outer_func]}, _,
+          [
+            {{:., _, [{:__aliases__, _, [:Enum]}, :reverse]}, _,
+             [{{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [subject]}]}
+          ]}
+       )
+       when outer_mod in [[:Enum], [:IO]] and outer_func in [:join, :iodata_to_binary] do
+    {:ok, meta, subject}
+  end
+
+  defp match_nested_manual_reverse(_), do: :error
+
   defp build_issue(meta) do
     %Issue{
       rule: :no_manual_string_reverse,
       message:
-        "Use `String.reverse/1` instead of `String.graphemes/1 |> Enum.reverse/0 |> Enum.join/0`. " <>
-          "It is clearer and avoids creating an intermediate list.",
+        "Use `String.reverse/1` instead of manually decomposing a string into graphemes, " <>
+          "reversing, and reassembling. It is clearer and handles Unicode correctly.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

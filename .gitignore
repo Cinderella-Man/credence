@@ -22,3 +22,13 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 credence-*.tar
 
+
+# Autonomous review-loop verdict channel (transient)
+maintainer_tools/_verdict
+
+# Autonomous review-loop per-row agent transcripts
+maintainer_tools/stage_1_promote_fixable_rules/.review_logs/
+maintainer_tools/stage_2_promote_non_fixable/.review_logs/
+maintainer_tools/stage_3_resurrect_followups/.review_logs/
+
+.claude

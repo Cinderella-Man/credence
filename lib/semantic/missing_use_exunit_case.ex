@@ -1,4 +1,4 @@
-defmodule Credence.Semantic.MissingUseExUnitCase do
+defmodule Credence.Semantic.MissingUseExunitCase do
   @moduledoc """
   Fixes test modules that are missing `use ExUnit.Case`.
 

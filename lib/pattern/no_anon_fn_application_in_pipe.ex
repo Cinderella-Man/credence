@@ -52,13 +52,32 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipe do
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      # |> (fn ... end).() → |> then(fn ... end)
-      {:|>, pipe_meta, [left, {{:., _, [{:fn, _, _} = fn_node]}, _, []}]} ->
-        {:|>, pipe_meta, [left, {:then, [], [fn_node]}]}
+    # `... |> (fn ... end).()` → `... |> then(fn ... end)`.
+    #
+    # We patch the `.()`-application node (`(fn ...).()`) on the pipe's right in
+    # place rather than rewriting the whole `:|>`, so chained applications each
+    # get their own non-overlapping patch. Sourceror's range for the application
+    # starts at the `fn` keyword, EXCLUDING the wrapping `(` that `.()` requires,
+    # so we extend the range one column to the left to swallow that `(`. Without
+    # this the patch strands the `(`, producing the uncompilable `|> (then(fn ...end)`.
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        {:|>, _, [_left, {{:., _, [{:fn, _, _} = fn_node]}, _, []} = dotcall]} = node, acc ->
+          case Sourceror.get_range(dotcall) do
+            nil ->
+              {node, acc}
 
-      node ->
-        node
-    end)
+            %Sourceror.Range{start: start, end: stop} ->
+              start_at_paren = Keyword.update!(start, :column, &(&1 - 1))
+              range = %Sourceror.Range{start: start_at_paren, end: stop}
+              change = Credence.RuleHelpers.render_replacement({:then, [], [fn_node]}, range)
+              {node, [%{range: range, change: change} | acc]}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reverse(patches)
   end
 end

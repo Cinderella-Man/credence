@@ -2,7 +2,7 @@ defmodule Credence.Pattern do
   @moduledoc """
   Pattern phase — detects and fixes anti-patterns in Elixir code.
 
-  Delegates to the 80+ rules implementing `Credence.Pattern.Rule` behaviour.
+  Delegates to the 117 rules implementing `Credence.Pattern.Rule` behaviour.
   Rules are discovered automatically and run in priority order (lower first),
   with module name as tiebreaker for determinism.
   """
@@ -98,9 +98,8 @@ defmodule Credence.Pattern do
     {code, applied}
   end
 
-  # Dispatch to either the new patch-based interface or the legacy
-  # whole-source interface, per-rule. See
-  # `Credence.RuleHelpers.apply_rule_fix/3` for the routing logic.
+  # Apply the rule's `fix_patches/2` to the source. See
+  # `Credence.RuleHelpers.apply_rule_fix/3`.
   defp invoke_fix(rule, source, opts), do: RuleHelpers.apply_rule_fix(rule, source, opts)
 
   # Compile-output gate. A rule whose `fix/2` returns source that no
@@ -127,13 +126,71 @@ defmodule Credence.Pattern do
     end
   end
 
+  # The base list always runs through the assumption filter — even when the
+  # caller hands an explicit `rules:` list — so naming a rule can never punch
+  # through the safety guarantee. `explicit?` lets the filter warn (not crash)
+  # when a rule the caller named by hand gets filtered out.
   defp rules(opts) do
-    Keyword.get(opts, :rules, default_rules())
+    {base, explicit?} =
+      case Keyword.fetch(opts, :rules) do
+        {:ok, list} -> {list, true}
+        :error -> {default_rules(), false}
+      end
+
+    RuleHelpers.filter_by_assumptions(base, opts, explicit?)
   end
 
   @doc false
   def default_rules do
     RuleHelpers.discover_rules(Credence.Pattern.Rule)
+  end
+
+  @doc """
+  Returns the status of every rule Credence found (or every rule in an explicit
+  `rules:` list), as maps with:
+
+  - `:rule` — the rule module
+  - `:name` — its short name
+  - `:assumptions` — the promises it needs
+  - `:enabled` — whether all of them are on under `opts` right now
+  - `:missing` — which needed promises are off
+
+  Honours the same `assumptions:` / `config :credence` settings as `fix/2`, so
+  this is the place to answer "what did I promise, and why didn't this rule fire?"
+  """
+  @spec rule_status(keyword()) :: [
+          %{
+            rule: module(),
+            name: String.t(),
+            assumptions: [atom()],
+            enabled: boolean(),
+            missing: [atom()]
+          }
+        ]
+  def rule_status(opts \\ []) do
+    effective = RuleHelpers.effective_assumptions(opts)
+    base = Keyword.get(opts, :rules, default_rules())
+
+    Enum.map(base, fn rule ->
+      missing = RuleHelpers.missing_assumptions(rule, effective)
+
+      %{
+        rule: rule,
+        name: RuleHelpers.rule_name(rule),
+        assumptions: rule.assumptions(),
+        enabled: missing == [],
+        missing: missing
+      }
+    end)
+  end
+
+  @doc """
+  The short names of the rules that are on under `opts`. Derived from
+  `rule_status/1` so the two answers never disagree.
+  """
+  @spec enabled_rules(keyword()) :: [String.t()]
+  def enabled_rules(opts \\ []) do
+    opts |> rule_status() |> Enum.filter(& &1.enabled) |> Enum.map(& &1.name)
   end
 
   defp parse_error_issue(line, error_msg, token) do

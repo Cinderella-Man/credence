@@ -1,31 +1,38 @@
 defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoKeywordGetIntegerKey
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoKeywordGetIntegerKey.check(ast, [])
-  end
 
   # ── flags integer keys ─────────────────────────────────────────
 
   describe "flags integer keys" do
     test "negative index -1" do
-      assert [%Issue{rule: :no_keyword_get_integer_key}] = check("Keyword.get(acc, -1)")
+      assert [%Issue{rule: :no_keyword_get_integer_key}] =
+               check(NoKeywordGetIntegerKey, """
+               Keyword.get(acc, -1)
+               """)
     end
 
     test "zero index" do
-      assert [%Issue{}] = check("Keyword.get(list, 0)")
+      assert [%Issue{}] =
+               check(NoKeywordGetIntegerKey, """
+               Keyword.get(list, 0)
+               """)
     end
 
     test "positive index" do
-      assert [%Issue{}] = check("Keyword.get(items, 3)")
+      assert [%Issue{}] =
+               check(NoKeywordGetIntegerKey, """
+               Keyword.get(items, 3)
+               """)
     end
 
     test "other negative index" do
-      assert [%Issue{}] = check("Keyword.get(items, -2)")
+      assert [%Issue{}] =
+               check(NoKeywordGetIntegerKey, """
+               Keyword.get(items, -2)
+               """)
     end
   end
 
@@ -33,15 +40,24 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
 
   describe "flags in various contexts" do
     test "in assignment" do
-      assert [%Issue{}] = check("prev = Keyword.get(acc, -1)")
+      assert [%Issue{}] =
+               check(NoKeywordGetIntegerKey, """
+               prev = Keyword.get(acc, -1)
+               """)
     end
 
     test "in pipe" do
-      assert [%Issue{}] = check("acc |> Keyword.get(-1)")
+      assert [%Issue{}] =
+               check(NoKeywordGetIntegerKey, """
+               acc |> Keyword.get(-1)
+               """)
     end
 
     test "as function argument" do
-      assert [%Issue{}] = check("do_something(Keyword.get(list, -1))")
+      assert [%Issue{}] =
+               check(NoKeywordGetIntegerKey, """
+               do_something(Keyword.get(list, -1))
+               """)
     end
   end
 
@@ -56,7 +72,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NoKeywordGetIntegerKey, code)) == 2
     end
   end
 
@@ -64,27 +80,39 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
 
   describe "does NOT flag" do
     test "atom key" do
-      assert check("Keyword.get(opts, :name)") == []
+      assert check(NoKeywordGetIntegerKey, """
+             Keyword.get(opts, :name)
+             """) == []
     end
 
     test "atom key with default" do
-      assert check("Keyword.get(opts, :name, \"default\")") == []
+      assert check(NoKeywordGetIntegerKey, """
+             Keyword.get(opts, :name, "default")
+             """) == []
     end
 
     test "variable key" do
-      assert check("Keyword.get(opts, key)") == []
+      assert check(NoKeywordGetIntegerKey, """
+             Keyword.get(opts, key)
+             """) == []
     end
 
     test "Map.get with integer key (maps allow integer keys)" do
-      assert check("Map.get(map, -1)") == []
+      assert check(NoKeywordGetIntegerKey, """
+             Map.get(map, -1)
+             """) == []
     end
 
     test "Keyword.fetch with integer key (different function)" do
-      assert check("Keyword.fetch(opts, -1)") == []
+      assert check(NoKeywordGetIntegerKey, """
+             Keyword.fetch(opts, -1)
+             """) == []
     end
 
     test "no Keyword.get at all" do
-      assert check("List.last(acc)") == []
+      assert check(NoKeywordGetIntegerKey, """
+             List.last(acc)
+             """) == []
     end
   end
 
@@ -92,7 +120,11 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
 
   describe "metadata" do
     test "meta.line is set" do
-      [issue] = check("Keyword.get(acc, -1)")
+      [issue] =
+        check(NoKeywordGetIntegerKey, """
+        Keyword.get(acc, -1)
+        """)
+
       assert issue.meta.line != nil
     end
   end

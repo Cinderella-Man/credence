@@ -1,40 +1,45 @@
 defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NoRedundantEnumJoinSeparator
 
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoRedundantEnumJoinSeparator.check(ast, [])
-  end
-
   describe "flags Enum.join with empty string" do
     test "piped Enum.join(\"\")" do
       assert [%Issue{rule: :no_redundant_enum_join_separator}] =
-               check("list |> Enum.join(\"\")")
+               check(NoRedundantEnumJoinSeparator, """
+               list |> Enum.join("")
+               """)
     end
 
     test "direct Enum.join(list, \"\")" do
       assert [%Issue{rule: :no_redundant_enum_join_separator}] =
-               check("Enum.join(list, \"\")")
+               check(NoRedundantEnumJoinSeparator, """
+               Enum.join(list, "")
+               """)
     end
 
     test "piped in longer pipeline" do
       assert [%Issue{rule: :no_redundant_enum_join_separator}] =
-               check("list |> Enum.reverse() |> Enum.join(\"\")")
+               check(NoRedundantEnumJoinSeparator, """
+               list |> Enum.reverse() |> Enum.join("")
+               """)
     end
   end
 
   describe "flags Enum.map_join with empty string" do
     test "piped Enum.map_join(\"\", mapper)" do
       assert [%Issue{rule: :no_redundant_enum_join_separator}] =
-               check("list |> Enum.map_join(\"\", &to_string/1)")
+               check(NoRedundantEnumJoinSeparator, """
+               list |> Enum.map_join("", &to_string/1)
+               """)
     end
 
     test "direct Enum.map_join(list, \"\", mapper)" do
       assert [%Issue{rule: :no_redundant_enum_join_separator}] =
-               check("Enum.map_join(list, \"\", &to_string/1)")
+               check(NoRedundantEnumJoinSeparator, """
+               Enum.map_join(list, "", &to_string/1)
+               """)
     end
   end
 
@@ -52,40 +57,59 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorCheckTest do
       end
       """
 
-      assert length(check(code)) == 4
+      assert length(check(NoRedundantEnumJoinSeparator, code)) == 4
     end
   end
 
   describe "does NOT flag" do
     test "Enum.join() with no separator" do
-      assert check("list |> Enum.join()") == []
+      assert check(NoRedundantEnumJoinSeparator, """
+             list |> Enum.join()
+             """) == []
     end
 
     test "Enum.join(list) direct with no separator" do
-      assert check("Enum.join(list)") == []
+      assert check(NoRedundantEnumJoinSeparator, """
+             Enum.join(list)
+             """) == []
     end
 
     test "Enum.join with non-empty separator" do
-      assert check("Enum.join(list, \", \")") == []
+      assert check(NoRedundantEnumJoinSeparator, """
+             Enum.join(list, ", ")
+             """) == []
     end
 
     test "Enum.map_join with no separator" do
-      assert check("Enum.map_join(list, &to_string/1)") == []
+      assert check(NoRedundantEnumJoinSeparator, """
+             Enum.map_join(list, &to_string/1)
+             """) == []
     end
 
     test "Enum.map_join with non-empty separator" do
-      assert check("list |> Enum.map_join(\", \", &to_string/1)") == []
+      assert check(NoRedundantEnumJoinSeparator, """
+             list |> Enum.map_join(", ", &to_string/1)
+             """) ==
+               []
     end
   end
 
   describe "metadata" do
     test "meta.line is set" do
-      [issue] = check("Enum.join(list, \"\")")
+      [issue] =
+        check(NoRedundantEnumJoinSeparator, """
+        Enum.join(list, "")
+        """)
+
       assert issue.meta.line != nil
     end
 
     test "message mentions default" do
-      [issue] = check("Enum.join(list, \"\")")
+      [issue] =
+        check(NoRedundantEnumJoinSeparator, """
+        Enum.join(list, "")
+        """)
+
       assert issue.message =~ "default to an empty string"
     end
   end

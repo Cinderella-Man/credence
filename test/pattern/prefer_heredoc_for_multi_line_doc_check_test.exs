@@ -1,17 +1,7 @@
 defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.PreferHeredocForMultiLineDoc
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferHeredocForMultiLineDoc.check(ast, [])
-  end
-
-  defp check_with_source(code) do
-    ast = Sourceror.parse_string!(code)
-    PreferHeredocForMultiLineDoc.check(ast, source: code)
-  end
 
   defp analyze(code) do
     Credence.analyze(code, [])
@@ -26,7 +16,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(PreferHeredocForMultiLineDoc, code)
       assert issue.rule == :prefer_heredoc_for_multi_line_doc
       assert issue.message =~ "heredoc"
     end
@@ -39,7 +29,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(PreferHeredocForMultiLineDoc, code)
       assert issue.rule == :prefer_heredoc_for_multi_line_doc
     end
 
@@ -51,7 +41,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(PreferHeredocForMultiLineDoc, code)
       assert issue.message =~ "@moduledoc"
     end
 
@@ -63,7 +53,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(PreferHeredocForMultiLineDoc, code)
       assert issue.message =~ "@typedoc"
     end
 
@@ -75,7 +65,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(PreferHeredocForMultiLineDoc, code)
       assert issue.rule == :prefer_heredoc_for_multi_line_doc
     end
 
@@ -87,7 +77,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      [issue] = check(code)
+      [issue] = check(PreferHeredocForMultiLineDoc, code)
       assert issue.rule == :prefer_heredoc_for_multi_line_doc
     end
   end
@@ -101,7 +91,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferHeredocForMultiLineDoc, code) == []
     end
 
     test "does not flag @doc with only trailing newline (no internal)" do
@@ -112,7 +102,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferHeredocForMultiLineDoc, code) == []
     end
 
     test "does not flag @doc false" do
@@ -123,7 +113,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferHeredocForMultiLineDoc, code) == []
     end
 
     test "does not flag non-doc attributes" do
@@ -134,7 +124,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(PreferHeredocForMultiLineDoc, code) == []
     end
   end
 
@@ -155,8 +145,8 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
       '''
 
       heredoc_issues =
-        code
-        |> check_with_source()
+        PreferHeredocForMultiLineDoc
+        |> check(code)
         |> Enum.filter(&(&1.rule == :prefer_heredoc_for_multi_line_doc))
 
       assert heredoc_issues == []
@@ -186,15 +176,16 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocCheckTest do
     end
 
     test "single-line @doc with \\n escapes IS still flagged" do
-      code = ~S'''
+      code = """
       defmodule Example do
-        @doc "Line one.\nLine two."
+        @doc "Line one.\\nLine two."
         def foo, do: :ok
       end
-      '''
+
+      """
 
       assert Enum.any?(
-               check_with_source(code),
+               check(PreferHeredocForMultiLineDoc, code),
                &(&1.rule == :prefer_heredoc_for_multi_line_doc)
              )
     end

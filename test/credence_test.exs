@@ -506,7 +506,7 @@ defmodule CredenceTest do
   end
 
   describe "edge cases that should NOT trigger rules" do
-    test "Enum.uniq in pipeline (should not trigger NoManualEnumUniq)" do
+    test "Enum.uniq in pipeline stays clean" do
       assert_clean("""
       defmodule UniqueChars do
         def unique_char_in_order(input_string) do
@@ -1151,13 +1151,13 @@ defmodule CredenceTest do
             char_count = String.length(text)
 
             total_length = Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)
-            avg_length = total_length / length(words)
+            avg_length = :erlang.float(total_length / Enum.count(words))
 
             frequencies =
-              Enum.frequencies(words)
+              Enum.frequencies_by(words, fn word -> String.downcase(word) end)
 
             sorted_desc = Enum.sort(words, :desc)
-            top_3 = Enum.sort(words, :desc) |> Enum.take(3)
+            top_3 = Enum.sort(words, :desc) |> Enum.take(3) |> Enum.reverse()
 
             sorted_desc_reversed = Enum.reverse(sorted_desc)
             [last, second_last | _] = sorted_desc_reversed
@@ -1204,13 +1204,7 @@ defmodule CredenceTest do
       input = """
       defmodule Example do
         def run(list) do
-          Enum.reduce(list, {MapSet.new(), []}, fn item, {seen, acc} ->
-            if MapSet.member?(seen, item) do
-              {seen, acc}
-            else
-              {MapSet.put(seen, item), [item | acc]}
-            end
-          end)
+          Enum.sort(list) |> Enum.reverse()
         end
       end
       """
@@ -1222,38 +1216,6 @@ defmodule CredenceTest do
       {rule_mod, count} = hd(result.applied_rules)
       assert is_atom(rule_mod)
       assert is_integer(count) and count > 0
-    end
-
-    test "NoManualEnumUniq strips orphaned elem(0) and Enum.reverse (idx=10 unique_char_in_order)" do
-      input = """
-      defmodule UniqueChars do
-        def unique_char_in_order(input_string) do
-          String.graphemes(input_string)
-          |> Enum.reduce({[], MapSet.new()}, fn char, {acc_list, acc_set} ->
-            if MapSet.member?(acc_set, char) do
-              {acc_list, acc_set}
-            else
-              {[char | acc_list], MapSet.put(acc_set, char)}
-            end
-          end)
-          |> elem(0)
-          |> Enum.reverse()
-        end
-      end
-      """
-
-      expected = """
-      defmodule UniqueChars do
-        def unique_char_in_order(input_string) do
-          String.graphemes(input_string)
-          |> Enum.uniq()
-        end
-      end
-      """
-
-      result = Credence.fix(input)
-      assert String.trim_trailing(result.code) == String.trim_trailing(expected)
-      assert {:ok, _ast} = Sourceror.parse_string(result.code)
     end
 
     test "NoEagerWithIndexInReduce preserves String.graphemes (idx=9 length_of_longest_substring)" do
@@ -1307,7 +1269,7 @@ defmodule CredenceTest do
                 end
 
               current_length = current_index - new_left + 1
-              max_len = max(current_length, acc.max_length)
+              max_len = if current_length > acc.max_length, do: current_length, else: acc.max_length
 
               %{
                 left: new_left,
@@ -1380,7 +1342,7 @@ defmodule CredenceTest do
 
       expected = """
       defmodule Example do
-        def foo(n, xs), do: {:erlang.float(n), Enum.sum(xs)}
+        def foo(n, xs), do: {:erlang.float(n), :erlang.float(Enum.sum(xs))}
       end
       """
 

@@ -1,13 +1,8 @@
 defmodule Credence.Pattern.NonGroupedClausesCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Issue
   alias Credence.Pattern.NonGroupedClauses
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NonGroupedClauses.check(ast, [])
-  end
 
   describe "flags non-grouped clauses" do
     test "def separated by another def" do
@@ -19,7 +14,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert [%Issue{rule: :non_grouped_clauses}] = check(code)
+      assert [%Issue{rule: :non_grouped_clauses}] = check(NonGroupedClauses, code)
     end
 
     test "defp separated by another defp" do
@@ -31,7 +26,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert [%Issue{rule: :non_grouped_clauses}] = check(code)
+      assert [%Issue{rule: :non_grouped_clauses}] = check(NonGroupedClauses, code)
     end
 
     test "multiple non-grouped functions" do
@@ -44,7 +39,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert length(check(code)) == 2
+      assert length(check(NonGroupedClauses, code)) == 2
     end
 
     test "def separated by another def is still flagged when later clause has an attribute" do
@@ -58,7 +53,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert [%Issue{rule: :non_grouped_clauses}] = check(code)
+      assert [%Issue{rule: :non_grouped_clauses}] = check(NonGroupedClauses, code)
     end
   end
 
@@ -72,7 +67,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NonGroupedClauses, code) == []
     end
 
     test "non-def expressions between clauses" do
@@ -83,7 +78,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NonGroupedClauses, code) == []
     end
 
     test "module attributes between consecutive clauses" do
@@ -96,7 +91,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NonGroupedClauses, code) == []
     end
 
     test "decorator attributes between consecutive clauses" do
@@ -109,7 +104,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NonGroupedClauses, code) == []
     end
 
     test "different arities are different functions" do
@@ -121,7 +116,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NonGroupedClauses, code) == []
     end
 
     test "single clause per function" do
@@ -132,7 +127,7 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
       end
       """
 
-      assert check(code) == []
+      assert check(NonGroupedClauses, code) == []
     end
   end
 end

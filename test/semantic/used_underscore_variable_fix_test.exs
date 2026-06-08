@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Semantic.UsedUnderscoreVariable
 
   defp diag(var_name, line, col \\ 1) do
@@ -197,12 +199,21 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
 
   describe "fix/2 — position formats" do
     test "handles bare integer position" do
-      source = "def check(_x, y) when y > _x, do: :ok\n"
-      expected = "def check(x, y) when y > x, do: :ok\n"
+      source = """
+      def check(_x, y) when y > _x, do: :ok
+
+      """
+
+      expected = """
+      def check(x, y) when y > x, do: :ok
+
+      """
 
       bare_diag = %{
         severity: :warning,
-        message: ~s(variable "_x" is used after being set),
+        message: """
+        variable "_x" is used after being set
+        """,
         position: 1
       }
 
@@ -212,11 +223,16 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
 
   describe "fix/2 — no-ops" do
     test "returns source unchanged when variable has no underscore" do
-      source = "def check(x, y) when y > x, do: :ok\n"
+      source = """
+      def check(x, y) when y > x, do: :ok
+
+      """
 
       weird_diag = %{
         severity: :warning,
-        message: ~s(variable "x" is used after being set),
+        message: """
+        variable "x" is used after being set
+        """,
         position: {1, 1}
       }
 
@@ -224,11 +240,16 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
     end
 
     test "returns source unchanged when position is nil" do
-      source = "some code\n"
+      source = """
+      some code
+
+      """
 
       bad_diag = %{
         severity: :warning,
-        message: ~s(variable "_x" is used after being set),
+        message: """
+        variable "_x" is used after being set
+        """,
         position: nil
       }
 
@@ -236,7 +257,10 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
     end
 
     test "returns source unchanged when message has no variable name" do
-      source = "some code\n"
+      source = """
+      some code
+
+      """
 
       bad_diag = %{
         severity: :warning,
@@ -296,6 +320,18 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
 
       fixed = Credence.Semantic.fix(source)
       assert fixed == source
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      source = """
+      defmodule M do
+        defp build(_target_n, index) when index > _target_n, do: index
+      end
+      """
+
+      assert valid_syntax?(UsedUnderscoreVariable.fix(source, diag("_target_n", 2)))
     end
   end
 end

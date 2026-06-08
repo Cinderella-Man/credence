@@ -1,12 +1,7 @@
 defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoLengthBasedIndexing
-
-  defp fix(code) do
-    result = Credence.RuleHelpers.apply_rule_fix(NoLengthBasedIndexing, code, [])
-    if String.ends_with?(result, "\n"), do: result, else: result <> "\n"
-  end
 
   # ═══════════════════════════════════════════════════════════════════
   # BASIC FIXES — n - K → -K
@@ -29,7 +24,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
 
     test "single Enum.at, removes unused length line without assign" do
@@ -46,7 +41,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
 
     test "multiple Enum.at, removes unused length line" do
@@ -69,7 +64,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
 
     test "different variable name for length binding" do
@@ -88,7 +83,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
 
     test "Enum.count variant" do
@@ -107,7 +102,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
   end
 
@@ -135,7 +130,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
 
     test "length used in condition and indexing" do
@@ -155,7 +150,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
   end
 
@@ -186,7 +181,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
   end
 
@@ -225,7 +220,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
   end
 
@@ -252,7 +247,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == expected
+      assert fix(NoLengthBasedIndexing, input) == expected
     end
   end
 
@@ -270,7 +265,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoLengthBasedIndexing, input) == input
     end
   end
 
@@ -284,7 +279,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoLengthBasedIndexing, input) == input
     end
   end
 
@@ -298,7 +293,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoLengthBasedIndexing, input) == input
     end
   end
 
@@ -312,7 +307,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoLengthBasedIndexing, input) == input
     end
 
     test "bare n" do
@@ -324,7 +319,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoLengthBasedIndexing, input) == input
     end
   end
 
@@ -339,7 +334,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoLengthBasedIndexing, input) == input
     end
 
     test "length variable rebound" do
@@ -352,7 +347,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoLengthBasedIndexing, input) == input
     end
   end
 
@@ -365,7 +360,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoLengthBasedIndexing, input) == input
     end
   end
 
@@ -377,7 +372,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingFixTest do
       end
       """
 
-      assert fix(input) == input
+      assert fix(NoLengthBasedIndexing, input) == input
     end
   end
 end

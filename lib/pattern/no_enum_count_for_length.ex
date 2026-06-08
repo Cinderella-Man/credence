@@ -1,35 +1,57 @@
 defmodule Credence.Pattern.NoEnumCountForLength do
   @moduledoc """
-  Detects `Enum.count/1` (without a predicate) and suggests `length/1`
-  or a more specific size function.
+  Detects `Enum.count/1` (without a predicate) on a **provably-list** argument
+  and rewrites it to `length/1`.
 
   ## Why this matters
 
   `Enum.count/1` goes through the `Enumerable` protocol, adding dispatch
-  overhead.  When the argument is a list — which it almost always is in
-  LLM-generated code — `length/1` is a BIF that does the same traversal
-  without protocol dispatch:
+  overhead. When the argument is a list, `length/1` is a BIF that does the same
+  traversal without protocol dispatch:
 
-      # Flagged — protocol dispatch overhead
-      total = Enum.count(chars)
+      # Flagged — argument is provably a list
+      total = String.graphemes(text) |> Enum.count()
 
       # Idiomatic — BIF, no protocol overhead
-      total = length(chars)
+      total = length(String.graphemes(text))
 
-  For other collection types, more specific functions exist:
-  `map_size/1` for maps, `MapSet.size/1` for sets, `tuple_size/1`
-  for tuples.
+  ## Why "provably a list"
+
+  `length/1` only accepts lists — `length(1..5)` raises `ArgumentError`, while
+  `Enum.count(1..5)` returns `5`. So the rewrite is behaviour-preserving **only**
+  when the argument is known to be a list. The rule therefore fires only when the
+  argument is:
+
+  - a list literal (`[a, b, c]`),
+  - a `++` concatenation, or
+  - a call (or pipe ending in a call) to a list-returning function —
+    `String.graphemes/split/...`, `Map.keys/values`, `Enum.map/filter/sort/...`,
+    `List.*`, etc.
+
+  A bare variable (`Enum.count(chars)`) is **not** flagged: its type is unknown,
+  and it might be a range, map, or stream rather than a list.
 
   ## Flagged patterns
 
-  Only the **single-argument** form `Enum.count(x)` is flagged.
-  The two-argument form `Enum.count(x, predicate)` is not flagged
-  because it filters and counts in one pass — there is no simpler
-  replacement.
+  Only the **single-argument** form `Enum.count(x)` (direct or piped). The
+  two-argument `Enum.count(x, predicate)` is not flagged (it filters and counts
+  in one pass).
   """
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+
+  # Functions whose result is always a list. Keys are the AST alias atoms.
+  @list_returning %{
+    Enum: ~w(map filter reject to_list sort sort_by uniq uniq_by reverse take drop
+         take_while drop_while flat_map with_index dedup dedup_by concat
+         intersperse chunk_every chunk_by slice map_every scan)a,
+    String: ~w(graphemes codepoints split to_charlist)a,
+    Map: ~w(keys values to_list)a,
+    Keyword: ~w(keys values to_list delete drop take merge put put_new)a,
+    List: ~w(wrap flatten delete delete_at insert_at replace_at update_at duplicate)a,
+    Tuple: ~w(to_list)a
+  }
 
   @impl true
   def check(ast, _opts) do
@@ -47,34 +69,39 @@ defmodule Credence.Pattern.NoEnumCountForLength do
   @impl true
   def fix_patches(ast, _opts) do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      # Direct: Enum.count(expr) → length(expr)
-      # Must not match the predicate-only piped form
+      # Direct: Enum.count(list_expr) → length(list_expr)
       {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg]} = node ->
-        if predicate?(arg) do
-          node
-        else
+        if not predicate?(arg) and provably_list?(arg) do
           {:length, [], [arg]}
+        else
+          node
         end
 
-      # Pipeline: ... |> Enum.count() → ... |> length()
-      {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, []} ->
-        {:length, [], []}
+      # Pipeline: list_lhs |> Enum.count() → list_lhs |> length()
+      {:|>, pmeta, [lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, cmeta, []}]} = node ->
+        if provably_list?(lhs) do
+          {:|>, pmeta, [lhs, {:length, cmeta, []}]}
+        else
+          node
+        end
 
       node ->
         node
     end)
   end
 
+  # Direct call: Enum.count(arg)
   defp check_node({{:., meta, [mod, :count]}, _, [arg]}) do
-    if enum_module?(mod) and not predicate?(arg) do
+    if enum_module?(mod) and not predicate?(arg) and provably_list?(arg) do
       {:ok, build_issue(meta)}
     else
       :error
     end
   end
 
-  defp check_node({{:., meta, [mod, :count]}, _, []}) do
-    if enum_module?(mod) do
+  # Piped call: lhs |> Enum.count()
+  defp check_node({:|>, _, [lhs, {{:., meta, [mod, :count]}, _, []}]}) do
+    if enum_module?(mod) and provably_list?(lhs) do
       {:ok, build_issue(meta)}
     else
       :error
@@ -90,18 +117,37 @@ defmodule Credence.Pattern.NoEnumCountForLength do
   defp predicate?({:fn, _, _}), do: true
   defp predicate?(_), do: false
 
+  # The argument is known to be a list when it is a list literal, a `++`
+  # concatenation, a list-returning call, or a pipe whose last step returns a list.
+  defp provably_list?(list) when is_list(list), do: true
+  # Sourceror wraps a list literal as {:__block__, meta, [[...]]}.
+  defp provably_list?({:__block__, _, [inner]}), do: provably_list?(inner)
+  defp provably_list?({:++, _, [_, _]}), do: true
+  defp provably_list?({:|>, _, [_lhs, step]}), do: list_returning_call?(step)
+
+  defp provably_list?({{:., _, [{:__aliases__, _, [_mod]}, _fun]}, _, _args} = call),
+    do: list_returning_call?(call)
+
+  defp provably_list?(_), do: false
+
+  defp list_returning_call?({{:., _, [{:__aliases__, _, [mod]}, fun]}, _, _args}) do
+    case Map.fetch(@list_returning, mod) do
+      {:ok, funs} -> fun in funs
+      :error -> false
+    end
+  end
+
+  defp list_returning_call?(_), do: false
+
   defp build_issue(meta) do
     %Issue{
       rule: :no_enum_count_for_length,
       message: """
-      `Enum.count/1` used without a predicate.
+      `Enum.count/1` on a list argument used instead of `length/1`.
 
-      If the argument is a list, use `length/1` — it's a BIF with \
-      no protocol dispatch overhead.
-
-      For other collections, prefer the specific size function:
-      `map_size/1` for maps, `MapSet.size/1` for sets, `tuple_size/1` \
-      for tuples.
+      `length/1` is a BIF with no protocol dispatch overhead. Only flagged when \
+      the argument is provably a list (literal, `++`, or a list-returning call) — \
+      `length/1` would raise on a range/map/stream.
       """,
       meta: %{line: Keyword.get(meta, :line)}
     }

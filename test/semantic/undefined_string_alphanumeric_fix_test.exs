@@ -1,6 +1,8 @@
 defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
   use ExUnit.Case
 
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
   alias Credence.Semantic.UndefinedStringAlphanumeric
 
   defp diag(line, col \\ 1) do
@@ -132,17 +134,23 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       end
       """
 
-      fixed = UndefinedStringAlphanumeric.fix(source, diag(2))
+      # Only line 2 (def a) is rewritten; line 3 (def b) keeps the capture form.
+      expected = """
+      defmodule M do
+        def a(s), do: String.graphemes(s) |> Enum.filter(fn char -> String.match?(char, ~r/^[a-zA-Z0-9]$/) end)
+        def b(s), do: String.graphemes(s) |> Enum.filter(&String.alphanumeric?/1)
+      end
+      """
 
-      lines = String.split(fixed, "\n")
-      assert Enum.at(lines, 1) =~ "String.match?"
-      assert Enum.at(lines, 2) =~ "&String.alphanumeric?/1"
+      assert UndefinedStringAlphanumeric.fix(source, diag(2)) == expected
     end
   end
 
   describe "fix/2 — no-ops" do
     test "returns source unchanged when position is nil" do
-      source = "some code\n"
+      source = """
+      some code
+      """
 
       bad_diag = %{
         severity: :warning,
@@ -199,6 +207,22 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
 
       fixed = Credence.Semantic.fix(source)
       assert fixed == source
+    end
+  end
+
+  describe "fix output is well-formed" do
+    test "fixed output parses" do
+      source = """
+      defmodule M do
+        def clean(s) do
+          s
+          |> String.graphemes()
+          |> Enum.filter(&String.alphanumeric?/1)
+        end
+      end
+      """
+
+      assert valid_syntax?(UndefinedStringAlphanumeric.fix(source, diag(5)))
     end
   end
 end

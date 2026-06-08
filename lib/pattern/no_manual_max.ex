@@ -18,19 +18,20 @@ defmodule Credence.Pattern.NoManualMax do
 
   ## Flagged patterns
 
-  Any `if` expression where:
-  - The condition is a comparison (`>`, `>=`, `<`, `<=`),
-  - One branch returns the left operand and the other returns the right, and
-  - The branch returning the "greater" operand is the `do` (true) branch.
+  Only the **non-strict** comparison forms are flagged, because only they equal
+  `max/2` for every input. `max/2` returns its first argument on a tie, so:
 
-  All four comparison operators are handled:
+  | Pattern                      | Replacement | Flagged? |
+  | ---------------------------- | ----------- | -------- |
+  | `if a >= b, do: a, else: b` | `max(a, b)` | yes      |
+  | `if b <= a, do: a, else: b` | `max(a, b)` | yes      |
+  | `if a > b, do: a, else: b`  | —           | no       |
+  | `if b < a, do: a, else: b`  | —           | no       |
 
-  | Pattern                          | Replacement    |
-  | -------------------------------- | -------------- |
-  | `if a > b, do: a, else: b`      | `max(a, b)`    |
-  | `if a >= b, do: a, else: b`     | `max(a, b)`    |
-  | `if b < a, do: a, else: b`      | `max(a, b)`    |
-  | `if b <= a, do: a, else: b`     | `max(a, b)`    |
+  The strict forms (`>`, `<`) take the `else` branch on a tie, which differs from
+  `max/2` when the operands are equal in value but different in type — e.g.
+  `max(1, 1.0)` is `1`, but `if 1 > 1.0, do: 1, else: 1.0` yields `1.0`. So they
+  are not rewritten.
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
@@ -114,13 +115,16 @@ defmodule Credence.Pattern.NoManualMax do
     end
   end
 
-  defp max_pattern?(op, left, right, do_branch, else_branch)
-       when op in [:>, :>=] do
+  # Only the NON-STRICT operators are behaviour-preserving. `max/2` uses `>=`
+  # (returns the first arg on a tie), so `if a >= b, do: a, else: b` matches it
+  # exactly. The strict `if a > b, do: a, else: b` returns the ELSE branch on a
+  # tie — which differs from `max` when the operands are equal in value but
+  # different in type, e.g. `max(1, 1.0) == 1` but the manual form yields `1.0`.
+  defp max_pattern?(:>=, left, right, do_branch, else_branch) do
     ast_equal?(do_branch, left) and ast_equal?(else_branch, right)
   end
 
-  defp max_pattern?(op, left, right, do_branch, else_branch)
-       when op in [:<, :<=] do
+  defp max_pattern?(:<=, left, right, do_branch, else_branch) do
     ast_equal?(do_branch, right) and ast_equal?(else_branch, left)
   end
 

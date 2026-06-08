@@ -1,15 +1,7 @@
 defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
-  use ExUnit.Case
+  use Credence.RuleCase, async: true
 
   alias Credence.Pattern.NoLengthBasedIndexing
-
-  defp check(code) do
-    ast = Sourceror.parse_string!(code)
-    NoLengthBasedIndexing.check(ast, [])
-  end
-
-  defp flagged?(code), do: check(code) != []
-  defp clean?(code), do: check(code) == []
 
   # ═══════════════════════════════════════════════════════════════════
   # POSITIVE — should flag
@@ -17,7 +9,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
 
   describe "flags length + Enum.at(var, n - K)" do
     test "basic single usage" do
-      assert flagged?("""
+      assert flagged?(NoLengthBasedIndexing, """
              def run(list) do
                n = length(list)
                last = Enum.at(list, n - 1)
@@ -27,7 +19,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "multiple Enum.at with length-based indices" do
-      assert flagged?("""
+      assert flagged?(NoLengthBasedIndexing, """
              def run(sorted) do
                n = length(sorted)
                largest = Enum.at(sorted, n - 1)
@@ -39,7 +31,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "Enum.count variant" do
-      assert flagged?("""
+      assert flagged?(NoLengthBasedIndexing, """
              def run(list) do
                n = Enum.count(list)
                last = Enum.at(list, n - 1)
@@ -49,7 +41,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "inside a module" do
-      assert flagged?("""
+      assert flagged?(NoLengthBasedIndexing, """
              defmodule Example do
                def run(sorted) do
                  n = length(sorted)
@@ -61,7 +53,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "different variable name for length" do
-      assert flagged?("""
+      assert flagged?(NoLengthBasedIndexing, """
              def run(list) do
                count = length(list)
                last = Enum.at(list, count - 1)
@@ -71,7 +63,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "length used for indexing AND other purposes" do
-      assert flagged?("""
+      assert flagged?(NoLengthBasedIndexing, """
              def run(numbers) do
                n = length(numbers)
                expected = div(n * (n + 1), 2)
@@ -82,7 +74,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "mixed literal and length-based indices" do
-      assert flagged?("""
+      assert flagged?(NoLengthBasedIndexing, """
              def run(sorted) do
                n = length(sorted)
                first = Enum.at(sorted, 0)
@@ -99,7 +91,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
 
   describe "does not flag negative indices" do
     test "already using negative indices" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(list) do
                last = Enum.at(list, -1)
                second = Enum.at(list, -2)
@@ -111,7 +103,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
 
   describe "does not flag length used only for non-indexing" do
     test "length used in arithmetic only" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(numbers) do
                n = length(numbers)
                expected = div(n * (n + 1), 2)
@@ -122,7 +114,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "length used in guard or condition" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(list) do
                n = length(list)
                if n > 0, do: :non_empty, else: :empty
@@ -133,7 +125,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
 
   describe "does not flag different list variables" do
     test "length on one var, Enum.at on another" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(a, b) do
                n = length(a)
                last = Enum.at(b, n - 1)
@@ -145,7 +137,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
 
   describe "does not flag non-literal subtraction" do
     test "variable offset" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(list, offset) do
                n = length(list)
                val = Enum.at(list, n - offset)
@@ -157,7 +149,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
 
   describe "does not flag non-subtraction index expressions" do
     test "addition: n + 1" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(list) do
                n = length(list)
                val = Enum.at(list, n + 1)
@@ -167,7 +159,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "multiplication: n * 2" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(list) do
                n = length(list)
                val = Enum.at(list, n * 2)
@@ -177,7 +169,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "bare n without subtraction" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(list) do
                n = length(list)
                val = Enum.at(list, n)
@@ -189,7 +181,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
 
   describe "does not flag when no length binding exists" do
     test "Enum.at with literal index only" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(list) do
                first = Enum.at(list, 0)
                second = Enum.at(list, 1)
@@ -201,7 +193,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
 
   describe "does not flag variable rebound between length and Enum.at" do
     test "list rebound" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(list) do
                n = length(list)
                list = Enum.filter(list, &(&1 > 0))
@@ -212,7 +204,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
     end
 
     test "length variable rebound" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              def run(list) do
                n = length(list)
                n = n + 1
@@ -225,7 +217,7 @@ defmodule Credence.Pattern.NoLengthBasedIndexingCheckTest do
 
   describe "does not flag different scopes" do
     test "length and Enum.at in different functions" do
-      assert clean?("""
+      assert clean?(NoLengthBasedIndexing, """
              defmodule M do
                def get_length(list), do: length(list)
                def get_last(list, n), do: Enum.at(list, n - 1)
