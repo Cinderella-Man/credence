@@ -535,8 +535,8 @@ defmodule Credence.RuleHelpers do
 
     change_summary =
       Enum.map_join(changes, "\n", fn
-        {:removed, line_no, text} -> "  L#{line_no} - #{String.trim(text)}"
-        {:added, line_no, text} -> "  L#{line_no} + #{String.trim(text)}"
+        {:removed, line_no, text} -> "  L#{line_no} - #{String.trim_trailing(text)}"
+        {:added, line_no, text} -> "  L#{line_no} + #{String.trim_trailing(text)}"
       end)
 
     Logger.debug("[credence_fix] #{label}: source CHANGED:\n#{change_summary}")
