@@ -1,0 +1,2901 @@
+[22m21:58:54.117 [info] [idx=37635] entry_point=generate_bracket_combinations[0m
+[36m21:58:54.117 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=600000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to generate all possible combinations of brackets for a given number of pairs.
+
+## Python Solution
+```python
+def generate_bracket_combinations(n):
+    def backtrack(s='', left=0, right=0):
+        if len(s) == 2 * n:
+            res.append(s)
+            return
+        if left < n:
+            backtrack(s+'(', left+1, right)
+        if right < left:
+            backtrack(s+')', left, right+1)
+    res = []
+    backtrack()
+    return res
+```
+
+## Python Tests
+assert generate_bracket_combinations(2) == ["(())","()()"]
+assert generate_bracket_combinations(1) == ["()"]
+assert generate_bracket_combinations(3) == ["((()))","(()())","(())()","()(())","()()()"]
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `generate_bracket_combinations`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m21:59:56.011 [debug] [LLM.call] finish=stop len=1391 usage=%{"completion_tokens" => 4131, "completion_tokens_details" => %{"reasoning_tokens" => 3766}, "prompt_tokens" => 531, "prompt_tokens_details" => %{}, "total_tokens" => 4662}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `generate_bracket_combinations/1` that takes an integer `n` (the number of bracket pairs) and returns a list of strings representing all valid combinations of exactly `n` pairs of parentheses. The order of the returned list does not matter, but every valid combination must appear exactly once.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "one pair" do
+    assert Solution.generate_bracket_combinations(1) == ["()"]
+  end
+
+  test "two pairs" do
+    assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+  end
+
+  test "three pairs" do
+    result = Solution.generate_bracket_combinations(3)
+    expected = ["((()))","(()())","(())()","()(())","()()()"]
+    assert Enum.sort(result) == Enum.sort(expected)
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def generate_bracket_combinations(n) do
+    backtrack([], 0, 0, n)
+  end
+
+  defp backtrack(current, left, right, n) do
+    if left + right == 2 * n do
+      [Enum.reverse(current) |> List.to_string()]
+    else
+      left_branch =
+        if left < n do
+          backtrack([?( | current], left + 1, right, n)
+        else
+          []
+        end
+
+      right_branch =
+        if right < left do
+          backtrack([?) | current], left, right + 1, n)
+        else
+          []
+        end
+
+      left_branch ++ right_branch
+    end
+  end
+end
+
+---END---[0m
+[22m21:59:56.011 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 61893ms — ok[0m
+[36m21:59:56.011 [debug] [Budget] spent so far (est.): $0.1114[0m
+[22m21:59:57.126 [info] [RoundTrip] reference PASSED tests[0m
+[22m21:59:57.126 [info] [idx=37635] translation fresh — solving[0m
+[22m21:59:57.126 [info] ===SOLVE_BOUNDARY===[0m
+[22m21:59:57.126 [info] [Solve attempt 1] generating (fn=generate_bracket_combinations)[0m
+[36m21:59:57.126 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=600000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `generate_bracket_combinations/1` that takes an integer `n` (the number of bracket pairs) and returns a list of strings representing all valid combinations of exactly `n` pairs of parentheses. The order of the returned list does not matter, but every valid combination must appear exactly once.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "one pair" do
+    assert Solution.generate_bracket_combinations(1) == ["()"]
+  end
+
+  test "two pairs" do
+    assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+  end
+
+  test "three pairs" do
+    result = Solution.generate_bracket_combinations(3)
+    expected = ["((()))","(()())","(())()","()(())","()()()"]
+    assert Enum.sort(result) == Enum.sort(expected)
+  end
+end
+```
+
+Module: `Solution`. Function: `generate_bracket_combinations`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m22:00:00.619 [debug] [LLM.call] finish=stop len=1217 usage=%{"completion_tokens" => 360, "prompt_tokens" => 471, "prompt_tokens_details" => %{"cached_tokens" => 99}, "total_tokens" => 831}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) when is_integer(n) and n > 0 do
+    generate("", n, 0, [])
+  end
+
+  @doc false
+  defp generate(current, left, right, acc) do
+    cond do
+      left == 0 and right == 0 ->
+        [current | acc]
+
+      left > 0 ->
+        generate(
+          current <> "(",
+          left - 1,
+          right + 1,
+          acc
+        )
+
+      right > 0 ->
+        generate(
+          current <> ")",
+          left,
+          right - 1,
+          acc
+        )
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "one pair" do
+    assert Solution.generate_bracket_combinations(1) == ["()"]
+  end
+
+  test "two pairs" do
+    assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+  end
+
+  test "three pairs" do
+    result = Solution.generate_bracket_combinations(3)
+    expected = ["((()))","(()())","(())()","()(())","()()()"]
+    assert Enum.sort(result) == Enum.sort(expected)
+  end
+end
+---END---[0m
+[22m22:00:00.619 [info] [LLM.call] local_qwen_thinking completed in 3492ms — ok[0m
+[22m22:00:00.619 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m22:00:00.619 [debug] [Validator.run] module code (728 chars):
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) when is_integer(n) and n > 0 do
+    generate("", n, 0, [])
+  end
+
+  @doc false
+  defp generate(current, left, right, acc) do
+    cond do
+      left == 0 and right == 0 ->
+        [current | acc]
+
+      left > 0 ->
+        generate(
+          current <> "(",
+          left - 1,
+          right + 1,
+          acc
+        )
+
+      right > 0 ->
+        generate(
+          current <> ")",
+          left,
+          right - 1,
+          acc
+        )
+    end
+  end
+end[0m
+[36m22:00:00.619 [debug] [Validator.run] test code (454 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "one pair" do
+    assert Solution.generate_bracket_combinations(1) == ["()"]
+  end
+
+  test "two pairs" do
+    assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+  end
+
+  test "three pairs" do
+    result = Solution.generate_bracket_combinations(3)
+    expected = ["((()))","(()())","(())()","()(())","()()()"]
+    assert Enum.sort(result) == Enum.sort(expected)
+  end
+end[0m
+[36m22:00:00.619 [debug] [Budget] spent so far (est.): $0.1119[0m
+[22m22:00:00.619 [info] [Validator.run] step 1/6: credence fix[0m
+[36m22:00:00.619 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m22:00:01.224 [debug] [run_credence_fix] exit=0 output:
+
+22:00:01.124 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+22:00:01.126 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 6 rules)
+
+22:00:01.138 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+22:00:01.143 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+22:00:01.143 [debug] [credence_fix] semantic done. Applied: []
+
+22:00:01.143 [debug] [credence_fix] starting pattern fix pipeline (117 rules)
+
+22:00:01.160 [debug] [credence_fix] NoDocFalseOnPrivate: check found 1 issue(s), running fix...
+
+22:00:01.176 [debug] [credence_fix] NoDocFalseOnPrivate: source CHANGED:
+  L12 - @doc false
+  L12 + defp generate(current, left, right, acc) do
+  L13 - defp generate(current, left, right, acc) do
+  L13 + cond do
+  L14 - cond do
+  L14 + left == 0 and right == 0 ->
+  L15 - left == 0 and right == 0 ->
+  L15 + [current | acc]
+  L16 - [current | acc]
+  L16 + 
+  L17 - 
+  L17 + left > 0 ->
+  L18 - left > 0 ->
+  L18 + generate(
+  L19 - generate(
+  L19 + current <> "(",
+  L20 - current <> "(",
+  L20 + left - 1,
+  L21 - left - 1,
+  L21 + right + 1,
+  L22 - right + 1,
+  L22 + acc
+  L23 - acc
+  L23 + )
+  L24 - )
+  L24 + 
+  L25 - 
+  L25 + right > 0 ->
+  L26 - right > 0 ->
+  L26 + generate(
+  L27 - generate(
+  L27 + current <> ")",
+  L28 - current <> ")",
+  L28 + left,
+  L29 - left,
+  L29 + right - 1,
+  L30 - right - 1,
+  L30 + acc
+  L31 - acc
+  L31 + )
+  L32 - )
+  L32 + end
+  L33 - end
+  L33 + end
+  L34 - end
+  L34 + end
+  L35 - end
+
+22:00:01.205 [debug] [credence_fix] done. Applied: [NoDocFalseOnPrivate(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.NoDocFalseOnPrivate, 1}]
+[0m
+[22m22:00:01.225 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m22:00:01.764 [info] [run_credence_fix] fix compiles OK[0m
+[36m22:00:01.764 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) when is_integer(n) and n > 0 do
+    generate("", n, 0, [])
+  end
+
+  @doc false
+  defp generate(current, left, right, acc) do
+    cond do
+      left == 0 and right == 0 ->
+        [current | acc]
+
+      left > 0 ->
+        generate(
+          current <> "(",
+          left - 1,
+          right + 1,
+          acc
+        )
+
+      right > 0 ->
+        generate(
+          current <> ")",
+          left,
+          right - 1,
+          acc
+        )
+    end
+  end
+end[0m
+[36m22:00:01.764 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) when is_integer(n) and n > 0 do
+    generate("", n, 0, [])
+  end
+
+  defp generate(current, left, right, acc) do
+    cond do
+      left == 0 and right == 0 ->
+        [current | acc]
+
+      left > 0 ->
+        generate(
+          current <> "(",
+          left - 1,
+          right + 1,
+          acc
+        )
+
+      right > 0 ->
+        generate(
+          current <> ")",
+          left,
+          right - 1,
+          acc
+        )
+    end
+  end
+end[0m
+[22m22:00:01.764 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m22:00:01.764 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) when is_integer(n) and n > 0 do
+    generate("", n, 0, [])
+  end
+
+  @doc false
+  defp generate(current, left, right, acc) do
+    cond do
+      left == 0 and right == 0 ->
+        [current | acc]
+
+      left > 0 ->
+        generate(
+          current <> "(",
+          left - 1,
+          right + 1,
+          acc
+        )
+
+      right > 0 ->
+        generate(
+          current <> ")",
+          left,
+          right - 1,
+          acc
+        )
+    end
+  end
+end[0m
+[36m22:00:01.764 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) when is_integer(n) and n > 0 do
+    generate("", n, 0, [])
+  end
+
+  defp generate(current, left, right, acc) do
+    cond do
+      left == 0 and right == 0 ->
+        [current | acc]
+
+      left > 0 ->
+        generate(
+          current <> "(",
+          left - 1,
+          right + 1,
+          acc
+        )
+
+      right > 0 ->
+        generate(
+          current <> ")",
+          left,
+          right - 1,
+          acc
+        )
+    end
+  end
+end[0m
+[36m22:00:01.764 [debug] [propagate_is_renames] old functions: ["generate_bracket_combinations", "generate"][0m
+[36m22:00:01.764 [debug] [propagate_is_renames] new functions: ["generate_bracket_combinations", "generate"][0m
+[36m22:00:01.764 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m22:00:01.764 [info] [Validator.run] step 2/6: compile[0m
+[22m22:00:02.292 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m22:00:02.292 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m22:00:02.292 [info] [Validator.run] step 3/6: format[0m
+[22m22:00:02.598 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m22:00:02.894 [debug] [Validator.run] format fix output: [0m
+[22m22:00:02.895 [info] [Validator.run] step 4/6: credo[0m
+[36m22:00:03.356 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m22:00:03.356 [info] [Validator.run] credo: no issues[0m
+[22m22:00:03.356 [info] [Validator.run] step 5/6: credence check[0m
+[22m22:00:04.025 [info] [Validator.run] credence check exit=0[0m
+[36m22:00:04.025 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m22:00:04.025 [info] [Validator.run] credence check: passed[0m
+[22m22:00:04.026 [info] [Validator.run] step 6/6: tests[0m
+[22m22:00:04.493 [info] [Validator.run] test exit=2[0m
+[36m22:00:04.493 [debug] [Validator.run] test output:
+Running ExUnit with seed: 443908, max_cases: 48
+
+.
+
+  1) test two pairs (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+     left:  ["(())"]
+     right: ["(())", "()()"]
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test three pairs (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Enum.sort(result) == Enum.sort(expected)
+     left:  ["((()))"]
+     right: ["((()))", "(()())", "(())()", "()(())", "()()()"]
+     stacktrace:
+       test/solution_test.exs:15: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 2 failures
+[0m
+[33m22:00:04.493 [warning] [Validator.run] tests: FAILED[0m
+[22m22:00:04.493 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m22:00:04.493 [debug] [Validator.run] final module (716 chars):
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) when is_integer(n) and n > 0 do
+    generate("", n, 0, [])
+  end
+
+  defp generate(current, left, right, acc) do
+    cond do
+      left == 0 and right == 0 ->
+        [current | acc]
+
+      left > 0 ->
+        generate(
+          current <> "(",
+          left - 1,
+          right + 1,
+          acc
+        )
+
+      right > 0 ->
+        generate(
+          current <> ")",
+          left,
+          right - 1,
+          acc
+        )
+    end
+  end
+end
+[0m
+[36m22:00:04.493 [debug] [Validator.run] final test (459 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "one pair" do
+    assert Solution.generate_bracket_combinations(1) == ["()"]
+  end
+
+  test "two pairs" do
+    assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+  end
+
+  test "three pairs" do
+    result = Solution.generate_bracket_combinations(3)
+    expected = ["((()))", "(()())", "(())()", "()(())", "()()()"]
+    assert Enum.sort(result) == Enum.sort(expected)
+  end
+end
+[0m
+[33m22:00:04.493 [warning] [Solve attempt 1] validation FAILED: [:test][0m
+[22m22:00:04.494 [info] [Solve attempt 2] generating (fn=generate_bracket_combinations)[0m
+[36m22:00:04.494 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=600000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) when is_integer(n) and n > 0 do
+    generate("", n, 0, [])
+  end
+
+  @doc false
+  defp generate(current, left, right, acc) do
+    cond do
+      left == 0 and right == 0 ->
+        [current | acc]
+
+      left > 0 ->
+        generate(
+          current <> "(",
+          left - 1,
+          right + 1,
+          acc
+        )
+
+      right > 0 ->
+        generate(
+          current <> ")",
+          left,
+          right - 1,
+          acc
+        )
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "one pair" do
+    assert Solution.generate_bracket_combinations(1) == ["()"]
+  end
+
+  test "two pairs" do
+    assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+  end
+
+  test "three pairs" do
+    result = Solution.generate_bracket_combinations(3)
+    expected = ["((()))","(()())","(())()","()(())","()()()"]
+    assert Enum.sort(result) == Enum.sort(expected)
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 443908, max_cases: 48
+
+.
+
+  1) test two pairs (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+     left:  ["(())"]
+     right: ["(())", "()()"]
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test three pairs (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Enum.sort(result) == Enum.sort(expected)
+     left:  ["((()))"]
+     right: ["((()))", "(()())", "(())()", "()(())", "()()()"]
+     stacktrace:
+       test/solution_test.exs:15: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 2 failures
+
+Reminder: module `Solution`, function `generate_bracket_combinations` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m22:00:08.150 [debug] [LLM.call] finish=stop len=1191 usage=%{"completion_tokens" => 358, "prompt_tokens" => 899, "prompt_tokens_details" => %{"cached_tokens" => 99}, "total_tokens" => 1257}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) do
+    generate("", n, 0)
+  end
+
+  @doc false
+  defp generate(current, 0, 0) do
+    [current]
+  end
+
+  defp generate(current, left, right) do
+    results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "one pair" do
+    assert Solution.generate_bracket_combinations(1) == ["()"]
+  end
+
+  test "two pairs" do
+    assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+  end
+
+  test "three pairs" do
+    result = Solution.generate_bracket_combinations(3)
+    expected = ["((()))", "(()())", "(())()", "()(())", "()()()"]
+    assert Enum.sort(result) == Enum.sort(expected)
+  end
+end
+---END---[0m
+[22m22:00:08.150 [info] [LLM.call] local_qwen_thinking completed in 3656ms — ok[0m
+[22m22:00:08.151 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m22:00:08.151 [debug] [Validator.run] module code (698 chars):
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) do
+    generate("", n, 0)
+  end
+
+  @doc false
+  defp generate(current, 0, 0) do
+    [current]
+  end
+
+  defp generate(current, left, right) do
+    results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end[0m
+[36m22:00:08.151 [debug] [Validator.run] test code (458 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "one pair" do
+    assert Solution.generate_bracket_combinations(1) == ["()"]
+  end
+
+  test "two pairs" do
+    assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+  end
+
+  test "three pairs" do
+    result = Solution.generate_bracket_combinations(3)
+    expected = ["((()))", "(()())", "(())()", "()(())", "()()()"]
+    assert Enum.sort(result) == Enum.sort(expected)
+  end
+end[0m
+[36m22:00:08.151 [debug] [Budget] spent so far (est.): $0.1126[0m
+[22m22:00:08.151 [info] [Validator.run] step 1/6: credence fix[0m
+[36m22:00:08.151 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m22:00:08.739 [debug] [run_credence_fix] exit=0 output:
+
+22:00:08.641 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+22:00:08.643 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 6 rules)
+
+22:00:08.654 [debug] [credence_fix] semantic pass 1: compilation OK, 2 warning(s)
+
+22:00:08.654 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+22:00:08.656 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L18 - results = []
+  L18 + _results = []
+
+22:00:08.660 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+22:00:08.660 [debug] [credence_fix] semantic done. Applied: [UnusedVariable(1)]
+
+22:00:08.660 [debug] [credence_fix] starting pattern fix pipeline (117 rules)
+
+22:00:08.675 [debug] [credence_fix] NoDocFalseOnPrivate: check found 1 issue(s), running fix...
+
+22:00:08.689 [debug] [credence_fix] NoDocFalseOnPrivate: source CHANGED:
+  L12 - @doc false
+  L12 + defp generate(current, 0, 0) do
+  L13 - defp generate(current, 0, 0) do
+  L13 + [current]
+  L14 - [current]
+  L14 + end
+  L15 - end
+  L15 + 
+  L16 - 
+  L16 + defp generate(current, left, right) do
+  L17 - defp generate(current, left, right) do
+  L17 + _results = []
+  L18 - _results = []
+  L18 + 
+  L19 - 
+  L19 + results =
+  L20 - results =
+  L20 + if left > 0 do
+  L21 - if left > 0 do
+  L21 + generate(current <> "(", left - 1, right + 1)
+  L22 - generate(current <> "(", left - 1, right + 1)
+  L22 + else
+  L23 - else
+  L23 + []
+  L24 - []
+  L24 + end
+  L25 - end
+  L25 + 
+  L26 - 
+  L26 + results2 =
+  L27 - results2 =
+  L27 + if right > 0 do
+  L28 - if right > 0 do
+  L28 + generate(current <> ")", left, right - 1)
+  L29 - generate(current <> ")", left, right - 1)
+  L29 + else
+  L30 - else
+  L30 + []
+  L31 - []
+  L31 + end
+  L32 - end
+  L32 + 
+  L33 - 
+  L33 + results ++ results2
+  L34 - results ++ results2
+  L34 + end
+  L35 - end
+  L35 + end
+  L36 - end
+
+22:00:08.719 [debug] [credence_fix] done. Applied: [NoDocFalseOnPrivate(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UnusedVariable, 1}, {Credence.Pattern.NoDocFalseOnPrivate, 1}]
+[0m
+[22m22:00:08.739 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m22:00:09.283 [info] [run_credence_fix] fix compiles OK[0m
+[36m22:00:09.283 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) do
+    generate("", n, 0)
+  end
+
+  @doc false
+  defp generate(current, 0, 0) do
+    [current]
+  end
+
+  defp generate(current, left, right) do
+    results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end[0m
+[36m22:00:09.283 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) do
+    generate("", n, 0)
+  end
+
+  defp generate(current, 0, 0) do
+    [current]
+  end
+
+  defp generate(current, left, right) do
+    _results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end[0m
+[22m22:00:09.283 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m22:00:09.283 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) do
+    generate("", n, 0)
+  end
+
+  @doc false
+  defp generate(current, 0, 0) do
+    [current]
+  end
+
+  defp generate(current, left, right) do
+    results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end[0m
+[36m22:00:09.283 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) do
+    generate("", n, 0)
+  end
+
+  defp generate(current, 0, 0) do
+    [current]
+  end
+
+  defp generate(current, left, right) do
+    _results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end[0m
+[36m22:00:09.283 [debug] [propagate_is_renames] old functions: ["generate_bracket_combinations", "generate"][0m
+[36m22:00:09.283 [debug] [propagate_is_renames] new functions: ["generate_bracket_combinations", "generate"][0m
+[36m22:00:09.284 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m22:00:09.284 [info] [Validator.run] step 2/6: compile[0m
+[22m22:00:09.817 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m22:00:09.817 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m22:00:09.817 [info] [Validator.run] step 3/6: format[0m
+[22m22:00:10.106 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m22:00:10.404 [debug] [Validator.run] format fix output: [0m
+[22m22:00:10.404 [info] [Validator.run] step 4/6: credo[0m
+[36m22:00:10.857 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m22:00:10.857 [info] [Validator.run] credo: no issues[0m
+[22m22:00:10.857 [info] [Validator.run] step 5/6: credence check[0m
+[22m22:00:11.519 [info] [Validator.run] credence check exit=0[0m
+[36m22:00:11.519 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m22:00:11.519 [info] [Validator.run] credence check: passed[0m
+[22m22:00:11.519 [info] [Validator.run] step 6/6: tests[0m
+[22m22:00:11.977 [info] [Validator.run] test exit=0[0m
+[36m22:00:11.977 [debug] [Validator.run] test output:
+Running ExUnit with seed: 939783, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m22:00:11.977 [info] [Validator.run] tests: PASSED[0m
+[22m22:00:11.977 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m22:00:11.977 [debug] [Validator.run] final module (687 chars):
+defmodule Solution do
+  @doc """
+  Generates all valid combinations of n pairs of parentheses.
+  """
+  @spec generate_bracket_combinations(non_neg_integer()) :: [String.t()]
+  def generate_bracket_combinations(0), do: [""]
+
+  def generate_bracket_combinations(n) do
+    generate("", n, 0)
+  end
+
+  defp generate(current, 0, 0) do
+    [current]
+  end
+
+  defp generate(current, left, right) do
+    _results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+[0m
+[36m22:00:11.978 [debug] [Validator.run] final test (459 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "one pair" do
+    assert Solution.generate_bracket_combinations(1) == ["()"]
+  end
+
+  test "two pairs" do
+    assert Solution.generate_bracket_combinations(2) == ["(())", "()()"]
+  end
+
+  test "three pairs" do
+    result = Solution.generate_bracket_combinations(3)
+    expected = ["((()))", "(()())", "(())()", "()(())", "()()()"]
+    assert Enum.sort(result) == Enum.sort(expected)
+  end
+end
+[0m
+[22m22:00:11.978 [info] [Solve attempt 2] validation PASSED[0m
+[36m22:00:11.987 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=600000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Pattern.NoDocFalseOnPrivate
+  - Credence.Semantic.UnusedVariable
+
+## Dead-ends already tried (do NOT re-propose)
+## row 92651 â gave_up
+implementer gave_up: {:llm_error, {:network, %Req.TransportError{reason: :timeout}}}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, self-contained defmodule isolating ONE issue)
+===AFTER===              (REQUIRED for any proposed rule — the idiomatic rewrite; NO check-only)
+===ASSUMPTIONS===        (optional — existing switch names; omit for no-promise)
+===PROPOSED_SWITCH===    (SWITCH_PROPOSAL only — name:/summary:/default:/divergence_class: lines, with ===BEFORE===, no ===AFTER===)
+===RATIONALE===
+one line
+===END===
+
+
+## Row log (distilled)
+[0m
+[22m21:59:57.126 [info] [Solve attempt 1] generating (fn=generate_bracket_combinations)[0m
+[36m21:59:57.126 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=600000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement t (truncated)[0m
+[36m22:02:25.209 [debug] [LLM.call] finish=stop len=1139 usage=%{"completion_tokens" => 4961, "completion_tokens_details" => %{"reasoning_tokens" => 4653}, "prompt_tokens" => 11696, "prompt_tokens_details" => %{}, "total_tokens" => 16657}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+avoid_dead_binding
+===PHASE===
+pattern
+===BEFORE===
+defmodule Solution do
+  defp generate(current, left, right) do
+    _results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+===AFTER===
+defmodule Solution do
+  defp generate(current, left, right) do
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+===ASSUMPTIONS===
+===PROPOSED_SWITCH===
+===RATIONALE===
+An assignment to an underscore-prefixed variable (`_name = expr`) that is never referenced, when followed in the same scope by an assignment to the unprefixed variable (`name = expr2`), is dead code left over from iterative development and should be removed.
+===END===[0m
+[22m22:02:25.209 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 133221ms — ok[0m
+[36m22:02:25.209 [debug] [Budget] spent so far (est.): $0.122[0m
+[22m22:02:26.696 [info] [Budget] HEARTBEAT — 43 paid calls, est $0.122 over 24.9min → ~$0.2941/hr, ~$7.06/day (tok in=181373 cache_rd=20928 out=49441)[0m
+[36m22:02:27.076 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=600000ms
+[LLM.call] system:
+You implement ONE Credence rule by FILLING generated stub files. Write `check`/`fix` (or analyze/fix, or match?/to_issue/fix), replace placeholder fixtures with the real before/after, and make the red assertions green WITHOUT weakening any test. Emit the WHOLE content of each file via the role/path markers — nothing else. Preserve the stub's structure.
+[LLM.call] user:
+## Task: implement a NEW pattern rule by filling the generated stubs.
+
+## Spec
+rationale: An assignment to an underscore-prefixed variable (`_name = expr`) that is never referenced, when followed in the same scope by an assignment to the unprefixed variable (`name = expr2`), is dead code left over from iterative development and should be removed.
+
+BEFORE (the offending / non-idiomatic snippet):
+```
+defmodule Solution do
+  defp generate(current, left, right) do
+    _results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+```
+
+AFTER (the idiomatic rewrite — fix/2 must produce this):
+```
+defmodule Solution do
+  defp generate(current, left, right) do
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+```
+
+
+## Generated scaffold (FILL these — preserve module names, file shape, the test scaffolding)
+### lib/pattern/avoid_dead_binding.ex
+```
+defmodule Credence.Pattern.AvoidDeadBinding do
+  @moduledoc """
+  TODO: describe the anti-pattern this rule detects and fixes.
+
+  ## Bad
+
+      # TODO: example of the flagged code
+
+  ## Good
+
+      # TODO: example of the rewritten code
+  """
+  use Credence.Pattern.Rule
+
+  @impl true
+  def check(_ast, _opts) do
+    # TODO: walk the AST and return issues, e.g.:
+    #   [%Issue{rule: :avoid_dead_binding, message: "...", meta: %{line: line}}]
+    []
+  end
+
+  @impl true
+  def fix_patches(_ast, _opts) do
+    # TODO: emit patches, e.g. via Credence.RuleHelpers.patches_from_postwalk/2
+    []
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_check_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "flags the anti-pattern" do
+    # TODO: replace with real code the rule should flag
+    assert flagged?(AvoidDeadBinding, """
+           foo(bar)
+           """)
+  end
+
+  test "leaves good code alone" do
+    # TODO: replace with real code the rule should ignore
+    assert clean?(AvoidDeadBinding, """
+           baz(qux)
+           """)
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_equivalence_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingEquivalenceTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "fix preserves behaviour" do
+    # TODO: replace with a real before-expression the rule fires on, its free
+    # variables, and inputs (see Credence.EquivalenceInputs, e.g. B.term_lists()).
+    assert_equivalent(
+      """
+      foo(bar)
+      """,
+      rule: AvoidDeadBinding,
+      vars: [:bar],
+      inputs: [1, 2, 3]
+    )
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_fix_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "rewrites the anti-pattern" do
+    # TODO: replace input/expected with a real before/after pair
+    input = """
+    foo(bar)
+    """
+
+    expected = """
+    baz(qux)
+    """
+
+    assert fix(AvoidDeadBinding, input) == expected
+  end
+end
+```
+
+## AST dumps (the Sourceror tuple shape check/2 matches)
+### BEFORE
+```
+Compiling 1 file (.ex)
+Generated credence app
+=== RAW (the shape check/2 matches — incl. __block__ literal wrappers) ===
+{:defmodule,
+ [
+   trailing_comments: [],
+   leading_comments: [],
+   do: [line: 1, column: 20],
+   end: [line: 21, column: 1],
+   line: 1,
+   column: 1
+ ],
+ [
+   {:__aliases__,
+    [
+      trailing_comments: [],
+      leading_comments: [],
+      last: [line: 1, column: 11],
+      line: 1,
+      column: 11
+    ], [:Solution]},
+   [
+     {{:__block__,
+       [trailing_comments: [], leading_comments: [], line: 1, column: 20],
+       [:do]},
+      {:defp,
+       [
+         trailing_comments: [],
+         leading_comments: [],
+         end_of_expression: [newlines: 1, line: 20, column: 6],
+         do: [line: 2, column: 39],
+         end: [line: 20, column: 3],
+         line: 2,
+         column: 3
+       ],
+       [
+         {:generate,
+          [
+            trailing_comments: [],
+            leading_comments: [],
+            closing: [line: 2, column: 37],
+            line: 2,
+            column: 8
+          ],
+          [
+            {:current,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 17],
+             nil},
+            {:left,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 26],
+             nil},
+            {:right,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 32],
+             nil}
+          ]},
+         [
+           {{:__block__,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 39],
+             [:do]},
+            {:__block__, [trailing_comments: [], leading_comments: []],
+             [
+               {:=,
+                [
+                  trailing_comments: [],
+                  end_of_expression: [newlines: 2, line: 3, column: 18],
+                  line: 3,
+                  column: 14
+                ],
+                [
+                  {:_results,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     line: 3,
+                     column: 5
+                   ], nil},
+                  {:__block__,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     closing: [line: 3, column: 17],
+                     line: 3,
+                     column: 16
+                   ], [[]]}
+                ]},
+               {:=,
+                [
+                  trailing_comments: [],
+                  end_of_expression: [newlines: 2, line: 10, column: 10],
+                  newlines: 1,
+                  line: 5,
+                  column: 13
+                ],
+                [
+                  {:results,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     line: 5,
+                     column: 5
+                   ], nil},
+                  {:if,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     do: [line: 6, column: 19],
+                     end: [line: 10, column: 7],
+                     line: 6,
+                     column: 7
+                   ],
+                   [
+                     {:>, [trailing_comments: [], line: 6, column: 15],
+                      [
+                        {:left,
+                         [
+                           trailing_comments: [],
+                           leading_comments: [],
+                           line: 6,
+                           column: 10
+                         ], nil},
+                        {:__block__,
+                         [
+                           trailing_comments: [],
+                           leading_comments: [],
+                           token: "0",
+                           line: 6,
+                           column: 17
+                         ], [0]}
+                      ]},
+                     [
+                       {{:__block__,
+     (truncated)[0m
+[36m22:07:25.802 [debug] [LLM.call] finish=length len=0 usage=%{"completion_tokens" => 16384, "completion_tokens_details" => %{"reasoning_tokens" => 16383}, "prompt_tokens" => 8626, "prompt_tokens_details" => %{}, "total_tokens" => 25010}
+[LLM.call] response:
+[0m
+[22m22:07:25.802 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 298725ms — truncated[0m
+[36m22:07:25.802 [debug] [Budget] spent so far (est.): $0.14[0m
+[36m22:07:25.881 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=600000ms
+[LLM.call] system:
+You implement ONE Credence rule by FILLING generated stub files. Write `check`/`fix` (or analyze/fix, or match?/to_issue/fix), replace placeholder fixtures with the real before/after, and make the red assertions green WITHOUT weakening any test. Emit the WHOLE content of each file via the role/path markers — nothing else. Preserve the stub's structure.
+[LLM.call] user:
+## Task: implement a NEW pattern rule by filling the generated stubs.
+
+## Spec
+rationale: An assignment to an underscore-prefixed variable (`_name = expr`) that is never referenced, when followed in the same scope by an assignment to the unprefixed variable (`name = expr2`), is dead code left over from iterative development and should be removed.
+
+BEFORE (the offending / non-idiomatic snippet):
+```
+defmodule Solution do
+  defp generate(current, left, right) do
+    _results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+```
+
+AFTER (the idiomatic rewrite — fix/2 must produce this):
+```
+defmodule Solution do
+  defp generate(current, left, right) do
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+```
+
+
+## Generated scaffold (FILL these — preserve module names, file shape, the test scaffolding)
+### lib/pattern/avoid_dead_binding.ex
+```
+defmodule Credence.Pattern.AvoidDeadBinding do
+  @moduledoc """
+  TODO: describe the anti-pattern this rule detects and fixes.
+
+  ## Bad
+
+      # TODO: example of the flagged code
+
+  ## Good
+
+      # TODO: example of the rewritten code
+  """
+  use Credence.Pattern.Rule
+
+  @impl true
+  def check(_ast, _opts) do
+    # TODO: walk the AST and return issues, e.g.:
+    #   [%Issue{rule: :avoid_dead_binding, message: "...", meta: %{line: line}}]
+    []
+  end
+
+  @impl true
+  def fix_patches(_ast, _opts) do
+    # TODO: emit patches, e.g. via Credence.RuleHelpers.patches_from_postwalk/2
+    []
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_check_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "flags the anti-pattern" do
+    # TODO: replace with real code the rule should flag
+    assert flagged?(AvoidDeadBinding, """
+           foo(bar)
+           """)
+  end
+
+  test "leaves good code alone" do
+    # TODO: replace with real code the rule should ignore
+    assert clean?(AvoidDeadBinding, """
+           baz(qux)
+           """)
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_equivalence_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingEquivalenceTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "fix preserves behaviour" do
+    # TODO: replace with a real before-expression the rule fires on, its free
+    # variables, and inputs (see Credence.EquivalenceInputs, e.g. B.term_lists()).
+    assert_equivalent(
+      """
+      foo(bar)
+      """,
+      rule: AvoidDeadBinding,
+      vars: [:bar],
+      inputs: [1, 2, 3]
+    )
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_fix_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "rewrites the anti-pattern" do
+    # TODO: replace input/expected with a real before/after pair
+    input = """
+    foo(bar)
+    """
+
+    expected = """
+    baz(qux)
+    """
+
+    assert fix(AvoidDeadBinding, input) == expected
+  end
+end
+```
+
+## AST dumps (the Sourceror tuple shape check/2 matches)
+### BEFORE
+```
+Compiling 1 file (.ex)
+Generated credence app
+=== RAW (the shape check/2 matches — incl. __block__ literal wrappers) ===
+{:defmodule,
+ [
+   trailing_comments: [],
+   leading_comments: [],
+   do: [line: 1, column: 20],
+   end: [line: 21, column: 1],
+   line: 1,
+   column: 1
+ ],
+ [
+   {:__aliases__,
+    [
+      trailing_comments: [],
+      leading_comments: [],
+      last: [line: 1, column: 11],
+      line: 1,
+      column: 11
+    ], [:Solution]},
+   [
+     {{:__block__,
+       [trailing_comments: [], leading_comments: [], line: 1, column: 20],
+       [:do]},
+      {:defp,
+       [
+         trailing_comments: [],
+         leading_comments: [],
+         end_of_expression: [newlines: 1, line: 20, column: 6],
+         do: [line: 2, column: 39],
+         end: [line: 20, column: 3],
+         line: 2,
+         column: 3
+       ],
+       [
+         {:generate,
+          [
+            trailing_comments: [],
+            leading_comments: [],
+            closing: [line: 2, column: 37],
+            line: 2,
+            column: 8
+          ],
+          [
+            {:current,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 17],
+             nil},
+            {:left,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 26],
+             nil},
+            {:right,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 32],
+             nil}
+          ]},
+         [
+           {{:__block__,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 39],
+             [:do]},
+            {:__block__, [trailing_comments: [], leading_comments: []],
+             [
+               {:=,
+                [
+                  trailing_comments: [],
+                  end_of_expression: [newlines: 2, line: 3, column: 18],
+                  line: 3,
+                  column: 14
+                ],
+                [
+                  {:_results,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     line: 3,
+                     column: 5
+                   ], nil},
+                  {:__block__,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     closing: [line: 3, column: 17],
+                     line: 3,
+                     column: 16
+                   ], [[]]}
+                ]},
+               {:=,
+                [
+                  trailing_comments: [],
+                  end_of_expression: [newlines: 2, line: 10, column: 10],
+                  newlines: 1,
+                  line: 5,
+                  column: 13
+                ],
+                [
+                  {:results,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     line: 5,
+                     column: 5
+                   ], nil},
+                  {:if,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     do: [line: 6, column: 19],
+                     end: [line: 10, column: 7],
+                     line: 6,
+                     column: 7
+                   ],
+                   [
+                     {:>, [trailing_comments: [], line: 6, column: 15],
+                      [
+                        {:left,
+                         [
+                           trailing_comments: [],
+                           leading_comments: [],
+                           line: 6,
+                           column: 10
+                         ], nil},
+                        {:__block__,
+                         [
+                           trailing_comments: [],
+                           leading_comments: [],
+                           token: "0",
+                           line: 6,
+                           column: 17
+                         ], [0]}
+                      ]},
+                     [
+                       {{:__block__,
+     (truncated)[0m
+[22m22:07:26.697 [info] [Budget] HEARTBEAT — 44 paid calls, est $0.14 over 29.9min → ~$0.2811/hr, ~$6.75/day (tok in=189999 cache_rd=20928 out=65825)[0m
+[36m22:08:55.134 [debug] [LLM.call] finish=stop len=8891 usage=%{"completion_tokens" => 5919, "completion_tokens_details" => %{"reasoning_tokens" => 3742}, "prompt_tokens" => 8654, "prompt_tokens_details" => %{"cached_tokens" => 8576}, "total_tokens" => 14573}
+[LLM.call] response:
+===RULE===
+```
+defmodule Credence.Pattern.AvoidDeadBinding do
+  @moduledoc """
+  Detects dead assignments to underscore-prefixed variables that are never
+  referenced when followed by an assignment to the unprefixed variable.
+
+  ## Bad
+
+      _results = []
+      results = [1, 2, 3]
+
+  ## Good
+
+      results = [1, 2, 3]
+  """
+  use Credence.Pattern.Rule
+
+  @impl true
+  def check(ast, _opts) do
+    Credence.RuleHelpers.postwalk(ast, [], fn node, issues ->
+      case node do
+        {:__block__, meta, expressions} ->
+          dead_assignments = find_dead_assignments(expressions)
+          Enum.reduce(dead_assignments, issues, fn {assign_meta, _}, acc ->
+            [%Issue{
+              rule: :avoid_dead_binding,
+              message: "Dead assignment to underscore-prefixed variable",
+              meta: %{line: assign_meta[:line]}
+            } | acc]
+          end)
+
+        _ ->
+          issues
+      end
+    end)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.postwalk(ast, [], fn node, patches ->
+      case node do
+        {:__block__, meta, expressions} ->
+          dead_assignments = find_dead_assignments(expressions)
+          if dead_assignments == [] do
+            patches
+          else
+            new_expressions =
+              expressions
+              |> Enum.reject(fn expr ->
+                Enum.any?(dead_assignments, fn {_, dead_expr} -> dead_expr == expr end)
+              end)
+
+            patch = %Patch{
+              action: :replace,
+              range: meta[:range] || get_range(node),
+              change: {:__block__, meta, new_expressions}
+            }
+            [patch | patches]
+          end
+
+        _ ->
+          patches
+      end
+    end)
+  end
+
+  defp find_dead_assignments(expressions) do
+    expressions
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {expr, index} ->
+      case expr do
+        {:=, assign_meta, [{underscore_var, _, nil}, _value]} ->
+          if is_underscore_var(underscore_var) do
+            unprefixed_var = String.to_atom(String.trim_leading(Atom.to_string(underscore_var), "_"))
+            if has_later_assignment?(expressions, index + 1, unprefixed_var) and
+               not_variable_used?(expressions, index + 1, underscore_var) do
+              [{assign_meta, expr}]
+            else
+              []
+            end
+          else
+            []
+          end
+        _ ->
+          []
+      end
+    end)
+  end
+
+  defp is_underscore_var(var) do
+    var_str = Atom.to_string(var)
+    String.starts_with?(var_str, "_") and String.length(var_str) > 1
+  end
+
+  defp has_later_assignment?(expressions, start_index, target_var) do
+    expressions
+    |> Enum.drop(start_index)
+    |> Enum.any?(fn
+      {:=, _, [{^target_var, _, nil}, _]} -> true
+      _ -> false
+    end)
+  end
+
+  defp not_variable_used?(expressions, start_index, var) do
+    expressions
+    |> Enum.drop(start_index)
+    |> Enum.all?(fn expr ->
+      not var_in_ast?(expr, var)
+    end)
+  end
+
+  defp var_in_ast?(ast, var) do
+    Credence.RuleHelpers.postwalk(ast, false, fn node, found ->
+      if found do
+        {node, found}
+      else
+        case node do
+          {^var, _, nil} -> {node, true}
+          _ -> {node, found}
+        end
+      end
+    end) |> elem(1)
+  end
+
+  defp get_range(node) do
+    case Sourceror.get_range(node) do
+      %{start: start_pos, end: end_pos} ->
+        %{start: start_pos, end: end_pos}
+      _ ->
+        %{start: {0, 0, 0}, end: {0, 0, 0}}
+    end
+  end
+end
+```
+
+===CHECK_TEST===
+```
+defmodule Credence.Pattern.AvoidDeadBindingCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "flags the anti-pattern" do
+    assert flagged?(AvoidDeadBinding, """
+           defmodule Solution do
+             defp generate(current, left, right) do
+               _results = []
+
+               results =
+                 if left > 0 do
+                   generate(current <> "(", left - 1, right + 1)
+                 else
+                   []
+                 end
+
+               results2 =
+                 if right > 0 do
+                   generate(current <> ")", left, right - 1)
+                 else
+                   []
+                 end
+
+               results ++ results2
+             end
+           end
+           """)
+  end
+
+  test "leaves good code alone" do
+    assert clean?(AvoidDeadBinding, """
+           defmodule Solution do
+             defp generate(current, left, right) do
+               results =
+                 if left > 0 do
+                   generate(current <> "(", left - 1, right + 1)
+                 else
+                   []
+                 end
+
+               results2 =
+                 if right > 0 do
+                   generate(current <> ")", left, right - 1)
+                 else
+                   []
+                 end
+
+               results ++ results2
+             end
+           end
+           """)
+  end
+
+  test "does not flag when underscore variable is used later" do
+    assert clean?(AvoidDeadBinding, """
+           defmodule Example do
+             def do_something do
+               _temp = calculate_temp()
+               temp = process(_temp)
+               temp
+             end
+           end
+           """)
+  end
+
+  test "does not flag when no unprefixed assignment follows" do
+    assert clean?(AvoidDeadBinding, """
+           defmodule Example do
+             def do_something do
+               _temp = calculate_temp()
+               :ok
+             end
+           end
+           """)
+  end
+
+  test "flags in nested blocks" do
+    assert flagged?(AvoidDeadBinding, """
+           defmodule Example do
+             def do_something do
+               if true do
+                 _unused = []
+                 unused = [:a, :b]
+                 unused
+               end
+             end
+           end
+           """)
+  end
+end
+```
+
+===FIX_TEST===
+```
+defmodule Credence.Pattern.AvoidDeadBindingFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "rewrites the anti-pattern" do
+    input = """
+    defmodule Solution do
+      defp generate(current, left, right) do
+        _results = []
+
+        results =
+          if left > 0 do
+            generate(current <> "(", left - 1, right + 1)
+          else
+            []
+          end
+
+        results2 =
+          if right > 0 do
+            generate(current <> ")", left, right - 1)
+          else
+            []
+          end
+
+        results ++ results2
+      end
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      defp generate(current, left, right) do
+        results =
+          if left > 0 do
+            generate(current <> "(", left - 1, right + 1)
+          else
+            []
+          end
+
+        results2 =
+          if right > 0 do
+            generate(current <> ")", left, right - 1)
+          else
+            []
+          end
+
+        results ++ results2
+      end
+    end
+    """
+
+    assert fix(AvoidDeadBinding, input) == expected
+  end
+
+  test "does not modify when no anti-pattern" do
+    input = """
+    defmodule Solution do
+      defp generate(current, left, right) do
+        results =
+          if left > 0 do
+            generate(current <> "(", left - 1, right + 1)
+          else
+            []
+          end
+
+        results2 =
+          if right > 0 do
+            generate(current <> ")", left, right - 1)
+          else
+            []
+          end
+
+        results ++ results2
+      end
+    end
+    """
+
+    assert fix(AvoidDeadBinding, input) == input
+  end
+
+  test "handles multiple dead assignments" do
+    input = """
+    defmodule Example do
+      def do_work do
+        _first = []
+        first = [:a]
+        _second = %{}
+        second = %{b: 1}
+        {first, second}
+      end
+    end
+    """
+
+    expected = """
+    defmodule (truncated)[0m
+[22m22:08:55.135 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 89252ms — ok[0m
+[36m22:08:55.135 [debug] [Budget] spent so far (est.): $0.1489[0m
+[36m22:08:55.549 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=600000ms
+[LLM.call] system:
+You implement ONE Credence rule by FILLING generated stub files. Write `check`/`fix` (or analyze/fix, or match?/to_issue/fix), replace placeholder fixtures with the real before/after, and make the red assertions green WITHOUT weakening any test. Emit the WHOLE content of each file via the role/path markers — nothing else. Preserve the stub's structure.
+[LLM.call] user:
+## Task: implement a NEW pattern rule by filling the generated stubs.
+
+## Spec
+rationale: An assignment to an underscore-prefixed variable (`_name = expr`) that is never referenced, when followed in the same scope by an assignment to the unprefixed variable (`name = expr2`), is dead code left over from iterative development and should be removed.
+
+BEFORE (the offending / non-idiomatic snippet):
+```
+defmodule Solution do
+  defp generate(current, left, right) do
+    _results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+```
+
+AFTER (the idiomatic rewrite — fix/2 must produce this):
+```
+defmodule Solution do
+  defp generate(current, left, right) do
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+```
+
+
+## Generated scaffold (FILL these — preserve module names, file shape, the test scaffolding)
+### lib/pattern/avoid_dead_binding.ex
+```
+defmodule Credence.Pattern.AvoidDeadBinding do
+  @moduledoc """
+  TODO: describe the anti-pattern this rule detects and fixes.
+
+  ## Bad
+
+      # TODO: example of the flagged code
+
+  ## Good
+
+      # TODO: example of the rewritten code
+  """
+  use Credence.Pattern.Rule
+
+  @impl true
+  def check(_ast, _opts) do
+    # TODO: walk the AST and return issues, e.g.:
+    #   [%Issue{rule: :avoid_dead_binding, message: "...", meta: %{line: line}}]
+    []
+  end
+
+  @impl true
+  def fix_patches(_ast, _opts) do
+    # TODO: emit patches, e.g. via Credence.RuleHelpers.patches_from_postwalk/2
+    []
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_check_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "flags the anti-pattern" do
+    # TODO: replace with real code the rule should flag
+    assert flagged?(AvoidDeadBinding, """
+           foo(bar)
+           """)
+  end
+
+  test "leaves good code alone" do
+    # TODO: replace with real code the rule should ignore
+    assert clean?(AvoidDeadBinding, """
+           baz(qux)
+           """)
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_equivalence_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingEquivalenceTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "fix preserves behaviour" do
+    # TODO: replace with a real before-expression the rule fires on, its free
+    # variables, and inputs (see Credence.EquivalenceInputs, e.g. B.term_lists()).
+    assert_equivalent(
+      """
+      foo(bar)
+      """,
+      rule: AvoidDeadBinding,
+      vars: [:bar],
+      inputs: [1, 2, 3]
+    )
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_fix_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "rewrites the anti-pattern" do
+    # TODO: replace input/expected with a real before/after pair
+    input = """
+    foo(bar)
+    """
+
+    expected = """
+    baz(qux)
+    """
+
+    assert fix(AvoidDeadBinding, input) == expected
+  end
+end
+```
+
+## AST dumps (the Sourceror tuple shape check/2 matches)
+### BEFORE
+```
+Compiling 1 file (.ex)
+Generated credence app
+=== RAW (the shape check/2 matches — incl. __block__ literal wrappers) ===
+{:defmodule,
+ [
+   trailing_comments: [],
+   leading_comments: [],
+   do: [line: 1, column: 20],
+   end: [line: 21, column: 1],
+   line: 1,
+   column: 1
+ ],
+ [
+   {:__aliases__,
+    [
+      trailing_comments: [],
+      leading_comments: [],
+      last: [line: 1, column: 11],
+      line: 1,
+      column: 11
+    ], [:Solution]},
+   [
+     {{:__block__,
+       [trailing_comments: [], leading_comments: [], line: 1, column: 20],
+       [:do]},
+      {:defp,
+       [
+         trailing_comments: [],
+         leading_comments: [],
+         end_of_expression: [newlines: 1, line: 20, column: 6],
+         do: [line: 2, column: 39],
+         end: [line: 20, column: 3],
+         line: 2,
+         column: 3
+       ],
+       [
+         {:generate,
+          [
+            trailing_comments: [],
+            leading_comments: [],
+            closing: [line: 2, column: 37],
+            line: 2,
+            column: 8
+          ],
+          [
+            {:current,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 17],
+             nil},
+            {:left,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 26],
+             nil},
+            {:right,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 32],
+             nil}
+          ]},
+         [
+           {{:__block__,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 39],
+             [:do]},
+            {:__block__, [trailing_comments: [], leading_comments: []],
+             [
+               {:=,
+                [
+                  trailing_comments: [],
+                  end_of_expression: [newlines: 2, line: 3, column: 18],
+                  line: 3,
+                  column: 14
+                ],
+                [
+                  {:_results,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     line: 3,
+                     column: 5
+                   ], nil},
+                  {:__block__,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     closing: [line: 3, column: 17],
+                     line: 3,
+                     column: 16
+                   ], [[]]}
+                ]},
+               {:=,
+                [
+                  trailing_comments: [],
+                  end_of_expression: [newlines: 2, line: 10, column: 10],
+                  newlines: 1,
+                  line: 5,
+                  column: 13
+                ],
+                [
+                  {:results,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     line: 5,
+                     column: 5
+                   ], nil},
+                  {:if,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     do: [line: 6, column: 19],
+                     end: [line: 10, column: 7],
+                     line: 6,
+                     column: 7
+                   ],
+                   [
+                     {:>, [trailing_comments: [], line: 6, column: 15],
+                      [
+                        {:left,
+                         [
+                           trailing_comments: [],
+                           leading_comments: [],
+                           line: 6,
+                           column: 10
+                         ], nil},
+                        {:__block__,
+                         [
+                           trailing_comments: [],
+                           leading_comments: [],
+                           token: "0",
+                           line: 6,
+                           column: 17
+                         ], [0]}
+                      ]},
+                     [
+                       {{:__block__,
+     (truncated)[0m
+[22m22:12:26.697 [info] [Budget] HEARTBEAT — 45 paid calls, est $0.1489 over 34.9min → ~$0.2561/hr, ~$6.15/day (tok in=198653 cache_rd=20928 out=71744)[0m
+[36m22:13:31.665 [debug] [LLM.call] finish=length len=0 usage=%{"completion_tokens" => 16384, "completion_tokens_details" => %{"reasoning_tokens" => 16383}, "prompt_tokens" => 10952, "prompt_tokens_details" => %{"cached_tokens" => 8576}, "total_tokens" => 27336}
+[LLM.call] response:
+[0m
+[22m22:13:31.665 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 276115ms — truncated[0m
+[36m22:13:31.665 [debug] [Budget] spent so far (est.): $0.1679[0m
+[36m22:13:31.665 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=600000ms
+[LLM.call] system:
+You implement ONE Credence rule by FILLING generated stub files. Write `check`/`fix` (or analyze/fix, or match?/to_issue/fix), replace placeholder fixtures with the real before/after, and make the red assertions green WITHOUT weakening any test. Emit the WHOLE content of each file via the role/path markers — nothing else. Preserve the stub's structure.
+[LLM.call] user:
+## Task: implement a NEW pattern rule by filling the generated stubs.
+
+## Spec
+rationale: An assignment to an underscore-prefixed variable (`_name = expr`) that is never referenced, when followed in the same scope by an assignment to the unprefixed variable (`name = expr2`), is dead code left over from iterative development and should be removed.
+
+BEFORE (the offending / non-idiomatic snippet):
+```
+defmodule Solution do
+  defp generate(current, left, right) do
+    _results = []
+
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+```
+
+AFTER (the idiomatic rewrite — fix/2 must produce this):
+```
+defmodule Solution do
+  defp generate(current, left, right) do
+    results =
+      if left > 0 do
+        generate(current <> "(", left - 1, right + 1)
+      else
+        []
+      end
+
+    results2 =
+      if right > 0 do
+        generate(current <> ")", left, right - 1)
+      else
+        []
+      end
+
+    results ++ results2
+  end
+end
+```
+
+
+## Generated scaffold (FILL these — preserve module names, file shape, the test scaffolding)
+### lib/pattern/avoid_dead_binding.ex
+```
+defmodule Credence.Pattern.AvoidDeadBinding do
+  @moduledoc """
+  TODO: describe the anti-pattern this rule detects and fixes.
+
+  ## Bad
+
+      # TODO: example of the flagged code
+
+  ## Good
+
+      # TODO: example of the rewritten code
+  """
+  use Credence.Pattern.Rule
+
+  @impl true
+  def check(_ast, _opts) do
+    # TODO: walk the AST and return issues, e.g.:
+    #   [%Issue{rule: :avoid_dead_binding, message: "...", meta: %{line: line}}]
+    []
+  end
+
+  @impl true
+  def fix_patches(_ast, _opts) do
+    # TODO: emit patches, e.g. via Credence.RuleHelpers.patches_from_postwalk/2
+    []
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_check_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "flags the anti-pattern" do
+    # TODO: replace with real code the rule should flag
+    assert flagged?(AvoidDeadBinding, """
+           foo(bar)
+           """)
+  end
+
+  test "leaves good code alone" do
+    # TODO: replace with real code the rule should ignore
+    assert clean?(AvoidDeadBinding, """
+           baz(qux)
+           """)
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_equivalence_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingEquivalenceTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "fix preserves behaviour" do
+    # TODO: replace with a real before-expression the rule fires on, its free
+    # variables, and inputs (see Credence.EquivalenceInputs, e.g. B.term_lists()).
+    assert_equivalent(
+      """
+      foo(bar)
+      """,
+      rule: AvoidDeadBinding,
+      vars: [:bar],
+      inputs: [1, 2, 3]
+    )
+  end
+end
+```
+
+### test/pattern/avoid_dead_binding_fix_test.exs
+```
+defmodule Credence.Pattern.AvoidDeadBindingFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidDeadBinding
+
+  test "rewrites the anti-pattern" do
+    # TODO: replace input/expected with a real before/after pair
+    input = """
+    foo(bar)
+    """
+
+    expected = """
+    baz(qux)
+    """
+
+    assert fix(AvoidDeadBinding, input) == expected
+  end
+end
+```
+
+## AST dumps (the Sourceror tuple shape check/2 matches)
+### BEFORE
+```
+Compiling 1 file (.ex)
+Generated credence app
+=== RAW (the shape check/2 matches — incl. __block__ literal wrappers) ===
+{:defmodule,
+ [
+   trailing_comments: [],
+   leading_comments: [],
+   do: [line: 1, column: 20],
+   end: [line: 21, column: 1],
+   line: 1,
+   column: 1
+ ],
+ [
+   {:__aliases__,
+    [
+      trailing_comments: [],
+      leading_comments: [],
+      last: [line: 1, column: 11],
+      line: 1,
+      column: 11
+    ], [:Solution]},
+   [
+     {{:__block__,
+       [trailing_comments: [], leading_comments: [], line: 1, column: 20],
+       [:do]},
+      {:defp,
+       [
+         trailing_comments: [],
+         leading_comments: [],
+         end_of_expression: [newlines: 1, line: 20, column: 6],
+         do: [line: 2, column: 39],
+         end: [line: 20, column: 3],
+         line: 2,
+         column: 3
+       ],
+       [
+         {:generate,
+          [
+            trailing_comments: [],
+            leading_comments: [],
+            closing: [line: 2, column: 37],
+            line: 2,
+            column: 8
+          ],
+          [
+            {:current,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 17],
+             nil},
+            {:left,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 26],
+             nil},
+            {:right,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 32],
+             nil}
+          ]},
+         [
+           {{:__block__,
+             [trailing_comments: [], leading_comments: [], line: 2, column: 39],
+             [:do]},
+            {:__block__, [trailing_comments: [], leading_comments: []],
+             [
+               {:=,
+                [
+                  trailing_comments: [],
+                  end_of_expression: [newlines: 2, line: 3, column: 18],
+                  line: 3,
+                  column: 14
+                ],
+                [
+                  {:_results,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     line: 3,
+                     column: 5
+                   ], nil},
+                  {:__block__,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     closing: [line: 3, column: 17],
+                     line: 3,
+                     column: 16
+                   ], [[]]}
+                ]},
+               {:=,
+                [
+                  trailing_comments: [],
+                  end_of_expression: [newlines: 2, line: 10, column: 10],
+                  newlines: 1,
+                  line: 5,
+                  column: 13
+                ],
+                [
+                  {:results,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     line: 5,
+                     column: 5
+                   ], nil},
+                  {:if,
+                   [
+                     trailing_comments: [],
+                     leading_comments: [],
+                     do: [line: 6, column: 19],
+                     end: [line: 10, column: 7],
+                     line: 6,
+                     column: 7
+                   ],
+                   [
+                     {:>, [trailing_comments: [], line: 6, column: 15],
+                      [
+                        {:left,
+                         [
+                           trailing_comments: [],
+                           leading_comments: [],
+                           line: 6,
+                           column: 10
+                         ], nil},
+                        {:__block__,
+                         [
+                           trailing_comments: [],
+                           leading_comments: [],
+                           token: "0",
+                           line: 6,
+                           column: 17
+                         ], [0]}
+                      ]},
+                     [
+                       {{:__block__,
+     (truncated)[0m
