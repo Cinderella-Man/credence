@@ -182,6 +182,41 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
   # NO-OP — left untouched (unsafe or undesirable to rewrite)
   # ═══════════════════════════════════════════════════════════════════
 
+  test "var == var equality with and in condition (knight_moves regression)" do
+    code = """
+    defmodule Solution do
+      defp bfs_step([], _visited, _target_x, _target_y), do: 0
+
+      defp bfs_step([{cx, cy, moves} | rest], visited, target_x, target_y) do
+        if cx == target_x and cy == target_y do
+          moves
+        else
+          possible_moves = []
+          new_queue = []
+          bfs_step(new_queue, visited, target_x, target_y)
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      defp bfs_step([], _visited, _target_x, _target_y), do: 0
+
+      defp bfs_step([{_cx, _cy, moves} | _rest], _visited, _cx, _cy) do
+        moves
+      end
+      defp bfs_step([{cx, cy, _moves} | _rest], visited, cx, cy) do
+        possible_moves = []
+        new_queue = []
+        bfs_step(new_queue, visited, cx, cy)
+      end
+    end
+    """
+
+    assert fix(PreferGuardOverIf, code) == expected
+  end
+
   test "equality with a literal is left alone (prefer pattern matching)" do
     code = """
     defp check(x) do

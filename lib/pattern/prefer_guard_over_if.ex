@@ -510,31 +510,31 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   end
 
   defp do_negate_eq_conditions({:and, _, [left, right]}, rename_map) do
+    # De Morgan: not(A and B) = not A or not B
     l = do_negate_eq_conditions(left, rename_map)
     r = do_negate_eq_conditions(right, rename_map)
     case {l, r} do
       {true, true} -> true
       {true, right} -> right
       {left, true} -> left
-      {left, right} -> {:and, [], [left, right]}
+      {left, right} -> {:or, [], [left, right]}
     end
   end
 
   defp do_negate_eq_conditions({:or, _, [left, right]}, rename_map) do
+    # De Morgan: not(A or B) = not A and not B
     l = do_negate_eq_conditions(left, rename_map)
     r = do_negate_eq_conditions(right, rename_map)
     case {l, r} do
       {true, _} -> true
       {_, true} -> true
-      {left, right} -> {:or, [], [left, right]}
+      {left, right} -> {:and, [], [left, right]}
     end
   end
 
   defp do_negate_eq_conditions({:not, _, [arg]}, rename_map) do
-    case do_negate_eq_conditions(arg, rename_map) do
-      true -> {:not, [], [true]}
-      other -> {:not, [], [other]}
-    end
+    # Double negation: not(not A) = A — strip the not
+    do_negate_eq_conditions(arg, rename_map)
   end
 
   defp do_negate_eq_conditions(node, _rename_map), do: node
@@ -550,6 +550,25 @@ defmodule Credence.Pattern.PreferGuardOverIf do
     case {var_name(left), var_name(right)} do
       {l, r} when is_atom(l) and is_atom(r) and l == r -> nil
       _ -> {:!=, [], [left, right]}
+    end
+  end
+  defp simplify_guard({:and, _, [left, right]}) do
+    l = simplify_guard(left)
+    r = simplify_guard(right)
+    case {l, r} do
+      {nil, nil} -> nil
+      {nil, right} -> right
+      {left, nil} -> left
+      {left, right} -> {:and, [], [left, right]}
+    end
+  end
+  defp simplify_guard({:or, _, [left, right]}) do
+    l = simplify_guard(left)
+    r = simplify_guard(right)
+    case {l, r} do
+      {nil, _} -> nil
+      {_, nil} -> nil
+      {left, right} -> {:or, [], [left, right]}
     end
   end
   defp simplify_guard(guard), do: guard
