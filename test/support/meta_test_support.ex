@@ -304,7 +304,7 @@ defmodule Credence.MetaTestSupport do
               if MapSet.member?(@fvars, var) and stringish?(rhs), do: [rhs], else: []
 
             {v, _, args} when is_atom(v) and is_list(args) ->
-              if MapSet.member?(@verbs, v), do: Enum.filter(args, &stringish?/1), else: []
+              if MapSet.member?(@verbs, v), do: verb_fixtures(args), else: []
 
             _ ->
               []
@@ -315,6 +315,21 @@ defmodule Credence.MetaTestSupport do
 
     Enum.uniq(acc)
   end
+
+  # Pick the code-fixture argument(s) of a verb call.
+  #
+  # Rule-first verbs (`check(Rule, code)`, `fix(Rule, code)`) name the rule as an
+  # inline alias FIRST; the code fixture(s) follow, so we check the rest.
+  #
+  # Source-first verbs (`fix(source, diagnostic)`, `analyze(code)`,
+  # `valid_syntax?(code)`, `assert_equivalent(before, opts)`) put the source
+  # FIRST — any LATER string arg is a diagnostic / opt / reason, NOT code (a
+  # semantic rule's diagnostic-message arg is not a fixture). So only the first
+  # arg can be a code fixture, and it's caught here only when written inline; a
+  # source bound to a var is checked at its `=` assignment instead.
+  defp verb_fixtures([{:__aliases__, _, _} | rest]), do: Enum.filter(rest, &stringish?/1)
+  defp verb_fixtures([first | _]), do: Enum.filter([first], &stringish?/1)
+  defp verb_fixtures([]), do: []
 
   defp stringish?({:__block__, m, [s]}) when is_binary(s), do: Keyword.get(m, :delimiter) != nil
   defp stringish?({:<<>>, _, _}), do: true
