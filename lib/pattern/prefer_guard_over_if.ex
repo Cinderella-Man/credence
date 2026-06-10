@@ -125,29 +125,62 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
           range = Sourceror.get_range(node)
 
+          # Detect var == var equalities in the guard condition and build
+          # a rename map so we can unify the parameter names.
+          var_equalities = extract_var_equalities(condition, call)
+          rename_map = build_rename_map(var_equalities)
+
+          # Apply renames to call and bodies
+          {first_call, first_do_body, first_else_body} =
+            if map_size(rename_map) > 0 do
+              {apply_rename(call, rename_map),
+               apply_rename(do_body, rename_map),
+               apply_rename(else_body, rename_map)}
+            else
+              {call, do_body, else_body}
+            end
+
           guard_names =
             if existing_guard, do: collect_var_names(existing_guard), else: MapSet.new()
 
           # Build first clause: defp call when condition do do_body end
-          # Underscore-prefix any params unused in guard + condition + do_body
-          first_guard = combine_guards(existing_guard, condition)
+          # After renaming, strip tautological guard (e.g. current_char == current_char)
+          first_combined_guard = combine_guards(existing_guard, condition)
+          first_guard =
+            if map_size(rename_map) > 0 do
+              strip_tautological_eq(first_combined_guard, rename_map)
+            else
+              first_combined_guard
+            end
 
           first_used =
             guard_names
-            |> MapSet.union(collect_var_names(condition))
-            |> MapSet.union(collect_var_names(do_body))
+            |> MapSet.union(collect_var_names(first_do_body))
+            |> MapSet.union(collect_var_names(first_guard))
 
-          first_call = underscore_unused_params(call, first_used)
-          first_head = build_head(first_call, first_guard)
-          first_clause = {def_kind, [], [first_head, [do: do_body]]}
+          first_head = build_head(underscore_unused_params(first_call, first_used), first_guard)
+          first_clause = {def_kind, [], [first_head, [do: first_do_body]]}
           first_text = Sourceror.to_string(first_clause)
 
-          # Build second clause: defp call [when existing_guard] do else_body end
-          # Underscore-prefix any params unused in guard + else_body
-          second_used = MapSet.union(guard_names, collect_var_names(else_body))
-          second_call = underscore_unused_params(call, second_used)
-          second_head = build_head(second_call, existing_guard)
-          second_clause = {def_kind, [], [second_head, [do: else_body]]}
+          # Build second clause: defp call [when guard] do else_body end
+          # For the else branch, negate the equality condition and strip tautologies
+          second_combined_guard = combine_guards(existing_guard, condition)
+          second_guard =
+            if map_size(rename_map) > 0 do
+              negated_guard = negate_eq_conditions(second_combined_guard, rename_map)
+              renamed_guard = apply_rename(negated_guard, rename_map)
+              simplify_guard(renamed_guard)
+            else
+              existing_guard
+            end
+
+          second_used =
+            guard_names
+            |> MapSet.union(collect_var_names(first_else_body))
+            |> MapSet.union(collect_var_names(second_guard))
+
+          second_head = build_head(underscore_unused_params(first_call, second_used), second_guard)
+          second_clause = {def_kind, [], [second_head, [do: first_else_body]]}
           second_text = Sourceror.to_string(second_clause)
 
           change = "#{first_text}\n#{second_text}"
@@ -315,6 +348,211 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   defp build_head(call, nil), do: call
   defp build_head(call, guard), do: {:when, [], [call, guard]}
+
+  # -- var-equality detection and renaming -----------------------------------
+
+  # Extract var == var equalities from the guard condition where both sides
+  # appear as parameters in the function head. Returns [{left_name, right_name}].
+  defp extract_var_equalities(condition, call) do
+    param_names = collect_param_names(call)
+
+    {_ast, equalities} =
+      Macro.prewalk(condition, [], fn
+        {op, _, [left, right]} = node, acc when op in [:==, :===] ->
+          case {var_name(left), var_name(right)} do
+            {l, r} when is_atom(l) and is_atom(r) and l != r ->
+              if l in param_names and r in param_names do
+                {node, [{l, r} | acc]}
+              else
+                {node, acc}
+              end
+            _ ->
+              {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.uniq(equalities)
+  end
+
+  # Collect all parameter variable names from a function call head.
+  defp collect_param_names(call) do
+    {_, names} =
+      Macro.prewalk(call, MapSet.new(), fn
+        {name, _, ctx} = node, acc
+        when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) and name != :_ ->
+          {node, MapSet.put(acc, name)}
+        node, acc ->
+          {node, acc}
+      end)
+    names
+  end
+
+  # Extract the variable name from an AST node, handling __block__ wrappers.
+  defp var_name({name, _, ctx}) when is_atom(name) and (is_atom(ctx) or is_nil(ctx)), do: name
+  defp var_name({:__block__, _, [expr]}), do: var_name(expr)
+  defp var_name(_), do: nil
+
+  # Build a rename map from var equalities. When (a, b) is in equalities and a
+  # appears before b in the param list, we rename b → a.
+  defp build_rename_map(equalities) do
+    Enum.reduce(equalities, %{}, fn {left, right}, acc ->
+      # Keep left (the earlier param), rename right → left
+      if Map.has_key?(acc, right) do
+        # right was already renamed; chain it
+        Map.put(acc, right, Map.get(acc, left, left))
+      else
+        Map.put(acc, right, left)
+      end
+    end)
+  end
+
+  # Apply a rename map to an AST subtree, replacing all occurrences of
+  # old variable names with new ones.
+  defp apply_rename(ast, rename_map) do
+    Macro.postwalk(ast, fn
+      {name, meta, ctx} when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
+        case Map.get(rename_map, name) do
+          nil -> {name, meta, ctx}
+          new_name -> {new_name, meta, ctx}
+        end
+      node ->
+        node
+    end)
+  end
+
+  # Strip equality conditions that became tautological after renaming
+  # (e.g. current_char == current_char). When the entire guard becomes
+  # a tautology, returns nil.
+  defp strip_tautological_eq(guard, rename_map) do
+    result = do_strip_tautological_eq(guard, rename_map)
+    case result do
+      true -> nil
+      other -> other
+    end
+  end
+
+  defp do_strip_tautological_eq(
+        {op, _, [left, right]},
+        rename_map
+      )
+      when op in [:==, :===] do
+    case {var_name(left), var_name(right)} do
+      {l, r} when is_atom(l) and is_atom(r) ->
+        new_l = Map.get(rename_map, l, l)
+        new_r = Map.get(rename_map, r, r)
+        if new_l == new_r, do: true, else: {op, [], [left, right]}
+      _ ->
+        {op, [], [left, right]}
+    end
+  end
+
+  defp do_strip_tautological_eq({:and, _, [left, right]}, rename_map) do
+    l = do_strip_tautological_eq(left, rename_map)
+    r = do_strip_tautological_eq(right, rename_map)
+    case {l, r} do
+      {true, true} -> true
+      {true, right} -> right
+      {left, true} -> left
+      {left, right} -> {:and, [], [left, right]}
+    end
+  end
+
+  defp do_strip_tautological_eq({:or, _, [left, right]}, rename_map) do
+    l = do_strip_tautological_eq(left, rename_map)
+    r = do_strip_tautological_eq(right, rename_map)
+    case {l, r} do
+      {true, _} -> true
+      {_, true} -> true
+      {left, right} -> {:or, [], [left, right]}
+    end
+  end
+
+  defp do_strip_tautological_eq({:not, _, [arg]}, rename_map) do
+    case do_strip_tautological_eq(arg, rename_map) do
+      true -> {:not, [], [true]}
+      other -> {:not, [], [other]}
+    end
+  end
+
+  defp do_strip_tautological_eq(node, _rename_map), do: node
+
+  # Negate equality conditions in a guard that became tautological after
+  # renaming, turning them into inequality conditions for the else branch.
+  defp negate_eq_conditions(guard, rename_map) do
+    result = do_negate_eq_conditions(guard, rename_map)
+    case result do
+      true -> nil
+      other -> other
+    end
+  end
+
+  defp do_negate_eq_conditions(
+        {op, _, [left, right]},
+        rename_map
+      )
+      when op in [:==, :===] do
+    case {var_name(left), var_name(right)} do
+      {l, r} when is_atom(l) and is_atom(r) ->
+        new_l = Map.get(rename_map, l, l)
+        new_r = Map.get(rename_map, r, r)
+        if new_l == new_r do
+          # Was var == var, becomes var != var (negated for else branch)
+          {:!=, [], [left, right]}
+        else
+          {op, [], [left, right]}
+        end
+      _ ->
+        {op, [], [left, right]}
+    end
+  end
+
+  defp do_negate_eq_conditions({:and, _, [left, right]}, rename_map) do
+    l = do_negate_eq_conditions(left, rename_map)
+    r = do_negate_eq_conditions(right, rename_map)
+    case {l, r} do
+      {true, true} -> true
+      {true, right} -> right
+      {left, true} -> left
+      {left, right} -> {:and, [], [left, right]}
+    end
+  end
+
+  defp do_negate_eq_conditions({:or, _, [left, right]}, rename_map) do
+    l = do_negate_eq_conditions(left, rename_map)
+    r = do_negate_eq_conditions(right, rename_map)
+    case {l, r} do
+      {true, _} -> true
+      {_, true} -> true
+      {left, right} -> {:or, [], [left, right]}
+    end
+  end
+
+  defp do_negate_eq_conditions({:not, _, [arg]}, rename_map) do
+    case do_negate_eq_conditions(arg, rename_map) do
+      true -> {:not, [], [true]}
+      other -> {:not, [], [other]}
+    end
+  end
+
+  defp do_negate_eq_conditions(node, _rename_map), do: node
+
+  # Simplify a guard AST by evaluating trivial boolean constants.
+  # Returns nil when the guard is trivially true (no guard needed)
+  # or trivially false (unreachable clause — strip the guard to make it a catch-all).
+  defp simplify_guard(nil), do: nil
+  defp simplify_guard(true), do: nil
+  defp simplify_guard(false), do: nil
+  defp simplify_guard({:!=, _, [left, right]}) do
+    # x != x is always false — unreachable clause
+    case {var_name(left), var_name(right)} do
+      {l, r} when is_atom(l) and is_atom(r) and l == r -> nil
+      _ -> {:!=, [], [left, right]}
+    end
+  end
+  defp simplify_guard(guard), do: guard
 
   # Collect all variable names referenced in an AST subtree.
   defp collect_var_names(ast) do

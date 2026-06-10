@@ -141,6 +141,43 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     assert fix(PreferGuardOverIf, code) == expected
   end
 
+  test "var == var equality renames later param and strips guard (Compress regression)" do
+    code = """
+    defmodule Compress do
+      def process([], _index, result, current_char, count) do
+        result <> Integer.to_string(count)
+      end
+
+      def process([current_char | rest], index, result, prev_char, count) do
+        if current_char == prev_char do
+          process(rest, index + 1, result, prev_char, count + 1)
+        else
+          new_result = result <> prev_char <> Integer.to_string(count)
+          process(rest, index + 1, new_result, current_char, 1)
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule Compress do
+      def process([], _index, result, current_char, count) do
+        result <> Integer.to_string(count)
+      end
+
+      def process([current_char | rest], index, result, current_char, count) do
+        process(rest, index + 1, result, current_char, count + 1)
+      end
+      def process([current_char | rest], index, result, current_char, count) do
+        new_result = result <> current_char <> Integer.to_string(count)
+        process(rest, index + 1, new_result, current_char, 1)
+      end
+    end
+    """
+
+    assert fix(PreferGuardOverIf, code) == expected
+  end
+
   # ═══════════════════════════════════════════════════════════════════
   # NO-OP — left untouched (unsafe or undesirable to rewrite)
   # ═══════════════════════════════════════════════════════════════════

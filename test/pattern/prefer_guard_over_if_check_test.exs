@@ -44,6 +44,18 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
              """)
     end
 
+    test "var == var equality in condition (Compress regression)" do
+      assert flagged?(PreferGuardOverIf, """
+             defp process([current_char | rest], index, result, prev_char, count) do
+               if current_char == prev_char do
+                 process(rest, index + 1, result, prev_char, count + 1)
+               else
+                 process(rest, index + 1, result, current_char, 1)
+               end
+             end
+             """)
+    end
+
     test "compound guard condition with and" do
       assert flagged?(PreferGuardOverIf, """
              defp check(x, y) do
