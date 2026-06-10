@@ -150,17 +150,15 @@ defmodule Credence.FixExamplesTest do
   defmodule Stats do
     @moduledoc "Basic statistical functions."
 
+    def summarize([]), do: :empty
+
     def summarize(nums) do
-      if nums == [] do
-        :empty
-      else
-        sorted = Enum.sort(nums, :desc)
-        max_val = Enum.at(sorted, 0)
-        min_val = List.last(sorted)
-        total = Enum.sum(nums)
-        mean = :erlang.float(total / Enum.count(nums))
-        %{max: max_val, min: min_val, mean: mean, count: Enum.count(nums)}
-      end
+      sorted = Enum.sort(nums, :desc)
+      max_val = Enum.at(sorted, 0)
+      min_val = List.last(sorted)
+      total = Enum.sum(nums)
+      mean = :erlang.float(total / Enum.count(nums))
+      %{max: max_val, min: min_val, mean: mean, count: Enum.count(nums)}
     end
   end
   """
