@@ -92,4 +92,77 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
 
     assert fix(input, "cannot invoke @/1 outside module") == input
   end
+
+  test "drops inner @moduledoc false when moving real @moduledoc into module" do
+    input = """
+    @moduledoc \"""
+    Solution module for counting distinct non-empty subsequences.
+    \"""
+
+    defmodule Solution do
+      @moduledoc false
+
+      @spec number_of_distinct_subsequences(String.t()) :: non_neg_integer()
+      def number_of_distinct_subsequences(string) when is_binary(string) do
+        mod = 1_000_000_007
+        {total, _last_seen} =
+          String.graphemes(string)
+          |> Enum.reduce({1, %{}}, fn grapheme, {total_count, last_seen} ->
+            new_total = rem(total_count * 2, mod)
+            case Map.get(last_seen, grapheme) do
+              nil ->
+                new_last_seen = Map.put(last_seen, grapheme, total_count)
+                {new_total, new_last_seen}
+              prev_total ->
+                corrected_total = rem(new_total - prev_total, mod)
+                new_last_seen = Map.put(last_seen, grapheme, total_count)
+                {corrected_total, new_last_seen}
+            end
+          end)
+        result = rem(total - 1, mod)
+        if result < 0, do: result + mod, else: result
+      end
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      @moduledoc \"""
+      Solution module for counting distinct non-empty subsequences.
+      \"""
+
+      @spec number_of_distinct_subsequences(String.t()) :: non_neg_integer()
+      def number_of_distinct_subsequences(string) when is_binary(string) do
+        mod = 1_000_000_007
+
+        {total, _last_seen} =
+          String.graphemes(string)
+          |> Enum.reduce({1, %{}}, fn grapheme, {total_count, last_seen} ->
+            new_total = rem(total_count * 2, mod)
+
+            case Map.get(last_seen, grapheme) do
+              nil ->
+                new_last_seen = Map.put(last_seen, grapheme, total_count)
+                {new_total, new_last_seen}
+
+              prev_total ->
+                corrected_total = rem(new_total - prev_total, mod)
+                new_last_seen = Map.put(last_seen, grapheme, total_count)
+                {corrected_total, new_last_seen}
+            end
+          end)
+
+        result = rem(total - 1, mod)
+        if result < 0, do: result + mod, else: result
+      end
+    end
+    """
+
+    diag_message = "redefining @moduledoc attribute previously set at line 2"
+    result = fix(input, diag_message)
+    assert result == expected
+    assert valid_syntax?(result)
+    # Verify @moduledoc false is gone
+    refute result =~ "@moduledoc false"
+  end
 end

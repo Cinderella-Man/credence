@@ -34,7 +34,8 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
 
   @impl true
   def match?(%{message: message}) when is_binary(message) do
-    String.contains?(message, "outside module")
+    String.contains?(message, "outside module") or
+      String.contains?(message, "redefining @moduledoc")
   end
 
   def match?(_), do: false
@@ -123,7 +124,16 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
   end
 
   defp prepend_body({:defmodule, dm_meta, [alias_node, [{do_key, body}]]}, attrs) do
-    new_body = {:__block__, [], attrs ++ body_statements(body)}
+    existing_stmts = body_statements(body)
+    # If we're moving in a @moduledoc with real content, strip any inner
+    # @moduledoc false to avoid a duplicate-attribute warning.
+    cleaned =
+      if has_real_moduledoc?(attrs) do
+        Enum.reject(existing_stmts, &moduledoc_false?/1)
+      else
+        existing_stmts
+      end
+    new_body = {:__block__, [], attrs ++ cleaned}
     {:defmodule, dm_meta, [alias_node, [{do_key, new_body}]]}
   end
 
@@ -140,6 +150,19 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
 
   defp defmodule?({:defmodule, _, _}), do: true
   defp defmodule?(_), do: false
+
+  # True when attrs list contains a @moduledoc with real content (not false).
+  defp has_real_moduledoc?(attrs) do
+    Enum.any?(attrs, fn
+      {:@, _, [{:moduledoc, _, [{:__block__, _, [val]}]}]} when is_binary(val) -> true
+      {:@, _, [{:moduledoc, _, [val]}]} when is_binary(val) -> true
+      _ -> false
+    end)
+  end
+
+  # True for `@moduledoc false`.
+  defp moduledoc_false?({:@, _, [{:moduledoc, _, [{:__block__, _, [false]}]}]}), do: true
+  defp moduledoc_false?(_), do: false
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line
