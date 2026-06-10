@@ -52,6 +52,9 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"List", "pop", 1} => {:rename, "List", "last"},
     {"List", "drop", 2} => {:rename, "Enum", "drop"},
 
+    # List.at/2 does not exist; the idiomatic equivalent is Enum.at/2
+    {"List", "at", 2} => {:rename, "Enum", "at"},
+
     # Wrong module
     {"Enum", "cycle", 1} => {:rename, "Stream", "cycle"},
 

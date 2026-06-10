@@ -562,6 +562,78 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
   end
 
+  describe "List.at → Enum.at" do
+    test "direct call" do
+      assert fix(
+               """
+               List.at(list, index)
+               """,
+               """
+               List.at/2 is undefined or private
+               """
+             ) == """
+             Enum.at(list, index)
+             """
+    end
+
+    test "piped" do
+      assert fix(
+               """
+               list |> List.at(index)
+               """,
+               """
+               List.at/2 is undefined or private
+               """
+             ) ==
+               """
+               list |> Enum.at(index)
+               """
+    end
+
+    test "only on reported line" do
+      input = """
+      List.first(xs)
+      List.at(xs, 0)
+      List.last(xs)
+      """
+
+      assert fix(
+               input,
+               """
+               List.at/2 is undefined or private
+               """,
+               2
+             ) ==
+               """
+               List.first(xs)
+               Enum.at(xs, 0)
+               List.last(xs)
+               """
+    end
+
+    test "realistic context with div" do
+      input = """
+      defmodule Solution do
+        def get_middle(list) do
+          index = div(length(list), 2)
+          List.at(list, index)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Solution do
+        def get_middle(list) do
+          index = div(length(list), 2)
+          Enum.at(list, index)
+        end
+      end
+      """
+
+      assert fix(input, "List.at/2 is undefined or private", 4) == expected
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "qualified: no-ops" do
