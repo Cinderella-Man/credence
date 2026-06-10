@@ -11,40 +11,52 @@ defmodule Mix.Tasks.Credence.Covers do
       mix credence.covers path/to/snippet.exs
       echo 'Enum.map(x, & &1)' | mix credence.covers
 
-  Prints **`COVERED`** iff any of:
+  Prints **`COVERED`** iff:
 
-    * `fix.code != input`            — an existing rule auto-fixed it,
-    * `fix.applied_rules != []`      — a rule fired,
-    * `analyze.issues` has a **non-parse-error** issue (a check flagged it).
+    * `fix.code != input`  — an existing rule actually **rewrote** the snippet, OR
+    * the snippet **COMPILES** and `analyze.issues` has a **non-parse-error**
+      issue (a real check flagged an idiom in valid code).
 
   else **`NOVEL`**.
 
-  🔴 The synthetic `:parse_error` issue is filtered: `Pattern.analyze` emits it
-  for *any* non-parsing input, so a naive `issues != []` would read COVERED on
-  every novel **syntax** snippet and kill all new-syntax-rule creation. Coverage
-  must mean "a real rule engaged", never the bare parse-error pseudo-issue. The
-  task therefore accepts **non-parsing** input and names no rule.
+  🔴 Two traps this avoids — both produced false duplicates that silently dropped
+  genuinely-novel rules (tunex docs/10):
+
+    * The synthetic `:parse_error` issue is filtered: `Pattern.analyze` emits it
+      for *any* non-parsing input, so a naive `issues != []` would read COVERED
+      on every novel **syntax** snippet and kill all new-syntax-rule creation.
+    * "A rule fired" must mean a rule **changed** the code, NOT merely matched. A
+      non-compiling / incomplete `before` (e.g. one that calls a helper it forgot
+      to include) makes a *brokenness* rule like `UndefinedFunction` or the
+      defmodule-wrapper family **match without changing anything**, and its
+      compile-error diagnostics surface as `analyze.issues`. That is the snippet
+      being *broken*, not the proposed idiom being *covered*. So `applied_rules`
+      (which counts no-op matches) is **not** used, and `analyze.issues` only
+      counts when the snippet actually compiles.
+
+  Still accepts non-parsing input (syntax-rule novelty) and names no rule.
   """
 
   use Mix.Task
 
   @impl Mix.Task
   def run(argv) do
-    input = read_source(argv)
+    Mix.shell().info(verdict(read_source(argv)))
+  end
 
+  @doc "COVERED | NOVEL for `input` (the decision the task prints; exposed for tests)."
+  @spec verdict(String.t()) :: String.t()
+  def verdict(input) do
     fix = Credence.fix(input)
     %{issues: issues} = Credence.analyze(input)
 
     real_issue? = Enum.any?(issues, &(&1.rule != :parse_error))
 
-    verdict =
-      if fix.code != input or fix.applied_rules != [] or real_issue? do
-        "COVERED"
-      else
-        "NOVEL"
-      end
-
-    Mix.shell().info(verdict)
+    if fix.code != input or (Credence.RuleHelpers.compiles?(input) and real_issue?) do
+      "COVERED"
+    else
+      "NOVEL"
+    end
   end
 
   defp read_source([]), do: IO.read(:stdio, :eof) |> to_string()
