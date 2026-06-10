@@ -1,0 +1,745 @@
+[22m15:48:09.848 [info] [idx=95999] entry_point=find_Majority_Element[0m
+[36m15:48:09.848 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to find the majority element in an array. A majority element in an array is an element that appears more than n/2 times, where n is the size of the array.
+
+## Python Solution
+```python
+def find_Majority_Element(nums):
+    count = 0
+    candidate = None
+
+    for num in nums:
+        if count == 0:
+            candidate = num
+        count += (1 if num == candidate else -1)
+
+    return candidate
+```
+
+## Python Tests
+assert find_Majority_Element([3, 3, 4, 2, 4, 4, 2, 4, 4]) == 4
+assert find_Majority_Element([1, 1, 2, 2, 2]) == 2
+assert find_Majority_Element([5, 5, 5, 5, 5, 1, 1, 1, 1, 1, 5]) == 5
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `find_majority_element`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m15:48:38.939 [debug] [LLM.call] finish=stop len=1361 usage=%{"completion_tokens" => 1000, "completion_tokens_details" => %{"reasoning_tokens" => 590}, "prompt_tokens" => 567, "prompt_tokens_details" => %{}, "total_tokens" => 1567}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `find_majority_element/1` that takes a list of integers and returns the majority element. A majority element is an element that appears more than `n/2` times, where `n` is the length of the list. The function should assume the input list is non-empty and a majority element always exists.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "majority element in a list with 4 appearing most" do
+    assert Solution.find_majority_element([3, 3, 4, 2, 4, 4, 2, 4, 4]) == 4
+  end
+
+  test "majority element in a list with 2 appearing most" do
+    assert Solution.find_majority_element([1, 1, 2, 2, 2]) == 2
+  end
+
+  test "majority element in a list with 5 appearing most" do
+    assert Solution.find_majority_element([5, 5, 5, 5, 5, 1, 1, 1, 1, 1, 5]) == 5
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def find_majority_element([head | tail]) do
+    {candidate, _count} =
+      Enum.reduce(tail, {head, 1}, fn num, {candidate, count} ->
+        if count == 0 do
+          {num, 1}
+        else
+          if num == candidate do
+            {candidate, count + 1}
+          else
+            {candidate, count - 1}
+          end
+        end
+      end)
+
+    candidate
+  end
+
+  # Handle empty list case? The problem says non-empty, but for safety:
+  def find_majority_element([]), do: nil
+end
+
+---END---[0m
+[22m15:48:38.939 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 29090ms — ok[0m
+[36m15:48:38.940 [debug] [Budget] spent so far (est.): $0.0179[0m
+[22m15:48:39.984 [info] [RoundTrip] reference PASSED tests[0m
+[22m15:48:39.984 [info] [idx=95999] translation fresh — solving[0m
+[22m15:48:39.984 [info] ===SOLVE_BOUNDARY===[0m
+[22m15:48:39.984 [info] [Solve attempt 1] generating (fn=find_majority_element)[0m
+[36m15:48:39.984 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `find_majority_element/1` that takes a list of integers and returns the majority element. A majority element is an element that appears more than `n/2` times, where `n` is the length of the list. The function should assume the input list is non-empty and a majority element always exists.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "majority element in a list with 4 appearing most" do
+    assert Solution.find_majority_element([3, 3, 4, 2, 4, 4, 2, 4, 4]) == 4
+  end
+
+  test "majority element in a list with 2 appearing most" do
+    assert Solution.find_majority_element([1, 1, 2, 2, 2]) == 2
+  end
+
+  test "majority element in a list with 5 appearing most" do
+    assert Solution.find_majority_element([5, 5, 5, 5, 5, 1, 1, 1, 1, 1, 5]) == 5
+  end
+end
+```
+
+Module: `Solution`. Function: `find_majority_element`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m15:48:44.165 [debug] [LLM.call] finish=stop len=1385 usage=%{"completion_tokens" => 440, "prompt_tokens" => 526, "prompt_tokens_details" => %{"cached_tokens" => 0}, "total_tokens" => 966}
+[LLM.call] response:
+---MODULE---
+@doc """
+Finds the majority element in a list of integers.
+
+A majority element is an element that appears more than n/2 times,
+where n is the length of the list. Assumes the input list is non-empty
+and a majority element always exists.
+"""
+@spec find_majority_element(list(integer())) :: integer()
+def find_majority_element(nums) when is_list(nums) and length(nums) > 0 do
+  nums
+  |> Enum.reduce(Map.new(), &update_count/2)
+  |> find_majority_from_map()
+end
+
+defp update_count(num, acc_map) do
+  Map.update(acc_map, num, 1, &(&1 + 1))
+end
+
+defp find_majority_from_map(count_map) do
+  target_threshold = calculate_target_threshold(count_map)
+
+  count_map
+  |> Enum.find_value(fn {element, count} ->
+    if count > target_threshold, do: element
+  end)
+end
+
+defp calculate_target_threshold(count_map) do
+  total = Enum.sum(Map.values(count_map))
+  div(total, 2)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "majority element in a list with 4 appearing most" do
+    assert Solution.find_majority_element([3, 3, 4, 2, 4, 4, 2, 4, 4]) == 4
+  end
+
+  test "majority element in a list with 2 appearing most" do
+    assert Solution.find_majority_element([1, 1, 2, 2, 2]) == 2
+  end
+
+  test "majority element in a list with 5 appearing most" do
+    assert Solution.find_majority_element([5, 5, 5, 5, 5, 1, 1, 1, 1, 1, 5]) == 5
+  end
+end
+---END---[0m
+[22m15:48:44.165 [info] [LLM.call] local_qwen_thinking completed in 4181ms — ok[0m
+[22m15:48:44.165 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m15:48:44.166 [debug] [Validator.run] module code (863 chars):
+@doc """
+Finds the majority element in a list of integers.
+
+A majority element is an element that appears more than n/2 times,
+where n is the length of the list. Assumes the input list is non-empty
+and a majority element always exists.
+"""
+@spec find_majority_element(list(integer())) :: integer()
+def find_majority_element(nums) when is_list(nums) and length(nums) > 0 do
+  nums
+  |> Enum.reduce(Map.new(), &update_count/2)
+  |> find_majority_from_map()
+end
+
+defp update_count(num, acc_map) do
+  Map.update(acc_map, num, 1, &(&1 + 1))
+end
+
+defp find_majority_from_map(count_map) do
+  target_threshold = calculate_target_threshold(count_map)
+
+  count_map
+  |> Enum.find_value(fn {element, count} ->
+    if count > target_threshold, do: element
+  end)
+end
+
+defp calculate_target_threshold(count_map) do
+  total = Enum.sum(Map.values(count_map))
+  div(total, 2)
+end[0m
+[36m15:48:44.166 [debug] [Validator.run] test code (487 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "majority element in a list with 4 appearing most" do
+    assert Solution.find_majority_element([3, 3, 4, 2, 4, 4, 2, 4, 4]) == 4
+  end
+
+  test "majority element in a list with 2 appearing most" do
+    assert Solution.find_majority_element([1, 1, 2, 2, 2]) == 2
+  end
+
+  test "majority element in a list with 5 appearing most" do
+    assert Solution.find_majority_element([5, 5, 5, 5, 5, 1, 1, 1, 1, 1, 5]) == 5
+  end
+end[0m
+[36m15:48:44.166 [debug] [Budget] spent so far (est.): $0.0185[0m
+[22m15:48:44.166 [info] [Validator.run] step 1/6: credence fix[0m
+[36m15:48:44.166 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m15:48:44.805 [debug] [run_credence_fix] exit=0 output:
+
+15:48:44.685 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+15:48:44.687 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 7 rules)
+
+15:48:44.689 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+15:48:44.689 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+15:48:44.689 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+15:48:44.691 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Finds the majority element in a list of integers.
+  L2 + @doc """
+  L3 - 
+  L3 + Finds the majority element in a list of integers.
+  L4 - A majority element is an element that appears more than n/2 times,
+  L4 + 
+  L5 - where n is the length of the list. Assumes the input list is non-empty
+  L5 + A majority element is an element that appears more than n/2 times,
+  L6 - and a majority element always exists.
+  L6 + where n is the length of the list. Assumes the input list is non-empty
+  L7 - """
+  L7 + and a majority element always exists.
+  L8 - @spec find_majority_element(list(integer())) :: integer()
+  L8 + """
+  L9 - def find_majority_element(nums) when is_list(nums) and length(nums) > 0 do
+  L9 + @spec find_majority_element(list(integer())) :: integer()
+  L10 -   nums
+  L10 + def find_majority_element(nums) when is_list(nums) and length(nums) > 0 do
+  L11 -   |> Enum.reduce(Map.new(), &update_count/2)
+  L11 +   nums
+  L12 -   |> find_majority_from_map()
+  L12 +   |> Enum.reduce(Map.new(), &update_count/2)
+  L13 - end
+  L13 +   |> find_majority_from_map()
+  L14 - 
+  L14 + end
+  L15 - defp update_count(num, acc_map) do
+  L15 + 
+  L16 -   Map.update(acc_map, num, 1, &(&1 + 1))
+  L16 + defp update_count(num, acc_map) do
+  L17 - end
+  L17 +   Map.update(acc_map, num, 1, &(&1 + 1))
+  L18 - 
+  L18 + end
+  L19 - defp find_majority_from_map(count_map) do
+  L19 + 
+  L20 -   target_threshold = calculate_target_threshold(count_map)
+  L20 + defp find_majority_from_map(count_map) do
+  L21 - 
+  L21 +   target_threshold = calculate_target_threshold(count_map)
+  L22 -   count_map
+  L22 + 
+  L23 -   |> Enum.find_value(fn {element, count} ->
+  L23 +   count_map
+  L24 -     if count > target_threshold, do: element
+  L24 +   |> Enum.find_value(fn {element, count} ->
+  L25 -   end)
+  L25 +     if count > target_threshold, do: element
+  L26 - end
+  L26 +   end)
+  L27 - 
+  L27 + end
+  L28 - defp calculate_target_threshold(count_map) do
+  L28 + 
+  L29 -   total = Enum.sum(Map.values(count_map))
+  L29 + defp calculate_target_threshold(count_map) do
+  L30 -   div(total, 2)
+  L30 +   total = Enum.sum(Map.values(count_map))
+  L31 - end
+  L31 +   div(total, 2)
+  L32 + end
+  L33 + end
+  L34 + 
+
+15:48:44.691 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+15:48:44.706 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+15:48:44.712 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+15:48:44.712 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+15:48:44.712 [debug] [credence_fix] starting pattern fix pipeline (116 rules)
+
+15:48:44.743 [debug] [credence_fix] NoLengthGuardToPattern: check found 1 issue(s), running fix...
+
+15:48:44.757 [debug] [credence_fix] NoLengthGuardToPattern: source CHANGED:
+  L10 - def find_majority_element(nums) when is_list(nums) and length(nums) > 0 do
+  L10 + def find_majority_element([_ | _] = nums) when is_list(nums) do
+
+15:48:44.782 [debug] [credence_fix] done. Applied: [NoLengthGuardToPattern(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Pattern.NoLengthGuardToPattern, 1}]
+[0m
+[22m15:48:44.805 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m15:48:45.376 [info] [run_credence_fix] fix compiles OK[0m
+[36m15:48:45.376 [debug] [run_credence_fix] original:
+@doc """
+Finds the majority element in a list of integers.
+
+A majority element is an element that appears more than n/2 times,
+where n is the length of the list. Assumes the input list is non-empty
+and a majority element always exists.
+"""
+@spec find_majority_element(list(integer())) :: integer()
+def find_majority_element(nums) when is_list(nums) and length(nums) > 0 do
+  nums
+  |> Enum.reduce(Map.new(), &update_count/2)
+  |> find_majority_from_map()
+end
+
+defp update_count(num, acc_map) do
+  Map.update(acc_map, num, 1, &(&1 + 1))
+end
+
+defp find_majority_from_map(count_map) do
+  target_threshold = calculate_target_threshold(count_map)
+
+  count_map
+  |> Enum.find_value(fn {element, count} ->
+    if count > target_threshold, do: element
+  end)
+end
+
+defp calculate_target_threshold(count_map) do
+  total = Enum.sum(Map.values(count_map))
+  div(total, 2)
+end[0m
+[36m15:48:45.376 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Finds the majority element in a list of integers.
+
+A majority element is an element that appears more than n/2 times,
+where n is the length of the list. Assumes the input list is non-empty
+and a majority element always exists.
+"""
+@spec find_majority_element(list(integer())) :: integer()
+def find_majority_element([_ | _] = nums) when is_list(nums) do
+  nums
+  |> Enum.reduce(Map.new(), &update_count/2)
+  |> find_majority_from_map()
+end
+
+defp update_count(num, acc_map) do
+  Map.update(acc_map, num, 1, &(&1 + 1))
+end
+
+defp find_majority_from_map(count_map) do
+  target_threshold = calculate_target_threshold(count_map)
+
+  count_map
+  |> Enum.find_value(fn {element, count} ->
+    if count > target_threshold, do: element
+  end)
+end
+
+defp calculate_target_threshold(count_map) do
+  total = Enum.sum(Map.values(count_map))
+  div(total, 2)
+end
+end
+[0m
+[22m15:48:45.376 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m15:48:45.376 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Finds the majority element in a list of integers.
+
+A majority element is an element that appears more than n/2 times,
+where n is the length of the list. Assumes the input list is non-empty
+and a majority element always exists.
+"""
+@spec find_majority_element(list(integer())) :: integer()
+def find_majority_element(nums) when is_list(nums) and length(nums) > 0 do
+  nums
+  |> Enum.reduce(Map.new(), &update_count/2)
+  |> find_majority_from_map()
+end
+
+defp update_count(num, acc_map) do
+  Map.update(acc_map, num, 1, &(&1 + 1))
+end
+
+defp find_majority_from_map(count_map) do
+  target_threshold = calculate_target_threshold(count_map)
+
+  count_map
+  |> Enum.find_value(fn {element, count} ->
+    if count > target_threshold, do: element
+  end)
+end
+
+defp calculate_target_threshold(count_map) do
+  total = Enum.sum(Map.values(count_map))
+  div(total, 2)
+end[0m
+[36m15:48:45.376 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Finds the majority element in a list of integers.
+
+A majority element is an element that appears more than n/2 times,
+where n is the length of the list. Assumes the input list is non-empty
+and a majority element always exists.
+"""
+@spec find_majority_element(list(integer())) :: integer()
+def find_majority_element([_ | _] = nums) when is_list(nums) do
+  nums
+  |> Enum.reduce(Map.new(), &update_count/2)
+  |> find_majority_from_map()
+end
+
+defp update_count(num, acc_map) do
+  Map.update(acc_map, num, 1, &(&1 + 1))
+end
+
+defp find_majority_from_map(count_map) do
+  target_threshold = calculate_target_threshold(count_map)
+
+  count_map
+  |> Enum.find_value(fn {element, count} ->
+    if count > target_threshold, do: element
+  end)
+end
+
+defp calculate_target_threshold(count_map) do
+  total = Enum.sum(Map.values(count_map))
+  div(total, 2)
+end
+end
+[0m
+[36m15:48:45.376 [debug] [propagate_is_renames] old functions: ["find_majority_element", "update_count", "find_majority_from_map", "calculate_target_threshold"][0m
+[36m15:48:45.376 [debug] [propagate_is_renames] new functions: ["find_majority_element", "update_count", "find_majority_from_map", "calculate_target_threshold"][0m
+[36m15:48:45.376 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m15:48:45.376 [info] [Validator.run] step 2/6: compile[0m
+[22m15:48:45.967 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m15:48:45.967 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m15:48:45.967 [info] [Validator.run] step 3/6: format[0m
+[22m15:48:46.272 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m15:48:46.584 [debug] [Validator.run] format fix output: [0m
+[22m15:48:46.584 [info] [Validator.run] step 4/6: credo[0m
+[36m15:48:47.050 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m15:48:47.050 [info] [Validator.run] credo: no issues[0m
+[22m15:48:47.050 [info] [Validator.run] step 5/6: credence check[0m
+[22m15:48:47.733 [info] [Validator.run] credence check exit=0[0m
+[36m15:48:47.733 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m15:48:47.733 [info] [Validator.run] credence check: passed[0m
+[22m15:48:47.733 [info] [Validator.run] step 6/6: tests[0m
+[22m15:48:48.195 [info] [Validator.run] test exit=0[0m
+[36m15:48:48.195 [debug] [Validator.run] test output:
+Running ExUnit with seed: 153591, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m15:48:48.195 [info] [Validator.run] tests: PASSED[0m
+[22m15:48:48.195 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m15:48:48.195 [debug] [Validator.run] final module (931 chars):
+defmodule Solution do
+  @doc """
+  Finds the majority element in a list of integers.
+
+  A majority element is an element that appears more than n/2 times,
+  where n is the length of the list. Assumes the input list is non-empty
+  and a majority element always exists.
+  """
+  @spec find_majority_element(list(integer())) :: integer()
+  def find_majority_element([_ | _] = nums) when is_list(nums) do
+    nums
+    |> Enum.reduce(Map.new(), &update_count/2)
+    |> find_majority_from_map()
+  end
+
+  defp update_count(num, acc_map) do
+    Map.update(acc_map, num, 1, &(&1 + 1))
+  end
+
+  defp find_majority_from_map(count_map) do
+    target_threshold = calculate_target_threshold(count_map)
+
+    count_map
+    |> Enum.find_value(fn {element, count} ->
+      if count > target_threshold, do: element
+    end)
+  end
+
+  defp calculate_target_threshold(count_map) do
+    total = Enum.sum(Map.values(count_map))
+    div(total, 2)
+  end
+end
+[0m
+[36m15:48:48.195 [debug] [Validator.run] final test (488 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "majority element in a list with 4 appearing most" do
+    assert Solution.find_majority_element([3, 3, 4, 2, 4, 4, 2, 4, 4]) == 4
+  end
+
+  test "majority element in a list with 2 appearing most" do
+    assert Solution.find_majority_element([1, 1, 2, 2, 2]) == 2
+  end
+
+  test "majority element in a list with 5 appearing most" do
+    assert Solution.find_majority_element([5, 5, 5, 5, 5, 1, 1, 1, 1, 1, 5]) == 5
+  end
+end
+[0m
+[22m15:48:48.195 [info] [Solve attempt 1] validation PASSED[0m
+[36m15:48:48.205 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Pattern.NoLengthGuardToPattern
+
+## Dead-ends already tried (do NOT re-propose)
+(none)
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, self-contained defmodule isolating ONE issue)
+===AFTER===              (REQUIRED for any proposed rule — the idiomatic rewrite; NO check-only)
+===ASSUMPTIONS===        (optional — existing switch names; omit for no-promise)
+===PROPOSED_SWITCH===    (SWITCH_PROPOSAL only — name:/summary:/default:/divergence_class: lines, with ===BEFORE===, no ===AFTER===)
+===RATIONALE===
+one line
+===END===
+
+
+## Row log (distilled)
+[0m
+[22m15:48:39.984 [info] [Solve attempt 1] generating (fn=find_majority_element)[0m
+[36m15:48:39.984 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suit (truncated)[0m
+[36m15:50:16.574 [debug] [LLM.call] finish=stop len=313 usage=%{"completion_tokens" => 2564, "completion_tokens_details" => %{"reasoning_tokens" => 2491}, "prompt_tokens" => 7672, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 10236}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+The final code is clean and idiomatic; the only residual non-idiomaticity (manual Enum.reduce + helper vs Enum.frequencies/1) requires cross-function detection and removal of the now-unused helper, making a safe auto-fix impractical. No existing rule over-fired.
+===END===[0m
+[22m15:50:16.574 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 88368ms — ok[0m
+[36m15:50:16.574 [debug] [Budget] spent so far (est.): $0.0241[0m
