@@ -214,11 +214,33 @@ defmodule Mix.Tasks.Credence.Equiv do
     code = "fn #{arglist} -> (#{String.trim(expr)}) end"
 
     silence(fn ->
-      try do
-        {fun, _} = Code.eval_string(code)
-        {:ok, fun}
-      rescue
-        e -> {:error, "does not compile: #{Exception.message(e)}"}
+      {result, diagnostics} =
+        Code.with_diagnostics(fn ->
+          try do
+            {fun, _} = Code.eval_string(code)
+            {:ok, fun}
+          rescue
+            e -> {:error, e}
+          end
+        end)
+
+      case result do
+        {:ok, fun} ->
+          {:ok, fun}
+
+        {:error, e} ->
+          # Surface the REAL compiler diagnostics (e.g. `undefined function
+          # do_count/3`). A bare `CompileError` only says "nofile: cannot compile
+          # file (errors have been logged)" — the actual errors go to the
+          # diagnostics, which `silence/1` would otherwise discard.
+          detail =
+            diagnostics
+            |> Enum.map(&Map.get(&1, :message, ""))
+            |> Enum.reject(&(&1 in [nil, ""]))
+            |> Enum.join("; ")
+
+          msg = if detail == "", do: Exception.message(e), else: detail
+          {:error, "does not compile: #{msg}"}
       end
     end)
   end
