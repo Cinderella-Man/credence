@@ -40,4 +40,42 @@ defmodule Credence.Syntax.NoReservedWordVariableFixTest do
              """)
            )
   end
+
+  test "preserves end keyword and :end atom when renaming end variable" do
+    input = """
+    defmodule Solution do
+      def test do
+        Enum.flat_map([{:a, :b}], fn {start, end} ->
+          [{start, :start}, {end, :end}]
+        end)
+      end
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      def test do
+        Enum.flat_map([{:a, :b}], fn {start, end_val} ->
+          [{start, :start}, {end_val, :end}]
+        end)
+      end
+    end
+    """
+
+    assert fix(input) == expected
+  end
+
+  test "fixed output with end variable parses correctly" do
+    input = """
+    defmodule Solution do
+      def test do
+        Enum.flat_map([{:a, :b}], fn {start, end} ->
+          [{start, :start}, {end, :end}]
+        end)
+      end
+    end
+    """
+
+    assert valid_syntax?(fix(input))
+  end
 end

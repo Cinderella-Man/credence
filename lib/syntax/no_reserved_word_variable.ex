@@ -103,7 +103,13 @@ defmodule Credence.Syntax.NoReservedWordVariable do
   end
 
   defp replace_variable_usage(source, old_name, new_name) do
-    pattern = Regex.compile!("\\b" <> Regex.escape(old_name) <> "\\b")
+    # Only replace when in a binding/variable position:
+    # - Preceded by { or , or ( (tuple/list/function arg start)
+    # - NOT preceded by : (atom)
+    # This avoids replacing:
+    # - :end (atom)
+    # - end (keyword closing blocks)
+    pattern = Regex.compile!("(?<=[\{\(,]\s{0,10})" <> Regex.escape(old_name) <> "(?=\s*[,})\]\|]|\s+$)")
     Regex.replace(pattern, source, new_name)
   end
 
