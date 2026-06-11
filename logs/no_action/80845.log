@@ -1,0 +1,1424 @@
+[22m05:31:47.145 [info] [idx=80845] entry_point=get_max_consecutive[0m
+[36m05:31:47.145 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to find the maximum number of consecutive integers that can be formed by choosing elements from a given list of integers.
+
+Given a list of integers, the function should return the maximum number of consecutive integers that can be formed by choosing elements from the list.
+
+## Python Solution
+```python
+from typing import List
+
+def get_max_consecutive(coins: List[int]) -> int:
+    coins.sort()
+    x = 1
+    for y in coins:
+        if y <= x:
+            x += y
+        else:
+            break
+    return x
+
+if __name__ == "__main__":
+    assert get_max_consecutive([1, 3]) == 2
+    assert get_max_consecutive([1, 1, 1, 4]) == 8
+    assert get_max_consecutive([1, 4, 10, 3, 1]) == 20
+```
+
+## Python Tests
+assert get_max_consecutive([1, 1, 1, 4]) == 8
+assert get_max_consecutive([1, 4, 10, 3, 1]) == 20
+assert get_max_consecutive([1, 3]) == 2
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `get_max_consecutive`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m05:33:05.217 [debug] [LLM.call] finish=stop len=1325 usage=%{"completion_tokens" => 2572, "completion_tokens_details" => %{"reasoning_tokens" => 2174}, "prompt_tokens" => 612, "prompt_tokens_details" => %{}, "total_tokens" => 3184}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `get_max_consecutive/1` that takes a list of integers and returns the smallest positive integer that cannot be represented as a sum of a subset of the given integers (each used at most once). This value is one more than the maximum consecutive integer (starting from 1) that can be formed.
+
+The algorithm should have O(n log n) complexity due to sorting.
+
+Edge cases:
+- An empty list should return 1.
+- The list may contain duplicate values.
+- The function must handle any positive integers.
+
+Example: For the list [1, 3], the numbers 1 can be formed, but 2 cannot, so the function returns 2.
+
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "returns 2 for [1, 3]" do
+    assert Solution.get_max_consecutive([1, 3]) == 2
+  end
+
+  test "returns 8 for [1, 1, 1, 4]" do
+    assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+  end
+
+  test "returns 20 for [1, 4, 10, 3, 1]" do
+    assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  @spec get_max_consecutive(list(integer())) :: integer()
+  def get_max_consecutive(coins) do
+    coins
+    |> Enum.sort()
+    |> Enum.reduce_while(1, fn y, x ->
+      if y <= x do
+        {:cont, x + y}
+      else
+        {:halt, x}
+      end
+    end)
+  end
+end
+---END---[0m
+[22m05:33:05.217 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 78071ms — ok[0m
+[36m05:33:05.217 [debug] [Budget] spent so far (est.): $2.9487[0m
+[22m05:33:06.271 [info] [RoundTrip] reference PASSED tests[0m
+[22m05:33:06.272 [info] [idx=80845] translation fresh — solving[0m
+[22m05:33:06.272 [info] ===SOLVE_BOUNDARY===[0m
+[22m05:33:06.272 [info] [Solve attempt 1] generating (fn=get_max_consecutive)[0m
+[36m05:33:06.272 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `get_max_consecutive/1` that takes a list of integers and returns the smallest positive integer that cannot be represented as a sum of a subset of the given integers (each used at most once). This value is one more than the maximum consecutive integer (starting from 1) that can be formed.
+
+The algorithm should have O(n log n) complexity due to sorting.
+
+Edge cases:
+- An empty list should return 1.
+- The list may contain duplicate values.
+- The function must handle any positive integers.
+
+Example: For the list [1, 3], the numbers 1 can be formed, but 2 cannot, so the function returns 2.
+
+## Tests (your module must pass these)
+```elixir
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "returns 2 for [1, 3]" do
+    assert Solution.get_max_consecutive([1, 3]) == 2
+  end
+
+  test "returns 8 for [1, 1, 1, 4]" do
+    assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+  end
+
+  test "returns 20 for [1, 4, 10, 3, 1]" do
+    assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+  end
+end
+```
+
+Module: `Solution`. Function: `get_max_consecutive`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m05:33:10.612 [debug] [LLM.call] finish=stop len=1411 usage=%{"completion_tokens" => 453, "prompt_tokens" => 574, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1027}
+[LLM.call] response:
+---MODULE---
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is one more than the maximum consecutive integer (starting from 1)
+that can be formed.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  case sorted do
+    [] ->
+      1
+
+    [head | _tail] when head > 1 ->
+      1
+
+    [head | _tail] when head == 1 ->
+      do_get_max_consecutive(sorted, 1)
+  end
+end
+
+defp do_get_max_consecutive(sorted, current_max) do
+  case sorted do
+    [] ->
+      current_max + 1
+
+    [head | tail] ->
+      # If the next smallest element is greater than current_max + 1,
+      # we have a gap and cannot form current_max + 1.
+      if head > current_max + 1 do
+        current_max + 1
+      else
+        # We can form all values from 1 to current_max + head
+        do_get_max_consecutive(tail, current_max + head)
+      end
+  end
+end
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "returns 2 for [1, 3]" do
+    assert Solution.get_max_consecutive([1, 3]) == 2
+  end
+
+  test "returns 8 for [1, 1, 1, 4]" do
+    assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+  end
+
+  test "returns 20 for [1, 4, 10, 3, 1]" do
+    assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+  end
+end
+---END---[0m
+[22m05:33:10.612 [info] [LLM.call] local_qwen_thinking completed in 4340ms — ok[0m
+[22m05:33:10.612 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m05:33:10.613 [debug] [Validator.run] module code (1002 chars):
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is one more than the maximum consecutive integer (starting from 1)
+that can be formed.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  case sorted do
+    [] ->
+      1
+
+    [head | _tail] when head > 1 ->
+      1
+
+    [head | _tail] when head == 1 ->
+      do_get_max_consecutive(sorted, 1)
+  end
+end
+
+defp do_get_max_consecutive(sorted, current_max) do
+  case sorted do
+    [] ->
+      current_max + 1
+
+    [head | tail] ->
+      # If the next smallest element is greater than current_max + 1,
+      # we have a gap and cannot form current_max + 1.
+      if head > current_max + 1 do
+        current_max + 1
+      else
+        # We can form all values from 1 to current_max + head
+        do_get_max_consecutive(tail, current_max + head)
+      end
+  end
+end[0m
+[36m05:33:10.613 [debug] [Validator.run] test code (374 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "returns 2 for [1, 3]" do
+    assert Solution.get_max_consecutive([1, 3]) == 2
+  end
+
+  test "returns 8 for [1, 1, 1, 4]" do
+    assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+  end
+
+  test "returns 20 for [1, 4, 10, 3, 1]" do
+    assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+  end
+end[0m
+[36m05:33:10.613 [debug] [Budget] spent so far (est.): $2.9494[0m
+[22m05:33:10.613 [info] [Validator.run] step 1/6: credence fix[0m
+[36m05:33:10.613 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m05:33:11.235 [debug] [run_credence_fix] exit=0 output:
+
+05:33:11.134 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+05:33:11.136 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+05:33:11.138 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+05:33:11.138 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+05:33:11.138 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+05:33:11.140 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Returns the smallest positive integer that cannot be represented as a sum
+  L2 + @doc """
+  L3 - of a subset of the given integers (each used at most once).
+  L3 + Returns the smallest positive integer that cannot be represented as a sum
+  L4 - 
+  L4 + of a subset of the given integers (each used at most once).
+  L5 - This is one more than the maximum consecutive integer (starting from 1)
+  L5 + 
+  L6 - that can be formed.
+  L6 + This is one more than the maximum consecutive integer (starting from 1)
+  L7 - """
+  L7 + that can be formed.
+  L8 - @spec get_max_consecutive(list(integer())) :: non_neg_integer()
+  L8 + """
+  L9 - def get_max_consecutive(integers) do
+  L9 + @spec get_max_consecutive(list(integer())) :: non_neg_integer()
+  L10 -   sorted = integers |> Enum.sort()
+  L10 + def get_max_consecutive(integers) do
+  L11 - 
+  L11 +   sorted = integers |> Enum.sort()
+  L12 -   case sorted do
+  L12 + 
+  L13 -     [] ->
+  L13 +   case sorted do
+  L14 -       1
+  L14 +     [] ->
+  L15 - 
+  L15 +       1
+  L16 -     [head | _tail] when head > 1 ->
+  L16 + 
+  L17 -       1
+  L17 +     [head | _tail] when head > 1 ->
+  L18 - 
+  L18 +       1
+  L19 -     [head | _tail] when head == 1 ->
+  L19 + 
+  L20 -       do_get_max_consecutive(sorted, 1)
+  L20 +     [head | _tail] when head == 1 ->
+  L21 -   end
+  L21 +       do_get_max_consecutive(sorted, 1)
+  L22 - end
+  L22 +   end
+  L23 - 
+  L23 + end
+  L24 - defp do_get_max_consecutive(sorted, current_max) do
+  L24 + 
+  L25 -   case sorted do
+  L25 + defp do_get_max_consecutive(sorted, current_max) do
+  L26 -     [] ->
+  L26 +   case sorted do
+  L27 -       current_max + 1
+  L27 +     [] ->
+  L28 - 
+  L28 +       current_max + 1
+  L29 -     [head | tail] ->
+  L29 + 
+  L30 -       # If the next smallest element is greater than current_max + 1,
+  L30 +     [head | tail] ->
+  L31 -       # we have a gap and cannot form current_max + 1.
+  L31 +       # If the next smallest element is greater than current_max + 1,
+  L32 -       if head > current_max + 1 do
+  L32 +       # we have a gap and cannot form current_max + 1.
+  L33 -         current_max + 1
+  L33 +       if head > current_max + 1 do
+  L34 -       else
+  L34 +         current_max + 1
+  L35 -         # We can form all values from 1 to current_max + head
+  L35 +       else
+  L36 -         do_get_max_consecutive(tail, current_max + head)
+  L36 +         # We can form all values from 1 to current_max + head
+  L37 -       end
+  L37 +         do_get_max_consecutive(tail, current_max + head)
+  L38 -   end
+  L38 +       end
+  L39 - end
+  L39 +   end
+  L40 + end
+  L41 + end
+  L42 + 
+
+05:33:11.140 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+05:33:11.151 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+05:33:11.156 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+05:33:11.156 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+05:33:11.157 [debug] [credence_fix] starting pattern fix pipeline (126 rules)
+
+05:33:11.211 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m05:33:11.235 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m05:33:11.805 [info] [run_credence_fix] fix compiles OK[0m
+[36m05:33:11.806 [debug] [run_credence_fix] original:
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is one more than the maximum consecutive integer (starting from 1)
+that can be formed.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  case sorted do
+    [] ->
+      1
+
+    [head | _tail] when head > 1 ->
+      1
+
+    [head | _tail] when head == 1 ->
+      do_get_max_consecutive(sorted, 1)
+  end
+end
+
+defp do_get_max_consecutive(sorted, current_max) do
+  case sorted do
+    [] ->
+      current_max + 1
+
+    [head | tail] ->
+      # If the next smallest element is greater than current_max + 1,
+      # we have a gap and cannot form current_max + 1.
+      if head > current_max + 1 do
+        current_max + 1
+      else
+        # We can form all values from 1 to current_max + head
+        do_get_max_consecutive(tail, current_max + head)
+      end
+  end
+end[0m
+[36m05:33:11.806 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is one more than the maximum consecutive integer (starting from 1)
+that can be formed.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  case sorted do
+    [] ->
+      1
+
+    [head | _tail] when head > 1 ->
+      1
+
+    [head | _tail] when head == 1 ->
+      do_get_max_consecutive(sorted, 1)
+  end
+end
+
+defp do_get_max_consecutive(sorted, current_max) do
+  case sorted do
+    [] ->
+      current_max + 1
+
+    [head | tail] ->
+      # If the next smallest element is greater than current_max + 1,
+      # we have a gap and cannot form current_max + 1.
+      if head > current_max + 1 do
+        current_max + 1
+      else
+        # We can form all values from 1 to current_max + head
+        do_get_max_consecutive(tail, current_max + head)
+      end
+  end
+end
+end
+[0m
+[22m05:33:11.806 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m05:33:11.806 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is one more than the maximum consecutive integer (starting from 1)
+that can be formed.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  case sorted do
+    [] ->
+      1
+
+    [head | _tail] when head > 1 ->
+      1
+
+    [head | _tail] when head == 1 ->
+      do_get_max_consecutive(sorted, 1)
+  end
+end
+
+defp do_get_max_consecutive(sorted, current_max) do
+  case sorted do
+    [] ->
+      current_max + 1
+
+    [head | tail] ->
+      # If the next smallest element is greater than current_max + 1,
+      # we have a gap and cannot form current_max + 1.
+      if head > current_max + 1 do
+        current_max + 1
+      else
+        # We can form all values from 1 to current_max + head
+        do_get_max_consecutive(tail, current_max + head)
+      end
+  end
+end[0m
+[36m05:33:11.806 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is one more than the maximum consecutive integer (starting from 1)
+that can be formed.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  case sorted do
+    [] ->
+      1
+
+    [head | _tail] when head > 1 ->
+      1
+
+    [head | _tail] when head == 1 ->
+      do_get_max_consecutive(sorted, 1)
+  end
+end
+
+defp do_get_max_consecutive(sorted, current_max) do
+  case sorted do
+    [] ->
+      current_max + 1
+
+    [head | tail] ->
+      # If the next smallest element is greater than current_max + 1,
+      # we have a gap and cannot form current_max + 1.
+      if head > current_max + 1 do
+        current_max + 1
+      else
+        # We can form all values from 1 to current_max + head
+        do_get_max_consecutive(tail, current_max + head)
+      end
+  end
+end
+end
+[0m
+[36m05:33:11.806 [debug] [propagate_is_renames] old functions: ["get_max_consecutive", "do_get_max_consecutive"][0m
+[36m05:33:11.806 [debug] [propagate_is_renames] new functions: ["get_max_consecutive", "do_get_max_consecutive"][0m
+[36m05:33:11.806 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m05:33:11.806 [info] [Validator.run] step 2/6: compile[0m
+[22m05:33:12.363 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m05:33:12.363 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m05:33:12.363 [info] [Validator.run] step 3/6: format[0m
+[22m05:33:12.679 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m05:33:12.980 [debug] [Validator.run] format fix output: [0m
+[22m05:33:12.980 [info] [Validator.run] step 4/6: credo[0m
+[36m05:33:13.446 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m05:33:13.446 [info] [Validator.run] credo: no issues[0m
+[22m05:33:13.446 [info] [Validator.run] step 5/6: credence check[0m
+[22m05:33:14.159 [info] [Validator.run] credence check exit=0[0m
+[36m05:33:14.159 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m05:33:14.160 [info] [Validator.run] credence check: passed[0m
+[22m05:33:14.160 [info] [Validator.run] step 6/6: tests[0m
+[22m05:33:14.635 [info] [Validator.run] test exit=2[0m
+[36m05:33:14.635 [debug] [Validator.run] test output:
+Running ExUnit with seed: 585565, max_cases: 48
+
+
+
+  1) test returns 8 for [1, 1, 1, 4] (TestSolution)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+     left:  9
+     right: 8
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test returns 20 for [1, 4, 10, 3, 1] (TestSolution)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+     left:  21
+     right: 20
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  3) test returns 2 for [1, 3] (TestSolution)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.get_max_consecutive([1, 3]) == 2
+     left:  6
+     right: 2
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+[0m
+[33m05:33:14.635 [warning] [Validator.run] tests: FAILED[0m
+[22m05:33:14.635 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m05:33:14.635 [debug] [Validator.run] final module (1095 chars):
+defmodule Solution do
+  @doc """
+  Returns the smallest positive integer that cannot be represented as a sum
+  of a subset of the given integers (each used at most once).
+
+  This is one more than the maximum consecutive integer (starting from 1)
+  that can be formed.
+  """
+  @spec get_max_consecutive(list(integer())) :: non_neg_integer()
+  def get_max_consecutive(integers) do
+    sorted = integers |> Enum.sort()
+
+    case sorted do
+      [] ->
+        1
+
+      [head | _tail] when head > 1 ->
+        1
+
+      [head | _tail] when head == 1 ->
+        do_get_max_consecutive(sorted, 1)
+    end
+  end
+
+  defp do_get_max_consecutive(sorted, current_max) do
+    case sorted do
+      [] ->
+        current_max + 1
+
+      [head | tail] ->
+        # If the next smallest element is greater than current_max + 1,
+        # we have a gap and cannot form current_max + 1.
+        if head > current_max + 1 do
+          current_max + 1
+        else
+          # We can form all values from 1 to current_max + head
+          do_get_max_consecutive(tail, current_max + head)
+        end
+    end
+  end
+end
+[0m
+[36m05:33:14.635 [debug] [Validator.run] final test (375 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "returns 2 for [1, 3]" do
+    assert Solution.get_max_consecutive([1, 3]) == 2
+  end
+
+  test "returns 8 for [1, 1, 1, 4]" do
+    assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+  end
+
+  test "returns 20 for [1, 4, 10, 3, 1]" do
+    assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+  end
+end
+[0m
+[33m05:33:14.635 [warning] [Solve attempt 1] validation FAILED: [:test][0m
+[22m05:33:14.635 [info] [Solve attempt 2] generating (fn=get_max_consecutive)[0m
+[36m05:33:14.635 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is one more than the maximum consecutive integer (starting from 1)
+that can be formed.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  case sorted do
+    [] ->
+      1
+
+    [head | _tail] when head > 1 ->
+      1
+
+    [head | _tail] when head == 1 ->
+      do_get_max_consecutive(sorted, 1)
+  end
+end
+
+defp do_get_max_consecutive(sorted, current_max) do
+  case sorted do
+    [] ->
+      current_max + 1
+
+    [head | tail] ->
+      # If the next smallest element is greater than current_max + 1,
+      # we have a gap and cannot form current_max + 1.
+      if head > current_max + 1 do
+        current_max + 1
+      else
+        # We can form all values from 1 to current_max + head
+        do_get_max_consecutive(tail, current_max + head)
+      end
+  end
+end
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "returns 2 for [1, 3]" do
+    assert Solution.get_max_consecutive([1, 3]) == 2
+  end
+
+  test "returns 8 for [1, 1, 1, 4]" do
+    assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+  end
+
+  test "returns 20 for [1, 4, 10, 3, 1]" do
+    assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 585565, max_cases: 48
+
+
+
+  1) test returns 8 for [1, 1, 1, 4] (TestSolution)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+     left:  9
+     right: 8
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test returns 20 for [1, 4, 10, 3, 1] (TestSolution)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+     left:  21
+     right: 20
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  3) test returns 2 for [1, 3] (TestSolution)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.get_max_consecutive([1, 3]) == 2
+     left:  6
+     right: 2
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+
+Reminder: module `Solution`, function `get_max_consecutive` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m05:33:19.477 [debug] [LLM.call] finish=stop len=1504 usage=%{"completion_tokens" => 475, "prompt_tokens" => 1105, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1580}
+[LLM.call] response:
+---MODULE---
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is the smallest positive integer that cannot be formed by summing a
+subset of the input list.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  do_find_min_non_consecutive(sorted, 1)
+end
+
+defp do_find_min_non_consecutive([], target) do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) when head > target do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) do
+  # We can form all sums from 1 to target - 1 using previous elements.
+  # Adding 'head' allows us to form sums from 1 + head to (target - 1) + head.
+  # Since head <= target, the new range of formable sums extends continuously
+  # to target - 1 + head.
+  # The new max consecutive sum we can form is (target - 1) + head.
+  # So the next target to check is (target - 1) + head + 1 = target + head.
+  do_find_min_non_consecutive(tail, target + head)
+end
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "returns 2 for [1, 3]" do
+    assert Solution.get_max_consecutive([1, 3]) == 2
+  end
+
+  test "returns 8 for [1, 1, 1, 4]" do
+    assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+  end
+
+  test "returns 20 for [1, 4, 10, 3, 1]" do
+    assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+  end
+end
+---END---[0m
+[22m05:33:19.477 [info] [LLM.call] local_qwen_thinking completed in 4841ms — ok[0m
+[22m05:33:19.477 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m05:33:19.477 [debug] [Validator.run] module code (1095 chars):
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is the smallest positive integer that cannot be formed by summing a
+subset of the input list.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  do_find_min_non_consecutive(sorted, 1)
+end
+
+defp do_find_min_non_consecutive([], target) do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) when head > target do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) do
+  # We can form all sums from 1 to target - 1 using previous elements.
+  # Adding 'head' allows us to form sums from 1 + head to (target - 1) + head.
+  # Since head <= target, the new range of formable sums extends continuously
+  # to target - 1 + head.
+  # The new max consecutive sum we can form is (target - 1) + head.
+  # So the next target to check is (target - 1) + head + 1 = target + head.
+  do_find_min_non_consecutive(tail, target + head)
+end[0m
+[36m05:33:19.477 [debug] [Validator.run] test code (374 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "returns 2 for [1, 3]" do
+    assert Solution.get_max_consecutive([1, 3]) == 2
+  end
+
+  test "returns 8 for [1, 1, 1, 4]" do
+    assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+  end
+
+  test "returns 20 for [1, 4, 10, 3, 1]" do
+    assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+  end
+end[0m
+[36m05:33:19.478 [debug] [Budget] spent so far (est.): $2.9503[0m
+[22m05:33:19.478 [info] [Validator.run] step 1/6: credence fix[0m
+[36m05:33:19.478 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m05:33:20.071 [debug] [run_credence_fix] exit=0 output:
+
+05:33:19.991 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+05:33:19.993 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+05:33:19.995 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+05:33:19.995 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+05:33:19.995 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+05:33:19.997 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Returns the smallest positive integer that cannot be represented as a sum
+  L2 + @doc """
+  L3 - of a subset of the given integers (each used at most once).
+  L3 + Returns the smallest positive integer that cannot be represented as a sum
+  L4 - 
+  L4 + of a subset of the given integers (each used at most once).
+  L5 - This is the smallest positive integer that cannot be formed by summing a
+  L5 + 
+  L6 - subset of the input list.
+  L6 + This is the smallest positive integer that cannot be formed by summing a
+  L7 - """
+  L7 + subset of the input list.
+  L8 - @spec get_max_consecutive(list(integer())) :: non_neg_integer()
+  L8 + """
+  L9 - def get_max_consecutive(integers) do
+  L9 + @spec get_max_consecutive(list(integer())) :: non_neg_integer()
+  L10 -   sorted = integers |> Enum.sort()
+  L10 + def get_max_consecutive(integers) do
+  L11 - 
+  L11 +   sorted = integers |> Enum.sort()
+  L12 -   do_find_min_non_consecutive(sorted, 1)
+  L12 + 
+  L13 - end
+  L13 +   do_find_min_non_consecutive(sorted, 1)
+  L14 - 
+  L14 + end
+  L15 - defp do_find_min_non_consecutive([], target) do
+  L15 + 
+  L16 -   target
+  L16 + defp do_find_min_non_consecutive([], target) do
+  L17 - end
+  L17 +   target
+  L18 - 
+  L18 + end
+  L19 - defp do_find_min_non_consecutive([head | tail], target) when head > target do
+  L19 + 
+  L20 -   target
+  L20 + defp do_find_min_non_consecutive([head | tail], target) when head > target do
+  L21 - end
+  L21 +   target
+  L22 - 
+  L22 + end
+  L23 - defp do_find_min_non_consecutive([head | tail], target) do
+  L23 + 
+  L24 -   # We can form all sums from 1 to target - 1 using previous elements.
+  L24 + defp do_find_min_non_consecutive([head | tail], target) do
+  L25 -   # Adding 'head' allows us to form sums from 1 + head to (target - 1) + head.
+  L25 +   # We can form all sums from 1 to target - 1 using previous elements.
+  L26 -   # Since head <= target, the new range of formable sums extends continuously
+  L26 +   # Adding 'head' allows us to form sums from 1 + head to (target - 1) + head.
+  L27 -   # to target - 1 + head.
+  L27 +   # Since head <= target, the new range of formable sums extends continuously
+  L28 -   # The new max consecutive sum we can form is (target - 1) + head.
+  L28 +   # to target - 1 + head.
+  L29 -   # So the next target to check is (target - 1) + head + 1 = target + head.
+  L29 +   # The new max consecutive sum we can form is (target - 1) + head.
+  L30 -   do_find_min_non_consecutive(tail, target + head)
+  L30 +   # So the next target to check is (target - 1) + head + 1 = target + head.
+  L31 - end
+  L31 +   do_find_min_non_consecutive(tail, target + head)
+  L32 + end
+  L33 + end
+  L34 + 
+
+05:33:19.997 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+05:33:20.008 [debug] [credence_fix] semantic pass 2: compilation OK, 2 warning(s)
+
+05:33:20.008 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+05:33:20.008 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L20 - defp do_find_min_non_consecutive([head | tail], target) when head > target do
+  L20 + defp do_find_min_non_consecutive([head | _tail], target) when head > target do
+
+05:33:20.014 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+05:33:20.014 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UnusedVariable(1)]
+
+05:33:20.014 [debug] [credence_fix] starting pattern fix pipeline (126 rules)
+
+05:33:20.052 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UnusedVariable, 1}]
+[0m
+[22m05:33:20.071 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m05:33:20.632 [info] [run_credence_fix] fix compiles OK[0m
+[36m05:33:20.632 [debug] [run_credence_fix] original:
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is the smallest positive integer that cannot be formed by summing a
+subset of the input list.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  do_find_min_non_consecutive(sorted, 1)
+end
+
+defp do_find_min_non_consecutive([], target) do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) when head > target do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) do
+  # We can form all sums from 1 to target - 1 using previous elements.
+  # Adding 'head' allows us to form sums from 1 + head to (target - 1) + head.
+  # Since head <= target, the new range of formable sums extends continuously
+  # to target - 1 + head.
+  # The new max consecutive sum we can form is (target - 1) + head.
+  # So the next target to check is (target - 1) + head + 1 = target + head.
+  do_find_min_non_consecutive(tail, target + head)
+end[0m
+[36m05:33:20.632 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is the smallest positive integer that cannot be formed by summing a
+subset of the input list.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  do_find_min_non_consecutive(sorted, 1)
+end
+
+defp do_find_min_non_consecutive([], target) do
+  target
+end
+
+defp do_find_min_non_consecutive([head | _tail], target) when head > target do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) do
+  # We can form all sums from 1 to target - 1 using previous elements.
+  # Adding 'head' allows us to form sums from 1 + head to (target - 1) + head.
+  # Since head <= target, the new range of formable sums extends continuously
+  # to target - 1 + head.
+  # The new max consecutive sum we can form is (target - 1) + head.
+  # So the next target to check is (target - 1) + head + 1 = target + head.
+  do_find_min_non_consecutive(tail, target + head)
+end
+end
+[0m
+[22m05:33:20.632 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m05:33:20.633 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is the smallest positive integer that cannot be formed by summing a
+subset of the input list.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  do_find_min_non_consecutive(sorted, 1)
+end
+
+defp do_find_min_non_consecutive([], target) do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) when head > target do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) do
+  # We can form all sums from 1 to target - 1 using previous elements.
+  # Adding 'head' allows us to form sums from 1 + head to (target - 1) + head.
+  # Since head <= target, the new range of formable sums extends continuously
+  # to target - 1 + head.
+  # The new max consecutive sum we can form is (target - 1) + head.
+  # So the next target to check is (target - 1) + head + 1 = target + head.
+  do_find_min_non_consecutive(tail, target + head)
+end[0m
+[36m05:33:20.633 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Returns the smallest positive integer that cannot be represented as a sum
+of a subset of the given integers (each used at most once).
+
+This is the smallest positive integer that cannot be formed by summing a
+subset of the input list.
+"""
+@spec get_max_consecutive(list(integer())) :: non_neg_integer()
+def get_max_consecutive(integers) do
+  sorted = integers |> Enum.sort()
+
+  do_find_min_non_consecutive(sorted, 1)
+end
+
+defp do_find_min_non_consecutive([], target) do
+  target
+end
+
+defp do_find_min_non_consecutive([head | _tail], target) when head > target do
+  target
+end
+
+defp do_find_min_non_consecutive([head | tail], target) do
+  # We can form all sums from 1 to target - 1 using previous elements.
+  # Adding 'head' allows us to form sums from 1 + head to (target - 1) + head.
+  # Since head <= target, the new range of formable sums extends continuously
+  # to target - 1 + head.
+  # The new max consecutive sum we can form is (target - 1) + head.
+  # So the next target to check is (target - 1) + head + 1 = target + head.
+  do_find_min_non_consecutive(tail, target + head)
+end
+end
+[0m
+[36m05:33:20.633 [debug] [propagate_is_renames] old functions: ["get_max_consecutive", "do_find_min_non_consecutive"][0m
+[36m05:33:20.633 [debug] [propagate_is_renames] new functions: ["get_max_consecutive", "do_find_min_non_consecutive"][0m
+[36m05:33:20.633 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m05:33:20.633 [info] [Validator.run] step 2/6: compile[0m
+[22m05:33:21.208 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m05:33:21.208 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m05:33:21.208 [info] [Validator.run] step 3/6: format[0m
+[22m05:33:21.512 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m05:33:21.817 [debug] [Validator.run] format fix output: [0m
+[22m05:33:21.817 [info] [Validator.run] step 4/6: credo[0m
+[36m05:33:22.292 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m05:33:22.292 [info] [Validator.run] credo: no issues[0m
+[22m05:33:22.292 [info] [Validator.run] step 5/6: credence check[0m
+[22m05:33:22.990 [info] [Validator.run] credence check exit=0[0m
+[36m05:33:22.990 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m05:33:22.990 [info] [Validator.run] credence check: passed[0m
+[22m05:33:22.990 [info] [Validator.run] step 6/6: tests[0m
+[22m05:33:23.455 [info] [Validator.run] test exit=0[0m
+[36m05:33:23.455 [debug] [Validator.run] test output:
+Running ExUnit with seed: 418199, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m05:33:23.455 [info] [Validator.run] tests: PASSED[0m
+[22m05:33:23.456 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m05:33:23.456 [debug] [Validator.run] final module (1175 chars):
+defmodule Solution do
+  @doc """
+  Returns the smallest positive integer that cannot be represented as a sum
+  of a subset of the given integers (each used at most once).
+
+  This is the smallest positive integer that cannot be formed by summing a
+  subset of the input list.
+  """
+  @spec get_max_consecutive(list(integer())) :: non_neg_integer()
+  def get_max_consecutive(integers) do
+    sorted = integers |> Enum.sort()
+
+    do_find_min_non_consecutive(sorted, 1)
+  end
+
+  defp do_find_min_non_consecutive([], target) do
+    target
+  end
+
+  defp do_find_min_non_consecutive([head | _tail], target) when head > target do
+    target
+  end
+
+  defp do_find_min_non_consecutive([head | tail], target) do
+    # We can form all sums from 1 to target - 1 using previous elements.
+    # Adding 'head' allows us to form sums from 1 + head to (target - 1) + head.
+    # Since head <= target, the new range of formable sums extends continuously
+    # to target - 1 + head.
+    # The new max consecutive sum we can form is (target - 1) + head.
+    # So the next target to check is (target - 1) + head + 1 = target + head.
+    do_find_min_non_consecutive(tail, target + head)
+  end
+end
+[0m
+[36m05:33:23.456 [debug] [Validator.run] final test (375 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "returns 2 for [1, 3]" do
+    assert Solution.get_max_consecutive([1, 3]) == 2
+  end
+
+  test "returns 8 for [1, 1, 1, 4]" do
+    assert Solution.get_max_consecutive([1, 1, 1, 4]) == 8
+  end
+
+  test "returns 20 for [1, 4, 10, 3, 1]" do
+    assert Solution.get_max_consecutive([1, 4, 10, 3, 1]) == 20
+  end
+end
+[0m
+[22m05:33:23.456 [info] [Solve attempt 2] validation PASSED[0m
+[36m05:33:23.468 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Semantic.UnusedVariable
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSE (truncated)[0m
+[36m05:33:47.453 [debug] [LLM.call] finish=stop len=352 usage=%{"completion_tokens" => 665, "completion_tokens_details" => %{"reasoning_tokens" => 587}, "prompt_tokens" => 15247, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 15912}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+The final code is clean, correct, and idiomatic — well-structured with pattern matching, guards, descriptive names, and proper @doc/@spec. No non-idiomatic residual warrants a deterministic rewrite; the existing rules (`RequireDefmoduleWrapper`, `UnusedVariable`) already handled all issues correctly.
+===END===[0m
+[22m05:33:47.454 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 23985ms — ok[0m
+[36m05:33:47.454 [debug] [Budget] spent so far (est.): $2.9575[0m

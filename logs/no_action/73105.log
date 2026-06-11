@@ -1,0 +1,570 @@
+[22m01:41:17.034 [info] [idx=73105] entry_point=product_unique_elements[0m
+[36m01:41:17.034 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that takes in a list of integers. This function should return the product of all unique elements in the list. If the list contains duplicate elements, only consider them once in the product.
+
+## Python Solution
+```python
+def product_unique_elements(numbers):
+    unique_numbers = set(numbers)
+    product = 1
+    for number in unique_numbers:
+        product *= number
+    return product
+
+print(product_unique_elements([1, 2, 3, 4, 5, 1]))
+print(product_unique_elements([10, 10, 10, 2, 3, 4]))
+print(product_unique_elements([1, 2, 2, 3, 3, 3]))
+```
+
+## Python Tests
+assert product_unique_elements([10, 10, 10, 2, 3, 4]) == 240
+assert product_unique_elements([1, 2, 3, 4, 5, 1]) == 120
+assert product_unique_elements([1, 2, 2, 3, 3, 3]) == 6
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `product_unique_elements`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m01:41:48.394 [debug] [LLM.call] finish=stop len=1200 usage=%{"completion_tokens" => 1273, "completion_tokens_details" => %{"reasoning_tokens" => 945}, "prompt_tokens" => 597, "prompt_tokens_details" => %{}, "total_tokens" => 1870}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function that takes a list of integers and returns the product of all unique elements in the list. If there are duplicate integers, only multiply each distinct integer once. The function should be named `product_unique_elements` and accept one argument: the list of integers. It should return an integer. If the list is empty, return 1. Assume the list can contain negative numbers and zero. The implementation should have O(n) time complexity and O(n) space complexity, where n is the length of the input list.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "product of unique elements" do
+    assert Solution.product_unique_elements([10, 10, 10, 2, 3, 4]) == 240
+    assert Solution.product_unique_elements([1, 2, 3, 4, 5, 1]) == 120
+    assert Solution.product_unique_elements([1, 2, 2, 3, 3, 3]) == 6
+  end
+
+  test "empty list returns 1" do
+    assert Solution.product_unique_elements([]) == 1
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  @spec product_unique_elements([integer]) :: integer
+  def product_unique_elements(numbers) do
+    numbers
+    |> MapSet.new()
+    |> Enum.reduce(1, fn x, acc -> acc * x end)
+  end
+end
+
+---END---[0m
+[22m01:41:48.394 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 31359ms — ok[0m
+[36m01:41:48.395 [debug] [Budget] spent so far (est.): $2.0846[0m
+[22m01:41:49.439 [info] [RoundTrip] reference PASSED tests[0m
+[22m01:41:49.440 [info] [idx=73105] translation fresh — solving[0m
+[22m01:41:49.440 [info] ===SOLVE_BOUNDARY===[0m
+[22m01:41:49.440 [info] [Solve attempt 1] generating (fn=product_unique_elements)[0m
+[36m01:41:49.440 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function that takes a list of integers and returns the product of all unique elements in the list. If there are duplicate integers, only multiply each distinct integer once. The function should be named `product_unique_elements` and accept one argument: the list of integers. It should return an integer. If the list is empty, return 1. Assume the list can contain negative numbers and zero. The implementation should have O(n) time complexity and O(n) space complexity, where n is the length of the input list.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "product of unique elements" do
+    assert Solution.product_unique_elements([10, 10, 10, 2, 3, 4]) == 240
+    assert Solution.product_unique_elements([1, 2, 3, 4, 5, 1]) == 120
+    assert Solution.product_unique_elements([1, 2, 2, 3, 3, 3]) == 6
+  end
+
+  test "empty list returns 1" do
+    assert Solution.product_unique_elements([]) == 1
+  end
+end
+```
+
+Module: `Solution`. Function: `product_unique_elements`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m01:41:52.109 [debug] [LLM.call] finish=stop len=857 usage=%{"completion_tokens" => 262, "prompt_tokens" => 525, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 787}
+[LLM.call] response:
+---MODULE---
+@doc """
+Calculates the product of all unique elements in a list of integers.
+
+If the list is empty, returns 1.
+Duplicates are ignored; each distinct integer is multiplied only once.
+"""
+@spec product_unique_elements(list(integer())) :: integer()
+def product_unique_elements(numbers) do
+  unique_elements = Enum.uniq(numbers)
+
+  Enum.reduce(unique_elements, 1, fn element, acc ->
+    acc * element
+  end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "product of unique elements" do
+    assert Solution.product_unique_elements([10, 10, 10, 2, 3, 4]) == 240
+    assert Solution.product_unique_elements([1, 2, 3, 4, 5, 1]) == 120
+    assert Solution.product_unique_elements([1, 2, 2, 3, 3, 3]) == 6
+  end
+
+  test "empty list returns 1" do
+    assert Solution.product_unique_elements([]) == 1
+  end
+end
+---END---[0m
+[22m01:41:52.109 [info] [LLM.call] local_qwen_thinking completed in 2669ms — ok[0m
+[22m01:41:52.109 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m01:41:52.109 [debug] [Validator.run] module code (408 chars):
+@doc """
+Calculates the product of all unique elements in a list of integers.
+
+If the list is empty, returns 1.
+Duplicates are ignored; each distinct integer is multiplied only once.
+"""
+@spec product_unique_elements(list(integer())) :: integer()
+def product_unique_elements(numbers) do
+  unique_elements = Enum.uniq(numbers)
+
+  Enum.reduce(unique_elements, 1, fn element, acc ->
+    acc * element
+  end)
+end[0m
+[36m01:41:52.109 [debug] [Validator.run] test code (414 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "product of unique elements" do
+    assert Solution.product_unique_elements([10, 10, 10, 2, 3, 4]) == 240
+    assert Solution.product_unique_elements([1, 2, 3, 4, 5, 1]) == 120
+    assert Solution.product_unique_elements([1, 2, 2, 3, 3, 3]) == 6
+  end
+
+  test "empty list returns 1" do
+    assert Solution.product_unique_elements([]) == 1
+  end
+end[0m
+[36m01:41:52.109 [debug] [Budget] spent so far (est.): $2.085[0m
+[22m01:41:52.110 [info] [Validator.run] step 1/6: credence fix[0m
+[36m01:41:52.110 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m01:41:52.717 [debug] [run_credence_fix] exit=0 output:
+
+01:41:52.637 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+01:41:52.639 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+01:41:52.641 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+01:41:52.641 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+01:41:52.641 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+01:41:52.643 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Calculates the product of all unique elements in a list of integers.
+  L2 + @doc """
+  L3 - 
+  L3 + Calculates the product of all unique elements in a list of integers.
+  L4 - If the list is empty, returns 1.
+  L4 + 
+  L5 - Duplicates are ignored; each distinct integer is multiplied only once.
+  L5 + If the list is empty, returns 1.
+  L6 - """
+  L6 + Duplicates are ignored; each distinct integer is multiplied only once.
+  L7 - @spec product_unique_elements(list(integer())) :: integer()
+  L7 + """
+  L8 - def product_unique_elements(numbers) do
+  L8 + @spec product_unique_elements(list(integer())) :: integer()
+  L9 -   unique_elements = Enum.uniq(numbers)
+  L9 + def product_unique_elements(numbers) do
+  L10 - 
+  L10 +   unique_elements = Enum.uniq(numbers)
+  L11 -   Enum.reduce(unique_elements, 1, fn element, acc ->
+  L11 + 
+  L12 -     acc * element
+  L12 +   Enum.reduce(unique_elements, 1, fn element, acc ->
+  L13 -   end)
+  L13 +     acc * element
+  L14 - end
+  L14 +   end)
+  L15 + end
+  L16 + end
+  L17 + 
+
+01:41:52.643 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+01:41:52.655 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+01:41:52.662 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+01:41:52.662 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+01:41:52.662 [debug] [credence_fix] starting pattern fix pipeline (124 rules)
+
+01:41:52.686 [debug] [credence_fix] NoExplicitProductReduce: check found 1 issue(s), running fix...
+
+01:41:52.696 [debug] [credence_fix] NoExplicitProductReduce: source CHANGED:
+  L12 -   Enum.reduce(unique_elements, 1, fn element, acc ->
+  L12 +   Enum.product(unique_elements)
+  L13 -     acc * element
+  L13 + end
+  L14 -   end)
+  L14 + end
+  L15 - end
+  L15 + 
+  L16 - end
+  L17 - 
+
+01:41:52.697 [debug] [credence_fix] done. Applied: [NoExplicitProductReduce(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Pattern.NoExplicitProductReduce, 1}]
+[0m
+[22m01:41:52.717 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m01:41:53.280 [info] [run_credence_fix] fix compiles OK[0m
+[36m01:41:53.280 [debug] [run_credence_fix] original:
+@doc """
+Calculates the product of all unique elements in a list of integers.
+
+If the list is empty, returns 1.
+Duplicates are ignored; each distinct integer is multiplied only once.
+"""
+@spec product_unique_elements(list(integer())) :: integer()
+def product_unique_elements(numbers) do
+  unique_elements = Enum.uniq(numbers)
+
+  Enum.reduce(unique_elements, 1, fn element, acc ->
+    acc * element
+  end)
+end[0m
+[36m01:41:53.280 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Calculates the product of all unique elements in a list of integers.
+
+If the list is empty, returns 1.
+Duplicates are ignored; each distinct integer is multiplied only once.
+"""
+@spec product_unique_elements(list(integer())) :: integer()
+def product_unique_elements(numbers) do
+  unique_elements = Enum.uniq(numbers)
+
+  Enum.product(unique_elements)
+end
+end
+[0m
+[22m01:41:53.280 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m01:41:53.281 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Calculates the product of all unique elements in a list of integers.
+
+If the list is empty, returns 1.
+Duplicates are ignored; each distinct integer is multiplied only once.
+"""
+@spec product_unique_elements(list(integer())) :: integer()
+def product_unique_elements(numbers) do
+  unique_elements = Enum.uniq(numbers)
+
+  Enum.reduce(unique_elements, 1, fn element, acc ->
+    acc * element
+  end)
+end[0m
+[36m01:41:53.281 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Calculates the product of all unique elements in a list of integers.
+
+If the list is empty, returns 1.
+Duplicates are ignored; each distinct integer is multiplied only once.
+"""
+@spec product_unique_elements(list(integer())) :: integer()
+def product_unique_elements(numbers) do
+  unique_elements = Enum.uniq(numbers)
+
+  Enum.product(unique_elements)
+end
+end
+[0m
+[36m01:41:53.281 [debug] [propagate_is_renames] old functions: ["product_unique_elements"][0m
+[36m01:41:53.281 [debug] [propagate_is_renames] new functions: ["product_unique_elements"][0m
+[36m01:41:53.281 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m01:41:53.281 [info] [Validator.run] step 2/6: compile[0m
+[22m01:41:53.842 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m01:41:53.843 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m01:41:53.843 [info] [Validator.run] step 3/6: format[0m
+[22m01:41:54.142 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m01:41:54.444 [debug] [Validator.run] format fix output: [0m
+[22m01:41:54.444 [info] [Validator.run] step 4/6: credo[0m
+[36m01:41:54.925 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m01:41:54.925 [info] [Validator.run] credo: no issues[0m
+[22m01:41:54.925 [info] [Validator.run] step 5/6: credence check[0m
+[22m01:41:55.619 [info] [Validator.run] credence check exit=0[0m
+[36m01:41:55.619 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m01:41:55.619 [info] [Validator.run] credence check: passed[0m
+[22m01:41:55.619 [info] [Validator.run] step 6/6: tests[0m
+[22m01:41:56.106 [info] [Validator.run] test exit=0[0m
+[36m01:41:56.106 [debug] [Validator.run] test output:
+Running ExUnit with seed: 66125, max_cases: 48
+
+..
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+2 tests, 0 failures
+[0m
+[22m01:41:56.106 [info] [Validator.run] tests: PASSED[0m
+[22m01:41:56.106 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m01:41:56.106 [debug] [Validator.run] final module (409 chars):
+defmodule Solution do
+  @doc """
+  Calculates the product of all unique elements in a list of integers.
+
+  If the list is empty, returns 1.
+  Duplicates are ignored; each distinct integer is multiplied only once.
+  """
+  @spec product_unique_elements(list(integer())) :: integer()
+  def product_unique_elements(numbers) do
+    unique_elements = Enum.uniq(numbers)
+
+    Enum.product(unique_elements)
+  end
+end
+[0m
+[36m01:41:56.106 [debug] [Validator.run] final test (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "product of unique elements" do
+    assert Solution.product_unique_elements([10, 10, 10, 2, 3, 4]) == 240
+    assert Solution.product_unique_elements([1, 2, 3, 4, 5, 1]) == 120
+    assert Solution.product_unique_elements([1, 2, 2, 3, 3, 3]) == 6
+  end
+
+  test "empty list returns 1" do
+    assert Solution.product_unique_elements([]) == 1
+  end
+end
+[0m
+[22m01:41:56.106 [info] [Solve attempt 1] validation PASSED[0m
+[36m01:41:56.116 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Pattern.NoExplicitProductReduce
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, se (truncated)[0m
+[36m01:42:16.261 [debug] [LLM.call] finish=stop len=285 usage=%{"completion_tokens" => 619, "completion_tokens_details" => %{"reasoning_tokens" => 550}, "prompt_tokens" => 6304, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 6923}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+The final code is idiomatic: `Enum.uniq` + `Enum.product` is clean. The two rules (RequireDefmoduleWrapper, NoExplicitProductReduce) fired correctly. The intermediate variable vs. pipe is style preference, not a deterministic rewrite.
+===END===[0m
+[22m01:42:16.261 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 20145ms — ok[0m
+[36m01:42:16.262 [debug] [Budget] spent so far (est.): $2.0883[0m

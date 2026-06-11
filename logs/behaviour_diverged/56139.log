@@ -1,0 +1,3102 @@
+[22m09:48:43.826 [info] [idx=56139] entry_point=perfect_numbers[0m
+[36m09:48:43.826 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to generate the first n perfect numbers. A perfect number is a positive integer that is equal to the sum of its proper divisors (excluding itself). For example, 6 is a perfect number because its divisors are 1, 2, and 3, and 1 + 2 + 3 = 6.
+
+## Python Solution
+```python
+def perfect_numbers(n):
+    def is_perfect(num):
+        if num < 2:
+            return False
+        divisors_sum = 1
+        for i in range(2, int(num ** 0.5) + 1):
+            if num % i == 0:
+                divisors_sum += i
+                if i != num // i:
+                    divisors_sum += num // i
+        return divisors_sum == num
+
+    result = []
+    candidate = 2
+    while len(result) < n:
+        if is_perfect(candidate):
+            result.append(candidate)
+        candidate += 1
+    return result
+```
+
+## Python Tests
+assert perfect_numbers(1) == [6]
+assert perfect_numbers(2) == [6, 28]
+assert perfect_numbers(3) == [6, 28, 496]
+assert perfect_numbers(4) == [6, 28, 496, 8128]
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `perfect_numbers`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m09:49:20.018 [debug] [LLM.call] finish=stop len=1832 usage=%{"completion_tokens" => 1410, "completion_tokens_details" => %{"reasoning_tokens" => 866}, "prompt_tokens" => 638, "prompt_tokens_details" => %{}, "total_tokens" => 2048}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `perfect_numbers/1` that takes a positive integer `n` and returns a list containing the first `n` perfect numbers, sorted in increasing order. A perfect number is a positive integer that is equal to the sum of its proper divisors (excluding itself). For example, 6 is a perfect number because its divisors (excluding 6) are 1, 2, and 3, and their sum is 6. If `n` is 0, return an empty list.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  @spec perfect_numbers(non_neg_integer) :: [pos_integer]
+  def perfect_numbers(n) do
+    do_perfect_numbers(n, 2, [])
+  end
+
+  defp do_perfect_numbers(0, _candidate, acc), do: Enum.reverse(acc)
+  defp do_perfect_numbers(n, candidate, acc) do
+    if perfect?(candidate) do
+      do_perfect_numbers(n - 1, candidate + 1, [candidate | acc])
+    else
+      do_perfect_numbers(n, candidate + 1, acc)
+    end
+  end
+
+  defp perfect?(num) when num < 2, do: false
+  defp perfect?(num) do
+    limit = trunc(:math.sqrt(num))
+    sum =
+      Enum.reduce(2..limit, 1, fn i, acc ->
+        if rem(num, i) == 0 do
+          pair = div(num, i)
+          if i == pair do
+            acc + i
+          else
+            acc + i + pair
+          end
+        else
+          acc
+        end
+      end)
+
+    sum == num
+  end
+end
+
+---END---[0m
+[22m09:49:20.018 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 36192ms — ok[0m
+[36m09:49:20.019 [debug] [Budget] spent so far (est.): $3.8242[0m
+[22m09:49:21.065 [info] [RoundTrip] reference PASSED tests[0m
+[22m09:49:21.065 [info] [idx=56139] translation fresh — solving[0m
+[22m09:49:21.065 [info] ===SOLVE_BOUNDARY===[0m
+[22m09:49:21.065 [info] [Solve attempt 1] generating (fn=perfect_numbers)[0m
+[36m09:49:21.065 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `perfect_numbers/1` that takes a positive integer `n` and returns a list containing the first `n` perfect numbers, sorted in increasing order. A perfect number is a positive integer that is equal to the sum of its proper divisors (excluding itself). For example, 6 is a perfect number because its divisors (excluding 6) are 1, 2, and 3, and their sum is 6. If `n` is 0, return an empty list.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+```
+
+Module: `Solution`. Function: `perfect_numbers`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m09:49:26.130 [debug] [LLM.call] finish=stop len=1656 usage=%{"completion_tokens" => 521, "prompt_tokens" => 553, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1074}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+---END---[0m
+[22m09:49:26.130 [info] [LLM.call] local_qwen_thinking completed in 5065ms — ok[0m
+[22m09:49:26.131 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m09:49:26.131 [debug] [Validator.run] module code (1085 chars):
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[36m09:49:26.131 [debug] [Validator.run] test code (536 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end[0m
+[36m09:49:26.131 [debug] [Budget] spent so far (est.): $3.8249[0m
+[22m09:49:26.131 [info] [Validator.run] step 1/6: credence fix[0m
+[36m09:49:26.131 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m09:49:26.761 [debug] [run_credence_fix] exit=0 output:
+
+09:49:26.640 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+09:49:26.642 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+09:49:26.655 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+09:49:26.661 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+09:49:26.661 [debug] [credence_fix] semantic done. Applied: []
+
+09:49:26.662 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+09:49:26.693 [debug] [credence_fix] NoIsPrefixForNonGuard: check found 1 issue(s), running fix...
+
+09:49:26.709 [debug] [credence_fix] NoIsPrefixForNonGuard: source CHANGED:
+  L33 -     if is_perfect?(candidate) do
+  L33 +     if perfect?(candidate) do
+  L40 -   defp is_perfect?(number) do
+  L40 +   defp perfect?(number) do
+
+09:49:26.737 [debug] [credence_fix] done. Applied: [NoIsPrefixForNonGuard(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.NoIsPrefixForNonGuard, 1}]
+[0m
+[22m09:49:26.761 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m09:49:27.338 [info] [run_credence_fix] fix compiles OK[0m
+[36m09:49:27.339 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[36m09:49:27.339 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[22m09:49:27.339 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m09:49:27.339 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[36m09:49:27.339 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[36m09:49:27.339 [debug] [propagate_is_renames] old functions: ["perfect_numbers", "find_next_perfect_number", "is_perfect?", "sum_of_proper_divisors"][0m
+[36m09:49:27.339 [debug] [propagate_is_renames] new functions: ["perfect_numbers", "find_next_perfect_number", "perfect?", "sum_of_proper_divisors"][0m
+[36m09:49:27.339 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m09:49:27.339 [info] [Validator.run] step 2/6: compile[0m
+[22m09:49:27.908 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m09:49:27.908 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m09:49:27.908 [info] [Validator.run] step 3/6: format[0m
+[22m09:49:28.228 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m09:49:28.535 [debug] [Validator.run] format fix output: [0m
+[22m09:49:28.535 [info] [Validator.run] step 4/6: credo[0m
+[36m09:49:29.009 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m09:49:29.009 [info] [Validator.run] credo: no issues[0m
+[22m09:49:29.009 [info] [Validator.run] step 5/6: credence check[0m
+[22m09:49:29.694 [info] [Validator.run] credence check exit=0[0m
+[36m09:49:29.695 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m09:49:29.695 [info] [Validator.run] credence check: passed[0m
+[22m09:49:29.695 [info] [Validator.run] step 6/6: tests[0m
+[22m09:49:30.165 [info] [Validator.run] test exit=2[0m
+[36m09:49:30.165 [debug] [Validator.run] test output:
+Running ExUnit with seed: 114853, max_cases: 48
+
+
+
+  1) test first three perfect numbers (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(3) == [6, 28, 496]
+     left:  [6, 6, 6]
+     right: [6, 28, 496]
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test first four perfect numbers (SolutionTest)
+     test/solution_test.exs:16
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+     left:  [6, 6, 6, 6]
+     right: [6, 28, 496, 8128]
+     stacktrace:
+       test/solution_test.exs:17: (test)
+
+.
+
+  3) test first two perfect numbers (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(2) == [6, 28]
+     left:  [6, 6]
+     right: [6, 28]
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+5 tests, 3 failures
+[0m
+[33m09:49:30.165 [warning] [Validator.run] tests: FAILED[0m
+[22m09:49:30.165 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m09:49:30.165 [debug] [Validator.run] final module (1080 chars):
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end
+[0m
+[36m09:49:30.165 [debug] [Validator.run] final test (537 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+[0m
+[33m09:49:30.166 [warning] [Solve attempt 1] validation FAILED: [:test][0m
+[22m09:49:30.166 [info] [Solve attempt 2] generating (fn=perfect_numbers)[0m
+[36m09:49:30.166 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 114853, max_cases: 48
+
+
+
+  1) test first three perfect numbers (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(3) == [6, 28, 496]
+     left:  [6, 6, 6]
+     right: [6, 28, 496]
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test first four perfect numbers (SolutionTest)
+     test/solution_test.exs:16
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+     left:  [6, 6, 6, 6]
+     right: [6, 28, 496, 8128]
+     stacktrace:
+       test/solution_test.exs:17: (test)
+
+.
+
+  3) test first two perfect numbers (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(2) == [6, 28]
+     left:  [6, 6]
+     right: [6, 28]
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+5 tests, 3 failures
+
+Reminder: module `Solution`, function `perfect_numbers` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m09:49:35.534 [debug] [LLM.call] finish=stop len=1656 usage=%{"completion_tokens" => 521, "prompt_tokens" => 1194, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1715}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+---END---[0m
+[22m09:49:35.534 [info] [LLM.call] local_qwen_thinking completed in 5368ms — ok[0m
+[22m09:49:35.534 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m09:49:35.534 [debug] [Validator.run] module code (1085 chars):
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[36m09:49:35.534 [debug] [Validator.run] test code (536 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end[0m
+[36m09:49:35.534 [debug] [Budget] spent so far (est.): $3.8259[0m
+[22m09:49:35.542 [info] [Validator.run] step 1/6: credence fix[0m
+[36m09:49:35.542 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m09:49:36.179 [debug] [run_credence_fix] exit=0 output:
+
+09:49:36.065 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+09:49:36.067 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+09:49:36.080 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+09:49:36.086 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+09:49:36.086 [debug] [credence_fix] semantic done. Applied: []
+
+09:49:36.086 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+09:49:36.113 [debug] [credence_fix] NoIsPrefixForNonGuard: check found 1 issue(s), running fix...
+
+09:49:36.130 [debug] [credence_fix] NoIsPrefixForNonGuard: source CHANGED:
+  L33 -     if is_perfect?(candidate) do
+  L33 +     if perfect?(candidate) do
+  L40 -   defp is_perfect?(number) do
+  L40 +   defp perfect?(number) do
+
+09:49:36.159 [debug] [credence_fix] done. Applied: [NoIsPrefixForNonGuard(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.NoIsPrefixForNonGuard, 1}]
+[0m
+[22m09:49:36.179 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m09:49:36.752 [info] [run_credence_fix] fix compiles OK[0m
+[36m09:49:36.752 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[36m09:49:36.752 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[22m09:49:36.752 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m09:49:36.752 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[36m09:49:36.752 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end[0m
+[36m09:49:36.752 [debug] [propagate_is_renames] old functions: ["perfect_numbers", "find_next_perfect_number", "is_perfect?", "sum_of_proper_divisors"][0m
+[36m09:49:36.752 [debug] [propagate_is_renames] new functions: ["perfect_numbers", "find_next_perfect_number", "perfect?", "sum_of_proper_divisors"][0m
+[36m09:49:36.753 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m09:49:36.753 [info] [Validator.run] step 2/6: compile[0m
+[22m09:49:37.327 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m09:49:37.327 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m09:49:37.327 [info] [Validator.run] step 3/6: format[0m
+[22m09:49:37.638 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m09:49:37.936 [debug] [Validator.run] format fix output: [0m
+[22m09:49:37.936 [info] [Validator.run] step 4/6: credo[0m
+[36m09:49:38.411 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m09:49:38.412 [info] [Validator.run] credo: no issues[0m
+[22m09:49:38.412 [info] [Validator.run] step 5/6: credence check[0m
+[22m09:49:39.100 [info] [Validator.run] credence check exit=0[0m
+[36m09:49:39.100 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m09:49:39.100 [info] [Validator.run] credence check: passed[0m
+[22m09:49:39.100 [info] [Validator.run] step 6/6: tests[0m
+[22m09:49:39.596 [info] [Validator.run] test exit=2[0m
+[36m09:49:39.596 [debug] [Validator.run] test output:
+Running ExUnit with seed: 542156, max_cases: 48
+
+.
+
+  1) test first three perfect numbers (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(3) == [6, 28, 496]
+     left:  [6, 6, 6]
+     right: [6, 28, 496]
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+.
+
+  2) test first four perfect numbers (SolutionTest)
+     test/solution_test.exs:16
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+     left:  [6, 6, 6, 6]
+     right: [6, 28, 496, 8128]
+     stacktrace:
+       test/solution_test.exs:17: (test)
+
+
+
+  3) test first two perfect numbers (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(2) == [6, 28]
+     left:  [6, 6]
+     right: [6, 28]
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+Finished in 0.02 seconds (0.00s async, 0.02s sync)
+5 tests, 3 failures
+[0m
+[33m09:49:39.596 [warning] [Validator.run] tests: FAILED[0m
+[22m09:49:39.597 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m09:49:39.597 [debug] [Validator.run] final module (1080 chars):
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end
+[0m
+[36m09:49:39.597 [debug] [Validator.run] final test (537 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+[0m
+[33m09:49:39.597 [warning] [Solve attempt 2] validation FAILED: [:test][0m
+[22m09:49:39.597 [info] [Solve attempt 3] generating (fn=perfect_numbers)[0m
+[36m09:49:39.597 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 542156, max_cases: 48
+
+.
+
+  1) test first three perfect numbers (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(3) == [6, 28, 496]
+     left:  [6, 6, 6]
+     right: [6, 28, 496]
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+.
+
+  2) test first four perfect numbers (SolutionTest)
+     test/solution_test.exs:16
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+     left:  [6, 6, 6, 6]
+     right: [6, 28, 496, 8128]
+     stacktrace:
+       test/solution_test.exs:17: (test)
+
+
+
+  3) test first two perfect numbers (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(2) == [6, 28]
+     left:  [6, 6]
+     right: [6, 28]
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+Finished in 0.02 seconds (0.00s async, 0.02s sync)
+5 tests, 3 failures
+
+Reminder: module `Solution`, function `perfect_numbers` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m09:49:45.336 [debug] [LLM.call] finish=stop len=1837 usage=%{"completion_tokens" => 575, "prompt_tokens" => 1194, "prompt_tokens_details" => %{"cached_tokens" => 678}, "total_tokens" => 1769}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+    |> Enum.reduce([], fn _number, acc ->
+      [next_number() | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+
+  defp next_number do
+    result = find_next_perfect_number()
+    result
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+---END---[0m
+[22m09:49:45.336 [info] [LLM.call] local_qwen_thinking completed in 5739ms — ok[0m
+[22m09:49:45.336 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m09:49:45.336 [debug] [Validator.run] module code (1266 chars):
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+    |> Enum.reduce([], fn _number, acc ->
+      [next_number() | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+
+  defp next_number do
+    result = find_next_perfect_number()
+    result
+  end
+end[0m
+[36m09:49:45.336 [debug] [Validator.run] test code (536 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end[0m
+[36m09:49:45.336 [debug] [Budget] spent so far (est.): $3.8269[0m
+[22m09:49:45.343 [info] [Validator.run] step 1/6: credence fix[0m
+[36m09:49:45.344 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m09:49:46.020 [debug] [run_credence_fix] exit=0 output:
+
+09:49:45.868 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+09:49:45.870 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+09:49:45.884 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+09:49:45.890 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+09:49:45.890 [debug] [credence_fix] semantic done. Applied: []
+
+09:49:45.890 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+09:49:45.927 [debug] [credence_fix] NoIsPrefixForNonGuard: check found 1 issue(s), running fix...
+
+09:49:45.944 [debug] [credence_fix] NoIsPrefixForNonGuard: source CHANGED:
+  L37 -     if is_perfect?(candidate) do
+  L37 +     if perfect?(candidate) do
+  L44 -   defp is_perfect?(number) do
+  L44 +   defp perfect?(number) do
+
+09:49:45.960 [debug] [credence_fix] NoRedundantAssignment: check found 1 issue(s), running fix...
+
+09:49:45.971 [debug] [credence_fix] NoRedundantAssignment: source CHANGED:
+  L56 -     result = find_next_perfect_number()
+  L56 +     find_next_perfect_number()
+  L57 -     result
+  L57 +   end
+  L58 -   end
+  L58 + end
+  L59 - end
+
+09:49:45.993 [debug] [credence_fix] done. Applied: [NoIsPrefixForNonGuard(1), NoRedundantAssignment(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.NoIsPrefixForNonGuard, 1}, {Credence.Pattern.NoRedundantAssignment, 1}]
+[0m
+[22m09:49:46.020 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m09:49:46.615 [info] [run_credence_fix] fix compiles OK[0m
+[36m09:49:46.615 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+    |> Enum.reduce([], fn _number, acc ->
+      [next_number() | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+
+  defp next_number do
+    result = find_next_perfect_number()
+    result
+  end
+end[0m
+[36m09:49:46.615 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+    |> Enum.reduce([], fn _number, acc ->
+      [next_number() | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+
+  defp next_number do
+    find_next_perfect_number()
+  end
+end[0m
+[22m09:49:46.615 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m09:49:46.615 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+    |> Enum.reduce([], fn _number, acc ->
+      [next_number() | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+
+  defp next_number do
+    result = find_next_perfect_number()
+    result
+  end
+end[0m
+[36m09:49:46.615 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+    |> Enum.reduce([], fn _number, acc ->
+      [next_number() | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+
+  defp next_number do
+    find_next_perfect_number()
+  end
+end[0m
+[36m09:49:46.615 [debug] [propagate_is_renames] old functions: ["perfect_numbers", "find_next_perfect_number", "is_perfect?", "sum_of_proper_divisors", "next_number"][0m
+[36m09:49:46.615 [debug] [propagate_is_renames] new functions: ["perfect_numbers", "find_next_perfect_number", "perfect?", "sum_of_proper_divisors", "next_number"][0m
+[36m09:49:46.615 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m09:49:46.615 [info] [Validator.run] step 2/6: compile[0m
+[22m09:49:47.194 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m09:49:47.194 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m09:49:47.194 [info] [Validator.run] step 3/6: format[0m
+[22m09:49:47.493 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m09:49:47.802 [debug] [Validator.run] format fix output: [0m
+[22m09:49:47.802 [info] [Validator.run] step 4/6: credo[0m
+[36m09:49:48.283 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m09:49:48.284 [info] [Validator.run] credo: no issues[0m
+[22m09:49:48.284 [info] [Validator.run] step 5/6: credence check[0m
+[22m09:49:48.995 [info] [Validator.run] credence check exit=0[0m
+[36m09:49:48.995 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m09:49:48.995 [info] [Validator.run] credence check: passed[0m
+[22m09:49:48.995 [info] [Validator.run] step 6/6: tests[0m
+[22m09:49:49.473 [info] [Validator.run] test exit=2[0m
+[36m09:49:49.473 [debug] [Validator.run] test output:
+Running ExUnit with seed: 422941, max_cases: 48
+
+.
+
+  1) test first four perfect numbers (SolutionTest)
+     test/solution_test.exs:16
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+     left:  [6, 6, 6, 6]
+     right: [6, 28, 496, 8128]
+     stacktrace:
+       test/solution_test.exs:17: (test)
+
+
+
+  2) test first two perfect numbers (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(2) == [6, 28]
+     left:  [6, 6]
+     right: [6, 28]
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  3) test first three perfect numbers (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(3) == [6, 28, 496]
+     left:  [6, 6, 6]
+     right: [6, 28, 496]
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+5 tests, 3 failures
+[0m
+[33m09:49:49.473 [warning] [Validator.run] tests: FAILED[0m
+[22m09:49:49.474 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m09:49:49.474 [debug] [Validator.run] final module (1241 chars):
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+    |> Enum.reduce([], fn _number, acc ->
+      [next_number() | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+
+  defp next_number do
+    find_next_perfect_number()
+  end
+end
+[0m
+[36m09:49:49.474 [debug] [Validator.run] final test (537 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+[0m
+[33m09:49:49.474 [warning] [Solve attempt 3] validation FAILED: [:test][0m
+[22m09:49:49.474 [info] [Solve attempt 4] generating (fn=perfect_numbers)[0m
+[36m09:49:49.474 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    1..n
+    |> Enum.map(fn _ -> find_next_perfect_number() end)
+    |> Enum.reduce([], fn _number, acc ->
+      [next_number() | acc]
+    end)
+    |> Enum.reverse()
+  end
+
+  defp find_next_perfect_number do
+    find_next_perfect_number(6)
+  end
+
+  defp find_next_perfect_number(candidate) do
+    if is_perfect?(candidate) do
+      candidate
+    else
+      find_next_perfect_number(candidate + 1)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    1..trunc(number / 2)
+    |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+    |> Enum.sum()
+  end
+
+  defp next_number do
+    result = find_next_perfect_number()
+    result
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 422941, max_cases: 48
+
+.
+
+  1) test first four perfect numbers (SolutionTest)
+     test/solution_test.exs:16
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+     left:  [6, 6, 6, 6]
+     right: [6, 28, 496, 8128]
+     stacktrace:
+       test/solution_test.exs:17: (test)
+
+
+
+  2) test first two perfect numbers (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(2) == [6, 28]
+     left:  [6, 6]
+     right: [6, 28]
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  3) test first three perfect numbers (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.perfect_numbers(3) == [6, 28, 496]
+     left:  [6, 6, 6]
+     right: [6, 28, 496]
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+5 tests, 3 failures
+
+Reminder: module `Solution`, function `perfect_numbers` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[22m09:49:55.478 [info] [Budget] HEARTBEAT — 845 paid calls, est $3.8269 over 1049.7min → ~$0.2187/hr, ~$5.25/day (tok in=4886636 cache_rd=41431232 out=1783961)[0m
+[36m09:49:55.695 [debug] [LLM.call] finish=stop len=1930 usage=%{"completion_tokens" => 596, "prompt_tokens" => 1248, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1844}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    find_perfect_numbers(n, 6)
+  end
+
+  defp find_perfect_numbers(count, candidate) do
+    result = collect_perfect_numbers(count, candidate, [])
+    Enum.reverse(result)
+  end
+
+  defp collect_perfect_numbers(0, _candidate, acc), do: acc
+
+  defp collect_perfect_numbers(remaining, candidate, acc) do
+    if is_perfect?(candidate) do
+      collect_perfect_numbers(remaining - 1, candidate + 1, [candidate | acc])
+    else
+      collect_perfect_numbers(remaining, candidate + 1, acc)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    max_divisor = trunc(number / 2)
+    if max_divisor == 0 do
+      0
+    else
+      1..max_divisor
+      |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+      |> Enum.sum()
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+---END---[0m
+[22m09:49:55.695 [info] [LLM.call] local_qwen_thinking completed in 6221ms — ok[0m
+[22m09:49:55.695 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m09:49:55.695 [debug] [Validator.run] module code (1359 chars):
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    find_perfect_numbers(n, 6)
+  end
+
+  defp find_perfect_numbers(count, candidate) do
+    result = collect_perfect_numbers(count, candidate, [])
+    Enum.reverse(result)
+  end
+
+  defp collect_perfect_numbers(0, _candidate, acc), do: acc
+
+  defp collect_perfect_numbers(remaining, candidate, acc) do
+    if is_perfect?(candidate) do
+      collect_perfect_numbers(remaining - 1, candidate + 1, [candidate | acc])
+    else
+      collect_perfect_numbers(remaining, candidate + 1, acc)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    max_divisor = trunc(number / 2)
+    if max_divisor == 0 do
+      0
+    else
+      1..max_divisor
+      |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+      |> Enum.sum()
+    end
+  end
+end[0m
+[36m09:49:55.695 [debug] [Validator.run] test code (536 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end[0m
+[36m09:49:55.695 [debug] [Budget] spent so far (est.): $3.8279[0m
+[22m09:49:55.696 [info] [Validator.run] step 1/6: credence fix[0m
+[36m09:49:55.696 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m09:49:56.376 [debug] [run_credence_fix] exit=0 output:
+
+09:49:56.234 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+09:49:56.236 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+09:49:56.252 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+09:49:56.258 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+09:49:56.258 [debug] [credence_fix] semantic done. Applied: []
+
+09:49:56.258 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+09:49:56.294 [debug] [credence_fix] NoIsPrefixForNonGuard: check found 1 issue(s), running fix...
+
+09:49:56.310 [debug] [credence_fix] NoIsPrefixForNonGuard: source CHANGED:
+  L35 -     if is_perfect?(candidate) do
+  L35 +     if perfect?(candidate) do
+  L42 -   defp is_perfect?(number) do
+  L42 +   defp perfect?(number) do
+
+09:49:56.349 [debug] [credence_fix] done. Applied: [NoIsPrefixForNonGuard(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.NoIsPrefixForNonGuard, 1}]
+[0m
+[22m09:49:56.376 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m09:49:56.951 [info] [run_credence_fix] fix compiles OK[0m
+[36m09:49:56.952 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    find_perfect_numbers(n, 6)
+  end
+
+  defp find_perfect_numbers(count, candidate) do
+    result = collect_perfect_numbers(count, candidate, [])
+    Enum.reverse(result)
+  end
+
+  defp collect_perfect_numbers(0, _candidate, acc), do: acc
+
+  defp collect_perfect_numbers(remaining, candidate, acc) do
+    if is_perfect?(candidate) do
+      collect_perfect_numbers(remaining - 1, candidate + 1, [candidate | acc])
+    else
+      collect_perfect_numbers(remaining, candidate + 1, acc)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    max_divisor = trunc(number / 2)
+    if max_divisor == 0 do
+      0
+    else
+      1..max_divisor
+      |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+      |> Enum.sum()
+    end
+  end
+end[0m
+[36m09:49:56.952 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    find_perfect_numbers(n, 6)
+  end
+
+  defp find_perfect_numbers(count, candidate) do
+    result = collect_perfect_numbers(count, candidate, [])
+    Enum.reverse(result)
+  end
+
+  defp collect_perfect_numbers(0, _candidate, acc), do: acc
+
+  defp collect_perfect_numbers(remaining, candidate, acc) do
+    if perfect?(candidate) do
+      collect_perfect_numbers(remaining - 1, candidate + 1, [candidate | acc])
+    else
+      collect_perfect_numbers(remaining, candidate + 1, acc)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    max_divisor = trunc(number / 2)
+    if max_divisor == 0 do
+      0
+    else
+      1..max_divisor
+      |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+      |> Enum.sum()
+    end
+  end
+end[0m
+[22m09:49:56.952 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m09:49:56.952 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    find_perfect_numbers(n, 6)
+  end
+
+  defp find_perfect_numbers(count, candidate) do
+    result = collect_perfect_numbers(count, candidate, [])
+    Enum.reverse(result)
+  end
+
+  defp collect_perfect_numbers(0, _candidate, acc), do: acc
+
+  defp collect_perfect_numbers(remaining, candidate, acc) do
+    if is_perfect?(candidate) do
+      collect_perfect_numbers(remaining - 1, candidate + 1, [candidate | acc])
+    else
+      collect_perfect_numbers(remaining, candidate + 1, acc)
+    end
+  end
+
+  defp is_perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    max_divisor = trunc(number / 2)
+    if max_divisor == 0 do
+      0
+    else
+      1..max_divisor
+      |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+      |> Enum.sum()
+    end
+  end
+end[0m
+[36m09:49:56.952 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    find_perfect_numbers(n, 6)
+  end
+
+  defp find_perfect_numbers(count, candidate) do
+    result = collect_perfect_numbers(count, candidate, [])
+    Enum.reverse(result)
+  end
+
+  defp collect_perfect_numbers(0, _candidate, acc), do: acc
+
+  defp collect_perfect_numbers(remaining, candidate, acc) do
+    if perfect?(candidate) do
+      collect_perfect_numbers(remaining - 1, candidate + 1, [candidate | acc])
+    else
+      collect_perfect_numbers(remaining, candidate + 1, acc)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    max_divisor = trunc(number / 2)
+    if max_divisor == 0 do
+      0
+    else
+      1..max_divisor
+      |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+      |> Enum.sum()
+    end
+  end
+end[0m
+[36m09:49:56.952 [debug] [propagate_is_renames] old functions: ["perfect_numbers", "find_perfect_numbers", "collect_perfect_numbers", "is_perfect?", "sum_of_proper_divisors"][0m
+[36m09:49:56.952 [debug] [propagate_is_renames] new functions: ["perfect_numbers", "find_perfect_numbers", "collect_perfect_numbers", "perfect?", "sum_of_proper_divisors"][0m
+[36m09:49:56.952 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m09:49:56.952 [info] [Validator.run] step 2/6: compile[0m
+[22m09:49:57.545 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m09:49:57.545 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m09:49:57.545 [info] [Validator.run] step 3/6: format[0m
+[22m09:49:57.869 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m09:49:58.178 [debug] [Validator.run] format fix output: [0m
+[22m09:49:58.178 [info] [Validator.run] step 4/6: credo[0m
+[36m09:49:58.657 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m09:49:58.658 [info] [Validator.run] credo: no issues[0m
+[22m09:49:58.658 [info] [Validator.run] step 5/6: credence check[0m
+[22m09:49:59.369 [info] [Validator.run] credence check exit=0[0m
+[36m09:49:59.369 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m09:49:59.369 [info] [Validator.run] credence check: passed[0m
+[22m09:49:59.369 [info] [Validator.run] step 6/6: tests[0m
+[22m09:50:00.006 [info] [Validator.run] test exit=0[0m
+[36m09:50:00.006 [debug] [Validator.run] test output:
+Running ExUnit with seed: 795668, max_cases: 48
+
+.....
+Finished in 0.1 seconds (0.00s async, 0.1s sync)
+5 tests, 0 failures
+[0m
+[22m09:50:00.006 [info] [Validator.run] tests: PASSED[0m
+[22m09:50:00.006 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m09:50:00.006 [debug] [Validator.run] final module (1355 chars):
+defmodule Solution do
+  @moduledoc """
+  Functions for working with perfect numbers.
+  """
+
+  @doc """
+  Returns a list containing the first `n` perfect numbers, sorted in increasing order.
+
+  ## Examples
+
+      iex> Solution.perfect_numbers(1)
+      [6]
+
+      iex> Solution.perfect_numbers(2)
+      [6, 28]
+
+      iex> Solution.perfect_numbers(0)
+      []
+  """
+  @spec perfect_numbers(non_neg_integer()) :: list(pos_integer())
+  def perfect_numbers(0), do: []
+
+  def perfect_numbers(n) when is_integer(n) and n > 0 do
+    find_perfect_numbers(n, 6)
+  end
+
+  defp find_perfect_numbers(count, candidate) do
+    result = collect_perfect_numbers(count, candidate, [])
+    Enum.reverse(result)
+  end
+
+  defp collect_perfect_numbers(0, _candidate, acc), do: acc
+
+  defp collect_perfect_numbers(remaining, candidate, acc) do
+    if perfect?(candidate) do
+      collect_perfect_numbers(remaining - 1, candidate + 1, [candidate | acc])
+    else
+      collect_perfect_numbers(remaining, candidate + 1, acc)
+    end
+  end
+
+  defp perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    max_divisor = trunc(number / 2)
+
+    if max_divisor == 0 do
+      0
+    else
+      1..max_divisor
+      |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+      |> Enum.sum()
+    end
+  end
+end
+[0m
+[36m09:50:00.006 [debug] [Validator.run] final test (537 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "first perfect number" do
+    assert Solution.perfect_numbers(1) == [6]
+  end
+
+  test "first two perfect numbers" do
+    assert Solution.perfect_numbers(2) == [6, 28]
+  end
+
+  test "first three perfect numbers" do
+    assert Solution.perfect_numbers(3) == [6, 28, 496]
+  end
+
+  test "first four perfect numbers" do
+    assert Solution.perfect_numbers(4) == [6, 28, 496, 8128]
+  end
+
+  test "zero perfect numbers" do
+    assert Solution.perfect_numbers(0) == []
+  end
+end
+[0m
+[22m09:50:00.006 [info] [Solve attempt 4] validation PASSED[0m
+[36m09:50:00.022 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Pattern.NoIsPrefixForNonGuard
+  - Credence.Pattern.NoRedundantAssignment
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 3135 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_graphemes_for_character_comparisons
+
+## row 62263 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_join_o (truncated)[0m
+[36m09:50:54.801 [debug] [LLM.call] finish=stop len=1138 usage=%{"completion_tokens" => 1703, "completion_tokens_details" => %{"reasoning_tokens" => 1384}, "prompt_tokens" => 27531, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 29234}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_no_unused_intermediate_variable
+===PHASE===
+pattern
+===BEFORE===
+defmodule Solution do
+  def perfect?(number) do
+    sum = sum_of_proper_divisors(number)
+    sum == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    max_divisor = trunc(number / 2)
+
+    if max_divisor == 0 do
+      0
+    else
+      1..max_divisor
+      |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+      |> Enum.sum()
+    end
+  end
+end
+===AFTER===
+defmodule Solution do
+  def perfect?(number) do
+    sum_of_proper_divisors(number) == number
+  end
+
+  defp sum_of_proper_divisors(number) do
+    max_divisor = trunc(number / 2)
+
+    if max_divisor == 0 do
+      0
+    else
+      1..max_divisor
+      |> Enum.filter(fn divisor -> rem(number, divisor) == 0 end)
+      |> Enum.sum()
+    end
+  end
+end
+===ASSUMPTIONS===
+===RATIONALE===
+Intermediate variable `sum` is assigned once and used exactly once in the immediately following expression; the assignment is redundant and unidiomatic. Distinct from NoRedundantAssignment which targets return-position alias (`result = x; result`).
+===END===[0m
+[22m09:50:54.801 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 54778ms — ok[0m
+[36m09:50:54.801 [debug] [Budget] spent so far (est.): $3.8414[0m
+[22m09:50:55.908 [info] [Router] equiv: DIVERGES (after-does not compile: nofile: cannot compile file (errors have been logged) minimal_set=none) — behaviour_diverged[0m

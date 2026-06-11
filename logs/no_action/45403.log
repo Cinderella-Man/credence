@@ -1,0 +1,1190 @@
+[22m07:04:42.776 [info] [idx=45403] entry_point=is_balanced_tree[0m
+[36m07:04:42.776 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to determine if a given binary tree is height-balanced. A binary tree is height-balanced if the left and right subtrees of every node differ in height by no more than 1.
+
+## Python Solution
+```python
+# Definition for a binary tree node.
+class TreeNode:
+    def __init__(self, x):
+        self.val = x
+        self.left = None
+        self.right = None
+
+def is_balanced_tree(root: TreeNode) -> bool:
+    def check_balance(t: TreeNode):
+        if t is None:
+            return 0
+        left_height = check_balance(t.left)
+        if left_height == -1:
+            return -1
+        right_height = check_balance(t.right)
+        if right_height == -1:
+            return -1
+        if abs(left_height - right_height) > 1:
+            return -1
+        return max(left_height, right_height) + 1
+
+    return check_balance(root) != -1
+
+# Construct test trees
+t1 = TreeNode(3)
+t1.left = TreeNode(9)
+t1.right = TreeNode(20)
+t1.right.left = TreeNode(15)
+t1.right.right = TreeNode(7)
+
+t2 = TreeNode(1)
+t2.left = TreeNode(2)
+t2.right = TreeNode(2)
+t2.left.left = TreeNode(3)
+t2.left.right = TreeNode(3)
+t2.left.left.left = TreeNode(4)
+
+# Test cases
+assert is_balanced_tree(t1) == True
+assert is_balanced_tree(t2) == False
+```
+
+## Python Tests
+# Test case 1
+#     9  20
+#      15   7
+#       3
+assert is_balanced_tree(t1) == True
+# This tree is balanced.
+
+#       /  \
+#        1
+#       / \
+#     / \
+# Test case 2
+#    3   3
+assert is_balanced_tree(t2) == False
+#  4
+#   /
+#      / \
+# This tree is not balanced because the left subtree of node 2 is deeper by more than 1 compared to its right subtree.
+#      2   2
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `balanced_tree?`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[22m07:04:55.478 [info] [Budget] HEARTBEAT — 711 paid calls, est $3.3004 over 884.7min → ~$0.2238/hr, ~$5.37/day (tok in=4212524 cache_rd=37214592 out=1533333)[0m
+[36m07:05:16.737 [debug] [LLM.call] finish=stop len=3347 usage=%{"completion_tokens" => 1818, "completion_tokens_details" => %{"reasoning_tokens" => 782}, "prompt_tokens" => 826, "prompt_tokens_details" => %{}, "total_tokens" => 2644}
+[LLM.call] response:
+---INSTRUCTION---
+Write an Elixir function `balanced_tree?/1` that determines if a given binary tree is height-balanced. A binary tree is height-balanced if the left and right subtrees of every node differ in height by no more than 1.
+
+The tree is represented as:
+- An empty tree (leaf) is represented by the atom `:leaf`.
+- A non-empty tree node is represented as `{value, left, right}` where:
+  - `value` is the node's value (integer).
+  - `left` is the left subtree (which can be `:leaf` or another node).
+  - `right` is the right subtree (which can be `:leaf` or another node).
+
+The function should return `true` if the tree is balanced, `false` otherwise.
+
+An empty tree (`:leaf`) is considered balanced (height 0).
+
+The algorithm should run in linear time relative to the number of nodes, performing a single traversal.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  describe "balanced_tree?" do
+    test "balanced tree" do
+      #     3
+      #    / \
+      #   9  20
+      #     /  \
+      #    15   7
+      tree = {3, {9, :leaf, :leaf}, {20, {15, :leaf, :leaf}, {7, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "unbalanced tree" do
+      #       1
+      #      / \
+      #     2   2
+      #    / \
+      #   3   3
+      #  /
+      # 4
+      tree = {1, {2, {3, {4, :leaf, :leaf}, :leaf}, {3, :leaf, :leaf}}, {2, :leaf, :leaf}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "empty tree" do
+      assert Solution.balanced_tree?(:leaf) == true
+    end
+
+    test "single node" do
+      assert Solution.balanced_tree?({1, :leaf, :leaf}) == true
+    end
+
+    test "left heavy but balanced" do
+      #     1
+      #    /
+      #   2
+      tree = {1, {2, :leaf, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "left heavy and unbalanced" do
+      #       1
+      #      /
+      #     2
+      #    /
+      #   3
+      tree = {1, {2, {3, :leaf, :leaf}, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "right heavy and unbalanced" do
+      #   1
+      #    \
+      #     2
+      #      \
+      #       3
+      tree = {1, :leaf, {2, :leaf, {3, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "complex balanced tree" do
+      #       1
+      #      / \
+      #     2   3
+      #    / \   \
+      #   4   5   6
+      tree = {1, {2, {4, :leaf, :leaf}, {5, :leaf, :leaf}}, {3, :leaf, {6, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  @spec balanced_tree?(binary_tree) :: boolean
+        when binary_tree: :leaf | {integer, binary_tree, binary_tree}
+  def balanced_tree?(tree) do
+    case check_height(tree) do
+      {:ok, _height} -> true
+      :unbalanced -> false
+    end
+  end
+
+  defp check_height(:leaf), do: {:ok, 0}
+  defp check_height({_value, left, right}) do
+    case check_height(left) do
+      :unbalanced -> :unbalanced
+      {:ok, left_height} ->
+        case check_height(right) do
+          :unbalanced -> :unbalanced
+          {:ok, right_height} ->
+            if abs(left_height - right_height) > 1 do
+              :unbalanced
+            else
+              {:ok, max(left_height, right_height) + 1}
+            end
+        end
+    end
+  end
+end
+---END---[0m
+[22m07:05:16.737 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 33960ms — ok[0m
+[36m07:05:16.737 [debug] [Budget] spent so far (est.): $3.3024[0m
+[22m07:05:17.778 [info] [RoundTrip] reference PASSED tests[0m
+[22m07:05:17.778 [info] [idx=45403] translation fresh — solving[0m
+[22m07:05:17.778 [info] ===SOLVE_BOUNDARY===[0m
+[22m07:05:17.778 [info] [Solve attempt 1] generating (fn=balanced_tree?)[0m
+[36m07:05:17.778 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write an Elixir function `balanced_tree?/1` that determines if a given binary tree is height-balanced. A binary tree is height-balanced if the left and right subtrees of every node differ in height by no more than 1.
+
+The tree is represented as:
+- An empty tree (leaf) is represented by the atom `:leaf`.
+- A non-empty tree node is represented as `{value, left, right}` where:
+  - `value` is the node's value (integer).
+  - `left` is the left subtree (which can be `:leaf` or another node).
+  - `right` is the right subtree (which can be `:leaf` or another node).
+
+The function should return `true` if the tree is balanced, `false` otherwise.
+
+An empty tree (`:leaf`) is considered balanced (height 0).
+
+The algorithm should run in linear time relative to the number of nodes, performing a single traversal.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  describe "balanced_tree?" do
+    test "balanced tree" do
+      #     3
+      #    / \
+      #   9  20
+      #     /  \
+      #    15   7
+      tree = {3, {9, :leaf, :leaf}, {20, {15, :leaf, :leaf}, {7, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "unbalanced tree" do
+      #       1
+      #      / \
+      #     2   2
+      #    / \
+      #   3   3
+      #  /
+      # 4
+      tree = {1, {2, {3, {4, :leaf, :leaf}, :leaf}, {3, :leaf, :leaf}}, {2, :leaf, :leaf}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "empty tree" do
+      assert Solution.balanced_tree?(:leaf) == true
+    end
+
+    test "single node" do
+      assert Solution.balanced_tree?({1, :leaf, :leaf}) == true
+    end
+
+    test "left heavy but balanced" do
+      #     1
+      #    /
+      #   2
+      tree = {1, {2, :leaf, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "left heavy and unbalanced" do
+      #       1
+      #      /
+      #     2
+      #    /
+      #   3
+      tree = {1, {2, {3, :leaf, :leaf}, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "right heavy and unbalanced" do
+      #   1
+      #    \
+      #     2
+      #      \
+      #       3
+      tree = {1, :leaf, {2, :leaf, {3, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "complex balanced tree" do
+      #       1
+      #      / \
+      #     2   3
+      #    / \   \
+      #   4   5   6
+      tree = {1, {2, {4, :leaf, :leaf}, {5, :leaf, :leaf}}, {3, :leaf, {6, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+  end
+end
+```
+
+Module: `Solution`. Function: `balanced_tree?`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m07:05:26.849 [debug] [LLM.call] finish=stop len=2887 usage=%{"completion_tokens" => 960, "prompt_tokens" => 1109, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 2069}
+[LLM.call] response:
+---MODULE---
+@doc """
+Determines if a given binary tree is height-balanced.
+
+A binary tree is height-balanced if the left and right subtrees of every
+node differ in height by no more than 1.
+
+The tree is represented as:
+- `:leaf` for an empty tree
+- `{value, left, right}` for a node
+
+The function returns `true` if the tree is balanced, `false` otherwise.
+An empty tree is considered balanced.
+"""
+@spec balanced_tree?(term()) :: boolean()
+def balanced_tree?(tree) do
+  case check_balance(tree) do
+    {:ok, _height} -> true
+    :not_balanced -> false
+  end
+end
+
+# Base case: empty tree is balanced with height 0
+defp check_balance(:leaf), do: {:ok, 0}
+
+# Recursive case: check both subtrees
+defp check_balance({_value, left_subtree, right_subtree}) do
+  with {:ok, left_height} <- check_balance(left_subtree),
+       {:ok, right_height} <- check_balance(right_subtree) do
+    height_difference = abs(left_height - right_height)
+
+    if height_difference <= 1 do
+      current_height = max(left_height, right_height) + 1
+      {:ok, current_height}
+    else
+      :not_balanced
+    end
+  else
+    :not_balanced -> :not_balanced
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  describe "balanced_tree?" do
+    test "balanced tree" do
+      #     3
+      #    / \
+      #   9  20
+      #     /  \
+      #    15   7
+      tree = {3, {9, :leaf, :leaf}, {20, {15, :leaf, :leaf}, {7, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "unbalanced tree" do
+      #       1
+      #      / \
+      #     2   2
+      #    / \
+      #   3   3
+      #  /
+      # 4
+      tree = {1, {2, {3, {4, :leaf, :leaf}, :leaf}, {3, :leaf, :leaf}}, {2, :leaf, :leaf}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "empty tree" do
+      assert Solution.balanced_tree?(:leaf) == true
+    end
+
+    test "single node" do
+      assert Solution.balanced_tree?({1, :leaf, :leaf}) == true
+    end
+
+    test "left heavy but balanced" do
+      #     1
+      #    /
+      #   2
+      tree = {1, {2, :leaf, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "left heavy and unbalanced" do
+      #       1
+      #      /
+      #     2
+      #    /
+      #   3
+      tree = {1, {2, {3, :leaf, :leaf}, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "right heavy and unbalanced" do
+      #   1
+      #    \
+      #     2
+      #      \
+      #       3
+      tree = {1, :leaf, {2, :leaf, {3, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "complex balanced tree" do
+      #       1
+      #      / \
+      #     2   3
+      #    / \   \
+      #   4   5   6
+      tree = {1, {2, {4, :leaf, :leaf}, {5, :leaf, :leaf}}, {3, :leaf, {6, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+  end
+end
+---END---[0m
+[22m07:05:26.849 [info] [LLM.call] local_qwen_thinking completed in 9070ms — ok[0m
+[22m07:05:26.849 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m07:05:26.849 [debug] [Validator.run] module code (1125 chars):
+@doc """
+Determines if a given binary tree is height-balanced.
+
+A binary tree is height-balanced if the left and right subtrees of every
+node differ in height by no more than 1.
+
+The tree is represented as:
+- `:leaf` for an empty tree
+- `{value, left, right}` for a node
+
+The function returns `true` if the tree is balanced, `false` otherwise.
+An empty tree is considered balanced.
+"""
+@spec balanced_tree?(term()) :: boolean()
+def balanced_tree?(tree) do
+  case check_balance(tree) do
+    {:ok, _height} -> true
+    :not_balanced -> false
+  end
+end
+
+# Base case: empty tree is balanced with height 0
+defp check_balance(:leaf), do: {:ok, 0}
+
+# Recursive case: check both subtrees
+defp check_balance({_value, left_subtree, right_subtree}) do
+  with {:ok, left_height} <- check_balance(left_subtree),
+       {:ok, right_height} <- check_balance(right_subtree) do
+    height_difference = abs(left_height - right_height)
+
+    if height_difference <= 1 do
+      current_height = max(left_height, right_height) + 1
+      {:ok, current_height}
+    else
+      :not_balanced
+    end
+  else
+    :not_balanced -> :not_balanced
+  end
+end[0m
+[36m07:05:26.849 [debug] [Validator.run] test code (1727 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  describe "balanced_tree?" do
+    test "balanced tree" do
+      #     3
+      #    / \
+      #   9  20
+      #     /  \
+      #    15   7
+      tree = {3, {9, :leaf, :leaf}, {20, {15, :leaf, :leaf}, {7, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "unbalanced tree" do
+      #       1
+      #      / \
+      #     2   2
+      #    / \
+      #   3   3
+      #  /
+      # 4
+      tree = {1, {2, {3, {4, :leaf, :leaf}, :leaf}, {3, :leaf, :leaf}}, {2, :leaf, :leaf}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "empty tree" do
+      assert Solution.balanced_tree?(:leaf) == true
+    end
+
+    test "single node" do
+      assert Solution.balanced_tree?({1, :leaf, :leaf}) == true
+    end
+
+    test "left heavy but balanced" do
+      #     1
+      #    /
+      #   2
+      tree = {1, {2, :leaf, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "left heavy and unbalanced" do
+      #       1
+      #      /
+      #     2
+      #    /
+      #   3
+      tree = {1, {2, {3, :leaf, :leaf}, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "right heavy and unbalanced" do
+      #   1
+      #    \
+      #     2
+      #      \
+      #       3
+      tree = {1, :leaf, {2, :leaf, {3, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "complex balanced tree" do
+      #       1
+      #      / \
+      #     2   3
+      #    / \   \
+      #   4   5   6
+      tree = {1, {2, {4, :leaf, :leaf}, {5, :leaf, :leaf}}, {3, :leaf, {6, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+  end
+end[0m
+[36m07:05:26.850 [debug] [Budget] spent so far (est.): $3.3037[0m
+[22m07:05:26.850 [info] [Validator.run] step 1/6: credence fix[0m
+[36m07:05:26.850 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m07:05:27.478 [debug] [run_credence_fix] exit=0 output:
+
+07:05:27.377 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+07:05:27.379 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+07:05:27.381 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+07:05:27.381 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+07:05:27.381 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+07:05:27.383 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Determines if a given binary tree is height-balanced.
+  L2 + @doc """
+  L3 - 
+  L3 + Determines if a given binary tree is height-balanced.
+  L4 - A binary tree is height-balanced if the left and right subtrees of every
+  L4 + 
+  L5 - node differ in height by no more than 1.
+  L5 + A binary tree is height-balanced if the left and right subtrees of every
+  L6 - 
+  L6 + node differ in height by no more than 1.
+  L7 - The tree is represented as:
+  L7 + 
+  L8 - - `:leaf` for an empty tree
+  L8 + The tree is represented as:
+  L9 - - `{value, left, right}` for a node
+  L9 + - `:leaf` for an empty tree
+  L10 - 
+  L10 + - `{value, left, right}` for a node
+  L11 - The function returns `true` if the tree is balanced, `false` otherwise.
+  L11 + 
+  L12 - An empty tree is considered balanced.
+  L12 + The function returns `true` if the tree is balanced, `false` otherwise.
+  L13 - """
+  L13 + An empty tree is considered balanced.
+  L14 - @spec balanced_tree?(term()) :: boolean()
+  L14 + """
+  L15 - def balanced_tree?(tree) do
+  L15 + @spec balanced_tree?(term()) :: boolean()
+  L16 -   case check_balance(tree) do
+  L16 + def balanced_tree?(tree) do
+  L17 -     {:ok, _height} -> true
+  L17 +   case check_balance(tree) do
+  L18 -     :not_balanced -> false
+  L18 +     {:ok, _height} -> true
+  L19 -   end
+  L19 +     :not_balanced -> false
+  L20 - end
+  L20 +   end
+  L21 - 
+  L21 + end
+  L22 - # Base case: empty tree is balanced with height 0
+  L22 + 
+  L23 - defp check_balance(:leaf), do: {:ok, 0}
+  L23 + # Base case: empty tree is balanced with height 0
+  L24 - 
+  L24 + defp check_balance(:leaf), do: {:ok, 0}
+  L25 - # Recursive case: check both subtrees
+  L25 + 
+  L26 - defp check_balance({_value, left_subtree, right_subtree}) do
+  L26 + # Recursive case: check both subtrees
+  L27 -   with {:ok, left_height} <- check_balance(left_subtree),
+  L27 + defp check_balance({_value, left_subtree, right_subtree}) do
+  L28 -        {:ok, right_height} <- check_balance(right_subtree) do
+  L28 +   with {:ok, left_height} <- check_balance(left_subtree),
+  L29 -     height_difference = abs(left_height - right_height)
+  L29 +        {:ok, right_height} <- check_balance(right_subtree) do
+  L30 - 
+  L30 +     height_difference = abs(left_height - right_height)
+  L31 -     if height_difference <= 1 do
+  L31 + 
+  L32 -       current_height = max(left_height, right_height) + 1
+  L32 +     if height_difference <= 1 do
+  L33 -       {:ok, current_height}
+  L33 +       current_height = max(left_height, right_height) + 1
+  L34 -     else
+  L34 +       {:ok, current_height}
+  L35 -       :not_balanced
+  L35 +     else
+  L36 -     end
+  L36 +       :not_balanced
+  L37 -   else
+  L37 +     end
+  L38 -     :not_balanced -> :not_balanced
+  L38 +   else
+  L39 -   end
+  L39 +     :not_balanced -> :not_balanced
+  L40 - end
+  L40 +   end
+  L41 + end
+  L42 + end
+  L43 + 
+
+07:05:27.383 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+07:05:27.396 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+07:05:27.402 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+07:05:27.402 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+07:05:27.403 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+07:05:27.456 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m07:05:27.478 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m07:05:28.068 [info] [run_credence_fix] fix compiles OK[0m
+[36m07:05:28.068 [debug] [run_credence_fix] original:
+@doc """
+Determines if a given binary tree is height-balanced.
+
+A binary tree is height-balanced if the left and right subtrees of every
+node differ in height by no more than 1.
+
+The tree is represented as:
+- `:leaf` for an empty tree
+- `{value, left, right}` for a node
+
+The function returns `true` if the tree is balanced, `false` otherwise.
+An empty tree is considered balanced.
+"""
+@spec balanced_tree?(term()) :: boolean()
+def balanced_tree?(tree) do
+  case check_balance(tree) do
+    {:ok, _height} -> true
+    :not_balanced -> false
+  end
+end
+
+# Base case: empty tree is balanced with height 0
+defp check_balance(:leaf), do: {:ok, 0}
+
+# Recursive case: check both subtrees
+defp check_balance({_value, left_subtree, right_subtree}) do
+  with {:ok, left_height} <- check_balance(left_subtree),
+       {:ok, right_height} <- check_balance(right_subtree) do
+    height_difference = abs(left_height - right_height)
+
+    if height_difference <= 1 do
+      current_height = max(left_height, right_height) + 1
+      {:ok, current_height}
+    else
+      :not_balanced
+    end
+  else
+    :not_balanced -> :not_balanced
+  end
+end[0m
+[36m07:05:28.068 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Determines if a given binary tree is height-balanced.
+
+A binary tree is height-balanced if the left and right subtrees of every
+node differ in height by no more than 1.
+
+The tree is represented as:
+- `:leaf` for an empty tree
+- `{value, left, right}` for a node
+
+The function returns `true` if the tree is balanced, `false` otherwise.
+An empty tree is considered balanced.
+"""
+@spec balanced_tree?(term()) :: boolean()
+def balanced_tree?(tree) do
+  case check_balance(tree) do
+    {:ok, _height} -> true
+    :not_balanced -> false
+  end
+end
+
+# Base case: empty tree is balanced with height 0
+defp check_balance(:leaf), do: {:ok, 0}
+
+# Recursive case: check both subtrees
+defp check_balance({_value, left_subtree, right_subtree}) do
+  with {:ok, left_height} <- check_balance(left_subtree),
+       {:ok, right_height} <- check_balance(right_subtree) do
+    height_difference = abs(left_height - right_height)
+
+    if height_difference <= 1 do
+      current_height = max(left_height, right_height) + 1
+      {:ok, current_height}
+    else
+      :not_balanced
+    end
+  else
+    :not_balanced -> :not_balanced
+  end
+end
+end
+[0m
+[22m07:05:28.068 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m07:05:28.068 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Determines if a given binary tree is height-balanced.
+
+A binary tree is height-balanced if the left and right subtrees of every
+node differ in height by no more than 1.
+
+The tree is represented as:
+- `:leaf` for an empty tree
+- `{value, left, right}` for a node
+
+The function returns `true` if the tree is balanced, `false` otherwise.
+An empty tree is considered balanced.
+"""
+@spec balanced_tree?(term()) :: boolean()
+def balanced_tree?(tree) do
+  case check_balance(tree) do
+    {:ok, _height} -> true
+    :not_balanced -> false
+  end
+end
+
+# Base case: empty tree is balanced with height 0
+defp check_balance(:leaf), do: {:ok, 0}
+
+# Recursive case: check both subtrees
+defp check_balance({_value, left_subtree, right_subtree}) do
+  with {:ok, left_height} <- check_balance(left_subtree),
+       {:ok, right_height} <- check_balance(right_subtree) do
+    height_difference = abs(left_height - right_height)
+
+    if height_difference <= 1 do
+      current_height = max(left_height, right_height) + 1
+      {:ok, current_height}
+    else
+      :not_balanced
+    end
+  else
+    :not_balanced -> :not_balanced
+  end
+end[0m
+[36m07:05:28.068 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Determines if a given binary tree is height-balanced.
+
+A binary tree is height-balanced if the left and right subtrees of every
+node differ in height by no more than 1.
+
+The tree is represented as:
+- `:leaf` for an empty tree
+- `{value, left, right}` for a node
+
+The function returns `true` if the tree is balanced, `false` otherwise.
+An empty tree is considered balanced.
+"""
+@spec balanced_tree?(term()) :: boolean()
+def balanced_tree?(tree) do
+  case check_balance(tree) do
+    {:ok, _height} -> true
+    :not_balanced -> false
+  end
+end
+
+# Base case: empty tree is balanced with height 0
+defp check_balance(:leaf), do: {:ok, 0}
+
+# Recursive case: check both subtrees
+defp check_balance({_value, left_subtree, right_subtree}) do
+  with {:ok, left_height} <- check_balance(left_subtree),
+       {:ok, right_height} <- check_balance(right_subtree) do
+    height_difference = abs(left_height - right_height)
+
+    if height_difference <= 1 do
+      current_height = max(left_height, right_height) + 1
+      {:ok, current_height}
+    else
+      :not_balanced
+    end
+  else
+    :not_balanced -> :not_balanced
+  end
+end
+end
+[0m
+[36m07:05:28.068 [debug] [propagate_is_renames] old functions: ["balanced_tree?", "check_balance"][0m
+[36m07:05:28.068 [debug] [propagate_is_renames] new functions: ["balanced_tree?", "check_balance"][0m
+[36m07:05:28.068 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m07:05:28.068 [info] [Validator.run] step 2/6: compile[0m
+[22m07:05:28.630 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m07:05:28.630 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m07:05:28.630 [info] [Validator.run] step 3/6: format[0m
+[22m07:05:28.943 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m07:05:29.253 [debug] [Validator.run] format fix output: [0m
+[22m07:05:29.253 [info] [Validator.run] step 4/6: credo[0m
+[36m07:05:29.724 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m07:05:29.724 [info] [Validator.run] credo: no issues[0m
+[22m07:05:29.724 [info] [Validator.run] step 5/6: credence check[0m
+[22m07:05:30.436 [info] [Validator.run] credence check exit=0[0m
+[36m07:05:30.436 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m07:05:30.436 [info] [Validator.run] credence check: passed[0m
+[22m07:05:30.436 [info] [Validator.run] step 6/6: tests[0m
+[22m07:05:30.900 [info] [Validator.run] test exit=0[0m
+[36m07:05:30.900 [debug] [Validator.run] test output:
+Running ExUnit with seed: 858495, max_cases: 48
+
+........
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+8 tests, 0 failures
+[0m
+[22m07:05:30.900 [info] [Validator.run] tests: PASSED[0m
+[22m07:05:30.900 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m07:05:30.900 [debug] [Validator.run] final module (1220 chars):
+defmodule Solution do
+  @doc """
+  Determines if a given binary tree is height-balanced.
+
+  A binary tree is height-balanced if the left and right subtrees of every
+  node differ in height by no more than 1.
+
+  The tree is represented as:
+  - `:leaf` for an empty tree
+  - `{value, left, right}` for a node
+
+  The function returns `true` if the tree is balanced, `false` otherwise.
+  An empty tree is considered balanced.
+  """
+  @spec balanced_tree?(term()) :: boolean()
+  def balanced_tree?(tree) do
+    case check_balance(tree) do
+      {:ok, _height} -> true
+      :not_balanced -> false
+    end
+  end
+
+  # Base case: empty tree is balanced with height 0
+  defp check_balance(:leaf), do: {:ok, 0}
+
+  # Recursive case: check both subtrees
+  defp check_balance({_value, left_subtree, right_subtree}) do
+    with {:ok, left_height} <- check_balance(left_subtree),
+         {:ok, right_height} <- check_balance(right_subtree) do
+      height_difference = abs(left_height - right_height)
+
+      if height_difference <= 1 do
+        current_height = max(left_height, right_height) + 1
+        {:ok, current_height}
+      else
+        :not_balanced
+      end
+    else
+      :not_balanced -> :not_balanced
+    end
+  end
+end
+[0m
+[36m07:05:30.900 [debug] [Validator.run] final test (1728 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  describe "balanced_tree?" do
+    test "balanced tree" do
+      #     3
+      #    / \
+      #   9  20
+      #     /  \
+      #    15   7
+      tree = {3, {9, :leaf, :leaf}, {20, {15, :leaf, :leaf}, {7, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "unbalanced tree" do
+      #       1
+      #      / \
+      #     2   2
+      #    / \
+      #   3   3
+      #  /
+      # 4
+      tree = {1, {2, {3, {4, :leaf, :leaf}, :leaf}, {3, :leaf, :leaf}}, {2, :leaf, :leaf}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "empty tree" do
+      assert Solution.balanced_tree?(:leaf) == true
+    end
+
+    test "single node" do
+      assert Solution.balanced_tree?({1, :leaf, :leaf}) == true
+    end
+
+    test "left heavy but balanced" do
+      #     1
+      #    /
+      #   2
+      tree = {1, {2, :leaf, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == true
+    end
+
+    test "left heavy and unbalanced" do
+      #       1
+      #      /
+      #     2
+      #    /
+      #   3
+      tree = {1, {2, {3, :leaf, :leaf}, :leaf}, :leaf}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "right heavy and unbalanced" do
+      #   1
+      #    \
+      #     2
+      #      \
+      #       3
+      tree = {1, :leaf, {2, :leaf, {3, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == false
+    end
+
+    test "complex balanced tree" do
+      #       1
+      #      / \
+      #     2   3
+      #    / \   \
+      #   4   5   6
+      tree = {1, {2, {4, :leaf, :leaf}, {5, :leaf, :leaf}}, {3, :leaf, {6, :leaf, :leaf}}}
+      assert Solution.balanced_tree?(tree) == true
+    end
+  end
+end
+[0m
+[22m07:05:30.900 [info] [Solve attempt 1] validation PASSED[0m
+[36m07:05:30.911 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE on (truncated)[0m
+[36m07:05:47.505 [debug] [LLM.call] finish=stop len=301 usage=%{"completion_tokens" => 638, "completion_tokens_details" => %{"reasoning_tokens" => 571}, "prompt_tokens" => 10380, "prompt_tokens_details" => %{"cached_tokens" => 2048}, "total_tokens" => 11018}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+The final code is idiomatic Elixir: pattern matching, tagged-tuple returns, with/else for early bailout, and proper function structure. No deterministic non-idiomatic residual exists worth a rule; the code represents a clean, standard implementation.
+===END===[0m
+[22m07:05:47.505 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 16594ms — ok[0m
+[36m07:05:47.505 [debug] [Budget] spent so far (est.): $3.3087[0m

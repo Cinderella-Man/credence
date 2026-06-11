@@ -1,0 +1,3770 @@
+[22m21:03:55.429 [info] [idx=72461] entry_point=nearest_valid_point[0m
+[36m21:03:55.429 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to find the nearest valid point from a given point. A valid point has the same x or y coordinate as the given point. The function should return the index of the nearest valid point from the list of points. If there are multiple valid points with the same minimum distance, return the smallest index. If there are no valid points, return -1.
+
+## Python Solution
+```python
+def nearest_valid_point(x, y, points):
+    dist, ans = float('inf'), -1
+    for i, point in enumerate(points):
+        dx, dy = abs(point[0] - x), abs(point[1] - y)
+        if not dx * dy and dx + dy < dist:
+            dist, ans = dx + dy, i
+    return ans
+```
+
+## Python Tests
+assert nearest_valid_point(3, 4, [[3,4]]) == 0
+assert nearest_valid_point(3, 4, [[2,3]]) == -1
+assert nearest_valid_point(3, 4, [[1,2],[3,1],[2,4],[2,3],[4,4]]) == 2
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `nearest_valid_point`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m21:04:46.811 [debug] [LLM.call] finish=stop len=2048 usage=%{"completion_tokens" => 2038, "completion_tokens_details" => %{"reasoning_tokens" => 1413}, "prompt_tokens" => 596, "prompt_tokens_details" => %{}, "total_tokens" => 2634}
+[LLM.call] response:
+---INSTRUCTION---
+Given an integer point (x, y) and a list of integer points, find the index of the nearest valid point in the list. A point is valid if it has the same x-coordinate or the same y-coordinate as the given point. The distance is the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points share the smallest distance, return the smallest index. If there are no valid points, return -1. Define a function `nearest_valid_point/3` that takes x, y, and a list of points (each point is a two-element list) and returns the integer index.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  @spec nearest_valid_point(integer(), integer(), [[integer()]]) :: integer()
+  def nearest_valid_point(x, y, points) do
+    points
+    |> Enum.with_index()
+    |> Enum.reduce({:infinity, -1}, fn {point, index}, {min_dist, best_index} ->
+      [px, py] = point
+      dx = abs(px - x)
+      dy = abs(py - y)
+
+      if (dx == 0 or dy == 0) and dx + dy < min_dist do
+        {dx + dy, index}
+      else
+        {min_dist, best_index}
+      end
+    end)
+    |> elem(1)
+  end
+end
+---END---[0m
+[22m21:04:46.811 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 51381ms — ok[0m
+[36m21:04:46.812 [debug] [Budget] spent so far (est.): $0.8933[0m
+[22m21:04:47.839 [info] [RoundTrip] reference PASSED tests[0m
+[22m21:04:47.840 [info] [idx=72461] translation fresh — solving[0m
+[22m21:04:47.840 [info] ===SOLVE_BOUNDARY===[0m
+[22m21:04:47.840 [info] [Solve attempt 1] generating (fn=nearest_valid_point)[0m
+[36m21:04:47.840 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Given an integer point (x, y) and a list of integer points, find the index of the nearest valid point in the list. A point is valid if it has the same x-coordinate or the same y-coordinate as the given point. The distance is the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points share the smallest distance, return the smallest index. If there are no valid points, return -1. Define a function `nearest_valid_point/3` that takes x, y, and a list of points (each point is a two-element list) and returns the integer index.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+```
+
+Module: `Solution`. Function: `nearest_valid_point`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:04:53.918 [debug] [LLM.call] finish=stop len=1964 usage=%{"completion_tokens" => 631, "prompt_tokens" => 727, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 1358}
+[LLM.call] response:
+---MODULE---
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn [px, py] -> px == x or py == y end)
+  |> Enum.map(fn [px, py] ->
+    distance = abs(px - x) + abs(py - y)
+    {distance, px, py}
+  end)
+  |> case do
+    [] -> -1
+    distances ->
+      {min_distance, _, _} =
+        Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+      
+      Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---END---[0m
+[22m21:04:53.918 [info] [LLM.call] local_qwen_thinking completed in 6078ms — ok[0m
+[22m21:04:53.918 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:04:53.919 [debug] [Validator.run] module code (974 chars):
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn [px, py] -> px == x or py == y end)
+  |> Enum.map(fn [px, py] ->
+    distance = abs(px - x) + abs(py - y)
+    {distance, px, py}
+  end)
+  |> case do
+    [] -> -1
+    distances ->
+      {min_distance, _, _} =
+        Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+      
+      Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+  end
+end[0m
+[36m21:04:53.919 [debug] [Validator.run] test code (955 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end[0m
+[36m21:04:53.919 [debug] [Budget] spent so far (est.): $0.8942[0m
+[22m21:04:53.919 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:04:53.919 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:04:54.560 [debug] [run_credence_fix] exit=0 output:
+
+21:04:54.444 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:04:54.446 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:04:54.448 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+21:04:54.448 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+21:04:54.448 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+21:04:54.450 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 -   Given an integer point (x, y) and a list of integer points, find the index
+  L2 + @doc """
+  L3 -   of the nearest valid point in the list. A point is valid if it has the same
+  L3 +   Given an integer point (x, y) and a list of integer points, find the index
+  L4 -   x-coordinate or the same y-coordinate as the given point. The distance is
+  L4 +   of the nearest valid point in the list. A point is valid if it has the same
+  L5 -   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L5 +   x-coordinate or the same y-coordinate as the given point. The distance is
+  L6 -   share the smallest distance, return the smallest index. If there are no
+  L6 +   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L7 -   valid points, return -1.
+  L7 +   share the smallest distance, return the smallest index. If there are no
+  L8 - """
+  L8 +   valid points, return -1.
+  L9 - @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L9 + """
+  L10 -         integer()
+  L10 + @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L11 - def nearest_valid_point(x, y, points) do
+  L11 +         integer()
+  L12 -   points
+  L12 + def nearest_valid_point(x, y, points) do
+  L13 -   |> Enum.with_index()
+  L13 +   points
+  L14 -   |> Enum.filter(fn [px, py] -> px == x or py == y end)
+  L14 +   |> Enum.with_index()
+  L15 -   |> Enum.map(fn [px, py] ->
+  L15 +   |> Enum.filter(fn [px, py] -> px == x or py == y end)
+  L16 -     distance = abs(px - x) + abs(py - y)
+  L16 +   |> Enum.map(fn [px, py] ->
+  L17 -     {distance, px, py}
+  L17 +     distance = abs(px - x) + abs(py - y)
+  L18 -   end)
+  L18 +     {distance, px, py}
+  L19 -   |> case do
+  L19 +   end)
+  L20 -     [] -> -1
+  L20 +   |> case do
+  L21 -     distances ->
+  L21 +     [] -> -1
+  L22 -       {min_distance, _, _} =
+  L22 +     distances ->
+  L23 -         Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+  L23 +       {min_distance, _, _} =
+  L24 - 
+  L24 +         Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+  L25 -       Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+  L25 + 
+  L26 -   end
+  L26 +       Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+  L27 - end
+  L27 +   end
+  L28 + end
+  L29 + end
+  L30 + 
+
+21:04:54.450 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+21:04:54.465 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+21:04:54.470 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:04:54.470 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+21:04:54.470 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:04:54.536 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m21:04:54.560 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m21:04:55.134 [info] [run_credence_fix] fix compiles OK[0m
+[36m21:04:55.134 [debug] [run_credence_fix] original:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn [px, py] -> px == x or py == y end)
+  |> Enum.map(fn [px, py] ->
+    distance = abs(px - x) + abs(py - y)
+    {distance, px, py}
+  end)
+  |> case do
+    [] -> -1
+    distances ->
+      {min_distance, _, _} =
+        Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+      
+      Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+  end
+end[0m
+[36m21:04:55.134 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn [px, py] -> px == x or py == y end)
+  |> Enum.map(fn [px, py] ->
+    distance = abs(px - x) + abs(py - y)
+    {distance, px, py}
+  end)
+  |> case do
+    [] -> -1
+    distances ->
+      {min_distance, _, _} =
+        Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+      
+      Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+  end
+end
+end
+[0m
+[22m21:04:55.134 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m21:04:55.134 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn [px, py] -> px == x or py == y end)
+  |> Enum.map(fn [px, py] ->
+    distance = abs(px - x) + abs(py - y)
+    {distance, px, py}
+  end)
+  |> case do
+    [] -> -1
+    distances ->
+      {min_distance, _, _} =
+        Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+      
+      Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+  end
+end[0m
+[36m21:04:55.134 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn [px, py] -> px == x or py == y end)
+  |> Enum.map(fn [px, py] ->
+    distance = abs(px - x) + abs(py - y)
+    {distance, px, py}
+  end)
+  |> case do
+    [] -> -1
+    distances ->
+      {min_distance, _, _} =
+        Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+      
+      Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+  end
+end
+end
+[0m
+[36m21:04:55.134 [debug] [propagate_is_renames] old functions: ["nearest_valid_point"][0m
+[36m21:04:55.134 [debug] [propagate_is_renames] new functions: ["nearest_valid_point"][0m
+[36m21:04:55.134 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m21:04:55.134 [info] [Validator.run] step 2/6: compile[0m
+[22m21:04:55.478 [info] [Budget] HEARTBEAT — 161 paid calls, est $0.8942 over 284.7min → ~$0.1885/hr, ~$4.52/day (tok in=1089650 cache_rd=14782272 out=421818)[0m
+[22m21:04:55.725 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:04:55.725 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:04:55.725 [info] [Validator.run] step 3/6: format[0m
+[22m21:04:56.039 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:04:56.345 [debug] [Validator.run] format fix output: [0m
+[22m21:04:56.345 [info] [Validator.run] step 4/6: credo[0m
+[36m21:04:56.829 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:04:56.829 [info] [Validator.run] credo: no issues[0m
+[22m21:04:56.829 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:04:57.528 [info] [Validator.run] credence check exit=0[0m
+[36m21:04:57.528 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:04:57.528 [info] [Validator.run] credence check: passed[0m
+[22m21:04:57.528 [info] [Validator.run] step 6/6: tests[0m
+[22m21:04:58.008 [info] [Validator.run] test exit=2[0m
+[36m21:04:58.008 [debug] [Validator.run] test output:
+Running ExUnit with seed: 955229, max_cases: 48
+
+
+
+  1) test returns -1 when no valid point exists (SolutionTest)
+     test/solution_test.exs:8
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[2, 3], 0}
+
+     code: assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:9: (test)
+
+.
+
+  2) test returns 0 for a single valid point at the same coordinates (SolutionTest)
+     test/solution_test.exs:4
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[3, 4], 0}
+
+     code: assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:5: (test)
+
+
+
+  3) test point with matching x only (SolutionTest)
+     test/solution_test.exs:24
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[5, 0], 0}
+
+     code: assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:25: (test)
+
+
+
+  4) test point with matching y only (SolutionTest)
+     test/solution_test.exs:28
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[0, 10], 0}
+
+     code: assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:29: (test)
+
+
+
+  5) test returns the index of the nearest valid point among multiple candidates (SolutionTest)
+     test/solution_test.exs:12
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[1, 2], 0}
+
+     code: assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:13: (test)
+
+
+
+  6) test returns smallest index when distances are tied (SolutionTest)
+     test/solution_test.exs:16
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[0, 2], 0}
+
+     code: assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:17: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 6 failures
+[0m
+[33m21:04:58.008 [warning] [Validator.run] tests: FAILED[0m
+[22m21:04:58.008 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m21:04:58.008 [debug] [Validator.run] final module (1056 chars):
+defmodule Solution do
+  @doc """
+    Given an integer point (x, y) and a list of integer points, find the index
+    of the nearest valid point in the list. A point is valid if it has the same
+    x-coordinate or the same y-coordinate as the given point. The distance is
+    the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+    share the smallest distance, return the smallest index. If there are no
+    valid points, return -1.
+  """
+  @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+          integer()
+  def nearest_valid_point(x, y, points) do
+    points
+    |> Enum.with_index()
+    |> Enum.filter(fn [px, py] -> px == x or py == y end)
+    |> Enum.map(fn [px, py] ->
+      distance = abs(px - x) + abs(py - y)
+      {distance, px, py}
+    end)
+    |> case do
+      [] ->
+        -1
+
+      distances ->
+        {min_distance, _, _} =
+          Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+
+        Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+    end
+  end
+end
+[0m
+[36m21:04:58.008 [debug] [Validator.run] final test (956 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+[0m
+[33m21:04:58.008 [warning] [Solve attempt 1] validation FAILED: [:test][0m
+[22m21:04:58.008 [info] [Solve attempt 2] generating (fn=nearest_valid_point)[0m
+[36m21:04:58.008 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn [px, py] -> px == x or py == y end)
+  |> Enum.map(fn [px, py] ->
+    distance = abs(px - x) + abs(py - y)
+    {distance, px, py}
+  end)
+  |> case do
+    [] -> -1
+    distances ->
+      {min_distance, _, _} =
+        Enum.min_by(distances, fn {dist, _px, _py} -> dist end)
+      
+      Enum.find_index(distances, fn {dist, _px, _py} -> dist == min_distance end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 955229, max_cases: 48
+
+
+
+  1) test returns -1 when no valid point exists (SolutionTest)
+     test/solution_test.exs:8
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[2, 3], 0}
+
+     code: assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:9: (test)
+
+.
+
+  2) test returns 0 for a single valid point at the same coordinates (SolutionTest)
+     test/solution_test.exs:4
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[3, 4], 0}
+
+     code: assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:5: (test)
+
+
+
+  3) test point with matching x only (SolutionTest)
+     test/solution_test.exs:24
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[5, 0], 0}
+
+     code: assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:25: (test)
+
+
+
+  4) test point with matching y only (SolutionTest)
+     test/solution_test.exs:28
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[0, 10], 0}
+
+     code: assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:29: (test)
+
+
+
+  5) test returns the index of the nearest valid point among multiple candidates (SolutionTest)
+     test/solution_test.exs:12
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[1, 2], 0}
+
+     code: assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:13: (test)
+
+
+
+  6) test returns smallest index when distances are tied (SolutionTest)
+     test/solution_test.exs:16
+     ** (FunctionClauseError) no function clause matching in anonymous fn/1 in Solution.nearest_valid_point/3
+
+     The following arguments were given to anonymous fn/1 in Solution.nearest_valid_point/3:
+
+         # 1
+         {[0, 2], 0}
+
+     code: assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:15: anonymous fn/1 in Solution.nearest_valid_point/3
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:17: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 6 failures
+
+Reminder: module `Solution`, function `nearest_valid_point` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:05:05.338 [debug] [LLM.call] finish=stop len=2075 usage=%{"completion_tokens" => 656, "prompt_tokens" => 2338, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 2994}
+[LLM.call] response:
+---MODULE---
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+  |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+    distance = abs(px - x) + abs(py - y)
+    {:halt, {distance, index}}
+  end)
+  |> case do
+    -1 ->
+      -1
+
+    {min_distance, best_index} ->
+      # Now find the first index with that minimal distance
+      Enum.find_index(
+        points,
+        fn [px, py] ->
+          px == x or py == y && abs(px - x) + abs(py - y) == min_distance
+        end
+      )
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---END---[0m
+[22m21:05:05.338 [info] [LLM.call] local_qwen_thinking completed in 7329ms — ok[0m
+[22m21:05:05.338 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:05:05.338 [debug] [Validator.run] module code (1085 chars):
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+  |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+    distance = abs(px - x) + abs(py - y)
+    {:halt, {distance, index}}
+  end)
+  |> case do
+    -1 ->
+      -1
+
+    {min_distance, best_index} ->
+      # Now find the first index with that minimal distance
+      Enum.find_index(
+        points,
+        fn [px, py] ->
+          px == x or py == y && abs(px - x) + abs(py - y) == min_distance
+        end
+      )
+  end
+end[0m
+[36m21:05:05.339 [debug] [Validator.run] test code (955 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end[0m
+[36m21:05:05.339 [debug] [Budget] spent so far (est.): $0.8958[0m
+[22m21:05:05.339 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:05:05.339 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:05:05.987 [debug] [run_credence_fix] exit=0 output:
+
+21:05:05.855 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:05:05.857 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:05:05.859 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+21:05:05.859 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+21:05:05.859 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+21:05:05.861 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 -   Given an integer point (x, y) and a list of integer points, find the index
+  L2 + @doc """
+  L3 -   of the nearest valid point in the list. A point is valid if it has the same
+  L3 +   Given an integer point (x, y) and a list of integer points, find the index
+  L4 -   x-coordinate or the same y-coordinate as the given point. The distance is
+  L4 +   of the nearest valid point in the list. A point is valid if it has the same
+  L5 -   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L5 +   x-coordinate or the same y-coordinate as the given point. The distance is
+  L6 -   share the smallest distance, return the smallest index. If there are no
+  L6 +   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L7 -   valid points, return -1.
+  L7 +   share the smallest distance, return the smallest index. If there are no
+  L8 - """
+  L8 +   valid points, return -1.
+  L9 - @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L9 + """
+  L10 -         integer()
+  L10 + @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L11 - def nearest_valid_point(x, y, points) do
+  L11 +         integer()
+  L12 -   points
+  L12 + def nearest_valid_point(x, y, points) do
+  L13 -   |> Enum.with_index()
+  L13 +   points
+  L14 -   |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+  L14 +   |> Enum.with_index()
+  L15 -   |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+  L15 +   |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+  L16 -     distance = abs(px - x) + abs(py - y)
+  L16 +   |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+  L17 -     {:halt, {distance, index}}
+  L17 +     distance = abs(px - x) + abs(py - y)
+  L18 -   end)
+  L18 +     {:halt, {distance, index}}
+  L19 -   |> case do
+  L19 +   end)
+  L20 -     -1 ->
+  L20 +   |> case do
+  L21 -       -1
+  L21 +     -1 ->
+  L22 - 
+  L22 +       -1
+  L23 -     {min_distance, best_index} ->
+  L23 + 
+  L24 -       # Now find the first index with that minimal distance
+  L24 +     {min_distance, best_index} ->
+  L25 -       Enum.find_index(
+  L25 +       # Now find the first index with that minimal distance
+  L26 -         points,
+  L26 +       Enum.find_index(
+  L27 -         fn [px, py] ->
+  L27 +         points,
+  L28 -           px == x or py == y && abs(px - x) + abs(py - y) == min_distance
+  L28 +         fn [px, py] ->
+  L29 -         end
+  L29 +           px == x or py == y && abs(px - x) + abs(py - y) == min_distance
+  L30 -       )
+  L30 +         end
+  L31 -   end
+  L31 +       )
+  L32 - end
+  L32 +   end
+  L33 + end
+  L34 + end
+  L35 + 
+
+21:05:05.861 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+21:05:05.875 [debug] [credence_fix] semantic pass 2: compilation OK, 2 warning(s)
+
+21:05:05.876 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+21:05:05.876 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L24 -     {min_distance, best_index} ->
+  L24 +     {min_distance, _best_index} ->
+
+21:05:05.882 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:05:05.882 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UnusedVariable(1)]
+
+21:05:05.882 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:05:05.961 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UnusedVariable, 1}]
+[0m
+[22m21:05:05.987 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m21:05:06.570 [info] [run_credence_fix] fix compiles OK[0m
+[36m21:05:06.570 [debug] [run_credence_fix] original:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+  |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+    distance = abs(px - x) + abs(py - y)
+    {:halt, {distance, index}}
+  end)
+  |> case do
+    -1 ->
+      -1
+
+    {min_distance, best_index} ->
+      # Now find the first index with that minimal distance
+      Enum.find_index(
+        points,
+        fn [px, py] ->
+          px == x or py == y && abs(px - x) + abs(py - y) == min_distance
+        end
+      )
+  end
+end[0m
+[36m21:05:06.571 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+  |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+    distance = abs(px - x) + abs(py - y)
+    {:halt, {distance, index}}
+  end)
+  |> case do
+    -1 ->
+      -1
+
+    {min_distance, _best_index} ->
+      # Now find the first index with that minimal distance
+      Enum.find_index(
+        points,
+        fn [px, py] ->
+          px == x or py == y && abs(px - x) + abs(py - y) == min_distance
+        end
+      )
+  end
+end
+end
+[0m
+[22m21:05:06.571 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m21:05:06.571 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+  |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+    distance = abs(px - x) + abs(py - y)
+    {:halt, {distance, index}}
+  end)
+  |> case do
+    -1 ->
+      -1
+
+    {min_distance, best_index} ->
+      # Now find the first index with that minimal distance
+      Enum.find_index(
+        points,
+        fn [px, py] ->
+          px == x or py == y && abs(px - x) + abs(py - y) == min_distance
+        end
+      )
+  end
+end[0m
+[36m21:05:06.571 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+  |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+    distance = abs(px - x) + abs(py - y)
+    {:halt, {distance, index}}
+  end)
+  |> case do
+    -1 ->
+      -1
+
+    {min_distance, _best_index} ->
+      # Now find the first index with that minimal distance
+      Enum.find_index(
+        points,
+        fn [px, py] ->
+          px == x or py == y && abs(px - x) + abs(py - y) == min_distance
+        end
+      )
+  end
+end
+end
+[0m
+[36m21:05:06.571 [debug] [propagate_is_renames] old functions: ["nearest_valid_point"][0m
+[36m21:05:06.571 [debug] [propagate_is_renames] new functions: ["nearest_valid_point"][0m
+[36m21:05:06.571 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m21:05:06.571 [info] [Validator.run] step 2/6: compile[0m
+[22m21:05:07.141 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:05:07.141 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:05:07.141 [info] [Validator.run] step 3/6: format[0m
+[22m21:05:07.451 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:05:07.775 [debug] [Validator.run] format fix output: [0m
+[22m21:05:07.775 [info] [Validator.run] step 4/6: credo[0m
+[36m21:05:08.246 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:05:08.246 [info] [Validator.run] credo: no issues[0m
+[22m21:05:08.246 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:05:08.940 [info] [Validator.run] credence check exit=0[0m
+[36m21:05:08.940 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:05:08.940 [info] [Validator.run] credence check: passed[0m
+[22m21:05:08.941 [info] [Validator.run] step 6/6: tests[0m
+[22m21:05:09.411 [info] [Validator.run] test exit=2[0m
+[36m21:05:09.411 [debug] [Validator.run] test output:
+Running ExUnit with seed: 358940, max_cases: 48
+
+......
+
+  1) test returns the index of the nearest valid point among multiple candidates (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+     left:  1
+     right: 2
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 1 failure
+[0m
+[33m21:05:09.411 [warning] [Validator.run] tests: FAILED[0m
+[22m21:05:09.411 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m21:05:09.411 [debug] [Validator.run] final module (1177 chars):
+defmodule Solution do
+  @doc """
+    Given an integer point (x, y) and a list of integer points, find the index
+    of the nearest valid point in the list. A point is valid if it has the same
+    x-coordinate or the same y-coordinate as the given point. The distance is
+    the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+    share the smallest distance, return the smallest index. If there are no
+    valid points, return -1.
+  """
+  @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+          integer()
+  def nearest_valid_point(x, y, points) do
+    points
+    |> Enum.with_index()
+    |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+    |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+      distance = abs(px - x) + abs(py - y)
+      {:halt, {distance, index}}
+    end)
+    |> case do
+      -1 ->
+        -1
+
+      {min_distance, _best_index} ->
+        # Now find the first index with that minimal distance
+        Enum.find_index(
+          points,
+          fn [px, py] ->
+            px == x or (py == y && abs(px - x) + abs(py - y) == min_distance)
+          end
+        )
+    end
+  end
+end
+[0m
+[36m21:05:09.411 [debug] [Validator.run] final test (956 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+[0m
+[33m21:05:09.411 [warning] [Solve attempt 2] validation FAILED: [:test][0m
+[22m21:05:09.411 [info] [Solve attempt 3] generating (fn=nearest_valid_point)[0m
+[36m21:05:09.412 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn {[px, py], _index} -> px == x or py == y end)
+  |> Enum.reduce_while(-1, fn {[px, py], index}, _best_index ->
+    distance = abs(px - x) + abs(py - y)
+    {:halt, {distance, index}}
+  end)
+  |> case do
+    -1 ->
+      -1
+
+    {min_distance, best_index} ->
+      # Now find the first index with that minimal distance
+      Enum.find_index(
+        points,
+        fn [px, py] ->
+          px == x or py == y && abs(px - x) + abs(py - y) == min_distance
+        end
+      )
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 358940, max_cases: 48
+
+......
+
+  1) test returns the index of the nearest valid point among multiple candidates (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+     left:  1
+     right: 2
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 1 failure
+
+Reminder: module `Solution`, function `nearest_valid_point` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:05:15.809 [debug] [LLM.call] finish=stop len=1966 usage=%{"completion_tokens" => 639, "prompt_tokens" => 1128, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 1767}
+[LLM.call] response:
+---MODULE---
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.map(fn
+    [px, py] = point, index when px == x or py == y ->
+      distance = abs(px - x) + abs(py - y)
+      {distance, index}
+
+    _other, _index ->
+      nil
+  end)
+  |> Enum.reject(&is_nil/1)
+  |> case do
+    [] ->
+      -1
+
+    candidates ->
+      Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+      |> then(fn {_, best_index} -> best_index end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---END---[0m
+[22m21:05:15.809 [info] [LLM.call] local_qwen_thinking completed in 6397ms — ok[0m
+[22m21:05:15.809 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:05:15.809 [debug] [Validator.run] module code (976 chars):
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.map(fn
+    [px, py] = point, index when px == x or py == y ->
+      distance = abs(px - x) + abs(py - y)
+      {distance, index}
+
+    _other, _index ->
+      nil
+  end)
+  |> Enum.reject(&is_nil/1)
+  |> case do
+    [] ->
+      -1
+
+    candidates ->
+      Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+      |> then(fn {_, best_index} -> best_index end)
+  end
+end[0m
+[36m21:05:15.809 [debug] [Validator.run] test code (955 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end[0m
+[36m21:05:15.809 [debug] [Budget] spent so far (est.): $0.8968[0m
+[22m21:05:15.809 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:05:15.809 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:05:16.449 [debug] [run_credence_fix] exit=0 output:
+
+21:05:16.331 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:05:16.333 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:05:16.335 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+21:05:16.335 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+21:05:16.335 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+21:05:16.337 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 -   Given an integer point (x, y) and a list of integer points, find the index
+  L2 + @doc """
+  L3 -   of the nearest valid point in the list. A point is valid if it has the same
+  L3 +   Given an integer point (x, y) and a list of integer points, find the index
+  L4 -   x-coordinate or the same y-coordinate as the given point. The distance is
+  L4 +   of the nearest valid point in the list. A point is valid if it has the same
+  L5 -   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L5 +   x-coordinate or the same y-coordinate as the given point. The distance is
+  L6 -   share the smallest distance, return the smallest index. If there are no
+  L6 +   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L7 -   valid points, return -1.
+  L7 +   share the smallest distance, return the smallest index. If there are no
+  L8 - """
+  L8 +   valid points, return -1.
+  L9 - @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L9 + """
+  L10 -         integer()
+  L10 + @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L11 - def nearest_valid_point(x, y, points) do
+  L11 +         integer()
+  L12 -   points
+  L12 + def nearest_valid_point(x, y, points) do
+  L13 -   |> Enum.with_index()
+  L13 +   points
+  L14 -   |> Enum.map(fn
+  L14 +   |> Enum.with_index()
+  L15 -     [px, py] = point, index when px == x or py == y ->
+  L15 +   |> Enum.map(fn
+  L16 -       distance = abs(px - x) + abs(py - y)
+  L16 +     [px, py] = point, index when px == x or py == y ->
+  L17 -       {distance, index}
+  L17 +       distance = abs(px - x) + abs(py - y)
+  L18 - 
+  L18 +       {distance, index}
+  L19 -     _other, _index ->
+  L19 + 
+  L20 -       nil
+  L20 +     _other, _index ->
+  L21 -   end)
+  L21 +       nil
+  L22 -   |> Enum.reject(&is_nil/1)
+  L22 +   end)
+  L23 -   |> case do
+  L23 +   |> Enum.reject(&is_nil/1)
+  L24 -     [] ->
+  L24 +   |> case do
+  L25 -       -1
+  L25 +     [] ->
+  L26 - 
+  L26 +       -1
+  L27 -     candidates ->
+  L27 + 
+  L28 -       Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+  L28 +     candidates ->
+  L29 -       |> then(fn {_, best_index} -> best_index end)
+  L29 +       Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+  L30 -   end
+  L30 +       |> then(fn {_, best_index} -> best_index end)
+  L31 - end
+  L31 +   end
+  L32 + end
+  L33 + end
+  L34 + 
+
+21:05:16.337 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+21:05:16.351 [debug] [credence_fix] semantic pass 2: compilation OK, 2 warning(s)
+
+21:05:16.351 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+21:05:16.351 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L16 -     [px, py] = point, index when px == x or py == y ->
+  L16 +     [px, py] = _point, index when px == x or py == y ->
+
+21:05:16.357 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:05:16.357 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UnusedVariable(1)]
+
+21:05:16.357 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:05:16.424 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UnusedVariable, 1}]
+[0m
+[22m21:05:16.449 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m21:05:17.015 [info] [run_credence_fix] fix compiles OK[0m
+[36m21:05:17.015 [debug] [run_credence_fix] original:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.map(fn
+    [px, py] = point, index when px == x or py == y ->
+      distance = abs(px - x) + abs(py - y)
+      {distance, index}
+
+    _other, _index ->
+      nil
+  end)
+  |> Enum.reject(&is_nil/1)
+  |> case do
+    [] ->
+      -1
+
+    candidates ->
+      Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+      |> then(fn {_, best_index} -> best_index end)
+  end
+end[0m
+[36m21:05:17.015 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.map(fn
+    [px, py] = _point, index when px == x or py == y ->
+      distance = abs(px - x) + abs(py - y)
+      {distance, index}
+
+    _other, _index ->
+      nil
+  end)
+  |> Enum.reject(&is_nil/1)
+  |> case do
+    [] ->
+      -1
+
+    candidates ->
+      Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+      |> then(fn {_, best_index} -> best_index end)
+  end
+end
+end
+[0m
+[22m21:05:17.015 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m21:05:17.015 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.map(fn
+    [px, py] = point, index when px == x or py == y ->
+      distance = abs(px - x) + abs(py - y)
+      {distance, index}
+
+    _other, _index ->
+      nil
+  end)
+  |> Enum.reject(&is_nil/1)
+  |> case do
+    [] ->
+      -1
+
+    candidates ->
+      Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+      |> then(fn {_, best_index} -> best_index end)
+  end
+end[0m
+[36m21:05:17.015 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.map(fn
+    [px, py] = _point, index when px == x or py == y ->
+      distance = abs(px - x) + abs(py - y)
+      {distance, index}
+
+    _other, _index ->
+      nil
+  end)
+  |> Enum.reject(&is_nil/1)
+  |> case do
+    [] ->
+      -1
+
+    candidates ->
+      Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+      |> then(fn {_, best_index} -> best_index end)
+  end
+end
+end
+[0m
+[36m21:05:17.015 [debug] [propagate_is_renames] old functions: ["nearest_valid_point"][0m
+[36m21:05:17.015 [debug] [propagate_is_renames] new functions: ["nearest_valid_point"][0m
+[36m21:05:17.015 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m21:05:17.015 [info] [Validator.run] step 2/6: compile[0m
+[22m21:05:17.581 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:05:17.581 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:05:17.581 [info] [Validator.run] step 3/6: format[0m
+[22m21:05:17.885 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:05:18.187 [debug] [Validator.run] format fix output: [0m
+[22m21:05:18.187 [info] [Validator.run] step 4/6: credo[0m
+[36m21:05:18.662 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:05:18.662 [info] [Validator.run] credo: no issues[0m
+[22m21:05:18.662 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:05:19.370 [info] [Validator.run] credence check exit=0[0m
+[36m21:05:19.370 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:05:19.370 [info] [Validator.run] credence check: passed[0m
+[22m21:05:19.370 [info] [Validator.run] step 6/6: tests[0m
+[22m21:05:19.857 [info] [Validator.run] test exit=2[0m
+[36m21:05:19.857 [debug] [Validator.run] test output:
+Running ExUnit with seed: 797608, max_cases: 48
+
+
+
+  1) test returns 0 for a single valid point at the same coordinates (SolutionTest)
+     test/solution_test.exs:4
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[3, 4], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:5: (test)
+
+
+
+  2) test point with matching x only (SolutionTest)
+     test/solution_test.exs:24
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[5, 0], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:25: (test)
+
+
+
+  3) test returns -1 for empty list (SolutionTest)
+     test/solution_test.exs:20
+     ** (FunctionClauseError) no function clause matching in Enum."-map/2-lists^map/1-1-"/2
+
+     The following arguments were given to Enum."-map/2-lists^map/1-1-"/2:
+
+         # 1
+         #Function<0.120680783/2 in Solution.nearest_valid_point/3>
+
+         # 2
+         []
+
+     code: assert Solution.nearest_valid_point(1, 1, []) == -1
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:21: (test)
+
+
+
+  4) test returns the index of the nearest valid point among multiple candidates (SolutionTest)
+     test/solution_test.exs:12
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[1, 2], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:13: (test)
+
+
+
+  5) test returns -1 when no valid point exists (SolutionTest)
+     test/solution_test.exs:8
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[2, 3], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:9: (test)
+
+
+
+  6) test point with matching y only (SolutionTest)
+     test/solution_test.exs:28
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 10], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:29: (test)
+
+
+
+  7) test returns smallest index when distances are tied (SolutionTest)
+     test/solution_test.exs:16
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 2], 0})
+     code: assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:17: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 7 failures
+[0m
+[33m21:05:19.857 [warning] [Validator.run] tests: FAILED[0m
+[22m21:05:19.857 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m21:05:19.857 [debug] [Validator.run] final module (1062 chars):
+defmodule Solution do
+  @doc """
+    Given an integer point (x, y) and a list of integer points, find the index
+    of the nearest valid point in the list. A point is valid if it has the same
+    x-coordinate or the same y-coordinate as the given point. The distance is
+    the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+    share the smallest distance, return the smallest index. If there are no
+    valid points, return -1.
+  """
+  @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+          integer()
+  def nearest_valid_point(x, y, points) do
+    points
+    |> Enum.with_index()
+    |> Enum.map(fn
+      [px, py] = _point, index when px == x or py == y ->
+        distance = abs(px - x) + abs(py - y)
+        {distance, index}
+
+      _other, _index ->
+        nil
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] ->
+        -1
+
+      candidates ->
+        Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+        |> then(fn {_, best_index} -> best_index end)
+    end
+  end
+end
+[0m
+[36m21:05:19.857 [debug] [Validator.run] final test (956 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+[0m
+[33m21:05:19.857 [warning] [Solve attempt 3] validation FAILED: [:test][0m
+[22m21:05:19.857 [info] [Solve attempt 4] generating (fn=nearest_valid_point)[0m
+[36m21:05:19.857 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(x, y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.map(fn
+    [px, py] = point, index when px == x or py == y ->
+      distance = abs(px - x) + abs(py - y)
+      {distance, index}
+
+    _other, _index ->
+      nil
+  end)
+  |> Enum.reject(&is_nil/1)
+  |> case do
+    [] ->
+      -1
+
+    candidates ->
+      Enum.min_by(candidates, &elem(&1, 0), fn -> {999_999_999, -1} end)
+      |> then(fn {_, best_index} -> best_index end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 797608, max_cases: 48
+
+
+
+  1) test returns 0 for a single valid point at the same coordinates (SolutionTest)
+     test/solution_test.exs:4
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[3, 4], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:5: (test)
+
+
+
+  2) test point with matching x only (SolutionTest)
+     test/solution_test.exs:24
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[5, 0], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:25: (test)
+
+
+
+  3) test returns -1 for empty list (SolutionTest)
+     test/solution_test.exs:20
+     ** (FunctionClauseError) no function clause matching in Enum."-map/2-lists^map/1-1-"/2
+
+     The following arguments were given to Enum."-map/2-lists^map/1-1-"/2:
+
+         # 1
+         #Function<0.120680783/2 in Solution.nearest_valid_point/3>
+
+         # 2
+         []
+
+     code: assert Solution.nearest_valid_point(1, 1, []) == -1
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:21: (test)
+
+
+
+  4) test returns the index of the nearest valid point among multiple candidates (SolutionTest)
+     test/solution_test.exs:12
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[1, 2], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:13: (test)
+
+
+
+  5) test returns -1 when no valid point exists (SolutionTest)
+     test/solution_test.exs:8
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[2, 3], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:9: (test)
+
+
+
+  6) test point with matching y only (SolutionTest)
+     test/solution_test.exs:28
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 10], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:29: (test)
+
+
+
+  7) test returns smallest index when distances are tied (SolutionTest)
+     test/solution_test.exs:16
+     ** (BadArityError) #Function<0.120680783/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 2], 0})
+     code: assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:17: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 7 failures
+
+Reminder: module `Solution`, function `nearest_valid_point` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:05:27.544 [debug] [LLM.call] finish=stop len=2128 usage=%{"completion_tokens" => 661, "prompt_tokens" => 2645, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 3306}
+[LLM.call] response:
+---MODULE---
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _point, _index -> false
+  end)
+  |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+    distance = abs(px - target_x) + abs(py - target_y)
+    case best_index do
+      -1 ->
+        {:halt, {index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> then(fn {best_index, _min_distance} -> best_index end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---END---[0m
+[22m21:05:27.544 [info] [LLM.call] local_qwen_thinking completed in 7686ms — ok[0m
+[22m21:05:27.545 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:05:27.545 [debug] [Validator.run] module code (1138 chars):
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _point, _index -> false
+  end)
+  |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+    distance = abs(px - target_x) + abs(py - target_y)
+    case best_index do
+      -1 ->
+        {:halt, {index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> then(fn {best_index, _min_distance} -> best_index end)
+end[0m
+[36m21:05:27.545 [debug] [Validator.run] test code (955 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end[0m
+[36m21:05:27.545 [debug] [Budget] spent so far (est.): $0.8986[0m
+[22m21:05:27.545 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:05:27.545 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:05:28.174 [debug] [run_credence_fix] exit=0 output:
+
+21:05:28.053 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:05:28.055 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:05:28.057 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+21:05:28.057 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+21:05:28.057 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+21:05:28.059 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 -   Given an integer point (x, y) and a list of integer points, find the index
+  L2 + @doc """
+  L3 -   of the nearest valid point in the list. A point is valid if it has the same
+  L3 +   Given an integer point (x, y) and a list of integer points, find the index
+  L4 -   x-coordinate or the same y-coordinate as the given point. The distance is
+  L4 +   of the nearest valid point in the list. A point is valid if it has the same
+  L5 -   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L5 +   x-coordinate or the same y-coordinate as the given point. The distance is
+  L6 -   share the smallest distance, return the smallest index. If there are no
+  L6 +   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L7 -   valid points, return -1.
+  L7 +   share the smallest distance, return the smallest index. If there are no
+  L8 - """
+  L8 +   valid points, return -1.
+  L9 - @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L9 + """
+  L10 -         integer()
+  L10 + @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L11 - def nearest_valid_point(target_x, target_y, points) do
+  L11 +         integer()
+  L12 -   points
+  L12 + def nearest_valid_point(target_x, target_y, points) do
+  L13 -   |> Enum.with_index()
+  L13 +   points
+  L14 -   |> Enum.filter(fn
+  L14 +   |> Enum.with_index()
+  L15 -     [px, py], _index -> px == target_x or py == target_y
+  L15 +   |> Enum.filter(fn
+  L16 -     _point, _index -> false
+  L16 +     [px, py], _index -> px == target_x or py == target_y
+  L17 -   end)
+  L17 +     _point, _index -> false
+  L18 -   |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+  L18 +   end)
+  L19 -     distance = abs(px - target_x) + abs(py - target_y)
+  L19 +   |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+  L20 -     case best_index do
+  L20 +     distance = abs(px - target_x) + abs(py - target_y)
+  L21 -       -1 ->
+  L21 +     case best_index do
+  L22 -         {:halt, {index, distance}}
+  L22 +       -1 ->
+  L23 - 
+  L23 +         {:halt, {index, distance}}
+  L24 -       _ when distance < min_distance ->
+  L24 + 
+  L25 -         {:halt, {index, distance}}
+  L25 +       _ when distance < min_distance ->
+  L26 - 
+  L26 +         {:halt, {index, distance}}
+  L27 -       _ ->
+  L27 + 
+  L28 -         {:cont, {best_index, min_distance}}
+  L28 +       _ ->
+  L29 -     end
+  L29 +         {:cont, {best_index, min_distance}}
+  L30 -   end)
+  L30 +     end
+  L31 -   |> then(fn {best_index, _min_distance} -> best_index end)
+  L31 +   end)
+  L32 - end
+  L32 +   |> then(fn {best_index, _min_distance} -> best_index end)
+  L33 + end
+  L34 + end
+  L35 + 
+
+21:05:28.059 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+21:05:28.073 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+21:05:28.078 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:05:28.078 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+21:05:28.078 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:05:28.151 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m21:05:28.174 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m21:05:28.733 [info] [run_credence_fix] fix compiles OK[0m
+[36m21:05:28.733 [debug] [run_credence_fix] original:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _point, _index -> false
+  end)
+  |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+    distance = abs(px - target_x) + abs(py - target_y)
+    case best_index do
+      -1 ->
+        {:halt, {index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> then(fn {best_index, _min_distance} -> best_index end)
+end[0m
+[36m21:05:28.733 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _point, _index -> false
+  end)
+  |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+    distance = abs(px - target_x) + abs(py - target_y)
+    case best_index do
+      -1 ->
+        {:halt, {index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> then(fn {best_index, _min_distance} -> best_index end)
+end
+end
+[0m
+[22m21:05:28.733 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m21:05:28.733 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _point, _index -> false
+  end)
+  |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+    distance = abs(px - target_x) + abs(py - target_y)
+    case best_index do
+      -1 ->
+        {:halt, {index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> then(fn {best_index, _min_distance} -> best_index end)
+end[0m
+[36m21:05:28.733 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _point, _index -> false
+  end)
+  |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+    distance = abs(px - target_x) + abs(py - target_y)
+    case best_index do
+      -1 ->
+        {:halt, {index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> then(fn {best_index, _min_distance} -> best_index end)
+end
+end
+[0m
+[36m21:05:28.734 [debug] [propagate_is_renames] old functions: ["nearest_valid_point"][0m
+[36m21:05:28.734 [debug] [propagate_is_renames] new functions: ["nearest_valid_point"][0m
+[36m21:05:28.734 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m21:05:28.734 [info] [Validator.run] step 2/6: compile[0m
+[22m21:05:29.308 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:05:29.308 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:05:29.308 [info] [Validator.run] step 3/6: format[0m
+[22m21:05:29.621 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:05:29.928 [debug] [Validator.run] format fix output: [0m
+[22m21:05:29.928 [info] [Validator.run] step 4/6: credo[0m
+[36m21:05:30.413 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:05:30.413 [info] [Validator.run] credo: no issues[0m
+[22m21:05:30.413 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:05:31.115 [info] [Validator.run] credence check exit=0[0m
+[36m21:05:31.115 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:05:31.115 [info] [Validator.run] credence check: passed[0m
+[22m21:05:31.115 [info] [Validator.run] step 6/6: tests[0m
+[22m21:05:31.580 [info] [Validator.run] test exit=2[0m
+[36m21:05:31.580 [debug] [Validator.run] test output:
+Running ExUnit with seed: 530704, max_cases: 48
+
+
+
+  1) test returns -1 when no valid point exists (SolutionTest)
+     test/solution_test.exs:8
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[2, 3], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test returns the index of the nearest valid point among multiple candidates (SolutionTest)
+     test/solution_test.exs:12
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[1, 2], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:13: (test)
+
+
+
+  3) test point with matching y only (SolutionTest)
+     test/solution_test.exs:28
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 10], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:29: (test)
+
+.
+
+  4) test returns smallest index when distances are tied (SolutionTest)
+     test/solution_test.exs:16
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 2], 0})
+     code: assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:17: (test)
+
+
+
+  5) test point with matching x only (SolutionTest)
+     test/solution_test.exs:24
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[5, 0], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:25: (test)
+
+
+
+  6) test returns 0 for a single valid point at the same coordinates (SolutionTest)
+     test/solution_test.exs:4
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[3, 4], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:5: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 6 failures
+[0m
+[33m21:05:31.580 [warning] [Validator.run] tests: FAILED[0m
+[22m21:05:31.580 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m21:05:31.580 [debug] [Validator.run] final module (1226 chars):
+defmodule Solution do
+  @doc """
+    Given an integer point (x, y) and a list of integer points, find the index
+    of the nearest valid point in the list. A point is valid if it has the same
+    x-coordinate or the same y-coordinate as the given point. The distance is
+    the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+    share the smallest distance, return the smallest index. If there are no
+    valid points, return -1.
+  """
+  @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+          integer()
+  def nearest_valid_point(target_x, target_y, points) do
+    points
+    |> Enum.with_index()
+    |> Enum.filter(fn
+      [px, py], _index -> px == target_x or py == target_y
+      _point, _index -> false
+    end)
+    |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+      distance = abs(px - target_x) + abs(py - target_y)
+
+      case best_index do
+        -1 ->
+          {:halt, {index, distance}}
+
+        _ when distance < min_distance ->
+          {:halt, {index, distance}}
+
+        _ ->
+          {:cont, {best_index, min_distance}}
+      end
+    end)
+    |> then(fn {best_index, _min_distance} -> best_index end)
+  end
+end
+[0m
+[36m21:05:31.580 [debug] [Validator.run] final test (956 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+[0m
+[33m21:05:31.580 [warning] [Solve attempt 4] validation FAILED: [:test][0m
+[22m21:05:31.580 [info] [Solve attempt 5] generating (fn=nearest_valid_point)[0m
+[36m21:05:31.580 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _point, _index -> false
+  end)
+  |> Enum.reduce_while({-1, :max_integer}, fn [px, py], {best_index, min_distance}, index ->
+    distance = abs(px - target_x) + abs(py - target_y)
+    case best_index do
+      -1 ->
+        {:halt, {index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> then(fn {best_index, _min_distance} -> best_index end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 530704, max_cases: 48
+
+
+
+  1) test returns -1 when no valid point exists (SolutionTest)
+     test/solution_test.exs:8
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[2, 3], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test returns the index of the nearest valid point among multiple candidates (SolutionTest)
+     test/solution_test.exs:12
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[1, 2], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:13: (test)
+
+
+
+  3) test point with matching y only (SolutionTest)
+     test/solution_test.exs:28
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 10], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:29: (test)
+
+.
+
+  4) test returns smallest index when distances are tied (SolutionTest)
+     test/solution_test.exs:16
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 2], 0})
+     code: assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:17: (test)
+
+
+
+  5) test point with matching x only (SolutionTest)
+     test/solution_test.exs:24
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[5, 0], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:25: (test)
+
+
+
+  6) test returns 0 for a single valid point at the same coordinates (SolutionTest)
+     test/solution_test.exs:4
+     ** (BadArityError) #Function<0.96426841/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[3, 4], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:5: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 6 failures
+
+Reminder: module `Solution`, function `nearest_valid_point` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:05:38.908 [debug] [LLM.call] finish=stop len=2072 usage=%{"completion_tokens" => 647, "prompt_tokens" => 2290, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 2937}
+[LLM.call] response:
+---MODULE---
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _, _ -> false
+  end)
+  |> Enum.reduce_while({-1, :infinity}, fn [px, py], {best_index, min_distance} ->
+    distance = abs(px - target_x) + abs(py - target_y)
+
+    case best_index do
+      -1 ->
+        {:halt, {best_index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {best_index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> elem(0)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+---END---[0m
+[22m21:05:38.908 [info] [LLM.call] local_qwen_thinking completed in 7327ms — ok[0m
+[22m21:05:38.908 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:05:38.908 [debug] [Validator.run] module code (1082 chars):
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _, _ -> false
+  end)
+  |> Enum.reduce_while({-1, :infinity}, fn [px, py], {best_index, min_distance} ->
+    distance = abs(px - target_x) + abs(py - target_y)
+
+    case best_index do
+      -1 ->
+        {:halt, {best_index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {best_index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> elem(0)
+end[0m
+[36m21:05:38.908 [debug] [Validator.run] test code (955 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end[0m
+[36m21:05:38.909 [debug] [Budget] spent so far (est.): $0.9001[0m
+[22m21:05:38.909 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:05:38.909 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:05:39.542 [debug] [run_credence_fix] exit=0 output:
+
+21:05:39.416 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:05:39.418 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:05:39.420 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+21:05:39.420 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+21:05:39.420 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+21:05:39.422 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 -   Given an integer point (x, y) and a list of integer points, find the index
+  L2 + @doc """
+  L3 -   of the nearest valid point in the list. A point is valid if it has the same
+  L3 +   Given an integer point (x, y) and a list of integer points, find the index
+  L4 -   x-coordinate or the same y-coordinate as the given point. The distance is
+  L4 +   of the nearest valid point in the list. A point is valid if it has the same
+  L5 -   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L5 +   x-coordinate or the same y-coordinate as the given point. The distance is
+  L6 -   share the smallest distance, return the smallest index. If there are no
+  L6 +   the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  L7 -   valid points, return -1.
+  L7 +   share the smallest distance, return the smallest index. If there are no
+  L8 - """
+  L8 +   valid points, return -1.
+  L9 - @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L9 + """
+  L10 -         integer()
+  L10 + @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+  L11 - def nearest_valid_point(target_x, target_y, points) do
+  L11 +         integer()
+  L12 -   points
+  L12 + def nearest_valid_point(target_x, target_y, points) do
+  L13 -   |> Enum.with_index()
+  L13 +   points
+  L14 -   |> Enum.filter(fn
+  L14 +   |> Enum.with_index()
+  L15 -     [px, py], _index -> px == target_x or py == target_y
+  L15 +   |> Enum.filter(fn
+  L16 -     _, _ -> false
+  L16 +     [px, py], _index -> px == target_x or py == target_y
+  L17 -   end)
+  L17 +     _, _ -> false
+  L18 -   |> Enum.reduce_while({-1, :infinity}, fn [px, py], {best_index, min_distance} ->
+  L18 +   end)
+  L19 -     distance = abs(px - target_x) + abs(py - target_y)
+  L19 +   |> Enum.reduce_while({-1, :infinity}, fn [px, py], {best_index, min_distance} ->
+  L20 - 
+  L20 +     distance = abs(px - target_x) + abs(py - target_y)
+  L21 -     case best_index do
+  L21 + 
+  L22 -       -1 ->
+  L22 +     case best_index do
+  L23 -         {:halt, {best_index, distance}}
+  L23 +       -1 ->
+  L24 - 
+  L24 +         {:halt, {best_index, distance}}
+  L25 -       _ when distance < min_distance ->
+  L25 + 
+  L26 -         {:halt, {best_index, distance}}
+  L26 +       _ when distance < min_distance ->
+  L27 - 
+  L27 +         {:halt, {best_index, distance}}
+  L28 -       _ ->
+  L28 + 
+  L29 -         {:cont, {best_index, min_distance}}
+  L29 +       _ ->
+  L30 -     end
+  L30 +         {:cont, {best_index, min_distance}}
+  L31 -   end)
+  L31 +     end
+  L32 -   |> elem(0)
+  L32 +   end)
+  L33 - end
+  L33 +   |> elem(0)
+  L34 + end
+  L35 + end
+  L36 + 
+
+21:05:39.422 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+21:05:39.435 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+21:05:39.441 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:05:39.441 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+21:05:39.442 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:05:39.517 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m21:05:39.542 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m21:05:40.116 [info] [run_credence_fix] fix compiles OK[0m
+[36m21:05:40.116 [debug] [run_credence_fix] original:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _, _ -> false
+  end)
+  |> Enum.reduce_while({-1, :infinity}, fn [px, py], {best_index, min_distance} ->
+    distance = abs(px - target_x) + abs(py - target_y)
+
+    case best_index do
+      -1 ->
+        {:halt, {best_index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {best_index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> elem(0)
+end[0m
+[36m21:05:40.116 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _, _ -> false
+  end)
+  |> Enum.reduce_while({-1, :infinity}, fn [px, py], {best_index, min_distance} ->
+    distance = abs(px - target_x) + abs(py - target_y)
+
+    case best_index do
+      -1 ->
+        {:halt, {best_index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {best_index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> elem(0)
+end
+end
+[0m
+[22m21:05:40.116 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m21:05:40.116 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _, _ -> false
+  end)
+  |> Enum.reduce_while({-1, :infinity}, fn [px, py], {best_index, min_distance} ->
+    distance = abs(px - target_x) + abs(py - target_y)
+
+    case best_index do
+      -1 ->
+        {:halt, {best_index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {best_index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> elem(0)
+end[0m
+[36m21:05:40.116 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+  Given an integer point (x, y) and a list of integer points, find the index
+  of the nearest valid point in the list. A point is valid if it has the same
+  x-coordinate or the same y-coordinate as the given point. The distance is
+  the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+  share the smallest distance, return the smallest index. If there are no
+  valid points, return -1.
+"""
+@spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+        integer()
+def nearest_valid_point(target_x, target_y, points) do
+  points
+  |> Enum.with_index()
+  |> Enum.filter(fn
+    [px, py], _index -> px == target_x or py == target_y
+    _, _ -> false
+  end)
+  |> Enum.reduce_while({-1, :infinity}, fn [px, py], {best_index, min_distance} ->
+    distance = abs(px - target_x) + abs(py - target_y)
+
+    case best_index do
+      -1 ->
+        {:halt, {best_index, distance}}
+
+      _ when distance < min_distance ->
+        {:halt, {best_index, distance}}
+
+      _ ->
+        {:cont, {best_index, min_distance}}
+    end
+  end)
+  |> elem(0)
+end
+end
+[0m
+[36m21:05:40.116 [debug] [propagate_is_renames] old functions: ["nearest_valid_point"][0m
+[36m21:05:40.116 [debug] [propagate_is_renames] new functions: ["nearest_valid_point"][0m
+[36m21:05:40.116 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m21:05:40.116 [info] [Validator.run] step 2/6: compile[0m
+[22m21:05:40.691 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:05:40.691 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:05:40.691 [info] [Validator.run] step 3/6: format[0m
+[22m21:05:41.004 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:05:41.316 [debug] [Validator.run] format fix output: [0m
+[22m21:05:41.316 [info] [Validator.run] step 4/6: credo[0m
+[36m21:05:41.799 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:05:41.799 [info] [Validator.run] credo: no issues[0m
+[22m21:05:41.799 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:05:42.484 [info] [Validator.run] credence check exit=0[0m
+[36m21:05:42.484 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:05:42.484 [info] [Validator.run] credence check: passed[0m
+[22m21:05:42.484 [info] [Validator.run] step 6/6: tests[0m
+[22m21:05:42.964 [info] [Validator.run] test exit=2[0m
+[36m21:05:42.964 [debug] [Validator.run] test output:
+Running ExUnit with seed: 911393, max_cases: 48
+
+
+
+  1) test returns 0 for a single valid point at the same coordinates (SolutionTest)
+     test/solution_test.exs:4
+     ** (BadArityError) #Function<0.92757148/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[3, 4], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:5: (test)
+
+.
+
+  2) test returns smallest index when distances are tied (SolutionTest)
+     test/solution_test.exs:16
+     ** (BadArityError) #Function<0.92757148/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 2], 0})
+     code: assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:17: (test)
+
+
+
+  3) test point with matching x only (SolutionTest)
+     test/solution_test.exs:24
+     ** (BadArityError) #Function<0.92757148/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[5, 0], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:25: (test)
+
+
+
+  4) test returns -1 when no valid point exists (SolutionTest)
+     test/solution_test.exs:8
+     ** (BadArityError) #Function<0.92757148/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[2, 3], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:9: (test)
+
+
+
+  5) test point with matching y only (SolutionTest)
+     test/solution_test.exs:28
+     ** (BadArityError) #Function<0.92757148/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[0, 10], 0})
+     code: assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:29: (test)
+
+
+
+  6) test returns the index of the nearest valid point among multiple candidates (SolutionTest)
+     test/solution_test.exs:12
+     ** (BadArityError) #Function<0.92757148/2 in Solution.nearest_valid_point/3> with arity 2 called with 1 argument ({[1, 2], 0})
+     code: assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (elixir 1.19.5) lib/enum.ex:4445: Enum.filter_list/2
+       (workspace 0.1.0) lib/solution.ex:15: Solution.nearest_valid_point/3
+       test/solution_test.exs:13: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 6 failures
+[0m
+[33m21:05:42.964 [warning] [Validator.run] tests: FAILED[0m
+[22m21:05:42.964 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m21:05:42.964 [debug] [Validator.run] final module (1169 chars):
+defmodule Solution do
+  @doc """
+    Given an integer point (x, y) and a list of integer points, find the index
+    of the nearest valid point in the list. A point is valid if it has the same
+    x-coordinate or the same y-coordinate as the given point. The distance is
+    the Manhattan distance: |x1 - x2| + |y1 - y2|. If multiple valid points
+    share the smallest distance, return the smallest index. If there are no
+    valid points, return -1.
+  """
+  @spec nearest_valid_point(integer(), integer(), list(list(integer()))) ::
+          integer()
+  def nearest_valid_point(target_x, target_y, points) do
+    points
+    |> Enum.with_index()
+    |> Enum.filter(fn
+      [px, py], _index -> px == target_x or py == target_y
+      _, _ -> false
+    end)
+    |> Enum.reduce_while({-1, :infinity}, fn [px, py], {best_index, min_distance} ->
+      distance = abs(px - target_x) + abs(py - target_y)
+
+      case best_index do
+        -1 ->
+          {:halt, {best_index, distance}}
+
+        _ when distance < min_distance ->
+          {:halt, {best_index, distance}}
+
+        _ ->
+          {:cont, {best_index, min_distance}}
+      end
+    end)
+    |> elem(0)
+  end
+end
+[0m
+[36m21:05:42.964 [debug] [Validator.run] final test (956 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns 0 for a single valid point at the same coordinates" do
+    assert Solution.nearest_valid_point(3, 4, [[3, 4]]) == 0
+  end
+
+  test "returns -1 when no valid point exists" do
+    assert Solution.nearest_valid_point(3, 4, [[2, 3]]) == -1
+  end
+
+  test "returns the index of the nearest valid point among multiple candidates" do
+    assert Solution.nearest_valid_point(3, 4, [[1, 2], [3, 1], [2, 4], [2, 3], [4, 4]]) == 2
+  end
+
+  test "returns smallest index when distances are tied" do
+    assert Solution.nearest_valid_point(0, 0, [[0, 2], [2, 0]]) == 0
+  end
+
+  test "returns -1 for empty list" do
+    assert Solution.nearest_valid_point(1, 1, []) == -1
+  end
+
+  test "point with matching x only" do
+    assert Solution.nearest_valid_point(5, 10, [[5, 0]]) == 0
+  end
+
+  test "point with matching y only" do
+    assert Solution.nearest_valid_point(5, 10, [[0, 10]]) == 0
+  end
+end
+[0m
+[33m21:05:42.964 [warning] [Solve attempt 5] validation FAILED: [:test][0m
+[33m21:05:42.964 [warning] [Solve] giving up after 5 attempts[0m
+[36m21:05:42.982 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve FAILED — there is NO clean final. Judge the attempts for an ISSUE they repeatedly hit that NO existing rule fixed (a new Syntax/Semantic rule — e.g. a Python-ism like `a div b`, an unfixed warning), plus any existing rule that over-fired (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Semantic.UnusedVariable
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, self-contained defmodule isolating ONE issue)
+===AFTER===              (RE (truncated)[0m
+[22m21:09:55.478 [info] [Budget] HEARTBEAT — 165 paid calls, est $0.9001 over 289.7min → ~$0.1864/hr, ~$4.47/day (tok in=1098051 cache_rd=14782272 out=424421)[0m
+[22m21:14:55.479 [info] [Budget] HEARTBEAT — 165 paid calls, est $0.9001 over 294.7min → ~$0.1833/hr, ~$4.4/day (tok in=1098051 cache_rd=14782272 out=424421)[0m
+[22m21:19:55.478 [info] [Budget] HEARTBEAT — 165 paid calls, est $0.9001 over 299.7min → ~$0.1802/hr, ~$4.33/day (tok in=1098051 cache_rd=14782272 out=424421)[0m
+[22m21:24:55.479 [info] [Budget] HEARTBEAT — 165 paid calls, est $0.9001 over 304.7min → ~$0.1773/hr, ~$4.25/day (tok in=1098051 cache_rd=14782272 out=424421)[0m
+[22m21:29:55.479 [info] [Budget] HEARTBEAT — 165 paid calls, est $0.9001 over 309.7min → ~$0.1744/hr, ~$4.19/day (tok in=1098051 cache_rd=14782272 out=424421)[0m
+[22m21:34:55.478 [info] [Budget] HEARTBEAT — 165 paid calls, est $0.9001 over 314.7min → ~$0.1716/hr, ~$4.12/day (tok in=1098051 cache_rd=14782272 out=424421)[0m
+[31m21:35:47.989 [error] [LLM.call] request error: %Req.TransportError{reason: :timeout}[0m
+[22m21:35:47.989 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 1805007ms — error[0m
+[22m21:35:47.989 [info] [Router] transient timeout — row 72461 (attempt 1) → not consuming[0m

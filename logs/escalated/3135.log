@@ -1,0 +1,1260 @@
+[22m07:05:47.552 [info] [idx=3135] entry_point=are_anagrams[0m
+[36m07:05:47.552 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to check if two given sentences are anagrams of each other. An anagram is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.
+
+## Python Solution
+```python
+def are_anagrams(str1, str2):
+    if len(str1) != len(str2):
+        return False
+    return sorted(str1) == sorted(str2)
+```
+
+## Python Tests
+assert are_anagrams("listen", "silent") == True
+assert are_anagrams("hello", "world") == False
+assert are_anagrams("triangle", "integral") == True
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `are_anagrams`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m07:06:34.747 [debug] [LLM.call] finish=stop len=1339 usage=%{"completion_tokens" => 2348, "completion_tokens_details" => %{"reasoning_tokens" => 2021}, "prompt_tokens" => 489, "prompt_tokens_details" => %{}, "total_tokens" => 2837}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `are_anagrams` that takes two strings as input and returns a boolean indicating whether the two strings are anagrams of each other. An anagram is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once. The function should return false if the strings have different lengths. Edge cases include empty strings, which should be considered anagrams of each other. The solution should have a time complexity of O(n log n) where n is the length of the strings.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "checks anagrams with listen and silent" do
+    assert Solution.are_anagrams("listen", "silent") == true
+  end
+
+  test "checks non-anagrams with hello and world" do
+    assert Solution.are_anagrams("hello", "world") == false
+  end
+
+  test "checks anagrams with triangle and integral" do
+    assert Solution.are_anagrams("triangle", "integral") == true
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  def are_anagrams(str1, str2) do
+    if String.length(str1) != String.length(str2) do
+      false
+    else
+      sorted_str1 = str1 |> String.graphemes() |> Enum.sort()
+      sorted_str2 = str2 |> String.graphemes() |> Enum.sort()
+      sorted_str1 == sorted_str2
+    end
+  end
+end
+---END---[0m
+[22m07:06:34.747 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 47194ms — ok[0m
+[36m07:06:34.747 [debug] [Budget] spent so far (est.): $3.311[0m
+[22m07:06:35.795 [info] [RoundTrip] reference PASSED tests[0m
+[22m07:06:35.795 [info] [idx=3135] translation fresh — solving[0m
+[22m07:06:35.796 [info] ===SOLVE_BOUNDARY===[0m
+[22m07:06:35.796 [info] [Solve attempt 1] generating (fn=are_anagrams)[0m
+[36m07:06:35.796 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `are_anagrams` that takes two strings as input and returns a boolean indicating whether the two strings are anagrams of each other. An anagram is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once. The function should return false if the strings have different lengths. Edge cases include empty strings, which should be considered anagrams of each other. The solution should have a time complexity of O(n log n) where n is the length of the strings.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "checks anagrams with listen and silent" do
+    assert Solution.are_anagrams("listen", "silent") == true
+  end
+
+  test "checks non-anagrams with hello and world" do
+    assert Solution.are_anagrams("hello", "world") == false
+  end
+
+  test "checks anagrams with triangle and integral" do
+    assert Solution.are_anagrams("triangle", "integral") == true
+  end
+end
+```
+
+Module: `Solution`. Function: `are_anagrams`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m07:06:38.719 [debug] [LLM.call] finish=stop len=1090 usage=%{"completion_tokens" => 283, "prompt_tokens" => 493, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 776}
+[LLM.call] response:
+---MODULE---
+@doc """
+Checks if two strings are anagrams of each other.
+
+An anagram is a word or phrase formed by rearranging the letters of a different
+word or phrase, typically using all the original letters exactly once.
+
+The function returns false if the strings have different lengths.
+Empty strings are considered anagrams of each other.
+
+Time complexity: O(n log n) due to sorting the characters.
+"""
+@spec are_anagrams(String.t(), String.t()) :: boolean()
+def are_anagrams(str1, str2) do
+  str1_sorted = String.codepoints(str1) |> Enum.sort()
+  str2_sorted = String.codepoints(str2) |> Enum.sort()
+
+  str1_sorted == str2_sorted
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "checks anagrams with listen and silent" do
+    assert Solution.are_anagrams("listen", "silent") == true
+  end
+
+  test "checks non-anagrams with hello and world" do
+    assert Solution.are_anagrams("hello", "world") == false
+  end
+
+  test "checks anagrams with triangle and integral" do
+    assert Solution.are_anagrams("triangle", "integral") == true
+  end
+end
+
+---END---[0m
+[22m07:06:38.719 [info] [LLM.call] local_qwen_thinking completed in 2923ms — ok[0m
+[22m07:06:38.719 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m07:06:38.719 [debug] [Validator.run] module code (626 chars):
+@doc """
+Checks if two strings are anagrams of each other.
+
+An anagram is a word or phrase formed by rearranging the letters of a different
+word or phrase, typically using all the original letters exactly once.
+
+The function returns false if the strings have different lengths.
+Empty strings are considered anagrams of each other.
+
+Time complexity: O(n log n) due to sorting the characters.
+"""
+@spec are_anagrams(String.t(), String.t()) :: boolean()
+def are_anagrams(str1, str2) do
+  str1_sorted = String.codepoints(str1) |> Enum.sort()
+  str2_sorted = String.codepoints(str2) |> Enum.sort()
+
+  str1_sorted == str2_sorted
+end[0m
+[36m07:06:38.719 [debug] [Validator.run] test code (427 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "checks anagrams with listen and silent" do
+    assert Solution.are_anagrams("listen", "silent") == true
+  end
+
+  test "checks non-anagrams with hello and world" do
+    assert Solution.are_anagrams("hello", "world") == false
+  end
+
+  test "checks anagrams with triangle and integral" do
+    assert Solution.are_anagrams("triangle", "integral") == true
+  end
+end[0m
+[36m07:06:38.720 [debug] [Budget] spent so far (est.): $3.3115[0m
+[22m07:06:38.720 [info] [Validator.run] step 1/6: credence fix[0m
+[36m07:06:38.720 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m07:06:39.318 [debug] [run_credence_fix] exit=0 output:
+
+07:06:39.249 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+07:06:39.251 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+07:06:39.253 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+07:06:39.253 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+07:06:39.253 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+07:06:39.255 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Checks if two strings are anagrams of each other.
+  L2 + @doc """
+  L3 - 
+  L3 + Checks if two strings are anagrams of each other.
+  L4 - An anagram is a word or phrase formed by rearranging the letters of a different
+  L4 + 
+  L5 - word or phrase, typically using all the original letters exactly once.
+  L5 + An anagram is a word or phrase formed by rearranging the letters of a different
+  L6 - 
+  L6 + word or phrase, typically using all the original letters exactly once.
+  L7 - The function returns false if the strings have different lengths.
+  L7 + 
+  L8 - Empty strings are considered anagrams of each other.
+  L8 + The function returns false if the strings have different lengths.
+  L9 - 
+  L9 + Empty strings are considered anagrams of each other.
+  L10 - Time complexity: O(n log n) due to sorting the characters.
+  L10 + 
+  L11 - """
+  L11 + Time complexity: O(n log n) due to sorting the characters.
+  L12 - @spec are_anagrams(String.t(), String.t()) :: boolean()
+  L12 + """
+  L13 - def are_anagrams(str1, str2) do
+  L13 + @spec are_anagrams(String.t(), String.t()) :: boolean()
+  L14 -   str1_sorted = String.codepoints(str1) |> Enum.sort()
+  L14 + def are_anagrams(str1, str2) do
+  L15 -   str2_sorted = String.codepoints(str2) |> Enum.sort()
+  L15 +   str1_sorted = String.codepoints(str1) |> Enum.sort()
+  L16 - 
+  L16 +   str2_sorted = String.codepoints(str2) |> Enum.sort()
+  L17 -   str1_sorted == str2_sorted
+  L17 + 
+  L18 - end
+  L18 +   str1_sorted == str2_sorted
+  L19 + end
+  L20 + end
+  L21 + 
+
+07:06:39.255 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+07:06:39.264 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+07:06:39.269 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+07:06:39.270 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+07:06:39.270 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+07:06:39.298 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m07:06:39.318 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m07:06:39.881 [info] [run_credence_fix] fix compiles OK[0m
+[36m07:06:39.881 [debug] [run_credence_fix] original:
+@doc """
+Checks if two strings are anagrams of each other.
+
+An anagram is a word or phrase formed by rearranging the letters of a different
+word or phrase, typically using all the original letters exactly once.
+
+The function returns false if the strings have different lengths.
+Empty strings are considered anagrams of each other.
+
+Time complexity: O(n log n) due to sorting the characters.
+"""
+@spec are_anagrams(String.t(), String.t()) :: boolean()
+def are_anagrams(str1, str2) do
+  str1_sorted = String.codepoints(str1) |> Enum.sort()
+  str2_sorted = String.codepoints(str2) |> Enum.sort()
+
+  str1_sorted == str2_sorted
+end[0m
+[36m07:06:39.881 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Checks if two strings are anagrams of each other.
+
+An anagram is a word or phrase formed by rearranging the letters of a different
+word or phrase, typically using all the original letters exactly once.
+
+The function returns false if the strings have different lengths.
+Empty strings are considered anagrams of each other.
+
+Time complexity: O(n log n) due to sorting the characters.
+"""
+@spec are_anagrams(String.t(), String.t()) :: boolean()
+def are_anagrams(str1, str2) do
+  str1_sorted = String.codepoints(str1) |> Enum.sort()
+  str2_sorted = String.codepoints(str2) |> Enum.sort()
+
+  str1_sorted == str2_sorted
+end
+end
+[0m
+[22m07:06:39.881 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m07:06:39.881 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Checks if two strings are anagrams of each other.
+
+An anagram is a word or phrase formed by rearranging the letters of a different
+word or phrase, typically using all the original letters exactly once.
+
+The function returns false if the strings have different lengths.
+Empty strings are considered anagrams of each other.
+
+Time complexity: O(n log n) due to sorting the characters.
+"""
+@spec are_anagrams(String.t(), String.t()) :: boolean()
+def are_anagrams(str1, str2) do
+  str1_sorted = String.codepoints(str1) |> Enum.sort()
+  str2_sorted = String.codepoints(str2) |> Enum.sort()
+
+  str1_sorted == str2_sorted
+end[0m
+[36m07:06:39.881 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Checks if two strings are anagrams of each other.
+
+An anagram is a word or phrase formed by rearranging the letters of a different
+word or phrase, typically using all the original letters exactly once.
+
+The function returns false if the strings have different lengths.
+Empty strings are considered anagrams of each other.
+
+Time complexity: O(n log n) due to sorting the characters.
+"""
+@spec are_anagrams(String.t(), String.t()) :: boolean()
+def are_anagrams(str1, str2) do
+  str1_sorted = String.codepoints(str1) |> Enum.sort()
+  str2_sorted = String.codepoints(str2) |> Enum.sort()
+
+  str1_sorted == str2_sorted
+end
+end
+[0m
+[36m07:06:39.882 [debug] [propagate_is_renames] old functions: ["are_anagrams"][0m
+[36m07:06:39.882 [debug] [propagate_is_renames] new functions: ["are_anagrams"][0m
+[36m07:06:39.882 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m07:06:39.882 [info] [Validator.run] step 2/6: compile[0m
+[22m07:06:40.448 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m07:06:40.448 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m07:06:40.448 [info] [Validator.run] step 3/6: format[0m
+[22m07:06:40.757 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m07:06:41.057 [debug] [Validator.run] format fix output: [0m
+[22m07:06:41.057 [info] [Validator.run] step 4/6: credo[0m
+[36m07:06:41.524 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m07:06:41.524 [info] [Validator.run] credo: no issues[0m
+[22m07:06:41.524 [info] [Validator.run] step 5/6: credence check[0m
+[22m07:06:42.206 [info] [Validator.run] credence check exit=0[0m
+[36m07:06:42.206 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m07:06:42.206 [info] [Validator.run] credence check: passed[0m
+[22m07:06:42.206 [info] [Validator.run] step 6/6: tests[0m
+[22m07:06:42.672 [info] [Validator.run] test exit=0[0m
+[36m07:06:42.672 [debug] [Validator.run] test output:
+Running ExUnit with seed: 635560, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m07:06:42.672 [info] [Validator.run] tests: PASSED[0m
+[22m07:06:42.673 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m07:06:42.673 [debug] [Validator.run] final module (681 chars):
+defmodule Solution do
+  @doc """
+  Checks if two strings are anagrams of each other.
+
+  An anagram is a word or phrase formed by rearranging the letters of a different
+  word or phrase, typically using all the original letters exactly once.
+
+  The function returns false if the strings have different lengths.
+  Empty strings are considered anagrams of each other.
+
+  Time complexity: O(n log n) due to sorting the characters.
+  """
+  @spec are_anagrams(String.t(), String.t()) :: boolean()
+  def are_anagrams(str1, str2) do
+    str1_sorted = String.codepoints(str1) |> Enum.sort()
+    str2_sorted = String.codepoints(str2) |> Enum.sort()
+
+    str1_sorted == str2_sorted
+  end
+end
+[0m
+[36m07:06:42.673 [debug] [Validator.run] final test (428 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "checks anagrams with listen and silent" do
+    assert Solution.are_anagrams("listen", "silent") == true
+  end
+
+  test "checks non-anagrams with hello and world" do
+    assert Solution.are_anagrams("hello", "world") == false
+  end
+
+  test "checks anagrams with triangle and integral" do
+    assert Solution.are_anagrams("triangle", "integral") == true
+  end
+end
+[0m
+[22m07:06:42.673 [info] [Solve attempt 1] validation PASSED[0m
+[36m07:06:42.683 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE on (truncated)[0m
+[36m07:08:12.814 [debug] [LLM.call] finish=stop len=1002 usage=%{"completion_tokens" => 4323, "completion_tokens_details" => %{"reasoning_tokens" => 4062}, "prompt_tokens" => 6641, "prompt_tokens_details" => %{"cached_tokens" => 2048}, "total_tokens" => 10964}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_graphemes_for_character_comparisons
+===PHASE===
+pattern
+===BEFORE===
+defmodule Solution do
+  @spec are_anagrams(String.t(), String.t()) :: boolean()
+  def are_anagrams(str1, str2) do
+    str1_sorted = String.codepoints(str1) |> Enum.sort()
+    str2_sorted = String.codepoints(str2) |> Enum.sort()
+
+    str1_sorted == str2_sorted
+  end
+end
+===AFTER===
+defmodule Solution do
+  @spec are_anagrams(String.t(), String.t()) :: boolean()
+  def are_anagrams(str1, str2) do
+    str1_sorted = String.graphemes(str1) |> Enum.sort()
+    str2_sorted = String.graphemes(str2) |> Enum.sort()
+
+    str1_sorted == str2_sorted
+  end
+end
+===ASSUMPTIONS===
+single_codepoint_graphemes
+===RATIONALE===
+String.codepoints/1 returns individual Unicode codepoints, while String.graphemes/1 returns user-perceived characters. For anagram checks comparing "letters" as perceived characters, graphemes is more correct and avoids splitting combining characters.
+===END===[0m
+[22m07:08:12.814 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 90131ms — ok[0m
+[36m07:08:12.814 [debug] [Budget] spent so far (est.): $3.3181[0m
+[22m07:08:14.736 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m07:08:22.880 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" -o -name "*.exs" | head -50[0m
+[22m07:08:22.880 [info] [Pi] step 2: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_graphemes_for_character_comparisons.ex[0m
+[22m07:08:22.880 [info] [Pi] step 3: read
+    path: /home/kly/projects/credence/test/pattern/prefer_graphemes_for_character_comparisons_check_test.exs[0m
+[22m07:08:22.880 [info] [Pi] step 4: read
+    path: /home/kly/projects/credence/test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs[0m
+[22m07:08:22.880 [info] [Pi] step 5: read
+    path: /home/kly/projects/credence/test/pattern/prefer_graphemes_for_character_comparisons_equivalence_test.exs[0m
+[22m07:08:26.385 [info] [Pi] step 6: bash
+    command: ls /home/kly/projects/credence/lib/pattern/[0m
+[22m07:08:26.385 [info] [Pi] step 7: read
+    path: /home/kly/projects/credence/lib/pattern/rule.ex[0m
+[22m07:08:26.385 [info] [Pi] step 8: read
+    path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m07:08:31.172 [info] [Pi] step 9: read
+    path: /home/kly/projects/credence/lib/pattern/no_codepoint_string_reverse.ex[0m
+[22m07:08:31.172 [info] [Pi] step 10: read
+    path: /home/kly/projects/credence/lib/pattern/avoid_graphemes_enum_count.ex[0m
+[22m07:08:31.172 [info] [Pi] step 11: read
+    path: /home/kly/projects/credence/lib/pattern/avoid_graphemes_length.ex[0m
+[22m07:08:34.686 [info] [Pi] step 12: read
+    path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m07:08:34.686 [info] [Pi] step 13: read
+    path: /home/kly/projects/credence/test/support/equivalence_inputs.ex[0m
+[22m07:08:39.269 [info] [Pi] step 14: read
+    path: /home/kly/projects/credence/lib/pattern/no_grapheme_palindrome.ex[0m
+[22m07:08:39.269 [info] [Pi] step 15: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_string_at_for_char_access.ex[0m
+[22m07:08:45.357 [info] [Pi] step 16: bash
+    command: ls /home/kly/projects/credence/test/pattern/ | head -30[0m
+[22m07:08:45.357 [info] [Pi] step 17: read
+    path: /home/kly/projects/credence/test/pattern/avoid_graphemes_enum_count_check_test.exs[0m
+[22m07:08:45.358 [info] [Pi] step 18: read
+    path: /home/kly/projects/credence/test/pattern/avoid_graphemes_enum_count_fix_test.exs[0m
+[22m07:08:48.553 [info] [Pi] step 19: read
+    path: /home/kly/projects/credence/test/pattern/avoid_graphemes_enum_count_equivalence_test.exs[0m
+[22m07:08:48.553 [info] [Pi] step 20: read
+    path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m07:08:52.650 [info] [Pi] step 21: read
+    path: /home/kly/projects/credence/lib/issue.ex[0m
+[22m07:09:55.478 [info] [Budget] HEARTBEAT — 717 paid calls, est $3.3181 over 889.7min → ~$0.2238/hr, ~$5.37/day (tok in=4232462 cache_rd=37214592 out=1543703)[0m
+[22m07:10:36.289 [info] [Pi] step 22: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_graphemes_for_character_comparisons_check_test.exs --no-compile 2>&1 | tail -20[0m
+[22m07:10:56.307 [info] [Pi] step 23: read
+    path: /home/kly/projects/credence/lib/pattern/no_manual_string_reverse.ex[0m
+[22m07:10:56.307 [info] [Pi] step 24: bash
+    command: cd /home/kly/projects/credence && grep -r "codepoints" lib/pattern/ --include="*.ex" -l[0m
+[22m07:11:01.078 [info] [Pi] step 25: bash
+    command: cd /home/kly/projects/credence && ls test/pattern/no_codepoint_string_reverse*[0m
+[22m07:11:01.078 [info] [Pi] step 26: read
+    path: /home/kly/projects/credence/test/pattern/no_codepoint_string_reverse_check_test.exs[0m
+[22m07:11:01.078 [info] [Pi] step 27: read
+    path: /home/kly/projects/credence/test/pattern/no_codepoint_string_reverse_fix_test.exs[0m
+[22m07:11:14.029 [info] [Pi] step 28: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = """
+str1_sorted = String.codepoints(str1) |> Enum.sort()
+str2_sorted = String.codepoints(str2) |> Enum.sort()
+"""
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity, pretty: true)
+'[0m
+[22m07:13:34.132 [info] [Pi] step 29: read
+    limit: 50
+    offset: 1
+    path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m07:13:34.132 [info] [Pi] step 30: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Check what String.codepoints vs String.graphemes return for simple ASCII
+IO.puts("codepoints abc: #{inspect(String.codepoints("abc") |> Enum.sort())}")
+IO.puts("graphemes abc: #{inspect(String.graphemes("abc") |> Enum.sort())}")
+IO.puts("codepoints café: #{inspect(String.codepoints("café") |> Enum.sort())}")
+IO.puts("graphemes café: #{inspect(String.graphemes("café") |> Enum.sort())}")
+# Combining accent
+IO.puts("codepoints café (decomposed): #{inspect(String.codepoints("café") |> Enum.sort())}")
+IO.puts("graphemes café (decomposed): #{inspect(String.graphemes("café") |> Enum.sort())}")
+'[0m
+[22m07:13:43.207 [info] [Pi] step 31: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Combining accent - the e + combining acute
+combined = "caf\u00e9"
+decomposed = :unicode.characters_to_nfd_binary("café")
+IO.puts("combined (caf\\u00e9): #{inspect(combined)}")
+IO.puts("decomposed NFD: #{inspect(decomposed)}")
+IO.puts("codepoints combined: #{inspect(String.codepoints(combined))}")
+IO.puts("graphemes combined: #{inspect(String.graphemes(combined))}")
+IO.puts("codepoints decomposed: #{inspect(String.codepoints(decomposed))}")
+IO.puts("graphemes decomposed: #{inspect(String.graphemes(decomposed))}")
+IO.puts("codepoints decomposed sorted: #{inspect(String.codepoints(decomposed) |> Enum.sort())}")
+IO.puts("graphemes decomposed sorted: #{inspect(String.graphemes(decomposed) |> Enum.sort())}")
+IO.puts("equal? #{String.codepoints(decomposed) |> Enum.sort() == String.graphemes(decomposed) |> Enum.sort()}")
+'[0m
+[22m07:13:54.607 [info] [Pi] step 32: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test that codepoints and graphemes agree for ASCII strings
+IO.puts("codepoints \"abc\": #{inspect(String.codepoints("abc") |> Enum.sort())}")
+IO.puts("graphemes \"abc\": #{inspect(String.graphemes("abc") |> Enum.sort())}")
+IO.puts("codepoints \"xyz\": #{inspect(String.codepoints("xyz") |> Enum.sort())}")
+IO.puts("graphemes \"xyz\": #{inspect(String.graphemes("xyz") |> Enum.sort())}")
+IO.puts("codepoints \"hello\": #{inspect(String.codepoints("hello") |> Enum.sort())}")
+IO.puts("graphemes \"hello\": #{inspect(String.graphemes("hello") |> Enum.sort())}")
+'[0m
+[22m07:14:25.975 [info] [Pi] step 33: bash
+    command: cd /home/kly/projects/credence && grep -r "mark_equivalence_cosmetic\|mark_equivalence_repair\|mark_equivalence_unconstructible" test/ --include="*.exs" -l[0m
+[22m07:14:30.211 [info] [Pi] step 34: read
+    path: /home/kly/projects/credence/test/pattern/hallucinated_guard_equivalence_test.exs[0m
+[22m07:14:30.211 [info] [Pi] step 35: read
+    path: /home/kly/projects/credence/test/pattern/no_doc_false_on_private_equivalence_test.exs[0m
+[22m07:14:39.588 [info] [Pi] step 36: read
+    path: /home/kly/projects/credence/test/pattern/no_codepoint_string_reverse_equivalence_test.exs[0m
+[22m07:14:55.479 [info] [Budget] HEARTBEAT — 717 paid calls, est $3.3181 over 894.7min → ~$0.2225/hr, ~$5.34/day (tok in=4232462 cache_rd=37214592 out=1543703)[0m
+[22m07:15:53.596 [info] [Pi] step 37: write
+    content: defmodule Credence.Pattern.PreferGraphemesForCharacterComparisons do
+  @moduledoc """
+  Readability rule: detects `String.codepoints/1` used in an anagram-check
+  pattern (sorted then compared) and rewrites it to `String.graphemes/1`.
+
+  `String.codepoints/1` splits a string into individual Unicode codepoints,
+  while `String.graphemes/1` returns user-perceived characters. For anagram
+  checks that compare "letters" as perceived characters, graphemes is more
+  correct because it avoids splitting combining characters into separate
+  codepoints.
+
+  Both `String.codepoints/1` and `String.graphemes/1` return `list(String.t())`,
+  so the type is preserved by the rewrite.
+
+  ## Bad
+
+      str1_sorted = String.codepoints(str1) |> Enum.sort()
+      str2_sorted = String.codepoints(str2) |> Enum.sort()
+      str1_sorted == str2_sorted
+
+      # Or nested:
+      Enum.sort(String.codepoints(str))
+
+  ## Good
+
+      str1_sorted = String.graphemes(str1) |> Enum.sort()
+      str2_sorted = String.graphemes(str2) |> Enum.sort()
+      str1_sorted == str2_sorted
+
+      # Or nested:
+      Enum.sort(String.graphemes(str))
+  """
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+  alias Credence.RuleHelpers
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        # Pipe form: String.codepoints(x) |> Enum.sort()
+        {:|>, _pipe_meta, [left, rhs]} = node, issues ->
+          if args_empty_call?(rhs, :Enum, :sort) and codepoints_call?(left) do
+            {node, [build_issue(node) | issues]}
+          else
+            {node, issues}
+          end
+
+        # Nested form: Enum.sort(String.codepoints(x))
+        {{:., _dot_meta, [{:__aliases__, _alias_meta, [:Enum]}, :sort]}, _call_meta,
+         [{{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, _}]} = node,
+        issues ->
+          {node, [build_issue(node) | issues]}
+
+        node, issues ->
+          {node, issues}
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_ast_transform(ast, "", fn input ->
+      Macro.postwalk(input, fn
+        # Pipe form: String.codepoints(x) |> Enum.sort()
+        {:|>, pipe_meta, [left, rhs]} = node ->
+          if args_empty_call?(rhs, :Enum, :sort) and codepoints_call?(left) do
+            {:|>, pipe_meta, [replace_codepoints(left), rhs]}
+          else
+            node
+          end
+
+        # Nested form: Enum.sort(String.codepoints(x)) -> Enum.sort(String.graphemes(x))
+        {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :sort]}, call_meta,
+         [{{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, _} = inner]} ->
+          {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :sort]}, call_meta,
+           [replace_codepoints(inner)]}
+
+        node ->
+          node
+      end)
+    end)
+  end
+
+  # Replaces String.codepoints/1 with String.graphemes/1
+  defp replace_codepoints(
+         {{:., dot_meta, [{:__aliases__, alias_meta, [:String]}, :codepoints]}, call_meta, args}
+       ) do
+    {{:., dot_meta, [{:__aliases__, alias_meta, [:String]}, :graphemes]}, call_meta, args}
+  end
+
+  # Matches a zero-arity call like Enum.sort() (no args)
+  defp args_empty_call?(
+         {{:., _, [{:__aliases__, _, [mod]}, func]}, _, args},
+         mod,
+         func
+       )
+       when args == [],
+       do: true
+
+  defp args_empty_call?(_, _, _), do: false
+
+  # Matches String.codepoints(x)
+  defp codepoints_call?(
+         {{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, _}
+       ),
+       do: true
+
+  defp codepoints_call?(_), do: false
+
+  defp build_issue(node) do
+    meta =
+      case node do
+        {_, m, _} when is_list(m) -> m
+        _ -> []
+      end
+
+    %Issue{
+      rule: :prefer_graphemes_for_character_comparisons,
+      message:
+        "Use `String.graphemes/1` instead of `String.codepoints/1` for anagram checks. " <>
+          "`String.graphemes/1` returns user-perceived characters, which avoids incorrectly " <>
+          "splitting combining characters into separate codepoints.",
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_graphemes_for_character_comparisons.ex[0m
+[22m07:16:08.194 [info] [Pi] step 38: write
+    content: defmodule Credence.Pattern.PreferGraphemesForCharacterComparisonsCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Issue
+  alias Credence.Pattern.PreferGraphemesForCharacterComparisons
+
+  describe "flags the anti-pattern" do
+    test "pipe form: String.codepoints(x) |> Enum.sort()" do
+      assert [%Issue{rule: :prefer_graphemes_for_character_comparisons}] =
+               check(PreferGraphemesForCharacterComparisons, """
+               String.codepoints(str) |> Enum.sort()
+               """)
+    end
+
+    test "nested form: Enum.sort(String.codepoints(x))" do
+      assert [%Issue{rule: :prefer_graphemes_for_character_comparisons}] =
+               check(PreferGraphemesForCharacterComparisons, """
+               Enum.sort(String.codepoints(str))
+               """)
+    end
+
+    test "within a module with anagram check pattern" do
+      code = """
+      defmodule Solution do
+        def are_anagrams(str1, str2) do
+          str1_sorted = String.codepoints(str1) |> Enum.sort()
+          str2_sorted = String.codepoints(str2) |> Enum.sort()
+          str1_sorted == str2_sorted
+        end
+      end
+      """
+
+      assert length(check(PreferGraphemesForCharacterComparisons, code)) == 2
+    end
+
+    test "upstream pipeline: str |> f() |> String.codepoints() |> Enum.sort()" do
+      assert [%Issue{rule: :prefer_graphemes_for_character_comparisons}] =
+               check(PreferGraphemesForCharacterComparisons, """
+               str |> String.trim() |> String.codepoints() |> Enum.sort()
+               """)
+    end
+  end
+
+  describe "does NOT flag" do
+    test "String.graphemes(x) |> Enum.sort()" do
+      assert check(PreferGraphemesForCharacterComparisons, """
+             String.graphemes(str) |> Enum.sort()
+             """) == []
+    end
+
+    test "Enum.sort(String.graphemes(x))" do
+      assert check(PreferGraphemesForCharacterComparisons, """
+             Enum.sort(String.graphemes(str))
+             """) == []
+    end
+
+    test "String.codepoints without Enum.sort()" do
+      assert check(PreferGraphemesForCharacterComparisons, """
+             String.codepoints(str)
+             """) == []
+    end
+
+    test "String.codepoints piped to something other than Enum.sort()" do
+      assert check(PreferGraphemesForCharacterComparisons, """
+             String.codepoints(str) |> Enum.reverse()
+             """) == []
+    end
+
+    test "Enum.sort with argument (not zero-arity)" do
+      assert check(PreferGraphemesForCharacterComparisons, """
+             Enum.sort(String.codepoints(str), :desc)
+             """) == []
+    end
+
+    test "Enum.sort on non-codepoints list" do
+      assert check(PreferGraphemesForCharacterComparisons, """
+             Enum.sort(list)
+             """) == []
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_graphemes_for_character_comparisons_check_test.exs[0m
+[22m07:16:37.956 [info] [Pi] step 39: write
+    content: defmodule Credence.Pattern.PreferGraphemesForCharacterComparisonsFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferGraphemesForCharacterComparisons
+
+  test "rewrites pipe form" do
+    input = """
+    String.codepoints(str) |> Enum.sort()
+    """
+
+    expected = """
+    String.graphemes(str) |> Enum.sort()
+    """
+
+    assert fix(PreferGraphemesForCharacterComparisons, input) == expected
+  end
+
+  test "rewrites nested form" do
+    input = """
+    Enum.sort(String.codepoints(str))
+    """
+
+    expected = """
+    Enum.sort(String.graphemes(str))
+    """
+
+    assert fix(PreferGraphemesForCharacterComparisons, input) == expected
+  end
+
+  test "rewrites module with anagram check" do
+    input = """
+    defmodule Solution do
+      def are_anagrams(str1, str2) do
+        str1_sorted = String.codepoints(str1) |> Enum.sort()
+        str2_sorted = String.codepoints(str2) |> Enum.sort()
+        str1_sorted == str2_sorted
+      end
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      def are_anagrams(str1, str2) do
+        str1_sorted = String.graphemes(str1) |> Enum.sort()
+        str2_sorted = String.graphemes(str2) |> Enum.sort()
+        str1_sorted == str2_sorted
+      end
+    end
+    """
+
+    assert fix(PreferGraphemesForCharacterComparisons, input) == expected
+  end
+
+  test "rewrites with upstream pipeline" do
+    input = """
+    str |> String.trim() |> String.codepoints() |> Enum.sort()
+    """
+
+    expected = """
+    str |> String.trim() |> String.graphemes() |> Enum.sort()
+    """
+
+    assert fix(PreferGraphemesForCharacterComparisons, input) == expected
+  end
+
+  describe "no-ops" do
+    test "String.graphemes unchanged" do
+      code = """
+      String.graphemes(str) |> Enum.sort()
+      """
+
+      assert fix(PreferGraphemesForCharacterComparisons, code) == code
+    end
+
+    test "Enum.sort(String.graphemes) unchanged" do
+      code = """
+      Enum.sort(String.graphemes(str))
+      """
+
+      assert fix(PreferGraphemesForCharacterComparisons, code) == code
+    end
+
+    test "codepoints without sort unchanged" do
+      code = """
+      String.codepoints(str)
+      """
+
+      assert fix(PreferGraphemesForCharacterComparisons, code) == code
+    end
+  end
+
+  describe "round-trip" do
+    test "fixed code produces zero issues" do
+      code = """
+      defmodule Solution do
+        def are_anagrams(str1, str2) do
+          str1_sorted = String.codepoints(str1) |> Enum.sort()
+          str2_sorted = String.codepoints(str2) |> Enum.sort()
+          str1_sorted == str2_sorted
+        end
+      end
+      """
+
+      assert check(PreferGraphemesForCharacterComparisons, fix(PreferGraphemesForCharacterComparisons, code)) == []
+    end
+
+    test "fixed code is valid Elixir" do
+      code = """
+      defmodule Solution do
+        def are_anagrams(str1, str2) do
+          str1_sorted = String.codepoints(str1) |> Enum.sort()
+          str2_sorted = String.codepoints(str2) |> Enum.sort()
+          str1_sorted == str2_sorted
+        end
+      end
+      """
+
+      assert valid_syntax?(fix(PreferGraphemesForCharacterComparisons, code))
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs[0m
+[22m07:17:08.549 [info] [Pi] step 40: write
+    content: defmodule Credence.Pattern.PreferGraphemesForCharacterComparisonsEquivalenceTest do
+  @moduledoc """
+  Tier 1 (expression). `String.codepoints(str) |> Enum.sort()` →
+  `String.graphemes(str) |> Enum.sort()`.
+
+  Both `String.codepoints/1` and `String.graphemes/1` return `list(String.t())`.
+  For strings whose every grapheme is a single codepoint (ASCII, NFC-precomposed
+  accented characters), both functions produce identical results, so the rewrite
+  is behaviour-preserving in that domain.
+
+  Multi-codepoint graphemes (NFD decomposed accents, ZWJ emoji, regional-indicator
+  flags) are deliberately excluded: on those inputs, codepoints splits into
+  individual codepoints while graphemes keeps them as perceived characters. This
+  divergence is the *reason* the rule exists — graphemes is semantically more
+  correct for anagram checks — but it means the rewrite is not output-identical
+  on every Unicode input.
+  """
+  use Credence.RuleCase, async: true
+
+  import Credence.BehaviourEquivalence
+  alias Credence.Pattern.PreferGraphemesForCharacterComparisons
+
+  @expr "String.codepoints(str) |> Enum.sort()"
+
+  test "preserves behaviour for single-codepoint-per-grapheme strings" do
+    assert_equivalent(@expr,
+      rule: PreferGraphemesForCharacterComparisons,
+      vars: [:str],
+      inputs: [
+        "abc",
+        "xyz",
+        "hello",
+        "world",
+        "cba",
+        :unicode.characters_to_nfc_binary("café")
+      ]
+    )
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_graphemes_for_character_comparisons_equivalence_test.exs[0m
+[22m07:17:13.355 [info] [Pi] step 41: bash
+    command: cd /home/kly/projects/credence && mix compile 2>&1 | tail -10[0m
+[22m07:17:19.278 [info] [Pi] step 42: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_graphemes_for_character_comparisons*_test.exs 2>&1[0m
+[22m07:17:37.421 [info] [Pi] step 43: edit
+    edits: [%{"newText" => "  @impl true\n  def check(ast, _opts) do\n    {_ast, issues} =\n      Macro.prewalk(ast, [], fn\n        # Pipe form: ... |> String.codepoints() |> Enum.sort()\n        {:|>, _pipe_meta, [left, rhs]} = node, issues ->\n          if args_empty_call?(rhs, :Enum, :sort) and codepoints_call?(rightmost(left)) do\n            {node, [build_issue(node) | issues]}\n          else\n            {node, issues}\n          end\n\n        # Nested form: Enum.sort(String.codepoints(x))\n        {{:., _dot_meta, [{:__aliases__, _alias_meta, [:Enum]}, :sort]}, _call_meta,\n         [{{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, _}]} = node,\n        issues ->\n          {node, [build_issue(node) | issues]}\n\n        node, issues ->\n          {node, issues}\n      end)\n\n    Enum.reverse(issues)\n  end", "oldText" => "  @impl true\n  def check(ast, _opts) do\n    {_ast, issues} =\n      Macro.prewalk(ast, [], fn\n        # Pipe form: String.codepoints(x) |> Enum.sort()\n        {:|>, _pipe_meta, [left, rhs]} = node, issues ->\n          if args_empty_call?(rhs, :Enum, :sort) and codepoints_call?(left) do\n            {node, [build_issue(node) | issues]}\n          else\n            {node, issues}\n          end\n\n        # Nested form: Enum.sort(String.codepoints(x))\n        {{:., _dot_meta, [{:__aliases__, _alias_meta, [:Enum]}, :sort]}, _call_meta,\n         [{{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, _}]} = node,\n        issues ->\n          {node, [build_issue(node) | issues]}\n\n        node, issues ->\n          {node, issues}\n      end)\n\n    Enum.reverse(issues)\n  end"}, %{"newText" => "  @impl true\n  def fix_patches(ast, _opts) do\n    RuleHelpers.patches_from_ast_transform(ast, \"\", fn input ->\n      Macro.postwalk(input, fn\n        # Pipe form: ... |> String.codepoints() |> Enum.sort()\n        {:|>, pipe_meta, [left, rhs]} = node ->\n          if args_empty_call?(rhs, :Enum, :sort) and codepoints_call?(rightmost(left)) do\n            {:|>, pipe_meta, [replace_codepoints_in_chain(left), rhs]}\n          else\n            node\n          end", "oldText" => "  @impl true\n  def fix_patches(ast, _opts) do\n    RuleHelpers.patches_from_ast_transform(ast, \"\", fn input ->\n      Macro.postwalk(input, fn\n        # Pipe form: String.codepoints(x) |> Enum.sort()\n        {:|>, pipe_meta, [left, rhs]} = node ->\n          if args_empty_call?(rhs, :Enum, :sort) and codepoints_call?(left) do\n            {:|>, pipe_meta, [replace_codepoints(left), rhs]}\n          else\n            node\n          end"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_graphemes_for_character_comparisons.ex[0m
+[22m07:17:42.242 [info] [Pi] step 44: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_graphemes_for_character_comparisons.ex[0m
+[22m07:17:51.037 [info] [Pi] step 45: edit
+    edits: [%{"newText" => "  defp codepoints_call?(_), do: false\n\n  # Returns the rightmost (terminal) call in a pipe chain.\n  defp rightmost({:|>, _, [_, right]}), do: rightmost(right)\n  defp rightmost(other), do: other\n\n  # Replaces the rightmost String.codepoints/1 in a pipe chain with String.graphemes/1\n  defp replace_codepoints_in_chain(\n         {:|>, pipe_meta, [left, right]} = _node\n       ) do\n    if codepoints_call?(right) do\n      {:|>, pipe_meta, [left, replace_codepoints(right)]}\n    else\n      {:|>, pipe_meta, [replace_codepoints_in_chain(left), right]}\n    end\n  end\n\n  defp replace_codepoints_in_chain(node), do: replace_codepoints(node)", "oldText" => "  defp codepoints_call?(_), do: false"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_graphemes_for_character_comparisons.ex[0m
+[22m07:18:00.835 [info] [Pi] step 46: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_graphemes_for_character_comparisons*_test.exs 2>&1[0m
+[22m07:18:12.189 [info] [Pi] step 47: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_graphemes_for_character_comparisons.ex[0m
+[22m07:18:15.363 [info] [Pi] step 48: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -30
+    timeout: 120[0m
+[22m07:18:31.755 [info] [Pi] step 49: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_graphemes_for_character_comparisons*_test.exs 2>&1[0m
+[22m07:18:37.989 [info] [Pi] step 50: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.RuleHelpers
+alias Credence.Pattern.PreferGraphemesForCharacterComparisons
+
+code = """
+defmodule Solution do
+  def are_anagrams(str1, str2) do
+    str1_sorted = String.codepoints(str1) |> Enum.sort()
+    str2_sorted = String.codepoints(str2) |> Enum.sort()
+    str1_sorted == str2_sorted
+  end
+end
+"""
+
+result = RuleHelpers.apply_rule_fix(PreferGraphemesForCharacterComparisons, code)
+IO.puts("=== FIX OUTPUT ===")
+IO.puts(result)
+'[0m
+[22m07:18:53.977 [info] [Pi] agent done — exit=0 steps=50 stop=stop[0m
+[36m07:18:53.977 [debug] [Budget] spent so far (est.): $3.3743[0m
+[22m07:18:54.470 [info] [Gate] staged entries: [{"A", ["lib/pattern/prefer_graphemes_for_character_comparisons.ex"]}, {"A", ["test/pattern/prefer_graphemes_for_character_comparisons_check_test.exs"]}, {"A", ["test/pattern/prefer_graphemes_for_character_comparisons_equivalence_test.exs"]}, {"A", ["test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs"]}][0m
+[36m07:18:55.127 [debug] [Gate] mix test ["test/pattern/prefer_graphemes_for_character_comparisons_check_test.exs", "test/pattern/prefer_graphemes_for_character_comparisons_equivalence_test.exs", "test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs"] exit=2
+Generated credence app
+Running ExUnit with seed: 904693, max_cases: 48
+
+
+
+  1) test preserves behaviour for single-codepoint-per-grapheme strings (Credence.Pattern.PreferGraphemesForCharacterComparisonsEquivalenceTest)
+     test/pattern/prefer_graphemes_for_character_comparisons_equivalence_test.exs:25
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferGraphemesForCharacterComparisons.check/2 is undefined (module Credence.Pattern.PreferGraphemesForCharacterComparisons is not available)
+     code: assert_equivalent(@expr,
+     stacktrace:
+       Credence.Pattern.PreferGraphemesForCharacterComparisons.check({:|>, [trailing_comments: [], line: 1, column: 24], [{{:., [trailing_comments: [], line: 1, column: 7], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 1], line: 1, column: 1], [:String]}, :codepoints]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 22], line: 1, column: 8], [{:str, [trailing_comments: [], leading_comments: [], line: 1, column: 19], nil}]}, {{:., [trailing_comments: [], line: 1, column: 31], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 27], line: 1, column: 27], [:Enum]}, :sort]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 37], line: 1, column: 32], []}]}, [source: "String.codepoints(str) |> Enum.sort()"])
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:293: Credence.BehaviourEquivalence.rule_fires?/2
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:240: Credence.BehaviourEquivalence.precheck!/4
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:75: Credence.BehaviourEquivalence.assert_equivalent/2
+       test/pattern/prefer_graphemes_for_character_comparisons_equivalence_test.exs:26: (test)
+
+
+
+  2) test rewrites with upstream pipeline (Credence.Pattern.PreferGraphemesForCharacterComparisonsFixTest)
+     test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs:54
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferGraphemesForCharacterComparisons.fix_patches/2 is undefined (module Credence.Pattern.PreferGraphemesForCharacterComparisons is not available)
+     code: assert fix(PreferGraphemesForCharacterComparisons, input) == expected
+     stacktrace:
+       Credence.Pattern.PreferGraphemesForCharacterComparisons.fix_patches({:|>, [trailing_comments: [], end_of_expression: [newlines: 1, line: 1, column: 59], line: 1, column: 45], [{:|>, [trailing_comments: [], line: 1, column: 22], [{:|>, [trailing_comments: [], line: 1, column: 5], [{:str, [trailing_comments: [], leading_comments: [], line: 1, column: 1], nil}, {{:., [trailing_comments: [], line: 1, column: 14], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 8], line: 1, column: 8], [:String]}, :trim]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 20], line: 1, column: 15], []}]}, {{:., [trailing_comments: [], line: 1, column: 31], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 25], line: 1, column: 25], [:String]}, :codepoints]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 43], line: 1, column: 32], []}]}, {{:., [trailing_comments: [], line: 1, column: 52], [...]}, ...}]}, [source: "str |> String.trim() |> String.codepoints() |> Enum.sort()\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs:63: (test)
+
+
+
+  3) test rewrites module with anagram check (Credence.Pattern.PreferGraphemesForCharacterComparisonsFixTest)
+     test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs:30
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferGraphemesForCharacterComparisons.fix_patches/2 is undefined (module Credence.Pattern.PreferGraphemesForCharacterComparisons is not available)
+     code: assert fix(PreferGraphemesForCharacterComparisons, input) == expected
+     stacktrace:
+       Credence.Pattern.PreferGraphemesForCharacterComparisons.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 7, column: 4], do: [line: 1, column: 20], end: [line: 7, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Solution]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 20], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 6, column: 6], do: [line: 2, column: 32], end: [line: 6, column: 3], line: 2, column: 3], [{:are_anagrams, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 30], line: 2, column: 7], [{:str1, [trailing_comments: [], leading_comments: [], line: 2, column: 20], nil}, {:str2, [trailing_comments: [], leading_comments: [], line: 2, column: 26], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 32], [:do]}, {:__block__, [trailing_comments: [], ...], ...}}]]}}]]}, [source: "defmodule Solution do\n  def are_anagrams(str1, str2) do\n    str1_sorted = String.codepoints(str1) |> Enum.sort()\n    str2_sorted = String.codepoints(str2) |> Enum.sort()\n    str1_sorted == str2_sorted\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs:51: (test)
+
+
+
+  4) test no-ops String.graphemes unchanged (Credence.Pattern.PreferGraphemesForCharacterComparisonsFixTest)
+     test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs:67
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferGraphemesForCharacterComparisons.fix_patches/2 is undefined (module Credence.Pattern.PreferGraphemesForCharacterComparisons is not available)
+     code: assert fix(PreferGraphemesForCharacterComparisons, code) == code
+     stacktrace:
+       Credence.Pattern.PreferGraphemesForCharacterComparisons.fix_patches({:|>, [trailing_comments: [], end_of_expression: [newlines: 1, line: 1, column: 37], line: 1, column: 23], [{{:., [trailing_comments: [], line: 1, column: 7], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 1], line: 1, column: 1], [:String]}, :graphemes]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 21], line: 1, column: 8], [{:str, [trailing_comments: [], leading_comments: [], line: 1, column: 18], nil}]}, {{:., [trailing_comments: [], line: 1, column: 30], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 26], line: 1, column: 26], [:Enum]}, :sort]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 36], line: 1, column: 31], []}]}, [source: "String.graphemes(str) |> Enum.sort()\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs:72: (test)
+
+
+
+  5) test round-trip fixed code produces zero issues (Credence.Pattern.PreferGraphemesForCharacterComparisonsFixTest)
+     test/pattern/prefer_graphemes_for_character_comparisons_fix_test.exs:93
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferGraphemesForCharacterComparisons.fix_patches/2 is undefined (module Credence.Pattern.PreferGraphemesForCharacterComparisons is not available)
+     code: assert check(PreferGraphemesForCharacterComparisons, fix(PreferGraphemesForCharacterComparisons, code)) == []
+     stacktrace:
+       Credence.Pattern.PreferGraphemesForCharacterComparisons.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [new (truncated)[0m
+[22m07:18:55.132 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m07:19:03.938 [debug] [Gate] mix test [] exit=2
+Compiling 1 file (.ex)
+Generated credence app
+Running ExUnit with seed: 597868, max_cases: 48
+
+.....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+
+  1) test every fix test exercises at least one real transformation (not all no-ops) (Credence.FixMetaTest)
+     test/fix_meta_test.exs:83
+     fix tests with no `fix(rule, input) == expected` where expected differs from input:
+       - Credence.Pattern.PreferPrependInAccumulator — test/pattern/prefer_prepend_in_accumulator_fix_test.exs
+     code: assert bad == [],
+     stacktrace:
+       test/fix_meta_test.exs:86: (test)
+
+..........
+
+  2) test every fix test compares whole strings (no =~ / substring / normalize) (Credence.FixMetaTest)
+     test/fix_meta_test.exs:75
+     fix tests using a partial or normalized comparison instead of whole-string ==:
+       - Credence.Pattern.PreferPrependInAccumulator — test/pattern/prefer_prepend_in_accumulator_fix_test.exs
+     code: assert bad == [],
+     stacktrace:
+       test/fix_meta_test.exs:78: (test)
+
+....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Finished in 8.2 seconds (3.9s async, 4.3s sync)
+5 properties, 4608 tests, 2 failures
+[0m
+[33m07:19:03.938 [warning] [Gate] REJECT: :full_suite_red — discarding[0m

@@ -1,0 +1,1455 @@
+[22m17:49:50.659 [info] [idx=98368] entry_point=maximumDifference[0m
+[36m17:49:50.659 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that takes an array and returns the maximum difference between two elements where the larger element comes after the smaller one.
+
+## Python Solution
+```python
+def maximumDifference(inputArr):
+    inputArr_size = len(inputArr)
+    max_difference = 0
+    min_element = inputArr[0]
+
+    for i in range(1, inputArr_size):
+        max_difference = max(max_difference, inputArr[i] - min_element)
+        min_element = min(min_element, inputArr[i])
+
+    return max_difference
+```
+
+## Python Tests
+assert maximumDifference([2,3,10,6,4,8,1]) == 8
+assert maximumDifference([1,2,3,4,5]) == 4
+assert maximumDifference([7,9,5,6,3,2]) == 2
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `maximumdifference`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[22m17:49:55.478 [info] [Budget] HEARTBEAT — 42 paid calls, est $0.3141 over 89.7min → ~$0.2101/hr, ~$5.04/day (tok in=396665 cache_rd=5977600 out=137959)[0m
+[36m17:50:52.251 [debug] [LLM.call] finish=stop len=1111 usage=%{"completion_tokens" => 1885, "completion_tokens_details" => %{"reasoning_tokens" => 1558}, "prompt_tokens" => 529, "prompt_tokens_details" => %{}, "total_tokens" => 2414}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function in Elixir that takes a list of numbers and returns the maximum difference between two elements such that the larger element appears after the smaller element in the list. The function should return 0 if no such pair exists or if the list has fewer than two elements. The implementation should run in linear time with constant extra space.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.maximumdifference([2, 3, 10, 6, 4, 8, 1]) == 8
+  end
+
+  test "example 2" do
+    assert Solution.maximumdifference([1, 2, 3, 4, 5]) == 4
+  end
+
+  test "example 3" do
+    assert Solution.maximumdifference([7, 9, 5, 6, 3, 2]) == 2
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def maximumdifference(list) when length(list) < 2, do: 0
+
+  def maximumdifference([first | rest]) do
+    Enum.reduce(rest, {first, 0}, fn current, {min_so_far, max_diff} ->
+      new_max_diff = max(max_diff, current - min_so_far)
+      new_min = min(min_so_far, current)
+      {new_min, new_max_diff}
+    end)
+    |> elem(1)
+  end
+end
+
+---END---[0m
+[22m17:50:52.251 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 61591ms — ok[0m
+[36m17:50:52.252 [debug] [Budget] spent so far (est.): $0.316[0m
+[22m17:50:53.395 [info] [RoundTrip] reference PASSED tests[0m
+[22m17:50:53.395 [info] [idx=98368] translation fresh — solving[0m
+[22m17:50:53.395 [info] ===SOLVE_BOUNDARY===[0m
+[22m17:50:53.395 [info] [Solve attempt 1] generating (fn=maximumdifference)[0m
+[36m17:50:53.396 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function in Elixir that takes a list of numbers and returns the maximum difference between two elements such that the larger element appears after the smaller element in the list. The function should return 0 if no such pair exists or if the list has fewer than two elements. The implementation should run in linear time with constant extra space.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.maximumdifference([2, 3, 10, 6, 4, 8, 1]) == 8
+  end
+
+  test "example 2" do
+    assert Solution.maximumdifference([1, 2, 3, 4, 5]) == 4
+  end
+
+  test "example 3" do
+    assert Solution.maximumdifference([7, 9, 5, 6, 3, 2]) == 2
+  end
+end
+```
+
+Module: `Solution`. Function: `maximumdifference`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m17:50:57.335 [debug] [LLM.call] finish=stop len=1387 usage=%{"completion_tokens" => 414, "prompt_tokens" => 473, "prompt_tokens_details" => %{"cached_tokens" => 144}, "total_tokens" => 887}
+[LLM.call] response:
+---MODULE---
+@moduledoc """
+Provides a function to calculate the maximum difference between two elements in a list
+such that the larger element appears after the smaller element.
+"""
+
+defmodule Solution do
+  @doc """
+  Returns the maximum difference between two elements such that the larger element
+  appears after the smaller element in the list. Returns 0 if no such pair exists
+  or if the list has fewer than two elements.
+
+  Runs in O(n) time with O(1) extra space.
+  """
+  @spec maximumdifference(list(number())) :: number()
+  def maximumdifference(list) when length(list) < 2, do: 0
+
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+
+  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+  defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+    current_diff = current - min_so_far
+    new_max_diff = max(max_diff, current_diff)
+
+    new_min_so_far = min(min_so_far, current)
+
+    do_maximumdifference(rest, new_min_so_far, new_max_diff)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.maximumdifference([2, 3, 10, 6, 4, 8, 1]) == 8
+  end
+
+  test "example 2" do
+    assert Solution.maximumdifference([1, 2, 3, 4, 5]) == 4
+  end
+
+  test "example 3" do
+    assert Solution.maximumdifference([7, 9, 5, 6, 3, 2]) == 2
+  end
+end
+---END---[0m
+[22m17:50:57.335 [info] [LLM.call] local_qwen_thinking completed in 3939ms — ok[0m
+[22m17:50:57.335 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m17:50:57.335 [debug] [Validator.run] module code (1014 chars):
+@moduledoc """
+Provides a function to calculate the maximum difference between two elements in a list
+such that the larger element appears after the smaller element.
+"""
+
+defmodule Solution do
+  @doc """
+  Returns the maximum difference between two elements such that the larger element
+  appears after the smaller element in the list. Returns 0 if no such pair exists
+  or if the list has fewer than two elements.
+
+  Runs in O(n) time with O(1) extra space.
+  """
+  @spec maximumdifference(list(number())) :: number()
+  def maximumdifference(list) when length(list) < 2, do: 0
+
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+
+  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+  defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+    current_diff = current - min_so_far
+    new_max_diff = max(max_diff, current_diff)
+
+    new_min_so_far = min(min_so_far, current)
+
+    do_maximumdifference(rest, new_min_so_far, new_max_diff)
+  end
+end[0m
+[36m17:50:57.335 [debug] [Validator.run] test code (338 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.maximumdifference([2, 3, 10, 6, 4, 8, 1]) == 8
+  end
+
+  test "example 2" do
+    assert Solution.maximumdifference([1, 2, 3, 4, 5]) == 4
+  end
+
+  test "example 3" do
+    assert Solution.maximumdifference([7, 9, 5, 6, 3, 2]) == 2
+  end
+end[0m
+[36m17:50:57.335 [debug] [Budget] spent so far (est.): $0.3165[0m
+[22m17:50:57.336 [info] [Validator.run] step 1/6: credence fix[0m
+[36m17:50:57.336 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m17:50:57.934 [debug] [run_credence_fix] exit=0 output:
+
+17:50:57.852 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+17:50:57.854 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 8 rules)
+
+17:50:57.856 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+17:50:57.856 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+17:50:57.856 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+17:50:57.866 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @moduledoc """
+  L1 + defmodule Solution do
+  L2 - Provides a function to calculate the maximum difference between two elements in a list
+  L2 +   @moduledoc """
+  L3 - such that the larger element appears after the smaller element.
+  L3 +   Provides a function to calculate the maximum difference between two elements in a list
+  L4 - """
+  L4 +   such that the larger element appears after the smaller element.
+  L5 - 
+  L5 +   """
+  L6 - defmodule Solution do
+  L6 + 
+
+17:50:57.866 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+17:50:57.875 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+17:50:57.879 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+17:50:57.879 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+17:50:57.879 [debug] [credence_fix] starting pattern fix pipeline (117 rules)
+
+17:50:57.915 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m17:50:57.935 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m17:50:58.499 [info] [run_credence_fix] fix compiles OK[0m
+[36m17:50:58.499 [debug] [run_credence_fix] original:
+@moduledoc """
+Provides a function to calculate the maximum difference between two elements in a list
+such that the larger element appears after the smaller element.
+"""
+
+defmodule Solution do
+  @doc """
+  Returns the maximum difference between two elements such that the larger element
+  appears after the smaller element in the list. Returns 0 if no such pair exists
+  or if the list has fewer than two elements.
+
+  Runs in O(n) time with O(1) extra space.
+  """
+  @spec maximumdifference(list(number())) :: number()
+  def maximumdifference(list) when length(list) < 2, do: 0
+
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+
+  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+  defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+    current_diff = current - min_so_far
+    new_max_diff = max(max_diff, current_diff)
+
+    new_min_so_far = min(min_so_far, current)
+
+    do_maximumdifference(rest, new_min_so_far, new_max_diff)
+  end
+end[0m
+[36m17:50:58.499 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @moduledoc """
+  Provides a function to calculate the maximum difference between two elements in a list
+  such that the larger element appears after the smaller element.
+  """
+
+  @doc """
+  Returns the maximum difference between two elements such that the larger element
+  appears after the smaller element in the list. Returns 0 if no such pair exists
+  or if the list has fewer than two elements.
+
+  Runs in O(n) time with O(1) extra space.
+  """
+  @spec maximumdifference(list(number())) :: number()
+  def maximumdifference(list) when length(list) < 2, do: 0
+
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+
+  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+  defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+    current_diff = current - min_so_far
+    new_max_diff = max(max_diff, current_diff)
+
+    new_min_so_far = min(min_so_far, current)
+
+    do_maximumdifference(rest, new_min_so_far, new_max_diff)
+  end
+end[0m
+[22m17:50:58.499 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m17:50:58.499 [debug] [Validator.run] module BEFORE credence fix:
+@moduledoc """
+Provides a function to calculate the maximum difference between two elements in a list
+such that the larger element appears after the smaller element.
+"""
+
+defmodule Solution do
+  @doc """
+  Returns the maximum difference between two elements such that the larger element
+  appears after the smaller element in the list. Returns 0 if no such pair exists
+  or if the list has fewer than two elements.
+
+  Runs in O(n) time with O(1) extra space.
+  """
+  @spec maximumdifference(list(number())) :: number()
+  def maximumdifference(list) when length(list) < 2, do: 0
+
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+
+  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+  defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+    current_diff = current - min_so_far
+    new_max_diff = max(max_diff, current_diff)
+
+    new_min_so_far = min(min_so_far, current)
+
+    do_maximumdifference(rest, new_min_so_far, new_max_diff)
+  end
+end[0m
+[36m17:50:58.500 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @moduledoc """
+  Provides a function to calculate the maximum difference between two elements in a list
+  such that the larger element appears after the smaller element.
+  """
+
+  @doc """
+  Returns the maximum difference between two elements such that the larger element
+  appears after the smaller element in the list. Returns 0 if no such pair exists
+  or if the list has fewer than two elements.
+
+  Runs in O(n) time with O(1) extra space.
+  """
+  @spec maximumdifference(list(number())) :: number()
+  def maximumdifference(list) when length(list) < 2, do: 0
+
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+
+  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+  defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+    current_diff = current - min_so_far
+    new_max_diff = max(max_diff, current_diff)
+
+    new_min_so_far = min(min_so_far, current)
+
+    do_maximumdifference(rest, new_min_so_far, new_max_diff)
+  end
+end[0m
+[36m17:50:58.500 [debug] [propagate_is_renames] old functions: ["maximumdifference", "do_maximumdifference"][0m
+[36m17:50:58.500 [debug] [propagate_is_renames] new functions: ["maximumdifference", "do_maximumdifference"][0m
+[36m17:50:58.500 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m17:50:58.500 [info] [Validator.run] step 2/6: compile[0m
+[22m17:50:59.062 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m17:50:59.062 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m17:50:59.062 [info] [Validator.run] step 3/6: format[0m
+[22m17:50:59.369 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m17:50:59.685 [debug] [Validator.run] format fix output: [0m
+[22m17:50:59.685 [info] [Validator.run] step 4/6: credo[0m
+[36m17:51:00.165 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m17:51:00.165 [info] [Validator.run] credo: no issues[0m
+[22m17:51:00.165 [info] [Validator.run] step 5/6: credence check[0m
+[22m17:51:00.874 [info] [Validator.run] credence check exit=0[0m
+[36m17:51:00.874 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m17:51:00.874 [info] [Validator.run] credence check: passed[0m
+[22m17:51:00.874 [info] [Validator.run] step 6/6: tests[0m
+[22m17:51:01.344 [info] [Validator.run] test exit=0[0m
+[36m17:51:01.344 [debug] [Validator.run] test output:
+Running ExUnit with seed: 303743, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m17:51:01.344 [info] [Validator.run] tests: PASSED[0m
+[22m17:51:01.345 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m17:51:01.345 [debug] [Validator.run] final module (1023 chars):
+defmodule Solution do
+  @moduledoc """
+  Provides a function to calculate the maximum difference between two elements in a list
+  such that the larger element appears after the smaller element.
+  """
+
+  @doc """
+  Returns the maximum difference between two elements such that the larger element
+  appears after the smaller element in the list. Returns 0 if no such pair exists
+  or if the list has fewer than two elements.
+
+  Runs in O(n) time with O(1) extra space.
+  """
+  @spec maximumdifference(list(number())) :: number()
+  def maximumdifference(list) when length(list) < 2, do: 0
+
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+
+  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+  defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+    current_diff = current - min_so_far
+    new_max_diff = max(max_diff, current_diff)
+
+    new_min_so_far = min(min_so_far, current)
+
+    do_maximumdifference(rest, new_min_so_far, new_max_diff)
+  end
+end
+[0m
+[36m17:51:01.345 [debug] [Validator.run] final test (339 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.maximumdifference([2, 3, 10, 6, 4, 8, 1]) == 8
+  end
+
+  test "example 2" do
+    assert Solution.maximumdifference([1, 2, 3, 4, 5]) == 4
+  end
+
+  test "example 3" do
+    assert Solution.maximumdifference([7, 9, 5, 6, 3, 2]) == 2
+  end
+end
+[0m
+[22m17:51:01.345 [info] [Solve attempt 1] validation PASSED[0m
+[36m17:51:01.355 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+
+## Dead-ends already tried (do NOT re-propose)
+(none)
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, self-contained defmodule isolating ONE issue)
+===AFTER===              (REQUIRED for any proposed rule — the idiomatic rewrite; NO check-only)
+===ASSUMPTIONS===        (o (truncated)[0m
+[36m17:53:34.364 [debug] [LLM.call] finish=stop len=1440 usage=%{"completion_tokens" => 3804, "completion_tokens_details" => %{"reasoning_tokens" => 3395}, "prompt_tokens" => 6950, "prompt_tokens_details" => %{"cached_tokens" => 2048}, "total_tokens" => 10754}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+avoid_length_guard_less_than_2
+===PHASE===
+pattern
+===BEFORE===
+defmodule Solution do
+  @spec maximumdifference(list(number())) :: number()
+  def maximumdifference(list) when length(list) < 2, do: 0
+
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+
+  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+  defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+    current_diff = current - min_so_far
+    new_max_diff = max(max_diff, current_diff)
+    new_min_so_far = min(min_so_far, current)
+    do_maximumdifference(rest, new_min_so_far, new_max_diff)
+  end
+end
+===AFTER===
+defmodule Solution do
+  @spec maximumdifference(list(number())) :: number()
+  def maximumdifference([]), do: 0
+  def maximumdifference([_]), do: 0
+
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+
+  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+  defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+    current_diff = current - min_so_far
+    new_max_diff = max(max_diff, current_diff)
+    new_min_so_far = min(min_so_far, current)
+    do_maximumdifference(rest, new_min_so_far, new_max_diff)
+  end
+end
+===ASSUMPTIONS===
+===RATIONALE===
+`when length(x) < 2` is O(n) traversal just to check emptiness; pattern matching `[]`/`[_]` is O(1) and idiomatic.
+===END===[0m
+[22m17:53:34.364 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 153008ms — ok[0m
+[36m17:53:34.364 [debug] [Budget] spent so far (est.): $0.3229[0m
+[22m17:53:36.298 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m17:53:42.921 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" -o -name "*.exs" | head -30[0m
+[22m17:53:46.919 [info] [Pi] step 2: bash
+    command: find /home/kly/projects/credence/lib/pattern -type f -name "*.ex" | head -20[0m
+[22m17:53:49.853 [info] [Pi] step 3: read
+    path: /home/kly/projects/credence/lib/pattern/no_manual_max.ex[0m
+[22m17:53:53.735 [info] [Pi] step 4: read
+    path: /home/kly/projects/credence/lib/credence/pattern/rule.ex[0m
+[22m17:53:57.441 [info] [Pi] step 5: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" | xargs grep -l "defmodule Credence.Pattern.Rule" 2>/dev/null[0m
+[22m17:54:00.400 [info] [Pi] step 6: read
+    path: /home/kly/projects/credence/lib/pattern/rule.ex[0m
+[22m17:54:04.745 [info] [Pi] step 7: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" | xargs grep -l "defmodule Credence.Issue" 2>/dev/null[0m
+[22m17:54:08.387 [info] [Pi] step 8: read
+    path: /home/kly/projects/credence/lib/issue.ex[0m
+[22m17:54:12.296 [info] [Pi] step 9: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" | xargs grep -l "defmodule Credence.RuleHelpers" 2>/dev/null[0m
+[22m17:54:16.519 [info] [Pi] step 10: read
+    path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m17:54:20.467 [info] [Pi] step 11: read
+    path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m17:54:24.463 [info] [Pi] step 12: bash
+    command: ls /home/kly/projects/credence/test/pattern/ | head -20[0m
+[22m17:54:29.414 [info] [Pi] step 13: bash
+    command: ls /home/kly/projects/credence/test/pattern/ | grep avoid_graphemes[0m
+[22m17:54:35.523 [info] [Pi] step 14: bash
+    command: find /home/kly/projects/credence/lib/pattern -name "*avoid_graphemes_enum_count*" | head -5[0m
+[22m17:54:38.975 [info] [Pi] step 15: read
+    path: /home/kly/projects/credence/lib/pattern/avoid_graphemes_enum_count.ex[0m
+[22m17:54:43.454 [info] [Pi] step 16: read
+    path: /home/kly/projects/credence/test/pattern/avoid_graphemes_enum_count_check_test.exs[0m
+[22m17:54:47.155 [info] [Pi] step 17: read
+    path: /home/kly/projects/credence/test/pattern/avoid_graphemes_enum_count_fix_test.exs[0m
+[22m17:54:50.976 [info] [Pi] step 18: read
+    path: /home/kly/projects/credence/test/pattern/avoid_graphemes_enum_count_equivalence_test.exs[0m
+[22m17:54:54.093 [info] [Pi] step 19: read
+    path: /home/kly/projects/credence/test/support/equivalence_inputs.ex[0m
+[22m17:54:55.478 [info] [Budget] HEARTBEAT — 45 paid calls, est $0.3229 over 94.7min → ~$0.2046/hr, ~$4.91/day (tok in=404617 cache_rd=5977600 out=144062)[0m
+[22m17:54:57.254 [info] [Pi] step 20: read
+    path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m17:55:01.891 [info] [Pi] step 21: read
+    path: /home/kly/projects/credence/test/pattern/avoid_length_guard_less_than2_check_test.exs[0m
+[22m17:55:05.775 [info] [Pi] step 22: read
+    path: /home/kly/projects/credence/lib/pattern/avoid_length_guard_less_than2.ex[0m
+[22m17:55:30.337 [info] [Pi] step 23: read
+    path: /home/kly/projects/credence/test/pattern/avoid_length_guard_less_than2_fix_test.exs[0m
+[22m17:55:33.622 [info] [Pi] step 24: read
+    path: /home/kly/projects/credence/test/pattern/avoid_length_guard_less_than2_equivalence_test.exs[0m
+[22m17:55:44.050 [info] [Pi] step 25: bash
+    command: grep -l "when.*length" /home/kly/projects/credence/lib/pattern/*.ex 2>/dev/null[0m
+[22m17:55:49.299 [info] [Pi] step 26: read
+    path: /home/kly/projects/credence/lib/pattern/no_length_guard_to_pattern.ex[0m
+[22m17:55:54.517 [info] [Pi] step 27: bash
+    command: find /home/kly/projects/credence/test/pattern -name "*no_length_guard_to_pattern*" | head -5[0m
+[22m17:55:59.446 [info] [Pi] step 28: read
+    path: /home/kly/projects/credence/test/pattern/no_length_guard_to_pattern_fix_test.exs[0m
+[22m17:56:05.703 [info] [Pi] step 29: read
+    path: /home/kly/projects/credence/lib/pattern/no_length_comparison_for_empty.ex[0m
+[22m17:56:16.488 [info] [Pi] step 30: bash
+    command: cd /home/kly/projects/credence && elixir -e '
+code = """
+defmodule Solution do
+  def maximumdifference(list) when length(list) < 2, do: 0
+end
+"""
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity)
+'[0m
+[22m17:56:21.641 [info] [Pi] step 31: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = """
+defmodule TestSolution do
+  def maximumdifference(list) when length(list) < 2, do: 0
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+end
+"""
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity, pretty: true)
+'[0m
+[22m17:56:34.279 [info] [Pi] step 32: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = """
+defmodule TestSolution do
+  def maximumdifference([]), do: 0
+  def maximumdifference([_]), do: 0
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+end
+"""
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity, pretty: true)
+'[0m
+[22m17:56:43.453 [info] [Pi] step 33: bash
+    command: grep -l "patches_from_ast_transform" /home/kly/projects/credence/lib/pattern/*.ex 2>/dev/null | head -5[0m
+[22m17:56:46.912 [info] [Pi] step 34: read
+    path: /home/kly/projects/credence/lib/pattern/no_enum_at_negative_index.ex[0m
+[22m17:57:52.170 [info] [Pi] step 35: write
+    content: defmodule Credence.Pattern.AvoidLengthGuardLessThan2 do
+  @moduledoc """
+  Performance rule: Detects function guards that check `length(x) < 2` (or
+  `length(x) <= 1`) and rewrites them into two O(1) pattern-matched clauses.
+
+  `length/1` traverses the entire list just to compare with a small number.
+  When the guard is `length(x) < 2`, the intent is "zero or one element",
+  which can be expressed with two pattern-matched clauses that are O(1).
+
+  ## Bad
+
+      def maximumdifference(list) when length(list) < 2, do: 0
+
+  ## Good
+
+      def maximumdifference([]), do: 0
+      def maximumdifference([_]), do: 0
+
+  Pattern matching is O(1) and idiomatic, while `length/1` is O(n).
+  """
+
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+  alias Credence.RuleHelpers
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        {:def, meta, [{:when, _, [_call, guard]} | _rest]} = node, issues ->
+          {node, find_length_less_than2(guard, meta, issues)}
+
+        {:defp, meta, [{:when, _, [_call, guard]} | _rest]} = node, issues ->
+          {node, find_length_less_than2(guard, meta, issues)}
+
+        node, issues ->
+          {node, issues}
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, opts) do
+    source = Keyword.fetch!(opts, :source)
+    RuleHelpers.patches_from_ast_transform(ast, source, &transform_ast/1)
+  end
+
+  defp find_length_less_than2(guard_ast, def_meta, acc) do
+    {_ast, issues} =
+      Macro.prewalk(guard_ast, acc, fn
+        # length(var) < 2
+        {:<, meta, [{:length, _, [_var]}, n_node]} = node, issues ->
+          if unwrap_int(n_node) == 2 do
+            line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
+            {node, [build_issue(line) | issues]}
+          else
+            {node, issues}
+          end
+
+        # 2 > length(var) — reversed
+        {:>, meta, [n_node, {:length, _, [_var]}]} = node, issues ->
+          if unwrap_int(n_node) == 2 do
+            line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
+            {node, [build_issue(line) | issues]}
+          else
+            {node, issues}
+          end
+
+        # length(var) <= 1
+        {:<=, meta, [{:length, _, [_var]}, n_node]} = node, issues ->
+          if unwrap_int(n_node) == 1 do
+            line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
+            {node, [build_issue(line) | issues]}
+          else
+            {node, issues}
+          end
+
+        # 1 >= length(var) — reversed
+        {:>=, meta, [n_node, {:length, _, [_var]}]} = node, issues ->
+          if unwrap_int(n_node) == 1 do
+            line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
+            {node, [build_issue(line) | issues]}
+          else
+            {node, issues}
+          end
+
+        node, issues ->
+          {node, issues}
+      end)
+
+    issues
+  end
+
+  defp unwrap_int({:__block__, _, [n]}) when is_integer(n), do: n
+  defp unwrap_int(_), do: nil
+
+  defp build_issue(line) do
+    %Issue{
+      rule: :avoid_length_guard_less_than2,
+      message:
+        "`length(x) < 2` in a guard traverses the entire list. " <>
+          "Use pattern matching `[]` and `[_]` instead — both are O(1).",
+      meta: %{line: line}
+    }
+  end
+
+  # AST transform: walk and replace matching def/defp clauses
+  defp transform_ast(ast) do
+    Macro.prewalk(ast, fn
+      {:def, meta, [{:when, when_meta, [call, guard]} | rest]} = node ->
+        try_split_clause(:def, meta, when_meta, call, guard, rest, node)
+
+      {:defp, meta, [{:when, when_meta, [call, guard]} | rest]} = node ->
+        try_split_clause(:defp, meta, when_meta, call, guard, rest, node)
+
+      node ->
+        node
+    end)
+  end
+
+  defp try_split_clause(kind, meta, _when_meta, call, guard, rest, original) do
+    case extract_length_less_than2(guard) do
+      {:ok, var} ->
+        case replace_param_with_patterns(call, var) do
+          {:ok, empty_call, single_call} ->
+            # Return a list of two clauses (will be flattened by the block)
+            {:__block__, [],
+             [
+               {kind, meta, [empty_call | rest]},
+               {kind, meta, [single_call | rest]}
+             ]}
+
+          :error ->
+            original
+        end
+
+      :error ->
+        original
+    end
+  end
+
+  # Extract the variable from length(var) < 2 or equivalent guards
+  defp extract_length_less_than2({:<, _, [{:length, _, [var]}, n]}) do
+    with {:ok, 2} <- extract_int(n),
+         true <- simple_var?(var) do
+      {:ok, var}
+    else
+      _ -> :error
+    end
+  end
+
+  defp extract_length_less_than2({:>, _, [n, {:length, _, [var]}]}) do
+    with {:ok, 2} <- extract_int(n),
+         true <- simple_var?(var) do
+      {:ok, var}
+    else
+      _ -> :error
+    end
+  end
+
+  defp extract_length_less_than2({:<=, _, [{:length, _, [var]}, n]}) do
+    with {:ok, 1} <- extract_int(n),
+         true <- simple_var?(var) do
+      {:ok, var}
+    else
+      _ -> :error
+    end
+  end
+
+  defp extract_length_less_than2({:>=, _, [n, {:length, _, [var]}]}) do
+    with {:ok, 1} <- extract_int(n),
+         true <- simple_var?(var) do
+      {:ok, var}
+    else
+      _ -> :error
+    end
+  end
+
+  # Compound guard: left and right — extract from either side
+  defp extract_length_less_than2({:and, _, [left, right]}) do
+    case extract_length_less_than2(left) do
+      {:ok, var} -> {:ok, var}
+      :error -> extract_length_less_than2(right)
+    end
+  end
+
+  defp extract_length_less_than2(_), do: :error
+
+  defp extract_int({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
+  defp extract_int(_), do: :error
+
+  defp simple_var?({name, _, ctx}) when is_atom(name) and (is_nil(ctx) or is_atom(ctx)),
+    do: true
+
+  defp simple_var?(_), do: false
+
+  # Replace the parameter `var` in the function call with patterns
+  defp replace_param_with_patterns({func_name, func_meta, params}, var) do
+    if Enum.any?(params, &same_var?(&1, var)) do
+      empty_params =
+        Enum.map(params, fn param ->
+          if same_var?(param, var),
+            do: {:__block__, [closing: [line: 0, column: 0]], [[]]},
+            else: param
+        end)
+
+      single_params =
+        Enum.map(params, fn param ->
+          if same_var?(param, var),
+            do: {:__block__, [], [[{:_, [], nil}]]},
+            else: param
+        end)
+
+      {:ok, {func_name, func_meta, empty_params}, {func_name, func_meta, single_params}}
+    else
+      :error
+    end
+  end
+
+  defp same_var?({name, _, _}, {name, _, _}) when is_atom(name), do: true
+  defp same_var?(_, _), do: false
+end
+
+    path: /home/kly/projects/credence/lib/pattern/avoid_length_guard_less_than2.ex[0m
+[22m17:58:12.711 [info] [Pi] step 36: write
+    content: defmodule Credence.Pattern.AvoidLengthGuardLessThan2CheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidLengthGuardLessThan2
+
+  describe "flags the anti-pattern" do
+    test "length(list) < 2" do
+      assert flagged?(AvoidLengthGuardLessThan2, """
+             def process(list) when length(list) < 2, do: :ok
+             """)
+    end
+
+    test "length(list) <= 1" do
+      assert flagged?(AvoidLengthGuardLessThan2, """
+             def process(list) when length(list) <= 1, do: :ok
+             """)
+    end
+
+    test "2 > length(list) — reversed" do
+      assert flagged?(AvoidLengthGuardLessThan2, """
+             def process(list) when 2 > length(list), do: :ok
+             """)
+    end
+
+    test "1 >= length(list) — reversed" do
+      assert flagged?(AvoidLengthGuardLessThan2, """
+             def process(list) when 1 >= length(list), do: :ok
+             """)
+    end
+
+    test "defp variant" do
+      assert flagged?(AvoidLengthGuardLessThan2, """
+             defp process(list) when length(list) < 2, do: :ok
+             """)
+    end
+
+    test "inside a module" do
+      assert flagged?(AvoidLengthGuardLessThan2, """
+             defmodule Example do
+               def maximumdifference(list) when length(list) < 2, do: 0
+             end
+             """)
+    end
+  end
+
+  describe "does NOT flag" do
+    test "length(list) < 3 (different threshold)" do
+      assert clean?(AvoidLengthGuardLessThan2, """
+             def process(list) when length(list) < 3, do: :ok
+             """)
+    end
+
+    test "length(list) > 0 (different comparison)" do
+      assert clean?(AvoidLengthGuardLessThan2, """
+             def process(list) when length(list) > 0, do: :ok
+             """)
+    end
+
+    test "no guard" do
+      assert clean?(AvoidLengthGuardLessThan2, """
+             def process(list), do: :ok
+             """)
+    end
+
+    test "length(list) == 0" do
+      assert clean?(AvoidLengthGuardLessThan2, """
+             def process(list) when length(list) == 0, do: :ok
+             """)
+    end
+
+    test "pattern-matched empty list" do
+      assert clean?(AvoidLengthGuardLessThan2, """
+             def process([]), do: :ok
+             """)
+    end
+
+    test "pattern-matched single element" do
+      assert clean?(AvoidLengthGuardLessThan2, """
+             def process([_]), do: :ok
+             """)
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/avoid_length_guard_less_than2_check_test.exs[0m
+[22m17:58:20.392 [info] [Pi] step 37: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = """
+defmodule Example do
+  def maximumdifference(list) when length(list) < 2, do: 0
+  def maximumdifference([head | tail]) do
+    do_maximumdifference(tail, head, 0)
+  end
+end
+"""
+result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.AvoidLengthGuardLessThan2, code)
+IO.puts("=== RESULT ===")
+IO.puts(result)
+'[0m
+[22m17:58:52.289 [info] [Pi] step 38: write
+    content: defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.AvoidLengthGuardLessThan2
+
+  describe "rewrites the anti-pattern" do
+    test "length(list) < 2 with do: block" do
+      input = """
+      defmodule Example do
+        def maximumdifference(list) when length(list) < 2, do: 0
+        def maximumdifference([head | tail]) do
+          do_maximumdifference(tail, head, 0)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def maximumdifference([]), do: 0
+        def maximumdifference([_]), do: 0
+        def maximumdifference([head | tail]) do
+          do_maximumdifference(tail, head, 0)
+        end
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, input) == expected
+    end
+
+    test "length(list) <= 1 with do: block" do
+      input = """
+      defmodule Example do
+        def process(list) when length(list) <= 1, do: :ok
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def process([]), do: :ok
+        def process([_]), do: :ok
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, input) == expected
+    end
+
+    test "2 > length(list) — reversed" do
+      input = """
+      defmodule Example do
+        def process(list) when 2 > length(list), do: :ok
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def process([]), do: :ok
+        def process([_]), do: :ok
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, input) == expected
+    end
+
+    test "1 >= length(list) — reversed" do
+      input = """
+      defmodule Example do
+        def process(list) when 1 >= length(list), do: :ok
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def process([]), do: :ok
+        def process([_]), do: :ok
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, input) == expected
+    end
+
+    test "defp variant" do
+      input = """
+      defmodule Example do
+        defp process(list) when length(list) < 2, do: :ok
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        defp process([]), do: :ok
+        defp process([_]), do: :ok
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, input) == expected
+    end
+
+    test "multi-line body" do
+      input = """
+      defmodule Example do
+        def process(list) when length(list) < 2 do
+          :empty_or_single
+        end
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def process([]) do
+          :empty_or_single
+        end
+        def process([_]) do
+          :empty_or_single
+        end
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, input) == expected
+    end
+  end
+
+  describe "no-ops" do
+    test "length(list) < 3 passes through" do
+      code = """
+      defmodule Example do
+        def process(list) when length(list) < 3, do: :ok
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, code) == code
+    end
+
+    test "no guard passes through" do
+      code = """
+      defmodule Example do
+        def process(list), do: :ok
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, code) == code
+    end
+
+    test "already pattern-matched passes through" do
+      code = """
+      defmodule Example do
+        def process([]), do: :ok
+        def process([_]), do: :ok
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, code) == code
+    end
+  end
+
+  describe "round-trip" do
+    test "fixed code produces zero issues" do
+      code = """
+      defmodule Example do
+        def maximumdifference(list) when length(list) < 2, do: 0
+        def maximumdifference([head | tail]) do
+          do_maximumdifference(tail, head, 0)
+        end
+      end
+      """
+
+      assert check(AvoidLengthGuardLessThan2, fix(AvoidLengthGuardLessThan2, code)) == []
+    end
+
+    test "fixed code is valid Elixir" do
+      code = """
+      defmodule Example do
+        def maximumdifference(list) when length(list) < 2, do: 0
+        def maximumdifference([head | tail]) do
+          do_maximumdifference(tail, head, 0)
+        end
+      end
+      """
+
+      assert valid_syntax?(fix(AvoidLengthGuardLessThan2, code))
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/avoid_length_guard_less_than2_fix_test.exs[0m
+[22m17:59:14.046 [info] [Pi] step 39: write
+    content: defmodule Credence.Pattern.AvoidLengthGuardLessThan2EquivalenceTest do
+  @moduledoc """
+  T2 module-call. `def maximumdifference(list) when length(list) < 2, do: 0`
+  → two clauses `def maximumdifference([]), do: 0` / `def maximumdifference([_]), do: 0`.
+
+  Both paths return 0 for lists of length 0 or 1, and delegate to the
+  `[head | tail]` clause for longer lists. The fix preserves the exact
+  same return values for every list input.
+  """
+  use Credence.RuleCase, async: true
+
+  import Credence.BehaviourEquivalence
+  alias Credence.Pattern.AvoidLengthGuardLessThan2
+
+  test "length < 2 guard → pattern match preserves behaviour" do
+    assert_equivalent_module(
+      """
+      defmodule MaximumDiffBefore do
+        def maximumdifference(list) when length(list) < 2, do: 0
+
+        def maximumdifference([head | tail]) do
+          do_maximumdifference(tail, head, 0)
+        end
+
+        defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff
+
+        defp do_maximumdifference([current | rest], min_so_far, max_diff) do
+          current_diff = current - min_so_far
+          new_max_diff = max(max_diff, current_diff)
+          new_min_so_far = min(min_so_far, current)
+          do_maximumdifference(rest, new_min_so_far, new_max_diff)
+        end
+      end
+      """,
+      rule: AvoidLengthGuardLessThan2,
+      call: {:maximumdifference, 1},
+      inputs: [
+        [],
+        [1],
+        [1, 2],
+        [3, 1, 2],
+        [1, 2, 3, 4, 5],
+        [5, 4, 3, 2, 1],
+        [1, 1.0, 1, 1.0, 2],
+        Enum.map(1..200, fn i -> rem(i, 7) end)
+      ]
+    )
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/avoid_length_guard_less_than2_equivalence_test.exs[0m
+[22m17:59:19.818 [info] [Pi] step 40: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/avoid_length_guard_less_than2_check_test.exs test/pattern/avoid_length_guard_less_than2_fix_test.exs test/pattern/avoid_length_guard_less_than2_equivalence_test.exs 2>&1[0m
+[22m17:59:30.749 [info] [Pi] step 41: edit
+    edits: [%{"newText" => "    test \"multi-line body\" do\n      input = \"\"\"\n      defmodule Example do\n        def process(list) when length(list) < 2 do\n          :empty_or_single\n        end\n      end\n      \"\"\"\n\n      expected = \"\"\"\n      defmodule Example do\n        def process([]) do\n          :empty_or_single\n        end\n\n        def process([_]) do\n          :empty_or_single\n        end\n      end\n      \"\"\"\n\n      assert fix(AvoidLengthGuardLessThan2, input) == expected", "oldText" => "    test \"multi-line body\" do\n      input = \"\"\"\n      defmodule Example do\n        def process(list) when length(list) < 2 do\n          :empty_or_single\n        end\n      end\n      \"\"\"\n\n      expected = \"\"\"\n      defmodule Example do\n        def process([]) do\n          :empty_or_single\n        end\n        def process([_]) do\n          :empty_or_single\n        end\n      end\n      \"\"\"\n\n      assert fix(AvoidLengthGuardLessThan2, input) == expected"}]
+    path: /home/kly/projects/credence/test/pattern/avoid_length_guard_less_than2_fix_test.exs[0m
+[22m17:59:35.840 [info] [Pi] step 42: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/avoid_length_guard_less_than2_check_test.exs test/pattern/avoid_length_guard_less_than2_fix_test.exs test/pattern/avoid_length_guard_less_than2_equivalence_test.exs 2>&1[0m
+[22m17:59:40.862 [info] [Pi] step 43: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -20[0m
+[22m17:59:55.478 [info] [Budget] HEARTBEAT — 45 paid calls, est $0.3229 over 99.7min → ~$0.1943/hr, ~$4.66/day (tok in=404617 cache_rd=5977600 out=144062)[0m
+[22m17:59:58.627 [info] [Pi] step 44: read
+    path: /home/kly/projects/credence/lib/pattern/avoid_length_guard_less_than2.ex[0m
+[22m18:00:05.034 [info] [Pi] step 45: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/avoid_length_guard_less_than2*_test.exs 2>&1[0m
+[22m18:00:23.226 [info] [Pi] step 46: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | grep -E "(tests|failures|Finished)"[0m
+[22m18:01:00.848 [info] [Pi] agent done — exit=0 steps=46 stop=stop[0m
+[36m18:01:00.848 [debug] [Budget] spent so far (est.): $0.3635[0m
+[22m18:01:08.994 [info] [Gate] staged entries: [{"A", ["lib/pattern/avoid_length_guard_less_than2.ex"]}, {"A", ["test/pattern/avoid_length_guard_less_than2_check_test.exs"]}, {"A", ["test/pattern/avoid_length_guard_less_than2_equivalence_test.exs"]}, {"A", ["test/pattern/avoid_length_guard_less_than2_fix_test.exs"]}][0m
+[36m18:01:09.695 [debug] [Gate] mix test ["test/pattern/avoid_length_guard_less_than2_check_test.exs", "test/pattern/avoid_length_guard_less_than2_equivalence_test.exs", "test/pattern/avoid_length_guard_less_than2_fix_test.exs"] exit=2
+Generated credence app
+Running ExUnit with seed: 442521, max_cases: 48
+
+
+
+  1) test length < 2 guard → pattern match preserves behaviour (Credence.Pattern.AvoidLengthGuardLessThan2EquivalenceTest)
+     test/pattern/avoid_length_guard_less_than2_equivalence_test.exs:15
+     ** (UndefinedFunctionError) function Credence.Pattern.AvoidLengthGuardLessThan2.check/2 is undefined (module Credence.Pattern.AvoidLengthGuardLessThan2 is not available)
+     code: assert_equivalent_module(
+     stacktrace:
+       Credence.Pattern.AvoidLengthGuardLessThan2.check({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 16, column: 4], do: [line: 1, column: 29], end: [line: 16, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:MaximumDiffBefore]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 29], [:do]}, {:__block__, [trailing_comments: [], leading_comments: []], [{:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 2, line: 2, column: 59], line: 2, column: 3], [{:when, [trailing_comments: [], line: 2, column: 31], [{:maximumdifference, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 29], line: 2, column: 7], [{:list, [trailing_comments: [], leading_comments: [], line: 2, column: 25], nil}]}, {:<, [trailing_comments: [], line: 2, column: 49], [{:length, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 47], line: 2, ...], ...}, ...]}]}, ...]}, ...]}}]]}, [source: "defmodule MaximumDiffBefore do\n  def maximumdifference(list) when length(list) < 2, do: 0\n\n  def maximumdifference([head | tail]) do\n    do_maximumdifference(tail, head, 0)\n  end\n\n  defp do_maximumdifference([], _min_so_far, max_diff), do: max_diff\n\n  defp do_maximumdifference([current | rest], min_so_far, max_diff) do\n    current_diff = current - min_so_far\n    new_max_diff = max(max_diff, current_diff)\n    new_min_so_far = min(min_so_far, current)\n    do_maximumdifference(rest, new_min_so_far, new_max_diff)\n  end\nend\n"])
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:293: Credence.BehaviourEquivalence.rule_fires?/2
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:240: Credence.BehaviourEquivalence.precheck!/4
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:116: Credence.BehaviourEquivalence.assert_equivalent_module/2
+       test/pattern/avoid_length_guard_less_than2_equivalence_test.exs:16: (test)
+
+
+
+  2) test rewrites the anti-pattern length(list) < 2 with do: block (Credence.Pattern.AvoidLengthGuardLessThan2FixTest)
+     test/pattern/avoid_length_guard_less_than2_fix_test.exs:7
+     ** (UndefinedFunctionError) function Credence.Pattern.AvoidLengthGuardLessThan2.fix_patches/2 is undefined (module Credence.Pattern.AvoidLengthGuardLessThan2 is not available)
+     code: assert fix(AvoidLengthGuardLessThan2, input) == expected
+     stacktrace:
+       Credence.Pattern.AvoidLengthGuardLessThan2.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 6, column: 4], do: [line: 1, column: 19], end: [line: 6, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Example]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 19], [:do]}, {:__block__, [trailing_comments: [], leading_comments: []], [{:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 2, column: 59], line: 2, column: 3], [{:when, [trailing_comments: [], line: 2, column: 31], [{:maximumdifference, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 29], line: 2, column: 7], [{:list, [trailing_comments: [], leading_comments: [], line: 2, column: 25], nil}]}, {:<, [trailing_comments: [], line: 2, column: 49], [{:length, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 47], line: 2, ...], ...}, ...]}]}, ...]}, ...]}}]]}, [source: "defmodule Example do\n  def maximumdifference(list) when length(list) < 2, do: 0\n  def maximumdifference([head | tail]) do\n    do_maximumdifference(tail, head, 0)\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/avoid_length_guard_less_than2_fix_test.exs:27: (test)
+
+
+
+  3) test flags the anti-pattern length(list) < 2 (Credence.Pattern.AvoidLengthGuardLessThan2CheckTest)
+     test/pattern/avoid_length_guard_less_than2_check_test.exs:7
+     ** (UndefinedFunctionError) function Credence.Pattern.AvoidLengthGuardLessThan2.check/2 is undefined (module Credence.Pattern.AvoidLengthGuardLessThan2 is not available)
+     code: assert flagged?(AvoidLengthGuardLessThan2, """
+     stacktrace:
+       Credence.Pattern.AvoidLengthGuardLessThan2.check({:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 1, column: 49], line: 1, column: 1], [{:when, [trailing_comments: [], line: 1, column: 19], [{:process, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 17], line: 1, column: 5], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 13], nil}]}, {:<, [trailing_comments: [], line: 1, column: 37], [{:length, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 35], line: 1, column: 24], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 31], nil}]}, {:__block__, [trailing_comments: [], leading_comments: [], token: "2", line: 1, column: 39], [2]}]}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], format: :keyword, line: 1, column: 42], [:do]}, {:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 46], [:ok]}}]]}, [source: "def process(list) when length(list) < 2, do: :ok\n"])
+       (credence 0.7.1) test/support/rule_case.ex:66: Credence.RuleCase.flagged?/2
+       test/pattern/avoid_length_guard_less_than2_check_test.exs:8: (test)
+
+
+
+  4) test round-trip fixed code produces zero issues (Credence.Pattern.AvoidLengthGuardLessThan2FixTest)
+     test/pattern/avoid_length_guard_less_than2_fix_test.exs:157
+     ** (UndefinedFunctionError) function Credence.Pattern.AvoidLengthGuardLessThan2.fix_patches/2 is undefined (module Credence.Pattern.AvoidLengthGuardLessThan2 is not available)
+     code: assert check(AvoidLengthGuardLessThan2, fix(AvoidLengthGuardLessThan2, code)) == []
+     stacktrace:
+       Credence.Pattern.AvoidLengthGuardLessThan2.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 6, column: 4], do: [line: 1, column: 19], end: [line: 6, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Example]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 19], [:do]}, {:__block__, [trailing_comments: [], leading_comments: []], [{:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 2, column: 59], line: 2, column: 3], [{:when, [trailing_comments: [], line: 2, column: 31], [{:maximumdifference, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 29], line: 2, column: 7], [{:list, [trailing_comments: [], leading_comments: [], line: 2, column: 25], nil}]}, {:<, [trailing_comments: [], line: 2, column: 49], [{:length, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 47], line: 2, ...], ...}, ...]}]}, ...]}, ...]}}]]}, [source: "defmodule Example do\n  def maximumdifference(list) when length(list) < 2, do: 0\n  def maximumdifference([head | tail]) do\n    do_maximumdifference(tail, head, 0)\n  (truncated)[0m
+[22m18:01:09.700 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m18:01:17.964 [debug] [Gate] mix test [] exit=0
+Compiling 1 file (.ex)
+Generated credence app
+Running ExUnit with seed: 172525, max_cases: 48
+
+.................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Finished in 7.7 seconds (3.5s async, 4.2s sync)
+5 properties, 4428 tests, 0 failures
+[0m
+[22m18:01:17.965 [info] [Gate] full suite GREEN[0m
+[22m18:01:17.976 [info] [Git] committed: cred-gen: new(pattern): avoid_length_guard_less_than_2 [row 98368][0m
+[22m18:01:17.976 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m18:01:20.047 [info] [Workspace] ✓ credence recompiled[0m
+[22m18:01:21.811 [info] [Git] pushed origin/evolution[0m
+[22m18:01:21.811 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m18:01:23.881 [info] [Workspace] ✓ credence recompiled[0m

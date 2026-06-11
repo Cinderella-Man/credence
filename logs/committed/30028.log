@@ -1,0 +1,4032 @@
+[22m19:33:42.585 [info] [idx=30028] entry_point=count_equal_binary_substrings[0m
+[36m19:33:42.585 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to find the number of substrings in a binary string that have equal number of 0s and 1s.
+
+## Python Solution
+```python
+def count_equal_binary_substrings(s):
+    prev, curr, res = 0, 1, 0
+    for i in range(1, len(s)):
+        if s[i] == s[i-1]:
+            curr += 1
+        else:
+            res += min(prev, curr)
+            prev, curr = curr, 1
+    return res + min(prev, curr)
+```
+
+## Python Tests
+assert count_equal_binary_substrings("1111") == 0
+assert count_equal_binary_substrings("10101") == 4
+assert count_equal_binary_substrings("00110011") == 6
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `count_equal_binary_substrings`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[22m19:34:55.478 [info] [Budget] HEARTBEAT — 92 paid calls, est $0.5927 over 194.7min → ~$0.1827/hr, ~$4.38/day (tok in=715623 cache_rd=10470784 out=280179)[0m
+[36m19:34:57.041 [debug] [LLM.call] finish=stop len=1346 usage=%{"completion_tokens" => 2840, "completion_tokens_details" => %{"reasoning_tokens" => 2437}, "prompt_tokens" => 533, "prompt_tokens_details" => %{}, "total_tokens" => 3373}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function that counts the number of substrings in a binary string (containing only '0' and '1' characters) that have an equal number of 0s and 1s.
+
+The function should:
+- Accept a binary string as input.
+- Return the count of substrings with equal number of 0s and 1s.
+- Run in linear time relative to the string length.
+- Return 0 for an empty string or strings with all identical characters.
+
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def count_equal_binary_substrings(s) do
+    s
+    |> String.graphemes()
+    |> do_count(0, 0, 1, nil)
+  end
+
+  defp do_count([], res, prev, curr, _last), do: res + min(prev, curr)
+
+  defp do_count([char | rest], res, prev, curr, nil) do
+    do_count(rest, res, prev, curr, char)
+  end
+
+  defp do_count([char | rest], res, prev, curr, last) do
+    if char == last do
+      do_count(rest, res, prev, curr + 1, last)
+    else
+      do_count(rest, res + min(prev, curr), curr, 1, char)
+    end
+  end
+end
+
+---END---[0m
+[22m19:34:57.041 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 74456ms — ok[0m
+[36m19:34:57.041 [debug] [Budget] spent so far (est.): $0.5954[0m
+[22m19:34:58.087 [info] [RoundTrip] reference PASSED tests[0m
+[22m19:34:58.087 [info] [idx=30028] translation fresh — solving[0m
+[22m19:34:58.087 [info] ===SOLVE_BOUNDARY===[0m
+[22m19:34:58.087 [info] [Solve attempt 1] generating (fn=count_equal_binary_substrings)[0m
+[36m19:34:58.087 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function that counts the number of substrings in a binary string (containing only '0' and '1' characters) that have an equal number of 0s and 1s.
+
+The function should:
+- Accept a binary string as input.
+- Return the count of substrings with equal number of 0s and 1s.
+- Run in linear time relative to the string length.
+- Return 0 for an empty string or strings with all identical characters.
+
+## Tests (your module must pass these)
+```elixir
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+```
+
+Module: `Solution`. Function: `count_equal_binary_substrings`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m19:35:10.223 [debug] [LLM.call] finish=stop len=4854 usage=%{"completion_tokens" => 1360, "prompt_tokens" => 488, "prompt_tokens_details" => %{"cached_tokens" => 144}, "total_tokens" => 1848}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to count substrings in a binary string
+  that have an equal number of '0's and '1's.
+  """
+
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of '0's and '1's.
+
+  This implementation runs in linear time O(n) by using a grouped approach:
+  1. Group consecutive identical characters and record their counts.
+  2. For each adjacent pair of groups, the number of valid substrings
+     that span the boundary between them is min(count_left, count_right).
+  3. Sum these up.
+
+  This works because any valid substring with equal 0s and 1s must start
+  in one group and end in another, and for adjacent groups of different
+  characters, the maximum such substring is limited by the smaller count.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(<<>>) do
+    0
+  end
+
+  def count_equal_binary_substrings(binary) do
+    groups = group_consecutive(binary)
+    count_valid_substrings_from_groups(groups)
+  end
+
+  @doc false
+  @spec group_consecutive(String.t()) :: [{char(), non_neg_integer()}]
+  defp group_consecutive(<<>>) do
+    []
+  end
+
+  defp group_consecutive(<<first::binary-size(1), _rest::binary>> = binary) do
+    # Find the length of the first run of identical characters
+    {char, rest} = extract_run(binary)
+    [{char, length(rest) + 1} | group_consecutive(rest)]
+  end
+
+  defp extract_run(<<>>), do: {nil, <<>>}
+
+  defp extract_run(<<first::binary-size(1), rest::binary>>) do
+    extract_run_helper(first, rest, 1)
+  end
+
+  defp extract_run_helper(_char, <<>>, acc) do
+    {<<>>, ""}
+  end
+
+  defp extract_run_helper(first, <<next::binary-size(1), rest::binary>>, acc) do
+    if first == next do
+      extract_run_helper(first, <<first, next::binary>>, acc + 1)
+    else
+      # The run is complete, return the run character and remaining string
+      # We need to reconstruct the run character and the rest
+      # Actually, let's simplify: just find where the run ends
+      {run_char, run_len, remaining} = find_run_end(<<>>, first, rest, 1)
+      {run_char, remaining}
+    end
+  end
+
+  # This approach is getting complicated. Let's use a simpler method.
+  defp group_consecutive_simple(<<>>) do
+    []
+  end
+
+  defp group_consecutive_simple(binary) do
+    do_group_consecutive(binary, [], nil)
+  end
+
+  defp do_group_consecutive(<<>>, groups, _current_char) do
+    Enum.reverse(groups)
+  end
+
+  defp do_group_consecutive(<<first::binary-size(1), rest::binary>>, groups, current_char) when current_char == first do
+    # Still in the same group, accumulate
+    do_group_consecutive(rest, groups, first)
+  end
+
+  defp do_group_consecutive(<<first::binary-size(1), rest::binary>>, groups, current_char) when current_char != first do
+    # Switch group - but we need to handle the count
+    # Let's use a different strategy
+    do_group_consecutive_with_counts(binary, [], nil)
+  end
+
+  # Actually, let's rewrite this more cleanly.
+  defp group_consecutive(_binary) do
+    do_group_consecutive_clean(_binary, [], nil)
+  end
+
+  defp do_group_consecutive_clean(<<>>, counts, _current) do
+    counts
+  end
+
+  defp do_group_consecutive_clean(binary, counts, current) do
+    do_group_consecutive_clean_helper(binary, counts, current)
+  end
+
+  defp do_group_consecutive_clean_helper(<<>>, counts, _current) do
+    counts
+  end
+
+  defp do_group_consecutive_clean_helper(<<char::binary-size(1), rest::binary>>, counts, current) when current == char do
+    do_group_consecutive_clean_helper(rest, counts, char)
+  end
+
+  defp do_group_consecutive_clean_helper(<<char::binary-size(1), rest::binary>>, counts, current) when current != char do
+    # Start a new group
+    do_group_consecutive_clean_helper(rest, [char | counts], char)
+  end
+
+  # Let me just use a clean implementation:
+  defp group_consecutive(binary) when is_binary(binary) do
+    # Convert to list of characters
+    chars = String.codepoints(binary)
+    do_group_chars(chars, [], nil)
+  end
+
+  defp do_group_chars([], groups, _current) do
+    Enum.reverse(groups)
+  end
+
+  defp do_group_chars([char | rest], groups, current) when current == char do
+    do_group_chars(rest, groups, char)
+  end
+
+  defp do_group_chars([char | rest], groups, current) when current != char do
+    do_group_chars(rest, [char | groups], char)
+  end
+
+  defp count_valid_substrings_from_groups(groups) do
+    do_count_groups(groups, 0)
+  end
+
+  defp do_count_groups([{_char, count}], total) do
+    total
+  end
+
+  defp do_count_groups([{char1, count1}, {char2, count2} | rest], total) when char1 != char2 do
+    new_total = total + min(count1, count2)
+    do_count_groups([{char2, count2} | rest], new_total)
+  end
+
+  defp do_count_groups(_, total) do
+    total
+  end
+
+  defp min(a, b) when a <= b, do: a
+  defp min(_a, b), do: b
+end[0m
+[22m19:35:10.223 [info] [LLM.call] local_qwen_thinking completed in 12136ms — ok[0m
+[33m19:35:10.223 [warning] [Solve attempt 1] parse failed — re-roll[0m
+[22m19:35:10.223 [info] [Solve attempt 2] generating (fn=count_equal_binary_substrings)[0m
+[36m19:35:10.224 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function that counts the number of substrings in a binary string (containing only '0' and '1' characters) that have an equal number of 0s and 1s.
+
+The function should:
+- Accept a binary string as input.
+- Return the count of substrings with equal number of 0s and 1s.
+- Run in linear time relative to the string length.
+- Return 0 for an empty string or strings with all identical characters.
+
+## Tests (your module must pass these)
+```elixir
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+```
+
+Module: `Solution`. Function: `count_equal_binary_substrings`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m19:35:10.224 [debug] [Budget] spent so far (est.): $0.5968[0m
+[36m19:35:17.162 [debug] [LLM.call] finish=stop len=2646 usage=%{"completion_tokens" => 788, "prompt_tokens" => 488, "prompt_tokens_details" => %{"cached_tokens" => 484}, "total_tokens" => 1276}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  Runs in linear time using a running difference counter approach.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(<<>>) do
+    0
+  end
+
+  def count_equal_binary_substrings(<<>>) when byte_size(<<>>) == 0, do: 0
+
+  def count_equal_binary_substrings(binary) do
+    # Convert string to list of integers (0 or 1)
+    chars = binary |> String.graphics() |> Enum.map(fn
+      "0" -> 0
+      "1" -> 1
+      _ -> raise "Invalid binary string"
+    end)
+
+    # Use the running difference approach:
+    # Treat '0' as -1 and '1' as +1
+    # A substring has equal 0s and 1s iff the sum of transformed values is 0
+    # We track the cumulative sum and count how many times each sum occurs.
+    # For each position, if we've seen the same cumulative sum before, 
+    # the substring between those positions has sum 0.
+
+    counts = chars
+    |> Enum.reduce({0, %{}, 0}, fn char, {running_sum, freq, total} ->
+      # Transform: 0 -> -1, 1 -> 1
+      delta = if char == 0, do: -1, else: 1
+      new_sum = running_sum + delta
+
+      # Before updating, check how many times this new_sum has been seen
+      # The initial sum 0 has been seen once (at the start, before any characters)
+      # But we need to handle this carefully.
+
+      # Actually, let's restructure:
+      # Start with running_sum = 0, and frequency map with {0: 1}
+      # For each character:
+      #   update running_sum
+      #   add freq[running_sum] to total
+      #   increment freq[running_sum]
+      {new_sum, freq, total}
+    end)
+
+    # Let me redo this properly
+    do_count_equal_binary_substrings(chars, 0, %{0 => 1}, 0)
+  end
+
+  defp do_count_equal_binary_substrings([], _running_sum, _freq, total) do
+    total
+  end
+
+  defp do_count_equal_binary_substrings([char | rest], running_sum, freq, total) do
+    delta = if char == 0, do: -1, else: 1
+    new_sum = running_sum + delta
+
+    count = Map.get(freq, new_sum, 0)
+    new_total = total + count
+
+    new_freq = Map.update(freq, new_sum, 1, &(&1 + 1))
+
+    do_count_equal_binary_substrings(rest, new_sum, new_freq, new_total)
+  end
+end
+
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+---END---[0m
+[22m19:35:17.162 [info] [LLM.call] local_qwen_thinking completed in 6938ms — ok[0m
+[22m19:35:17.163 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m19:35:17.163 [debug] [Validator.run] module code (2247 chars):
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  Runs in linear time using a running difference counter approach.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(<<>>) do
+    0
+  end
+
+  def count_equal_binary_substrings(<<>>) when byte_size(<<>>) == 0, do: 0
+
+  def count_equal_binary_substrings(binary) do
+    # Convert string to list of integers (0 or 1)
+    chars = binary |> String.graphics() |> Enum.map(fn
+      "0" -> 0
+      "1" -> 1
+      _ -> raise "Invalid binary string"
+    end)
+
+    # Use the running difference approach:
+    # Treat '0' as -1 and '1' as +1
+    # A substring has equal 0s and 1s iff the sum of transformed values is 0
+    # We track the cumulative sum and count how many times each sum occurs.
+    # For each position, if we've seen the same cumulative sum before, 
+    # the substring between those positions has sum 0.
+
+    counts = chars
+    |> Enum.reduce({0, %{}, 0}, fn char, {running_sum, freq, total} ->
+      # Transform: 0 -> -1, 1 -> 1
+      delta = if char == 0, do: -1, else: 1
+      new_sum = running_sum + delta
+
+      # Before updating, check how many times this new_sum has been seen
+      # The initial sum 0 has been seen once (at the start, before any characters)
+      # But we need to handle this carefully.
+
+      # Actually, let's restructure:
+      # Start with running_sum = 0, and frequency map with {0: 1}
+      # For each character:
+      #   update running_sum
+      #   add freq[running_sum] to total
+      #   increment freq[running_sum]
+      {new_sum, freq, total}
+    end)
+
+    # Let me redo this properly
+    do_count_equal_binary_substrings(chars, 0, %{0 => 1}, 0)
+  end
+
+  defp do_count_equal_binary_substrings([], _running_sum, _freq, total) do
+    total
+  end
+
+  defp do_count_equal_binary_substrings([char | rest], running_sum, freq, total) do
+    delta = if char == 0, do: -1, else: 1
+    new_sum = running_sum + delta
+
+    count = Map.get(freq, new_sum, 0)
+    new_total = total + count
+
+    new_freq = Map.update(freq, new_sum, 1, &(&1 + 1))
+
+    do_count_equal_binary_substrings(rest, new_sum, new_freq, new_total)
+  end
+end[0m
+[36m19:35:17.163 [debug] [Validator.run] test code (363 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end[0m
+[36m19:35:17.163 [debug] [Budget] spent so far (est.): $0.5977[0m
+[22m19:35:17.163 [info] [Validator.run] step 1/6: credence fix[0m
+[36m19:35:17.163 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m19:35:17.845 [debug] [run_credence_fix] exit=0 output:
+
+19:35:17.678 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+19:35:17.680 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+19:35:17.700 [debug] [credence_fix] semantic pass 1: compilation OK, 4 warning(s)
+
+19:35:17.700 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+19:35:17.702 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L30 -     counts = chars
+  L30 +     _counts = chars
+
+19:35:17.702 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+19:35:17.703 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+19:35:17.708 [debug] [credence_fix] no rule matched diagnostic: %{message: "this clause cannot match because a previous clause at line 9 matches the same pattern as this clause", position: {13, 7}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+19:35:17.708 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+19:35:17.708 [debug] [credence_fix] semantic done. Applied: [UnusedVariable(1), UndefinedFunction(1)]
+
+19:35:17.708 [debug] [credence_fix] starting pattern fix pipeline (118 rules)
+
+19:35:17.819 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UnusedVariable, 1}, {Credence.Semantic.UndefinedFunction, 1}]
+REMAINING_ISSUES: 1 unfixable issue(s)
+undefined_function: String.graphics/1 is undefined or private. Did you mean:
+
+    * graphemes/1
+ (line 17)
+[0m
+[22m19:35:17.845 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m19:35:18.395 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m19:35:18.395 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: this clause cannot match because a previous clause at line 9 matches the same pattern as this clause
+    │
+ 13 │   def count_equal_binary_substrings(<<>>) when byte_size(<<>>) == 0, do: 0
+    │       ~
+    │
+    └─ lib/solution.ex:13:7
+
+    warning: String.graphics/1 is undefined or private. Did you mean:
+
+        * graphemes/1
+
+    │
+ 17 │     chars = binary |> String.graphics() |> Enum.map(fn
+    │                              ~
+    │
+    └─ lib/solution.ex:17:30: Solution.count_equal_binary_substrings/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m19:35:18.964 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m19:35:18.964 [info] [Validator.run] step 2/6: compile[0m
+[22m19:35:19.512 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m19:35:19.512 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: variable "counts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 30 │     counts = chars
+    │     ~~~~~~
+    │
+    └─ lib/solution.ex:30:5: Solution.count_equal_binary_substrings/1
+
+    warning: this clause cannot match because a previous clause at line 9 matches the same pattern as this clause
+    │
+ 13 │   def count_equal_binary_substrings(<<>>) when byte_size(<<>>) == 0, do: 0
+    │       ~
+    │
+    └─ lib/solution.ex:13:7
+
+    warning: String.graphics/1 is undefined or private. Did you mean:
+
+        * graphemes/1
+
+    │
+ 17 │     chars = binary |> String.graphics() |> Enum.map(fn
+    │                              ~
+    │
+    └─ lib/solution.ex:17:30: Solution.count_equal_binary_substrings/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m19:35:19.512 [info] [Validator.run] step 3/6: format[0m
+[22m19:35:19.512 [info] [Validator.run] skipping format (compile failed)[0m
+[22m19:35:19.512 [info] [Validator.run] step 4/6: credo[0m
+[22m19:35:19.512 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m19:35:19.512 [info] [Validator.run] step 5/6: credence check[0m
+[22m19:35:19.512 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m19:35:19.512 [info] [Validator.run] step 6/6: tests[0m
+[22m19:35:19.512 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m19:35:19.512 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m19:35:19.512 [debug] [Validator.run] final module (2247 chars):
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  Runs in linear time using a running difference counter approach.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(<<>>) do
+    0
+  end
+
+  def count_equal_binary_substrings(<<>>) when byte_size(<<>>) == 0, do: 0
+
+  def count_equal_binary_substrings(binary) do
+    # Convert string to list of integers (0 or 1)
+    chars = binary |> String.graphics() |> Enum.map(fn
+      "0" -> 0
+      "1" -> 1
+      _ -> raise "Invalid binary string"
+    end)
+
+    # Use the running difference approach:
+    # Treat '0' as -1 and '1' as +1
+    # A substring has equal 0s and 1s iff the sum of transformed values is 0
+    # We track the cumulative sum and count how many times each sum occurs.
+    # For each position, if we've seen the same cumulative sum before, 
+    # the substring between those positions has sum 0.
+
+    counts = chars
+    |> Enum.reduce({0, %{}, 0}, fn char, {running_sum, freq, total} ->
+      # Transform: 0 -> -1, 1 -> 1
+      delta = if char == 0, do: -1, else: 1
+      new_sum = running_sum + delta
+
+      # Before updating, check how many times this new_sum has been seen
+      # The initial sum 0 has been seen once (at the start, before any characters)
+      # But we need to handle this carefully.
+
+      # Actually, let's restructure:
+      # Start with running_sum = 0, and frequency map with {0: 1}
+      # For each character:
+      #   update running_sum
+      #   add freq[running_sum] to total
+      #   increment freq[running_sum]
+      {new_sum, freq, total}
+    end)
+
+    # Let me redo this properly
+    do_count_equal_binary_substrings(chars, 0, %{0 => 1}, 0)
+  end
+
+  defp do_count_equal_binary_substrings([], _running_sum, _freq, total) do
+    total
+  end
+
+  defp do_count_equal_binary_substrings([char | rest], running_sum, freq, total) do
+    delta = if char == 0, do: -1, else: 1
+    new_sum = running_sum + delta
+
+    count = Map.get(freq, new_sum, 0)
+    new_total = total + count
+
+    new_freq = Map.update(freq, new_sum, 1, &(&1 + 1))
+
+    do_count_equal_binary_substrings(rest, new_sum, new_freq, new_total)
+  end
+end[0m
+[36m19:35:19.513 [debug] [Validator.run] final test (363 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end[0m
+[33m19:35:19.513 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m19:35:19.513 [info] [Solve attempt 3] generating (fn=count_equal_binary_substrings)[0m
+[36m19:35:19.513 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  Runs in linear time using a running difference counter approach.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(<<>>) do
+    0
+  end
+
+  def count_equal_binary_substrings(<<>>) when byte_size(<<>>) == 0, do: 0
+
+  def count_equal_binary_substrings(binary) do
+    # Convert string to list of integers (0 or 1)
+    chars = binary |> String.graphics() |> Enum.map(fn
+      "0" -> 0
+      "1" -> 1
+      _ -> raise "Invalid binary string"
+    end)
+
+    # Use the running difference approach:
+    # Treat '0' as -1 and '1' as +1
+    # A substring has equal 0s and 1s iff the sum of transformed values is 0
+    # We track the cumulative sum and count how many times each sum occurs.
+    # For each position, if we've seen the same cumulative sum before, 
+    # the substring between those positions has sum 0.
+
+    counts = chars
+    |> Enum.reduce({0, %{}, 0}, fn char, {running_sum, freq, total} ->
+      # Transform: 0 -> -1, 1 -> 1
+      delta = if char == 0, do: -1, else: 1
+      new_sum = running_sum + delta
+
+      # Before updating, check how many times this new_sum has been seen
+      # The initial sum 0 has been seen once (at the start, before any characters)
+      # But we need to handle this carefully.
+
+      # Actually, let's restructure:
+      # Start with running_sum = 0, and frequency map with {0: 1}
+      # For each character:
+      #   update running_sum
+      #   add freq[running_sum] to total
+      #   increment freq[running_sum]
+      {new_sum, freq, total}
+    end)
+
+    # Let me redo this properly
+    do_count_equal_binary_substrings(chars, 0, %{0 => 1}, 0)
+  end
+
+  defp do_count_equal_binary_substrings([], _running_sum, _freq, total) do
+    total
+  end
+
+  defp do_count_equal_binary_substrings([char | rest], running_sum, freq, total) do
+    delta = if char == 0, do: -1, else: 1
+    new_sum = running_sum + delta
+
+    count = Map.get(freq, new_sum, 0)
+    new_total = total + count
+
+    new_freq = Map.update(freq, new_sum, 1, &(&1 + 1))
+
+    do_count_equal_binary_substrings(rest, new_sum, new_freq, new_total)
+  end
+end
+
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: variable "counts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 30 │     counts = chars
+    │     ~~~~~~
+    │
+    └─ lib/solution.ex:30:5: Solution.count_equal_binary_substrings/1
+
+    warning: this clause cannot match because a previous clause at line 9 matches the same pattern as this clause
+    │
+ 13 │   def count_equal_binary_substrings(<<>>) when byte_size(<<>>) == 0, do: 0
+    │       ~
+    │
+    └─ lib/solution.ex:13:7
+
+    warning: String.graphics/1 is undefined or private. Did you mean:
+
+        * graphemes/1
+
+    │
+ 17 │     chars = binary |> String.graphics() |> Enum.map(fn
+    │                              ~
+    │
+    └─ lib/solution.ex:17:30: Solution.count_equal_binary_substrings/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+
+Reminder: module `Solution`, function `count_equal_binary_substrings` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m19:35:24.030 [debug] [LLM.call] finish=stop len=1379 usage=%{"completion_tokens" => 421, "prompt_tokens" => 1323, "prompt_tokens_details" => %{"cached_tokens" => 144}, "total_tokens" => 1744}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  Runs in linear time using a running difference counter approach.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars = String.graphemes(binary) |> Enum.map(fn
+      "0" -> 0
+      "1" -> 1
+      _ -> raise "Invalid binary string"
+    end)
+
+    do_count_equal_binary_substrings(chars, 0, %{0 => 1}, 0)
+  end
+
+  defp do_count_equal_binary_substrings([], _running_sum, _freq, total) do
+    total
+  end
+
+  defp do_count_equal_binary_substrings([char | rest], running_sum, freq, total) do
+    delta = if char == 0, do: -1, else: 1
+    new_sum = running_sum + delta
+
+    count = Map.get(freq, new_sum, 0)
+    new_total = total + count
+
+    new_freq = Map.update(freq, new_sum, 1, &(&1 + 1))
+
+    do_count_equal_binary_substrings(rest, new_sum, new_freq, new_total)
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+---END---[0m
+[22m19:35:24.030 [info] [LLM.call] local_qwen_thinking completed in 4518ms — ok[0m
+[22m19:35:24.031 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m19:35:24.031 [debug] [Validator.run] module code (981 chars):
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  Runs in linear time using a running difference counter approach.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars = String.graphemes(binary) |> Enum.map(fn
+      "0" -> 0
+      "1" -> 1
+      _ -> raise "Invalid binary string"
+    end)
+
+    do_count_equal_binary_substrings(chars, 0, %{0 => 1}, 0)
+  end
+
+  defp do_count_equal_binary_substrings([], _running_sum, _freq, total) do
+    total
+  end
+
+  defp do_count_equal_binary_substrings([char | rest], running_sum, freq, total) do
+    delta = if char == 0, do: -1, else: 1
+    new_sum = running_sum + delta
+
+    count = Map.get(freq, new_sum, 0)
+    new_total = total + count
+
+    new_freq = Map.update(freq, new_sum, 1, &(&1 + 1))
+
+    do_count_equal_binary_substrings(rest, new_sum, new_freq, new_total)
+  end
+end[0m
+[36m19:35:24.031 [debug] [Validator.run] test code (363 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end[0m
+[36m19:35:24.031 [debug] [Budget] spent so far (est.): $0.5987[0m
+[22m19:35:24.031 [info] [Validator.run] step 1/6: credence fix[0m
+[36m19:35:24.031 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m19:35:24.644 [debug] [run_credence_fix] exit=0 output:
+
+19:35:24.541 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+19:35:24.543 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+19:35:24.557 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+19:35:24.562 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+19:35:24.562 [debug] [credence_fix] semantic done. Applied: []
+
+19:35:24.562 [debug] [credence_fix] starting pattern fix pipeline (118 rules)
+
+19:35:24.621 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m19:35:24.644 [debug] [run_credence_fix] no changes needed[0m
+[22m19:35:24.644 [info] [Validator.run] credence: no changes needed[0m
+[22m19:35:24.644 [info] [Validator.run] step 2/6: compile[0m
+[22m19:35:25.218 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m19:35:25.218 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m19:35:25.218 [info] [Validator.run] step 3/6: format[0m
+[22m19:35:25.525 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m19:35:25.825 [debug] [Validator.run] format fix output: [0m
+[22m19:35:25.825 [info] [Validator.run] step 4/6: credo[0m
+[36m19:35:26.301 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m19:35:26.301 [info] [Validator.run] credo: no issues[0m
+[22m19:35:26.301 [info] [Validator.run] step 5/6: credence check[0m
+[22m19:35:27.015 [info] [Validator.run] credence check exit=0[0m
+[36m19:35:27.015 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m19:35:27.015 [info] [Validator.run] credence check: passed[0m
+[22m19:35:27.015 [info] [Validator.run] step 6/6: tests[0m
+[22m19:35:27.481 [info] [Validator.run] test exit=2[0m
+[36m19:35:27.481 [debug] [Validator.run] test output:
+Running ExUnit with seed: 433260, max_cases: 48
+
+.
+
+  1) test grouped pattern (Test)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.count_equal_binary_substrings("00110011") == 6
+     left:  10
+     right: 6
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test alternating characters (Test)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.count_equal_binary_substrings("10101") == 4
+     left:  6
+     right: 4
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 2 failures
+[0m
+[33m19:35:27.481 [warning] [Validator.run] tests: FAILED[0m
+[22m19:35:27.481 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m19:35:27.481 [debug] [Validator.run] final module (1002 chars):
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  Runs in linear time using a running difference counter approach.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars =
+      String.graphemes(binary)
+      |> Enum.map(fn
+        "0" -> 0
+        "1" -> 1
+        _ -> raise "Invalid binary string"
+      end)
+
+    do_count_equal_binary_substrings(chars, 0, %{0 => 1}, 0)
+  end
+
+  defp do_count_equal_binary_substrings([], _running_sum, _freq, total) do
+    total
+  end
+
+  defp do_count_equal_binary_substrings([char | rest], running_sum, freq, total) do
+    delta = if char == 0, do: -1, else: 1
+    new_sum = running_sum + delta
+
+    count = Map.get(freq, new_sum, 0)
+    new_total = total + count
+
+    new_freq = Map.update(freq, new_sum, 1, &(&1 + 1))
+
+    do_count_equal_binary_substrings(rest, new_sum, new_freq, new_total)
+  end
+end
+[0m
+[36m19:35:27.481 [debug] [Validator.run] final test (364 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+[0m
+[33m19:35:27.481 [warning] [Solve attempt 3] validation FAILED: [:test][0m
+[22m19:35:27.481 [info] [Solve attempt 4] generating (fn=count_equal_binary_substrings)[0m
+[36m19:35:27.481 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  Runs in linear time using a running difference counter approach.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars = String.graphemes(binary) |> Enum.map(fn
+      "0" -> 0
+      "1" -> 1
+      _ -> raise "Invalid binary string"
+    end)
+
+    do_count_equal_binary_substrings(chars, 0, %{0 => 1}, 0)
+  end
+
+  defp do_count_equal_binary_substrings([], _running_sum, _freq, total) do
+    total
+  end
+
+  defp do_count_equal_binary_substrings([char | rest], running_sum, freq, total) do
+    delta = if char == 0, do: -1, else: 1
+    new_sum = running_sum + delta
+
+    count = Map.get(freq, new_sum, 0)
+    new_total = total + count
+
+    new_freq = Map.update(freq, new_sum, 1, &(&1 + 1))
+
+    do_count_equal_binary_substrings(rest, new_sum, new_freq, new_total)
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 433260, max_cases: 48
+
+.
+
+  1) test grouped pattern (Test)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.count_equal_binary_substrings("00110011") == 6
+     left:  10
+     right: 6
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test alternating characters (Test)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.count_equal_binary_substrings("10101") == 4
+     left:  6
+     right: 4
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 2 failures
+
+Reminder: module `Solution`, function `count_equal_binary_substrings` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m19:35:34.635 [debug] [LLM.call] finish=stop len=2610 usage=%{"completion_tokens" => 740, "prompt_tokens" => 942, "prompt_tokens_details" => %{"cached_tokens" => 144}, "total_tokens" => 1682}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  The correct interpretation is that we look for contiguous substrings where
+  the number of 0s equals the number of 1s. This is different from counting
+  substrings with balanced prefix sums globally; it requires checking contiguous
+  runs of identical characters and then finding valid transitions.
+
+  Approach:
+  1. Convert string to list of integers (0 and 1).
+  2. Find all contiguous runs of identical characters, storing {length, value}.
+  3. For each pair of adjacent runs with different values, the number of valid
+     substrings spanning those two runs is min(len_left, len_right).
+  4. Sum these up across all adjacent pairs.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars =
+      binary
+      |> String.graphemes()
+      |> Enum.map(fn
+        "0" -> 0
+        "1" -> 1
+        _ -> raise "Invalid binary string"
+      end)
+
+    if length(chars) == 0 do
+      0
+    else
+      runs = group_into_runs(chars)
+      count_substrings_from_runs(runs, 0)
+    end
+  end
+
+  defp group_into_runs([]), do: []
+
+  defp group_into_runs([first_char | rest]) do
+    {run_length, remaining} = collect_run(rest, 1, first_char)
+    [{run_length, first_char} | group_into_runs(remaining)]
+  end
+
+  defp collect_run([], length, _char), do: {length, []}
+
+  defp collect_run([char | rest], length, char) do
+    collect_run(rest, length + 1, char)
+  end
+
+  defp collect_run([other_char | rest], length, _char) do
+    {length, [other_char | rest]}
+  end
+
+  defp count_substrings_from_runs(runs, total) when length(runs) < 2 do
+    total
+  end
+
+  defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total) do
+    if val_left != val_right do
+      count = :erlang.min(len_left, len_right)
+      new_total = total + count
+      count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+    else
+      # This case shouldn't happen if grouping is correct, but handle safely
+      count_substrings_from_runs([{len_right, val_right} | rest], total)
+    end
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+---END---[0m
+[22m19:35:34.635 [info] [LLM.call] local_qwen_thinking completed in 7153ms — ok[0m
+[22m19:35:34.635 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m19:35:34.635 [debug] [Validator.run] module code (2212 chars):
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  The correct interpretation is that we look for contiguous substrings where
+  the number of 0s equals the number of 1s. This is different from counting
+  substrings with balanced prefix sums globally; it requires checking contiguous
+  runs of identical characters and then finding valid transitions.
+
+  Approach:
+  1. Convert string to list of integers (0 and 1).
+  2. Find all contiguous runs of identical characters, storing {length, value}.
+  3. For each pair of adjacent runs with different values, the number of valid
+     substrings spanning those two runs is min(len_left, len_right).
+  4. Sum these up across all adjacent pairs.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars =
+      binary
+      |> String.graphemes()
+      |> Enum.map(fn
+        "0" -> 0
+        "1" -> 1
+        _ -> raise "Invalid binary string"
+      end)
+
+    if length(chars) == 0 do
+      0
+    else
+      runs = group_into_runs(chars)
+      count_substrings_from_runs(runs, 0)
+    end
+  end
+
+  defp group_into_runs([]), do: []
+
+  defp group_into_runs([first_char | rest]) do
+    {run_length, remaining} = collect_run(rest, 1, first_char)
+    [{run_length, first_char} | group_into_runs(remaining)]
+  end
+
+  defp collect_run([], length, _char), do: {length, []}
+
+  defp collect_run([char | rest], length, char) do
+    collect_run(rest, length + 1, char)
+  end
+
+  defp collect_run([other_char | rest], length, _char) do
+    {length, [other_char | rest]}
+  end
+
+  defp count_substrings_from_runs(runs, total) when length(runs) < 2 do
+    total
+  end
+
+  defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total) do
+    if val_left != val_right do
+      count = :erlang.min(len_left, len_right)
+      new_total = total + count
+      count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+    else
+      # This case shouldn't happen if grouping is correct, but handle safely
+      count_substrings_from_runs([{len_right, val_right} | rest], total)
+    end
+  end
+end[0m
+[36m19:35:34.635 [debug] [Validator.run] test code (363 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end[0m
+[36m19:35:34.635 [debug] [Budget] spent so far (est.): $0.5997[0m
+[22m19:35:34.636 [info] [Validator.run] step 1/6: credence fix[0m
+[36m19:35:34.636 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m19:35:35.357 [debug] [run_credence_fix] exit=0 output:
+
+19:35:35.139 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+19:35:35.141 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+19:35:35.157 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+19:35:35.163 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+19:35:35.163 [debug] [credence_fix] semantic done. Applied: []
+
+19:35:35.163 [debug] [credence_fix] starting pattern fix pipeline (118 rules)
+
+19:35:35.181 [debug] [credence_fix] AvoidLengthGuardLessThan2: check found 1 issue(s), running fix...
+
+19:35:35.205 [debug] [credence_fix] AvoidLengthGuardLessThan2: source CHANGED:
+  L54 -   defp count_substrings_from_runs(runs, total) when length(runs) < 2 do
+  L54 +   defp count_substrings_from_runs(
+  L55 -     total
+  L55 +          [],
+  L56 -   end
+  L56 +          total
+  L57 - 
+  L57 +        ) do
+  L58 -   defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total) do
+  L58 +     total
+  L59 -     if val_left != val_right do
+  L59 +   end
+  L60 -       count = :erlang.min(len_left, len_right)
+  L60 + 
+  L61 -       new_total = total + count
+  L61 +   defp count_substrings_from_runs([_], total) do
+  L62 -       count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+  L62 +     total
+  L63 -     else
+  L63 +   end
+  L64 -       # This case shouldn't happen if grouping is correct, but handle safely
+  L64 + 
+  L65 -       count_substrings_from_runs([{len_right, val_right} | rest], total)
+  L65 +   defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total) do
+  L66 -     end
+  L66 +     if val_left != val_right do
+  L67 -   end
+  L67 +       count = :erlang.min(len_left, len_right)
+  L68 - end
+  L68 +       new_total = total + count
+  L69 +       count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+  L70 +     else
+  L71 +       # This case shouldn't happen if grouping is correct, but handle safely
+  L72 +       count_substrings_from_runs([{len_right, val_right} | rest], total)
+  L73 +     end
+  L74 +   end
+  L75 + end
+
+19:35:35.232 [debug] [credence_fix] NoKernelShadowing: check found 3 issue(s), running fix...
+
+19:35:35.246 [debug] [credence_fix] NoKernelShadowing: source CHANGED:
+  L44 -   defp collect_run([], length, _char), do: {length, []}
+  L44 +   defp collect_run([], count, _char), do: {count, []}
+  L46 -   defp collect_run([char | rest], length, char) do
+  L46 +   defp collect_run([char | rest], count, char) do
+  L47 -     collect_run(rest, length + 1, char)
+  L47 +     collect_run(rest, count + 1, char)
+  L50 -   defp collect_run([other_char | rest], length, _char) do
+  L50 +   defp collect_run([other_char | rest], count, _char) do
+  L51 -     {length, [other_char | rest]}
+  L51 +     {count, [other_char | rest]}
+
+19:35:35.250 [debug] [credence_fix] NoLengthComparisonForEmpty: check found 1 issue(s), running fix...
+
+19:35:35.265 [debug] [credence_fix] NoLengthComparisonForEmpty: source CHANGED:
+  L29 -     if length(chars) == 0 do
+  L29 +     if chars == [] do
+
+19:35:35.310 [debug] [credence_fix] PreferGuardOverIf: check found 1 issue(s), running fix...
+
+19:35:35.324 [debug] [credence_fix] PreferGuardOverIf: source CHANGED:
+  L65 -   defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total) do
+  L65 +   defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total)
+  L66 -     if val_left != val_right do
+  L66 +        when val_left != val_right do
+  L67 -       count = :erlang.min(len_left, len_right)
+  L67 +     count = :erlang.min(len_left, len_right)
+  L68 -       new_total = total + count
+  L68 +     new_total = total + count
+  L69 -       count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+  L69 +     count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+  L70 -     else
+  L70 +   end
+  L71 -       # This case shouldn't happen if grouping is correct, but handle safely
+  L71 +   defp count_substrings_from_runs([{_len_left, _val_left}, {len_right, val_right} | rest], total) do
+  L72 -       count_substrings_from_runs([{len_right, val_right} | rest], total)
+  L72 +     # This case shouldn't happen if grouping is correct, but handle safely
+  L73 -     end
+  L73 +     count_substrings_from_runs([{len_right, val_right} | rest], total)
+
+19:35:35.331 [debug] [credence_fix] done. Applied: [AvoidLengthGuardLessThan2(1), NoKernelShadowing(3), NoLengthComparisonForEmpty(1), PreferGuardOverIf(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.AvoidLengthGuardLessThan2, 1}, {Credence.Pattern.NoKernelShadowing, 3}, {Credence.Pattern.NoLengthComparisonForEmpty, 1}, {Credence.Pattern.PreferGuardOverIf, 1}]
+[0m
+[22m19:35:35.357 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m19:35:35.958 [info] [run_credence_fix] fix compiles OK[0m
+[36m19:35:35.958 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  The correct interpretation is that we look for contiguous substrings where
+  the number of 0s equals the number of 1s. This is different from counting
+  substrings with balanced prefix sums globally; it requires checking contiguous
+  runs of identical characters and then finding valid transitions.
+
+  Approach:
+  1. Convert string to list of integers (0 and 1).
+  2. Find all contiguous runs of identical characters, storing {length, value}.
+  3. For each pair of adjacent runs with different values, the number of valid
+     substrings spanning those two runs is min(len_left, len_right).
+  4. Sum these up across all adjacent pairs.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars =
+      binary
+      |> String.graphemes()
+      |> Enum.map(fn
+        "0" -> 0
+        "1" -> 1
+        _ -> raise "Invalid binary string"
+      end)
+
+    if length(chars) == 0 do
+      0
+    else
+      runs = group_into_runs(chars)
+      count_substrings_from_runs(runs, 0)
+    end
+  end
+
+  defp group_into_runs([]), do: []
+
+  defp group_into_runs([first_char | rest]) do
+    {run_length, remaining} = collect_run(rest, 1, first_char)
+    [{run_length, first_char} | group_into_runs(remaining)]
+  end
+
+  defp collect_run([], length, _char), do: {length, []}
+
+  defp collect_run([char | rest], length, char) do
+    collect_run(rest, length + 1, char)
+  end
+
+  defp collect_run([other_char | rest], length, _char) do
+    {length, [other_char | rest]}
+  end
+
+  defp count_substrings_from_runs(runs, total) when length(runs) < 2 do
+    total
+  end
+
+  defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total) do
+    if val_left != val_right do
+      count = :erlang.min(len_left, len_right)
+      new_total = total + count
+      count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+    else
+      # This case shouldn't happen if grouping is correct, but handle safely
+      count_substrings_from_runs([{len_right, val_right} | rest], total)
+    end
+  end
+end[0m
+[36m19:35:35.958 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  The correct interpretation is that we look for contiguous substrings where
+  the number of 0s equals the number of 1s. This is different from counting
+  substrings with balanced prefix sums globally; it requires checking contiguous
+  runs of identical characters and then finding valid transitions.
+
+  Approach:
+  1. Convert string to list of integers (0 and 1).
+  2. Find all contiguous runs of identical characters, storing {length, value}.
+  3. For each pair of adjacent runs with different values, the number of valid
+     substrings spanning those two runs is min(len_left, len_right).
+  4. Sum these up across all adjacent pairs.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars =
+      binary
+      |> String.graphemes()
+      |> Enum.map(fn
+        "0" -> 0
+        "1" -> 1
+        _ -> raise "Invalid binary string"
+      end)
+
+    if chars == [] do
+      0
+    else
+      runs = group_into_runs(chars)
+      count_substrings_from_runs(runs, 0)
+    end
+  end
+
+  defp group_into_runs([]), do: []
+
+  defp group_into_runs([first_char | rest]) do
+    {run_length, remaining} = collect_run(rest, 1, first_char)
+    [{run_length, first_char} | group_into_runs(remaining)]
+  end
+
+  defp collect_run([], count, _char), do: {count, []}
+
+  defp collect_run([char | rest], count, char) do
+    collect_run(rest, count + 1, char)
+  end
+
+  defp collect_run([other_char | rest], count, _char) do
+    {count, [other_char | rest]}
+  end
+
+  defp count_substrings_from_runs(
+         [],
+         total
+       ) do
+    total
+  end
+
+  defp count_substrings_from_runs([_], total) do
+    total
+  end
+
+  defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total)
+       when val_left != val_right do
+    count = :erlang.min(len_left, len_right)
+    new_total = total + count
+    count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+  end
+  defp count_substrings_from_runs([{_len_left, _val_left}, {len_right, val_right} | rest], total) do
+    # This case shouldn't happen if grouping is correct, but handle safely
+    count_substrings_from_runs([{len_right, val_right} | rest], total)
+  end
+end[0m
+[22m19:35:35.958 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m19:35:35.959 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  The correct interpretation is that we look for contiguous substrings where
+  the number of 0s equals the number of 1s. This is different from counting
+  substrings with balanced prefix sums globally; it requires checking contiguous
+  runs of identical characters and then finding valid transitions.
+
+  Approach:
+  1. Convert string to list of integers (0 and 1).
+  2. Find all contiguous runs of identical characters, storing {length, value}.
+  3. For each pair of adjacent runs with different values, the number of valid
+     substrings spanning those two runs is min(len_left, len_right).
+  4. Sum these up across all adjacent pairs.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars =
+      binary
+      |> String.graphemes()
+      |> Enum.map(fn
+        "0" -> 0
+        "1" -> 1
+        _ -> raise "Invalid binary string"
+      end)
+
+    if length(chars) == 0 do
+      0
+    else
+      runs = group_into_runs(chars)
+      count_substrings_from_runs(runs, 0)
+    end
+  end
+
+  defp group_into_runs([]), do: []
+
+  defp group_into_runs([first_char | rest]) do
+    {run_length, remaining} = collect_run(rest, 1, first_char)
+    [{run_length, first_char} | group_into_runs(remaining)]
+  end
+
+  defp collect_run([], length, _char), do: {length, []}
+
+  defp collect_run([char | rest], length, char) do
+    collect_run(rest, length + 1, char)
+  end
+
+  defp collect_run([other_char | rest], length, _char) do
+    {length, [other_char | rest]}
+  end
+
+  defp count_substrings_from_runs(runs, total) when length(runs) < 2 do
+    total
+  end
+
+  defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total) do
+    if val_left != val_right do
+      count = :erlang.min(len_left, len_right)
+      new_total = total + count
+      count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+    else
+      # This case shouldn't happen if grouping is correct, but handle safely
+      count_substrings_from_runs([{len_right, val_right} | rest], total)
+    end
+  end
+end[0m
+[36m19:35:35.959 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  The correct interpretation is that we look for contiguous substrings where
+  the number of 0s equals the number of 1s. This is different from counting
+  substrings with balanced prefix sums globally; it requires checking contiguous
+  runs of identical characters and then finding valid transitions.
+
+  Approach:
+  1. Convert string to list of integers (0 and 1).
+  2. Find all contiguous runs of identical characters, storing {length, value}.
+  3. For each pair of adjacent runs with different values, the number of valid
+     substrings spanning those two runs is min(len_left, len_right).
+  4. Sum these up across all adjacent pairs.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars =
+      binary
+      |> String.graphemes()
+      |> Enum.map(fn
+        "0" -> 0
+        "1" -> 1
+        _ -> raise "Invalid binary string"
+      end)
+
+    if chars == [] do
+      0
+    else
+      runs = group_into_runs(chars)
+      count_substrings_from_runs(runs, 0)
+    end
+  end
+
+  defp group_into_runs([]), do: []
+
+  defp group_into_runs([first_char | rest]) do
+    {run_length, remaining} = collect_run(rest, 1, first_char)
+    [{run_length, first_char} | group_into_runs(remaining)]
+  end
+
+  defp collect_run([], count, _char), do: {count, []}
+
+  defp collect_run([char | rest], count, char) do
+    collect_run(rest, count + 1, char)
+  end
+
+  defp collect_run([other_char | rest], count, _char) do
+    {count, [other_char | rest]}
+  end
+
+  defp count_substrings_from_runs(
+         [],
+         total
+       ) do
+    total
+  end
+
+  defp count_substrings_from_runs([_], total) do
+    total
+  end
+
+  defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total)
+       when val_left != val_right do
+    count = :erlang.min(len_left, len_right)
+    new_total = total + count
+    count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+  end
+  defp count_substrings_from_runs([{_len_left, _val_left}, {len_right, val_right} | rest], total) do
+    # This case shouldn't happen if grouping is correct, but handle safely
+    count_substrings_from_runs([{len_right, val_right} | rest], total)
+  end
+end[0m
+[36m19:35:35.959 [debug] [propagate_is_renames] old functions: ["count_equal_binary_substrings", "group_into_runs", "collect_run", "count_substrings_from_runs"][0m
+[36m19:35:35.959 [debug] [propagate_is_renames] new functions: ["count_equal_binary_substrings", "group_into_runs", "collect_run", "count_substrings_from_runs"][0m
+[36m19:35:35.959 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m19:35:35.959 [info] [Validator.run] step 2/6: compile[0m
+[22m19:35:36.516 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m19:35:36.516 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m19:35:36.516 [info] [Validator.run] step 3/6: format[0m
+[22m19:35:36.808 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m19:35:37.119 [debug] [Validator.run] format fix output: [0m
+[22m19:35:37.119 [info] [Validator.run] step 4/6: credo[0m
+[36m19:35:37.595 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m19:35:37.595 [info] [Validator.run] credo: no issues[0m
+[22m19:35:37.595 [info] [Validator.run] step 5/6: credence check[0m
+[22m19:35:38.285 [info] [Validator.run] credence check exit=0[0m
+[36m19:35:38.285 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m19:35:38.285 [info] [Validator.run] credence check: passed[0m
+[22m19:35:38.285 [info] [Validator.run] step 6/6: tests[0m
+[22m19:35:38.758 [info] [Validator.run] test exit=0[0m
+[36m19:35:38.758 [debug] [Validator.run] test output:
+Running ExUnit with seed: 716836, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m19:35:38.758 [info] [Validator.run] tests: PASSED[0m
+[22m19:35:38.758 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m19:35:38.758 [debug] [Validator.run] final module (2352 chars):
+defmodule Solution do
+  @doc """
+  Counts the number of substrings in a binary string that have an equal
+  number of 0s and 1s.
+
+  The correct interpretation is that we look for contiguous substrings where
+  the number of 0s equals the number of 1s. This is different from counting
+  substrings with balanced prefix sums globally; it requires checking contiguous
+  runs of identical characters and then finding valid transitions.
+
+  Approach:
+  1. Convert string to list of integers (0 and 1).
+  2. Find all contiguous runs of identical characters, storing {length, value}.
+  3. For each pair of adjacent runs with different values, the number of valid
+     substrings spanning those two runs is min(len_left, len_right).
+  4. Sum these up across all adjacent pairs.
+  """
+  @spec count_equal_binary_substrings(String.t()) :: non_neg_integer()
+  def count_equal_binary_substrings(binary) do
+    chars =
+      binary
+      |> String.graphemes()
+      |> Enum.map(fn
+        "0" -> 0
+        "1" -> 1
+        _ -> raise "Invalid binary string"
+      end)
+
+    if chars == [] do
+      0
+    else
+      runs = group_into_runs(chars)
+      count_substrings_from_runs(runs, 0)
+    end
+  end
+
+  defp group_into_runs([]), do: []
+
+  defp group_into_runs([first_char | rest]) do
+    {run_length, remaining} = collect_run(rest, 1, first_char)
+    [{run_length, first_char} | group_into_runs(remaining)]
+  end
+
+  defp collect_run([], count, _char), do: {count, []}
+
+  defp collect_run([char | rest], count, char) do
+    collect_run(rest, count + 1, char)
+  end
+
+  defp collect_run([other_char | rest], count, _char) do
+    {count, [other_char | rest]}
+  end
+
+  defp count_substrings_from_runs(
+         [],
+         total
+       ) do
+    total
+  end
+
+  defp count_substrings_from_runs([_], total) do
+    total
+  end
+
+  defp count_substrings_from_runs([{len_left, val_left}, {len_right, val_right} | rest], total)
+       when val_left != val_right do
+    count = :erlang.min(len_left, len_right)
+    new_total = total + count
+    count_substrings_from_runs([{len_right, val_right} | rest], new_total)
+  end
+
+  defp count_substrings_from_runs([{_len_left, _val_left}, {len_right, val_right} | rest], total) do
+    # This case shouldn't happen if grouping is correct, but handle safely
+    count_substrings_from_runs([{len_right, val_right} | rest], total)
+  end
+end
+[0m
+[36m19:35:38.759 [debug] [Validator.run] final test (364 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "all same characters" do
+    assert Solution.count_equal_binary_substrings("1111") == 0
+  end
+
+  test "alternating characters" do
+    assert Solution.count_equal_binary_substrings("10101") == 4
+  end
+
+  test "grouped pattern" do
+    assert Solution.count_equal_binary_substrings("00110011") == 6
+  end
+end
+[0m
+[22m19:35:38.759 [info] [Solve attempt 4] validation PASSED[0m
+[36m19:35:38.771 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.UnusedVariable
+  - Credence.Semantic.UndefinedFunction
+  - Credence.Pattern.AvoidLengthGuardLessThan2
+  - Credence.Pattern.NoKernelShadowing
+  - Credence.Pattern.NoLengthComparisonForEmpty
+  - Credence.Pattern.PreferGuardOverIf
+
+## Dead-ends already tried (do NOT re-propose)
+(none)
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+== (truncated)[0m
+[22m19:39:55.479 [info] [Budget] HEARTBEAT — 97 paid calls, est $0.5997 over 199.7min → ~$0.1802/hr, ~$4.32/day (tok in=719397 cache_rd=10470784 out=286328)[0m
+[36m19:40:06.963 [debug] [LLM.call] finish=stop len=582 usage=%{"completion_tokens" => 6945, "completion_tokens_details" => %{"reasoning_tokens" => 6775}, "prompt_tokens" => 22318, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 29263}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_pattern_match_over_if_empty_list
+===PHASE===
+pattern
+===BEFORE===
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+===AFTER===
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process([]), do: 0
+
+  def process(list) do
+    Enum.sum(list)
+  end
+end
+===RATIONALE===
+`if list == [] do ... else ... end` is non-idiomatic Elixir; replace with a pattern-match clause on `[]`.
+===END===[0m
+[22m19:40:06.963 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 268191ms — ok[0m
+[36m19:40:06.964 [debug] [Budget] spent so far (est.): $0.6155[0m
+[22m19:40:09.321 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m19:40:14.907 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" | head -50[0m
+[22m19:40:14.907 [info] [Pi] step 2: bash
+    command: find /home/kly/projects/credence -type f -name "*.exs" | head -50[0m
+[22m19:40:19.232 [info] [Pi] step 3: read
+    path: /home/kly/projects/credence/lib/pattern.ex[0m
+[22m19:40:19.232 [info] [Pi] step 4: read
+    path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m19:40:19.232 [info] [Pi] step 5: read
+    path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m19:40:25.093 [info] [Pi] step 6: read
+    path: /home/kly/projects/credence/lib/pattern/no_unless_else.ex[0m
+[22m19:40:25.093 [info] [Pi] step 7: read
+    path: /home/kly/projects/credence/lib/pattern/no_case_true_false.ex[0m
+[22m19:40:25.093 [info] [Pi] step 8: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_pattern_match_over_if_empty_list.ex[0m
+[22m19:40:31.748 [info] [Pi] step 9: read
+    path: /home/kly/projects/credence/lib/pattern/rule.ex[0m
+[22m19:40:31.749 [info] [Pi] step 10: read
+    path: /home/kly/projects/credence/lib/issue.ex[0m
+[22m19:40:31.749 [info] [Pi] step 11: read
+    path: /home/kly/projects/credence/test/support/equivalence_inputs.ex[0m
+[22m19:40:31.749 [info] [Pi] step 12: read
+    path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m19:40:36.723 [info] [Pi] step 13: bash
+    command: ls /home/kly/projects/credence/test/pattern/no_explicit_sum_reduce_*[0m
+[22m19:40:36.723 [info] [Pi] step 14: bash
+    command: ls /home/kly/projects/credence/test/pattern/no_manual_max_*[0m
+[22m19:40:42.638 [info] [Pi] step 15: read
+    path: /home/kly/projects/credence/lib/pattern/no_explicit_sum_reduce.ex[0m
+[22m19:40:42.638 [info] [Pi] step 16: read
+    path: /home/kly/projects/credence/test/pattern/no_explicit_sum_reduce_check_test.exs[0m
+[22m19:40:42.638 [info] [Pi] step 17: read
+    path: /home/kly/projects/credence/test/pattern/no_explicit_sum_reduce_fix_test.exs[0m
+[22m19:40:42.638 [info] [Pi] step 18: read
+    path: /home/kly/projects/credence/test/pattern/no_explicit_sum_reduce_equivalence_test.exs[0m
+[22m19:41:40.969 [info] [Pi] step 19: read
+    path: /home/kly/projects/credence/lib/pattern/non_grouped_clauses.ex[0m
+[22m19:41:40.969 [info] [Pi] step 20: read
+    path: /home/kly/projects/credence/lib/pattern/no_case_on_param_dispatch.ex[0m
+[22m19:43:01.305 [info] [Pi] step 21: read
+    path: /home/kly/projects/credence/lib/pattern/no_redundant_case_nil_clause.ex[0m
+[22m19:43:59.086 [info] [Pi] step 22: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Check how Sourceror renders empty list in function head
+node = {:__block__, [line: 1, column: 1], [[]]}
+IO.puts("Empty list node:")
+IO.inspect(node)
+IO.puts(Sourceror.to_string(node))
+
+# Check a def with empty list pattern
+def_node = {:def, [], [{:process, [], [{:__block__, [], [[]]}]}, [{{:__block__, [format: :keyword], [:do]}, {:__block__, [], [0]}}]]}
+IO.puts("\ndef with [] pattern:")
+IO.puts(Sourceror.to_string(def_node))
+'
+    timeout: 30[0m
+[22m19:44:10.872 [info] [Pi] step 23: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Try rendering two def clauses as strings
+def1 = Sourceror.parse_string!("def process([]), do: 0")
+def2 = Sourceror.parse_string!("def process(list) do\n  Enum.sum(list)\nend")
+IO.puts("def1: #{inspect(def1)}")
+IO.puts("def2: #{inspect(def2)}")
+IO.puts("\ndef1 string: #{Sourceror.to_string(def1)}")
+IO.puts("\ndef2 string: #{Sourceror.to_string(def2)}")
+'
+    timeout: 30[0m
+[22m19:44:22.166 [info] [Pi] step 24: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+IO.puts("AST:")
+IO.inspect(ast, limit: :infinity)
+
+# Get the range of the def node
+def_node = get_in(ast, [Access.at(1), Access.at(0)])
+IO.puts("\ndef_node:")
+IO.inspect(def_node, limit: :infinity)
+
+# Walk to find the def node
+Macro.prewalk(ast, nil, fn
+  {:def, meta, [{:process, _, _}, _]} = node, _acc ->
+    IO.puts("\nFound def node, meta: #{inspect(meta)}")
+    IO.puts("Range: #{inspect(Sourceror.get_range(node))}")
+    {node, node}
+  node, acc ->
+    {node, acc}
+end)
+'
+    timeout: 30[0m
+[22m19:44:35.252 [info] [Pi] step 25: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+
+# Walk to find def nodes with if inside
+Macro.prewalk(ast, fn
+  {:def, meta, [{:process, pmeta, [param]}, body_kw]} = node ->
+    IO.puts("Found def process")
+    IO.puts("  param: #{inspect(param)}")
+    IO.puts("  body_kw: #{inspect(body_kw)}")
+    
+    # Check if the body is just an if
+    case body_kw do
+      [{{:__block__, _, [:do]}, {:if, if_meta, [condition, branches]}}] ->
+        IO.puts("  condition: #{inspect(condition)}")
+        IO.puts("  branches: #{inspect(branches)}")
+      _ ->
+        IO.puts("  Not a simple if body")
+    end
+    
+    node
+  node ->
+    node
+end)
+
+# Now test building a replacement
+replacement1 = "def process([]), do: 0"
+replacement2 = "def process(list) do\n  Enum.sum(list)\nend"
+change = replacement1 <> "\n\n" <> replacement2
+IO.puts("\nReplacement:\n#{change}")
+'
+    timeout: 30[0m
+[22m19:44:44.573 [info] [Pi] step 26: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+
+# Find the def node and get its range
+{_, patches} = Macro.prewalk(ast, [], fn
+  {:def, _meta, [{:process, _, [{:list, _, nil}]}, [{{:__block__, _, [:do]}, {:if, _, [_, _]}}]]} = node, acc ->
+    range = Sourceror.get_range(node)
+    IO.puts("Range: #{inspect(range)}")
+    
+    replacement = "def process([]), do: 0\n\ndef process(list) do\n  Enum.sum(list)\nend"
+    patch = %{range: range, change: replacement}
+    {node, [patch | acc]}
+  node, acc ->
+    {node, acc}
+end)
+
+IO.puts("\nPatches: #{inspect(patches, limit: :infinity)}")
+
+if patches != [] do
+  fixed = Sourceror.patch_string(source, patches)
+  IO.puts("\nFixed:\n#{fixed}")
+end
+'
+    timeout: 30[0m
+[22m19:44:55.478 [info] [Budget] HEARTBEAT — 98 paid calls, est $0.6155 over 204.7min → ~$0.1804/hr, ~$4.33/day (tok in=741715 cache_rd=10470784 out=293273)[0m
+[22m19:45:04.360 [info] [Pi] step 27: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.RuleHelpers
+
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+# Simulate what the pipeline does
+ast = Sourceror.parse_string!(source)
+
+# Find def nodes
+{_, patches} = Macro.prewalk(ast, [], fn
+  {:def, _, [{:process, _, [{:list, _, nil}]}, [{{:__block__, _, [:do]}, {:if, _, [_, _]}}]]} = node, acc ->
+    range = Sourceror.get_range(node)
+    replacement = "def process([]), do: 0\n\ndef process(list) do\n  Enum.sum(list)\nend"
+    {node, [%{range: range, change: replacement} | acc]}
+  node, acc ->
+    {node, acc}
+end)
+
+# Apply patches like the pipeline
+fixed = source |> Sourceror.patch_string(patches) |> String.split("\n") |> Enum.map_join("\n", &String.trim_trailing/1)
+IO.puts("Fixed output:")
+IO.puts(fixed)
+IO.puts("---")
+IO.inspect(fixed)
+'
+    timeout: 30[0m
+[22m19:46:18.928 [info] [Pi] step 28: write
+    content: defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyList do
+  @moduledoc """
+  Detects `if var == []` inside a function body and rewrites it to a
+  pattern-matched clause on `[]`.
+
+  ## Bad
+
+      def process(list) do
+        if list == [] do
+          0
+        else
+          Enum.sum(list)
+        end
+      end
+
+  ## Good
+
+      def process([]), do: 0
+
+      def process(list) do
+        Enum.sum(list)
+      end
+
+  ## Auto-fix
+
+  Replaces the `if var == []` guard with a dedicated `def name([]), do: do_body`
+  clause and keeps the else body as the original clause body.
+  """
+
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case detect_anti_pattern(node) do
+          {:ok, meta} -> {node, [build_issue(meta) | acc]}
+          :no -> {node, acc}
+        end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case detect_anti_pattern(node) do
+          {:ok, _meta} -> {node, [build_patch(node) | acc]}
+          :no -> {node, acc}
+        end
+      end)
+
+    Enum.reverse(patches)
+  end
+
+  defp detect_anti_pattern({kind, meta, [{name, _, [param]}, body_kw]})
+       when kind in [:def, :defp] and is_atom(name) and is_list(body_kw) do
+    with true <- bare_variable?(param),
+         {:ok, if_body} <- extract_do_body(body_kw),
+         {:ok, _if_meta, left, right, do_body, else_body} <- extract_if_eq_empty(if_body) do
+      if var_matches_param?(left, right, param) do
+        {:ok, %{line: Keyword.get(meta, :line), name: name, param: param,
+                do_body: do_body, else_body: else_body, kind: kind}}
+      else
+        :no
+      end
+    else
+      _ -> :no
+    end
+  end
+
+  defp detect_anti_pattern(_), do: :no
+
+  defp bare_variable?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
+  defp bare_variable?(_), do: false
+
+  defp extract_do_body(kw) when is_list(kw) do
+    case kw do
+      [{{:__block__, _, [:do]}, body}] -> {:ok, body}
+      [{:do, body}] -> {:ok, body}
+      _ -> :error
+    end
+  end
+
+  defp extract_do_body(_), do: :error
+
+  defp extract_if_eq_empty({:if, if_meta, [condition, branches]}) when is_list(branches) do
+    case condition do
+      {:==, _, [left, {:__block__, _, [[]]}]} ->
+        {:ok, if_meta, left, nil, extract_branch(branches, :do), extract_branch(branches, :else)}
+
+      {:==, _, [{:__block__, _, [[]]}, right]} ->
+        {:ok, if_meta, nil, right, extract_branch(branches, :do), extract_branch(branches, :else)}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp extract_if_eq_empty(_), do: :error
+
+  defp extract_branch(branches, key) do
+    Enum.find_value(branches, fn
+      {{:__block__, _, [^key]}, body} -> body
+      _ -> nil
+    end)
+  end
+
+  defp var_matches_param?(left, nil, param) do
+    match?({^param, _, ctx} when is_atom(ctx), left)
+  end
+
+  defp var_matches_param?(nil, right, param) do
+    match?({^param, _, ctx} when is_atom(ctx), right)
+  end
+
+  defp var_matches_param?(_, _, _), do: false
+
+  defp build_issue(%{line: line}) do
+    %Issue{
+      rule: :prefer_pattern_match_over_if_empty_list,
+      message:
+        "Use pattern matching on `[]` instead of `if var == []`. " <>
+          "Rewrite as `def name([]), do: do_body` and `def name(var) do else_body end`.",
+      meta: %{line: line}
+    }
+  end
+
+  defp build_patch({kind, _meta, [{name, _, [param]}, _body_kw]} = node) do
+    range = Sourceror.get_range(node)
+
+    # Find the if body from the original node
+    [{{:__block__, _, [:do]}, {:if, _, [_, branches]}}] = elem(node, 2) |> Enum.at(1) |> List.wrap()
+
+    do_body = extract_branch(branches, :do)
+    else_body = extract_branch(branches, :else)
+
+    # Build the empty-list clause: def name([]), do: do_body
+    empty_clause = build_empty_clause(kind, name, do_body)
+    # Build the fallthrough clause: def name(param) do else_body end
+    fallthrough_clause = build_fallthrough_clause(kind, name, param, else_body)
+
+    change =
+      Sourceror.to_string(empty_clause) <>
+        "\n\n" <>
+        Sourceror.to_string(fallthrough_clause)
+
+    %{range: range, change: change}
+  end
+
+  defp build_empty_clause(kind, name, do_body) do
+    empty_list = {:__block__, [format: :keyword], [[]]}
+    call = {name, [], [empty_list]}
+    body_kw = [{{:__block__, [format: :keyword], [:do]}, do_body}]
+    {kind, [], [call, body_kw]}
+  end
+
+  defp build_fallthrough_clause(kind, name, param, else_body) do
+    call = {name, [], [{param, [], nil}]}
+    body_kw = [{{:__block__, [], [:do]}, else_body}]
+    {kind, [], [call, body_kw]}
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_pattern_match_over_if_empty_list.ex[0m
+[22m19:46:22.562 [info] [Pi] step 29: bash
+    command: cd /home/kly/projects/credence && mix compile --force 2>&1 | tail -10
+    timeout: 30[0m
+[22m19:46:30.598 [info] [Pi] step 30: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+issues = PreferPatternMatchOverIfEmptyList.check(ast, source: source)
+IO.puts("Issues: #{inspect(issues)}")
+
+patches = PreferPatternMatchOverIfEmptyList.fix_patches(ast, source: source)
+IO.puts("Patches: #{inspect(patches, limit: :infinity)}")
+
+fixed = Credence.RuleHelpers.apply_rule_fix(PreferPatternMatchOverIfEmptyList, source)
+IO.puts("\nFixed:\n#{fixed}")
+'
+    timeout: 30[0m
+[22m19:46:43.370 [info] [Pi] step 31: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+
+# Walk and debug each def node
+Macro.prewalk(ast, fn
+  {:def, meta, args} = node ->
+    IO.puts("=== Found def ===")
+    IO.puts("args length: #{length(args)}")
+    
+    case args do
+      [{name, name_meta, params}, body_kw] ->
+        IO.puts("name: #{inspect(name)}")
+        IO.puts("params: #{inspect(params)}")
+        IO.puts("body_kw is list? #{is_list(body_kw)}")
+        
+        if is_list(body_kw) do
+          case body_kw do
+            [{{:__block__, _, [:do]}, body}] ->
+              IO.puts("body: #{inspect(elem(body, 0))}")
+              # Check if it's an if
+              case body do
+                {:if, _, [condition, branches]} ->
+                  IO.puts("IF condition: #{inspect(condition)}")
+                  IO.puts("IF branches: #{inspect(branches)}")
+                _ ->
+                  IO.puts("Not an if: #{inspect(body)}")
+              end
+            [{:do, body}] ->
+              IO.puts("Keyword do body")
+            _ ->
+              IO.puts("Other body_kw: #{inspect(body_kw)}")
+          end
+        end
+      _ ->
+        IO.puts("Other args structure")
+    end
+    
+    node
+  node ->
+    node
+end)
+'
+    timeout: 30[0m
+[22m19:46:54.805 [info] [Pi] step 32: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+
+Macro.prewalk(ast, fn
+  {:def, _meta, [{name, _nm, params}, body_kw]} = node when name == :process ->
+    IO.puts("=== Found def process ===")
+    IO.puts("params: #{inspect(params)}")
+    IO.puts("body_kw is list? #{is_list(body_kw)}")
+    if is_list(body_kw) and length(body_kw) == 1 do
+      [first | _] = body_kw
+      IO.puts("first kw: #{inspect(elem(first, 0))}")
+      case first do
+        {{:__block__, _, [:do]}, body} ->
+          case body do
+            {:if, _, [cond_node, branches]} ->
+              IO.puts("Found if!")
+              IO.puts("cond: #{inspect(cond_node)}")
+              IO.puts("branches keys: #{inspect(Enum.map(branches, fn {{:__block__, _, [k]}, _} -> k end))}")
+            other ->
+              IO.puts("Not if: #{inspect(elem(other, 0))}")
+          end
+        _ -> IO.puts("other first")
+      end
+    end
+    node
+  node ->
+    node
+end)
+'
+    timeout: 30[0m
+[22m19:47:17.448 [info] [Pi] step 33: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+
+# Test each step of detection manually
+Macro.prewalk(ast, fn
+  {:def, meta, [{name, _, [param]}, body_kw]} = node ->
+    IO.puts("1. Matched def #{name}")
+    IO.puts("   param: #{inspect(param)}")
+    
+    # Check bare_variable?
+    bv = case param do
+      {n, _, c} when is_atom(n) and is_atom(c) -> true
+      _ -> false
+    end
+    IO.puts("2. bare_variable? #{bv}")
+    
+    # Check body_kw
+    body_ok = case body_kw do
+      [{{:__block__, _, [:do]}, _}] -> true
+      _ -> false
+    end
+    IO.puts("3. body_kw single do? #{body_ok}")
+    
+    if bv and body_ok do
+      [{{:__block__, _, [:do]}, body}] = body_kw
+      
+      # Check if
+      if_result = case body do
+        {:if, _, [condition, branches]} ->
+          IO.puts("4. Found if")
+          IO.puts("   condition: #{inspect(condition)}")
+          
+          case condition do
+            {:==, _, [left, {:__block__, _, [[]]}]} ->
+              IO.puts("5. Matched var == []")
+              IO.puts("   left: #{inspect(left)}")
+              IO.puts("   left matches param? #{match?({^param, _, ctx} when is_atom(ctx), left)}")
+            {:==, _, [{:__block__, _, [[]]}, right]} ->
+              IO.puts("5. Matched [] == var")
+            _ ->
+              IO.puts("5. Condition not matched")
+          end
+        _ ->
+          IO.puts("4. Not an if")
+      end
+    end
+    
+    node
+  node ->
+    node
+end)
+'
+    timeout: 30[0m
+[22m19:47:33.258 [info] [Pi] step 34: edit
+    edits: [%{"newText" => "  defp var_matches_param?(left, nil, {param_name, _, _}) do\n    match?({^param_name, _, ctx} when is_atom(ctx), left)\n  end\n\n  defp var_matches_param?(nil, right, {param_name, _, _}) do\n    match?({^param_name, _, ctx} when is_atom(ctx), right)\n  end\n\n  defp var_matches_param?(_, _, _), do: false", "oldText" => "  defp var_matches_param?(left, nil, param) do\n    match?({^param, _, ctx} when is_atom(ctx), left)\n  end\n\n  defp var_matches_param?(nil, right, param) do\n    match?({^param, _, ctx} when is_atom(ctx), right)\n  end\n\n  defp var_matches_param?(_, _, _), do: false"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_pattern_match_over_if_empty_list.ex[0m
+[22m19:47:49.496 [info] [Pi] step 35: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_pattern_match_over_if_empty_list.ex[0m
+[22m19:48:23.470 [info] [Pi] step 36: write
+    content: defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyList do
+  @moduledoc """
+  Detects `if var == []` inside a function body and rewrites it to a
+  pattern-matched clause on `[]`.
+
+  ## Bad
+
+      def process(list) do
+        if list == [] do
+          0
+        else
+          Enum.sum(list)
+        end
+      end
+
+  ## Good
+
+      def process([]), do: 0
+
+      def process(list) do
+        Enum.sum(list)
+      end
+
+  ## Auto-fix
+
+  Replaces the `if var == []` guard with a dedicated `def name([]), do: do_body`
+  clause and keeps the else body as the original clause body.
+  """
+
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case detect_anti_pattern(node) do
+          {:ok, info} -> {node, [build_issue(info) | acc]}
+          :no -> {node, acc}
+        end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case detect_anti_pattern(node) do
+          {:ok, info} -> {node, [build_patch(node, info) | acc]}
+          :no -> {node, acc}
+        end
+      end)
+
+    Enum.reverse(patches)
+  end
+
+  defp detect_anti_pattern({kind, meta, [{name, _, [param]}, body_kw]})
+       when kind in [:def, :defp] and is_atom(name) and is_list(body_kw) do
+    with true <- bare_variable?(param),
+         {:ok, if_body} <- extract_do_body(body_kw),
+         {:ok, _if_meta, left, right, do_body, else_body} <- extract_if_eq_empty(if_body),
+         true <- var_matches_param?(left, right, param) do
+      {:ok,
+       %{
+         line: Keyword.get(meta, :line),
+         name: name,
+         param_name: elem(param, 0),
+         do_body: do_body,
+         else_body: else_body,
+         kind: kind
+       }}
+    else
+      _ -> :no
+    end
+  end
+
+  defp detect_anti_pattern(_), do: :no
+
+  defp bare_variable?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
+  defp bare_variable?(_), do: false
+
+  defp extract_do_body(kw) when is_list(kw) do
+    case kw do
+      [{{:__block__, _, [:do]}, body}] -> {:ok, body}
+      [{:do, body}] -> {:ok, body}
+      _ -> :error
+    end
+  end
+
+  defp extract_do_body(_), do: :error
+
+  defp extract_if_eq_empty({:if, if_meta, [condition, branches]}) when is_list(branches) do
+    case condition do
+      {:==, _, [left, {:__block__, _, [[]]}]} ->
+        {:ok, if_meta, left, nil, extract_branch(branches, :do), extract_branch(branches, :else)}
+
+      {:==, _, [{:__block__, _, [[]]}, right]} ->
+        {:ok, if_meta, nil, right, extract_branch(branches, :do), extract_branch(branches, :else)}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp extract_if_eq_empty(_), do: :error
+
+  defp extract_branch(branches, key) do
+    Enum.find_value(branches, fn
+      {{:__block__, _, [^key]}, body} -> body
+      _ -> nil
+    end)
+  end
+
+  defp var_matches_param?(left, nil, {param_name, _, _}) do
+    match?({^param_name, _, ctx} when is_atom(ctx), left)
+  end
+
+  defp var_matches_param?(nil, right, {param_name, _, _}) do
+    match?({^param_name, _, ctx} when is_atom(ctx), right)
+  end
+
+  defp var_matches_param?(_, _, _), do: false
+
+  defp build_issue(%{line: line}) do
+    %Issue{
+      rule: :prefer_pattern_match_over_if_empty_list,
+      message:
+        "Use pattern matching on `[]` instead of `if var == []`. " <>
+          "Rewrite as `def name([]), do: do_body` and `def name(var) do else_body end`.",
+      meta: %{line: line}
+    }
+  end
+
+  defp build_patch(node, %{kind: kind, name: name, param_name: param_name,
+                            do_body: do_body, else_body: else_body}) do
+    range = Sourceror.get_range(node)
+
+    # Build the empty-list clause: def name([]), do: do_body
+    empty_clause = build_empty_clause(kind, name, do_body)
+    # Build the fallthrough clause: def name(param) do else_body end
+    fallthrough_clause = build_fallthrough_clause(kind, name, param_name, else_body)
+
+    change =
+      Sourceror.to_string(empty_clause) <>
+        "\n\n" <>
+        Sourceror.to_string(fallthrough_clause)
+
+    %{range: range, change: change}
+  end
+
+  defp build_empty_clause(kind, name, do_body) do
+    empty_list = {:__block__, [format: :keyword], [[]]}
+    call = {name, [], [empty_list]}
+    body_kw = [{{:__block__, [format: :keyword], [:do]}, do_body}]
+    {kind, [], [call, body_kw]}
+  end
+
+  defp build_fallthrough_clause(kind, name, param_name, else_body) do
+    call = {name, [], [{param_name, [], nil}]}
+    body_kw = [{{:__block__, [], [:do]}, else_body}]
+    {kind, [], [call, body_kw]}
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_pattern_match_over_if_empty_list.ex[0m
+[22m19:48:30.060 [info] [Pi] step 37: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+issues = PreferPatternMatchOverIfEmptyList.check(ast, source: source)
+IO.puts("Issues: #{inspect(issues)}")
+
+fixed = Credence.RuleHelpers.apply_rule_fix(PreferPatternMatchOverIfEmptyList, source)
+IO.puts("\nFixed:\n#{fixed}")
+'
+    timeout: 30[0m
+[22m19:48:59.917 [info] [Pi] step 38: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test different metadata combinations for def...do...end (not keyword)
+def1 = {:def, [], [{:process, [], [{:list, [], nil}]}, [{{:__block__, [], [:do]}, {:__block__, [], [0]}}]]}
+IO.puts("def1 (no meta): #{Sourceror.to_string(def1)}")
+
+# Try with do/end metadata
+def2 = {:def, [do: [line: 1, column: 21], end: [line: 3, column: 1]], [{:process, [], [{:list, [], nil}]}, [{{:__block__, [], [:do]}, {{:., [], [{:__aliases__, [], [:Enum]}, :sum]}, [], [{:list, [], nil}]}}]]}
+IO.puts("def2 (do/end meta): #{Sourceror.to_string(def2)}")
+
+# Parse the expected string
+def3 = Sourceror.parse_string!("def process(list) do\n  Enum.sum(list)\nend")
+IO.puts("def3 (parsed): #{inspect(def3, limit: :infinity)}")
+IO.puts("def3 string: #{Sourceror.to_string(def3)}")
+'
+    timeout: 30[0m
+[22m19:49:15.404 [info] [Pi] step 39: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test render_replacement with parsed AST
+parsed = Sourceror.parse_string!("def process(list) do\n  Enum.sum(list)\nend")
+range = %{start: [line: 1, column: 1], end: [line: 3, column: 4]}
+rendered = Credence.RuleHelpers.render_replacement(parsed, range)
+IO.puts("Rendered: #{inspect(rendered)}")
+IO.puts(rendered)
+'
+    timeout: 30[0m
+[22m19:49:28.757 [info] [Pi] step 40: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test rendering the else_body and wrapping
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+
+# Walk to the def and extract parts
+Macro.prewalk(ast, fn
+  {:def, _meta, [{:process, _, [{:list, _, nil}]}, [{{:__block__, _, [:do]}, {:if, _, [_, branches]}}]]} = node ->
+    do_body = Enum.find_value(branches, fn {{:__block__, _, [:do]}, body} -> body end)
+    else_body = Enum.find_value(branches, fn {{:__block__, _, [:else]}, body} -> body end)
+    
+    IO.puts("do_body: #{inspect(do_body)}")
+    IO.puts("else_body: #{inspect(else_body)}")
+    
+    do_str = Sourceror.to_string(do_body)
+    else_str = Sourceror.to_string(else_body)
+    
+    IO.puts("\ndo_str: #{inspect(do_str)}")
+    IO.puts("else_str: #{inspect(else_str)}")
+    
+    empty_clause = "def process([]), do: #{do_str}"
+    fallthrough = "def process(list) do\n  #{else_str}\nend"
+    
+    IO.puts("\nResult:")
+    IO.puts(empty_clause)
+    IO.puts("")
+    IO.puts(fallthrough)
+    
+    node
+  node ->
+    node
+end)
+'
+    timeout: 30[0m
+[22m19:49:43.671 [info] [Pi] step 41: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+
+Macro.prewalk(ast, fn
+  {:def, _meta, [{:process, _, [{:list, _, nil}]}, [{{:__block__, _, [:do]}, {:if, _, [_, branches]}}]]} = node ->
+    do_body = Enum.find_value(branches, fn
+      {{:__block__, _, [:do]}, body} -> body
+      _ -> nil
+    end)
+    else_body = Enum.find_value(branches, fn
+      {{:__block__, _, [:else]}, body} -> body
+      _ -> nil
+    end)
+    
+    do_str = Sourceror.to_string(do_body)
+    else_str = Sourceror.to_string(else_body)
+    
+    IO.puts("do_str: #{inspect(do_str)}")
+    IO.puts("else_str: #{inspect(else_str)}")
+    
+    empty_clause = "def process([]), do: #{do_str}"
+    fallthrough = "def process(list) do\n  #{else_str}\nend"
+    
+    IO.puts("\nResult:")
+    IO.puts(empty_clause)
+    IO.puts("")
+    IO.puts(fallthrough)
+    
+    node
+  node ->
+    node
+end)
+'
+    timeout: 30[0m
+[22m19:49:54.774 [info] [Pi] step 42: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.RuleHelpers
+
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+# Simulate the fix with correct change
+ast = Sourceror.parse_string!(source)
+
+Macro.prewalk(ast, fn
+  {:def, _meta, [{:process, _, [{:list, _, nil}]}, [{{:__block__, _, [:do]}, {:if, _, [_, branches]}}]]} = node ->
+    do_body = Enum.find_value(branches, fn
+      {{:__block__, _, [:do]}, body} -> body
+      _ -> nil
+    end)
+    else_body = Enum.find_value(branches, fn
+      {{:__block__, _, [:else]}, body} -> body
+      _ -> nil
+    end)
+    
+    do_str = Sourceror.to_string(do_body)
+    else_str = Sourceror.to_string(else_body)
+    
+    empty_clause = "def process([]), do: #{do_str}"
+    fallthrough = "def process(list) do\n  #{else_str}\nend"
+    change = empty_clause <> "\n\n" <> fallthrough
+    
+    range = Sourceror.get_range(node)
+    patch = %{range: range, change: change}
+    
+    fixed = source |> Sourceror.patch_string([patch]) |> String.split("\n") |> Enum.map_join("\n", &String.trim_trailing/1)
+    IO.puts("Fixed:")
+    IO.puts(fixed)
+    
+    node
+  node ->
+    node
+end)
+'
+    timeout: 30[0m
+[22m19:49:55.478 [info] [Budget] HEARTBEAT — 98 paid calls, est $0.6155 over 209.7min → ~$0.1761/hr, ~$4.23/day (tok in=741715 cache_rd=10470784 out=293273)[0m
+[22m19:50:18.932 [info] [Pi] step 43: write
+    content: defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyList do
+  @moduledoc """
+  Detects `if var == []` inside a function body and rewrites it to a
+  pattern-matched clause on `[]`.
+
+  ## Bad
+
+      def process(list) do
+        if list == [] do
+          0
+        else
+          Enum.sum(list)
+        end
+      end
+
+  ## Good
+
+      def process([]), do: 0
+
+      def process(list) do
+        Enum.sum(list)
+      end
+
+  ## Auto-fix
+
+  Replaces the `if var == []` guard with a dedicated `def name([]), do: do_body`
+  clause and keeps the else body as the original clause body.
+  """
+
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case detect_anti_pattern(node) do
+          {:ok, info} -> {node, [build_issue(info) | acc]}
+          :no -> {node, acc}
+        end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case detect_anti_pattern(node) do
+          {:ok, info} -> {node, [build_patch(node, info) | acc]}
+          :no -> {node, acc}
+        end
+      end)
+
+    Enum.reverse(patches)
+  end
+
+  defp detect_anti_pattern({kind, meta, [{name, _, [param]}, body_kw]})
+       when kind in [:def, :defp] and is_atom(name) and is_list(body_kw) do
+    with true <- bare_variable?(param),
+         {:ok, if_body} <- extract_do_body(body_kw),
+         {:ok, _if_meta, left, right, do_body, else_body} <- extract_if_eq_empty(if_body),
+         true <- var_matches_param?(left, right, param) do
+      {:ok,
+       %{
+         line: Keyword.get(meta, :line),
+         name: name,
+         param_name: elem(param, 0),
+         do_body: do_body,
+         else_body: else_body,
+         kind: kind
+       }}
+    else
+      _ -> :no
+    end
+  end
+
+  defp detect_anti_pattern(_), do: :no
+
+  defp bare_variable?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
+  defp bare_variable?(_), do: false
+
+  defp extract_do_body(kw) when is_list(kw) do
+    case kw do
+      [{{:__block__, _, [:do]}, body}] -> {:ok, body}
+      [{:do, body}] -> {:ok, body}
+      _ -> :error
+    end
+  end
+
+  defp extract_do_body(_), do: :error
+
+  defp extract_if_eq_empty({:if, if_meta, [condition, branches]}) when is_list(branches) do
+    case condition do
+      {:==, _, [left, {:__block__, _, [[]]}]} ->
+        {:ok, if_meta, left, nil, extract_branch(branches, :do), extract_branch(branches, :else)}
+
+      {:==, _, [{:__block__, _, [[]]}, right]} ->
+        {:ok, if_meta, nil, right, extract_branch(branches, :do), extract_branch(branches, :else)}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp extract_if_eq_empty(_), do: :error
+
+  defp extract_branch(branches, key) do
+    Enum.find_value(branches, fn
+      {{:__block__, _, [^key]}, body} -> body
+      _ -> nil
+    end)
+  end
+
+  defp var_matches_param?(left, nil, {param_name, _, _}) do
+    match?({^param_name, _, ctx} when is_atom(ctx), left)
+  end
+
+  defp var_matches_param?(nil, right, {param_name, _, _}) do
+    match?({^param_name, _, ctx} when is_atom(ctx), right)
+  end
+
+  defp var_matches_param?(_, _, _), do: false
+
+  defp build_issue(%{line: line}) do
+    %Issue{
+      rule: :prefer_pattern_match_over_if_empty_list,
+      message:
+        "Use pattern matching on `[]` instead of `if var == []`. " <>
+          "Rewrite as `def name([]), do: do_body` and `def name(var) do else_body end`.",
+      meta: %{line: line}
+    }
+  end
+
+  defp build_patch(node, %{name: name, param_name: param_name,
+                            do_body: do_body, else_body: else_body}) do
+    range = Sourceror.get_range(node)
+
+    do_str = Sourceror.to_string(do_body)
+    else_str = Sourceror.to_string(else_body)
+
+    empty_clause = "def #{name}([]), do: #{do_str}"
+    fallthrough = "def #{name}(#{param_name}) do\n  #{else_str}\nend"
+    change = empty_clause <> "\n\n" <> fallthrough
+
+    %{range: range, change: change}
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_pattern_match_over_if_empty_list.ex[0m
+[22m19:50:26.607 [info] [Pi] step 44: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+# Test check
+ast = Sourceror.parse_string!(source)
+issues = PreferPatternMatchOverIfEmptyList.check(ast, source: source)
+IO.puts("Issues: #{inspect(length(issues))} issue(s)")
+
+# Test fix
+fixed = Credence.RuleHelpers.apply_rule_fix(PreferPatternMatchOverIfEmptyList, source)
+IO.puts("\nFixed:\n#{fixed}")
+
+# Test clean code
+clean_source = """
+defmodule Solution do
+  def process(list) do
+    Enum.sum(list)
+  end
+end
+"""
+clean_ast = Sourceror.parse_string!(clean_source)
+clean_issues = PreferPatternMatchOverIfEmptyList.check(clean_ast, source: clean_source)
+IO.puts("Clean issues: #{inspect(length(clean_issues))}")
+
+# Test [] == var variant
+source2 = """
+defmodule Solution do
+  def process(list) do
+    if [] == list do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+ast2 = Sourceror.parse_string!(source2)
+issues2 = PreferPatternMatchOverIfEmptyList.check(ast2, source: source2)
+IO.puts("Reverse issues: #{inspect(length(issues2))}")
+fixed2 = Credence.RuleHelpers.apply_rule_fix(PreferPatternMatchOverIfEmptyList, source2)
+IO.puts("\nFixed2:\n#{fixed2}")
+'
+    timeout: 30[0m
+[22m19:50:39.856 [info] [Pi] step 45: write
+    content: defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyListCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+  test "flags the anti-pattern: if list == []" do
+    assert flagged?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def process(list) do
+               if list == [] do
+                 0
+               else
+                 Enum.sum(list)
+               end
+             end
+           end
+           """)
+  end
+
+  test "flags the anti-pattern: if [] == list (reversed)" do
+    assert flagged?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def process(list) do
+               if [] == list do
+                 0
+               else
+                 Enum.sum(list)
+               end
+             end
+           end
+           """)
+  end
+
+  test "leaves good code alone: pattern-matched empty list clause" do
+    assert clean?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def process([]), do: 0
+
+             def process(list) do
+               Enum.sum(list)
+             end
+           end
+           """)
+  end
+
+  test "leaves good code alone: no empty list check" do
+    assert clean?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def process(list) do
+               Enum.sum(list)
+             end
+           end
+           """)
+  end
+
+  test "leaves good code alone: if with non-empty-list condition" do
+    assert clean?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def process(list) do
+               if list == nil do
+                 0
+               else
+                 Enum.sum(list)
+               end
+             end
+           end
+           """)
+  end
+
+  test "leaves good code alone: pattern match on other value" do
+    assert clean?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def process(list, target) do
+               if list == target do
+                 0
+               else
+                 Enum.sum(list)
+               end
+             end
+           end
+           """)
+  end
+
+  test "leaves good code alone: multi-param function" do
+    assert clean?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def process(list, extra) do
+               if list == [] do
+                 extra
+               else
+                 Enum.sum(list)
+               end
+             end
+           end
+           """)
+  end
+
+  test "leaves good code alone: defp with non-empty-list check" do
+    assert clean?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             defp process(list) do
+               if length(list) == 0 do
+                 0
+               else
+                 Enum.sum(list)
+               end
+             end
+           end
+           """)
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_pattern_match_over_if_empty_list_check_test.exs[0m
+[22m19:50:47.510 [info] [Pi] step 46: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.RuleHelpers
+
+input = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+fixed = RuleHelpers.apply_rule_fix(Credence.Pattern.PreferPatternMatchOverIfEmptyList, input)
+IO.puts("=== FIXED OUTPUT ===")
+IO.puts(fixed)
+IO.puts("=== END ===")
+IO.puts("inspect: #{inspect(fixed)}")
+'
+    timeout: 30[0m
+[22m19:50:56.460 [info] [Pi] step 47: write
+    content: defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyListFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+  test "rewrites the anti-pattern" do
+    input = """
+    defmodule Solution do
+      @spec process(list()) :: non_neg_integer()
+      def process(list) do
+        if list == [] do
+          0
+        else
+          Enum.sum(list)
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      @spec process(list()) :: non_neg_integer()
+      def process([]), do: 0
+
+      def process(list) do
+        Enum.sum(list)
+      end
+    end
+    """
+
+    assert fix(PreferPatternMatchOverIfEmptyList, input) == expected
+  end
+
+  test "rewrites reversed condition: [] == list" do
+    input = """
+    defmodule M do
+      def process(list) do
+        if [] == list do
+          0
+        else
+          Enum.sum(list)
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule M do
+      def process([]), do: 0
+
+      def process(list) do
+        Enum.sum(list)
+      end
+    end
+    """
+
+    assert fix(PreferPatternMatchOverIfEmptyList, input) == expected
+  end
+
+  test "does not modify clean code" do
+    code = """
+    defmodule M do
+      def process(list) do
+        Enum.sum(list)
+      end
+    end
+    """
+
+    assert fix(PreferPatternMatchOverIfEmptyList, code) == code
+  end
+
+  test "round-trip: fixed code produces no issues" do
+    code = """
+    defmodule M do
+      def process(list) do
+        if list == [] do
+          0
+        else
+          Enum.sum(list)
+        end
+      end
+    end
+    """
+
+    assert check(PreferPatternMatchOverIfEmptyList, fix(PreferPatternMatchOverIfEmptyList, code)) == []
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_pattern_match_over_if_empty_list_fix_test.exs[0m
+[22m19:51:23.290 [info] [Pi] step 48: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+import Credence.BehaviourEquivalence
+
+before = """
+defmodule TestBefore123 do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+after = """
+defmodule TestAfter456 do
+  @spec process(list()) :: non_neg_integer()
+  def process([]), do: 0
+
+  def process(list) do
+    Enum.sum(list)
+  end
+end
+"""
+
+{mod_b, _} = Code.eval_string(before)
+{mod_a, _} = Code.eval_string(after)
+IO.puts("Before: #{inspect(mod_b.process([]))}, #{inspect(mod_b.process([1]))}, #{inspect(mod_b.process([1,2,3]))}")
+IO.puts("After: #{inspect(mod_a.process([]))}, #{inspect(mod_a.process([1]))}, #{inspect(mod_a.process([1,2,3]))}")
+'
+    timeout: 30[0m
+[22m19:51:29.959 [info] [Pi] step 49: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+before_code = """
+defmodule TestBefore123 do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+after_code = """
+defmodule TestAfter456 do
+  @spec process(list()) :: non_neg_integer()
+  def process([]), do: 0
+
+  def process(list) do
+    Enum.sum(list)
+  end
+end
+"""
+
+{mod_b, _} = Code.eval_string(before_code)
+{mod_a, _} = Code.eval_string(after_code)
+IO.puts("Before: #{inspect(mod_b.process([]))}, #{inspect(mod_b.process([1]))}, #{inspect(mod_b.process([1,2,3]))}")
+IO.puts("After: #{inspect(mod_a.process([]))}, #{inspect(mod_a.process([1]))}, #{inspect(mod_a.process([1,2,3]))}")
+'
+    timeout: 30[0m
+[22m19:51:35.473 [info] [Pi] step 50: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+before_code = """
+defmodule TestBefore987 do
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+{{:module, mod_b, _, _}, _} = Code.eval_string(before_code)
+IO.puts("Before: #{inspect(mod_b.process([]))}, #{inspect(mod_b.process([1]))}, #{inspect(mod_b.process([1,2,3]))}")
+'
+    timeout: 30[0m
+[22m19:51:51.835 [info] [Pi] step 51: write
+    content: defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyListEquivalenceTest do
+  @moduledoc """
+  Tier 2 (module-level). Rewrites `def process(list) do if list == [] do 0 else
+  Enum.sum(list) end end` to multi-clause `def process([]), do: 0 / def
+  process(list) do Enum.sum(list) end`. Empty-list and non-empty branches
+  produce distinct outcomes (0 vs positive sum), so the inputs discriminate.
+  """
+  use Credence.RuleCase, async: true
+
+  import Credence.BehaviourEquivalence
+  alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+  test "fix preserves behaviour for empty and non-empty lists" do
+    assert_equivalent_module(
+      """
+      defmodule Solution do
+        @spec process(list()) :: non_neg_integer()
+        def process(list) do
+          if list == [] do
+            0
+          else
+            Enum.sum(list)
+          end
+        end
+      end
+      """,
+      rule: PreferPatternMatchOverIfEmptyList,
+      call: {:process, 1},
+      inputs: [[], [1], [1, 2, 3], [-1, 0, 1], Enum.to_list(1..50)]
+    )
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_pattern_match_over_if_empty_list_equivalence_test.exs[0m
+[22m19:51:55.147 [info] [Pi] step 52: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_pattern_match_over_if_empty_list*_test.exs 2>&1
+    timeout: 60[0m
+[22m19:51:59.205 [info] [Pi] step 53: bash
+    command: cd /home/kly/projects/credence && mix test test/rule_test_completeness_test.exs 2>&1
+    timeout: 60[0m
+[22m19:52:13.896 [info] [Pi] step 54: bash
+    command: cd /home/kly/projects/credence && mix test test/check_meta_test.exs test/fix_meta_test.exs test/fix_showcase_test.exs 2>&1
+    timeout: 60[0m
+[22m19:52:20.559 [info] [Pi] step 55: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+input = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+fixed = Credence.Pattern.fix(input)
+IO.puts("=== FIXED OUTPUT ===")
+IO.puts(fixed)
+IO.puts("=== END ===")
+'
+    timeout: 30[0m
+[22m19:52:26.176 [info] [Pi] step 56: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_pattern_match_over_if_empty_list*_test.exs test/rule_test_completeness_test.exs test/fix_showcase_test.exs test/check_meta_test.exs test/fix_meta_test.exs 2>&1
+    timeout: 60[0m
+[22m19:52:31.188 [info] [Pi] step 57: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_pattern_match_over_if_empty_list.ex[0m
+[22m19:52:35.800 [info] [Pi] step 58: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+source = """
+defmodule M do
+  defp process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+  
+  def run(list), do: process(list)
+end
+"""
+
+fixed = Credence.RuleHelpers.apply_rule_fix(PreferPatternMatchOverIfEmptyList, source)
+IO.puts("Fixed defp:")
+IO.puts(fixed)
+'
+    timeout: 30[0m
+[22m19:52:46.803 [info] [Pi] step 59: edit
+    edits: [%{"newText" => "  defp build_patch(node, %{kind: kind, name: name, param_name: param_name,\n                            do_body: do_body, else_body: else_body}) do\n    range = Sourceror.get_range(node)\n\n    do_str = Sourceror.to_string(do_body)\n    else_str = Sourceror.to_string(else_body)\n\n    kw = if kind == :defp, do: \"defp\", else: \"def\"\n    empty_clause = \"\#{kw} \#{name}([]), do: \#{do_str}\"\n    fallthrough = \"\#{kw} \#{name}(\#{param_name}) do\\n  \#{else_str}\\nend\"\n    change = empty_clause <> \"\\n\\n\" <> fallthrough\n\n    %{range: range, change: change}\n  end", "oldText" => "  defp build_patch(node, %{name: name, param_name: param_name,\n                            do_body: do_body, else_body: else_body}) do\n    range = Sourceror.get_range(node)\n\n    do_str = Sourceror.to_string(do_body)\n    else_str = Sourceror.to_string(else_body)\n\n    empty_clause = \"def \#{name}([]), do: \#{do_str}\"\n    fallthrough = \"def \#{name}(\#{param_name}) do\\n  \#{else_str}\\nend\"\n    change = empty_clause <> \"\\n\\n\" <> fallthrough\n\n    %{range: range, change: change}\n  end"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_pattern_match_over_if_empty_list.ex[0m
+[22m19:52:51.453 [info] [Pi] step 60: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+source = """
+defmodule M do
+  defp process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+  
+  def run(list), do: process(list)
+end
+"""
+
+fixed = Credence.RuleHelpers.apply_rule_fix(PreferPatternMatchOverIfEmptyList, source)
+IO.puts("Fixed defp:")
+IO.puts(fixed)
+'
+    timeout: 30[0m
+[22m19:52:55.500 [info] [Pi] step 61: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_pattern_match_over_if_empty_list*_test.exs 2>&1
+    timeout: 60[0m
+[22m19:52:59.960 [info] [Pi] step 62: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -30
+    timeout: 120[0m
+[22m19:53:12.843 [info] [Pi] step 63: read
+    limit: 80
+    offset: 140
+    path: /home/kly/projects/credence/test/fix_examples_test.exs[0m
+[22m19:53:21.061 [info] [Pi] step 64: read
+    limit: 80
+    offset: 100
+    path: /home/kly/projects/credence/test/fix_examples_test.exs[0m
+[22m19:53:32.583 [info] [Pi] step 65: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+stats_input = """
+defmodule Stats do
+  @moduledoc "Basic statistical functions.\\n"
+
+  def summarize(nums) do
+    if length(nums) == 0 do
+      :empty
+    else
+      sorted = Enum.sort(nums) |> Enum.reverse()
+      max_val = Enum.at(sorted, 0)
+      min_val = Enum.at(sorted, -1)
+      total = Enum.map(nums, fn n -> n end) |> Enum.sum()
+      mean = total / Enum.count(nums) * 1.0
+      %{max: max_val, min: min_val, mean: mean, count: Enum.count(nums)}
+    end
+  end
+end
+"""
+
+result = Credence.fix(stats_input, [])
+IO.puts("=== ACTUAL OUTPUT ===")
+IO.puts(result.code)
+IO.puts("=== END ===")
+'
+    timeout: 60[0m
+[22m19:54:00.640 [info] [Pi] step 66: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test how Sourceror.patch_string handles multi-line replacement
+source = """
+defmodule M do
+  def summarize(nums) do
+    if nums == [] do
+      :empty
+    else
+      sorted = Enum.sort(nums, :desc)
+      max_val = Enum.at(sorted, 0)
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+
+Macro.prewalk(ast, fn
+  {:def, _, [{:summarize, _, _}, [{{:__block__, _, [:do]}, {:if, _, [_, branches]}}]]} = node ->
+    else_body = Enum.find_value(branches, fn
+      {{:__block__, _, [:else]}, body} -> body
+      _ -> nil
+    end)
+    
+    else_str = Sourceror.to_string(else_body)
+    IO.puts("else_str: #{inspect(else_str)}")
+    IO.puts("Rendered:")
+    IO.puts(else_str)
+    
+    range = Sourceror.get_range(node)
+    
+    empty_clause = "def summarize([]), do: :empty"
+    fallthrough = "def summarize(nums) do\n  #{else_str}\nend"
+    change = empty_clause <> "\n\n" <> fallthrough
+    
+    IO.puts("\nchange: #{inspect(change)}")
+    
+    patch = %{range: range, change: change}
+    fixed = source |> Sourceror.patch_string([patch]) |> String.split("\n") |> Enum.map_join("\n", &String.trim_trailing/1)
+    IO.puts("\nFixed:")
+    IO.puts(fixed)
+    
+    node
+  node ->
+    node
+end)
+'
+    timeout: 30[0m
+[22m19:54:25.134 [info] [Pi] step 67: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test: use parsed AST for the fallthrough clause  
+else_str = "sorted = Enum.sort(nums, :desc)\nmax_val = Enum.at(sorted, 0)"
+
+# Approach 1: Parse the full replacement string
+fallthrough_code = "def summarize(nums) do\n  #{else_str}\nend"
+IO.puts("fallthrough_code:")
+IO.puts(fallthrough_code)
+
+parsed = Sourceror.parse_string!(fallthrough_code)
+rendered = Sourceror.to_string(parsed)
+IO.puts("\nparsed + rendered:")
+IO.puts(rendered)
+'
+    timeout: 30[0m
+[22m19:54:40.451 [info] [Pi] step 68: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test parsing multi-clause def as a single code block
+code = "def summarize([]), do: :empty\n\ndef summarize(nums) do\n  sorted = Enum.sort(nums, :desc)\nmax_val = Enum.at(sorted, 0)\nend"
+
+{:ok, parsed} = Sourceror.parse_string(code)
+rendered = Sourceror.to_string(parsed)
+IO.puts("Rendered:")
+IO.puts(rendered)
+IO.puts("---")
+IO.puts(inspect(rendered))
+'
+    timeout: 30[0m
+[22m19:54:48.587 [info] [Pi] step 69: edit
+    edits: [%{"newText" => "  defp build_patch(node, %{kind: kind, name: name, param_name: param_name,\n                            do_body: do_body, else_body: else_body}) do\n    range = Sourceror.get_range(node)\n\n    do_str = Sourceror.to_string(do_body)\n    else_str = Sourceror.to_string(else_body)\n\n    kw = if kind == :defp, do: \"defp\", else: \"def\"\n    empty_clause = \"\#{kw} \#{name}([]), do: \#{do_str}\"\n    fallthrough = \"\#{kw} \#{name}(\#{param_name}) do\\n  \#{else_str}\\nend\"\n    raw_change = empty_clause <> \"\\n\\n\" <> fallthrough\n\n    # Parse and re-render to normalize indentation\n    change =\n      case Sourceror.parse_string(raw_change) do\n        {:ok, parsed} -> Sourceror.to_string(parsed)\n        {:error, _} -> raw_change\n      end\n\n    %{range: range, change: change}\n  end", "oldText" => "  defp build_patch(node, %{kind: kind, name: name, param_name: param_name,\n                            do_body: do_body, else_body: else_body}) do\n    range = Sourceror.get_range(node)\n\n    do_str = Sourceror.to_string(do_body)\n    else_str = Sourceror.to_string(else_body)\n\n    kw = if kind == :defp, do: \"defp\", else: \"def\"\n    empty_clause = \"\#{kw} \#{name}([]), do: \#{do_str}\"\n    fallthrough = \"\#{kw} \#{name}(\#{param_name}) do\\n  \#{else_str}\\nend\"\n    change = empty_clause <> \"\\n\\n\" <> fallthrough\n\n    %{range: range, change: change}\n  end"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_pattern_match_over_if_empty_list.ex[0m
+[22m19:54:55.478 [info] [Budget] HEARTBEAT — 98 paid calls, est $0.6155 over 214.7min → ~$0.172/hr, ~$4.13/day (tok in=741715 cache_rd=10470784 out=293273)[0m
+[22m19:54:58.151 [info] [Pi] step 70: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+# Test with multi-line else body
+source = """
+defmodule Stats do
+  @moduledoc "Basic statistical functions."
+
+  def summarize(nums) do
+    if nums == [] do
+      :empty
+    else
+      sorted = Enum.sort(nums, :desc)
+      max_val = Enum.at(sorted, 0)
+      min_val = List.last(sorted)
+      total = Enum.sum(nums)
+      mean = :erlang.float(total / Enum.count(nums))
+      %{max: max_val, min: min_val, mean: mean, count: Enum.count(nums)}
+    end
+  end
+end
+"""
+
+fixed = Credence.RuleHelpers.apply_rule_fix(PreferPatternMatchOverIfEmptyList, source)
+IO.puts("Fixed:")
+IO.puts(fixed)
+'
+    timeout: 30[0m
+[22m19:55:06.372 [info] [Pi] step 71: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.Pattern.PreferPatternMatchOverIfEmptyList
+
+source = """
+defmodule Solution do
+  @spec process(list()) :: non_neg_integer()
+  def process(list) do
+    if list == [] do
+      0
+    else
+      Enum.sum(list)
+    end
+  end
+end
+"""
+
+fixed = Credence.RuleHelpers.apply_rule_fix(PreferPatternMatchOverIfEmptyList, source)
+IO.puts("Fixed:")
+IO.puts(fixed)
+'
+    timeout: 30[0m
+[22m19:55:10.682 [info] [Pi] step 72: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_pattern_match_over_if_empty_list*_test.exs 2>&1
+    timeout: 60[0m
+[22m19:55:17.485 [info] [Pi] step 73: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+stats_input = """
+defmodule Stats do
+  @moduledoc "Basic statistical functions.\\n"
+
+  def summarize(nums) do
+    if length(nums) == 0 do
+      :empty
+    else
+      sorted = Enum.sort(nums) |> Enum.reverse()
+      max_val = Enum.at(sorted, 0)
+      min_val = Enum.at(sorted, -1)
+      total = Enum.map(nums, fn n -> n end) |> Enum.sum()
+      mean = total / Enum.count(nums) * 1.0
+      %{max: max_val, min: min_val, mean: mean, count: Enum.count(nums)}
+    end
+  end
+end
+"""
+
+result = Credence.fix(stats_input, [])
+IO.puts("=== ACTUAL OUTPUT ===")
+IO.puts(result.code)
+IO.puts("=== END ===")
+'
+    timeout: 60[0m
+[22m19:55:24.227 [info] [Pi] step 74: read
+    limit: 30
+    offset: 148
+    path: /home/kly/projects/credence/test/fix_examples_test.exs[0m
+[22m19:55:31.651 [info] [Pi] step 75: edit
+    edits: [%{"newText" => "  @stats_fixed ~S\"\"\"\n  defmodule Stats do\n    @moduledoc \"Basic statistical functions.\"\n\n    def summarize([]), do: :empty\n\n    def summarize(nums) do\n      sorted = Enum.sort(nums, :desc)\n      max_val = Enum.at(sorted, 0)\n      min_val = List.last(sorted)\n      total = Enum.sum(nums)\n      mean = :erlang.float(total / Enum.count(nums))\n      %{max: max_val, min: min_val, mean: mean, count: Enum.count(nums)}\n    end\n  end\n  \"\"\"", "oldText" => "  @stats_fixed ~S\"\"\"\n  defmodule Stats do\n    @moduledoc \"Basic statistical functions.\"\n\n    def summarize(nums) do\n      if nums == [] do\n        :empty\n      else\n        sorted = Enum.sort(nums, :desc)\n        max_val = Enum.at(sorted, 0)\n        min_val = List.last(sorted)\n        total = Enum.sum(nums)\n        mean = :erlang.float(total / Enum.count(nums))\n        %{max: max_val, min: min_val, mean: mean, count: Enum.count(nums)}\n      end\n    end\n  end\n  \"\"\""}]
+    path: /home/kly/projects/credence/test/fix_examples_test.exs[0m
+[22m19:55:34.735 [info] [Pi] step 76: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_pattern_match_over_if_empty_list*_test.exs test/fix_examples_test.exs 2>&1
+    timeout: 60[0m
+[22m19:55:40.591 [info] [Pi] step 77: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -10
+    timeout: 120[0m
+[22m19:56:00.352 [info] [Pi] agent done — exit=0 steps=77 stop=stop[0m
+[36m19:56:00.352 [debug] [Budget] spent so far (est.): $0.6937[0m
+[22m19:56:00.859 [info] [Gate] staged entries: [{"A", ["lib/pattern/prefer_pattern_match_over_if_empty_list.ex"]}, {"M", ["test/fix_examples_test.exs"]}, {"A", ["test/pattern/prefer_pattern_match_over_if_empty_list_check_test.exs"]}, {"A", ["test/pattern/prefer_pattern_match_over_if_empty_list_equivalence_test.exs"]}, {"A", ["test/pattern/prefer_pattern_match_over_if_empty_list_fix_test.exs"]}][0m
+[36m19:56:02.015 [debug] [Gate] mix test ["test/fix_examples_test.exs", "test/pattern/prefer_pattern_match_over_if_empty_list_check_test.exs", "test/pattern/prefer_pattern_match_over_if_empty_list_equivalence_test.exs", "test/pattern/prefer_pattern_match_over_if_empty_list_fix_test.exs"] exit=2
+Generated credence app
+Running ExUnit with seed: 301240, max_cases: 48
+
+
+
+  1) test leaves good code alone: if with non-empty-list condition (Credence.Pattern.PreferPatternMatchOverIfEmptyListCheckTest)
+     test/pattern/prefer_pattern_match_over_if_empty_list_check_test.exs:56
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferPatternMatchOverIfEmptyList.check/2 is undefined (module Credence.Pattern.PreferPatternMatchOverIfEmptyList is not available)
+     code: assert clean?(PreferPatternMatchOverIfEmptyList, """
+     stacktrace:
+       Credence.Pattern.PreferPatternMatchOverIfEmptyList.check({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 9, column: 4], do: [line: 1, column: 13], end: [line: 9, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:M]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 13], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 8, column: 6], do: [line: 2, column: 21], end: [line: 8, column: 3], line: 2, column: 3], [{:process, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 19], line: 2, column: 7], [{:list, [trailing_comments: [], leading_comments: [], line: 2, column: 15], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 21], [:do]}, {:if, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 7, column: 8], do: [line: 3, column: 20], ...], ...}}]]}}]]}, [source: "defmodule M do\n  def process(list) do\n    if list == nil do\n      0\n    else\n      Enum.sum(list)\n    end\n  end\nend\n"])
+       (credence 0.7.1) test/support/rule_case.ex:69: Credence.RuleCase.clean?/2
+       test/pattern/prefer_pattern_match_over_if_empty_list_check_test.exs:57: (test)
+
+
+
+  2) test fix preserves behaviour for empty and non-empty lists (Credence.Pattern.PreferPatternMatchOverIfEmptyListEquivalenceTest)
+     test/pattern/prefer_pattern_match_over_if_empty_list_equivalence_test.exs:13
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferPatternMatchOverIfEmptyList.check/2 is undefined (module Credence.Pattern.PreferPatternMatchOverIfEmptyList is not available)
+     code: assert_equivalent_module(
+     stacktrace:
+       Credence.Pattern.PreferPatternMatchOverIfEmptyList.check({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 10, column: 4], do: [line: 1, column: 20], end: [line: 10, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Solution]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 20], [:do]}, {:__block__, [trailing_comments: [], leading_comments: []], [{:@, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 2, column: 45], line: 2, column: 3], [{:spec, [trailing_comments: [], leading_comments: [], line: 2, column: 4], [{:"::", [trailing_comments: [], line: 2, column: 25], [{:process, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 23], line: 2, column: 9], [{:list, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 22], line: 2, column: 17], []}]}, {:non_neg_integer, [trailing_comments: [], leading_comments: [], ...], ...}]}]}]}, ...]}}]]}, [source: "defmodule Solution do\n  @spec process(list()) :: non_neg_integer()\n  def process(list) do\n    if list == [] do\n      0\n    else\n      Enum.sum(list)\n    end\n  end\nend\n"])
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:293: Credence.BehaviourEquivalence.rule_fires?/2
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:240: Credence.BehaviourEquivalence.precheck!/4
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:116: Credence.BehaviourEquivalence.assert_equivalent_module/2
+       test/pattern/prefer_pattern_match_over_if_empty_list_equivalence_test.exs:14: (test)
+
+
+
+  3) test rewrites the anti-pattern (Credence.Pattern.PreferPatternMatchOverIfEmptyListFixTest)
+     test/pattern/prefer_pattern_match_over_if_empty_list_fix_test.exs:6
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferPatternMatchOverIfEmptyList.fix_patches/2 is undefined (module Credence.Pattern.PreferPatternMatchOverIfEmptyList is not available)
+     code: assert fix(PreferPatternMatchOverIfEmptyList, input) == expected
+     stacktrace:
+       Credence.Pattern.PreferPatternMatchOverIfEmptyList.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 10, column: 4], do: [line: 1, column: 20], end: [line: 10, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Solution]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 20], [:do]}, {:__block__, [trailing_comments: [], leading_comments: []], [{:@, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 2, column: 45], line: 2, column: 3], [{:spec, [trailing_comments: [], leading_comments: [], line: 2, column: 4], [{:"::", [trailing_comments: [], line: 2, column: 25], [{:process, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 23], line: 2, column: 9], [{:list, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 22], line: 2, column: 17], []}]}, {:non_neg_integer, [trailing_comments: [], leading_comments: [], ...], ...}]}]}]}, ...]}}]]}, [source: "defmodule Solution do\n  @spec process(list()) :: non_neg_integer()\n  def process(list) do\n    if list == [] do\n      0\n    else\n      Enum.sum(list)\n    end\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_pattern_match_over_if_empty_list_fix_test.exs:31: (test)
+
+
+
+  4) test does not modify clean code (Credence.Pattern.PreferPatternMatchOverIfEmptyListFixTest)
+     test/pattern/prefer_pattern_match_over_if_empty_list_fix_test.exs:60
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferPatternMatchOverIfEmptyList.fix_patches/2 is undefined (module Credence.Pattern.PreferPatternMatchOverIfEmptyList is not available)
+     code: assert fix(PreferPatternMatchOverIfEmptyList, code) == code
+     stacktrace:
+       Credence.Pattern.PreferPatternMatchOverIfEmptyList.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 5, column: 4], do: [line: 1, column: 13], end: [line: 5, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:M]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 13], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 6], do: [line: 2, column: 21], end: [line: 4, column: 3], line: 2, column: 3], [{:process, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 19], line: 2, column: 7], [{:list, [trailing_comments: [], leading_comments: [], line: 2, column: 15], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 21], [:do]}, {{:., [trailing_comments: [], line: 3, column: 9], [{:__aliases__, [trailing_comments: [], ...], ...}, ...]}, ...}}]]}}]]}, [source: "defmodule M do\n  def process(list) do\n    Enum.sum(list)\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_pattern_match_over_ (truncated)[0m
+[22m19:56:02.019 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m19:56:10.343 [debug] [Gate] mix test [] exit=0
+Compiling 1 file (.ex)
+Generated credence app
+Running ExUnit with seed: 477727, max_cases: 48
+
+..........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Finished in 7.7 seconds (3.6s async, 4.1s sync)
+5 properties, 4453 tests, 0 failures
+[0m
+[22m19:56:10.343 [info] [Gate] full suite GREEN[0m
+[22m19:56:10.355 [info] [Git] committed: cred-gen: new(pattern): prefer_pattern_match_over_if_empty_list [row 30028][0m
+[22m19:56:10.355 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m19:56:12.410 [info] [Workspace] ✓ credence recompiled[0m
+[22m19:56:13.894 [info] [Git] pushed origin/evolution[0m
+[22m19:56:13.894 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m19:56:15.879 [info] [Workspace] ✓ credence recompiled[0m

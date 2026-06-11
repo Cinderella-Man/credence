@@ -1,0 +1,1317 @@
+[22m09:06:51.411 [info] [idx=104841] entry_point=check_phone_prefix[0m
+[36m09:06:51.411 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that checks whether any phone number is a prefix of another phone number in a given list of phone numbers.
+
+## Python Solution
+```python
+def check_phone_prefix(phone_book):
+    answer = True
+
+    phone_book.sort()
+
+    for i in range(len(phone_book)-1):
+        if phone_book[i] == phone_book[i+1][:len(phone_book[i])]:
+            answer = False
+            break
+
+    return answer
+```
+
+## Python Tests
+assert check_phone_prefix(["12", "123", "1523", "567", "88"]) == False
+assert check_phone_prefix(["123", "456", "789"]) == True
+assert check_phone_prefix(["119", "97674223", "1195524421"]) == False 
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `check_phone_prefix`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m09:07:50.504 [debug] [LLM.call] finish=stop len=1575 usage=%{"completion_tokens" => 2473, "completion_tokens_details" => %{"reasoning_tokens" => 2048}, "prompt_tokens" => 538, "prompt_tokens_details" => %{}, "total_tokens" => 3011}
+[LLM.call] response:
+---INSTRUCTION---
+Given a list of phone numbers represented as strings, write a function that checks whether any phone number in the list is a prefix of another phone number in the list. The function should return false if such a prefix relationship exists, and true otherwise. The function name is `check_phone_prefix` and it takes a list of strings as input, returning a boolean. The implementation should have a time complexity of O(n log n). For edge cases, an empty list or a list with a single element should return true, and identical phone numbers are considered prefixes of each other, so they should trigger a false return.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns false when a phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["12", "123", "1523", "567", "88"]) == false
+  end
+
+  test "returns true when no phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["123", "456", "789"]) == true
+  end
+
+  test "returns false for overlapping prefixes" do
+    assert Solution.check_phone_prefix(["119", "97674223", "1195524421"]) == false
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  @spec check_phone_prefix([String.t()]) :: boolean
+  def check_phone_prefix(phone_book) do
+    phone_book
+    |> Enum.sort()
+    |> check_adjacent()
+  end
+
+  defp check_adjacent([]), do: true
+  defp check_adjacent([_]), do: true
+  defp check_adjacent([a, b | rest]) do
+    if String.starts_with?(b, a) do
+      false
+    else
+      check_adjacent([b | rest])
+    end
+  end
+end
+---END---[0m
+[22m09:07:50.504 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 59093ms — ok[0m
+[36m09:07:50.504 [debug] [Budget] spent so far (est.): $3.6214[0m
+[22m09:07:51.571 [info] [RoundTrip] reference PASSED tests[0m
+[22m09:07:51.571 [info] [idx=104841] translation fresh — solving[0m
+[22m09:07:51.571 [info] ===SOLVE_BOUNDARY===[0m
+[22m09:07:51.572 [info] [Solve attempt 1] generating (fn=check_phone_prefix)[0m
+[36m09:07:51.572 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Given a list of phone numbers represented as strings, write a function that checks whether any phone number in the list is a prefix of another phone number in the list. The function should return false if such a prefix relationship exists, and true otherwise. The function name is `check_phone_prefix` and it takes a list of strings as input, returning a boolean. The implementation should have a time complexity of O(n log n). For edge cases, an empty list or a list with a single element should return true, and identical phone numbers are considered prefixes of each other, so they should trigger a false return.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns false when a phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["12", "123", "1523", "567", "88"]) == false
+  end
+
+  test "returns true when no phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["123", "456", "789"]) == true
+  end
+
+  test "returns false for overlapping prefixes" do
+    assert Solution.check_phone_prefix(["119", "97674223", "1195524421"]) == false
+  end
+end
+```
+
+Module: `Solution`. Function: `check_phone_prefix`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m09:07:57.664 [debug] [LLM.call] finish=stop len=2305 usage=%{"completion_tokens" => 662, "prompt_tokens" => 556, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1218}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+
+        # Check adjacent pairs in the sorted list.
+        # If A is a prefix of B, and both A and C are prefixes of B (or vice versa),
+        # then in a sorted list, A will appear immediately before or near the number
+        # that has A as a prefix. Specifically, if A is a prefix of C, and we sort
+        # lexicographically, A will come before C. If there's a B between them such
+        # that A < B < C, then A must also be a prefix of B (because B starts with A
+        # since A is a prefix of C and A < B < C lexicographically).
+        #
+        # So we only need to check if any element is a prefix of its immediate successor.
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix(_list), do: true
+
+  defp do_check_prefix([_last]), do: true
+
+  defp do_check_prefix([first | [second | _rest]] = _rest_tail) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | tl(rest_tail(_rest_tail))])
+    end
+  end
+
+  defp rest_tail(list) do
+    case tl(list) do
+      [] -> []
+      [_ | tail] -> tail
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns false when a phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["12", "123", "1523", "567", "88"]) == false
+  end
+
+  test "returns true when no phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["123", "456", "789"]) == true
+  end
+
+  test "returns false for overlapping prefixes" do
+    assert Solution.check_phone_prefix(["119", "97674223", "1195524421"]) == false
+  end
+end
+---END---[0m
+[22m09:07:57.664 [info] [LLM.call] local_qwen_thinking completed in 6092ms — ok[0m
+[22m09:07:57.664 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m09:07:57.664 [debug] [Validator.run] module code (1766 chars):
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+
+        # Check adjacent pairs in the sorted list.
+        # If A is a prefix of B, and both A and C are prefixes of B (or vice versa),
+        # then in a sorted list, A will appear immediately before or near the number
+        # that has A as a prefix. Specifically, if A is a prefix of C, and we sort
+        # lexicographically, A will come before C. If there's a B between them such
+        # that A < B < C, then A must also be a prefix of B (because B starts with A
+        # since A is a prefix of C and A < B < C lexicographically).
+        #
+        # So we only need to check if any element is a prefix of its immediate successor.
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix(_list), do: true
+
+  defp do_check_prefix([_last]), do: true
+
+  defp do_check_prefix([first | [second | _rest]] = _rest_tail) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | tl(rest_tail(_rest_tail))])
+    end
+  end
+
+  defp rest_tail(list) do
+    case tl(list) do
+      [] -> []
+      [_ | tail] -> tail
+    end
+  end
+end[0m
+[36m09:07:57.664 [debug] [Validator.run] test code (504 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns false when a phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["12", "123", "1523", "567", "88"]) == false
+  end
+
+  test "returns true when no phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["123", "456", "789"]) == true
+  end
+
+  test "returns false for overlapping prefixes" do
+    assert Solution.check_phone_prefix(["119", "97674223", "1195524421"]) == false
+  end
+end[0m
+[36m09:07:57.664 [debug] [Budget] spent so far (est.): $3.6222[0m
+[22m09:07:57.665 [info] [Validator.run] step 1/6: credence fix[0m
+[36m09:07:57.665 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m09:07:58.302 [debug] [run_credence_fix] exit=0 output:
+
+09:07:58.186 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+09:07:58.188 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+09:07:58.198 [debug] [credence_fix] semantic pass 1: compilation OK, 4 warning(s)
+
+09:07:58.199 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+09:07:58.201 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L47 -   defp do_check_prefix([first | [second | _rest]] = _rest_tail) do
+  L47 +   defp do_check_prefix([first | [second | _rest]] = rest_tail) do
+  L51 -       do_check_prefix([second | tl(rest_tail(_rest_tail))])
+  L51 +       do_check_prefix([second | tl(rest_tail(rest_tail))])
+
+09:07:58.205 [debug] [credence_fix] no rule matched diagnostic: %{message: "this clause for do_check_prefix/1 cannot match because a previous clause at line 43 always matches", position: {47, 8}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+09:07:58.205 [debug] [credence_fix] no rule matched diagnostic: %{message: "this clause for do_check_prefix/1 cannot match because a previous clause at line 43 always matches", position: {45, 8}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+09:07:58.206 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+09:07:58.206 [debug] [credence_fix] semantic done. Applied: [UsedUnderscoreVariable(1)]
+
+09:07:58.206 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+09:07:58.264 [debug] [credence_fix] RemoveUnreachableClausesAfterCatchall: check found 2 issue(s), running fix...
+
+09:07:58.280 [debug] [credence_fix] RemoveUnreachableClausesAfterCatchall: source CHANGED:
+  L24 -       [_single] ->
+  L24 +       # Check adjacent pairs in the sorted list.
+  L25 -         true
+  L25 +       # If A is a prefix of B, and both A and C are prefixes of B (or vice versa),
+  L26 - 
+  L26 +       # then in a sorted list, A will appear immediately before or near the number
+  L27 -       _ ->
+  L27 +       # that has A as a prefix. Specifically, if A is a prefix of C, and we sort
+  L28 -         sorted = Enum.sort(phone_numbers)
+  L28 +       # lexicographically, A will come before C. If there's a B between them such
+  L29 - 
+  L29 +       # that A < B < C, then A must also be a prefix of B (because B starts with A
+  L30 -         # Check adjacent pairs in the sorted list.
+  L30 +       # since A is a prefix of C and A < B < C lexicographically).
+  L31 -         # If A is a prefix of B, and both A and C are prefixes of B (or vice versa),
+  L31 +       #
+  L32 -         # then in a sorted list, A will appear immediately before or near the number
+  L32 +       # So we only need to check if any element is a prefix of its immediate successor.
+  L33 -         # that has A as a prefix. Specifically, if A is a prefix of C, and we sort
+  L33 +       [_single] ->
+  L34 -         # lexicographically, A will come before C. If there's a B between them such
+  L34 +         true
+  L35 -         # that A < B < C, then A must also be a prefix of B (because B starts with A
+  L35 + 
+  L36 -         # since A is a prefix of C and A < B < C lexicographically).
+  L36 +       _ ->
+  L37 -         #
+  L37 +         sorted = Enum.sort(phone_numbers)
+  L38 -         # So we only need to check if any element is a prefix of its immediate successor.
+  L38 +         do_check_prefix(sorted)
+  L39 -         do_check_prefix(sorted)
+  L39 +     end
+  L40 -     end
+  L40 +   end
+  L41 -   end
+  L41 + 
+  L42 - 
+  L42 +   defp do_check_prefix(_list), do: true
+  L43 -   defp do_check_prefix(_list), do: true
+  L43 + 
+  L44 - 
+  L44 +   defp rest_tail(list) do
+  L45 -   defp do_check_prefix([_last]), do: true
+  L45 +     case tl(list) do
+  L46 - 
+  L46 +       [] -> []
+  L47 -   defp do_check_prefix([first | [second | _rest]] = rest_tail) do
+  L47 +       [_ | tail] -> tail
+  L48 -     if String.starts_with?(second, first) do
+  L48 +     end
+  L49 -       false
+  L49 +   end
+  L50 -     else
+  L50 + end
+  L51 -       do_check_prefix([second | tl(rest_tail(rest_tail))])
+  L52 -     end
+  L53 -   end
+  L54 - 
+  L55 -   defp rest_tail(list) do
+  L56 -     case tl(list) do
+  L57 -       [] -> []
+  L58 -       [_ | tail] -> tail
+  L59 -     end
+  L60 -   end
+  L61 - end
+
+09:07:58.283 [debug] [credence_fix] done. Applied: [RemoveUnreachableClausesAfterCatchall(2)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UsedUnderscoreVariable, 1}, {Credence.Pattern.RemoveUnreachableClausesAfterCatchall, 2}]
+[0m
+[22m09:07:58.302 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m09:07:58.855 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m09:07:58.855 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: function rest_tail/1 is unused
+    │
+ 44 │   defp rest_tail(list) do
+    │        ~
+    │
+    └─ lib/solution.ex:44:8: Solution (module)
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m09:07:59.422 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m09:07:59.422 [info] [Validator.run] step 2/6: compile[0m
+[22m09:07:59.978 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m09:07:59.978 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: the underscored variable "_rest_tail" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 51 │       do_check_prefix([second | tl(rest_tail(_rest_tail))])
+    │                                              ~
+    │
+    └─ lib/solution.ex:51:46: Solution.do_check_prefix/1
+
+    warning: this clause for do_check_prefix/1 cannot match because a previous clause at line 43 always matches
+    │
+ 45 │   defp do_check_prefix([_last]), do: true
+    │        ~
+    │
+    └─ lib/solution.ex:45:8
+
+    warning: this clause for do_check_prefix/1 cannot match because a previous clause at line 43 always matches
+    │
+ 47 │   defp do_check_prefix([first | [second | _rest]] = _rest_tail) do
+    │        ~
+    │
+    └─ lib/solution.ex:47:8
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m09:07:59.978 [info] [Validator.run] step 3/6: format[0m
+[22m09:07:59.978 [info] [Validator.run] skipping format (compile failed)[0m
+[22m09:07:59.979 [info] [Validator.run] step 4/6: credo[0m
+[22m09:07:59.979 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m09:07:59.979 [info] [Validator.run] step 5/6: credence check[0m
+[22m09:07:59.979 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m09:07:59.979 [info] [Validator.run] step 6/6: tests[0m
+[22m09:07:59.979 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m09:07:59.979 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m09:07:59.979 [debug] [Validator.run] final module (1766 chars):
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+
+        # Check adjacent pairs in the sorted list.
+        # If A is a prefix of B, and both A and C are prefixes of B (or vice versa),
+        # then in a sorted list, A will appear immediately before or near the number
+        # that has A as a prefix. Specifically, if A is a prefix of C, and we sort
+        # lexicographically, A will come before C. If there's a B between them such
+        # that A < B < C, then A must also be a prefix of B (because B starts with A
+        # since A is a prefix of C and A < B < C lexicographically).
+        #
+        # So we only need to check if any element is a prefix of its immediate successor.
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix(_list), do: true
+
+  defp do_check_prefix([_last]), do: true
+
+  defp do_check_prefix([first | [second | _rest]] = _rest_tail) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | tl(rest_tail(_rest_tail))])
+    end
+  end
+
+  defp rest_tail(list) do
+    case tl(list) do
+      [] -> []
+      [_ | tail] -> tail
+    end
+  end
+end[0m
+[36m09:07:59.979 [debug] [Validator.run] final test (504 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns false when a phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["12", "123", "1523", "567", "88"]) == false
+  end
+
+  test "returns true when no phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["123", "456", "789"]) == true
+  end
+
+  test "returns false for overlapping prefixes" do
+    assert Solution.check_phone_prefix(["119", "97674223", "1195524421"]) == false
+  end
+end[0m
+[33m09:07:59.979 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m09:07:59.979 [info] [Solve attempt 2] generating (fn=check_phone_prefix)[0m
+[36m09:07:59.979 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+
+        # Check adjacent pairs in the sorted list.
+        # If A is a prefix of B, and both A and C are prefixes of B (or vice versa),
+        # then in a sorted list, A will appear immediately before or near the number
+        # that has A as a prefix. Specifically, if A is a prefix of C, and we sort
+        # lexicographically, A will come before C. If there's a B between them such
+        # that A < B < C, then A must also be a prefix of B (because B starts with A
+        # since A is a prefix of C and A < B < C lexicographically).
+        #
+        # So we only need to check if any element is a prefix of its immediate successor.
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix(_list), do: true
+
+  defp do_check_prefix([_last]), do: true
+
+  defp do_check_prefix([first | [second | _rest]] = _rest_tail) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | tl(rest_tail(_rest_tail))])
+    end
+  end
+
+  defp rest_tail(list) do
+    case tl(list) do
+      [] -> []
+      [_ | tail] -> tail
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns false when a phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["12", "123", "1523", "567", "88"]) == false
+  end
+
+  test "returns true when no phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["123", "456", "789"]) == true
+  end
+
+  test "returns false for overlapping prefixes" do
+    assert Solution.check_phone_prefix(["119", "97674223", "1195524421"]) == false
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: the underscored variable "_rest_tail" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 51 │       do_check_prefix([second | tl(rest_tail(_rest_tail))])
+    │                                              ~
+    │
+    └─ lib/solution.ex:51:46: Solution.do_check_prefix/1
+
+    warning: this clause for do_check_prefix/1 cannot match because a previous clause at line 43 always matches
+    │
+ 45 │   defp do_check_prefix([_last]), do: true
+    │        ~
+    │
+    └─ lib/solution.ex:45:8
+
+    warning: this clause for do_check_prefix/1 cannot match because a previous clause at line 43 always matches
+    │
+ 47 │   defp do_check_prefix([first | [second | _rest]] = _rest_tail) do
+    │        ~
+    │
+    └─ lib/solution.ex:47:8
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+
+Reminder: module `Solution`, function `check_phone_prefix` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m09:08:04.642 [debug] [LLM.call] finish=stop len=1511 usage=%{"completion_tokens" => 446, "prompt_tokens" => 1212, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1658}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix(_list) when length(_list) <= 1 do
+    true
+  end
+
+  defp do_check_prefix([first, second | rest]) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | rest])
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns false when a phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["12", "123", "1523", "567", "88"]) == false
+  end
+
+  test "returns true when no phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["123", "456", "789"]) == true
+  end
+
+  test "returns false for overlapping prefixes" do
+    assert Solution.check_phone_prefix(["119", "97674223", "1195524421"]) == false
+  end
+end
+---END---[0m
+[22m09:08:04.642 [info] [LLM.call] local_qwen_thinking completed in 4663ms — ok[0m
+[22m09:08:04.642 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m09:08:04.642 [debug] [Validator.run] module code (972 chars):
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix(_list) when length(_list) <= 1 do
+    true
+  end
+
+  defp do_check_prefix([first, second | rest]) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | rest])
+    end
+  end
+end[0m
+[36m09:08:04.642 [debug] [Validator.run] test code (504 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns false when a phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["12", "123", "1523", "567", "88"]) == false
+  end
+
+  test "returns true when no phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["123", "456", "789"]) == true
+  end
+
+  test "returns false for overlapping prefixes" do
+    assert Solution.check_phone_prefix(["119", "97674223", "1195524421"]) == false
+  end
+end[0m
+[36m09:08:04.642 [debug] [Budget] spent so far (est.): $3.6231[0m
+[22m09:08:04.642 [info] [Validator.run] step 1/6: credence fix[0m
+[36m09:08:04.642 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m09:08:05.271 [debug] [run_credence_fix] exit=0 output:
+
+09:08:05.166 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+09:08:05.168 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+09:08:05.180 [debug] [credence_fix] semantic pass 1: compilation OK, 2 warning(s)
+
+09:08:05.180 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+09:08:05.183 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L33 -   defp do_check_prefix(_list) when length(_list) <= 1 do
+  L33 +   defp do_check_prefix(list) when length(list) <= 1 do
+
+09:08:05.188 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+09:08:05.188 [debug] [credence_fix] semantic done. Applied: [UsedUnderscoreVariable(1)]
+
+09:08:05.189 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+09:08:05.200 [debug] [credence_fix] AvoidLengthGuardLessThan2: check found 1 issue(s), running fix...
+
+09:08:05.216 [debug] [credence_fix] AvoidLengthGuardLessThan2: source CHANGED:
+  L33 -   defp do_check_prefix(list) when length(list) <= 1 do
+  L33 +   defp do_check_prefix([]) do
+  L37 -   defp do_check_prefix([first, second | rest]) do
+  L37 +   defp do_check_prefix([_]) do
+  L38 -     if String.starts_with?(second, first) do
+  L38 +     true
+  L39 -       false
+  L39 +   end
+  L40 -     else
+  L40 + 
+  L41 -       do_check_prefix([second | rest])
+  L41 +   defp do_check_prefix([first, second | rest]) do
+  L42 -     end
+  L42 +     if String.starts_with?(second, first) do
+  L43 -   end
+  L43 +       false
+  L44 - end
+  L44 +     else
+  L45 +       do_check_prefix([second | rest])
+  L46 +     end
+  L47 +   end
+  L48 + end
+
+09:08:05.250 [debug] [credence_fix] done. Applied: [AvoidLengthGuardLessThan2(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UsedUnderscoreVariable, 1}, {Credence.Pattern.AvoidLengthGuardLessThan2, 1}]
+[0m
+[22m09:08:05.271 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m09:08:05.825 [info] [run_credence_fix] fix compiles OK[0m
+[36m09:08:05.825 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix(_list) when length(_list) <= 1 do
+    true
+  end
+
+  defp do_check_prefix([first, second | rest]) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | rest])
+    end
+  end
+end[0m
+[36m09:08:05.825 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix([]) do
+    true
+  end
+
+  defp do_check_prefix([_]) do
+    true
+  end
+
+  defp do_check_prefix([first, second | rest]) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | rest])
+    end
+  end
+end[0m
+[22m09:08:05.825 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m09:08:05.825 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix(_list) when length(_list) <= 1 do
+    true
+  end
+
+  defp do_check_prefix([first, second | rest]) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | rest])
+    end
+  end
+end[0m
+[36m09:08:05.825 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix([]) do
+    true
+  end
+
+  defp do_check_prefix([_]) do
+    true
+  end
+
+  defp do_check_prefix([first, second | rest]) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | rest])
+    end
+  end
+end[0m
+[36m09:08:05.825 [debug] [propagate_is_renames] old functions: ["check_phone_prefix", "do_check_prefix"][0m
+[36m09:08:05.825 [debug] [propagate_is_renames] new functions: ["check_phone_prefix", "do_check_prefix"][0m
+[36m09:08:05.826 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m09:08:05.826 [info] [Validator.run] step 2/6: compile[0m
+[22m09:08:06.400 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m09:08:06.400 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m09:08:06.400 [info] [Validator.run] step 3/6: format[0m
+[22m09:08:06.706 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m09:08:07.005 [debug] [Validator.run] format fix output: [0m
+[22m09:08:07.005 [info] [Validator.run] step 4/6: credo[0m
+[36m09:08:07.468 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m09:08:07.469 [info] [Validator.run] credo: no issues[0m
+[22m09:08:07.469 [info] [Validator.run] step 5/6: credence check[0m
+[22m09:08:08.161 [info] [Validator.run] credence check exit=0[0m
+[36m09:08:08.161 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m09:08:08.161 [info] [Validator.run] credence check: passed[0m
+[22m09:08:08.161 [info] [Validator.run] step 6/6: tests[0m
+[22m09:08:08.630 [info] [Validator.run] test exit=0[0m
+[36m09:08:08.630 [debug] [Validator.run] test output:
+Running ExUnit with seed: 590805, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m09:08:08.630 [info] [Validator.run] tests: PASSED[0m
+[22m09:08:08.630 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m09:08:08.630 [debug] [Validator.run] final module (993 chars):
+defmodule Solution do
+  @doc """
+  Checks whether any phone number in the list is a prefix of another phone number in the list.
+
+  Returns `false` if such a prefix relationship exists, and `true` otherwise.
+
+  ## Examples
+
+      iex> Solution.check_phone_prefix(["12", "123"])
+      false
+
+      iex> Solution.check_phone_prefix(["123", "456"])
+      true
+
+      iex> Solution.check_phone_prefix([])
+      true
+  """
+  @spec check_phone_prefix([String.t()]) :: boolean()
+  def check_phone_prefix(phone_numbers) when is_list(phone_numbers) do
+    case phone_numbers do
+      [] ->
+        true
+
+      [_single] ->
+        true
+
+      _ ->
+        sorted = Enum.sort(phone_numbers)
+        do_check_prefix(sorted)
+    end
+  end
+
+  defp do_check_prefix([]) do
+    true
+  end
+
+  defp do_check_prefix([_]) do
+    true
+  end
+
+  defp do_check_prefix([first, second | rest]) do
+    if String.starts_with?(second, first) do
+      false
+    else
+      do_check_prefix([second | rest])
+    end
+  end
+end
+[0m
+[36m09:08:08.630 [debug] [Validator.run] final test (505 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "returns false when a phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["12", "123", "1523", "567", "88"]) == false
+  end
+
+  test "returns true when no phone number is prefix of another" do
+    assert Solution.check_phone_prefix(["123", "456", "789"]) == true
+  end
+
+  test "returns false for overlapping prefixes" do
+    assert Solution.check_phone_prefix(["119", "97674223", "1195524421"]) == false
+  end
+end
+[0m
+[22m09:08:08.630 [info] [Solve attempt 2] validation PASSED[0m
+[36m09:08:08.642 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.UsedUnderscoreVariable
+  - Credence.Pattern.RemoveUnreachableClausesAfterCatchall
+  - Credence.Pattern.AvoidLengthGuardLessThan2
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 3135 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_graphemes_for_character_comparisons
+
+## row 62263 â gat (truncated)[0m
+[36m09:09:13.881 [debug] [LLM.call] finish=stop len=34 usage=%{"completion_tokens" => 2221, "completion_tokens_details" => %{"reasoning_tokens" => 2208}, "prompt_tokens" => 13763, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 15984}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===END===[0m
+[22m09:09:13.881 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 65239ms — ok[0m
+[36m09:09:13.881 [debug] [Budget] spent so far (est.): $3.6311[0m

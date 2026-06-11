@@ -1,0 +1,595 @@
+[22m03:01:56.914 [info] [idx=106063] entry_point=dec_bin_conversion[0m
+[36m03:01:56.914 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that converts a decimal number to its binary representation and vice versa. The function should take two parameters: the number to be converted and a boolean flag indicating the direction of the conversion. If the flag is True, the function should convert from decimal to binary; if False, from binary to decimal.
+
+## Python Solution
+```python
+def dec_bin_conversion(num, flag):
+    if flag:  # Decimal to Binary
+        return bin(num).replace("0b", "")
+    else:  # Binary to Decimal
+        return int(num, 2)
+```
+
+## Python Tests
+assert dec_bin_conversion('111', False)==7
+assert dec_bin_conversion(15, True)=='1111'
+assert dec_bin_conversion(5, True)=='101'
+assert dec_bin_conversion('10000', False)==16
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `dec_bin_conversion`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m03:02:10.030 [debug] [LLM.call] finish=stop len=1310 usage=%{"completion_tokens" => 401, "completion_tokens_details" => %{"reasoning_tokens" => 47}, "prompt_tokens" => 533, "prompt_tokens_details" => %{}, "total_tokens" => 934}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `dec_bin_conversion/2` that converts between decimal and binary representations.
+
+The function takes two parameters: a value to convert and a boolean flag indicating the direction of conversion.
+
+When the flag is `true`, the input is a decimal integer and the function should return its binary representation as a string (without any prefix). When the flag is `false`, the input is a binary string and the function should return its decimal integer value.
+
+Handle typical inputs correctly, including binary strings of various lengths and non-negative integers.
+
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "binary to decimal: '111' is 7" do
+    assert Solution.dec_bin_conversion("111", false) == 7
+  end
+
+  test "decimal to binary: 15 is '1111'" do
+    assert Solution.dec_bin_conversion(15, true) == "1111"
+  end
+
+  test "decimal to binary: 5 is '101'" do
+    assert Solution.dec_bin_conversion(5, true) == "101"
+  end
+
+  test "binary to decimal: '10000' is 16" do
+    assert Solution.dec_bin_conversion("10000", false) == 16
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def dec_bin_conversion(num, true) do
+    Integer.to_string(num, 2)
+  end
+
+  def dec_bin_conversion(num, false) do
+    String.to_integer(num, 2)
+  end
+end
+---END---[0m
+[22m03:02:10.030 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 13116ms — ok[0m
+[36m03:02:10.031 [debug] [Budget] spent so far (est.): $2.5127[0m
+[22m03:02:11.076 [info] [RoundTrip] reference PASSED tests[0m
+[22m03:02:11.076 [info] [idx=106063] translation fresh — solving[0m
+[22m03:02:11.076 [info] ===SOLVE_BOUNDARY===[0m
+[22m03:02:11.076 [info] [Solve attempt 1] generating (fn=dec_bin_conversion)[0m
+[36m03:02:11.076 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `dec_bin_conversion/2` that converts between decimal and binary representations.
+
+The function takes two parameters: a value to convert and a boolean flag indicating the direction of conversion.
+
+When the flag is `true`, the input is a decimal integer and the function should return its binary representation as a string (without any prefix). When the flag is `false`, the input is a binary string and the function should return its decimal integer value.
+
+Handle typical inputs correctly, including binary strings of various lengths and non-negative integers.
+
+## Tests (your module must pass these)
+```elixir
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "binary to decimal: '111' is 7" do
+    assert Solution.dec_bin_conversion("111", false) == 7
+  end
+
+  test "decimal to binary: 15 is '1111'" do
+    assert Solution.dec_bin_conversion(15, true) == "1111"
+  end
+
+  test "decimal to binary: 5 is '101'" do
+    assert Solution.dec_bin_conversion(5, true) == "101"
+  end
+
+  test "binary to decimal: '10000' is 16" do
+    assert Solution.dec_bin_conversion("10000", false) == 16
+  end
+end
+```
+
+Module: `Solution`. Function: `dec_bin_conversion`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m03:02:14.780 [debug] [LLM.call] finish=stop len=1220 usage=%{"completion_tokens" => 371, "prompt_tokens" => 560, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 931}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Converts between decimal and binary representations.
+
+  When `to_binary?` is `true`, converts a decimal integer to a binary string.
+  When `to_binary?` is `false`, converts a binary string to a decimal integer.
+  """
+  @spec dec_bin_conversion(integer | String.t(), boolean()) :: String.t() | integer()
+  def dec_bin_conversion(number, true) when is_integer(number) and number >= 0 do
+    Integer.to_string(number, 2)
+  end
+
+  def dec_bin_conversion(binary_string, false) when is_binary(binary_string) do
+    case Integer.parse(binary_string, 2) do
+      {decimal, ""} -> decimal
+      _ -> raise ArgumentError, "Invalid binary string"
+    end
+  end
+end
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "binary to decimal: '111' is 7" do
+    assert Solution.dec_bin_conversion("111", false) == 7
+  end
+
+  test "decimal to binary: 15 is '1111'" do
+    assert Solution.dec_bin_conversion(15, true) == "1111"
+  end
+
+  test "decimal to binary: 5 is '101'" do
+    assert Solution.dec_bin_conversion(5, true) == "101"
+  end
+
+  test "binary to decimal: '10000' is 16" do
+    assert Solution.dec_bin_conversion("10000", false) == 16
+  end
+end
+---END---[0m
+[22m03:02:14.781 [info] [LLM.call] local_qwen_thinking completed in 3704ms — ok[0m
+[22m03:02:14.781 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m03:02:14.781 [debug] [Validator.run] module code (688 chars):
+defmodule Solution do
+  @doc """
+  Converts between decimal and binary representations.
+
+  When `to_binary?` is `true`, converts a decimal integer to a binary string.
+  When `to_binary?` is `false`, converts a binary string to a decimal integer.
+  """
+  @spec dec_bin_conversion(integer | String.t(), boolean()) :: String.t() | integer()
+  def dec_bin_conversion(number, true) when is_integer(number) and number >= 0 do
+    Integer.to_string(number, 2)
+  end
+
+  def dec_bin_conversion(binary_string, false) when is_binary(binary_string) do
+    case Integer.parse(binary_string, 2) do
+      {decimal, ""} -> decimal
+      _ -> raise ArgumentError, "Invalid binary string"
+    end
+  end
+end[0m
+[36m03:02:14.781 [debug] [Validator.run] test code (497 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "binary to decimal: '111' is 7" do
+    assert Solution.dec_bin_conversion("111", false) == 7
+  end
+
+  test "decimal to binary: 15 is '1111'" do
+    assert Solution.dec_bin_conversion(15, true) == "1111"
+  end
+
+  test "decimal to binary: 5 is '101'" do
+    assert Solution.dec_bin_conversion(5, true) == "101"
+  end
+
+  test "binary to decimal: '10000' is 16" do
+    assert Solution.dec_bin_conversion("10000", false) == 16
+  end
+end[0m
+[36m03:02:14.781 [debug] [Budget] spent so far (est.): $2.5133[0m
+[22m03:02:14.781 [info] [Validator.run] step 1/6: credence fix[0m
+[36m03:02:14.781 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m03:02:15.391 [debug] [run_credence_fix] exit=0 output:
+
+03:02:15.301 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+03:02:15.303 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+03:02:15.313 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+03:02:15.318 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+03:02:15.318 [debug] [credence_fix] semantic done. Applied: []
+
+03:02:15.318 [debug] [credence_fix] starting pattern fix pipeline (125 rules)
+
+03:02:15.330 [debug] [credence_fix] InconsistentParamNames: check found 1 issue(s), running fix...
+
+03:02:15.346 [debug] [credence_fix] InconsistentParamNames: source CHANGED:
+  L13 -   def dec_bin_conversion(binary_string, false) when is_binary(binary_string) do
+  L13 +   def dec_bin_conversion(number, false) when is_binary(number) do
+  L14 -     case Integer.parse(binary_string, 2) do
+  L14 +     case Integer.parse(number, 2) do
+
+03:02:15.372 [debug] [credence_fix] done. Applied: [InconsistentParamNames(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.InconsistentParamNames, 1}]
+[0m
+[22m03:02:15.391 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m03:02:15.955 [info] [run_credence_fix] fix compiles OK[0m
+[36m03:02:15.955 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Converts between decimal and binary representations.
+
+  When `to_binary?` is `true`, converts a decimal integer to a binary string.
+  When `to_binary?` is `false`, converts a binary string to a decimal integer.
+  """
+  @spec dec_bin_conversion(integer | String.t(), boolean()) :: String.t() | integer()
+  def dec_bin_conversion(number, true) when is_integer(number) and number >= 0 do
+    Integer.to_string(number, 2)
+  end
+
+  def dec_bin_conversion(binary_string, false) when is_binary(binary_string) do
+    case Integer.parse(binary_string, 2) do
+      {decimal, ""} -> decimal
+      _ -> raise ArgumentError, "Invalid binary string"
+    end
+  end
+end[0m
+[36m03:02:15.955 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Converts between decimal and binary representations.
+
+  When `to_binary?` is `true`, converts a decimal integer to a binary string.
+  When `to_binary?` is `false`, converts a binary string to a decimal integer.
+  """
+  @spec dec_bin_conversion(integer | String.t(), boolean()) :: String.t() | integer()
+  def dec_bin_conversion(number, true) when is_integer(number) and number >= 0 do
+    Integer.to_string(number, 2)
+  end
+
+  def dec_bin_conversion(number, false) when is_binary(number) do
+    case Integer.parse(number, 2) do
+      {decimal, ""} -> decimal
+      _ -> raise ArgumentError, "Invalid binary string"
+    end
+  end
+end[0m
+[22m03:02:15.955 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m03:02:15.956 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Converts between decimal and binary representations.
+
+  When `to_binary?` is `true`, converts a decimal integer to a binary string.
+  When `to_binary?` is `false`, converts a binary string to a decimal integer.
+  """
+  @spec dec_bin_conversion(integer | String.t(), boolean()) :: String.t() | integer()
+  def dec_bin_conversion(number, true) when is_integer(number) and number >= 0 do
+    Integer.to_string(number, 2)
+  end
+
+  def dec_bin_conversion(binary_string, false) when is_binary(binary_string) do
+    case Integer.parse(binary_string, 2) do
+      {decimal, ""} -> decimal
+      _ -> raise ArgumentError, "Invalid binary string"
+    end
+  end
+end[0m
+[36m03:02:15.956 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Converts between decimal and binary representations.
+
+  When `to_binary?` is `true`, converts a decimal integer to a binary string.
+  When `to_binary?` is `false`, converts a binary string to a decimal integer.
+  """
+  @spec dec_bin_conversion(integer | String.t(), boolean()) :: String.t() | integer()
+  def dec_bin_conversion(number, true) when is_integer(number) and number >= 0 do
+    Integer.to_string(number, 2)
+  end
+
+  def dec_bin_conversion(number, false) when is_binary(number) do
+    case Integer.parse(number, 2) do
+      {decimal, ""} -> decimal
+      _ -> raise ArgumentError, "Invalid binary string"
+    end
+  end
+end[0m
+[36m03:02:15.956 [debug] [propagate_is_renames] old functions: ["dec_bin_conversion"][0m
+[36m03:02:15.956 [debug] [propagate_is_renames] new functions: ["dec_bin_conversion"][0m
+[36m03:02:15.956 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m03:02:15.956 [info] [Validator.run] step 2/6: compile[0m
+[22m03:02:16.531 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m03:02:16.531 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m03:02:16.531 [info] [Validator.run] step 3/6: format[0m
+[22m03:02:16.836 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m03:02:17.146 [debug] [Validator.run] format fix output: [0m
+[22m03:02:17.146 [info] [Validator.run] step 4/6: credo[0m
+[36m03:02:17.616 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m03:02:17.616 [info] [Validator.run] credo: no issues[0m
+[22m03:02:17.616 [info] [Validator.run] step 5/6: credence check[0m
+[22m03:02:18.327 [info] [Validator.run] credence check exit=0[0m
+[36m03:02:18.327 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m03:02:18.327 [info] [Validator.run] credence check: passed[0m
+[22m03:02:18.327 [info] [Validator.run] step 6/6: tests[0m
+[22m03:02:18.796 [info] [Validator.run] test exit=0[0m
+[36m03:02:18.796 [debug] [Validator.run] test output:
+Running ExUnit with seed: 757822, max_cases: 48
+
+....
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+4 tests, 0 failures
+[0m
+[22m03:02:18.796 [info] [Validator.run] tests: PASSED[0m
+[22m03:02:18.797 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m03:02:18.797 [debug] [Validator.run] final module (668 chars):
+defmodule Solution do
+  @doc """
+  Converts between decimal and binary representations.
+
+  When `to_binary?` is `true`, converts a decimal integer to a binary string.
+  When `to_binary?` is `false`, converts a binary string to a decimal integer.
+  """
+  @spec dec_bin_conversion(integer | String.t(), boolean()) :: String.t() | integer()
+  def dec_bin_conversion(number, true) when is_integer(number) and number >= 0 do
+    Integer.to_string(number, 2)
+  end
+
+  def dec_bin_conversion(number, false) when is_binary(number) do
+    case Integer.parse(number, 2) do
+      {decimal, ""} -> decimal
+      _ -> raise ArgumentError, "Invalid binary string"
+    end
+  end
+end
+[0m
+[36m03:02:18.797 [debug] [Validator.run] final test (498 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "binary to decimal: '111' is 7" do
+    assert Solution.dec_bin_conversion("111", false) == 7
+  end
+
+  test "decimal to binary: 15 is '1111'" do
+    assert Solution.dec_bin_conversion(15, true) == "1111"
+  end
+
+  test "decimal to binary: 5 is '101'" do
+    assert Solution.dec_bin_conversion(5, true) == "101"
+  end
+
+  test "binary to decimal: '10000' is 16" do
+    assert Solution.dec_bin_conversion("10000", false) == 16
+  end
+end
+[0m
+[22m03:02:18.797 [info] [Solve attempt 1] validation PASSED[0m
+[36m03:02:18.807 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Pattern.InconsistentParamNames
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: (truncated)[0m
+[36m03:02:48.294 [debug] [LLM.call] finish=stop len=209 usage=%{"completion_tokens" => 814, "completion_tokens_details" => %{"reasoning_tokens" => 765}, "prompt_tokens" => 6478, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 7292}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+Code is clean and idiomatic after InconsistentParamNames fix; no deterministic non-idiomatic residual or over-fire detected that warrants a new or fixed rule.
+===END===[0m
+[22m03:02:48.294 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 29487ms — ok[0m
+[36m03:02:48.294 [debug] [Budget] spent so far (est.): $2.5168[0m

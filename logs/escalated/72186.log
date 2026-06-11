@@ -1,0 +1,1318 @@
+[22m08:56:09.275 [info] [idx=72186] entry_point=join_strings[0m
+[36m08:56:09.275 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that takes a list of strings and joins them with a specific separator. The separator should be placed between each pair of strings in the final joined string.
+
+## Python Solution
+```python
+def join_strings(words, separator):
+    return separator.join(words)
+```
+
+## Python Tests
+assert join_strings(["Apple", "Banana", "Cherry"], ", ") == "Apple, Banana, Cherry"
+assert join_strings(["John", "Doe"], " ") == "John Doe"
+assert join_strings(["Hello", "World"], "") == "HelloWorld"
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `join_strings`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m08:56:16.521 [debug] [LLM.call] finish=stop len=944 usage=%{"completion_tokens" => 248, "completion_tokens_details" => %{"reasoning_tokens" => 5}, "prompt_tokens" => 469, "prompt_tokens_details" => %{}, "total_tokens" => 717}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `join_strings/2` that takes a list of strings and a separator string, and returns a single string formed by joining all the strings in the list with the separator placed between each pair. If the list is empty, return an empty string. If the separator is empty, the strings are concatenated directly.
+
+---TEST---
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "joins with comma separator" do
+    assert Solution.join_strings(["Apple", "Banana", "Cherry"], ", ") == "Apple, Banana, Cherry"
+  end
+
+  test "joins with space separator" do
+    assert Solution.join_strings(["John", "Doe"], " ") == "John Doe"
+  end
+
+  test "joins with empty separator" do
+    assert Solution.join_strings(["Hello", "World"], "") == "HelloWorld"
+  end
+end
+```
+---REFERENCE---
+```elixir
+defmodule Solution do
+  def join_strings(words, separator) do
+    Enum.join(words, separator)
+  end
+end
+```
+---END---[0m
+[22m08:56:16.521 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 7245ms — ok[0m
+[36m08:56:16.521 [debug] [Budget] spent so far (est.): $3.5708[0m
+[22m08:56:17.569 [info] [RoundTrip] reference PASSED tests[0m
+[22m08:56:17.569 [info] [idx=72186] translation fresh — solving[0m
+[22m08:56:17.569 [info] ===SOLVE_BOUNDARY===[0m
+[22m08:56:17.569 [info] [Solve attempt 1] generating (fn=join_strings)[0m
+[36m08:56:17.569 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `join_strings/2` that takes a list of strings and a separator string, and returns a single string formed by joining all the strings in the list with the separator placed between each pair. If the list is empty, return an empty string. If the separator is empty, the strings are concatenated directly.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "joins with comma separator" do
+    assert Solution.join_strings(["Apple", "Banana", "Cherry"], ", ") == "Apple, Banana, Cherry"
+  end
+
+  test "joins with space separator" do
+    assert Solution.join_strings(["John", "Doe"], " ") == "John Doe"
+  end
+
+  test "joins with empty separator" do
+    assert Solution.join_strings(["Hello", "World"], "") == "HelloWorld"
+  end
+end
+```
+
+Module: `Solution`. Function: `join_strings`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m08:56:20.572 [debug] [LLM.call] finish=stop len=1012 usage=%{"completion_tokens" => 297, "prompt_tokens" => 460, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 757}
+[LLM.call] response:
+---MODULE---
+@doc """
+Joins a list of strings with a given separator.
+
+## Examples
+
+    iex> Solution.join_strings(["Apple", "Banana", "Cherry"], ", ")
+    "Apple, Banana, Cherry"
+
+    iex> Solution.join_strings(["John", "Doe"], " ")
+    "John Doe"
+
+    iex> Solution.join_strings(["Hello", "World"], "")
+    "HelloWorld"
+
+    iex> Solution.join_strings([], ",")
+    ""
+"""
+@spec join_strings([String.t()], String.t()) :: String.t()
+def join_strings(strings, separator) do
+  case strings do
+    [] -> ""
+    list -> Enum.join(list, separator)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "joins with comma separator" do
+    assert Solution.join_strings(["Apple", "Banana", "Cherry"], ", ") == "Apple, Banana, Cherry"
+  end
+
+  test "joins with space separator" do
+    assert Solution.join_strings(["John", "Doe"], " ") == "John Doe"
+  end
+
+  test "joins with empty separator" do
+    assert Solution.join_strings(["Hello", "World"], "") == "HelloWorld"
+  end
+end
+---END---[0m
+[22m08:56:20.572 [info] [LLM.call] local_qwen_thinking completed in 3003ms — ok[0m
+[22m08:56:20.572 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m08:56:20.572 [debug] [Validator.run] module code (539 chars):
+@doc """
+Joins a list of strings with a given separator.
+
+## Examples
+
+    iex> Solution.join_strings(["Apple", "Banana", "Cherry"], ", ")
+    "Apple, Banana, Cherry"
+
+    iex> Solution.join_strings(["John", "Doe"], " ")
+    "John Doe"
+
+    iex> Solution.join_strings(["Hello", "World"], "")
+    "HelloWorld"
+
+    iex> Solution.join_strings([], ",")
+    ""
+"""
+@spec join_strings([String.t()], String.t()) :: String.t()
+def join_strings(strings, separator) do
+  case strings do
+    [] -> ""
+    list -> Enum.join(list, separator)
+  end
+end[0m
+[36m08:56:20.572 [debug] [Validator.run] test code (438 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "joins with comma separator" do
+    assert Solution.join_strings(["Apple", "Banana", "Cherry"], ", ") == "Apple, Banana, Cherry"
+  end
+
+  test "joins with space separator" do
+    assert Solution.join_strings(["John", "Doe"], " ") == "John Doe"
+  end
+
+  test "joins with empty separator" do
+    assert Solution.join_strings(["Hello", "World"], "") == "HelloWorld"
+  end
+end[0m
+[36m08:56:20.572 [debug] [Budget] spent so far (est.): $3.5712[0m
+[22m08:56:20.573 [info] [Validator.run] step 1/6: credence fix[0m
+[36m08:56:20.573 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m08:56:21.177 [debug] [run_credence_fix] exit=0 output:
+
+08:56:21.106 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+08:56:21.108 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+08:56:21.110 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+08:56:21.110 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+08:56:21.110 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+08:56:21.112 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Joins a list of strings with a given separator.
+  L2 + @doc """
+  L3 - 
+  L3 + Joins a list of strings with a given separator.
+  L4 - ## Examples
+  L4 + 
+  L5 - 
+  L5 + ## Examples
+  L6 -     iex> Solution.join_strings(["Apple", "Banana", "Cherry"], ", ")
+  L6 + 
+  L7 -     "Apple, Banana, Cherry"
+  L7 +     iex> Solution.join_strings(["Apple", "Banana", "Cherry"], ", ")
+  L8 - 
+  L8 +     "Apple, Banana, Cherry"
+  L9 -     iex> Solution.join_strings(["John", "Doe"], " ")
+  L9 + 
+  L10 -     "John Doe"
+  L10 +     iex> Solution.join_strings(["John", "Doe"], " ")
+  L11 - 
+  L11 +     "John Doe"
+  L12 -     iex> Solution.join_strings(["Hello", "World"], "")
+  L12 + 
+  L13 -     "HelloWorld"
+  L13 +     iex> Solution.join_strings(["Hello", "World"], "")
+  L14 - 
+  L14 +     "HelloWorld"
+  L15 -     iex> Solution.join_strings([], ",")
+  L15 + 
+  L16 -     ""
+  L16 +     iex> Solution.join_strings([], ",")
+  L17 - """
+  L17 +     ""
+  L18 - @spec join_strings([String.t()], String.t()) :: String.t()
+  L18 + """
+  L19 - def join_strings(strings, separator) do
+  L19 + @spec join_strings([String.t()], String.t()) :: String.t()
+  L20 -   case strings do
+  L20 + def join_strings(strings, separator) do
+  L21 -     [] -> ""
+  L21 +   case strings do
+  L22 -     list -> Enum.join(list, separator)
+  L22 +     [] -> ""
+  L23 -   end
+  L23 +     list -> Enum.join(list, separator)
+  L24 - end
+  L24 +   end
+  L25 + end
+  L26 + end
+  L27 + 
+
+08:56:21.112 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+08:56:21.122 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+08:56:21.127 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+08:56:21.127 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+08:56:21.128 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+08:56:21.156 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m08:56:21.177 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m08:56:21.728 [info] [run_credence_fix] fix compiles OK[0m
+[36m08:56:21.728 [debug] [run_credence_fix] original:
+@doc """
+Joins a list of strings with a given separator.
+
+## Examples
+
+    iex> Solution.join_strings(["Apple", "Banana", "Cherry"], ", ")
+    "Apple, Banana, Cherry"
+
+    iex> Solution.join_strings(["John", "Doe"], " ")
+    "John Doe"
+
+    iex> Solution.join_strings(["Hello", "World"], "")
+    "HelloWorld"
+
+    iex> Solution.join_strings([], ",")
+    ""
+"""
+@spec join_strings([String.t()], String.t()) :: String.t()
+def join_strings(strings, separator) do
+  case strings do
+    [] -> ""
+    list -> Enum.join(list, separator)
+  end
+end[0m
+[36m08:56:21.728 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Joins a list of strings with a given separator.
+
+## Examples
+
+    iex> Solution.join_strings(["Apple", "Banana", "Cherry"], ", ")
+    "Apple, Banana, Cherry"
+
+    iex> Solution.join_strings(["John", "Doe"], " ")
+    "John Doe"
+
+    iex> Solution.join_strings(["Hello", "World"], "")
+    "HelloWorld"
+
+    iex> Solution.join_strings([], ",")
+    ""
+"""
+@spec join_strings([String.t()], String.t()) :: String.t()
+def join_strings(strings, separator) do
+  case strings do
+    [] -> ""
+    list -> Enum.join(list, separator)
+  end
+end
+end
+[0m
+[22m08:56:21.728 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m08:56:21.728 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Joins a list of strings with a given separator.
+
+## Examples
+
+    iex> Solution.join_strings(["Apple", "Banana", "Cherry"], ", ")
+    "Apple, Banana, Cherry"
+
+    iex> Solution.join_strings(["John", "Doe"], " ")
+    "John Doe"
+
+    iex> Solution.join_strings(["Hello", "World"], "")
+    "HelloWorld"
+
+    iex> Solution.join_strings([], ",")
+    ""
+"""
+@spec join_strings([String.t()], String.t()) :: String.t()
+def join_strings(strings, separator) do
+  case strings do
+    [] -> ""
+    list -> Enum.join(list, separator)
+  end
+end[0m
+[36m08:56:21.728 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Joins a list of strings with a given separator.
+
+## Examples
+
+    iex> Solution.join_strings(["Apple", "Banana", "Cherry"], ", ")
+    "Apple, Banana, Cherry"
+
+    iex> Solution.join_strings(["John", "Doe"], " ")
+    "John Doe"
+
+    iex> Solution.join_strings(["Hello", "World"], "")
+    "HelloWorld"
+
+    iex> Solution.join_strings([], ",")
+    ""
+"""
+@spec join_strings([String.t()], String.t()) :: String.t()
+def join_strings(strings, separator) do
+  case strings do
+    [] -> ""
+    list -> Enum.join(list, separator)
+  end
+end
+end
+[0m
+[36m08:56:21.729 [debug] [propagate_is_renames] old functions: ["join_strings"][0m
+[36m08:56:21.729 [debug] [propagate_is_renames] new functions: ["join_strings"][0m
+[36m08:56:21.729 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m08:56:21.729 [info] [Validator.run] step 2/6: compile[0m
+[22m08:56:22.304 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m08:56:22.304 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m08:56:22.304 [info] [Validator.run] step 3/6: format[0m
+[22m08:56:22.614 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m08:56:22.934 [debug] [Validator.run] format fix output: [0m
+[22m08:56:22.934 [info] [Validator.run] step 4/6: credo[0m
+[36m08:56:23.417 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m08:56:23.417 [info] [Validator.run] credo: no issues[0m
+[22m08:56:23.417 [info] [Validator.run] step 5/6: credence check[0m
+[22m08:56:24.105 [info] [Validator.run] credence check exit=0[0m
+[36m08:56:24.105 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m08:56:24.105 [info] [Validator.run] credence check: passed[0m
+[22m08:56:24.105 [info] [Validator.run] step 6/6: tests[0m
+[22m08:56:24.560 [info] [Validator.run] test exit=0[0m
+[36m08:56:24.560 [debug] [Validator.run] test output:
+Running ExUnit with seed: 521419, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m08:56:24.560 [info] [Validator.run] tests: PASSED[0m
+[22m08:56:24.561 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m08:56:24.561 [debug] [Validator.run] final module (604 chars):
+defmodule Solution do
+  @doc """
+  Joins a list of strings with a given separator.
+
+  ## Examples
+
+      iex> Solution.join_strings(["Apple", "Banana", "Cherry"], ", ")
+      "Apple, Banana, Cherry"
+
+      iex> Solution.join_strings(["John", "Doe"], " ")
+      "John Doe"
+
+      iex> Solution.join_strings(["Hello", "World"], "")
+      "HelloWorld"
+
+      iex> Solution.join_strings([], ",")
+      ""
+  """
+  @spec join_strings([String.t()], String.t()) :: String.t()
+  def join_strings(strings, separator) do
+    case strings do
+      [] -> ""
+      list -> Enum.join(list, separator)
+    end
+  end
+end
+[0m
+[36m08:56:24.561 [debug] [Validator.run] final test (439 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "joins with comma separator" do
+    assert Solution.join_strings(["Apple", "Banana", "Cherry"], ", ") == "Apple, Banana, Cherry"
+  end
+
+  test "joins with space separator" do
+    assert Solution.join_strings(["John", "Doe"], " ") == "John Doe"
+  end
+
+  test "joins with empty separator" do
+    assert Solution.join_strings(["Hello", "World"], "") == "HelloWorld"
+  end
+end
+[0m
+[22m08:56:24.561 [info] [Solve attempt 1] validation PASSED[0m
+[36m08:56:24.571 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 3135 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_graphemes_for_character_comparisons
+
+## row 62263 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_join_over_map_join_with_integer_to_string
+
+##  (truncated)[0m
+[36m08:57:17.610 [debug] [LLM.call] finish=stop len=590 usage=%{"completion_tokens" => 2052, "completion_tokens_details" => %{"reasoning_tokens" => 1899}, "prompt_tokens" => 6731, "prompt_tokens_details" => %{"cached_tokens" => 2048}, "total_tokens" => 8783}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_enum_join_over_redundant_case
+===PHASE===
+pattern
+===BEFORE===
+defmodule Example do
+  def join_strings(strings, separator) do
+    case strings do
+      [] -> ""
+      list -> Enum.join(list, separator)
+    end
+  end
+end
+===AFTER===
+defmodule Example do
+  def join_strings(strings, separator) do
+    Enum.join(strings, separator)
+  end
+end
+===ASSUMPTIONS===
+proper_lists
+===RATIONALE===
+The case is redundant because Enum.join/2 already returns "" for an empty list and concatenates directly when the separator is empty.
+===END===[0m
+[22m08:57:17.610 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 53039ms — ok[0m
+[36m08:57:17.610 [debug] [Budget] spent so far (est.): $3.576[0m
+[22m08:57:19.560 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m08:57:30.071 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" | head -40[0m
+[22m08:57:34.744 [info] [Pi] step 2: bash
+    command: find /home/kly/projects/credence/lib/pattern -type f -name "*.ex" | sort[0m
+[22m08:57:40.454 [info] [Pi] step 3: read
+    path: /home/kly/projects/credence/lib/pattern/no_redundant_case_nil_clause.ex[0m
+[22m08:57:43.896 [info] [Pi] step 4: read
+    path: /home/kly/projects/credence/lib/pattern/rule.ex[0m
+[22m08:57:43.896 [info] [Pi] step 5: read
+    path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m08:57:51.043 [info] [Pi] step 6: read
+    path: /home/kly/projects/credence/lib/pattern/no_case_true_false.ex[0m
+[22m08:57:51.043 [info] [Pi] step 7: read
+    path: /home/kly/projects/credence/lib/pattern/no_list_duplicate_join.ex[0m
+[22m08:57:56.388 [info] [Pi] step 8: read
+    path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m08:57:56.388 [info] [Pi] step 9: read
+    path: /home/kly/projects/credence/test/support/equivalence_inputs.ex[0m
+[22m08:58:01.307 [info] [Pi] step 10: read
+    path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m08:58:01.308 [info] [Pi] step 11: bash
+    command: ls /home/kly/projects/credence/test/pattern/ | grep -E "check_test|fix_test|equivalence_test" | head -20[0m
+[22m08:58:06.845 [info] [Pi] step 12: bash
+    command: ls /home/kly/projects/credence/test/pattern/prefer_enum_join*[0m
+[22m08:58:06.845 [info] [Pi] step 13: read
+    path: /home/kly/projects/credence/test/pattern/no_list_duplicate_join_check_test.exs[0m
+[22m08:58:35.833 [info] [Pi] step 14: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_join_over_redundant_case.ex[0m
+[22m08:59:17.262 [info] [Pi] step 15: write
+    content: defmodule Credence.Pattern.PreferEnumJoinOverRedundantCase do
+  @moduledoc """
+  Detects a `case` expression that special-cases an empty list for
+  `Enum.join/2` and rewrites it to a direct `Enum.join/2` call.
+
+  `Enum.join/2` already returns `""` for an empty list, so the
+  `[] -> ""` clause is redundant. LLMs frequently add this guard
+  before calling `Enum.join/2`, producing an unnecessary `case`
+  wrapper.
+
+  ## Bad
+
+      case strings do
+        [] -> ""
+        list -> Enum.join(list, separator)
+      end
+
+  ## Good
+
+      Enum.join(strings, separator)
+
+  ## Auto-fix
+
+  Replaces the entire `case` expression with `Enum.join(subject, separator)`,
+  where `subject` is the original case subject and `separator` is taken from
+  the `Enum.join/2` call in the non-empty clause.
+  """
+
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+  alias Credence.RuleHelpers
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        {:case, meta, [_subject, kw]} = node, acc when is_list(kw) ->
+          case check_case(kw) do
+            :match -> {node, [build_issue(meta) | acc]}
+            :no_match -> {node, acc}
+          end
+
+        {:case, meta, [kw]} = node, acc when is_list(kw) ->
+          case check_case(kw) do
+            :match -> {node, [build_issue(meta) | acc]}
+            :no_match -> {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
+  end
+
+  # ── detection ──────────────────────────────────────────────────────
+
+  defp check_case(kw) do
+    case extract_do_clauses(kw) do
+      [clause1, clause2] ->
+        if empty_list_clause?(clause1) and enum_join_clause?(clause2) do
+          :match
+        else
+          :no_match
+        end
+
+      _ ->
+        :no_match
+    end
+  end
+
+  defp extract_do_clauses([{{:__block__, _, [:do]}, clauses}]) when is_list(clauses),
+    do: clauses
+
+  defp extract_do_clauses(_), do: nil
+
+  # Matches `[] -> ""`
+  defp empty_list_clause?({:->, _, [[pattern], body]}) do
+    empty_list_pattern?(pattern) and empty_string_body?(body)
+  end
+
+  defp empty_list_clause?(_), do: false
+
+  defp empty_list_pattern?({:__block__, _, [[]]}), do: true
+  defp empty_list_pattern?(_), do: false
+
+  defp empty_string_body?({:__block__, _, [""]}), do: true
+  defp empty_string_body?(_), do: false
+
+  # Matches `var -> Enum.join(var, separator)` where `var` is a fresh binding
+  defp enum_join_clause?({:->, _, [[pattern], body]}) do
+    with true <- bare_var_pattern?(pattern),
+         {clause_var_name, _, nil} <- pattern,
+         true <- enum_join_call_with_var?(body, clause_var_name) do
+      true
+    else
+      _ -> false
+    end
+  end
+
+  defp enum_join_clause?(_), do: false
+
+  defp bare_var_pattern?({name, _, ctx}) when is_atom(name) and is_atom(ctx) do
+    not (name |> to_string() |> String.starts_with?("_"))
+  end
+
+  defp bare_var_pattern?(_), do: false
+
+  # Checks that the body is `Enum.join(var, separator)` where `var` is the
+  # clause-bound variable (same name as the pattern).
+  defp enum_join_call_with_var?(body, var_name) do
+    case body do
+      {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, [{^var_name, _, nil}, _sep]} ->
+        true
+
+      _ ->
+        false
+    end
+  end
+
+  # ── issue ──────────────────────────────────────────────────────────
+
+  defp build_issue(meta) do
+    %Issue{
+      rule: :prefer_enum_join_over_redundant_case,
+      message:
+        "`case` with `[] -> \"\"` is redundant — `Enum.join/2` already returns " <>
+          "`\"\"` for an empty list. Use `Enum.join(subject, separator)` directly.",
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
+
+  # ── auto-fix ───────────────────────────────────────────────────────
+
+  defp maybe_rewrite({:case, _meta, [subject, kw]} = node) when is_list(kw) do
+    case extract_do_clauses(kw) do
+      [clause1, clause2] ->
+        if empty_list_clause?(clause1) do
+          case extract_join_args(clause2) do
+            {:ok, _var_name, sep} ->
+              build_enum_join(subject, sep)
+
+            :no_match ->
+              node
+          end
+        else
+          node
+        end
+
+      _ ->
+        node
+    end
+  end
+
+  defp maybe_rewrite({:case, _meta, [kw]} = node) when is_list(kw) do
+    # piped form: `subject |> case do ... end`
+    # In this form, the subject is not directly available in the case node;
+    # it comes from the pipe. We can't safely rewrite this form without
+    # knowing the piped subject, so skip it.
+    node
+  end
+
+  defp maybe_rewrite(node), do: node
+
+  defp extract_join_args({:->, _, [[pattern], body]}) do
+    with true <- bare_var_pattern?(pattern),
+         {clause_var_name, _, nil} <- pattern do
+      case body do
+        {{:., _, [{:__aliases__, _, [:Enum]}, :join]}, _, [{^clause_var_name, _, nil}, sep]} ->
+          {:ok, clause_var_name, sep}
+
+        _ ->
+          :no_match
+      end
+    else
+      _ -> :no_match
+    end
+  end
+
+  defp extract_join_args(_), do: :no_match
+
+  defp build_enum_join(subject, sep) do
+    {{:., [], [{:__aliases__, [], [:Enum]}, :join]}, [], [subject, sep]}
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_join_over_redundant_case.ex[0m
+[22m08:59:25.348 [info] [Pi] step 16: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_join_over_redundant_case_check_test.exs[0m
+[22m08:59:25.349 [info] [Pi] step 17: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs[0m
+[22m08:59:25.349 [info] [Pi] step 18: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_join_over_redundant_case_equivalence_test.exs[0m
+[22m08:59:50.347 [info] [Pi] step 19: bash
+    command: cd /home/kly/projects/credence && mix compile --force 2>&1 | tail -20[0m
+[22m08:59:55.478 [info] [Budget] HEARTBEAT — 768 paid calls, est $3.576 over 999.7min → ~$0.2146/hr, ~$5.15/day (tok in=4544884 cache_rd=40367360 out=1670814)[0m
+[22m08:59:59.283 [info] [Pi] step 20: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Example do
+  def join_strings(strings, separator) do
+    case strings do
+      [] -> ""
+      list -> Enum.join(list, separator)
+    end
+  end
+end
+"""
+result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferEnumJoinOverRedundantCase, source)
+IO.puts("=== RESULT ===")
+IO.inspect(result, label: "result")
+IO.puts("=== END ===")
+'[0m
+[22m09:00:06.365 [info] [Pi] step 21: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Example do
+  def join_strings(strings, separator) do
+    case strings do
+      [] -> ""
+      list -> Enum.join(list, separator)
+    end
+  end
+end
+"""
+ast = Sourceror.parse_string!(source)
+issues = Credence.Pattern.PreferEnumJoinOverRedundantCase.check(ast, source: source)
+IO.inspect(issues, label: "issues")
+'[0m
+[22m09:00:36.376 [info] [Pi] step 22: write
+    content: defmodule Credence.Pattern.PreferEnumJoinOverRedundantCaseCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferEnumJoinOverRedundantCase
+
+  # ═══════════════════════════════════════════════════════════════════
+  # POSITIVE — should flag the anti-pattern
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "flags the redundant case pattern" do
+    test "basic form with variable separator" do
+      assert flagged?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings, separator) do
+                 case strings do
+                   [] -> ""
+                   list -> Enum.join(list, separator)
+                 end
+               end
+             end
+             """)
+    end
+
+    test "with string literal separator" do
+      assert flagged?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings) do
+                 case strings do
+                   [] -> ""
+                   list -> Enum.join(list, ", ")
+                 end
+               end
+             end
+             """)
+    end
+
+    test "with single-letter variable names" do
+      assert flagged?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def f(a, b) do
+                 case a do
+                   [] -> ""
+                   x -> Enum.join(x, b)
+                 end
+               end
+             end
+             """)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # NEGATIVE — must NOT flag
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "does not flag direct Enum.join (already idiomatic)" do
+    test "direct Enum.join call" do
+      assert clean?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings, separator) do
+                 Enum.join(strings, separator)
+               end
+             end
+             """)
+    end
+  end
+
+  describe "does not flag case with different empty-clause body" do
+    test "empty clause returns nil instead of empty string" do
+      assert clean?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings, separator) do
+                 case strings do
+                   [] -> nil
+                   list -> Enum.join(list, separator)
+                 end
+               end
+             end
+             """)
+    end
+
+    test "empty clause returns a different string" do
+      assert clean?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings, separator) do
+                 case strings do
+                   [] -> "default"
+                   list -> Enum.join(list, separator)
+                 end
+               end
+             end
+             """)
+    end
+  end
+
+  describe "does not flag case with different second-clause body" do
+    test "second clause does not call Enum.join" do
+      assert clean?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings, separator) do
+                 case strings do
+                   [] -> ""
+                   list -> List.to_string(list)
+                 end
+               end
+             end
+             """)
+    end
+
+    test "second clause uses subject directly instead of clause variable" do
+      assert clean?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings, separator) do
+                 case strings do
+                   [] -> ""
+                   _list -> Enum.join(strings, separator)
+                 end
+               end
+             end
+             """)
+    end
+
+    test "second clause calls Enum.join with wrong arity" do
+      assert clean?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings) do
+                 case strings do
+                   [] -> ""
+                   list -> Enum.join(list)
+                 end
+               end
+             end
+             """)
+    end
+  end
+
+  describe "does not flag case with more than two clauses" do
+    test "three clauses" do
+      assert clean?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings, separator) do
+                 case strings do
+                   [] -> ""
+                   [single] -> single
+                   list -> Enum.join(list, separator)
+                 end
+               end
+             end
+             """)
+    end
+  end
+
+  describe "does not flag case with non-empty-list first pattern" do
+    test "first pattern is a wildcard" do
+      assert clean?(PreferEnumJoinOverRedundantCase, """
+             defmodule Example do
+               def join_strings(strings, separator) do
+                 case strings do
+                   _ -> ""
+                   list -> Enum.join(list, separator)
+                 end
+               end
+             end
+             """)
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_join_over_redundant_case_check_test.exs[0m
+[22m09:00:49.196 [info] [Pi] step 23: write
+    content: defmodule Credence.Pattern.PreferEnumJoinOverRedundantCaseFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferEnumJoinOverRedundantCase
+
+  test "rewrites the anti-pattern" do
+    input = """
+    defmodule Example do
+      def join_strings(strings, separator) do
+        case strings do
+          [] -> ""
+          list -> Enum.join(list, separator)
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      def join_strings(strings, separator) do
+        Enum.join(strings, separator)
+      end
+    end
+    """
+
+    assert fix(PreferEnumJoinOverRedundantCase, input) == expected
+  end
+
+  test "rewrites with string literal separator" do
+    input = """
+    defmodule Example do
+      def join_strings(strings) do
+        case strings do
+          [] -> ""
+          list -> Enum.join(list, ", ")
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      def join_strings(strings) do
+        Enum.join(strings, ", ")
+      end
+    end
+    """
+
+    assert fix(PreferEnumJoinOverRedundantCase, input) == expected
+  end
+
+  test "rewrites with single-letter variable names" do
+    input = """
+    defmodule Example do
+      def f(a, b) do
+        case a do
+          [] -> ""
+          x -> Enum.join(x, b)
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      def f(a, b) do
+        Enum.join(a, b)
+      end
+    end
+    """
+
+    assert fix(PreferEnumJoinOverRedundantCase, input) == expected
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs[0m
+[22m09:01:08.676 [info] [Pi] step 24: write
+    content: defmodule Credence.Pattern.PreferEnumJoinOverRedundantCaseEquivalenceTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferEnumJoinOverRedundantCase
+
+  test "fix preserves behaviour" do
+    # The expression has two free variables: `strings` (a list) and
+    # `separator` (a string). We exercise edge cases: empty list,
+    # single element, multiple elements, unicode, and various separators.
+    assert_equivalent(
+      """
+      case strings do
+        [] -> ""
+        list -> Enum.join(list, separator)
+      end
+      """,
+      rule: PreferEnumJoinOverRedundantCase,
+      vars: [:strings, :separator],
+      inputs: [
+        [[], ""],
+        [["a"], ","],
+        [["a", "b", "c"], ","],
+        [["hello", "world"], " "],
+        [["café", "naïve"], " & "],
+        [["👨‍👩‍👧", "🇵🇱"], " "],
+        [[1, 2, 3], "-"],
+        [["x"], ""],
+        [["", ""], ","],
+        [["a", "b", "c", "d", "e"], " | "]
+      ]
+    )
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_join_over_redundant_case_equivalence_test.exs[0m
+[22m09:01:14.053 [info] [Pi] step 25: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_join_over_redundant_case*_test.exs 2>&1[0m
+[22m09:01:19.785 [info] [Pi] step 26: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_join_over_redundant_case*_test.exs --trace 2>&1[0m
+[22m09:01:25.010 [info] [Pi] step 27: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/ 2>&1 | tail -20[0m
+[22m09:01:40.304 [info] [Pi] agent done — exit=0 steps=27 stop=stop[0m
+[36m09:01:40.304 [debug] [Budget] spent so far (est.): $3.6016[0m
+[22m09:01:40.803 [info] [Gate] staged entries: [{"A", ["lib/pattern/prefer_enum_join_over_redundant_case.ex"]}, {"A", ["test/pattern/prefer_enum_join_over_redundant_case_check_test.exs"]}, {"A", ["test/pattern/prefer_enum_join_over_redundant_case_equivalence_test.exs"]}, {"A", ["test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs"]}][0m
+[36m09:01:41.428 [debug] [Gate] mix test ["test/pattern/prefer_enum_join_over_redundant_case_check_test.exs", "test/pattern/prefer_enum_join_over_redundant_case_equivalence_test.exs", "test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs"] exit=2
+Generated credence app
+Running ExUnit with seed: 235951, max_cases: 48
+
+
+
+  1) test fix preserves behaviour (Credence.Pattern.PreferEnumJoinOverRedundantCaseEquivalenceTest)
+     test/pattern/prefer_enum_join_over_redundant_case_equivalence_test.exs:6
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumJoinOverRedundantCase.check/2 is undefined (module Credence.Pattern.PreferEnumJoinOverRedundantCase is not available)
+     code: assert_equivalent(
+     stacktrace:
+       Credence.Pattern.PreferEnumJoinOverRedundantCase.check({:case, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 4], do: [line: 1, column: 14], end: [line: 4, column: 1], line: 1, column: 1], [{:strings, [trailing_comments: [], leading_comments: [], line: 1, column: 6], nil}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 14], [:do]}, [{:->, [trailing_comments: [], leading_comments: [], line: 2, column: 6], [[{:__block__, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 4], line: 2, column: 3], [[]]}], {:__block__, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 2, column: 11], delimiter: "\"", line: 2, column: 9], [""]}]}, {:->, [trailing_comments: [], leading_comments: [], line: 3, column: 8], [[{:list, [trailing_comments: [], leading_comments: [], line: 3, column: 3], nil}], {{:., [trailing_comments: [], line: 3, column: 15], [{:__aliases__, [...], ...}, ...]}, ...}]}]}]]}, [source: "case strings do\n  [] -> \"\"\n  list -> Enum.join(list, separator)\nend\n"])
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:293: Credence.BehaviourEquivalence.rule_fires?/2
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:240: Credence.BehaviourEquivalence.precheck!/4
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:75: Credence.BehaviourEquivalence.assert_equivalent/2
+       test/pattern/prefer_enum_join_over_redundant_case_equivalence_test.exs:10: (test)
+
+
+
+  2) test rewrites with single-letter variable names (Credence.Pattern.PreferEnumJoinOverRedundantCaseFixTest)
+     test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs:52
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumJoinOverRedundantCase.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumJoinOverRedundantCase is not available)
+     code: assert fix(PreferEnumJoinOverRedundantCase, input) == expected
+     stacktrace:
+       Credence.Pattern.PreferEnumJoinOverRedundantCase.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 8, column: 4], do: [line: 1, column: 19], end: [line: 8, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Example]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 19], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 7, column: 6], do: [line: 2, column: 15], end: [line: 7, column: 3], line: 2, column: 3], [{:f, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 13], line: 2, column: 7], [{:a, [trailing_comments: [], leading_comments: [], line: 2, column: 9], nil}, {:b, [trailing_comments: [], leading_comments: [], line: 2, column: 12], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 15], [:do]}, {:case, [trailing_comments: [], ...], ...}}]]}}]]}, [source: "defmodule Example do\n  def f(a, b) do\n    case a do\n      [] -> \"\"\n      x -> Enum.join(x, b)\n    end\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs:72: (test)
+
+
+
+  3) test rewrites the anti-pattern (Credence.Pattern.PreferEnumJoinOverRedundantCaseFixTest)
+     test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs:6
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumJoinOverRedundantCase.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumJoinOverRedundantCase is not available)
+     code: assert fix(PreferEnumJoinOverRedundantCase, input) == expected
+     stacktrace:
+       Credence.Pattern.PreferEnumJoinOverRedundantCase.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 8, column: 4], do: [line: 1, column: 19], end: [line: 8, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Example]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 19], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 7, column: 6], do: [line: 2, column: 40], end: [line: 7, column: 3], line: 2, column: 3], [{:join_strings, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 38], line: 2, column: 7], [{:strings, [trailing_comments: [], leading_comments: [], line: 2, column: 20], nil}, {:separator, [trailing_comments: [], leading_comments: [], line: 2, column: 29], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 40], [:do]}, {:case, [trailing_comments: [], ...], ...}}]]}}]]}, [source: "defmodule Example do\n  def join_strings(strings, separator) do\n    case strings do\n      [] -> \"\"\n      list -> Enum.join(list, separator)\n    end\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs:26: (test)
+
+
+
+  4) test rewrites with string literal separator (Credence.Pattern.PreferEnumJoinOverRedundantCaseFixTest)
+     test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs:29
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumJoinOverRedundantCase.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumJoinOverRedundantCase is not available)
+     code: assert fix(PreferEnumJoinOverRedundantCase, input) == expected
+     stacktrace:
+       Credence.Pattern.PreferEnumJoinOverRedundantCase.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 8, column: 4], do: [line: 1, column: 19], end: [line: 8, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Example]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 19], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 7, column: 6], do: [line: 2, column: 29], end: [line: 7, column: 3], line: 2, column: 3], [{:join_strings, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 27], line: 2, column: 7], [{:strings, [trailing_comments: [], leading_comments: [], line: 2, column: 20], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 29], [:do]}, {:case, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 6, column: 8], do: [line: 3, column: 18], ...], ...}}]]}}]]}, [source: "defmodule Example do\n  def join_strings(strings) do\n    case strings do\n      [] -> \"\"\n      list -> Enum.join(list, \", \")\n    end\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_enum_join_over_redundant_case_fix_test.exs:49: (test)
+
+
+
+  5) test does not flag case with non-empty-list first pattern first pattern is a wildcard (Credence.Pattern.PreferEnumJoinOverRedundantCaseCheckTest)
+     test/pattern/prefer_enum_join_over_redund (truncated)[0m
+[22m09:01:41.433 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m09:01:50.171 [debug] [Gate] mix test [] exit=2
+Compiling 1 file (.ex)
+Running ExUnit with seed: 892803, max_cases: 48
+
+...............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+
+  1) test every fix test compares whole strings (no =~ / substring / normalize) (Credence.FixMetaTest)
+     test/fix_meta_test.exs:75
+     fix tests using a partial or normalized comparison instead of whole-string ==:
+       - Credence.Pattern.PreferPrependInAccumulator — test/pattern/prefer_prepend_in_accumulator_fix_test.exs
+     code: assert bad == [],
+     stacktrace:
+       test/fix_meta_test.exs:78: (test)
+
+......
+
+  2) test every fix test exercises at least one real transformation (not all no-ops) (Credence.FixMetaTest)
+     test/fix_meta_test.exs:83
+     fix tests with no `fix(rule, input) == expected` where expected differs from input:
+       - Credence.Pattern.PreferPrependInAccumulator — test/pattern/prefer_prepend_in_accumulator_fix_test.exs
+     code: assert bad == [],
+     stacktrace:
+       test/fix_meta_test.exs:86: (test)
+
+.........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Finished in 8.1 seconds (3.8s async, 4.3s sync)
+5 properties, 4603 tests, 2 failures
+[0m
+[33m09:01:50.171 [warning] [Gate] REJECT: :full_suite_red — discarding[0m

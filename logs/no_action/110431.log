@@ -1,0 +1,2921 @@
+[22m06:33:45.158 [info] [idx=110431] entry_point=num_of_ways_to_traverse_grid[0m
+[36m06:33:45.158 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to find the number of ways to traverse a grid of size m x n.
+
+## Python Solution
+```python
+def num_of_ways_to_traverse_grid(m, n):
+    """
+    Calculate the number of ways to traverse a grid of size m x n
+    :param m: int, number of rows
+    :param n: int, number of columns
+    :return: int, number of ways to traverse the grid
+    """
+    grid = [[0 for _ in range(n + 1)] for _ in range(m + 1)]
+    grid[1][1] = 1
+    
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if i == 1 and j == 1:
+                continue
+            grid[i][j] = grid[i - 1][j] + grid[i][j - 1]
+    
+    return grid[m][n]
+```
+
+## Python Tests
+assert num_of_ways_to_traverse_grid(3, 3) == 6
+assert num_of_ways_to_traverse_grid(2, 2) == 2
+assert num_of_ways_to_traverse_grid(4, 4) == 20
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `num_of_ways_to_traverse_grid`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m06:34:01.735 [debug] [LLM.call] finish=stop len=1954 usage=%{"completion_tokens" => 744, "completion_tokens_details" => %{"reasoning_tokens" => 95}, "prompt_tokens" => 627, "prompt_tokens_details" => %{}, "total_tokens" => 1371}
+[LLM.call] response:
+---INSTRUCTION---
+Write an Elixir function `num_of_ways_to_traverse_grid/2` that takes two positive integers `m` (number of rows) and `n` (number of columns) and returns the number of ways to traverse the grid from the top-left corner to the bottom-right corner, moving only right or down at each step. The function should handle standard grid sizes and return 1 when either dimension is 1.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  @spec num_of_ways_to_traverse_grid(integer(), integer()) :: integer()
+  def num_of_ways_to_traverse_grid(m, n) do
+    # Build a 2D grid using dynamic programming
+    # grid[i][j] = number of ways to reach cell (i, j) from (1, 1)
+    grid = for _ <- 0..m, do: for(_ <- 0..n, do: 0)
+
+    grid =
+      grid
+      |> List.update_at(1, fn row ->
+        List.update_at(row, 1, fn _ -> 1 end)
+      end)
+
+    for i <- 1..m, j <- 1..n, !(i == 1 and j == 1), reduce: grid do
+      acc ->
+        value = Enum.at(Enum.at(acc, i - 1), j) + Enum.at(Enum.at(acc, i), j - 1)
+
+        acc
+        |> List.update_at(i, fn row ->
+          List.update_at(row, j, fn _ -> value end)
+        end)
+    end
+    |> Enum.at(m)
+    |> Enum.at(n)
+  end
+end
+
+---END---[0m
+[22m06:34:01.735 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 16577ms — ok[0m
+[36m06:34:01.735 [debug] [Budget] spent so far (est.): $3.1308[0m
+[22m06:34:02.768 [info] [RoundTrip] reference PASSED tests[0m
+[22m06:34:02.769 [info] [idx=110431] translation fresh — solving[0m
+[22m06:34:02.769 [info] ===SOLVE_BOUNDARY===[0m
+[22m06:34:02.769 [info] [Solve attempt 1] generating (fn=num_of_ways_to_traverse_grid)[0m
+[36m06:34:02.769 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write an Elixir function `num_of_ways_to_traverse_grid/2` that takes two positive integers `m` (number of rows) and `n` (number of columns) and returns the number of ways to traverse the grid from the top-left corner to the bottom-right corner, moving only right or down at each step. The function should handle standard grid sizes and return 1 when either dimension is 1.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+```
+
+Module: `Solution`. Function: `num_of_ways_to_traverse_grid`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m06:34:10.492 [debug] [LLM.call] finish=stop len=2401 usage=%{"completion_tokens" => 834, "prompt_tokens" => 654, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1488}
+[LLM.call] response:
+---MODULE---
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0 or r > 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, 1), do: n
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  numerator = product(n, r)
+  denominator = factorial(n - r)
+
+  numerator / denominator
+end
+
+defp product(start, count) when count > 0 do
+  Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+---END---[0m
+[22m06:34:10.492 [info] [LLM.call] local_qwen_thinking completed in 7723ms — ok[0m
+[22m06:34:10.492 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m06:34:10.492 [debug] [Validator.run] module code (1600 chars):
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0 or r > 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, 1), do: n
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  numerator = product(n, r)
+  denominator = factorial(n - r)
+
+  numerator / denominator
+end
+
+defp product(start, count) when count > 0 do
+  Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end[0m
+[36m06:34:10.492 [debug] [Validator.run] test code (766 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end[0m
+[36m06:34:10.493 [debug] [Budget] spent so far (est.): $3.1318[0m
+[22m06:34:10.493 [info] [Validator.run] step 1/6: credence fix[0m
+[36m06:34:10.493 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m06:34:11.156 [debug] [run_credence_fix] exit=0 output:
+
+06:34:11.018 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+06:34:11.020 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+06:34:11.022 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+06:34:11.022 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+06:34:11.022 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+06:34:11.024 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 -   Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  L2 + @doc """
+  L3 -   moving only right or down at each step.
+  L3 +   Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  L4 - 
+  L4 +   moving only right or down at each step.
+  L5 -   ## Parameters
+  L5 + 
+  L6 -     - rows: A positive integer representing the number of rows.
+  L6 +   ## Parameters
+  L7 -     - cols: A positive integer representing the number of columns.
+  L7 +     - rows: A positive integer representing the number of rows.
+  L8 - 
+  L8 +     - cols: A positive integer representing the number of columns.
+  L9 -   ## Examples
+  L9 + 
+  L10 - 
+  L10 +   ## Examples
+  L11 -       iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+  L11 + 
+  L12 -       6
+  L12 +       iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+  L13 - 
+  L13 +       6
+  L14 -       iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+  L14 + 
+  L15 -       2
+  L15 +       iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+  L16 - 
+  L16 +       2
+  L17 -       iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+  L17 + 
+  L18 -       1
+  L18 +       iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+  L19 - """
+  L19 +       1
+  L20 - @spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+  L20 + """
+  L21 - def num_of_ways_to_traverse_grid(rows, cols) do
+  L21 + @spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+  L22 -   # The number of ways is C(rows + cols - 2, rows - 1)
+  L22 + def num_of_ways_to_traverse_grid(rows, cols) do
+  L23 -   # or equivalently C(rows + cols - 2, cols - 1)
+  L23 +   # The number of ways is C(rows + cols - 2, rows - 1)
+  L24 -   # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  L24 +   # or equivalently C(rows + cols - 2, cols - 1)
+  L25 -   # for a total of (rows + cols - 2) moves.
+  L25 +   # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  L26 - 
+  L26 +   # for a total of (rows + cols - 2) moves.
+  L27 -   total_moves = rows + cols - 2
+  L27 + 
+  L28 -   down_moves = rows - 1
+  L28 +   total_moves = rows + cols - 2
+  L29 - 
+  L29 +   down_moves = rows - 1
+  L30 -   combinations(total_moves, down_moves)
+  L30 + 
+  L31 - end
+  L31 +   combinations(total_moves, down_moves)
+  L32 - 
+  L32 + end
+  L33 - defp combinations(_n, r) when r < 0 or r > 0, do: 0
+  L33 + 
+  L34 - defp combinations(_n, 0), do: 1
+  L34 + defp combinations(_n, r) when r < 0 or r > 0, do: 0
+  L35 - defp combinations(n, 1), do: n
+  L35 + defp combinations(_n, 0), do: 1
+  L36 - defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+  L36 + defp combinations(n, 1), do: n
+  L37 - 
+  L37 + defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+  L38 - defp combinations(n, r) do
+  L38 + 
+  L39 -   # Calculate C(n, r) = n! / (r! * (n-r)!)
+  L39 + defp combinations(n, r) do
+  L40 -   # We compute it iteratively to avoid large intermediate factorials
+  L40 +   # Calculate C(n, r) = n! / (r! * (n-r)!)
+  L41 -   numerator = product(n, r)
+  L41 +   # We compute it iteratively to avoid large intermediate factorials
+  L42 -   denominator = factorial(n - r)
+  L42 +   numerator = product(n, r)
+  L43 - 
+  L43 +   denominator = factorial(n - r)
+  L44 -   numerator / denominator
+  L44 + 
+  L45 - end
+  L45 +   numerator / denominator
+  L46 - 
+  L46 + end
+  L47 - defp product(start, count) when count > 0 do
+  L47 + 
+  L48 -   Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+  L48 + defp product(start, count) when count > 0 do
+  L49 - end
+  L49 +   Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+  L50 - 
+  L50 + end
+  L51 - defp factorial(0), do: 1
+  L51 + 
+  L52 - defp factorial(n) when n > 0 do
+  L52 + defp factorial(0), do: 1
+  L53 -   Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+  L53 + defp factorial(n) when n > 0 do
+  L54 - end
+  L54 +   Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+  L55 + end
+  L56 + end
+  L57 + 
+
+06:34:11.024 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+06:34:11.037 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+06:34:11.042 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+06:34:11.042 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+06:34:11.042 [debug] [credence_fix] starting pattern fix pipeline (127 rules)
+
+06:34:11.118 [debug] [credence_fix] NoExplicitProductReduce: check found 1 issue(s), running fix...
+
+06:34:11.131 [debug] [credence_fix] NoExplicitProductReduce: source CHANGED:
+  L54 -   Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+  L54 +   Enum.product(1..n)
+
+06:34:11.132 [debug] [credence_fix] done. Applied: [NoExplicitProductReduce(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Pattern.NoExplicitProductReduce, 1}]
+[0m
+[22m06:34:11.156 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m06:34:11.736 [info] [run_credence_fix] fix compiles OK[0m
+[36m06:34:11.736 [debug] [run_credence_fix] original:
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0 or r > 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, 1), do: n
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  numerator = product(n, r)
+  denominator = factorial(n - r)
+
+  numerator / denominator
+end
+
+defp product(start, count) when count > 0 do
+  Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end[0m
+[36m06:34:11.736 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0 or r > 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, 1), do: n
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  numerator = product(n, r)
+  denominator = factorial(n - r)
+
+  numerator / denominator
+end
+
+defp product(start, count) when count > 0 do
+  Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.product(1..n)
+end
+end
+[0m
+[22m06:34:11.736 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m06:34:11.736 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0 or r > 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, 1), do: n
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  numerator = product(n, r)
+  denominator = factorial(n - r)
+
+  numerator / denominator
+end
+
+defp product(start, count) when count > 0 do
+  Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end[0m
+[36m06:34:11.736 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0 or r > 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, 1), do: n
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  numerator = product(n, r)
+  denominator = factorial(n - r)
+
+  numerator / denominator
+end
+
+defp product(start, count) when count > 0 do
+  Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.product(1..n)
+end
+end
+[0m
+[36m06:34:11.737 [debug] [propagate_is_renames] old functions: ["num_of_ways_to_traverse_grid", "combinations", "product", "factorial"][0m
+[36m06:34:11.737 [debug] [propagate_is_renames] new functions: ["num_of_ways_to_traverse_grid", "combinations", "product", "factorial"][0m
+[36m06:34:11.737 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m06:34:11.737 [info] [Validator.run] step 2/6: compile[0m
+[22m06:34:12.315 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m06:34:12.315 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m06:34:12.315 [info] [Validator.run] step 3/6: format[0m
+[22m06:34:12.613 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m06:34:12.915 [debug] [Validator.run] format fix output: [0m
+[22m06:34:12.916 [info] [Validator.run] step 4/6: credo[0m
+[36m06:34:13.381 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m06:34:13.381 [info] [Validator.run] credo: no issues[0m
+[22m06:34:13.381 [info] [Validator.run] step 5/6: credence check[0m
+[22m06:34:14.086 [info] [Validator.run] credence check exit=0[0m
+[36m06:34:14.086 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m06:34:14.086 [info] [Validator.run] credence check: passed[0m
+[22m06:34:14.087 [info] [Validator.run] step 6/6: tests[0m
+[22m06:34:14.562 [info] [Validator.run] test exit=2[0m
+[36m06:34:14.562 [debug] [Validator.run] test output:
+Running ExUnit with seed: 512373, max_cases: 48
+
+
+
+  1) test 3x3 grid (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+     left:  0
+     right: 6
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+
+  2) test 2x2 grid (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+     left:  0
+     right: 2
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  3) test 2x3 grid (SolutionTest)
+     test/solution_test.exs:28
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+     left:  0
+     right: 3
+     stacktrace:
+       test/solution_test.exs:29: (test)
+
+
+
+  4) test 5x1 grid (SolutionTest)
+     test/solution_test.exs:24
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+     left:  0
+     right: 1
+     stacktrace:
+       test/solution_test.exs:25: (test)
+
+
+
+  5) test 3x2 grid (SolutionTest)
+     test/solution_test.exs:32
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+     left:  0
+     right: 3
+     stacktrace:
+       test/solution_test.exs:33: (test)
+
+..
+
+  6) test 4x4 grid (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+     left:  0
+     right: 20
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+Finished in 0.02 seconds (0.00s async, 0.02s sync)
+8 tests, 6 failures
+[0m
+[33m06:34:14.562 [warning] [Validator.run] tests: FAILED[0m
+[22m06:34:14.562 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m06:34:14.562 [debug] [Validator.run] final module (1684 chars):
+defmodule Solution do
+  @doc """
+    Calculates the number of ways to traverse a grid from top-left to bottom-right,
+    moving only right or down at each step.
+
+    ## Parameters
+      - rows: A positive integer representing the number of rows.
+      - cols: A positive integer representing the number of columns.
+
+    ## Examples
+
+        iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+        6
+
+        iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+        2
+
+        iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+        1
+  """
+  @spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+  def num_of_ways_to_traverse_grid(rows, cols) do
+    # The number of ways is C(rows + cols - 2, rows - 1)
+    # or equivalently C(rows + cols - 2, cols - 1)
+    # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+    # for a total of (rows + cols - 2) moves.
+
+    total_moves = rows + cols - 2
+    down_moves = rows - 1
+
+    combinations(total_moves, down_moves)
+  end
+
+  defp combinations(_n, r) when r < 0 or r > 0, do: 0
+  defp combinations(_n, 0), do: 1
+  defp combinations(n, 1), do: n
+  defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+  defp combinations(n, r) do
+    # Calculate C(n, r) = n! / (r! * (n-r)!)
+    # We compute it iteratively to avoid large intermediate factorials
+    numerator = product(n, r)
+    denominator = factorial(n - r)
+
+    numerator / denominator
+  end
+
+  defp product(start, count) when count > 0 do
+    Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+  end
+
+  defp factorial(0), do: 1
+
+  defp factorial(n) when n > 0 do
+    Enum.product(1..n)
+  end
+end
+[0m
+[36m06:34:14.562 [debug] [Validator.run] final test (767 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+[0m
+[33m06:34:14.562 [warning] [Solve attempt 1] validation FAILED: [:test][0m
+[22m06:34:14.562 [info] [Solve attempt 2] generating (fn=num_of_ways_to_traverse_grid)[0m
+[36m06:34:14.562 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: pos_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0 or r > 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, 1), do: n
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  numerator = product(n, r)
+  denominator = factorial(n - r)
+
+  numerator / denominator
+end
+
+defp product(start, count) when count > 0 do
+  Enum.reduce(1..count, 1, fn i, acc -> acc * (start - count + i) end)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 512373, max_cases: 48
+
+
+
+  1) test 3x3 grid (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+     left:  0
+     right: 6
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+
+  2) test 2x2 grid (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+     left:  0
+     right: 2
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  3) test 2x3 grid (SolutionTest)
+     test/solution_test.exs:28
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+     left:  0
+     right: 3
+     stacktrace:
+       test/solution_test.exs:29: (test)
+
+
+
+  4) test 5x1 grid (SolutionTest)
+     test/solution_test.exs:24
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+     left:  0
+     right: 1
+     stacktrace:
+       test/solution_test.exs:25: (test)
+
+
+
+  5) test 3x2 grid (SolutionTest)
+     test/solution_test.exs:32
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+     left:  0
+     right: 3
+     stacktrace:
+       test/solution_test.exs:33: (test)
+
+..
+
+  6) test 4x4 grid (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+     left:  0
+     right: 20
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+Finished in 0.02 seconds (0.00s async, 0.02s sync)
+8 tests, 6 failures
+
+Reminder: module `Solution`, function `num_of_ways_to_traverse_grid` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m06:34:23.023 [debug] [LLM.call] finish=stop len=2369 usage=%{"completion_tokens" => 840, "prompt_tokens" => 1722, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 2562}
+[LLM.call] response:
+---MODULE---
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, _r) when _r < 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(_n, 1), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  
+  numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+---END---[0m
+[22m06:34:23.023 [info] [LLM.call] local_qwen_thinking completed in 8460ms — ok[0m
+[22m06:34:23.023 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m06:34:23.023 [debug] [Validator.run] module code (1568 chars):
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, _r) when _r < 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(_n, 1), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  
+  numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end[0m
+[36m06:34:23.023 [debug] [Validator.run] test code (766 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end[0m
+[36m06:34:23.024 [debug] [Budget] spent so far (est.): $3.1333[0m
+[22m06:34:23.024 [info] [Validator.run] step 1/6: credence fix[0m
+[36m06:34:23.024 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m06:34:23.677 [debug] [run_credence_fix] exit=0 output:
+
+06:34:23.543 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+06:34:23.545 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+06:34:23.547 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+06:34:23.547 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+06:34:23.547 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+06:34:23.549 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 -   Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  L2 + @doc """
+  L3 -   moving only right or down at each step.
+  L3 +   Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  L4 - 
+  L4 +   moving only right or down at each step.
+  L5 -   ## Parameters
+  L5 + 
+  L6 -     - rows: A positive integer representing the number of rows.
+  L6 +   ## Parameters
+  L7 -     - cols: A positive integer representing the number of columns.
+  L7 +     - rows: A positive integer representing the number of rows.
+  L8 - 
+  L8 +     - cols: A positive integer representing the number of columns.
+  L9 -   ## Examples
+  L9 + 
+  L10 - 
+  L10 +   ## Examples
+  L11 -       iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+  L11 + 
+  L12 -       6
+  L12 +       iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+  L13 - 
+  L13 +       6
+  L14 -       iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+  L14 + 
+  L15 -       2
+  L15 +       iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+  L16 - 
+  L16 +       2
+  L17 -       iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+  L17 + 
+  L18 -       1
+  L18 +       iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+  L19 - """
+  L19 +       1
+  L20 - @spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+  L20 + """
+  L21 - def num_of_ways_to_traverse_grid(rows, cols) do
+  L21 + @spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+  L22 -   # The number of ways is C(rows + cols - 2, rows - 1)
+  L22 + def num_of_ways_to_traverse_grid(rows, cols) do
+  L23 -   # or equivalently C(rows + cols - 2, cols - 1)
+  L23 +   # The number of ways is C(rows + cols - 2, rows - 1)
+  L24 -   # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  L24 +   # or equivalently C(rows + cols - 2, cols - 1)
+  L25 -   # for a total of (rows + cols - 2) moves.
+  L25 +   # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  L26 - 
+  L26 +   # for a total of (rows + cols - 2) moves.
+  L27 -   total_moves = rows + cols - 2
+  L27 + 
+  L28 -   down_moves = rows - 1
+  L28 +   total_moves = rows + cols - 2
+  L29 - 
+  L29 +   down_moves = rows - 1
+  L30 -   combinations(total_moves, down_moves)
+  L30 + 
+  L31 - end
+  L31 +   combinations(total_moves, down_moves)
+  L32 - 
+  L32 + end
+  L33 - defp combinations(_n, _r) when _r < 0, do: 0
+  L33 + 
+  L34 - defp combinations(_n, 0), do: 1
+  L34 + defp combinations(_n, _r) when _r < 0, do: 0
+  L35 - defp combinations(_n, 1), do: 1
+  L35 + defp combinations(_n, 0), do: 1
+  L36 - defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+  L36 + defp combinations(_n, 1), do: 1
+  L37 - 
+  L37 + defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+  L38 - defp combinations(n, r) do
+  L38 + 
+  L39 -   # Calculate C(n, r) = n! / (r! * (n-r)!)
+  L39 + defp combinations(n, r) do
+  L40 -   # We compute it iteratively to avoid large intermediate factorials
+  L40 +   # Calculate C(n, r) = n! / (r! * (n-r)!)
+  L41 -   # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  L41 +   # We compute it iteratively to avoid large intermediate factorials
+  L42 - 
+  L42 +   # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  L43 -   numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  L43 + 
+  L44 -   denominator = factorial(r)
+  L44 +   numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  L45 - 
+  L45 +   denominator = factorial(r)
+  L46 -   div(numerator, denominator)
+  L46 + 
+  L47 - end
+  L47 +   div(numerator, denominator)
+  L48 - 
+  L48 + end
+  L49 - defp factorial(0), do: 1
+  L49 + 
+  L50 - defp factorial(n) when n > 0 do
+  L50 + defp factorial(0), do: 1
+  L51 -   Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+  L51 + defp factorial(n) when n > 0 do
+  L52 - end
+  L52 +   Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+  L53 + end
+  L54 + end
+  L55 + 
+
+06:34:23.549 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+06:34:23.563 [debug] [credence_fix] semantic pass 2: compilation OK, 2 warning(s)
+
+06:34:23.563 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+06:34:23.564 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L34 - defp combinations(_n, _r) when _r < 0, do: 0
+  L34 + defp combinations(_n, r) when r < 0, do: 0
+
+06:34:23.569 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+06:34:23.569 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UsedUnderscoreVariable(1)]
+
+06:34:23.569 [debug] [credence_fix] starting pattern fix pipeline (127 rules)
+
+06:34:23.638 [debug] [credence_fix] NoExplicitProductReduce: check found 2 issue(s), running fix...
+
+06:34:23.653 [debug] [credence_fix] NoExplicitProductReduce: source CHANGED:
+  L43 - 
+  L43 + 
+  L44 -   numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  L44 +   numerator = Enum.product((n - r + 1)..n)
+  L52 -   Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+  L52 +   Enum.product(1..n)
+
+06:34:23.655 [debug] [credence_fix] done. Applied: [NoExplicitProductReduce(2)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UsedUnderscoreVariable, 1}, {Credence.Pattern.NoExplicitProductReduce, 2}]
+[0m
+[22m06:34:23.677 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m06:34:24.234 [info] [run_credence_fix] fix compiles OK[0m
+[36m06:34:24.235 [debug] [run_credence_fix] original:
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, _r) when _r < 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(_n, 1), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  
+  numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end[0m
+[36m06:34:24.235 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(_n, 1), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+
+  numerator = Enum.product((n - r + 1)..n)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.product(1..n)
+end
+end
+[0m
+[22m06:34:24.235 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m06:34:24.235 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, _r) when _r < 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(_n, 1), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  
+  numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end[0m
+[36m06:34:24.235 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(_n, 1), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+
+  numerator = Enum.product((n - r + 1)..n)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.product(1..n)
+end
+end
+[0m
+[36m06:34:24.235 [debug] [propagate_is_renames] old functions: ["num_of_ways_to_traverse_grid", "combinations", "factorial"][0m
+[36m06:34:24.235 [debug] [propagate_is_renames] new functions: ["num_of_ways_to_traverse_grid", "combinations", "factorial"][0m
+[36m06:34:24.235 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m06:34:24.235 [info] [Validator.run] step 2/6: compile[0m
+[22m06:34:24.825 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m06:34:24.825 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m06:34:24.825 [info] [Validator.run] step 3/6: format[0m
+[22m06:34:25.136 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m06:34:25.445 [debug] [Validator.run] format fix output: [0m
+[22m06:34:25.445 [info] [Validator.run] step 4/6: credo[0m
+[36m06:34:25.927 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m06:34:25.927 [info] [Validator.run] credo: no issues[0m
+[22m06:34:25.927 [info] [Validator.run] step 5/6: credence check[0m
+[22m06:34:26.616 [info] [Validator.run] credence check exit=0[0m
+[36m06:34:26.616 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m06:34:26.616 [info] [Validator.run] credence check: passed[0m
+[22m06:34:26.616 [info] [Validator.run] step 6/6: tests[0m
+[22m06:34:27.097 [info] [Validator.run] test exit=2[0m
+[36m06:34:27.097 [debug] [Validator.run] test output:
+Running ExUnit with seed: 48163, max_cases: 48
+
+.
+
+  1) test 2x2 grid (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+     left:  1
+     right: 2
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+.
+
+  2) test 3x2 grid (SolutionTest)
+     test/solution_test.exs:32
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+     left:  1
+     right: 3
+     stacktrace:
+       test/solution_test.exs:33: (test)
+
+...
+
+  3) test 2x3 grid (SolutionTest)
+     test/solution_test.exs:28
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+     left:  1
+     right: 3
+     stacktrace:
+       test/solution_test.exs:29: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+8 tests, 3 failures
+[0m
+[33m06:34:27.097 [warning] [Validator.run] tests: FAILED[0m
+[22m06:34:27.098 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m06:34:27.098 [debug] [Validator.run] final module (1616 chars):
+defmodule Solution do
+  @doc """
+    Calculates the number of ways to traverse a grid from top-left to bottom-right,
+    moving only right or down at each step.
+
+    ## Parameters
+      - rows: A positive integer representing the number of rows.
+      - cols: A positive integer representing the number of columns.
+
+    ## Examples
+
+        iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+        6
+
+        iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+        2
+
+        iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+        1
+  """
+  @spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+  def num_of_ways_to_traverse_grid(rows, cols) do
+    # The number of ways is C(rows + cols - 2, rows - 1)
+    # or equivalently C(rows + cols - 2, cols - 1)
+    # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+    # for a total of (rows + cols - 2) moves.
+
+    total_moves = rows + cols - 2
+    down_moves = rows - 1
+
+    combinations(total_moves, down_moves)
+  end
+
+  defp combinations(_n, r) when r < 0, do: 0
+  defp combinations(_n, 0), do: 1
+  defp combinations(_n, 1), do: 1
+  defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+  defp combinations(n, r) do
+    # Calculate C(n, r) = n! / (r! * (n-r)!)
+    # We compute it iteratively to avoid large intermediate factorials
+    # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+
+    numerator = Enum.product((n - r + 1)..n)
+    denominator = factorial(r)
+
+    div(numerator, denominator)
+  end
+
+  defp factorial(0), do: 1
+
+  defp factorial(n) when n > 0 do
+    Enum.product(1..n)
+  end
+end
+[0m
+[36m06:34:27.098 [debug] [Validator.run] final test (767 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+[0m
+[33m06:34:27.098 [warning] [Solve attempt 2] validation FAILED: [:test][0m
+[22m06:34:27.098 [info] [Solve attempt 3] generating (fn=num_of_ways_to_traverse_grid)[0m
+[36m06:34:27.098 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, _r) when _r < 0, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(_n, 1), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  
+  numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 48163, max_cases: 48
+
+.
+
+  1) test 2x2 grid (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+     left:  1
+     right: 2
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+.
+
+  2) test 3x2 grid (SolutionTest)
+     test/solution_test.exs:32
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+     left:  1
+     right: 3
+     stacktrace:
+       test/solution_test.exs:33: (test)
+
+...
+
+  3) test 2x3 grid (SolutionTest)
+     test/solution_test.exs:28
+     Assertion with == failed
+     code:  assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+     left:  1
+     right: 3
+     stacktrace:
+       test/solution_test.exs:29: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+8 tests, 3 failures
+
+Reminder: module `Solution`, function `num_of_ways_to_traverse_grid` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m06:34:35.659 [debug] [LLM.call] finish=stop len=2383 usage=%{"completion_tokens" => 847, "prompt_tokens" => 1464, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 2311}
+[LLM.call] response:
+---MODULE---
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, _r) when _r < 0, do: 0
+defp combinations(_n, _r) when _r > _n, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  
+  numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+---END---[0m
+[22m06:34:35.660 [info] [LLM.call] local_qwen_thinking completed in 8562ms — ok[0m
+[22m06:34:35.660 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m06:34:35.660 [debug] [Validator.run] module code (1582 chars):
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, _r) when _r < 0, do: 0
+defp combinations(_n, _r) when _r > _n, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  
+  numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end[0m
+[36m06:34:35.660 [debug] [Validator.run] test code (766 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end[0m
+[36m06:34:35.660 [debug] [Budget] spent so far (est.): $3.1347[0m
+[22m06:34:35.660 [info] [Validator.run] step 1/6: credence fix[0m
+[36m06:34:35.660 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m06:34:36.326 [debug] [run_credence_fix] exit=0 output:
+
+06:34:36.184 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+06:34:36.186 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+06:34:36.188 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+06:34:36.188 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+06:34:36.188 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+06:34:36.191 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 -   Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  L2 + @doc """
+  L3 -   moving only right or down at each step.
+  L3 +   Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  L4 - 
+  L4 +   moving only right or down at each step.
+  L5 -   ## Parameters
+  L5 + 
+  L6 -     - rows: A positive integer representing the number of rows.
+  L6 +   ## Parameters
+  L7 -     - cols: A positive integer representing the number of columns.
+  L7 +     - rows: A positive integer representing the number of rows.
+  L8 - 
+  L8 +     - cols: A positive integer representing the number of columns.
+  L9 -   ## Examples
+  L9 + 
+  L10 - 
+  L10 +   ## Examples
+  L11 -       iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+  L11 + 
+  L12 -       6
+  L12 +       iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+  L13 - 
+  L13 +       6
+  L14 -       iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+  L14 + 
+  L15 -       2
+  L15 +       iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+  L16 - 
+  L16 +       2
+  L17 -       iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+  L17 + 
+  L18 -       1
+  L18 +       iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+  L19 - """
+  L19 +       1
+  L20 - @spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+  L20 + """
+  L21 - def num_of_ways_to_traverse_grid(rows, cols) do
+  L21 + @spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+  L22 -   # The number of ways is C(rows + cols - 2, rows - 1)
+  L22 + def num_of_ways_to_traverse_grid(rows, cols) do
+  L23 -   # or equivalently C(rows + cols - 2, cols - 1)
+  L23 +   # The number of ways is C(rows + cols - 2, rows - 1)
+  L24 -   # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  L24 +   # or equivalently C(rows + cols - 2, cols - 1)
+  L25 -   # for a total of (rows + cols - 2) moves.
+  L25 +   # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  L26 - 
+  L26 +   # for a total of (rows + cols - 2) moves.
+  L27 -   total_moves = rows + cols - 2
+  L27 + 
+  L28 -   down_moves = rows - 1
+  L28 +   total_moves = rows + cols - 2
+  L29 - 
+  L29 +   down_moves = rows - 1
+  L30 -   combinations(total_moves, down_moves)
+  L30 + 
+  L31 - end
+  L31 +   combinations(total_moves, down_moves)
+  L32 - 
+  L32 + end
+  L33 - defp combinations(_n, _r) when _r < 0, do: 0
+  L33 + 
+  L34 - defp combinations(_n, _r) when _r > _n, do: 0
+  L34 + defp combinations(_n, _r) when _r < 0, do: 0
+  L35 - defp combinations(_n, 0), do: 1
+  L35 + defp combinations(_n, _r) when _r > _n, do: 0
+  L36 - defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+  L36 + defp combinations(_n, 0), do: 1
+  L37 - 
+  L37 + defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+  L38 - defp combinations(n, r) do
+  L38 + 
+  L39 -   # Calculate C(n, r) = n! / (r! * (n-r)!)
+  L39 + defp combinations(n, r) do
+  L40 -   # We compute it iteratively to avoid large intermediate factorials
+  L40 +   # Calculate C(n, r) = n! / (r! * (n-r)!)
+  L41 -   # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  L41 +   # We compute it iteratively to avoid large intermediate factorials
+  L42 - 
+  L42 +   # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  L43 -   numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  L43 + 
+  L44 -   denominator = factorial(r)
+  L44 +   numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  L45 - 
+  L45 +   denominator = factorial(r)
+  L46 -   div(numerator, denominator)
+  L46 + 
+  L47 - end
+  L47 +   div(numerator, denominator)
+  L48 - 
+  L48 + end
+  L49 - defp factorial(0), do: 1
+  L49 + 
+  L50 - defp factorial(n) when n > 0 do
+  L50 + defp factorial(0), do: 1
+  L51 -   Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+  L51 + defp factorial(n) when n > 0 do
+  L52 - end
+  L52 +   Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+  L53 + end
+  L54 + end
+  L55 + 
+
+06:34:36.191 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+06:34:36.204 [debug] [credence_fix] semantic pass 2: compilation OK, 4 warning(s)
+
+06:34:36.205 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+06:34:36.206 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L35 - defp combinations(_n, _r) when _r > _n, do: 0
+  L35 + defp combinations(n, _r) when _r > n, do: 0
+
+06:34:36.206 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+06:34:36.206 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L35 - defp combinations(n, _r) when _r > n, do: 0
+  L35 + defp combinations(n, r) when r > n, do: 0
+
+06:34:36.207 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+06:34:36.207 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L34 - defp combinations(_n, _r) when _r < 0, do: 0
+  L34 + defp combinations(_n, r) when r < 0, do: 0
+
+06:34:36.212 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+06:34:36.212 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UsedUnderscoreVariable(1), UsedUnderscoreVariable(1), UsedUnderscoreVariable(1)]
+
+06:34:36.212 [debug] [credence_fix] starting pattern fix pipeline (127 rules)
+
+06:34:36.286 [debug] [credence_fix] NoExplicitProductReduce: check found 2 issue(s), running fix...
+
+06:34:36.299 [debug] [credence_fix] NoExplicitProductReduce: source CHANGED:
+  L43 - 
+  L43 + 
+  L44 -   numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  L44 +   numerator = Enum.product((n - r + 1)..n)
+  L52 -   Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+  L52 +   Enum.product(1..n)
+
+06:34:36.301 [debug] [credence_fix] done. Applied: [NoExplicitProductReduce(2)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UsedUnderscoreVariable, 1}, {Credence.Semantic.UsedUnderscoreVariable, 1}, {Credence.Semantic.UsedUnderscoreVariable, 1}, {Credence.Pattern.NoExplicitProductReduce, 2}]
+[0m
+[22m06:34:36.326 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m06:34:36.889 [info] [run_credence_fix] fix compiles OK[0m
+[36m06:34:36.889 [debug] [run_credence_fix] original:
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, _r) when _r < 0, do: 0
+defp combinations(_n, _r) when _r > _n, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  
+  numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end[0m
+[36m06:34:36.889 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0, do: 0
+defp combinations(n, r) when r > n, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+
+  numerator = Enum.product((n - r + 1)..n)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.product(1..n)
+end
+end
+[0m
+[22m06:34:36.889 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m06:34:36.889 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, _r) when _r < 0, do: 0
+defp combinations(_n, _r) when _r > _n, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+  
+  numerator = Enum.reduce((n - r + 1)..n, 1, fn i, acc -> acc * i end)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.reduce(1..n, 1, fn i, acc -> acc * i end)
+end[0m
+[36m06:34:36.889 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+  Calculates the number of ways to traverse a grid from top-left to bottom-right,
+  moving only right or down at each step.
+
+  ## Parameters
+    - rows: A positive integer representing the number of rows.
+    - cols: A positive integer representing the number of columns.
+
+  ## Examples
+
+      iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+      6
+
+      iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+      2
+
+      iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+      1
+"""
+@spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+def num_of_ways_to_traverse_grid(rows, cols) do
+  # The number of ways is C(rows + cols - 2, rows - 1)
+  # or equivalently C(rows + cols - 2, cols - 1)
+  # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+  # for a total of (rows + cols - 2) moves.
+
+  total_moves = rows + cols - 2
+  down_moves = rows - 1
+
+  combinations(total_moves, down_moves)
+end
+
+defp combinations(_n, r) when r < 0, do: 0
+defp combinations(n, r) when r > n, do: 0
+defp combinations(_n, 0), do: 1
+defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+defp combinations(n, r) do
+  # Calculate C(n, r) = n! / (r! * (n-r)!)
+  # We compute it iteratively to avoid large intermediate factorials
+  # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+
+  numerator = Enum.product((n - r + 1)..n)
+  denominator = factorial(r)
+
+  div(numerator, denominator)
+end
+
+defp factorial(0), do: 1
+defp factorial(n) when n > 0 do
+  Enum.product(1..n)
+end
+end
+[0m
+[36m06:34:36.889 [debug] [propagate_is_renames] old functions: ["num_of_ways_to_traverse_grid", "combinations", "factorial"][0m
+[36m06:34:36.889 [debug] [propagate_is_renames] new functions: ["num_of_ways_to_traverse_grid", "combinations", "factorial"][0m
+[36m06:34:36.889 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m06:34:36.889 [info] [Validator.run] step 2/6: compile[0m
+[22m06:34:37.453 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m06:34:37.454 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m06:34:37.454 [info] [Validator.run] step 3/6: format[0m
+[22m06:34:37.765 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m06:34:38.062 [debug] [Validator.run] format fix output: [0m
+[22m06:34:38.062 [info] [Validator.run] step 4/6: credo[0m
+[36m06:34:38.531 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m06:34:38.531 [info] [Validator.run] credo: no issues[0m
+[22m06:34:38.531 [info] [Validator.run] step 5/6: credence check[0m
+[22m06:34:39.231 [info] [Validator.run] credence check exit=0[0m
+[36m06:34:39.231 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m06:34:39.231 [info] [Validator.run] credence check: passed[0m
+[22m06:34:39.231 [info] [Validator.run] step 6/6: tests[0m
+[22m06:34:39.710 [info] [Validator.run] test exit=0[0m
+[36m06:34:39.710 [debug] [Validator.run] test output:
+Running ExUnit with seed: 668196, max_cases: 48
+
+........
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+8 tests, 0 failures
+[0m
+[22m06:34:39.710 [info] [Validator.run] tests: PASSED[0m
+[22m06:34:39.710 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m06:34:39.710 [debug] [Validator.run] final module (1626 chars):
+defmodule Solution do
+  @doc """
+    Calculates the number of ways to traverse a grid from top-left to bottom-right,
+    moving only right or down at each step.
+
+    ## Parameters
+      - rows: A positive integer representing the number of rows.
+      - cols: A positive integer representing the number of columns.
+
+    ## Examples
+
+        iex> Solution.num_of_ways_to_traverse_grid(3, 3)
+        6
+
+        iex> Solution.num_of_ways_to_traverse_grid(2, 2)
+        2
+
+        iex> Solution.num_of_ways_to_traverse_grid(1, 5)
+        1
+  """
+  @spec num_of_ways_to_traverse_grid(pos_integer(), pos_integer()) :: non_neg_integer()
+  def num_of_ways_to_traverse_grid(rows, cols) do
+    # The number of ways is C(rows + cols - 2, rows - 1)
+    # or equivalently C(rows + cols - 2, cols - 1)
+    # because we need to make (rows - 1) down moves and (cols - 1) right moves,
+    # for a total of (rows + cols - 2) moves.
+
+    total_moves = rows + cols - 2
+    down_moves = rows - 1
+
+    combinations(total_moves, down_moves)
+  end
+
+  defp combinations(_n, r) when r < 0, do: 0
+  defp combinations(n, r) when r > n, do: 0
+  defp combinations(_n, 0), do: 1
+  defp combinations(n, r) when r > div(n, 2), do: combinations(n, n - r)
+
+  defp combinations(n, r) do
+    # Calculate C(n, r) = n! / (r! * (n-r)!)
+    # We compute it iteratively to avoid large intermediate factorials
+    # C(n, r) = n * (n-1) * ... * (n-r+1) / r!
+
+    numerator = Enum.product((n - r + 1)..n)
+    denominator = factorial(r)
+
+    div(numerator, denominator)
+  end
+
+  defp factorial(0), do: 1
+
+  defp factorial(n) when n > 0 do
+    Enum.product(1..n)
+  end
+end
+[0m
+[36m06:34:39.710 [debug] [Validator.run] final test (767 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "3x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 3) == 6
+  end
+
+  test "2x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 2) == 2
+  end
+
+  test "4x4 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(4, 4) == 20
+  end
+
+  test "1x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 1) == 1
+  end
+
+  test "1x5 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(1, 5) == 1
+  end
+
+  test "5x1 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(5, 1) == 1
+  end
+
+  test "2x3 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(2, 3) == 3
+  end
+
+  test "3x2 grid" do
+    assert Solution.num_of_ways_to_traverse_grid(3, 2) == 3
+  end
+end
+[0m
+[22m06:34:39.710 [info] [Solve attempt 3] validation PASSED[0m
+[36m06:34:39.725 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Pattern.NoExplicitProductReduce
+  - Credence.Semantic.UsedUnderscoreVariable
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE o (truncated)[0m
+[22m06:34:55.479 [info] [Budget] HEARTBEAT — 686 paid calls, est $3.1347 over 854.7min → ~$0.2201/hr, ~$5.28/day (tok in=4013961 cache_rd=33744704 out=1456471)[0m
+[36m06:35:10.502 [debug] [LLM.call] finish=stop len=437 usage=%{"completion_tokens" => 893, "completion_tokens_details" => %{"reasoning_tokens" => 783}, "prompt_tokens" => 32219, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 33112}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+The row solved cleanly after 3 LLM attempts. Existing rules (RequireDefmoduleWrapper, NoExplicitProductReduce, UsedUnderscoreVariable) fired correctly with no over-firing. The primary bug (broken guard `r < 0 or r > 0` catching all non-zero r) was a logic error, not a fixable AST idiom. The final code passes all checks with no non-idiomatic residual a deterministic rule should catch.
+===END===[0m
+[22m06:35:10.502 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 30776ms — ok[0m
+[36m06:35:10.503 [debug] [Budget] spent so far (est.): $3.1495[0m

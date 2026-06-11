@@ -1,0 +1,5166 @@
+[22m18:01:23.909 [info] [idx=98222] entry_point=max_connected_components[0m
+[36m18:01:23.909 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to find the maximum number of connected components that can be made equal by removing at most one edge from the graph.
+
+## Python Solution
+```python
+from collections import defaultdict
+
+def max_connected_components(n, edges):
+    def dfs(node, visited, graph):
+        visited.add(node)
+        for neighbor in graph[node]:
+            if neighbor not in visited:
+                dfs(neighbor, visited, graph)
+
+    graph = defaultdict(list)
+    for u, v in edges:
+        graph[u].append(v)
+        graph[v].append(u)
+
+    visited = set()
+    max_components = 0
+    for u, v in edges:
+        graph[u].remove(v)
+        graph[v].remove(u)
+
+        components = 0
+        for i in range(1, n+1):
+            if i not in visited:
+                dfs(i, visited, graph)
+                components += 1
+
+        max_components = max(max_components, components)
+        graph[u].append(v)
+        graph[v].append(u)
+
+    return max_components
+```
+
+## Python Tests
+assert max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+assert max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+assert max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `max_connected_components`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m18:03:57.204 [debug] [LLM.call] finish=stop len=2324 usage=%{"completion_tokens" => 4683, "completion_tokens_details" => %{"reasoning_tokens" => 3993}, "prompt_tokens" => 698, "prompt_tokens_details" => %{}, "total_tokens" => 5381}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `max_connected_components(n, edges)` that takes an integer `n` and a list of edges, where each edge is a list of two integers representing an undirected connection between two nodes labeled from 1 to `n`. The function should return the maximum number of connected components that can be obtained by removing at most one edge from the graph. The initial number of components (without removing any edge) should also be considered.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def max_connected_components(n, edges) do
+    graph = build_graph(n, edges)
+    initial = count_components(graph, n)
+    Enum.reduce(edges, initial, fn [u, v], acc_max ->
+      modified_graph = remove_edge(graph, u, v)
+      current = count_components(modified_graph, n)
+      max(acc_max, current)
+    end)
+  end
+
+  defp build_graph(n, edges) do
+    base = Map.new(1..n, fn x -> {x, []} end)
+    Enum.reduce(edges, base, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, &[v | &1])
+      |> Map.update!(v, &[u | &1])
+    end)
+  end
+
+  defp remove_edge(graph, u, v) do
+    graph
+    |> Map.update!(u, &List.delete(&1, v))
+    |> Map.update!(v, &List.delete(&1, u))
+  end
+
+  defp count_components(graph, n) do
+    visited = MapSet.new()
+    {count, _} =
+      Enum.reduce(1..n, {0, visited}, fn node, {count, visited} ->
+        if MapSet.member?(visited, node) do
+          {count, visited}
+        else
+          new_visited = dfs(node, graph, visited)
+          {count + 1, new_visited}
+        end
+      end)
+    count
+  end
+
+  defp dfs(node, graph, visited) do
+    if MapSet.member?(visited, node) do
+      visited
+    else
+      visited = MapSet.put(visited, node)
+      neighbors = Map.get(graph, node, [])
+      Enum.reduce(neighbors, visited, fn neighbor, acc_visited ->
+        dfs(neighbor, graph, acc_visited)
+      end)
+    end
+  end
+end
+
+---END---[0m
+[22m18:03:57.205 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 153294ms — ok[0m
+[36m18:03:57.205 [debug] [Budget] spent so far (est.): $0.3678[0m
+[22m18:03:58.326 [info] [RoundTrip] reference PASSED tests[0m
+[22m18:03:58.327 [info] [idx=98222] translation fresh — solving[0m
+[22m18:03:58.327 [info] ===SOLVE_BOUNDARY===[0m
+[22m18:03:58.327 [info] [Solve attempt 1] generating (fn=max_connected_components)[0m
+[36m18:03:58.327 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `max_connected_components(n, edges)` that takes an integer `n` and a list of edges, where each edge is a list of two integers representing an undirected connection between two nodes labeled from 1 to `n`. The function should return the maximum number of connected components that can be obtained by removing at most one edge from the graph. The initial number of components (without removing any edge) should also be considered.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+```
+
+Module: `Solution`. Function: `max_connected_components`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m18:04:06.324 [debug] [LLM.call] finish=stop len=2942 usage=%{"completion_tokens" => 895, "prompt_tokens" => 541, "prompt_tokens_details" => %{"cached_tokens" => 144}, "total_tokens" => 1436}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, edges) when length(edges) == 0, do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS
+    visited = MapSet.new()
+    {count, _visited} = count_components_helper(adj, n, visited, 0)
+    count
+  end
+
+  defp build_adjacency(n, edges) do
+    1..n
+    |> Enum.map(fn node -> {node, []} end)
+    |> Enum.into(%{})
+    |> Enum.reduce(fn {node, _}, adj ->
+      adj
+    end)
+    |> Enum.reduce(edges, fn edge, adj ->
+      [u, v] = edge
+      adj
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(adj, n, visited, count) do
+    unvisited = MapSet.difference(MapSet.new(1..n), visited)
+
+    if MapSet.size(unvisited) == 0 do
+      {count, visited}
+    else
+      # Start a new component from an unvisited node
+      [start_node | _rest] = MapSet.to_list(unvisited)
+      {new_visited, _} = bfs(adj, start_node, visited)
+      count_components_helper(adj, n, new_visited, count + 1)
+    end
+  end
+
+  defp bfs(adj, start, visited) do
+    queue = [start]
+    bfs_helper(adj, queue, MapSet.put(visited, start))
+  end
+
+  defp bfs_helper(_adj, [], visited), do: visited
+
+  defp bfs_helper(adj, queue, visited) do
+    {node, remaining_queue} = List.pop_at(queue, 0)
+    neighbors = adj[node]
+
+    {new_visited, new_queue} =
+      Enum.reduce(neighbors, {visited, remaining_queue}, fn neighbor, {vis, q} ->
+        if MapSet.member?(vis, neighbor) do
+          {vis, q}
+        else
+          MapSet.put(vis, neighbor)
+          [neighbor | q]
+        end
+      end)
+
+    bfs_helper(adj, new_queue, new_visited)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+---END---[0m
+[22m18:04:06.324 [info] [LLM.call] local_qwen_thinking completed in 7997ms — ok[0m
+[22m18:04:06.324 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m18:04:06.324 [debug] [Validator.run] module code (2463 chars):
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, edges) when length(edges) == 0, do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS
+    visited = MapSet.new()
+    {count, _visited} = count_components_helper(adj, n, visited, 0)
+    count
+  end
+
+  defp build_adjacency(n, edges) do
+    1..n
+    |> Enum.map(fn node -> {node, []} end)
+    |> Enum.into(%{})
+    |> Enum.reduce(fn {node, _}, adj ->
+      adj
+    end)
+    |> Enum.reduce(edges, fn edge, adj ->
+      [u, v] = edge
+      adj
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(adj, n, visited, count) do
+    unvisited = MapSet.difference(MapSet.new(1..n), visited)
+
+    if MapSet.size(unvisited) == 0 do
+      {count, visited}
+    else
+      # Start a new component from an unvisited node
+      [start_node | _rest] = MapSet.to_list(unvisited)
+      {new_visited, _} = bfs(adj, start_node, visited)
+      count_components_helper(adj, n, new_visited, count + 1)
+    end
+  end
+
+  defp bfs(adj, start, visited) do
+    queue = [start]
+    bfs_helper(adj, queue, MapSet.put(visited, start))
+  end
+
+  defp bfs_helper(_adj, [], visited), do: visited
+
+  defp bfs_helper(adj, queue, visited) do
+    {node, remaining_queue} = List.pop_at(queue, 0)
+    neighbors = adj[node]
+
+    {new_visited, new_queue} =
+      Enum.reduce(neighbors, {visited, remaining_queue}, fn neighbor, {vis, q} ->
+        if MapSet.member?(vis, neighbor) do
+          {vis, q}
+        else
+          MapSet.put(vis, neighbor)
+          [neighbor | q]
+        end
+      end)
+
+    bfs_helper(adj, new_queue, new_visited)
+  end
+end[0m
+[36m18:04:06.324 [debug] [Validator.run] test code (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end[0m
+[36m18:04:06.324 [debug] [Budget] spent so far (est.): $0.3689[0m
+[22m18:04:06.325 [info] [Validator.run] step 1/6: credence fix[0m
+[36m18:04:06.325 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m18:04:07.070 [debug] [run_credence_fix] exit=0 output:
+
+18:04:06.843 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+18:04:06.845 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 8 rules)
+
+18:04:06.866 [debug] [credence_fix] semantic pass 1: compilation OK, 2 warning(s)
+
+18:04:06.866 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+18:04:06.869 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L39 -     |> Enum.reduce(fn {node, _}, adj ->
+  L39 +     |> Enum.reduce(fn {_node, _}, adj ->
+
+18:04:06.874 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+18:04:06.874 [debug] [credence_fix] semantic done. Applied: [UnusedVariable(1)]
+
+18:04:06.874 [debug] [credence_fix] starting pattern fix pipeline (118 rules)
+
+18:04:07.039 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UnusedVariable, 1}]
+[0m
+[22m18:04:07.070 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m18:04:07.645 [info] [run_credence_fix] fix compiles OK[0m
+[36m18:04:07.645 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, edges) when length(edges) == 0, do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS
+    visited = MapSet.new()
+    {count, _visited} = count_components_helper(adj, n, visited, 0)
+    count
+  end
+
+  defp build_adjacency(n, edges) do
+    1..n
+    |> Enum.map(fn node -> {node, []} end)
+    |> Enum.into(%{})
+    |> Enum.reduce(fn {node, _}, adj ->
+      adj
+    end)
+    |> Enum.reduce(edges, fn edge, adj ->
+      [u, v] = edge
+      adj
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(adj, n, visited, count) do
+    unvisited = MapSet.difference(MapSet.new(1..n), visited)
+
+    if MapSet.size(unvisited) == 0 do
+      {count, visited}
+    else
+      # Start a new component from an unvisited node
+      [start_node | _rest] = MapSet.to_list(unvisited)
+      {new_visited, _} = bfs(adj, start_node, visited)
+      count_components_helper(adj, n, new_visited, count + 1)
+    end
+  end
+
+  defp bfs(adj, start, visited) do
+    queue = [start]
+    bfs_helper(adj, queue, MapSet.put(visited, start))
+  end
+
+  defp bfs_helper(_adj, [], visited), do: visited
+
+  defp bfs_helper(adj, queue, visited) do
+    {node, remaining_queue} = List.pop_at(queue, 0)
+    neighbors = adj[node]
+
+    {new_visited, new_queue} =
+      Enum.reduce(neighbors, {visited, remaining_queue}, fn neighbor, {vis, q} ->
+        if MapSet.member?(vis, neighbor) do
+          {vis, q}
+        else
+          MapSet.put(vis, neighbor)
+          [neighbor | q]
+        end
+      end)
+
+    bfs_helper(adj, new_queue, new_visited)
+  end
+end[0m
+[36m18:04:07.646 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, edges) when length(edges) == 0, do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS
+    visited = MapSet.new()
+    {count, _visited} = count_components_helper(adj, n, visited, 0)
+    count
+  end
+
+  defp build_adjacency(n, edges) do
+    1..n
+    |> Enum.map(fn node -> {node, []} end)
+    |> Enum.into(%{})
+    |> Enum.reduce(fn {_node, _}, adj ->
+      adj
+    end)
+    |> Enum.reduce(edges, fn edge, adj ->
+      [u, v] = edge
+      adj
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(adj, n, visited, count) do
+    unvisited = MapSet.difference(MapSet.new(1..n), visited)
+
+    if MapSet.size(unvisited) == 0 do
+      {count, visited}
+    else
+      # Start a new component from an unvisited node
+      [start_node | _rest] = MapSet.to_list(unvisited)
+      {new_visited, _} = bfs(adj, start_node, visited)
+      count_components_helper(adj, n, new_visited, count + 1)
+    end
+  end
+
+  defp bfs(adj, start, visited) do
+    queue = [start]
+    bfs_helper(adj, queue, MapSet.put(visited, start))
+  end
+
+  defp bfs_helper(_adj, [], visited), do: visited
+
+  defp bfs_helper(adj, queue, visited) do
+    {node, remaining_queue} = List.pop_at(queue, 0)
+    neighbors = adj[node]
+
+    {new_visited, new_queue} =
+      Enum.reduce(neighbors, {visited, remaining_queue}, fn neighbor, {vis, q} ->
+        if MapSet.member?(vis, neighbor) do
+          {vis, q}
+        else
+          MapSet.put(vis, neighbor)
+          [neighbor | q]
+        end
+      end)
+
+    bfs_helper(adj, new_queue, new_visited)
+  end
+end[0m
+[22m18:04:07.646 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m18:04:07.646 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, edges) when length(edges) == 0, do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS
+    visited = MapSet.new()
+    {count, _visited} = count_components_helper(adj, n, visited, 0)
+    count
+  end
+
+  defp build_adjacency(n, edges) do
+    1..n
+    |> Enum.map(fn node -> {node, []} end)
+    |> Enum.into(%{})
+    |> Enum.reduce(fn {node, _}, adj ->
+      adj
+    end)
+    |> Enum.reduce(edges, fn edge, adj ->
+      [u, v] = edge
+      adj
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(adj, n, visited, count) do
+    unvisited = MapSet.difference(MapSet.new(1..n), visited)
+
+    if MapSet.size(unvisited) == 0 do
+      {count, visited}
+    else
+      # Start a new component from an unvisited node
+      [start_node | _rest] = MapSet.to_list(unvisited)
+      {new_visited, _} = bfs(adj, start_node, visited)
+      count_components_helper(adj, n, new_visited, count + 1)
+    end
+  end
+
+  defp bfs(adj, start, visited) do
+    queue = [start]
+    bfs_helper(adj, queue, MapSet.put(visited, start))
+  end
+
+  defp bfs_helper(_adj, [], visited), do: visited
+
+  defp bfs_helper(adj, queue, visited) do
+    {node, remaining_queue} = List.pop_at(queue, 0)
+    neighbors = adj[node]
+
+    {new_visited, new_queue} =
+      Enum.reduce(neighbors, {visited, remaining_queue}, fn neighbor, {vis, q} ->
+        if MapSet.member?(vis, neighbor) do
+          {vis, q}
+        else
+          MapSet.put(vis, neighbor)
+          [neighbor | q]
+        end
+      end)
+
+    bfs_helper(adj, new_queue, new_visited)
+  end
+end[0m
+[36m18:04:07.646 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, edges) when length(edges) == 0, do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS
+    visited = MapSet.new()
+    {count, _visited} = count_components_helper(adj, n, visited, 0)
+    count
+  end
+
+  defp build_adjacency(n, edges) do
+    1..n
+    |> Enum.map(fn node -> {node, []} end)
+    |> Enum.into(%{})
+    |> Enum.reduce(fn {_node, _}, adj ->
+      adj
+    end)
+    |> Enum.reduce(edges, fn edge, adj ->
+      [u, v] = edge
+      adj
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(adj, n, visited, count) do
+    unvisited = MapSet.difference(MapSet.new(1..n), visited)
+
+    if MapSet.size(unvisited) == 0 do
+      {count, visited}
+    else
+      # Start a new component from an unvisited node
+      [start_node | _rest] = MapSet.to_list(unvisited)
+      {new_visited, _} = bfs(adj, start_node, visited)
+      count_components_helper(adj, n, new_visited, count + 1)
+    end
+  end
+
+  defp bfs(adj, start, visited) do
+    queue = [start]
+    bfs_helper(adj, queue, MapSet.put(visited, start))
+  end
+
+  defp bfs_helper(_adj, [], visited), do: visited
+
+  defp bfs_helper(adj, queue, visited) do
+    {node, remaining_queue} = List.pop_at(queue, 0)
+    neighbors = adj[node]
+
+    {new_visited, new_queue} =
+      Enum.reduce(neighbors, {visited, remaining_queue}, fn neighbor, {vis, q} ->
+        if MapSet.member?(vis, neighbor) do
+          {vis, q}
+        else
+          MapSet.put(vis, neighbor)
+          [neighbor | q]
+        end
+      end)
+
+    bfs_helper(adj, new_queue, new_visited)
+  end
+end[0m
+[36m18:04:07.646 [debug] [propagate_is_renames] old functions: ["max_connected_components", "count_components", "build_adjacency", "count_components_helper", "bfs", "bfs_helper"][0m
+[36m18:04:07.646 [debug] [propagate_is_renames] new functions: ["max_connected_components", "count_components", "build_adjacency", "count_components_helper", "bfs", "bfs_helper"][0m
+[36m18:04:07.646 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m18:04:07.646 [info] [Validator.run] step 2/6: compile[0m
+[22m18:04:08.224 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m18:04:08.224 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m18:04:08.224 [info] [Validator.run] step 3/6: format[0m
+[22m18:04:08.538 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m18:04:08.833 [debug] [Validator.run] format fix output: [0m
+[22m18:04:08.833 [info] [Validator.run] step 4/6: credo[0m
+[36m18:04:09.319 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m18:04:09.319 [info] [Validator.run] credo: no issues[0m
+[22m18:04:09.319 [info] [Validator.run] step 5/6: credence check[0m
+[22m18:04:10.023 [info] [Validator.run] credence check exit=0[0m
+[36m18:04:10.023 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m18:04:10.023 [info] [Validator.run] credence check: passed[0m
+[22m18:04:10.023 [info] [Validator.run] step 6/6: tests[0m
+[22m18:04:10.515 [info] [Validator.run] test exit=2[0m
+[36m18:04:10.515 [debug] [Validator.run] test output:
+Running ExUnit with seed: 467888, max_cases: 48
+
+
+
+  1) test cycle graph (SolutionTest)
+     test/solution_test.exs:8
+     ** (Protocol.UndefinedError) protocol Enumerable not implemented for Tuple. This protocol is implemented for: Date.Range, File.Stream, Function, GenEvent.Stream, HashDict, HashSet, IO.Stream, Jason.OrderedObject, List, Map, MapSet, Range, Stream
+
+     Got value:
+
+         {1, []}
+
+     code: assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) ==
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:5: Enumerable.impl_for!/1
+       (elixir 1.19.5) lib/enum.ex:170: Enumerable.reduce/3
+       (elixir 1.19.5) lib/enum.ex:4570: Enum.reduce/3
+       (workspace 0.1.0) lib/solution.ex:27: Solution.count_components/2
+       (workspace 0.1.0) lib/solution.ex:11: Solution.max_connected_components/2
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test path graph (SolutionTest)
+     test/solution_test.exs:4
+     ** (Protocol.UndefinedError) protocol Enumerable not implemented for Tuple. This protocol is implemented for: Date.Range, File.Stream, Function, GenEvent.Stream, HashDict, HashSet, IO.Stream, Jason.OrderedObject, List, Map, MapSet, Range, Stream
+
+     Got value:
+
+         {1, []}
+
+     code: assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:5: Enumerable.impl_for!/1
+       (elixir 1.19.5) lib/enum.ex:170: Enumerable.reduce/3
+       (elixir 1.19.5) lib/enum.ex:4570: Enum.reduce/3
+       (workspace 0.1.0) lib/solution.ex:27: Solution.count_components/2
+       (workspace 0.1.0) lib/solution.ex:11: Solution.max_connected_components/2
+       test/solution_test.exs:5: (test)
+
+
+
+  3) test disconnected node (SolutionTest)
+     test/solution_test.exs:13
+     ** (Protocol.UndefinedError) protocol Enumerable not implemented for Tuple. This protocol is implemented for: Date.Range, File.Stream, Function, GenEvent.Stream, HashDict, HashSet, IO.Stream, Jason.OrderedObject, List, Map, MapSet, Range, Stream
+
+     Got value:
+
+         {1, []}
+
+     code: assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:5: Enumerable.impl_for!/1
+       (elixir 1.19.5) lib/enum.ex:170: Enumerable.reduce/3
+       (elixir 1.19.5) lib/enum.ex:4570: Enum.reduce/3
+       (workspace 0.1.0) lib/solution.ex:27: Solution.count_components/2
+       (workspace 0.1.0) lib/solution.ex:11: Solution.max_connected_components/2
+       test/solution_test.exs:14: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+[0m
+[33m18:04:10.515 [warning] [Validator.run] tests: FAILED[0m
+[22m18:04:10.515 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m18:04:10.515 [debug] [Validator.run] final module (2466 chars):
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, edges) when length(edges) == 0, do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS
+    visited = MapSet.new()
+    {count, _visited} = count_components_helper(adj, n, visited, 0)
+    count
+  end
+
+  defp build_adjacency(n, edges) do
+    1..n
+    |> Enum.map(fn node -> {node, []} end)
+    |> Enum.into(%{})
+    |> Enum.reduce(fn {_node, _}, adj ->
+      adj
+    end)
+    |> Enum.reduce(edges, fn edge, adj ->
+      [u, v] = edge
+
+      adj
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(adj, n, visited, count) do
+    unvisited = MapSet.difference(MapSet.new(1..n), visited)
+
+    if MapSet.size(unvisited) == 0 do
+      {count, visited}
+    else
+      # Start a new component from an unvisited node
+      [start_node | _rest] = MapSet.to_list(unvisited)
+      {new_visited, _} = bfs(adj, start_node, visited)
+      count_components_helper(adj, n, new_visited, count + 1)
+    end
+  end
+
+  defp bfs(adj, start, visited) do
+    queue = [start]
+    bfs_helper(adj, queue, MapSet.put(visited, start))
+  end
+
+  defp bfs_helper(_adj, [], visited), do: visited
+
+  defp bfs_helper(adj, queue, visited) do
+    {node, remaining_queue} = List.pop_at(queue, 0)
+    neighbors = adj[node]
+
+    {new_visited, new_queue} =
+      Enum.reduce(neighbors, {visited, remaining_queue}, fn neighbor, {vis, q} ->
+        if MapSet.member?(vis, neighbor) do
+          {vis, q}
+        else
+          MapSet.put(vis, neighbor)
+          [neighbor | q]
+        end
+      end)
+
+    bfs_helper(adj, new_queue, new_visited)
+  end
+end
+[0m
+[36m18:04:10.515 [debug] [Validator.run] final test (458 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) ==
+             1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+[0m
+[33m18:04:10.515 [warning] [Solve attempt 1] validation FAILED: [:test][0m
+[22m18:04:10.516 [info] [Solve attempt 2] generating (fn=max_connected_components)[0m
+[36m18:04:10.516 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, edges) when length(edges) == 0, do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS
+    visited = MapSet.new()
+    {count, _visited} = count_components_helper(adj, n, visited, 0)
+    count
+  end
+
+  defp build_adjacency(n, edges) do
+    1..n
+    |> Enum.map(fn node -> {node, []} end)
+    |> Enum.into(%{})
+    |> Enum.reduce(fn {node, _}, adj ->
+      adj
+    end)
+    |> Enum.reduce(edges, fn edge, adj ->
+      [u, v] = edge
+      adj
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(adj, n, visited, count) do
+    unvisited = MapSet.difference(MapSet.new(1..n), visited)
+
+    if MapSet.size(unvisited) == 0 do
+      {count, visited}
+    else
+      # Start a new component from an unvisited node
+      [start_node | _rest] = MapSet.to_list(unvisited)
+      {new_visited, _} = bfs(adj, start_node, visited)
+      count_components_helper(adj, n, new_visited, count + 1)
+    end
+  end
+
+  defp bfs(adj, start, visited) do
+    queue = [start]
+    bfs_helper(adj, queue, MapSet.put(visited, start))
+  end
+
+  defp bfs_helper(_adj, [], visited), do: visited
+
+  defp bfs_helper(adj, queue, visited) do
+    {node, remaining_queue} = List.pop_at(queue, 0)
+    neighbors = adj[node]
+
+    {new_visited, new_queue} =
+      Enum.reduce(neighbors, {visited, remaining_queue}, fn neighbor, {vis, q} ->
+        if MapSet.member?(vis, neighbor) do
+          {vis, q}
+        else
+          MapSet.put(vis, neighbor)
+          [neighbor | q]
+        end
+      end)
+
+    bfs_helper(adj, new_queue, new_visited)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 467888, max_cases: 48
+
+
+
+  1) test cycle graph (SolutionTest)
+     test/solution_test.exs:8
+     ** (Protocol.UndefinedError) protocol Enumerable not implemented for Tuple. This protocol is implemented for: Date.Range, File.Stream, Function, GenEvent.Stream, HashDict, HashSet, IO.Stream, Jason.OrderedObject, List, Map, MapSet, Range, Stream
+
+     Got value:
+
+         {1, []}
+
+     code: assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) ==
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:5: Enumerable.impl_for!/1
+       (elixir 1.19.5) lib/enum.ex:170: Enumerable.reduce/3
+       (elixir 1.19.5) lib/enum.ex:4570: Enum.reduce/3
+       (workspace 0.1.0) lib/solution.ex:27: Solution.count_components/2
+       (workspace 0.1.0) lib/solution.ex:11: Solution.max_connected_components/2
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test path graph (SolutionTest)
+     test/solution_test.exs:4
+     ** (Protocol.UndefinedError) protocol Enumerable not implemented for Tuple. This protocol is implemented for: Date.Range, File.Stream, Function, GenEvent.Stream, HashDict, HashSet, IO.Stream, Jason.OrderedObject, List, Map, MapSet, Range, Stream
+
+     Got value:
+
+         {1, []}
+
+     code: assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:5: Enumerable.impl_for!/1
+       (elixir 1.19.5) lib/enum.ex:170: Enumerable.reduce/3
+       (elixir 1.19.5) lib/enum.ex:4570: Enum.reduce/3
+       (workspace 0.1.0) lib/solution.ex:27: Solution.count_components/2
+       (workspace 0.1.0) lib/solution.ex:11: Solution.max_connected_components/2
+       test/solution_test.exs:5: (test)
+
+
+
+  3) test disconnected node (SolutionTest)
+     test/solution_test.exs:13
+     ** (Protocol.UndefinedError) protocol Enumerable not implemented for Tuple. This protocol is implemented for: Date.Range, File.Stream, Function, GenEvent.Stream, HashDict, HashSet, IO.Stream, Jason.OrderedObject, List, Map, MapSet, Range, Stream
+
+     Got value:
+
+         {1, []}
+
+     code: assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:5: Enumerable.impl_for!/1
+       (elixir 1.19.5) lib/enum.ex:170: Enumerable.reduce/3
+       (elixir 1.19.5) lib/enum.ex:4570: Enum.reduce/3
+       (workspace 0.1.0) lib/solution.ex:27: Solution.count_components/2
+       (workspace 0.1.0) lib/solution.ex:11: Solution.max_connected_components/2
+       test/solution_test.exs:14: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+
+Reminder: module `Solution`, function `max_connected_components` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m18:04:19.628 [debug] [LLM.call] finish=stop len=3062 usage=%{"completion_tokens" => 894, "prompt_tokens" => 2093, "prompt_tokens_details" => %{"cached_tokens" => 144}, "total_tokens" => 2987}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, []), do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using DFS
+    all_nodes = MapSet.new(1..n)
+    count_components_helper(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_helper(adj, unvisited, _visited, count) do
+    # Get the first unvisited node
+    [start_node | rest_unvisited] = MapSet.to_list(unvisited)
+
+    # Perform DFS to find all nodes in this component
+    {_, visited_nodes} = dfs(adj, start_node, MapSet.new(), MapSet.new())
+    new_visited = MapSet.union(_visited, visited_nodes)
+    
+    # Remove visited nodes from unvisited
+    new_unvisited = MapSet.difference(unvisited, visited_nodes)
+    
+    count_components_helper(adj, new_unvisited, new_visited, count + 1)
+  end
+
+  defp dfs(_adj, current, visited, stack) do
+    if MapSet.member?(visited, current) do
+      {visited, stack}
+    else
+      visited = MapSet.put(visited, current)
+      stack = List.delete(stack, current)
+      
+      neighbors = Map.get(_adj, current, [])
+      
+      {visited, stack} =
+        neighbors
+        |> Enum.reduce({visited, stack}, fn neighbor, {vis, stk} ->
+          if MapSet.member?(vis, neighbor) do
+            {vis, stk}
+          else
+            {vis, [neighbor | stk]}
+          end
+        end)
+      
+      dfs(_adj, current, visited, stack)
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+---END---[0m
+[22m18:04:19.628 [info] [LLM.call] local_qwen_thinking completed in 9112ms — ok[0m
+[22m18:04:19.628 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m18:04:19.628 [debug] [Validator.run] module code (2583 chars):
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, []), do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using DFS
+    all_nodes = MapSet.new(1..n)
+    count_components_helper(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_helper(adj, unvisited, _visited, count) do
+    # Get the first unvisited node
+    [start_node | rest_unvisited] = MapSet.to_list(unvisited)
+
+    # Perform DFS to find all nodes in this component
+    {_, visited_nodes} = dfs(adj, start_node, MapSet.new(), MapSet.new())
+    new_visited = MapSet.union(_visited, visited_nodes)
+    
+    # Remove visited nodes from unvisited
+    new_unvisited = MapSet.difference(unvisited, visited_nodes)
+    
+    count_components_helper(adj, new_unvisited, new_visited, count + 1)
+  end
+
+  defp dfs(_adj, current, visited, stack) do
+    if MapSet.member?(visited, current) do
+      {visited, stack}
+    else
+      visited = MapSet.put(visited, current)
+      stack = List.delete(stack, current)
+      
+      neighbors = Map.get(_adj, current, [])
+      
+      {visited, stack} =
+        neighbors
+        |> Enum.reduce({visited, stack}, fn neighbor, {vis, stk} ->
+          if MapSet.member?(vis, neighbor) do
+            {vis, stk}
+          else
+            {vis, [neighbor | stk]}
+          end
+        end)
+      
+      dfs(_adj, current, visited, stack)
+    end
+  end
+end[0m
+[36m18:04:19.628 [debug] [Validator.run] test code (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end[0m
+[36m18:04:19.628 [debug] [Budget] spent so far (est.): $0.3705[0m
+[22m18:04:19.629 [info] [Validator.run] step 1/6: credence fix[0m
+[36m18:04:19.629 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m18:04:20.189 [debug] [run_credence_fix] exit=0 output:
+
+18:04:20.152 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+18:04:20.154 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 8 rules)
+
+18:04:20.160 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+18:04:20.161 [debug] [credence_fix] semantic pass 1: compilation FAILED, 2 error(s)
+
+18:04:20.165 [debug] [credence_fix] no rule matched diagnostic: %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {48, 78}, file: "credence_check.ex", stacktrace: [{Solution, :count_components_helper, 4, [file: "credence_check.ex", column: 78, line: 48]}], source: "credence_check.ex", span: nil, severity: :error}
+
+18:04:20.165 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+18:04:20.165 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+18:04:20.165 [debug] [credence_fix] semantic done. Applied: []
+
+18:04:20.165 [debug] [credence_fix] starting pattern fix pipeline (118 rules)
+
+18:04:20.167 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+18:04:20.167 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+18:04:20.170 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 1 unfixable issue(s)
+no_reduce_for_map_building: `Enum.reduce/3` building a map via `Map.put/3` can be replaced with `Map.new/2`. `Map.new(enum, fn elem -> {key, value} end)` is clearer and more idiomatic. (line 37)
+[0m
+[36m18:04:20.189 [debug] [run_credence_fix] no changes needed[0m
+[22m18:04:20.189 [info] [Validator.run] credence: no changes needed[0m
+[22m18:04:20.189 [info] [Validator.run] step 2/6: compile[0m
+[22m18:04:20.674 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m18:04:20.674 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    error: cannot invoke remote function MapSet.size/1 inside a guard
+    │
+ 48 │   defp count_components_helper(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    │                                                                              ^
+    │
+    └─ lib/solution.ex:48:78: Solution.count_components_helper/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[22m18:04:20.674 [info] [Validator.run] step 3/6: format[0m
+[22m18:04:20.674 [info] [Validator.run] skipping format (compile failed)[0m
+[22m18:04:20.674 [info] [Validator.run] step 4/6: credo[0m
+[22m18:04:20.674 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m18:04:20.674 [info] [Validator.run] step 5/6: credence check[0m
+[22m18:04:20.674 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m18:04:20.674 [info] [Validator.run] step 6/6: tests[0m
+[22m18:04:20.674 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m18:04:20.674 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m18:04:20.675 [debug] [Validator.run] final module (2583 chars):
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, []), do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using DFS
+    all_nodes = MapSet.new(1..n)
+    count_components_helper(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_helper(adj, unvisited, _visited, count) do
+    # Get the first unvisited node
+    [start_node | rest_unvisited] = MapSet.to_list(unvisited)
+
+    # Perform DFS to find all nodes in this component
+    {_, visited_nodes} = dfs(adj, start_node, MapSet.new(), MapSet.new())
+    new_visited = MapSet.union(_visited, visited_nodes)
+    
+    # Remove visited nodes from unvisited
+    new_unvisited = MapSet.difference(unvisited, visited_nodes)
+    
+    count_components_helper(adj, new_unvisited, new_visited, count + 1)
+  end
+
+  defp dfs(_adj, current, visited, stack) do
+    if MapSet.member?(visited, current) do
+      {visited, stack}
+    else
+      visited = MapSet.put(visited, current)
+      stack = List.delete(stack, current)
+      
+      neighbors = Map.get(_adj, current, [])
+      
+      {visited, stack} =
+        neighbors
+        |> Enum.reduce({visited, stack}, fn neighbor, {vis, stk} ->
+          if MapSet.member?(vis, neighbor) do
+            {vis, stk}
+          else
+            {vis, [neighbor | stk]}
+          end
+        end)
+      
+      dfs(_adj, current, visited, stack)
+    end
+  end
+end[0m
+[36m18:04:20.675 [debug] [Validator.run] final test (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end[0m
+[33m18:04:20.675 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m18:04:20.675 [info] [Solve attempt 3] generating (fn=max_connected_components)[0m
+[36m18:04:20.675 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, []), do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # Calculate the number of components after removing each edge
+    max_after_removal =
+      edges
+      |> Enum.map(fn edge ->
+        remaining_edges = List.delete(edges, edge)
+        count_components(n, remaining_edges)
+      end)
+      |> Enum.max()
+
+    max(initial_count, max_after_removal)
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using DFS
+    all_nodes = MapSet.new(1..n)
+    count_components_helper(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_helper(adj, unvisited, _visited, count) do
+    # Get the first unvisited node
+    [start_node | rest_unvisited] = MapSet.to_list(unvisited)
+
+    # Perform DFS to find all nodes in this component
+    {_, visited_nodes} = dfs(adj, start_node, MapSet.new(), MapSet.new())
+    new_visited = MapSet.union(_visited, visited_nodes)
+    
+    # Remove visited nodes from unvisited
+    new_unvisited = MapSet.difference(unvisited, visited_nodes)
+    
+    count_components_helper(adj, new_unvisited, new_visited, count + 1)
+  end
+
+  defp dfs(_adj, current, visited, stack) do
+    if MapSet.member?(visited, current) do
+      {visited, stack}
+    else
+      visited = MapSet.put(visited, current)
+      stack = List.delete(stack, current)
+      
+      neighbors = Map.get(_adj, current, [])
+      
+      {visited, stack} =
+        neighbors
+        |> Enum.reduce({visited, stack}, fn neighbor, {vis, stk} ->
+          if MapSet.member?(vis, neighbor) do
+            {vis, stk}
+          else
+            {vis, [neighbor | stk]}
+          end
+        end)
+      
+      dfs(_adj, current, visited, stack)
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+---END---
+
+## Errors
+### compile error:
+error: cannot invoke remote function MapSet.size/1 inside a guard
+    │
+ 48 │   defp count_components_helper(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    │                                                                              ^
+    │
+    └─ lib/solution.ex:48:78: Solution.count_components_helper/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+Reminder: module `Solution`, function `max_connected_components` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m18:04:29.480 [debug] [LLM.call] finish=stop len=3157 usage=%{"completion_tokens" => 904, "prompt_tokens" => 1303, "prompt_tokens_details" => %{"cached_tokens" => 144}, "total_tokens" => 2207}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, []), do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # If there are no edges, we can't remove any, so return initial count
+    if Enum.empty?(edges) do
+      initial_count
+    else
+      # Calculate the number of components after removing each edge
+      max_after_removal =
+        Enum.reduce(edges, initial_count, fn edge, max_acc ->
+          remaining_edges = List.delete(edges, edge)
+          count = count_components(n, remaining_edges)
+          if count > max_acc, do: count, else: max_acc
+        end)
+
+      max_after_removal
+    end
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS with a visited set
+    all_nodes = MapSet.new(1..n)
+    count_components_helper(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(_adj, unvisited, _visited, count) when is_nil(MapSet.pop_first(unvisited)) do
+    count
+  end
+
+  defp count_components_helper(adj, unvisited, _visited, count) do
+    # Get the first unvisited node
+    [start_node | rest_unvisited] = MapSet.to_list(unvisited)
+
+    # Perform DFS to find all nodes in this component
+    visited_nodes = dfs_collect(adj, start_node, MapSet.new(), MapSet.new())
+    
+    # Remove visited nodes from unvisited
+    new_unvisited = MapSet.difference(unvisited, visited_nodes)
+    
+    count_components_helper(adj, new_unvisited, _visited, count + 1)
+  end
+
+  defp dfs_collect(_adj, current, visited, stack) do
+    if MapSet.member?(visited, current) do
+      visited
+    else
+      visited = MapSet.put(visited, current)
+      
+      neighbors = Map.get(_adj, current, [])
+      
+      new_stack =
+        Enum.reduce(neighbors, stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) do
+            stk
+          else
+            [neighbor | stk]
+          end
+        end)
+      
+      dfs_collect(_adj, current, visited, new_stack)
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+---END---[0m
+[22m18:04:29.480 [info] [LLM.call] local_qwen_thinking completed in 8805ms — ok[0m
+[22m18:04:29.480 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m18:04:29.480 [debug] [Validator.run] module code (2678 chars):
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, []), do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # If there are no edges, we can't remove any, so return initial count
+    if Enum.empty?(edges) do
+      initial_count
+    else
+      # Calculate the number of components after removing each edge
+      max_after_removal =
+        Enum.reduce(edges, initial_count, fn edge, max_acc ->
+          remaining_edges = List.delete(edges, edge)
+          count = count_components(n, remaining_edges)
+          if count > max_acc, do: count, else: max_acc
+        end)
+
+      max_after_removal
+    end
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS with a visited set
+    all_nodes = MapSet.new(1..n)
+    count_components_helper(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(_adj, unvisited, _visited, count) when is_nil(MapSet.pop_first(unvisited)) do
+    count
+  end
+
+  defp count_components_helper(adj, unvisited, _visited, count) do
+    # Get the first unvisited node
+    [start_node | rest_unvisited] = MapSet.to_list(unvisited)
+
+    # Perform DFS to find all nodes in this component
+    visited_nodes = dfs_collect(adj, start_node, MapSet.new(), MapSet.new())
+    
+    # Remove visited nodes from unvisited
+    new_unvisited = MapSet.difference(unvisited, visited_nodes)
+    
+    count_components_helper(adj, new_unvisited, _visited, count + 1)
+  end
+
+  defp dfs_collect(_adj, current, visited, stack) do
+    if MapSet.member?(visited, current) do
+      visited
+    else
+      visited = MapSet.put(visited, current)
+      
+      neighbors = Map.get(_adj, current, [])
+      
+      new_stack =
+        Enum.reduce(neighbors, stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) do
+            stk
+          else
+            [neighbor | stk]
+          end
+        end)
+      
+      dfs_collect(_adj, current, visited, new_stack)
+    end
+  end
+end[0m
+[36m18:04:29.480 [debug] [Validator.run] test code (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end[0m
+[36m18:04:29.480 [debug] [Budget] spent so far (est.): $0.3719[0m
+[22m18:04:29.481 [info] [Validator.run] step 1/6: credence fix[0m
+[36m18:04:29.481 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m18:04:30.029 [debug] [run_credence_fix] exit=0 output:
+
+18:04:29.994 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+18:04:29.996 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 8 rules)
+
+18:04:30.003 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+18:04:30.003 [debug] [credence_fix] semantic pass 1: compilation FAILED, 2 error(s)
+
+18:04:30.007 [debug] [credence_fix] no rule matched diagnostic: %{message: "cannot invoke remote function MapSet.pop_first/1 inside a guard", position: {52, 85}, file: "credence_check.ex", stacktrace: [{Solution, :count_components_helper, 4, [file: "credence_check.ex", column: 85, line: 52]}], source: "credence_check.ex", span: nil, severity: :error}
+
+18:04:30.007 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+18:04:30.008 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+18:04:30.008 [debug] [credence_fix] semantic done. Applied: []
+
+18:04:30.008 [debug] [credence_fix] starting pattern fix pipeline (118 rules)
+
+18:04:30.009 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+18:04:30.009 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+18:04:30.012 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 2 unfixable issue(s)
+no_reduce_for_map_building: `Enum.reduce/3` building a map via `Map.put/3` can be replaced with `Map.new/2`. `Map.new(enum, fn elem -> {key, value} end)` is clearer and more idiomatic. (line 41)
+no_redundant_assignment: Variable is assigned and immediately returned. The assignment is redundant — return the expression directly. (line 18)
+[0m
+[36m18:04:30.029 [debug] [run_credence_fix] no changes needed[0m
+[22m18:04:30.029 [info] [Validator.run] credence: no changes needed[0m
+[22m18:04:30.029 [info] [Validator.run] step 2/6: compile[0m
+[22m18:04:30.627 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m18:04:30.627 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    error: cannot invoke remote function MapSet.pop_first/1 inside a guard
+    │
+ 52 │   defp count_components_helper(_adj, unvisited, _visited, count) when is_nil(MapSet.pop_first(unvisited)) do
+    │                                                                                     ^
+    │
+    └─ lib/solution.ex:52:85: Solution.count_components_helper/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+    (elixir 1.19.5) expanding macro: Kernel.is_nil/1
+    lib/solution.ex:52: Solution.count_components_helper/4
+[0m
+[22m18:04:30.627 [info] [Validator.run] step 3/6: format[0m
+[22m18:04:30.627 [info] [Validator.run] skipping format (compile failed)[0m
+[22m18:04:30.627 [info] [Validator.run] step 4/6: credo[0m
+[22m18:04:30.627 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m18:04:30.627 [info] [Validator.run] step 5/6: credence check[0m
+[22m18:04:30.627 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m18:04:30.627 [info] [Validator.run] step 6/6: tests[0m
+[22m18:04:30.627 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m18:04:30.627 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m18:04:30.627 [debug] [Validator.run] final module (2678 chars):
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, []), do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # If there are no edges, we can't remove any, so return initial count
+    if Enum.empty?(edges) do
+      initial_count
+    else
+      # Calculate the number of components after removing each edge
+      max_after_removal =
+        Enum.reduce(edges, initial_count, fn edge, max_acc ->
+          remaining_edges = List.delete(edges, edge)
+          count = count_components(n, remaining_edges)
+          if count > max_acc, do: count, else: max_acc
+        end)
+
+      max_after_removal
+    end
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS with a visited set
+    all_nodes = MapSet.new(1..n)
+    count_components_helper(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(_adj, unvisited, _visited, count) when is_nil(MapSet.pop_first(unvisited)) do
+    count
+  end
+
+  defp count_components_helper(adj, unvisited, _visited, count) do
+    # Get the first unvisited node
+    [start_node | rest_unvisited] = MapSet.to_list(unvisited)
+
+    # Perform DFS to find all nodes in this component
+    visited_nodes = dfs_collect(adj, start_node, MapSet.new(), MapSet.new())
+    
+    # Remove visited nodes from unvisited
+    new_unvisited = MapSet.difference(unvisited, visited_nodes)
+    
+    count_components_helper(adj, new_unvisited, _visited, count + 1)
+  end
+
+  defp dfs_collect(_adj, current, visited, stack) do
+    if MapSet.member?(visited, current) do
+      visited
+    else
+      visited = MapSet.put(visited, current)
+      
+      neighbors = Map.get(_adj, current, [])
+      
+      new_stack =
+        Enum.reduce(neighbors, stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) do
+            stk
+          else
+            [neighbor | stk]
+          end
+        end)
+      
+      dfs_collect(_adj, current, visited, new_stack)
+    end
+  end
+end[0m
+[36m18:04:30.627 [debug] [Validator.run] final test (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end[0m
+[33m18:04:30.627 [warning] [Solve attempt 3] validation FAILED: [:compile][0m
+[22m18:04:30.627 [info] [Solve attempt 4] generating (fn=max_connected_components)[0m
+[36m18:04:30.627 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(integer, [[integer]]) :: integer
+  def max_connected_components(_n, []), do: 1
+
+  def max_connected_components(n, edges) do
+    # Calculate the initial number of connected components (removing 0 edges)
+    initial_count = count_components(n, edges)
+
+    # If there are no edges, we can't remove any, so return initial count
+    if Enum.empty?(edges) do
+      initial_count
+    else
+      # Calculate the number of components after removing each edge
+      max_after_removal =
+        Enum.reduce(edges, initial_count, fn edge, max_acc ->
+          remaining_edges = List.delete(edges, edge)
+          count = count_components(n, remaining_edges)
+          if count > max_acc, do: count, else: max_acc
+        end)
+
+      max_after_removal
+    end
+  end
+
+  defp count_components(n, edges) do
+    # Build adjacency list
+    adj = build_adjacency(n, edges)
+
+    # Count connected components using BFS/DFS with a visited set
+    all_nodes = MapSet.new(1..n)
+    count_components_helper(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+
+  defp count_components_helper(_adj, unvisited, _visited, count) when is_nil(MapSet.pop_first(unvisited)) do
+    count
+  end
+
+  defp count_components_helper(adj, unvisited, _visited, count) do
+    # Get the first unvisited node
+    [start_node | rest_unvisited] = MapSet.to_list(unvisited)
+
+    # Perform DFS to find all nodes in this component
+    visited_nodes = dfs_collect(adj, start_node, MapSet.new(), MapSet.new())
+    
+    # Remove visited nodes from unvisited
+    new_unvisited = MapSet.difference(unvisited, visited_nodes)
+    
+    count_components_helper(adj, new_unvisited, _visited, count + 1)
+  end
+
+  defp dfs_collect(_adj, current, visited, stack) do
+    if MapSet.member?(visited, current) do
+      visited
+    else
+      visited = MapSet.put(visited, current)
+      
+      neighbors = Map.get(_adj, current, [])
+      
+      new_stack =
+        Enum.reduce(neighbors, stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) do
+            stk
+          else
+            [neighbor | stk]
+          end
+        end)
+      
+      dfs_collect(_adj, current, visited, new_stack)
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+---END---
+
+## Errors
+### compile error:
+error: cannot invoke remote function MapSet.pop_first/1 inside a guard
+    │
+ 52 │   defp count_components_helper(_adj, unvisited, _visited, count) when is_nil(MapSet.pop_first(unvisited)) do
+    │                                                                                     ^
+    │
+    └─ lib/solution.ex:52:85: Solution.count_components_helper/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+    (elixir 1.19.5) expanding macro: Kernel.is_nil/1
+    lib/solution.ex:52: Solution.count_components_helper/4
+
+Reminder: module `Solution`, function `max_connected_components` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m18:04:41.803 [debug] [LLM.call] finish=stop len=4033 usage=%{"completion_tokens" => 1170, "prompt_tokens" => 1352, "prompt_tokens_details" => %{"cached_tokens" => 144}, "total_tokens" => 2522}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to calculate the maximum number of connected components
+  obtainable by removing at most one edge from a graph.
+  """
+
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(non_neg_integer(), list(list(integer()))) :: integer()
+  def max_connected_components(0, _edges), do: 0
+  def max_connected_components(1, _edges), do: 1
+
+  def max_connected_components(n, edges) when n > 1 do
+    if Enum.empty?(edges) do
+      n
+    else
+      initial_count = count_components(n, edges)
+
+      max_after_removal =
+        Enum.reduce(edges, initial_count, fn [u, v], max_acc ->
+          # Remove the current edge and count components
+          remaining_edges = List.delete(edges, [u, v])
+          count = count_components(n, remaining_edges)
+          if count > max_acc, do: count, else: max_acc
+        end)
+
+      max_after_removal
+    end
+  end
+
+  @spec count_components(non_neg_integer(), list(list(integer()))) :: integer()
+  defp count_components(n, edges) when n == 0, do: 0
+  defp count_components(n, edges) when n == 1, do: 1
+
+  defp count_components(n, edges) do
+    adj = build_adjacency(n, edges)
+    
+    # We need to track visited nodes to count components
+    # Start with all nodes as unvisited
+    all_nodes = MapSet.new(1..n)
+    
+    count_components_dfs(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  @spec count_components_dfs(map(), MapSet.t(), MapSet.t(), integer()) :: integer()
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    # Get any node from unvisited to start a new component
+    <<first_node::binary-size(8), _rest::binary>> = :binary.encode_unsigned(MapSet.first(unvisited))
+    start_node = :binary.decode_unsigned(<<first_node::binary-size(8)>>)
+    
+    # Find all nodes in this component
+    {visited_new, component_nodes} = dfs_collect(adj, start_node, MapSet.new([start_node]), MapSet.new([start_node]))
+    
+    new_unvisited = MapSet.difference(unvisited, component_nodes)
+    
+    count_components_dfs(adj, new_unvisited, visited_new, count + 1)
+  end
+
+  @spec dfs_collect(map(), integer(), MapSet.t(), MapSet.t()) :: {MapSet.t(), MapSet.t()}
+  defp dfs_collect(_adj, current, visited, stack) when MapSet.empty?(stack) do
+    {visited, visited}
+  end
+
+  defp dfs_collect(adj, _current, visited, stack) do
+    {current, new_stack} = MapSet.pop(stack)
+    
+    if MapSet.member?(visited, current) do
+      dfs_collect(adj, current, visited, new_stack)
+    else
+      visited = MapSet.put(visited, current)
+      
+      neighbors = Map.get(adj, current, [])
+      
+      new_stack =
+        Enum.reduce(neighbors, new_stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) or MapSet.member?(stk, neighbor) do
+            stk
+          else
+            MapSet.put(stk, neighbor)
+          end
+        end)
+      
+      dfs_collect(adj, current, visited, new_stack)
+    end
+  end
+
+  @spec build_adjacency(non_neg_integer(), list(list(integer()))) :: map()
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+---END---[0m
+[22m18:04:41.803 [info] [LLM.call] local_qwen_thinking completed in 11175ms — ok[0m
+[22m18:04:41.803 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m18:04:41.803 [debug] [Validator.run] module code (3554 chars):
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to calculate the maximum number of connected components
+  obtainable by removing at most one edge from a graph.
+  """
+
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(non_neg_integer(), list(list(integer()))) :: integer()
+  def max_connected_components(0, _edges), do: 0
+  def max_connected_components(1, _edges), do: 1
+
+  def max_connected_components(n, edges) when n > 1 do
+    if Enum.empty?(edges) do
+      n
+    else
+      initial_count = count_components(n, edges)
+
+      max_after_removal =
+        Enum.reduce(edges, initial_count, fn [u, v], max_acc ->
+          # Remove the current edge and count components
+          remaining_edges = List.delete(edges, [u, v])
+          count = count_components(n, remaining_edges)
+          if count > max_acc, do: count, else: max_acc
+        end)
+
+      max_after_removal
+    end
+  end
+
+  @spec count_components(non_neg_integer(), list(list(integer()))) :: integer()
+  defp count_components(n, edges) when n == 0, do: 0
+  defp count_components(n, edges) when n == 1, do: 1
+
+  defp count_components(n, edges) do
+    adj = build_adjacency(n, edges)
+    
+    # We need to track visited nodes to count components
+    # Start with all nodes as unvisited
+    all_nodes = MapSet.new(1..n)
+    
+    count_components_dfs(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  @spec count_components_dfs(map(), MapSet.t(), MapSet.t(), integer()) :: integer()
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    # Get any node from unvisited to start a new component
+    <<first_node::binary-size(8), _rest::binary>> = :binary.encode_unsigned(MapSet.first(unvisited))
+    start_node = :binary.decode_unsigned(<<first_node::binary-size(8)>>)
+    
+    # Find all nodes in this component
+    {visited_new, component_nodes} = dfs_collect(adj, start_node, MapSet.new([start_node]), MapSet.new([start_node]))
+    
+    new_unvisited = MapSet.difference(unvisited, component_nodes)
+    
+    count_components_dfs(adj, new_unvisited, visited_new, count + 1)
+  end
+
+  @spec dfs_collect(map(), integer(), MapSet.t(), MapSet.t()) :: {MapSet.t(), MapSet.t()}
+  defp dfs_collect(_adj, current, visited, stack) when MapSet.empty?(stack) do
+    {visited, visited}
+  end
+
+  defp dfs_collect(adj, _current, visited, stack) do
+    {current, new_stack} = MapSet.pop(stack)
+    
+    if MapSet.member?(visited, current) do
+      dfs_collect(adj, current, visited, new_stack)
+    else
+      visited = MapSet.put(visited, current)
+      
+      neighbors = Map.get(adj, current, [])
+      
+      new_stack =
+        Enum.reduce(neighbors, new_stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) or MapSet.member?(stk, neighbor) do
+            stk
+          else
+            MapSet.put(stk, neighbor)
+          end
+        end)
+      
+      dfs_collect(adj, current, visited, new_stack)
+    end
+  end
+
+  @spec build_adjacency(non_neg_integer(), list(list(integer()))) :: map()
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+end[0m
+[36m18:04:41.803 [debug] [Validator.run] test code (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end[0m
+[36m18:04:41.804 [debug] [Budget] spent so far (est.): $0.3735[0m
+[22m18:04:41.804 [info] [Validator.run] step 1/6: credence fix[0m
+[36m18:04:41.804 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m18:04:42.363 [debug] [run_credence_fix] exit=0 output:
+
+18:04:42.322 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+18:04:42.324 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 8 rules)
+
+18:04:42.332 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+18:04:42.332 [debug] [credence_fix] semantic pass 1: compilation FAILED, 2 error(s)
+
+18:04:42.337 [debug] [credence_fix] no rule matched diagnostic: %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {48, 75}, file: "credence_check.ex", stacktrace: [{Solution, :count_components_dfs, 4, [file: "credence_check.ex", column: 75, line: 48]}], source: "credence_check.ex", span: nil, severity: :error}
+
+18:04:42.337 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+18:04:42.337 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+18:04:42.337 [debug] [credence_fix] semantic done. Applied: []
+
+18:04:42.337 [debug] [credence_fix] starting pattern fix pipeline (118 rules)
+
+18:04:42.340 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+18:04:42.340 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+18:04:42.345 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 2 unfixable issue(s)
+no_reduce_for_map_building: `Enum.reduce/3` building a map via `Map.put/3` can be replaced with `Map.new/2`. `Map.new(enum, fn elem -> {key, value} end)` is clearer and more idiomatic. (line 97)
+no_redundant_assignment: Variable is assigned and immediately returned. The assignment is redundant — return the expression directly. (line 21)
+[0m
+[36m18:04:42.363 [debug] [run_credence_fix] no changes needed[0m
+[22m18:04:42.363 [info] [Validator.run] credence: no changes needed[0m
+[22m18:04:42.363 [info] [Validator.run] step 2/6: compile[0m
+[22m18:04:42.963 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m18:04:42.963 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: variable "edges" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 34 │   defp count_components(n, edges) when n == 0, do: 0
+    │                            ~~~~~
+    │
+    └─ lib/solution.ex:34:28: Solution.count_components/2
+
+    warning: variable "edges" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 35 │   defp count_components(n, edges) when n == 1, do: 1
+    │                            ~~~~~
+    │
+    └─ lib/solution.ex:35:28: Solution.count_components/2
+
+    error: cannot invoke remote function MapSet.size/1 inside a guard
+    │
+ 48 │   defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    │                                                                           ^
+    │
+    └─ lib/solution.ex:48:75: Solution.count_components_dfs/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[22m18:04:42.964 [info] [Validator.run] step 3/6: format[0m
+[22m18:04:42.964 [info] [Validator.run] skipping format (compile failed)[0m
+[22m18:04:42.964 [info] [Validator.run] step 4/6: credo[0m
+[22m18:04:42.964 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m18:04:42.964 [info] [Validator.run] step 5/6: credence check[0m
+[22m18:04:42.964 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m18:04:42.964 [info] [Validator.run] step 6/6: tests[0m
+[22m18:04:42.964 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m18:04:42.964 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m18:04:42.964 [debug] [Validator.run] final module (3554 chars):
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to calculate the maximum number of connected components
+  obtainable by removing at most one edge from a graph.
+  """
+
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(non_neg_integer(), list(list(integer()))) :: integer()
+  def max_connected_components(0, _edges), do: 0
+  def max_connected_components(1, _edges), do: 1
+
+  def max_connected_components(n, edges) when n > 1 do
+    if Enum.empty?(edges) do
+      n
+    else
+      initial_count = count_components(n, edges)
+
+      max_after_removal =
+        Enum.reduce(edges, initial_count, fn [u, v], max_acc ->
+          # Remove the current edge and count components
+          remaining_edges = List.delete(edges, [u, v])
+          count = count_components(n, remaining_edges)
+          if count > max_acc, do: count, else: max_acc
+        end)
+
+      max_after_removal
+    end
+  end
+
+  @spec count_components(non_neg_integer(), list(list(integer()))) :: integer()
+  defp count_components(n, edges) when n == 0, do: 0
+  defp count_components(n, edges) when n == 1, do: 1
+
+  defp count_components(n, edges) do
+    adj = build_adjacency(n, edges)
+    
+    # We need to track visited nodes to count components
+    # Start with all nodes as unvisited
+    all_nodes = MapSet.new(1..n)
+    
+    count_components_dfs(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  @spec count_components_dfs(map(), MapSet.t(), MapSet.t(), integer()) :: integer()
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    # Get any node from unvisited to start a new component
+    <<first_node::binary-size(8), _rest::binary>> = :binary.encode_unsigned(MapSet.first(unvisited))
+    start_node = :binary.decode_unsigned(<<first_node::binary-size(8)>>)
+    
+    # Find all nodes in this component
+    {visited_new, component_nodes} = dfs_collect(adj, start_node, MapSet.new([start_node]), MapSet.new([start_node]))
+    
+    new_unvisited = MapSet.difference(unvisited, component_nodes)
+    
+    count_components_dfs(adj, new_unvisited, visited_new, count + 1)
+  end
+
+  @spec dfs_collect(map(), integer(), MapSet.t(), MapSet.t()) :: {MapSet.t(), MapSet.t()}
+  defp dfs_collect(_adj, current, visited, stack) when MapSet.empty?(stack) do
+    {visited, visited}
+  end
+
+  defp dfs_collect(adj, _current, visited, stack) do
+    {current, new_stack} = MapSet.pop(stack)
+    
+    if MapSet.member?(visited, current) do
+      dfs_collect(adj, current, visited, new_stack)
+    else
+      visited = MapSet.put(visited, current)
+      
+      neighbors = Map.get(adj, current, [])
+      
+      new_stack =
+        Enum.reduce(neighbors, new_stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) or MapSet.member?(stk, neighbor) do
+            stk
+          else
+            MapSet.put(stk, neighbor)
+          end
+        end)
+      
+      dfs_collect(adj, current, visited, new_stack)
+    end
+  end
+
+  @spec build_adjacency(non_neg_integer(), list(list(integer()))) :: map()
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+end[0m
+[36m18:04:42.964 [debug] [Validator.run] final test (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end[0m
+[33m18:04:42.964 [warning] [Solve attempt 4] validation FAILED: [:compile][0m
+[22m18:04:42.964 [info] [Solve attempt 5] generating (fn=max_connected_components)[0m
+[36m18:04:42.964 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to calculate the maximum number of connected components
+  obtainable by removing at most one edge from a graph.
+  """
+
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(non_neg_integer(), list(list(integer()))) :: integer()
+  def max_connected_components(0, _edges), do: 0
+  def max_connected_components(1, _edges), do: 1
+
+  def max_connected_components(n, edges) when n > 1 do
+    if Enum.empty?(edges) do
+      n
+    else
+      initial_count = count_components(n, edges)
+
+      max_after_removal =
+        Enum.reduce(edges, initial_count, fn [u, v], max_acc ->
+          # Remove the current edge and count components
+          remaining_edges = List.delete(edges, [u, v])
+          count = count_components(n, remaining_edges)
+          if count > max_acc, do: count, else: max_acc
+        end)
+
+      max_after_removal
+    end
+  end
+
+  @spec count_components(non_neg_integer(), list(list(integer()))) :: integer()
+  defp count_components(n, edges) when n == 0, do: 0
+  defp count_components(n, edges) when n == 1, do: 1
+
+  defp count_components(n, edges) do
+    adj = build_adjacency(n, edges)
+    
+    # We need to track visited nodes to count components
+    # Start with all nodes as unvisited
+    all_nodes = MapSet.new(1..n)
+    
+    count_components_dfs(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  @spec count_components_dfs(map(), MapSet.t(), MapSet.t(), integer()) :: integer()
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    # Get any node from unvisited to start a new component
+    <<first_node::binary-size(8), _rest::binary>> = :binary.encode_unsigned(MapSet.first(unvisited))
+    start_node = :binary.decode_unsigned(<<first_node::binary-size(8)>>)
+    
+    # Find all nodes in this component
+    {visited_new, component_nodes} = dfs_collect(adj, start_node, MapSet.new([start_node]), MapSet.new([start_node]))
+    
+    new_unvisited = MapSet.difference(unvisited, component_nodes)
+    
+    count_components_dfs(adj, new_unvisited, visited_new, count + 1)
+  end
+
+  @spec dfs_collect(map(), integer(), MapSet.t(), MapSet.t()) :: {MapSet.t(), MapSet.t()}
+  defp dfs_collect(_adj, current, visited, stack) when MapSet.empty?(stack) do
+    {visited, visited}
+  end
+
+  defp dfs_collect(adj, _current, visited, stack) do
+    {current, new_stack} = MapSet.pop(stack)
+    
+    if MapSet.member?(visited, current) do
+      dfs_collect(adj, current, visited, new_stack)
+    else
+      visited = MapSet.put(visited, current)
+      
+      neighbors = Map.get(adj, current, [])
+      
+      new_stack =
+        Enum.reduce(neighbors, new_stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) or MapSet.member?(stk, neighbor) do
+            stk
+          else
+            MapSet.put(stk, neighbor)
+          end
+        end)
+      
+      dfs_collect(adj, current, visited, new_stack)
+    end
+  end
+
+  @spec build_adjacency(non_neg_integer(), list(list(integer()))) :: map()
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: variable "edges" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 34 │   defp count_components(n, edges) when n == 0, do: 0
+    │                            ~~~~~
+    │
+    └─ lib/solution.ex:34:28: Solution.count_components/2
+
+    warning: variable "edges" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 35 │   defp count_components(n, edges) when n == 1, do: 1
+    │                            ~~~~~
+    │
+    └─ lib/solution.ex:35:28: Solution.count_components/2
+
+    error: cannot invoke remote function MapSet.size/1 inside a guard
+    │
+ 48 │   defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    │                                                                           ^
+    │
+    └─ lib/solution.ex:48:75: Solution.count_components_dfs/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+Reminder: module `Solution`, function `max_connected_components` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m18:04:53.925 [debug] [LLM.call] finish=stop len=3778 usage=%{"completion_tokens" => 1105, "prompt_tokens" => 1749, "prompt_tokens_details" => %{"cached_tokens" => 144}, "total_tokens" => 2854}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to calculate the maximum number of connected components
+  obtainable by removing at most one edge from a graph.
+  """
+
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(non_neg_integer(), list(list(integer()))) :: integer()
+  def max_connected_components(0, _edges), do: 0
+  def max_connected_components(1, _edges), do: 1
+
+  def max_connected_components(n, edges) when n > 1 do
+    initial_count = count_components(n, edges)
+
+    max_after_removal =
+      Enum.reduce(edges, initial_count, fn [u, v], max_acc ->
+        # Remove the current edge and count components
+        remaining_edges = List.delete(edges, [u, v])
+        count = count_components(n, remaining_edges)
+        if count > max_acc, do: count, else: max_acc
+      end)
+
+    max_after_removal
+  end
+
+  @spec count_components(non_neg_integer(), list(list(integer()))) :: integer()
+  defp count_components(n, _edges) when n == 0, do: 0
+  defp count_components(1, _edges), do: 1
+
+  defp count_components(n, edges) do
+    adj = build_adjacency(n, edges)
+
+    # We need to track visited nodes to count components
+    # Start with all nodes as unvisited
+    all_nodes = MapSet.new(1..n)
+
+    count_components_dfs(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  @spec count_components_dfs(map(), MapSet.t(), MapSet.t(), integer()) :: integer()
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    # Get any node from unvisited to start a new component
+    start_node = MapSet.first(unvisited)
+
+    # Find all nodes in this component
+    {_visited_new, component_nodes} = dfs_collect(adj, start_node, MapSet.new([start_node]), MapSet.new([start_node]))
+
+    new_unvisited = MapSet.difference(unvisited, component_nodes)
+
+    count_components_dfs(adj, new_unvisited, MapSet.new(), count + 1)
+  end
+
+  @spec dfs_collect(map(), integer(), MapSet.t(), MapSet.t()) :: {MapSet.t(), MapSet.t()}
+  defp dfs_collect(_adj, _current, visited, stack) when MapSet.empty?(stack) do
+    {visited, visited}
+  end
+
+  defp dfs_collect(adj, current, visited, stack) do
+    {current, new_stack} = MapSet.pop(stack)
+
+    if MapSet.member?(visited, current) do
+      dfs_collect(adj, current, visited, new_stack)
+    else
+      visited = MapSet.put(visited, current)
+
+      neighbors = Map.get(adj, current, [])
+
+      new_stack =
+        Enum.reduce(neighbors, new_stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) or MapSet.member?(stk, neighbor) do
+            stk
+          else
+            MapSet.put(stk, neighbor)
+          end
+        end)
+
+      dfs_collect(adj, current, visited, new_stack)
+    end
+  end
+
+  @spec build_adjacency(non_neg_integer(), list(list(integer()))) :: map()
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end
+---END---[0m
+[22m18:04:53.925 [info] [LLM.call] local_qwen_thinking completed in 10960ms — ok[0m
+[22m18:04:53.925 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m18:04:53.925 [debug] [Validator.run] module code (3299 chars):
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to calculate the maximum number of connected components
+  obtainable by removing at most one edge from a graph.
+  """
+
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(non_neg_integer(), list(list(integer()))) :: integer()
+  def max_connected_components(0, _edges), do: 0
+  def max_connected_components(1, _edges), do: 1
+
+  def max_connected_components(n, edges) when n > 1 do
+    initial_count = count_components(n, edges)
+
+    max_after_removal =
+      Enum.reduce(edges, initial_count, fn [u, v], max_acc ->
+        # Remove the current edge and count components
+        remaining_edges = List.delete(edges, [u, v])
+        count = count_components(n, remaining_edges)
+        if count > max_acc, do: count, else: max_acc
+      end)
+
+    max_after_removal
+  end
+
+  @spec count_components(non_neg_integer(), list(list(integer()))) :: integer()
+  defp count_components(n, _edges) when n == 0, do: 0
+  defp count_components(1, _edges), do: 1
+
+  defp count_components(n, edges) do
+    adj = build_adjacency(n, edges)
+
+    # We need to track visited nodes to count components
+    # Start with all nodes as unvisited
+    all_nodes = MapSet.new(1..n)
+
+    count_components_dfs(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  @spec count_components_dfs(map(), MapSet.t(), MapSet.t(), integer()) :: integer()
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    # Get any node from unvisited to start a new component
+    start_node = MapSet.first(unvisited)
+
+    # Find all nodes in this component
+    {_visited_new, component_nodes} = dfs_collect(adj, start_node, MapSet.new([start_node]), MapSet.new([start_node]))
+
+    new_unvisited = MapSet.difference(unvisited, component_nodes)
+
+    count_components_dfs(adj, new_unvisited, MapSet.new(), count + 1)
+  end
+
+  @spec dfs_collect(map(), integer(), MapSet.t(), MapSet.t()) :: {MapSet.t(), MapSet.t()}
+  defp dfs_collect(_adj, _current, visited, stack) when MapSet.empty?(stack) do
+    {visited, visited}
+  end
+
+  defp dfs_collect(adj, current, visited, stack) do
+    {current, new_stack} = MapSet.pop(stack)
+
+    if MapSet.member?(visited, current) do
+      dfs_collect(adj, current, visited, new_stack)
+    else
+      visited = MapSet.put(visited, current)
+
+      neighbors = Map.get(adj, current, [])
+
+      new_stack =
+        Enum.reduce(neighbors, new_stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) or MapSet.member?(stk, neighbor) do
+            stk
+          else
+            MapSet.put(stk, neighbor)
+          end
+        end)
+
+      dfs_collect(adj, current, visited, new_stack)
+    end
+  end
+
+  @spec build_adjacency(non_neg_integer(), list(list(integer()))) :: map()
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+end[0m
+[36m18:04:53.925 [debug] [Validator.run] test code (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end[0m
+[36m18:04:53.926 [debug] [Budget] spent so far (est.): $0.3752[0m
+[22m18:04:53.926 [info] [Validator.run] step 1/6: credence fix[0m
+[36m18:04:53.926 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m18:04:54.473 [debug] [run_credence_fix] exit=0 output:
+
+18:04:54.436 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+18:04:54.438 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 8 rules)
+
+18:04:54.445 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+18:04:54.445 [debug] [credence_fix] semantic pass 1: compilation FAILED, 2 error(s)
+
+18:04:54.448 [debug] [credence_fix] no rule matched diagnostic: %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {44, 75}, file: "credence_check.ex", stacktrace: [{Solution, :count_components_dfs, 4, [file: "credence_check.ex", column: 75, line: 44]}], source: "credence_check.ex", span: nil, severity: :error}
+
+18:04:54.449 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+18:04:54.449 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+18:04:54.449 [debug] [credence_fix] semantic done. Applied: []
+
+18:04:54.449 [debug] [credence_fix] starting pattern fix pipeline (118 rules)
+
+18:04:54.451 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+18:04:54.451 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+18:04:54.455 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 2 unfixable issue(s)
+no_reduce_for_map_building: `Enum.reduce/3` building a map via `Map.put/3` can be replaced with `Map.new/2`. `Map.new(enum, fn elem -> {key, value} end)` is clearer and more idiomatic. (line 92)
+no_redundant_assignment: Variable is assigned and immediately returned. The assignment is redundant — return the expression directly. (line 18)
+[0m
+[36m18:04:54.473 [debug] [run_credence_fix] no changes needed[0m
+[22m18:04:54.473 [info] [Validator.run] credence: no changes needed[0m
+[22m18:04:54.473 [info] [Validator.run] step 2/6: compile[0m
+[22m18:04:55.063 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m18:04:55.063 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    error: cannot invoke remote function MapSet.size/1 inside a guard
+    │
+ 44 │   defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    │                                                                           ^
+    │
+    └─ lib/solution.ex:44:75: Solution.count_components_dfs/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[22m18:04:55.063 [info] [Validator.run] step 3/6: format[0m
+[22m18:04:55.063 [info] [Validator.run] skipping format (compile failed)[0m
+[22m18:04:55.063 [info] [Validator.run] step 4/6: credo[0m
+[22m18:04:55.063 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m18:04:55.063 [info] [Validator.run] step 5/6: credence check[0m
+[22m18:04:55.063 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m18:04:55.063 [info] [Validator.run] step 6/6: tests[0m
+[22m18:04:55.063 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m18:04:55.063 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m18:04:55.063 [debug] [Validator.run] final module (3299 chars):
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to calculate the maximum number of connected components
+  obtainable by removing at most one edge from a graph.
+  """
+
+  @doc """
+  Returns the maximum number of connected components that can be obtained
+  by removing at most one edge from the graph.
+  """
+  @spec max_connected_components(non_neg_integer(), list(list(integer()))) :: integer()
+  def max_connected_components(0, _edges), do: 0
+  def max_connected_components(1, _edges), do: 1
+
+  def max_connected_components(n, edges) when n > 1 do
+    initial_count = count_components(n, edges)
+
+    max_after_removal =
+      Enum.reduce(edges, initial_count, fn [u, v], max_acc ->
+        # Remove the current edge and count components
+        remaining_edges = List.delete(edges, [u, v])
+        count = count_components(n, remaining_edges)
+        if count > max_acc, do: count, else: max_acc
+      end)
+
+    max_after_removal
+  end
+
+  @spec count_components(non_neg_integer(), list(list(integer()))) :: integer()
+  defp count_components(n, _edges) when n == 0, do: 0
+  defp count_components(1, _edges), do: 1
+
+  defp count_components(n, edges) do
+    adj = build_adjacency(n, edges)
+
+    # We need to track visited nodes to count components
+    # Start with all nodes as unvisited
+    all_nodes = MapSet.new(1..n)
+
+    count_components_dfs(adj, all_nodes, MapSet.new(), 0)
+  end
+
+  @spec count_components_dfs(map(), MapSet.t(), MapSet.t(), integer()) :: integer()
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    # Get any node from unvisited to start a new component
+    start_node = MapSet.first(unvisited)
+
+    # Find all nodes in this component
+    {_visited_new, component_nodes} = dfs_collect(adj, start_node, MapSet.new([start_node]), MapSet.new([start_node]))
+
+    new_unvisited = MapSet.difference(unvisited, component_nodes)
+
+    count_components_dfs(adj, new_unvisited, MapSet.new(), count + 1)
+  end
+
+  @spec dfs_collect(map(), integer(), MapSet.t(), MapSet.t()) :: {MapSet.t(), MapSet.t()}
+  defp dfs_collect(_adj, _current, visited, stack) when MapSet.empty?(stack) do
+    {visited, visited}
+  end
+
+  defp dfs_collect(adj, current, visited, stack) do
+    {current, new_stack} = MapSet.pop(stack)
+
+    if MapSet.member?(visited, current) do
+      dfs_collect(adj, current, visited, new_stack)
+    else
+      visited = MapSet.put(visited, current)
+
+      neighbors = Map.get(adj, current, [])
+
+      new_stack =
+        Enum.reduce(neighbors, new_stack, fn neighbor, stk ->
+          if MapSet.member?(visited, neighbor) or MapSet.member?(stk, neighbor) do
+            stk
+          else
+            MapSet.put(stk, neighbor)
+          end
+        end)
+
+      dfs_collect(adj, current, visited, new_stack)
+    end
+  end
+
+  @spec build_adjacency(non_neg_integer(), list(list(integer()))) :: map()
+  defp build_adjacency(n, edges) do
+    adj =
+      1..n
+      |> Enum.reduce(%{}, fn node, acc ->
+        Map.put(acc, node, [])
+      end)
+
+    Enum.reduce(edges, adj, fn [u, v], acc ->
+      acc
+      |> Map.update!(u, fn neighbors -> [v | neighbors] end)
+      |> Map.update!(v, fn neighbors -> [u | neighbors] end)
+    end)
+  end
+end[0m
+[36m18:04:55.063 [debug] [Validator.run] final test (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "path graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]) == 2
+  end
+
+  test "cycle graph" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [1, 6]]) == 1
+  end
+
+  test "disconnected node" do
+    assert Solution.max_connected_components(6, [[1, 2], [2, 3], [3, 4], [4, 5]]) == 3
+  end
+end[0m
+[33m18:04:55.063 [warning] [Solve attempt 5] validation FAILED: [:compile][0m
+[33m18:04:55.063 [warning] [Solve] giving up after 5 attempts[0m
+[36m18:04:55.079 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve FAILED — there is NO clean final. Judge the attempts for an ISSUE they repeatedly hit that NO existing rule fixed (a new Syntax/Semantic rule — e.g. a Python-ism like `a div b`, an unfixed warning), plus any existing rule that over-fired (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.UnusedVariable
+
+## Dead-ends already tried (do NOT re-propose)
+(none)
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, self-contained defmodule isolating ONE issue)
+===AFTER===              (REQUIRED for any proposed rule — the idiomatic rewrite; NO check-only)
+===ASSUMPTIONS===        (optiona (truncated)[0m
+[22m18:04:55.478 [info] [Budget] HEARTBEAT — 52 paid calls, est $0.3752 over 104.7min → ~$0.2151/hr, ~$5.16/day (tok in=471593 cache_rd=7557696 out=164230)[0m
+[36m18:07:39.093 [debug] [LLM.call] finish=stop len=786 usage=%{"completion_tokens" => 4752, "completion_tokens_details" => %{"reasoning_tokens" => 4526}, "prompt_tokens" => 36112, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 40864}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+avoid_remote_function_in_guard
+===PHASE===
+semantic
+===BEFORE===
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+===AFTER===
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) do
+    if MapSet.size(unvisited) == 0 do
+      count
+    else
+      count + 1
+    end
+  end
+end
+===ASSUMPTIONS===
+===PROPOSED_SWITCH===
+===RATIONALE===
+Repeated attempts used remote function calls (MapSet.size/1) in guards, which is not allowed. The rule merges the guarded clause with the next clause by moving the condition to the body.
+===END===[0m
+[22m18:07:39.093 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 164013ms — ok[0m
+[36m18:07:39.093 [debug] [Budget] spent so far (est.): $0.3951[0m
+[22m18:07:41.016 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m18:07:48.620 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" -o -name "*.exs" | head -50[0m
+[22m18:07:48.620 [info] [Pi] step 2: bash
+    command: ls /home/kly/projects/credence[0m
+[22m18:07:55.506 [info] [Pi] step 3: bash
+    command: ls /home/kly/projects/credence/lib/semantic/[0m
+[22m18:07:55.506 [info] [Pi] step 4: read
+    path: /home/kly/projects/credence/lib/semantic/avoid_remote_function_in_guard.ex[0m
+[22m18:07:55.506 [info] [Pi] step 5: read
+    path: /home/kly/projects/credence/test/semantic/avoid_remote_function_in_guard_check_test.exs[0m
+[22m18:07:55.506 [info] [Pi] step 6: read
+    path: /home/kly/projects/credence/test/semantic/avoid_remote_function_in_guard_fix_test.exs[0m
+[22m18:08:04.298 [info] [Pi] step 7: read
+    path: /home/kly/projects/credence/lib/semantic/rule.ex[0m
+[22m18:08:04.298 [info] [Pi] step 8: read
+    path: /home/kly/projects/credence/lib/semantic/undefined_function.ex[0m
+[22m18:08:04.298 [info] [Pi] step 9: read
+    path: /home/kly/projects/credence/lib/semantic/unused_variable.ex[0m
+[22m18:08:12.790 [info] [Pi] step 10: bash
+    command: ls /home/kly/projects/credence/test/semantic/[0m
+[22m18:08:12.791 [info] [Pi] step 11: read
+    path: /home/kly/projects/credence/test/semantic/undefined_function_check_test.exs[0m
+[22m18:08:21.234 [info] [Pi] step 12: read
+    path: /home/kly/projects/credence/test/semantic/undefined_function_qualified_fix_test.exs[0m
+[22m18:08:21.234 [info] [Pi] step 13: read
+    path: /home/kly/projects/credence/test/semantic/used_underscore_variable_check_test.exs[0m
+[22m18:08:21.235 [info] [Pi] step 14: read
+    path: /home/kly/projects/credence/lib/semantic/used_underscore_variable.ex[0m
+[22m18:08:30.199 [info] [Pi] step 15: bash
+    command: grep -r "Sourceror" /home/kly/projects/credence/lib/ --include="*.ex" -l[0m
+[22m18:08:30.199 [info] [Pi] step 16: bash
+    command: cat /home/kly/projects/credence/mix.exs[0m
+[22m18:08:49.959 [info] [Pi] step 17: read
+    path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m18:08:49.959 [info] [Pi] step 18: bash
+    command: cat /home/kly/projects/credence/lib/semantic/require_defmodule_wrapper.ex[0m
+[22m18:08:59.875 [info] [Pi] step 19: read
+    path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m18:08:59.875 [info] [Pi] step 20: bash
+    command: cat /home/kly/projects/credence/lib/pattern/no_case_tuple_guard_dispatch.ex[0m
+[22m18:09:10.041 [info] [Pi] step 21: read
+    path: /home/kly/projects/credence/lib/semantic.ex[0m
+[22m18:09:10.041 [info] [Pi] step 22: bash
+    command: cat /home/kly/projects/credence/lib/semantic/outdented_heredoc.ex[0m
+[22m18:09:15.432 [info] [Pi] step 23: bash
+    command: cat /home/kly/projects/credence/lib/pattern/no_cond_two_clauses.ex[0m
+[22m18:09:23.967 [info] [Pi] step 24: read
+    path: /home/kly/projects/credence/lib/pattern/rule.ex[0m
+[22m18:09:23.967 [info] [Pi] step 25: bash
+    command: cat /home/kly/projects/credence/lib/pattern/prefer_guard_over_if.ex[0m
+[22m18:09:52.574 [info] [Pi] step 26: bash
+    command: cd /home/kly/projects/credence && elixir --version[0m
+[22m18:09:52.574 [info] [Pi] step 27: bash
+    command: cd /home/kly/projects/credence && elixir -e '
+Code.with_diagnostics(fn ->
+  Code.compile_string("""
+  defmodule Example do
+    defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+      count
+    end
+
+    defp count_components_dfs(adj, unvisited, _visited, count) do
+      count + 1
+    end
+  end
+  """, "test.ex")
+end)
+' 2>&1[0m
+[22m18:09:55.478 [info] [Budget] HEARTBEAT — 53 paid calls, est $0.3951 over 109.7min → ~$0.2161/hr, ~$5.19/day (tok in=507705 cache_rd=7557696 out=168982)[0m
+[22m18:10:00.896 [info] [Pi] step 28: bash
+    command: cd /home/kly/projects/credence && elixir -e '
+{result, diagnostics} = Code.with_diagnostics(fn ->
+  try do
+    Code.compile_string("""
+    defmodule Example do
+      defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+        count
+      end
+
+      defp count_components_dfs(adj, unvisited, _visited, count) do
+        count + 1
+      end
+    end
+    """, "test.ex")
+  rescue
+    e -> {:raised, e}
+  end
+end)
+IO.puts("Result: #{inspect(result)}")
+IO.puts("Diagnostics: #{inspect(diagnostics)}")
+' 2>&1[0m
+[22m18:10:30.683 [info] [Pi] step 29: bash
+    command: cd /home/kly/projects/credence && mix test test/semantic/avoid_remote_function_in_guard_check_test.exs test/semantic/avoid_remote_function_in_guard_fix_test.exs 2>&1[0m
+[22m18:10:30.683 [info] [Pi] step 30: bash
+    command: cat /home/kly/projects/credence/lib/semantic/prefer_kernel_max_over_local.ex[0m
+[22m18:10:36.831 [info] [Pi] step 31: bash
+    command: grep -r "defmodule Credence.Issue" /home/kly/projects/credence/lib/ -l[0m
+[22m18:10:36.831 [info] [Pi] step 32: bash
+    command: cat /home/kly/projects/credence/lib/issue.ex[0m
+[22m18:11:21.935 [info] [Pi] step 33: bash
+    command: cd /home/kly/projects/credence && elixir -e '
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+IO.inspect(ast, label: "AST", limit: :infinity)
+'[0m
+[22m18:11:30.896 [info] [Pi] step 34: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+IO.inspect(ast, label: "AST", limit: :infinity)
+' 2>&1[0m
+[22m18:11:37.796 [info] [Pi] step 35: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) do
+    if MapSet.size(unvisited) == 0 do
+      count
+    else
+      count + 1
+    end
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+IO.inspect(ast, label: "AST AFTER", limit: :infinity)
+' 2>&1[0m
+[22m18:14:55.478 [info] [Budget] HEARTBEAT — 53 paid calls, est $0.3951 over 114.7min → ~$0.2067/hr, ~$4.96/day (tok in=507705 cache_rd=7557696 out=168982)[0m
+[22m18:19:07.764 [info] [Pi] step 36: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Build the merged AST manually and render it
+merged = {:defp, [
+  trailing_comments: [],
+  leading_comments: [],
+  do: [line: 2, column: 63],
+  end: [line: 8, column: 3],
+  line: 2,
+  column: 3
+], [
+  {:count_components_dfs, [
+    trailing_comments: [],
+    leading_comments: [],
+    closing: [line: 2, column: 61],
+    line: 2,
+    column: 8
+  ], [
+    {:_adj, [trailing_comments: [], leading_comments: [], line: 2, column: 29], nil},
+    {:unvisited, [trailing_comments: [], leading_comments: [], line: 2, column: 35], nil},
+    {:_visited, [trailing_comments: [], leading_comments: [], line: 2, column: 46], nil},
+    {:count, [trailing_comments: [], leading_comments: [], line: 2, column: 56], nil}
+  ]},
+  [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 63], [:do]},
+    {:if, [
+      trailing_comments: [],
+      leading_comments: [],
+      do: [line: 3, column: 36],
+      end: [line: 7, column: 5],
+      line: 3,
+      column: 5
+    ], [
+      {:==, [trailing_comments: [], line: 3, column: 31], [
+        {{:., [trailing_comments: [], line: 3, column: 14], [
+          {:__aliases__, [
+            trailing_comments: [],
+            leading_comments: [],
+            last: [line: 3, column: 8],
+            line: 3,
+            column: 8
+          ], [:MapSet]},
+          :size
+        ]}, [
+          trailing_comments: [],
+          leading_comments: [],
+          closing: [line: 3, column: 29],
+          line: 3,
+          column: 15
+        ], [
+          {:unvisited, [
+            trailing_comments: [],
+            leading_comments: [],
+            line: 3,
+            column: 20
+          ], nil}
+        ]},
+        {:__block__, [
+          trailing_comments: [],
+          leading_comments: [],
+          token: "0",
+          line: 3,
+          column: 34
+        ], [0]}
+      ]},
+      [
+        {{:__block__, [
+          trailing_comments: [],
+          leading_comments: [],
+          line: 3,
+          column: 36
+        ], [:do]},
+        {:count, [
+          trailing_comments: [],
+          leading_comments: [],
+          end_of_expression: [newlines: 1, line: 4, column: 12],
+          line: 4,
+          column: 7
+        ], nil}},
+        {{:__block__, [
+          trailing_comments: [],
+          leading_comments: [],
+          line: 5,
+          column: 5
+        ], [:else]},
+        {:+, [
+          trailing_comments: [],
+          end_of_expression: [newlines: 1, line: 6, column: 16],
+          line: 6,
+          column: 13
+        ], [
+          {:count, [
+            trailing_comments: [],
+            leading_comments: [],
+            line: 6,
+            column: 7
+          ], nil},
+          {:__block__, [
+            trailing_comments: [],
+            leading_comments: [],
+            token: "1",
+            line: 6,
+            column: 15
+          ], [1]}
+        ]}}
+      ]
+    ]}}
+  ]}
+]}
+
+dm = {:defmodule, [
+  trailing_comments: [],
+  leading_comments: [],
+  do: [line: 1, column: 19],
+  end: [line: 9, column: 1],
+  line: 1,
+  column: 1
+], [
+  {:__aliases__, [
+    trailing_comments: [],
+    leading_comments: [],
+    last: [line: 1, column: 11],
+    line: 1,
+    column: 11
+  ], [:Example]},
+  [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 19], [:do]},
+    merged
+  ]}
+]}
+
+IO.puts(Sourceror.to_string(dm))
+' 2>&1[0m
+[22m18:19:21.117 [info] [Pi] step 37: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+before = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+after_ = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) do
+    if MapSet.size(unvisited) == 0 do
+      count
+    else
+      count + 1
+    end
+  end
+end
+"""
+
+# What does Sourceror.to_string produce for the after AST?
+ast_after = Sourceror.parse_string!(after_)
+rendered = Sourceror.to_string(ast_after)
+IO.puts("=== Sourceror.to_string output ===")
+IO.puts(rendered)
+IO.puts("=== END ===")
+' 2>&1[0m
+[22m18:19:55.478 [info] [Budget] HEARTBEAT — 53 paid calls, est $0.3951 over 119.7min → ~$0.198/hr, ~$4.75/day (tok in=507705 cache_rd=7557696 out=168982)[0m
+[22m18:20:31.854 [info] [Pi] step 38: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Build a minimal AST for the "after" form and render it
+guard = {:==, [], [
+  {{:., [], [{:__aliases__, [], [:MapSet]}, :size]}, [], [{:unvisited, [], nil}]},
+  {:__block__, [], [0]}
+]}
+
+body1 = {:count, [], nil}
+body2 = {:+, [], [{:count, [], nil}, {:__block__, [], [1]}]}
+
+if_expr = {:if, [], [guard, [[do: body1, else: body2]]]}
+
+head = {:count_components_dfs, [], [
+  {:_adj, [], nil},
+  {:unvisited, [], nil},
+  {:_visited, [], nil},
+  {:count, [], nil}
+]}
+
+merged = {:defp, [], [head, [do: if_expr]]}
+
+dm = {:defmodule, [], [
+  {:__aliases__, [], [:Example]},
+  [[do: {:__block__, [], [merged]}]]
+]}
+
+IO.puts(Sourceror.to_string(dm))
+' 2>&1[0m
+[22m18:20:51.804 [info] [Pi] step 39: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) do
+    if MapSet.size(unvisited) == 0 do
+      count
+    else
+      count + 1
+    end
+  end
+end
+"""
+ast = Sourceror.parse_string!(source)
+rendered = Sourceror.to_string(ast)
+IO.puts(rendered)
+IO.puts("---")
+IO.puts(rendered == source)
+' 2>&1[0m
+[22m18:20:59.223 [info] [Pi] step 40: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) do
+    if MapSet.size(unvisited) == 0 do
+      count
+    else
+      count + 1
+    end
+  end
+end
+"""
+ast = Sourceror.parse_string!(source)
+rendered = Sourceror.to_string(ast)
+IO.puts("SOURCE bytes: #{byte_size(source)}")
+IO.puts("RENDERED bytes: #{byte_size(rendered)}")
+IO.inspect(String.to_charlist(source), label: "source chars", limit: :infinity)
+IO.inspect(String.to_charlist(rendered), label: "rendered chars", limit: :infinity)
+' 2>&1[0m
+[22m18:22:57.490 [info] [Pi] step 41: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test constructing an if expression AST manually
+guard = {:==, [line: 1], [
+  {{:., [line: 1], [{:__aliases__, [line: 1], [:MapSet]}, :size]}, [line: 1], [{:unvisited, [line: 1], nil}]},
+  {:__block__, [line: 1], [0]}
+]}
+
+body1 = {:count, [line: 1], nil}
+body2 = {:+, [line: 1], [{:count, [line: 1], nil}, {:__block__, [line: 1], [1]}]}
+
+if_expr = {:if, [], [guard, [
+  {{:__block__, [], [:do]}, body1},
+  {{:__block__, [], [:else]}, body2}
+]]}
+
+head = {:count_components_dfs, [line: 1], [
+  {:_adj, [line: 1], nil},
+  {:unvisited, [line: 1], nil},
+  {:_visited, [line: 1], nil},
+  {:count, [line: 1], nil}
+]}
+
+merged = {:defp, [line: 1], [head, [{{:__block__, [], [:do]}, if_expr}]]}
+
+IO.puts(Sourceror.to_string(merged))
+' 2>&1[0m
+[22m18:23:17.955 [info] [Pi] step 42: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Take the "before" source, parse it, and understand the structure
+before = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(before)
+
+# Navigate to the module body
+{:defmodule, _, [_alias, [{{:__block__, _, [:do]}, body}]]} = ast
+
+# body is {:__block__, _, [defp1, defp2]}
+{:__block__, _, [defp1, defp2]} = body
+
+# defp1
+{:defp, defp1_meta, [head1, body1_kw]} = defp1
+{:when, when_meta, [call1, guard]} = head1
+
+IO.puts("=== call1 (function head without guard) ===")
+IO.inspect(call1, limit: :infinity)
+
+IO.puts("\n=== guard ===")
+IO.inspect(guard, limit: :infinity)
+
+IO.puts("\n=== body1 keyword ===")
+IO.inspect(body1_kw, limit: :infinity)
+
+# Extract body1 content
+{{:__block__, do_meta, [:do]}, body1_content} = hd(body1_kw)
+
+IO.puts("\n=== body1_content ===")
+IO.inspect(body1_content, limit: :infinity)
+
+# defp2
+{:defp, defp2_meta, [call2, body2_kw]} = defp2
+
+IO.puts("\n=== call2 ===")
+IO.inspect(call2, limit: :infinity)
+
+IO.puts("\n=== body2 keyword ===")
+IO.inspect(body2_kw, limit: :infinity)
+
+# Extract body2 content
+{{:__block__, _, [:do]}, body2_content} = hd(body2_kw)
+
+IO.puts("\n=== body2_content ===")
+IO.inspect(body2_content, limit: :infinity)
+' 2>&1[0m
+[22m18:23:38.827 [info] [Pi] step 43: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+before = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(before)
+
+# Extract parts
+{:defmodule, dm_meta, [alias_ast, [{{:__block__, do_kw, [:do]}, body}]]} = ast
+{:__block__, body_meta, [defp1, defp2]} = body
+
+{:defp, defp1_meta, [head1_with_guard, body1_kw]} = defp1
+{:when, _when_meta, [call_head, guard]} = head1_with_guard
+
+{:defp, _defp2_meta, [_call2, body2_kw]} = defp2
+
+# Get body contents
+{{:__block__, _do1_meta, [:do]}, body1_content} = hd(body1_kw)
+{{:__block__, _do2_meta, [:do]}, body2_content} = hd(body2_kw)
+
+# Strip layout meta helper
+strip = fn node ->
+  Macro.prewalk(node, fn
+    {form, meta, args} when is_list(meta) ->
+      {form, Keyword.drop(meta, [:line, :column, :closing, :last, :end]), args}
+    other -> other
+  end)
+end
+
+# Build the if expression
+stripped_guard = strip.(guard)
+stripped_body1 = strip.(body1_content)
+stripped_body2 = strip.(body2_content)
+
+if_expr = {:if, [], [stripped_guard, [
+  {{:__block__, [], [:do]}, stripped_body1},
+  {{:__block__, [], [:else]}, stripped_body2}
+]]}
+
+# Build the merged defp
+stripped_head = strip.(call_head)
+merged = {:defp, [], [stripped_head, [{{:__block__, [], [:do]}, if_expr}]]}
+
+IO.puts("=== Merged defp ===")
+IO.puts(Sourceror.to_string(merged))
+' 2>&1[0m
+[22m18:23:55.432 [info] [Pi] step 44: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+before = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+after_ = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) do
+    if MapSet.size(unvisited) == 0 do
+      count
+    else
+      count + 1
+    end
+  end
+end
+"""
+
+ast_before = Sourceror.parse_string!(before)
+ast_after = Sourceror.parse_string!(after_)
+
+# Try patches_from_diff
+patches = Credence.RuleHelpers.patches_from_diff(ast_before, ast_after)
+IO.puts("=== Patches ===")
+IO.inspect(patches, limit: :infinity)
+
+# Apply patches to the before source
+result = Sourceror.patch_string(before, patches)
+IO.puts("\n=== Result ===")
+IO.puts(result)
+' 2>&1[0m
+[22m18:24:18.235 [info] [Pi] step 45: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test my merge logic
+before = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(before)
+
+# Navigate to defp clauses
+{:defmodule, _, [_, [{{:__block__, _, [:do]}, body}]]} = ast
+{:__block__, _, [defp1, defp2]} = body
+
+{:defp, _, [head1_with_guard, body1_kw]} = defp1
+{:when, _, [call_head, guard]} = head1_with_guard
+{{:__block__, _, [:do]}, body1_content} = hd(body1_kw)
+
+{:defp, _, [_, body2_kw]} = defp2
+{{:__block__, _, [:do]}, body2_content} = hd(body2_kw)
+
+# Build new if expression, reusing existing metadata
+if_expr = {:if, [], [guard, [
+  {{:__block__, [], [:do]}, body1_content},
+  {{:__block__, [], [:else]}, body2_content}
+]]}
+
+# Build new defp
+new_defp = {:defp, [], [call_head, [{{:__block__, [], [:do]}, if_expr}]]}
+
+# Build new module body
+new_body = {:__block__, [], [new_defp]}
+
+# Build new module
+new_module = {:defmodule, [], [
+  {:__aliases__, [], [:Example]},
+  [{{:__block__, [], [:do]}, new_body}]
+]}
+
+# Render and re-parse
+rendered = Sourceror.to_string(new_module)
+IO.puts("=== Rendered ===")
+IO.puts(rendered)
+
+# Re-parse for clean metadata
+{:ok, re_parsed} = Sourceror.parse_string(rendered)
+
+# Diff patches
+patches = Credence.RuleHelpers.patches_from_diff(ast, re_parsed)
+IO.puts("\n=== Patches ===")
+IO.inspect(patches, limit: :infinity)
+
+# Apply
+result = Sourceror.patch_string(before, patches)
+IO.puts("\n=== Result ===")
+IO.puts(result)
+' 2>&1[0m
+[22m18:24:38.550 [info] [Pi] step 46: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+before = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(before)
+
+{:defmodule, dm_meta, [alias_ast, [{{:__block__, do_block_meta, [:do]}, body}]]} = ast
+{:__block__, body_meta, [defp1, defp2]} = body
+
+{:defp, defp1_meta, [head1_with_guard, body1_kw]} = defp1
+{:when, _when_meta, [call_head, guard]} = head1_with_guard
+{{:__block__, do1_meta, [:do]}, body1_content} = hd(body1_kw)
+
+{:defp, _defp2_meta, [_call2, body2_kw]} = defp2
+{{:__block__, do2_meta, [:do]}, body2_content} = hd(body2_kw)
+
+# Strip layout meta helper (from RuleHelpers)
+strip = fn node ->
+  Macro.prewalk(node, fn
+    {form, meta, args} when is_list(meta) ->
+      {form, Keyword.drop(meta, [:line, :column, :closing, :last, :end]), args}
+    other -> other
+  end)
+end
+
+# Build the merged defp by reusing existing AST nodes
+# but stripping layout metadata so Sourceror re-layouts it
+if_expr = {:if, [line: 2, column: 10], [strip.(guard), [
+  {{:__block__, [line: 3, column: 5], [:do]}, strip.(body1_content)},
+  {{:__block__, [line: 5, column: 5], [:else]}, strip.(body2_content)}
+]]}
+
+new_body1_kw = [{{:__block__, [line: 2, column: 63], [:do]}, if_expr}]
+new_defp = {:defp, defp1_meta, [call_head, new_body1_kw]}
+
+new_body = {:__block__, body_meta, [new_defp]}
+new_module = {:defmodule, dm_meta, [alias_ast, [{{:__block__, do_block_meta, [:do]}, new_body}]]}
+
+# Render
+rendered = Sourceror.to_string(new_module)
+IO.puts("=== Rendered ===")
+IO.puts(rendered)
+
+# Re-parse
+{:ok, re_parsed} = Sourceror.parse_string(rendered)
+
+# Diff patches
+patches = Credence.RuleHelpers.patches_from_diff(ast, re_parsed)
+IO.puts("\n=== Patches ===")
+IO.inspect(patches, limit: :infinity)
+
+# Apply
+result = Sourceror.patch_string(before, patches)
+IO.puts("\n=== Result ===")
+IO.puts(result)
+' 2>&1[0m
+[22m18:24:55.478 [info] [Budget] HEARTBEAT — 53 paid calls, est $0.3951 over 124.7min → ~$0.1901/hr, ~$4.56/day (tok in=507705 cache_rd=7557696 out=168982)[0m
+[22m18:25:08.911 [info] [Pi] step 47: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+before = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(before)
+
+{:defmodule, dm_meta, [alias_ast, [{{:__block__, do_block_meta, [:do]}, body}]]} = ast
+{:__block__, body_meta, [defp1, defp2]} = body
+
+{:defp, defp1_meta, [head1_with_guard, body1_kw]} = defp1
+{:when, _when_meta, [call_head, guard]} = head1_with_guard
+{{:__block__, do1_meta, [:do]}, body1_content} = hd(body1_kw)
+
+{:defp, _defp2_meta, [_call2, body2_kw]} = defp2
+{{:__block__, do2_meta, [:do]}, body2_content} = hd(body2_kw)
+
+# Build the if expression with do/end block metadata
+if_expr = {:if, [do: [line: 2, column: 10], end: [line: 2, column: 10]], [guard, [
+  {{:__block__, [line: 2, column: 10], [:do]}, body1_content},
+  {{:__block__, [line: 2, column: 10], [:else]}, body2_content}
+]]}
+
+new_body1_kw = [{{:__block__, do1_meta, [:do]}, if_expr}]
+new_defp = {:defp, defp1_meta, [call_head, new_body1_kw]}
+
+new_body = {:__block__, body_meta, [new_defp]}
+new_module = {:defmodule, dm_meta, [alias_ast, [{{:__block__, do_block_meta, [:do]}, new_body}]]}
+
+rendered = Sourceror.to_string(new_module)
+IO.puts("=== Rendered ===")
+IO.puts(rendered)
+' 2>&1[0m
+[22m18:25:26.278 [info] [Pi] step 48: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+before = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(before)
+
+{:defmodule, dm_meta, [alias_ast, [{{:__block__, do_block_meta, [:do]}, body}]]} = ast
+{:__block__, body_meta, [defp1, defp2]} = body
+
+{:defp, defp1_meta, [head1_with_guard, body1_kw]} = defp1
+{:when, _when_meta, [call_head, guard]} = head1_with_guard
+{{:__block__, do1_meta, [:do]}, body1_content} = hd(body1_kw)
+
+{:defp, _defp2_meta, [_call2, body2_kw]} = defp2
+{{:__block__, do2_meta, [:do]}, body2_content} = hd(body2_kw)
+
+# Build the if expression with proper block metadata
+if_expr = {:if, [do: [line: 2, column: 10], end: [line: 2, column: 10]], [guard, [
+  {{:__block__, [line: 2, column: 10], [:do]}, body1_content},
+  {{:__block__, [line: 2, column: 10], [:else]}, body2_content}
+]]}
+
+new_body1_kw = [{{:__block__, do1_meta, [:do]}, if_expr}]
+new_defp = {:defp, defp1_meta, [call_head, new_body1_kw]}
+
+new_body = {:__block__, body_meta, [new_defp]}
+new_module = {:defmodule, dm_meta, [alias_ast, [{{:__block__, do_block_meta, [:do]}, new_body}]]}
+
+rendered = Sourceror.to_string(new_module)
+IO.puts("=== Rendered ===")
+IO.puts(rendered)
+
+# Re-parse for clean metadata
+{:ok, re_parsed} = Sourceror.parse_string(rendered)
+
+# Diff patches
+patches = Credence.RuleHelpers.patches_from_diff(ast, re_parsed)
+
+# Apply
+result = Sourceror.patch_string(before, patches)
+IO.puts("\n=== Result ===")
+IO.puts(result)
+
+# Check against expected
+expected = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) do
+    if MapSet.size(unvisited) == 0 do
+      count
+    else
+      count + 1
+    end
+  end
+end
+"""
+
+IO.puts("\n=== Match? ===")
+IO.puts(result == expected)
+' 2>&1[0m
+[22m18:25:50.895 [info] [Pi] step 49: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Test guard_has_remote_call? detection
+guard1 = {:==, [], [
+  {{:., [], [{:__aliases__, [], [:MapSet]}, :size]}, [], [{:unvisited, [], nil}]},
+  0
+]}
+
+guard2 = {:==, [], [
+  {:count, [], nil},
+  0
+]}
+
+# Check for remote function calls
+check = fn guard ->
+  Macro.prewalk(guard, false, fn
+    {{:., _, [{:__aliases__, _, [_mod]}, _fun]}, _, _} = node, _acc ->
+      {node, true}
+    node, acc ->
+      {node, acc}
+  end)
+  |> elem(1)
+end
+
+IO.puts("guard1 has remote call: #{check.(guard1)}")
+IO.puts("guard2 has remote call: #{check.(guard2)}")
+' 2>&1[0m
+[22m18:26:01.333 [info] [Pi] step 50: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Verify the real diagnostic message
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+{result, diagnostics} = Code.with_diagnostics(fn ->
+  try do
+    Code.compile_string(source, "credence_check.ex")
+  rescue
+    e -> {:raised, e}
+  end
+end)
+
+IO.puts("Result: #{inspect(result)}")
+IO.puts("\nDiagnostics:")
+Enum.each(diagnostics, fn d ->
+  IO.inspect(d)
+end)
+' 2>&1[0m
+[22m18:26:23.250 [info] [Pi] step 51: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Now test the pipeline diagnostic capture
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+{status, diagnostics} = Credence.RuleHelpers.compile_and_capture(source)
+IO.puts("Status: #{inspect(status)}")
+IO.puts("\nDiagnostics:")
+Enum.each(diagnostics, fn d ->
+  IO.inspect(d)
+end)
+' 2>&1[0m
+[22m18:27:20.016 [info] [Pi] step 52: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+# Full fix flow test
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+ast = Sourceror.parse_string!(source)
+
+# Helper to detect remote function calls in a guard
+guard_has_remote_call? = fn guard ->
+  Macro.prewalk(guard, false, fn
+    {{:., _, [{:__aliases__, _, [_mod]}, _fun]}, _, _} = node, _acc -> {node, true}
+    node, acc -> {node, acc}
+  end) |> elem(1)
+end
+
+# Helper to extract function name and arity from a call head
+fun_info = fn
+  {:when, _, [call, _guard]} -> fun_info.(call)
+  {name, _, args} when is_list(args) -> {name, length(args)}
+  _ -> nil
+end
+
+# Walk the AST to find and merge consecutive defp pairs
+transform = fn transform ->
+  fn
+    {:__block__, meta, stmts} = node, _acc ->
+      new_stmts = Enum.reduce(stmts, [], fn stmt, acc ->
+        case acc do
+          [prev | rest] ->
+            case {prev, stmt} do
+              {{:defp, _, [head1, _body1_kw]}, {:defp, _, [head2, _body2_kw]}} ->
+                info1 = fun_info.(head1)
+                info2 = fun_info.(head2)
+                has_guard? = match?({:when, _, _}, head1)
+                has_remote? = if has_guard?, do: guard_has_remote_call?(elem(head1, 2) |> Enum.at(1)), else: false
+                
+                if info1 == info2 and info1 != nil and has_guard? and has_remote? do
+                  # Merge!
+                  {:when, _, [call_head, guard]} = head1
+                  {:defp, meta1, [_, body1_kw]} = prev
+                  {:defp, _, [_, body2_kw]} = stmt
+                  
+                  {{:__block__, do1_meta, [:do]}, body1} = hd(body1_kw)
+                  {{:__block__, _, [:do]}, body2} = hd(body2_kw)
+                  
+                  if_expr = {:if, [do: [line: 1, column: 1], end: [line: 1, column: 1]], [guard, [
+                    {{:__block__, [line: 1, column: 1], [:do]}, body1},
+                    {{:__block__, [line: 1, column: 1], [:else]}, body2}
+                  ]]}
+                  
+                  new_defp = {:defp, meta1, [call_head, [{{:__block__, do1_meta, [:do]}, if_expr}]]}
+                  [new_defp | rest]
+                else
+                  [stmt, prev | rest]
+                end
+              _ ->
+                [stmt, prev | rest]
+            end
+          [] ->
+            [stmt]
+        end
+      end) |> Enum.reverse()
+      
+      {{:__block__, meta, new_stmts}, :ok}
+    
+    node, acc -> {node, acc}
+  end
+end
+
+# Use Macro.prewalk to apply the transform
+# Actually, I need a custom walker since I need to transform at the block level
+# Let me use Sourceror.prewalk or a manual approach
+
+# Manual approach: walk the AST and find defmodule blocks
+walk_and_transform = fn ast ->
+  Macro.postwalk(ast, fn
+    {:defmodule, dm_meta, [alias_ast, [{{:__block__, do_meta, [:do]}, body}]]} ->
+      case body do
+        {:__block__, bmeta, stmts} ->
+          new_stmts = merge_pairs(stmts)
+          {:defmodule, dm_meta, [alias_ast, [{{:__block__, do_meta, [:do]}, {:__block__, bmeta, new_stmts}}]]}
+        single ->
+          {:defmodule, dm_meta, [alias_ast, [{{:__block__, do_meta, [:do]}, single}]]}
+      end
+    node -> node
+  end)
+end
+
+merge_pairs = fn
+  merge_pairs_fn ->
+    fn
+      [] -> []
+      [single] -> [single]
+      [first = {:defp, _, [head1, _]}, second = {:defp, _, [head2, _]} | rest] ->
+        info1 = fun_info.(head1)
+        info2 = fun_info.(head2)
+        has_guard? = match?({:when, _, _}, head1)
+        has_remote? = if has_guard?, do: guard_has_remote_call?(elem(head1, 2) |> Enum.at(1)), else: false
+        
+        if info1 == info2 and info1 != nil and has_guard? and has_remote? do
+          {:when, _, [call_head, guard]} = head1
+          {:defp, meta1, [_, body1_kw]} = first
+          {:defp, _, [_, body2_kw]} = second
+          
+          {{:__block__, do1_meta, [:do]}, body1} = hd(body1_kw)
+          {{:__block__, _, [:do]}, body2} = hd(body2_kw)
+          
+          if_expr = {:if, [do: [line: 1, column: 1], end: [line: 1, column: 1]], [guard, [
+            {{:__block__, [line: 1, column: 1], [:do]}, body1},
+            {{:__block__, [line: 1, column: 1], [:else]}, body2}
+          ]]}
+          
+          new_defp = {:defp, meta1, [call_head, [{{:__block__, do1_meta, [:do]}, if_expr}]]}
+          [new_defp | merge_pairs_fn.(merge_pairs_fn).(rest)]
+        else
+          [first | merge_pairs_fn.(merge_pairs_fn).([second | rest])]
+        end
+      [first | rest] -> [first | merge_pairs_fn.(merge_pairs_fn).(rest)]
+    end
+end
+
+# Hmm, this is getting complex with the anonymous function recursion.
+# Let me just define proper modules.
+
+IO.puts("Need to implement properly")
+' 2>&1[0m
+[22m18:28:02.798 [info] [Pi] step 53: write
+    content: defmodule Credence.Semantic.AvoidRemoteFunctionInGuard do
+  @moduledoc """
+  Fixes compiler errors about remote function calls inside guards.
+
+  The Elixir compiler forbids remote function calls (e.g. `MapSet.size/1`)
+  inside guard clauses. When it encounters one, it emits:
+
+      cannot invoke remote function Module.function/arity inside a guard
+
+  The fix detects two consecutive `defp` clauses for the same function where:
+
+    1. The first has a `when` guard that contains a remote function call.
+    2. The second is a plain fallback clause (no guard) with the same name/arity.
+
+  It merges them into a single clause whose body is an `if/else`:
+
+      # Before (compiler error — remote call in guard)
+      defp foo(args) when Module.fun(x) == value do
+        body1
+      end
+
+      defp foo(args) do
+        body2
+      end
+
+      # After (compiles cleanly)
+      defp foo(args) do
+        if Module.fun(x) == value do
+          body1
+        else
+          body2
+        end
+      end
+  """
+  use Credence.Semantic.Rule
+
+  alias Credence.Issue
+
+  @impl true
+  def match?(%{severity: :error, message: msg}) when is_binary(msg) do
+    String.contains?(msg, "cannot invoke remote function") and
+      String.contains?(msg, "inside a guard")
+  end
+
+  def match?(_), do: false
+
+  @impl true
+  def to_issue(diagnostic) do
+    %Issue{
+      rule: :avoid_remote_function_in_guard,
+      message: "Remote function call in guard — merging with fallback clause",
+      meta: %{line: line(diagnostic)}
+    }
+  end
+
+  @impl true
+  def fix(source, _diagnostic) do
+    case parse(source) do
+      {:ok, ast} ->
+        transformed = transform(ast)
+
+        if transformed == ast do
+          source
+        else
+          rendered = Sourceror.to_string(transformed)
+
+          case Sourceror.parse_string(rendered) do
+            {:ok, re_parsed} ->
+              patches = Credence.RuleHelpers.patches_from_diff(ast, re_parsed)
+
+              if patches == [] do
+                source
+              else
+                result = Sourceror.patch_string(source, patches)
+                if result == source, do: source, else: result
+              end
+
+            {:error, _} ->
+              source
+          end
+        end
+
+      :error ->
+        source
+    end
+  end
+
+  defp line(%{position: {line, _col}}), do: line
+  defp line(%{position: line}) when is_integer(line), do: line
+
+  defp parse(source) do
+    {:ok, Sourceror.parse_string!(source)}
+  rescue
+    _ -> :error
+  end
+
+  # Walk the AST looking for defmodule blocks and transform their bodies.
+  defp transform(ast) do
+    Macro.postwalk(ast, fn
+      {:defmodule, dm_meta, [alias_ast, body_kw]} = node ->
+        case extract_do_body(body_kw) do
+          {:ok, body} ->
+            new_body = transform_module_body(body)
+
+            if new_body == body do
+              node
+            else
+              {:defmodule, dm_meta, [alias_ast, replace_do_body(body_kw, new_body)]}
+            end
+
+          :error ->
+            node
+        end
+
+      node ->
+        node
+    end)
+  end
+
+  # In a module body (which may be a :__block__ of statements or a single
+  # statement), find consecutive defp pairs to merge.
+  defp transform_module_body({:__block__, meta, stmts}) do
+    new_stmts = merge_consecutive_defps(stmts)
+    {:__block__, meta, new_stmts}
+  end
+
+  defp transform_module_body(other), do: other
+
+  # Walk a list of statements, merging consecutive defp pairs where the
+  # first has a when-guard with a remote function call.
+  defp merge_consecutive_defps([]), do: []
+  defp merge_consecutive_defps([single]), do: [single]
+
+  defp merge_consecutive_defps([first, second | rest]) do
+    case try_merge_defp_pair(first, second) do
+      {:ok, merged} ->
+        # Continue scanning: there might be more pairs after the merged clause
+        merge_consecutive_defps([merged | rest])
+
+      :error ->
+        [first | merge_consecutive_defps([second | rest])]
+    end
+  end
+
+  # Try to merge two consecutive defp clauses.
+  # Returns {:ok, merged_defp} or :error.
+  defp try_merge_defp_pair(
+         {:defp, meta1, [{:when, _when_meta, [head1, guard]}, body_kw1]},
+         {:defp, _meta2, [head2, body_kw2]}
+       ) do
+    with true <- same_function?(head1, head2),
+         true <- guard_has_remote_call?(guard),
+         {:ok, body1} <- extract_do_body(body_kw1),
+         {:ok, body2} <- extract_do_body(body_kw2) do
+      # Build the if/else expression from the guard and both bodies
+      if_expr =
+        {:if, [do: [line: 1, column: 1], end: [line: 1, column: 1]],
+         [
+           guard,
+           [
+             {{:__block__, [line: 1, column: 1], [:do]}, body1},
+             {{:__block__, [line: 1, column: 1], [:else]}, body2}
+           ]
+         ]}
+
+      # Build the merged defp: use head1 (without when) + if body
+      new_body_kw = [{{:__block__, [], [:do]}, if_expr}]
+      {:ok, {:defp, meta1, [head1, new_body_kw]}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp try_merge_defp_pair(_, _), do: :error
+
+  # Check if two function heads refer to the same function (same name and arity).
+  defp same_function?({name, _, args1}, {name, _, args2})
+       when is_atom(name) and is_list(args1) and is_list(args2),
+       do: length(args1) == length(args2)
+
+  defp same_function?(_, _), do: false
+
+  # Check if a guard expression contains a remote function call.
+  # A remote call looks like: Module.function(args)
+  # In AST: {{:., _, [{:__aliases__, _, [:Module]}, :function]}, _, args}
+  defp guard_has_remote_call?(guard) do
+    {_ast, found} =
+      Macro.prewalk(guard, false, fn
+        {{:., _, [{:__aliases__, _, [_module]}, _fun]}, _, _} = node, _acc ->
+          {node, true}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found
+  end
+
+  # Extract the do-body from a keyword list body.
+  # Handles both `[do: body]` and Sourceror's `[{{:__block__, _, [:do]}, body}]` forms.
+  defp extract_do_body(kw) when is_list(kw) do
+    Enum.find_value(kw, :error, fn
+      {{:__block__, _, [:do]}, body} -> {:ok, body}
+      {:do, body} -> {:ok, body}
+      _ -> nil
+    end)
+  end
+
+  defp extract_do_body(_), do: :error
+
+  # Replace the do-body in a keyword list body.
+  defp replace_do_body(kw, new_body) when is_list(kw) do
+    Enum.map(kw, fn
+      {{:__block__, meta, [:do]}, _} -> {{:__block__, meta, [:do]}, new_body}
+      {:do, _} -> {:do, new_body}
+      other -> other
+    end)
+  end
+end
+
+    path: /home/kly/projects/credence/lib/semantic/avoid_remote_function_in_guard.ex[0m
+[22m18:28:22.489 [info] [Pi] step 54: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+diag = %{severity: :error, message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {2, 75}}
+
+result = Credence.Semantic.AvoidRemoteFunctionInGuard.fix(source, diag)
+IO.puts("=== Result ===")
+IO.puts(result)
+
+expected = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) do
+    if MapSet.size(unvisited) == 0 do
+      count
+    else
+      count + 1
+    end
+  end
+end
+"""
+
+IO.puts("\n=== Match? ===")
+IO.puts(result == expected)
+' 2>&1[0m
+[22m18:28:36.746 [info] [Pi] step 55: write
+    content: defmodule Credence.Semantic.AvoidRemoteFunctionInGuardCheckTest do
+  use ExUnit.Case
+
+  alias Credence.Semantic.AvoidRemoteFunctionInGuard
+
+  test "matches the diagnostic" do
+    diag = %{
+      severity: :error,
+      message: "cannot invoke remote function MapSet.size/1 inside a guard",
+      position: {2, 75}
+    }
+
+    assert AvoidRemoteFunctionInGuard.match?(diag)
+  end
+
+  test "ignores unrelated diagnostics" do
+    diag = %{severity: :warning, message: "unrelated", position: {1, 1}}
+    refute AvoidRemoteFunctionInGuard.match?(diag)
+  end
+
+  test "ignores error diagnostics without remote function guard message" do
+    diag = %{severity: :error, message: "some other error", position: {1, 1}}
+    refute AvoidRemoteFunctionInGuard.match?(diag)
+  end
+
+  test "attributes the issue to this rule" do
+    diag = %{
+      severity: :error,
+      message: "cannot invoke remote function MapSet.size/1 inside a guard",
+      position: {2, 75}
+    }
+
+    assert AvoidRemoteFunctionInGuard.to_issue(diag).rule == :avoid_remote_function_in_guard
+  end
+
+  test "to_issue includes the line number from the diagnostic" do
+    diag = %{
+      severity: :error,
+      message: "cannot invoke remote function MapSet.size/1 inside a guard",
+      position: {5, 10}
+    }
+
+    issue = AvoidRemoteFunctionInGuard.to_issue(diag)
+    assert issue.meta.line == 5
+  end
+end
+
+    path: /home/kly/projects/credence/test/semantic/avoid_remote_function_in_guard_check_test.exs[0m
+[22m18:29:03.470 [info] [Pi] step 56: write
+    content: defmodule Credence.Semantic.AvoidRemoteFunctionInGuardFixTest do
+  use ExUnit.Case
+
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
+  alias Credence.Semantic.AvoidRemoteFunctionInGuard
+
+  defp fix(source, message \\ nil, line \\ 1) do
+    msg = message || "cannot invoke remote function MapSet.size/1 inside a guard"
+
+    AvoidRemoteFunctionInGuard.fix(source, %{
+      severity: :error,
+      message: msg,
+      position: {line, 1}
+    })
+  end
+
+  test "merges guarded clause with fallback into if/else" do
+    input = """
+    defmodule Example do
+      defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+        count
+      end
+
+      defp count_components_dfs(adj, unvisited, _visited, count) do
+        count + 1
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      defp count_components_dfs(_adj, unvisited, _visited, count) do
+        if MapSet.size(unvisited) == 0 do
+          count
+        else
+          count + 1
+        end
+      end
+    end
+    """
+
+    assert fix(input) == expected
+  end
+
+  test "fixed output is well-formed (parses)" do
+    input = """
+    defmodule Example do
+      defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+        count
+      end
+
+      defp count_components_dfs(adj, unvisited, _visited, count) do
+        count + 1
+      end
+    end
+    """
+
+    assert valid_syntax?(fix(input))
+  end
+
+  test "returns source unchanged when no remote function in guard" do
+    input = """
+    defmodule Example do
+      defp foo(x) when x > 0, do: x
+      defp foo(x), do: -x
+    end
+    """
+
+    assert fix(input) == input
+  end
+
+  test "returns source unchanged when no consecutive defp pair" do
+    input = """
+    defmodule Example do
+      defp foo(x) when MapSet.size(x) == 0, do: :empty
+
+      def bar(x), do: x
+
+      defp foo(x), do: x
+    end
+    """
+
+    assert fix(input) == input
+  end
+
+  test "handles guard with List.first/1 remote call" do
+    input = """
+    defmodule Example do
+      defp process(list, acc) when List.first(list) == nil do
+        acc
+      end
+
+      defp process(list, acc) do
+        [head | tail] = list
+        process(tail, [head | acc])
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      defp process(list, acc) do
+        if List.first(list) == nil do
+          acc
+        else
+          [head | tail] = list
+          process(tail, [head | acc])
+        end
+      end
+    end
+    """
+
+    assert fix(input) == expected
+  end
+
+  test "handles guard with String.length/1 remote call" do
+    input = """
+    defmodule Example do
+      defp classify(str) when String.length(str) == 0 do
+        :empty
+      end
+
+      defp classify(str) do
+        :non_empty
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      defp classify(str) do
+        if String.length(str) == 0 do
+          :empty
+        else
+          :non_empty
+        end
+      end
+    end
+    """
+
+    assert fix(input) == expected
+  end
+
+  test "does not modify source without remote function calls in guard" do
+    input = """
+    defmodule Example do
+      defp foo(x) when is_integer(x) and x > 0, do: x
+      defp foo(x), do: -x
+    end
+    """
+
+    assert fix(input) == input
+  end
+end
+
+    path: /home/kly/projects/credence/test/semantic/avoid_remote_function_in_guard_fix_test.exs[0m
+[22m18:29:09.022 [info] [Pi] step 57: bash
+    command: cd /home/kly/projects/credence && mix test test/semantic/avoid_remote_function_in_guard_check_test.exs test/semantic/avoid_remote_function_in_guard_fix_test.exs 2>&1[0m
+[22m18:29:18.195 [info] [Pi] step 58: bash
+    command: cd /home/kly/projects/credence && mix test test/semantic_meta_test.exs 2>&1[0m
+[22m18:29:25.514 [info] [Pi] step 59: bash
+    command: cd /home/kly/projects/credence && mix test test/rule_test_completeness_test.exs 2>&1[0m
+[22m18:29:32.738 [info] [Pi] step 60: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -30[0m
+[22m18:29:50.354 [info] [Pi] step 61: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+source = """
+defmodule Example do
+  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do
+    count
+  end
+
+  defp count_components_dfs(adj, unvisited, _visited, count) do
+    count + 1
+  end
+end
+"""
+
+fixed = Credence.Semantic.fix(source)
+IO.puts("=== Fixed ===")
+IO.puts(fixed)
+
+# Verify it compiles
+{result, _} = Credence.RuleHelpers.compile_and_capture(fixed)
+IO.puts("\nCompiles: #{result == :ok}")
+' 2>&1[0m
+[22m18:29:55.478 [info] [Budget] HEARTBEAT — 53 paid calls, est $0.3951 over 129.7min → ~$0.1828/hr, ~$4.39/day (tok in=507705 cache_rd=7557696 out=168982)[0m
+[22m18:30:11.374 [info] [Pi] step 62: bash
+    command: cd /home/kly/projects/credence && mix test test/semantic/avoid_remote_function_in_guard_check_test.exs test/semantic/avoid_remote_function_in_guard_fix_test.exs test/semantic_meta_test.exs test/rule_test_completeness_test.exs 2>&1[0m
+[22m18:30:21.698 [info] [Pi] step 63: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | grep -E "(tests|failures|Finished)"[0m
+[22m18:30:46.045 [info] [Pi] agent done — exit=0 steps=63 stop=stop[0m
+[36m18:30:46.045 [debug] [Budget] spent so far (est.): $0.4841[0m
+[22m18:30:46.552 [info] [Gate] staged entries: [{"A", ["lib/semantic/avoid_remote_function_in_guard.ex"]}, {"A", ["test/semantic/avoid_remote_function_in_guard_check_test.exs"]}, {"A", ["test/semantic/avoid_remote_function_in_guard_fix_test.exs"]}][0m
+[36m18:30:47.177 [debug] [Gate] mix test ["test/semantic/avoid_remote_function_in_guard_check_test.exs", "test/semantic/avoid_remote_function_in_guard_fix_test.exs"] exit=2
+Generated credence app
+Running ExUnit with seed: 982914, max_cases: 48
+
+    warning: Credence.Semantic.AvoidRemoteFunctionInGuard.fix/2 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available or is yet to be defined)
+    │
+ 11 │     AvoidRemoteFunctionInGuard.fix(source, %{
+    │                                ~
+    │
+    └─ test/semantic/avoid_remote_function_in_guard_fix_test.exs:11:32: Credence.Semantic.AvoidRemoteFunctionInGuardFixTest.fix/3
+
+    warning: Credence.Semantic.AvoidRemoteFunctionInGuard.to_issue/1 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available or is yet to be defined)
+    │
+ 33 │     assert AvoidRemoteFunctionInGuard.to_issue(diag).rule == :avoid_remote_function_in_guard
+    │                                       ~
+    │
+    └─ test/semantic/avoid_remote_function_in_guard_check_test.exs:33:39: Credence.Semantic.AvoidRemoteFunctionInGuardCheckTest."test attributes the issue to this rule"/1
+    └─ test/semantic/avoid_remote_function_in_guard_check_test.exs:43:40: Credence.Semantic.AvoidRemoteFunctionInGuardCheckTest."test to_issue includes the line number from the diagnostic"/1
+
+
+
+  1) test returns source unchanged when no remote function in guard (Credence.Semantic.AvoidRemoteFunctionInGuardFixTest)
+     test/semantic/avoid_remote_function_in_guard_fix_test.exs:62
+     ** (UndefinedFunctionError) function Credence.Semantic.AvoidRemoteFunctionInGuard.fix/2 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available)
+     code: assert fix(input) == input
+     stacktrace:
+       Credence.Semantic.AvoidRemoteFunctionInGuard.fix("defmodule Example do\n  defp foo(x) when x > 0, do: x\n  defp foo(x), do: -x\nend\n", %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {1, 1}, severity: :error})
+       test/semantic/avoid_remote_function_in_guard_fix_test.exs:70: (test)
+
+
+
+  2) test returns source unchanged when no consecutive defp pair (Credence.Semantic.AvoidRemoteFunctionInGuardFixTest)
+     test/semantic/avoid_remote_function_in_guard_fix_test.exs:73
+     ** (UndefinedFunctionError) function Credence.Semantic.AvoidRemoteFunctionInGuard.fix/2 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available)
+     code: assert fix(input) == input
+     stacktrace:
+       Credence.Semantic.AvoidRemoteFunctionInGuard.fix("defmodule Example do\n  defp foo(x) when MapSet.size(x) == 0, do: :empty\n\n  def bar(x), do: x\n\n  defp foo(x), do: x\nend\n", %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {1, 1}, severity: :error})
+       test/semantic/avoid_remote_function_in_guard_fix_test.exs:84: (test)
+
+
+
+  3) test does not modify source without remote function calls in guard (Credence.Semantic.AvoidRemoteFunctionInGuardFixTest)
+     test/semantic/avoid_remote_function_in_guard_fix_test.exs:145
+     ** (UndefinedFunctionError) function Credence.Semantic.AvoidRemoteFunctionInGuard.fix/2 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available)
+     code: assert fix(input) == input
+     stacktrace:
+       Credence.Semantic.AvoidRemoteFunctionInGuard.fix("defmodule Example do\n  defp foo(x) when is_integer(x) and x > 0, do: x\n  defp foo(x), do: -x\nend\n", %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {1, 1}, severity: :error})
+       test/semantic/avoid_remote_function_in_guard_fix_test.exs:153: (test)
+
+
+
+  4) test handles guard with String.length/1 remote call (Credence.Semantic.AvoidRemoteFunctionInGuardFixTest)
+     test/semantic/avoid_remote_function_in_guard_fix_test.exs:117
+     ** (UndefinedFunctionError) function Credence.Semantic.AvoidRemoteFunctionInGuard.fix/2 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available)
+     code: assert fix(input) == expected
+     stacktrace:
+       Credence.Semantic.AvoidRemoteFunctionInGuard.fix("defmodule Example do\n  defp classify(str) when String.length(str) == 0 do\n    :empty\n  end\n\n  defp classify(str) do\n    :non_empty\n  end\nend\n", %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {1, 1}, severity: :error})
+       test/semantic/avoid_remote_function_in_guard_fix_test.exs:142: (test)
+
+
+
+  5) test merges guarded clause with fallback into if/else (Credence.Semantic.AvoidRemoteFunctionInGuardFixTest)
+     test/semantic/avoid_remote_function_in_guard_fix_test.exs:18
+     ** (UndefinedFunctionError) function Credence.Semantic.AvoidRemoteFunctionInGuard.fix/2 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available)
+     code: assert fix(input) == expected
+     stacktrace:
+       Credence.Semantic.AvoidRemoteFunctionInGuard.fix("defmodule Example do\n  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do\n    count\n  end\n\n  defp count_components_dfs(adj, unvisited, _visited, count) do\n    count + 1\n  end\nend\n", %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {1, 1}, severity: :error})
+       test/semantic/avoid_remote_function_in_guard_fix_test.exs:43: (test)
+
+
+
+  6) test handles guard with List.first/1 remote call (Credence.Semantic.AvoidRemoteFunctionInGuardFixTest)
+     test/semantic/avoid_remote_function_in_guard_fix_test.exs:87
+     ** (UndefinedFunctionError) function Credence.Semantic.AvoidRemoteFunctionInGuard.fix/2 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available)
+     code: assert fix(input) == expected
+     stacktrace:
+       Credence.Semantic.AvoidRemoteFunctionInGuard.fix("defmodule Example do\n  defp process(list, acc) when List.first(list) == nil do\n    acc\n  end\n\n  defp process(list, acc) do\n    [head | tail] = list\n    process(tail, [head | acc])\n  end\nend\n", %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {1, 1}, severity: :error})
+       test/semantic/avoid_remote_function_in_guard_fix_test.exs:114: (test)
+
+
+
+  7) test fixed output is well-formed (parses) (Credence.Semantic.AvoidRemoteFunctionInGuardFixTest)
+     test/semantic/avoid_remote_function_in_guard_fix_test.exs:46
+     ** (UndefinedFunctionError) function Credence.Semantic.AvoidRemoteFunctionInGuard.fix/2 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available)
+     code: assert valid_syntax?(fix(input))
+     stacktrace:
+       Credence.Semantic.AvoidRemoteFunctionInGuard.fix("defmodule Example do\n  defp count_components_dfs(_adj, unvisited, _visited, count) when MapSet.size(unvisited) == 0 do\n    count\n  end\n\n  defp count_components_dfs(adj, unvisited, _visited, count) do\n    count + 1\n  end\nend\n", %{message: "cannot invoke remote function MapSet.size/1 inside a guard", position: {1, 1}, severity: :error})
+       test/semantic/avoid_remote_function_in_guard_fix_test.exs:59: (test)
+
+
+
+  8) test ignores error diagnostics without remote function guard message (Credence.Semantic.AvoidRemoteFunctionInGuardCheckTest)
+     test/semantic/avoid_remote_function_in_guard_check_test.exs:21
+     ** (UndefinedFunctionError) function Credence.Semantic.AvoidRemoteFunctionInGuard.match?/1 is undefined (module Credence.Semantic.AvoidRemoteFunctionInGuard is not available)
+     code: refute AvoidRemoteFunctionInGuard.match?(diag)
+     stacktrace:
+       Credence.Semantic.AvoidRemoteFunctionInGuard.match?(%{message: "some other error", position: {1, 1}, severity: :error})
+       test/semantic/avoid_remote_function_in_guard_check_test.exs:23: (test)
+
+
+
+  9) test attributes the issue to this rule (Credence.Semantic.AvoidRemoteFunctionInGuardCheckTest)
+     test/semantic/avoid_remote_function_in_guard_check_test.exs:26
+     ** (UndefinedFunctionError) function Credence.Semantic.AvoidRemoteFunctionInGuard.to_issue/1 is undefined (module Credence.Semantic.Av (truncated)[0m
+[22m18:30:47.182 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m18:30:55.461 [debug] [Gate] mix test [] exit=0
+Compiling 1 file (.ex)
+Generated credence app
+Running ExUnit with seed: 643449, max_cases: 48
+
+.............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Finished in 7.7 seconds (3.6s async, 4.0s sync)
+5 properties, 4440 tests, 0 failures
+[0m
+[22m18:30:55.461 [info] [Gate] full suite GREEN[0m
+[22m18:30:55.472 [info] [Git] committed: cred-gen: new(semantic): avoid_remote_function_in_guard [row 98222][0m
+[22m18:30:55.472 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m18:30:57.528 [info] [Workspace] ✓ credence recompiled[0m
+[22m18:30:59.339 [info] [Git] pushed origin/evolution[0m
+[22m18:30:59.339 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m18:31:01.371 [info] [Workspace] ✓ credence recompiled[0m

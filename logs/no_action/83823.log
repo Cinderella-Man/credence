@@ -1,0 +1,2973 @@
+[22m21:00:11.332 [info] [idx=83823] entry_point=rotate_2D_array[0m
+[36m21:00:11.332 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Create a function that takes a 2D array and an integer as arguments and returns the 2D array after rotating it clockwise by the given number of times.
+
+## Python Solution
+```python
+def rotate_2D_array(arr, n):
+    for _ in range(n):
+        arr = list(zip(*arr[::-1]))
+    return [list(i) for i in arr]
+```
+
+## Python Tests
+assert rotate_2D_array([[1,2,3],[4,5,6],[7,8,9]], 2) == [[9,8,7],[6,5,4],[3,2,1]]
+assert rotate_2D_array([[1,2,3],[4,5,6],[7,8,9]], 3) == [[3,6,9],[2,5,8],[1,4,7]]
+assert rotate_2D_array([[1,2,3],[4,5,6],[7,8,9]], 1) == [[7,4,1],[8,5,2],[9,6,3]]
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `rotate_2d_array`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m21:01:47.618 [debug] [LLM.call] finish=stop len=1236 usage=%{"completion_tokens" => 2882, "completion_tokens_details" => %{"reasoning_tokens" => 2451}, "prompt_tokens" => 585, "prompt_tokens_details" => %{}, "total_tokens" => 3467}
+[LLM.call] response:
+---INSTRUCTION---
+Given a two-dimensional list (list of lists) and an integer `n`, return the two-dimensional list after rotating it clockwise by the given number of times. Each rotation is 90 degrees clockwise. The function should be named `rotate_2d_array` and take two arguments: the two-dimensional list and the integer `n`. For example, rotating `[[1,2],[3,4]]` once clockwise yields `[[3,1],[4,2]]`.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 2) == [[9,8,7],[6,5,4],[3,2,1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 3) == [[3,6,9],[2,5,8],[1,4,7]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 1) == [[7,4,1],[8,5,2],[9,6,3]]
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def rotate_2d_array(matrix, n) do
+    n
+    |> rem(4)
+    |> then(fn times -> Enum.reduce(1..times, matrix, fn _, acc -> rotate_once(acc) end) end)
+  end
+
+  defp rotate_once(matrix) do
+    matrix
+    |> Enum.reverse()
+    |> Enum.zip()
+    |> Enum.map(fn tuple -> Tuple.to_list(tuple) end)
+  end
+end
+
+---END---[0m
+[22m21:01:47.618 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 96285ms — ok[0m
+[36m21:01:47.619 [debug] [Budget] spent so far (est.): $0.8668[0m
+[22m21:01:48.650 [info] [RoundTrip] reference PASSED tests[0m
+[22m21:01:48.650 [info] [idx=83823] translation fresh — solving[0m
+[22m21:01:48.650 [info] ===SOLVE_BOUNDARY===[0m
+[22m21:01:48.650 [info] [Solve attempt 1] generating (fn=rotate_2d_array)[0m
+[36m21:01:48.650 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Given a two-dimensional list (list of lists) and an integer `n`, return the two-dimensional list after rotating it clockwise by the given number of times. Each rotation is 90 degrees clockwise. The function should be named `rotate_2d_array` and take two arguments: the two-dimensional list and the integer `n`. For example, rotating `[[1,2],[3,4]]` once clockwise yields `[[3,1],[4,2]]`.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 2) == [[9,8,7],[6,5,4],[3,2,1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 3) == [[3,6,9],[2,5,8],[1,4,7]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 1) == [[7,4,1],[8,5,2],[9,6,3]]
+  end
+end
+```
+
+Module: `Solution`. Function: `rotate_2d_array`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:01:56.271 [debug] [LLM.call] finish=stop len=2357 usage=%{"completion_tokens" => 828, "prompt_tokens" => 592, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 1420}
+[LLM.call] response:
+---MODULE---
+@doc """
+Rotates a 2D array clockwise by 90 degrees, n times.
+"""
+@spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+  # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+  normalized_n = rem(n, 4)
+  
+  if normalized_n == 0 do
+    array
+  else
+    do_rotate(array, normalized_n)
+  end
+end
+
+defp do_rotate(array, 1) do
+  # Rotate once clockwise:
+  # Step 1: Transpose the matrix
+  # Step 2: Reverse each row
+  transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  # Actually, let's do it properly for any size
+  
+  # Transpose: rows become columns
+  # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+  # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+  # Then reverse each row to get clockwise rotation:
+  # [[7,4,1],[8,5,2],[9,6,3]]
+  
+  transpose_matrix = transpose_matrix(array)
+  transpose_matrix |> Enum.map(&Enum.reverse/1)
+end
+
+defp do_rotate(array, n) when n > 1 do
+  # Rotate once, then rotate the result n-1 times
+  once_rotated = rotate_2d_array(array, 1)
+  rotate_2d_array(once_rotated, n - 1)
+end
+
+# Helper function to transpose a 2D list
+defp transpose_matrix(matrix) do
+  # Handle empty matrix or matrix with empty rows
+  if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+    []
+  else
+    # Get the first column of each row, then recursively transpose the rest
+    # Using Enum.map with index might not work directly, so use Enum.with_index
+    # Actually, a simpler approach: transpose by mapping over columns
+    
+    # Find number of columns
+    num_cols = length(hd(matrix))
+    
+    # For each column index, extract all elements in that column
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+    |> Enum.to_list()
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 2) == [[9,8,7],[6,5,4],[3,2,1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 3) == [[3,6,9],[2,5,8],[1,4,7]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 1) == [[7,4,1],[8,5,2],[9,6,3]]
+  end
+end
+---END---[0m
+[22m21:01:56.271 [info] [LLM.call] local_qwen_thinking completed in 7620ms — ok[0m
+[22m21:01:56.271 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:01:56.271 [debug] [Validator.run] module code (1855 chars):
+@doc """
+Rotates a 2D array clockwise by 90 degrees, n times.
+"""
+@spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+  # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+  normalized_n = rem(n, 4)
+  
+  if normalized_n == 0 do
+    array
+  else
+    do_rotate(array, normalized_n)
+  end
+end
+
+defp do_rotate(array, 1) do
+  # Rotate once clockwise:
+  # Step 1: Transpose the matrix
+  # Step 2: Reverse each row
+  transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  # Actually, let's do it properly for any size
+  
+  # Transpose: rows become columns
+  # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+  # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+  # Then reverse each row to get clockwise rotation:
+  # [[7,4,1],[8,5,2],[9,6,3]]
+  
+  transpose_matrix = transpose_matrix(array)
+  transpose_matrix |> Enum.map(&Enum.reverse/1)
+end
+
+defp do_rotate(array, n) when n > 1 do
+  # Rotate once, then rotate the result n-1 times
+  once_rotated = rotate_2d_array(array, 1)
+  rotate_2d_array(once_rotated, n - 1)
+end
+
+# Helper function to transpose a 2D list
+defp transpose_matrix(matrix) do
+  # Handle empty matrix or matrix with empty rows
+  if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+    []
+  else
+    # Get the first column of each row, then recursively transpose the rest
+    # Using Enum.map with index might not work directly, so use Enum.with_index
+    # Actually, a simpler approach: transpose by mapping over columns
+    
+    # Find number of columns
+    num_cols = length(hd(matrix))
+    
+    # For each column index, extract all elements in that column
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+    |> Enum.to_list()
+  end
+end[0m
+[36m21:01:56.271 [debug] [Budget] spent so far (est.): $0.8677[0m
+[36m21:01:56.271 [debug] [Validator.run] test code (466 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 2) == [[9,8,7],[6,5,4],[3,2,1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 3) == [[3,6,9],[2,5,8],[1,4,7]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 1) == [[7,4,1],[8,5,2],[9,6,3]]
+  end
+end[0m
+[22m21:01:56.271 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:01:56.272 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:01:56.966 [debug] [run_credence_fix] exit=0 output:
+
+21:01:56.797 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:01:56.799 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:01:56.801 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+21:01:56.801 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+21:01:56.802 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+21:01:56.804 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Rotates a 2D array clockwise by 90 degrees, n times.
+  L2 + @doc """
+  L3 - """
+  L3 + Rotates a 2D array clockwise by 90 degrees, n times.
+  L4 - @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  L4 + """
+  L5 - def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+  L5 + @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  L6 -   # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+  L6 + def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+  L7 -   normalized_n = rem(n, 4)
+  L7 +   # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+  L8 - 
+  L8 +   normalized_n = rem(n, 4)
+  L9 -   if normalized_n == 0 do
+  L9 + 
+  L10 -     array
+  L10 +   if normalized_n == 0 do
+  L11 -   else
+  L11 +     array
+  L12 -     do_rotate(array, normalized_n)
+  L12 +   else
+  L13 -   end
+  L13 +     do_rotate(array, normalized_n)
+  L14 - end
+  L14 +   end
+  L15 - 
+  L15 + end
+  L16 - defp do_rotate(array, 1) do
+  L16 + 
+  L17 -   # Rotate once clockwise:
+  L17 + defp do_rotate(array, 1) do
+  L18 -   # Step 1: Transpose the matrix
+  L18 +   # Rotate once clockwise:
+  L19 -   # Step 2: Reverse each row
+  L19 +   # Step 1: Transpose the matrix
+  L20 -   transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  L20 +   # Step 2: Reverse each row
+  L21 -   # Actually, let's do it properly for any size
+  L21 +   transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  L22 - 
+  L22 +   # Actually, let's do it properly for any size
+  L23 -   # Transpose: rows become columns
+  L23 + 
+  L24 -   # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+  L24 +   # Transpose: rows become columns
+  L25 -   # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+  L25 +   # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+  L26 -   # Then reverse each row to get clockwise rotation:
+  L26 +   # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+  L27 -   # [[7,4,1],[8,5,2],[9,6,3]]
+  L27 +   # Then reverse each row to get clockwise rotation:
+  L28 - 
+  L28 +   # [[7,4,1],[8,5,2],[9,6,3]]
+  L29 -   transpose_matrix = transpose_matrix(array)
+  L29 + 
+  L30 -   transpose_matrix |> Enum.map(&Enum.reverse/1)
+  L30 +   transpose_matrix = transpose_matrix(array)
+  L31 - end
+  L31 +   transpose_matrix |> Enum.map(&Enum.reverse/1)
+  L32 - 
+  L32 + end
+  L33 - defp do_rotate(array, n) when n > 1 do
+  L33 + 
+  L34 -   # Rotate once, then rotate the result n-1 times
+  L34 + defp do_rotate(array, n) when n > 1 do
+  L35 -   once_rotated = rotate_2d_array(array, 1)
+  L35 +   # Rotate once, then rotate the result n-1 times
+  L36 -   rotate_2d_array(once_rotated, n - 1)
+  L36 +   once_rotated = rotate_2d_array(array, 1)
+  L37 - end
+  L37 +   rotate_2d_array(once_rotated, n - 1)
+  L38 - 
+  L38 + end
+  L39 - # Helper function to transpose a 2D list
+  L39 + 
+  L40 - defp transpose_matrix(matrix) do
+  L40 + # Helper function to transpose a 2D list
+  L41 -   # Handle empty matrix or matrix with empty rows
+  L41 + defp transpose_matrix(matrix) do
+  L42 -   if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+  L42 +   # Handle empty matrix or matrix with empty rows
+  L43 -     []
+  L43 +   if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+  L44 -   else
+  L44 +     []
+  L45 -     # Get the first column of each row, then recursively transpose the rest
+  L45 +   else
+  L46 -     # Using Enum.map with index might not work directly, so use Enum.with_index
+  L46 +     # Get the first column of each row, then recursively transpose the rest
+  L47 -     # Actually, a simpler approach: transpose by mapping over columns
+  L47 +     # Using Enum.map with index might not work directly, so use Enum.with_index
+  L48 - 
+  L48 +     # Actually, a simpler approach: transpose by mapping over columns
+  L49 -     # Find number of columns
+  L49 + 
+  L50 -     num_cols = length(hd(matrix))
+  L50 +     # Find number of columns
+  L51 - 
+  L51 +     num_cols = length(hd(matrix))
+  L52 -     # For each column index, extract all elements in that column
+  L52 + 
+  L53 -     0..(num_cols - 1)
+  L53 +     # For each column index, extract all elements in that column
+  L54 -     |> Enum.map(fn col_idx ->
+  L54 +     0..(num_cols - 1)
+  L55 -       Enum.map(matrix, &Enum.at(&1, col_idx))
+  L55 +     |> Enum.map(fn col_idx ->
+  L56 -     end)
+  L56 +       Enum.map(matrix, &Enum.at(&1, col_idx))
+  L57 -     |> Enum.to_list()
+  L57 +     end)
+  L58 -   end
+  L58 +     |> Enum.to_list()
+  L59 - end
+  L59 +   end
+  L60 + end
+  L61 + end
+  L62 + 
+
+21:01:56.805 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+21:01:56.819 [debug] [credence_fix] semantic pass 2: compilation OK, 2 warning(s)
+
+21:01:56.819 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+21:01:56.819 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L21 -   transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  L21 +   _transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+
+21:01:56.825 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:01:56.825 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UnusedVariable(1)]
+
+21:01:56.826 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:01:56.938 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UnusedVariable, 1}]
+[0m
+[22m21:01:56.966 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m21:01:57.527 [info] [run_credence_fix] fix compiles OK[0m
+[36m21:01:57.527 [debug] [run_credence_fix] original:
+@doc """
+Rotates a 2D array clockwise by 90 degrees, n times.
+"""
+@spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+  # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+  normalized_n = rem(n, 4)
+  
+  if normalized_n == 0 do
+    array
+  else
+    do_rotate(array, normalized_n)
+  end
+end
+
+defp do_rotate(array, 1) do
+  # Rotate once clockwise:
+  # Step 1: Transpose the matrix
+  # Step 2: Reverse each row
+  transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  # Actually, let's do it properly for any size
+  
+  # Transpose: rows become columns
+  # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+  # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+  # Then reverse each row to get clockwise rotation:
+  # [[7,4,1],[8,5,2],[9,6,3]]
+  
+  transpose_matrix = transpose_matrix(array)
+  transpose_matrix |> Enum.map(&Enum.reverse/1)
+end
+
+defp do_rotate(array, n) when n > 1 do
+  # Rotate once, then rotate the result n-1 times
+  once_rotated = rotate_2d_array(array, 1)
+  rotate_2d_array(once_rotated, n - 1)
+end
+
+# Helper function to transpose a 2D list
+defp transpose_matrix(matrix) do
+  # Handle empty matrix or matrix with empty rows
+  if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+    []
+  else
+    # Get the first column of each row, then recursively transpose the rest
+    # Using Enum.map with index might not work directly, so use Enum.with_index
+    # Actually, a simpler approach: transpose by mapping over columns
+    
+    # Find number of columns
+    num_cols = length(hd(matrix))
+    
+    # For each column index, extract all elements in that column
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+    |> Enum.to_list()
+  end
+end[0m
+[36m21:01:57.527 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Rotates a 2D array clockwise by 90 degrees, n times.
+"""
+@spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+  # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+  normalized_n = rem(n, 4)
+  
+  if normalized_n == 0 do
+    array
+  else
+    do_rotate(array, normalized_n)
+  end
+end
+
+defp do_rotate(array, 1) do
+  # Rotate once clockwise:
+  # Step 1: Transpose the matrix
+  # Step 2: Reverse each row
+  _transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  # Actually, let's do it properly for any size
+  
+  # Transpose: rows become columns
+  # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+  # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+  # Then reverse each row to get clockwise rotation:
+  # [[7,4,1],[8,5,2],[9,6,3]]
+  
+  transpose_matrix = transpose_matrix(array)
+  transpose_matrix |> Enum.map(&Enum.reverse/1)
+end
+
+defp do_rotate(array, n) when n > 1 do
+  # Rotate once, then rotate the result n-1 times
+  once_rotated = rotate_2d_array(array, 1)
+  rotate_2d_array(once_rotated, n - 1)
+end
+
+# Helper function to transpose a 2D list
+defp transpose_matrix(matrix) do
+  # Handle empty matrix or matrix with empty rows
+  if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+    []
+  else
+    # Get the first column of each row, then recursively transpose the rest
+    # Using Enum.map with index might not work directly, so use Enum.with_index
+    # Actually, a simpler approach: transpose by mapping over columns
+    
+    # Find number of columns
+    num_cols = length(hd(matrix))
+    
+    # For each column index, extract all elements in that column
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+    |> Enum.to_list()
+  end
+end
+end
+[0m
+[22m21:01:57.527 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m21:01:57.527 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Rotates a 2D array clockwise by 90 degrees, n times.
+"""
+@spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+  # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+  normalized_n = rem(n, 4)
+  
+  if normalized_n == 0 do
+    array
+  else
+    do_rotate(array, normalized_n)
+  end
+end
+
+defp do_rotate(array, 1) do
+  # Rotate once clockwise:
+  # Step 1: Transpose the matrix
+  # Step 2: Reverse each row
+  transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  # Actually, let's do it properly for any size
+  
+  # Transpose: rows become columns
+  # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+  # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+  # Then reverse each row to get clockwise rotation:
+  # [[7,4,1],[8,5,2],[9,6,3]]
+  
+  transpose_matrix = transpose_matrix(array)
+  transpose_matrix |> Enum.map(&Enum.reverse/1)
+end
+
+defp do_rotate(array, n) when n > 1 do
+  # Rotate once, then rotate the result n-1 times
+  once_rotated = rotate_2d_array(array, 1)
+  rotate_2d_array(once_rotated, n - 1)
+end
+
+# Helper function to transpose a 2D list
+defp transpose_matrix(matrix) do
+  # Handle empty matrix or matrix with empty rows
+  if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+    []
+  else
+    # Get the first column of each row, then recursively transpose the rest
+    # Using Enum.map with index might not work directly, so use Enum.with_index
+    # Actually, a simpler approach: transpose by mapping over columns
+    
+    # Find number of columns
+    num_cols = length(hd(matrix))
+    
+    # For each column index, extract all elements in that column
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+    |> Enum.to_list()
+  end
+end[0m
+[36m21:01:57.527 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Rotates a 2D array clockwise by 90 degrees, n times.
+"""
+@spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+  # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+  normalized_n = rem(n, 4)
+  
+  if normalized_n == 0 do
+    array
+  else
+    do_rotate(array, normalized_n)
+  end
+end
+
+defp do_rotate(array, 1) do
+  # Rotate once clockwise:
+  # Step 1: Transpose the matrix
+  # Step 2: Reverse each row
+  _transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  # Actually, let's do it properly for any size
+  
+  # Transpose: rows become columns
+  # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+  # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+  # Then reverse each row to get clockwise rotation:
+  # [[7,4,1],[8,5,2],[9,6,3]]
+  
+  transpose_matrix = transpose_matrix(array)
+  transpose_matrix |> Enum.map(&Enum.reverse/1)
+end
+
+defp do_rotate(array, n) when n > 1 do
+  # Rotate once, then rotate the result n-1 times
+  once_rotated = rotate_2d_array(array, 1)
+  rotate_2d_array(once_rotated, n - 1)
+end
+
+# Helper function to transpose a 2D list
+defp transpose_matrix(matrix) do
+  # Handle empty matrix or matrix with empty rows
+  if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+    []
+  else
+    # Get the first column of each row, then recursively transpose the rest
+    # Using Enum.map with index might not work directly, so use Enum.with_index
+    # Actually, a simpler approach: transpose by mapping over columns
+    
+    # Find number of columns
+    num_cols = length(hd(matrix))
+    
+    # For each column index, extract all elements in that column
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+    |> Enum.to_list()
+  end
+end
+end
+[0m
+[36m21:01:57.528 [debug] [propagate_is_renames] old functions: ["rotate_2d_array", "do_rotate", "transpose_matrix"][0m
+[36m21:01:57.528 [debug] [propagate_is_renames] new functions: ["rotate_2d_array", "do_rotate", "transpose_matrix"][0m
+[36m21:01:57.528 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m21:01:57.528 [info] [Validator.run] step 2/6: compile[0m
+[22m21:01:58.090 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:01:58.090 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:01:58.090 [info] [Validator.run] step 3/6: format[0m
+[22m21:01:58.395 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:01:58.699 [debug] [Validator.run] format fix output: [0m
+[22m21:01:58.699 [info] [Validator.run] step 4/6: credo[0m
+[36m21:01:59.189 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:01:59.189 [info] [Validator.run] credo: no issues[0m
+[22m21:01:59.189 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:01:59.897 [info] [Validator.run] credence check exit=0[0m
+[36m21:01:59.897 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:01:59.897 [info] [Validator.run] credence check: passed[0m
+[22m21:01:59.897 [info] [Validator.run] step 6/6: tests[0m
+[22m21:02:00.389 [info] [Validator.run] test exit=2[0m
+[36m21:02:00.389 [debug] [Validator.run] test output:
+Running ExUnit with seed: 321142, max_cases: 48
+
+
+
+  1) test rotate 2D array by 3 (SolutionTest)
+     test/solution_test.exs:12
+     ** (FunctionClauseError) no function clause matching in Enum.unzip/3
+
+     The following arguments were given to Enum.unzip/3:
+
+         # 1
+         [3, 2, 1]
+
+         # 2
+         []
+
+         # 3
+         []
+
+     Attempted function clauses (showing 2 out of 2):
+
+         defp unzip(-[{el1, el2} | reversed_list]-, list1, list2)
+         defp unzip(-[]-, list1, list2)
+
+     code: assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:3917: Enum.unzip/3
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:21: Solution.do_rotate/2
+       (workspace 0.1.0) lib/solution.ex:36: Solution.do_rotate/2
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test rotate 2D array by 2 (SolutionTest)
+     test/solution_test.exs:4
+     ** (FunctionClauseError) no function clause matching in Enum.unzip/3
+
+     The following arguments were given to Enum.unzip/3:
+
+         # 1
+         [3, 2, 1]
+
+         # 2
+         []
+
+         # 3
+         []
+
+     Attempted function clauses (showing 2 out of 2):
+
+         defp unzip(-[{el1, el2} | reversed_list]-, list1, list2)
+         defp unzip(-[]-, list1, list2)
+
+     code: assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:3917: Enum.unzip/3
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:21: Solution.do_rotate/2
+       (workspace 0.1.0) lib/solution.ex:36: Solution.do_rotate/2
+       test/solution_test.exs:5: (test)
+
+
+
+  3) test rotate 2D array by 1 (SolutionTest)
+     test/solution_test.exs:20
+     ** (FunctionClauseError) no function clause matching in Enum.unzip/3
+
+     The following arguments were given to Enum.unzip/3:
+
+         # 1
+         [3, 2, 1]
+
+         # 2
+         []
+
+         # 3
+         []
+
+     Attempted function clauses (showing 2 out of 2):
+
+         defp unzip(-[{el1, el2} | reversed_list]-, list1, list2)
+         defp unzip(-[]-, list1, list2)
+
+     code: assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:3917: Enum.unzip/3
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:21: Solution.do_rotate/2
+       test/solution_test.exs:21: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+[0m
+[33m21:02:00.389 [warning] [Validator.run] tests: FAILED[0m
+[22m21:02:00.389 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m21:02:00.389 [debug] [Validator.run] final module (1971 chars):
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+    normalized_n = rem(n, 4)
+
+    if normalized_n == 0 do
+      array
+    else
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(array, 1) do
+    # Rotate once clockwise:
+    # Step 1: Transpose the matrix
+    # Step 2: Reverse each row
+    _transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+    # Actually, let's do it properly for any size
+
+    # Transpose: rows become columns
+    # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+    # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+    # Then reverse each row to get clockwise rotation:
+    # [[7,4,1],[8,5,2],[9,6,3]]
+
+    transpose_matrix = transpose_matrix(array)
+    transpose_matrix |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    # Rotate once, then rotate the result n-1 times
+    once_rotated = rotate_2d_array(array, 1)
+    rotate_2d_array(once_rotated, n - 1)
+  end
+
+  # Helper function to transpose a 2D list
+  defp transpose_matrix(matrix) do
+    # Handle empty matrix or matrix with empty rows
+    if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+      []
+    else
+      # Get the first column of each row, then recursively transpose the rest
+      # Using Enum.map with index might not work directly, so use Enum.with_index
+      # Actually, a simpler approach: transpose by mapping over columns
+
+      # Find number of columns
+      num_cols = length(hd(matrix))
+
+      # For each column index, extract all elements in that column
+      0..(num_cols - 1)
+      |> Enum.map(fn col_idx ->
+        Enum.map(matrix, &Enum.at(&1, col_idx))
+      end)
+      |> Enum.to_list()
+    end
+  end
+end
+[0m
+[36m21:02:00.389 [debug] [Validator.run] final test (671 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [
+             [9, 8, 7],
+             [6, 5, 4],
+             [3, 2, 1]
+           ]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [
+             [3, 6, 9],
+             [2, 5, 8],
+             [1, 4, 7]
+           ]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [
+             [7, 4, 1],
+             [8, 5, 2],
+             [9, 6, 3]
+           ]
+  end
+end
+[0m
+[33m21:02:00.389 [warning] [Solve attempt 1] validation FAILED: [:test][0m
+[22m21:02:00.389 [info] [Solve attempt 2] generating (fn=rotate_2d_array)[0m
+[36m21:02:00.389 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+Rotates a 2D array clockwise by 90 degrees, n times.
+"""
+@spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+  # Normalize n to be within [0, 3] since rotating 4 times is the same as 0
+  normalized_n = rem(n, 4)
+  
+  if normalized_n == 0 do
+    array
+  else
+    do_rotate(array, normalized_n)
+  end
+end
+
+defp do_rotate(array, 1) do
+  # Rotate once clockwise:
+  # Step 1: Transpose the matrix
+  # Step 2: Reverse each row
+  transpose = array |> Enum.map(&Enum.unzip/1) |> Enum.map(fn {a, b} -> [a, b] end)
+  # Actually, let's do it properly for any size
+  
+  # Transpose: rows become columns
+  # For a 3x3 matrix: [[1,2,3],[4,5,6],[7,8,9]]
+  # Transpose: [[1,4,7],[2,5,8],[3,6,9]]
+  # Then reverse each row to get clockwise rotation:
+  # [[7,4,1],[8,5,2],[9,6,3]]
+  
+  transpose_matrix = transpose_matrix(array)
+  transpose_matrix |> Enum.map(&Enum.reverse/1)
+end
+
+defp do_rotate(array, n) when n > 1 do
+  # Rotate once, then rotate the result n-1 times
+  once_rotated = rotate_2d_array(array, 1)
+  rotate_2d_array(once_rotated, n - 1)
+end
+
+# Helper function to transpose a 2D list
+defp transpose_matrix(matrix) do
+  # Handle empty matrix or matrix with empty rows
+  if Enum.empty?(matrix) or Enum.empty?(hd(matrix)) do
+    []
+  else
+    # Get the first column of each row, then recursively transpose the rest
+    # Using Enum.map with index might not work directly, so use Enum.with_index
+    # Actually, a simpler approach: transpose by mapping over columns
+    
+    # Find number of columns
+    num_cols = length(hd(matrix))
+    
+    # For each column index, extract all elements in that column
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+    |> Enum.to_list()
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 2) == [[9,8,7],[6,5,4],[3,2,1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 3) == [[3,6,9],[2,5,8],[1,4,7]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1,2,3],[4,5,6],[7,8,9]], 1) == [[7,4,1],[8,5,2],[9,6,3]]
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 321142, max_cases: 48
+
+
+
+  1) test rotate 2D array by 3 (SolutionTest)
+     test/solution_test.exs:12
+     ** (FunctionClauseError) no function clause matching in Enum.unzip/3
+
+     The following arguments were given to Enum.unzip/3:
+
+         # 1
+         [3, 2, 1]
+
+         # 2
+         []
+
+         # 3
+         []
+
+     Attempted function clauses (showing 2 out of 2):
+
+         defp unzip(-[{el1, el2} | reversed_list]-, list1, list2)
+         defp unzip(-[]-, list1, list2)
+
+     code: assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:3917: Enum.unzip/3
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:21: Solution.do_rotate/2
+       (workspace 0.1.0) lib/solution.ex:36: Solution.do_rotate/2
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test rotate 2D array by 2 (SolutionTest)
+     test/solution_test.exs:4
+     ** (FunctionClauseError) no function clause matching in Enum.unzip/3
+
+     The following arguments were given to Enum.unzip/3:
+
+         # 1
+         [3, 2, 1]
+
+         # 2
+         []
+
+         # 3
+         []
+
+     Attempted function clauses (showing 2 out of 2):
+
+         defp unzip(-[{el1, el2} | reversed_list]-, list1, list2)
+         defp unzip(-[]-, list1, list2)
+
+     code: assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:3917: Enum.unzip/3
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:21: Solution.do_rotate/2
+       (workspace 0.1.0) lib/solution.ex:36: Solution.do_rotate/2
+       test/solution_test.exs:5: (test)
+
+
+
+  3) test rotate 2D array by 1 (SolutionTest)
+     test/solution_test.exs:20
+     ** (FunctionClauseError) no function clause matching in Enum.unzip/3
+
+     The following arguments were given to Enum.unzip/3:
+
+         # 1
+         [3, 2, 1]
+
+         # 2
+         []
+
+         # 3
+         []
+
+     Attempted function clauses (showing 2 out of 2):
+
+         defp unzip(-[{el1, el2} | reversed_list]-, list1, list2)
+         defp unzip(-[]-, list1, list2)
+
+     code: assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:3917: Enum.unzip/3
+       (elixir 1.19.5) lib/enum.ex:1688: Enum."-map/2-lists^map/1-1-"/2
+       (workspace 0.1.0) lib/solution.ex:21: Solution.do_rotate/2
+       test/solution_test.exs:21: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+
+Reminder: module `Solution`, function `rotate_2d_array` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:02:09.075 [debug] [LLM.call] finish=stop len=1971 usage=%{"completion_tokens" => 831, "prompt_tokens" => 2131, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 2962}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: []
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(_array, 0), do: []
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    once_rotated = do_rotate(array, 1)
+    do_rotate(once_rotated, n - 1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+---END---[0m
+[22m21:02:09.075 [info] [LLM.call] local_qwen_thinking completed in 8685ms — ok[0m
+[22m21:02:09.075 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:02:09.075 [debug] [Validator.run] module code (937 chars):
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: []
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(_array, 0), do: []
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    once_rotated = do_rotate(array, 1)
+    do_rotate(once_rotated, n - 1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end[0m
+[36m21:02:09.075 [debug] [Validator.run] test code (999 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end[0m
+[36m21:02:09.075 [debug] [Budget] spent so far (est.): $0.8694[0m
+[22m21:02:09.076 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:02:09.076 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:02:09.708 [debug] [run_credence_fix] exit=0 output:
+
+21:02:09.585 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:02:09.587 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:02:09.600 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+21:02:09.606 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:02:09.606 [debug] [credence_fix] semantic done. Applied: []
+
+21:02:09.606 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:02:09.682 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m21:02:09.708 [debug] [run_credence_fix] no changes needed[0m
+[22m21:02:09.708 [info] [Validator.run] credence: no changes needed[0m
+[22m21:02:09.708 [info] [Validator.run] step 2/6: compile[0m
+[22m21:02:10.289 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:02:10.289 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:02:10.289 [info] [Validator.run] step 3/6: format[0m
+[22m21:02:10.592 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:02:10.892 [debug] [Validator.run] format fix output: [0m
+[22m21:02:10.892 [info] [Validator.run] step 4/6: credo[0m
+[36m21:02:11.356 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:02:11.356 [info] [Validator.run] credo: no issues[0m
+[22m21:02:11.356 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:02:12.072 [info] [Validator.run] credence check exit=0[0m
+[36m21:02:12.072 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:02:12.072 [info] [Validator.run] credence check: passed[0m
+[22m21:02:12.072 [info] [Validator.run] step 6/6: tests[0m
+[22m21:02:12.572 [info] [Validator.run] test exit=2[0m
+[36m21:02:12.572 [debug] [Validator.run] test output:
+Running ExUnit with seed: 522087, max_cases: 48
+
+..
+
+  1) test rotate 2D array by 0 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], ~c"\a\b\t"], 0) == [
+              [1, 2, 3],
+              [4, 5, 6],
+              ~c"\a\b\t"
+            ]
+     left:  []
+     right: [[1, 2, 3], [4, 5, 6], ~c"\a\b\t"]
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+..
+
+  2) test rotate 2D array by 4 (SolutionTest)
+     test/solution_test.exs:36
+     Assertion with == failed
+     code:  assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], ~c"\a\b\t"], 4) == [
+              [1, 2, 3],
+              [4, 5, 6],
+              ~c"\a\b\t"
+            ]
+     left:  []
+     right: [[1, 2, 3], [4, 5, 6], ~c"\a\b\t"]
+     stacktrace:
+       test/solution_test.exs:37: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 2 failures
+[0m
+[33m21:02:12.572 [warning] [Validator.run] tests: FAILED[0m
+[22m21:02:12.573 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m21:02:12.573 [debug] [Validator.run] final module (940 chars):
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: []
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(_array, 0), do: []
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    once_rotated = do_rotate(array, 1)
+    do_rotate(once_rotated, n - 1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+[0m
+[36m21:02:12.573 [debug] [Validator.run] final test (1260 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [
+             [1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]
+           ]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [
+             [7, 4, 1],
+             [8, 5, 2],
+             [9, 6, 3]
+           ]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [
+             [9, 8, 7],
+             [6, 5, 4],
+             [3, 2, 1]
+           ]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [
+             [3, 6, 9],
+             [2, 5, 8],
+             [1, 4, 7]
+           ]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [
+             [1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]
+           ]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+[0m
+[33m21:02:12.573 [warning] [Solve attempt 2] validation FAILED: [:test][0m
+[22m21:02:12.573 [info] [Solve attempt 3] generating (fn=rotate_2d_array)[0m
+[36m21:02:12.573 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: []
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(_array, 0), do: []
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    once_rotated = do_rotate(array, 1)
+    do_rotate(once_rotated, n - 1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 522087, max_cases: 48
+
+..
+
+  1) test rotate 2D array by 0 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], ~c"\a\b\t"], 0) == [
+              [1, 2, 3],
+              [4, 5, 6],
+              ~c"\a\b\t"
+            ]
+     left:  []
+     right: [[1, 2, 3], [4, 5, 6], ~c"\a\b\t"]
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+..
+
+  2) test rotate 2D array by 4 (SolutionTest)
+     test/solution_test.exs:36
+     Assertion with == failed
+     code:  assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], ~c"\a\b\t"], 4) == [
+              [1, 2, 3],
+              [4, 5, 6],
+              ~c"\a\b\t"
+            ]
+     left:  []
+     right: [[1, 2, 3], [4, 5, 6], ~c"\a\b\t"]
+     stacktrace:
+       test/solution_test.exs:37: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 2 failures
+
+Reminder: module `Solution`, function `rotate_2d_array` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:02:20.966 [debug] [LLM.call] finish=stop len=1971 usage=%{"completion_tokens" => 831, "prompt_tokens" => 1518, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 2349}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: []
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(_array, 0), do: []
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    once_rotated = do_rotate(array, 1)
+    do_rotate(once_rotated, n - 1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+---END---[0m
+[22m21:02:20.966 [info] [LLM.call] local_qwen_thinking completed in 8392ms — ok[0m
+[22m21:02:20.966 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:02:20.966 [debug] [Validator.run] module code (937 chars):
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: []
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(_array, 0), do: []
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    once_rotated = do_rotate(array, 1)
+    do_rotate(once_rotated, n - 1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end[0m
+[36m21:02:20.966 [debug] [Validator.run] test code (999 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end[0m
+[36m21:02:20.967 [debug] [Budget] spent so far (est.): $0.8708[0m
+[22m21:02:20.967 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:02:20.967 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:02:21.617 [debug] [run_credence_fix] exit=0 output:
+
+21:02:21.489 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:02:21.491 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:02:21.506 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+21:02:21.512 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:02:21.512 [debug] [credence_fix] semantic done. Applied: []
+
+21:02:21.512 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:02:21.589 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m21:02:21.617 [debug] [run_credence_fix] no changes needed[0m
+[22m21:02:21.617 [info] [Validator.run] credence: no changes needed[0m
+[22m21:02:21.617 [info] [Validator.run] step 2/6: compile[0m
+[22m21:02:22.191 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:02:22.191 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:02:22.191 [info] [Validator.run] step 3/6: format[0m
+[22m21:02:22.511 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:02:22.818 [debug] [Validator.run] format fix output: [0m
+[22m21:02:22.818 [info] [Validator.run] step 4/6: credo[0m
+[36m21:02:23.284 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:02:23.284 [info] [Validator.run] credo: no issues[0m
+[22m21:02:23.284 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:02:23.988 [info] [Validator.run] credence check exit=0[0m
+[36m21:02:23.988 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:02:23.988 [info] [Validator.run] credence check: passed[0m
+[22m21:02:23.988 [info] [Validator.run] step 6/6: tests[0m
+[22m21:02:24.473 [info] [Validator.run] test exit=2[0m
+[36m21:02:24.473 [debug] [Validator.run] test output:
+Running ExUnit with seed: 422119, max_cases: 48
+
+...
+
+  1) test rotate 2D array by 4 (SolutionTest)
+     test/solution_test.exs:36
+     Assertion with == failed
+     code:  assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], ~c"\a\b\t"], 4) == [
+              [1, 2, 3],
+              [4, 5, 6],
+              ~c"\a\b\t"
+            ]
+     left:  []
+     right: [[1, 2, 3], [4, 5, 6], ~c"\a\b\t"]
+     stacktrace:
+       test/solution_test.exs:37: (test)
+
+.
+
+  2) test rotate 2D array by 0 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], ~c"\a\b\t"], 0) == [
+              [1, 2, 3],
+              [4, 5, 6],
+              ~c"\a\b\t"
+            ]
+     left:  []
+     right: [[1, 2, 3], [4, 5, 6], ~c"\a\b\t"]
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 2 failures
+[0m
+[33m21:02:24.473 [warning] [Validator.run] tests: FAILED[0m
+[22m21:02:24.473 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m21:02:24.473 [debug] [Validator.run] final module (940 chars):
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: []
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(_array, 0), do: []
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    once_rotated = do_rotate(array, 1)
+    do_rotate(once_rotated, n - 1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+[0m
+[36m21:02:24.474 [debug] [Validator.run] final test (1260 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [
+             [1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]
+           ]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [
+             [7, 4, 1],
+             [8, 5, 2],
+             [9, 6, 3]
+           ]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [
+             [9, 8, 7],
+             [6, 5, 4],
+             [3, 2, 1]
+           ]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [
+             [3, 6, 9],
+             [2, 5, 8],
+             [1, 4, 7]
+           ]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [
+             [1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]
+           ]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+[0m
+[33m21:02:24.474 [warning] [Solve attempt 3] validation FAILED: [:test][0m
+[22m21:02:24.474 [info] [Solve attempt 4] generating (fn=rotate_2d_array)[0m
+[36m21:02:24.474 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: []
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(_array, 0), do: []
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    once_rotated = do_rotate(array, 1)
+    do_rotate(once_rotated, n - 1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 422119, max_cases: 48
+
+...
+
+  1) test rotate 2D array by 4 (SolutionTest)
+     test/solution_test.exs:36
+     Assertion with == failed
+     code:  assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], ~c"\a\b\t"], 4) == [
+              [1, 2, 3],
+              [4, 5, 6],
+              ~c"\a\b\t"
+            ]
+     left:  []
+     right: [[1, 2, 3], [4, 5, 6], ~c"\a\b\t"]
+     stacktrace:
+       test/solution_test.exs:37: (test)
+
+.
+
+  2) test rotate 2D array by 0 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], ~c"\a\b\t"], 0) == [
+              [1, 2, 3],
+              [4, 5, 6],
+              ~c"\a\b\t"
+            ]
+     left:  []
+     right: [[1, 2, 3], [4, 5, 6], ~c"\a\b\t"]
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 2 failures
+
+Reminder: module `Solution`, function `rotate_2d_array` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:02:32.442 [debug] [LLM.call] finish=stop len=1994 usage=%{"completion_tokens" => 830, "prompt_tokens" => 1518, "prompt_tokens_details" => %{"cached_tokens" => 1002}, "total_tokens" => 2348}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: raise "Should not happen if normalized correctly"
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(array, 0), do: array
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    do_rotate(array, n - 1)
+    |> do_rotate(1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+---END---[0m
+[22m21:02:32.442 [info] [LLM.call] local_qwen_thinking completed in 7968ms — ok[0m
+[22m21:02:32.442 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:02:32.442 [debug] [Validator.run] module code (960 chars):
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: raise "Should not happen if normalized correctly"
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(array, 0), do: array
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    do_rotate(array, n - 1)
+    |> do_rotate(1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end[0m
+[36m21:02:32.442 [debug] [Validator.run] test code (999 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end[0m
+[36m21:02:32.442 [debug] [Budget] spent so far (est.): $0.8721[0m
+[22m21:02:32.442 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:02:32.442 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:02:33.109 [debug] [run_credence_fix] exit=0 output:
+
+21:02:32.981 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:02:32.983 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:02:32.998 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+21:02:33.004 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:02:33.004 [debug] [credence_fix] semantic done. Applied: []
+
+21:02:33.004 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:02:33.081 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m21:02:33.109 [debug] [run_credence_fix] no changes needed[0m
+[22m21:02:33.109 [info] [Validator.run] credence: no changes needed[0m
+[22m21:02:33.109 [info] [Validator.run] step 2/6: compile[0m
+[22m21:02:33.688 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:02:33.688 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:02:33.688 [info] [Validator.run] step 3/6: format[0m
+[22m21:02:34.004 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:02:34.298 [debug] [Validator.run] format fix output: [0m
+[22m21:02:34.298 [info] [Validator.run] step 4/6: credo[0m
+[36m21:02:34.762 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:02:34.762 [info] [Validator.run] credo: no issues[0m
+[22m21:02:34.762 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:02:35.475 [info] [Validator.run] credence check exit=0[0m
+[36m21:02:35.475 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:02:35.475 [info] [Validator.run] credence check: passed[0m
+[22m21:02:35.475 [info] [Validator.run] step 6/6: tests[0m
+[22m21:02:35.958 [info] [Validator.run] test exit=2[0m
+[36m21:02:35.959 [debug] [Validator.run] test output:
+Running ExUnit with seed: 909971, max_cases: 48
+
+..
+
+  1) test rotate 2D array by 0 (SolutionTest)
+     test/solution_test.exs:4
+     ** (RuntimeError) Should not happen if normalized correctly
+     code: assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:6: Solution.rotate_2d_array/2
+       test/solution_test.exs:5: (test)
+
+....
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 1 failure
+[0m
+[33m21:02:35.959 [warning] [Validator.run] tests: FAILED[0m
+[22m21:02:35.959 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m21:02:35.959 [debug] [Validator.run] final module (964 chars):
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: raise("Should not happen if normalized correctly")
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(array, 0), do: array
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    do_rotate(array, n - 1)
+    |> do_rotate(1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+[0m
+[36m21:02:35.959 [debug] [Validator.run] final test (1260 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [
+             [1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]
+           ]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [
+             [7, 4, 1],
+             [8, 5, 2],
+             [9, 6, 3]
+           ]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [
+             [9, 8, 7],
+             [6, 5, 4],
+             [3, 2, 1]
+           ]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [
+             [3, 6, 9],
+             [2, 5, 8],
+             [1, 4, 7]
+           ]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [
+             [1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]
+           ]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+[0m
+[33m21:02:35.959 [warning] [Solve attempt 4] validation FAILED: [:test][0m
+[22m21:02:35.959 [info] [Solve attempt 5] generating (fn=rotate_2d_array)[0m
+[36m21:02:35.959 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(_array, 0), do: raise "Should not happen if normalized correctly"
+
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(array, 0), do: array
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    do_rotate(array, n - 1)
+    |> do_rotate(1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 909971, max_cases: 48
+
+..
+
+  1) test rotate 2D array by 0 (SolutionTest)
+     test/solution_test.exs:4
+     ** (RuntimeError) Should not happen if normalized correctly
+     code: assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:6: Solution.rotate_2d_array/2
+       test/solution_test.exs:5: (test)
+
+....
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 1 failure
+
+Reminder: module `Solution`, function `rotate_2d_array` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m21:02:44.084 [debug] [LLM.call] finish=stop len=1905 usage=%{"completion_tokens" => 805, "prompt_tokens" => 1314, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 2119}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(array, 0), do: array
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    do_rotate(array, n - 1)
+    |> do_rotate(1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+---END---[0m
+[22m21:02:44.084 [info] [LLM.call] local_qwen_thinking completed in 8124ms — ok[0m
+[22m21:02:44.084 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m21:02:44.084 [debug] [Validator.run] module code (871 chars):
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(array, 0), do: array
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    do_rotate(array, n - 1)
+    |> do_rotate(1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end[0m
+[36m21:02:44.085 [debug] [Validator.run] test code (999 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end[0m
+[36m21:02:44.085 [debug] [Budget] spent so far (est.): $0.8734[0m
+[22m21:02:44.085 [info] [Validator.run] step 1/6: credence fix[0m
+[36m21:02:44.085 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m21:02:44.731 [debug] [run_credence_fix] exit=0 output:
+
+21:02:44.614 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+21:02:44.616 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+21:02:44.630 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+21:02:44.635 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+21:02:44.635 [debug] [credence_fix] semantic done. Applied: []
+
+21:02:44.635 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+21:02:44.706 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m21:02:44.732 [debug] [run_credence_fix] no changes needed[0m
+[22m21:02:44.732 [info] [Validator.run] credence: no changes needed[0m
+[22m21:02:44.732 [info] [Validator.run] step 2/6: compile[0m
+[22m21:02:45.288 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m21:02:45.288 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m21:02:45.288 [info] [Validator.run] step 3/6: format[0m
+[22m21:02:45.593 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m21:02:45.907 [debug] [Validator.run] format fix output: [0m
+[22m21:02:45.907 [info] [Validator.run] step 4/6: credo[0m
+[36m21:02:46.396 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m21:02:46.396 [info] [Validator.run] credo: no issues[0m
+[22m21:02:46.396 [info] [Validator.run] step 5/6: credence check[0m
+[22m21:02:47.112 [info] [Validator.run] credence check exit=0[0m
+[36m21:02:47.112 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m21:02:47.112 [info] [Validator.run] credence check: passed[0m
+[22m21:02:47.112 [info] [Validator.run] step 6/6: tests[0m
+[22m21:02:47.581 [info] [Validator.run] test exit=0[0m
+[36m21:02:47.581 [debug] [Validator.run] test output:
+Running ExUnit with seed: 538734, max_cases: 48
+
+.......
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+7 tests, 0 failures
+[0m
+[22m21:02:47.581 [info] [Validator.run] tests: PASSED[0m
+[22m21:02:47.581 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m21:02:47.581 [debug] [Validator.run] final module (874 chars):
+defmodule Solution do
+  @doc """
+  Rotates a 2D array clockwise by 90 degrees, n times.
+  """
+  @spec rotate_2d_array(list(list(any())), non_neg_integer()) :: list(list(any()))
+  def rotate_2d_array(array, n) when is_list(array) and is_integer(n) and n >= 0 do
+    if Enum.empty?(array) do
+      []
+    else
+      normalized_n = rem(n, 4)
+      do_rotate(array, normalized_n)
+    end
+  end
+
+  defp do_rotate(array, 0), do: array
+
+  defp do_rotate(array, 1) do
+    array
+    |> transpose()
+    |> Enum.map(&Enum.reverse/1)
+  end
+
+  defp do_rotate(array, n) when n > 1 do
+    do_rotate(array, n - 1)
+    |> do_rotate(1)
+  end
+
+  defp transpose([]), do: []
+  defp transpose([[] | _rest]), do: []
+
+  defp transpose(matrix) do
+    num_cols = length(hd(matrix))
+
+    0..(num_cols - 1)
+    |> Enum.map(fn col_idx ->
+      Enum.map(matrix, &Enum.at(&1, col_idx))
+    end)
+  end
+end
+[0m
+[36m21:02:47.582 [debug] [Validator.run] final test (1260 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "rotate 2D array by 0" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 0) == [
+             [1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]
+           ]
+  end
+
+  test "rotate 2D array by 1" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 1) == [
+             [7, 4, 1],
+             [8, 5, 2],
+             [9, 6, 3]
+           ]
+  end
+
+  test "rotate 2D array by 2" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2) == [
+             [9, 8, 7],
+             [6, 5, 4],
+             [3, 2, 1]
+           ]
+  end
+
+  test "rotate 2D array by 3" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 3) == [
+             [3, 6, 9],
+             [2, 5, 8],
+             [1, 4, 7]
+           ]
+  end
+
+  test "rotate 2D array by 4" do
+    assert Solution.rotate_2d_array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 4) == [
+             [1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9]
+           ]
+  end
+
+  test "rotate empty array" do
+    assert Solution.rotate_2d_array([], 1) == []
+  end
+
+  test "rotate single element" do
+    assert Solution.rotate_2d_array([[1]], 1) == [[1]]
+  end
+end
+[0m
+[22m21:02:47.582 [info] [Solve attempt 5] validation PASSED[0m
+[36m21:02:47.597 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Semantic.UnusedVariable
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, self-contained defmodule isolating ONE issue)
+===AFTER===              (REQUI (truncated)[0m
+[36m21:03:25.606 [debug] [LLM.call] finish=stop len=34 usage=%{"completion_tokens" => 1025, "completion_tokens_details" => %{"reasoning_tokens" => 1012}, "prompt_tokens" => 35510, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 36535}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===END===[0m
+[22m21:03:25.607 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 38010ms — ok[0m
+[36m21:03:25.615 [debug] [Budget] spent so far (est.): $0.8898[0m

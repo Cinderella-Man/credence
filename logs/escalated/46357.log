@@ -1,0 +1,1383 @@
+[22m10:29:36.614 [info] [idx=46357] entry_point=string_index[0m
+[36m10:29:36.614 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that takes a list of strings and a target string. Return the index of the target string in the list if it exists, otherwise return -1. The list may contain duplicates.
+
+## Python Solution
+```python
+def string_index(lst, target):
+    try:
+        return lst.index(target)
+    except ValueError:
+        return -1
+```
+
+## Python Tests
+assert string_index(["apple", "banana", "cherry", "date", "apple"], "cherry") == 2
+assert string_index(["apple", "banana", "cherry", "date", "apple"], "grape") == -1
+assert string_index(["apple", "banana", "cherry", "date", "apple"], "apple") == 0
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `string_index`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[22m10:29:55.478 [info] [Budget] HEARTBEAT — 882 paid calls, est $4.0032 over 1089.7min → ~$0.2204/hr, ~$5.29/day (tok in=5115723 cache_rd=42921024 out=1865920)[0m
+[36m10:30:08.883 [debug] [LLM.call] finish=stop len=963 usage=%{"completion_tokens" => 1303, "completion_tokens_details" => %{"reasoning_tokens" => 1031}, "prompt_tokens" => 511, "prompt_tokens_details" => %{}, "total_tokens" => 1814}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function that takes a list of strings and a target string. Return the index of the target string in the list if it exists, otherwise return -1. The list may contain duplicates.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "index of 'cherry' in list" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "cherry") == 2
+  end
+
+  test "index of missing string returns -1" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "grape") == -1
+  end
+
+  test "index of first duplicate" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "apple") == 0
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  @spec string_index([String.t()], String.t()) :: integer()
+  def string_index(list, target) do
+    case Enum.find_index(list, fn x -> x == target end) do
+      nil -> -1
+      index -> index
+    end
+  end
+end
+---END---[0m
+[22m10:30:08.883 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 32269ms — ok[0m
+[36m10:30:08.883 [debug] [Budget] spent so far (est.): $4.0046[0m
+[22m10:30:09.903 [info] [RoundTrip] reference PASSED tests[0m
+[22m10:30:09.903 [info] [idx=46357] translation fresh — solving[0m
+[22m10:30:09.903 [info] ===SOLVE_BOUNDARY===[0m
+[22m10:30:09.903 [info] [Solve attempt 1] generating (fn=string_index)[0m
+[36m10:30:09.903 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function that takes a list of strings and a target string. Return the index of the target string in the list if it exists, otherwise return -1. The list may contain duplicates.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "index of 'cherry' in list" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "cherry") == 2
+  end
+
+  test "index of missing string returns -1" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "grape") == -1
+  end
+
+  test "index of first duplicate" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "apple") == 0
+  end
+end
+```
+
+Module: `Solution`. Function: `string_index`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m10:30:12.508 [debug] [LLM.call] finish=stop len=826 usage=%{"completion_tokens" => 252, "prompt_tokens" => 459, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 711}
+[LLM.call] response:
+---MODULE---
+@doc """
+Returns the index of the first occurrence of `target` in `list`, or -1 if not found.
+"""
+@spec string_index(list(String.t()), String.t()) :: non_neg_integer() | -1
+def string_index(list, target) do
+  case Enum.find_index(list, &(&1 == target)) do
+    nil -> -1
+    index -> index
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "index of 'cherry' in list" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "cherry") == 2
+  end
+
+  test "index of missing string returns -1" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "grape") == -1
+  end
+
+  test "index of first duplicate" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "apple") == 0
+  end
+end
+
+---END---[0m
+[22m10:30:12.508 [info] [LLM.call] local_qwen_thinking completed in 2604ms — ok[0m
+[22m10:30:12.508 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m10:30:12.508 [debug] [Validator.run] module code (298 chars):
+@doc """
+Returns the index of the first occurrence of `target` in `list`, or -1 if not found.
+"""
+@spec string_index(list(String.t()), String.t()) :: non_neg_integer() | -1
+def string_index(list, target) do
+  case Enum.find_index(list, &(&1 == target)) do
+    nil -> -1
+    index -> index
+  end
+end[0m
+[36m10:30:12.508 [debug] [Validator.run] test code (491 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "index of 'cherry' in list" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "cherry") == 2
+  end
+
+  test "index of missing string returns -1" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "grape") == -1
+  end
+
+  test "index of first duplicate" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "apple") == 0
+  end
+end[0m
+[36m10:30:12.508 [debug] [Budget] spent so far (est.): $4.005[0m
+[22m10:30:12.508 [info] [Validator.run] step 1/6: credence fix[0m
+[36m10:30:12.508 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m10:30:13.103 [debug] [run_credence_fix] exit=0 output:
+
+10:30:13.034 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+10:30:13.036 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+10:30:13.038 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+10:30:13.038 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+10:30:13.038 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+10:30:13.040 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Returns the index of the first occurrence of `target` in `list`, or -1 if not found.
+  L2 + @doc """
+  L3 - """
+  L3 + Returns the index of the first occurrence of `target` in `list`, or -1 if not found.
+  L4 - @spec string_index(list(String.t()), String.t()) :: non_neg_integer() | -1
+  L4 + """
+  L5 - def string_index(list, target) do
+  L5 + @spec string_index(list(String.t()), String.t()) :: non_neg_integer() | -1
+  L6 -   case Enum.find_index(list, &(&1 == target)) do
+  L6 + def string_index(list, target) do
+  L7 -     nil -> -1
+  L7 +   case Enum.find_index(list, &(&1 == target)) do
+  L8 -     index -> index
+  L8 +     nil -> -1
+  L9 -   end
+  L9 +     index -> index
+  L10 - end
+  L10 +   end
+  L11 + end
+  L12 + end
+  L13 + 
+
+10:30:13.040 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+10:30:13.049 [debug] [credence_fix] semantic pass 2: compilation OK, 1 warning(s)
+
+10:30:13.056 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+10:30:13.056 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+10:30:13.056 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+10:30:13.083 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m10:30:13.104 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m10:30:13.659 [info] [run_credence_fix] fix compiles OK[0m
+[36m10:30:13.659 [debug] [run_credence_fix] original:
+@doc """
+Returns the index of the first occurrence of `target` in `list`, or -1 if not found.
+"""
+@spec string_index(list(String.t()), String.t()) :: non_neg_integer() | -1
+def string_index(list, target) do
+  case Enum.find_index(list, &(&1 == target)) do
+    nil -> -1
+    index -> index
+  end
+end[0m
+[36m10:30:13.659 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Returns the index of the first occurrence of `target` in `list`, or -1 if not found.
+"""
+@spec string_index(list(String.t()), String.t()) :: non_neg_integer() | -1
+def string_index(list, target) do
+  case Enum.find_index(list, &(&1 == target)) do
+    nil -> -1
+    index -> index
+  end
+end
+end
+[0m
+[22m10:30:13.659 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m10:30:13.659 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Returns the index of the first occurrence of `target` in `list`, or -1 if not found.
+"""
+@spec string_index(list(String.t()), String.t()) :: non_neg_integer() | -1
+def string_index(list, target) do
+  case Enum.find_index(list, &(&1 == target)) do
+    nil -> -1
+    index -> index
+  end
+end[0m
+[36m10:30:13.659 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Returns the index of the first occurrence of `target` in `list`, or -1 if not found.
+"""
+@spec string_index(list(String.t()), String.t()) :: non_neg_integer() | -1
+def string_index(list, target) do
+  case Enum.find_index(list, &(&1 == target)) do
+    nil -> -1
+    index -> index
+  end
+end
+end
+[0m
+[36m10:30:13.659 [debug] [propagate_is_renames] old functions: ["string_index"][0m
+[36m10:30:13.659 [debug] [propagate_is_renames] new functions: ["string_index"][0m
+[36m10:30:13.659 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m10:30:13.659 [info] [Validator.run] step 2/6: compile[0m
+[22m10:30:14.213 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m10:30:14.213 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m10:30:14.213 [info] [Validator.run] step 3/6: format[0m
+[22m10:30:14.519 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m10:30:14.833 [debug] [Validator.run] format fix output: [0m
+[22m10:30:14.833 [info] [Validator.run] step 4/6: credo[0m
+[36m10:30:15.305 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m10:30:15.305 [info] [Validator.run] credo: no issues[0m
+[22m10:30:15.305 [info] [Validator.run] step 5/6: credence check[0m
+[22m10:30:16.008 [info] [Validator.run] credence check exit=0[0m
+[36m10:30:16.008 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m10:30:16.008 [info] [Validator.run] credence check: passed[0m
+[22m10:30:16.009 [info] [Validator.run] step 6/6: tests[0m
+[22m10:30:16.480 [info] [Validator.run] test exit=0[0m
+[36m10:30:16.480 [debug] [Validator.run] test output:
+Running ExUnit with seed: 436397, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m10:30:16.480 [info] [Validator.run] tests: PASSED[0m
+[22m10:30:16.480 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m10:30:16.480 [debug] [Validator.run] final module (345 chars):
+defmodule Solution do
+  @doc """
+  Returns the index of the first occurrence of `target` in `list`, or -1 if not found.
+  """
+  @spec string_index(list(String.t()), String.t()) :: non_neg_integer() | -1
+  def string_index(list, target) do
+    case Enum.find_index(list, &(&1 == target)) do
+      nil -> -1
+      index -> index
+    end
+  end
+end
+[0m
+[36m10:30:16.480 [debug] [Validator.run] final test (492 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "index of 'cherry' in list" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "cherry") == 2
+  end
+
+  test "index of missing string returns -1" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "grape") == -1
+  end
+
+  test "index of first duplicate" do
+    assert Solution.string_index(["apple", "banana", "cherry", "date", "apple"], "apple") == 0
+  end
+end
+[0m
+[22m10:30:16.480 [info] [Solve attempt 1] validation PASSED[0m
+[36m10:30:16.490 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 3135 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_graphemes_for_character_comparisons
+
+## row 62263 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_join_over_map_join_with_integer_to_string
+
+##  (truncated)[0m
+[36m10:31:53.558 [debug] [LLM.call] finish=stop len=677 usage=%{"completion_tokens" => 3382, "completion_tokens_details" => %{"reasoning_tokens" => 3200}, "prompt_tokens" => 6289, "prompt_tokens_details" => %{"cached_tokens" => 2048}, "total_tokens" => 9671}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_enum_find_index_with_default
+===PHASE===
+pattern
+===BEFORE===
+defmodule Example do
+  def find_index_with_default(list, target, default) do
+    case Enum.find_index(list, &(&1 == target)) do
+      nil -> default
+      index -> index
+    end
+  end
+end
+===AFTER===
+defmodule Example do
+  def find_index_with_default(list, target, default) do
+    Enum.find_index(list, &(&1 == target)) || default
+  end
+end
+===ASSUMPTIONS===
+===PROPOSED_SWITCH===
+===RATIONALE===
+Using a case expression to provide a default for Enum.find_index is non-idiomatic; using || is clearer and more concise when the default is truthy.
+===END===[0m
+[22m10:31:53.558 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 97067ms — ok[0m
+[36m10:31:53.559 [debug] [Budget] spent so far (est.): $4.0107[0m
+[22m10:31:55.507 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m10:32:04.799 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" | head -40[0m
+[22m10:32:10.097 [info] [Pi] step 2: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_slice.ex[0m
+[22m10:32:20.354 [info] [Pi] step 3: read
+    path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m10:32:24.762 [info] [Pi] step 4: read
+    path: /home/kly/projects/credence/lib/pattern.ex[0m
+[22m10:32:28.742 [info] [Pi] step 5: bash
+    command: find /home/kly/projects/credence -name "rule.ex" -path "*/pattern/*" -exec cat {} \;[0m
+[22m10:32:34.304 [info] [Pi] step 6: read
+    path: /home/kly/projects/credence/lib/pattern/no_manual_max.ex[0m
+[22m10:32:42.478 [info] [Pi] step 7: read
+    path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m10:32:48.256 [info] [Pi] step 8: bash
+    command: find /home/kly/projects/credence/test -name "*no_manual_max*" -exec cat {} \;[0m
+[22m10:32:53.464 [info] [Pi] step 9: read
+    path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m10:32:58.757 [info] [Pi] step 10: read
+    path: /home/kly/projects/credence/test/support/equivalence_inputs.ex[0m
+[22m10:33:03.944 [info] [Pi] step 11: read
+    path: /home/kly/projects/credence/lib/pattern/no_filter_then_first.ex[0m
+[22m10:33:19.194 [info] [Pi] step 12: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:33:57.858 [info] [Pi] step 13: write
+    content: defmodule Credence.Pattern.PreferEnumFindIndexWithDefault do
+  @moduledoc """
+  Readability rule: flags `case Enum.find_index(...)` used solely to provide a
+  default for `nil`, and rewrites it to use `||`.
+
+  `Enum.find_index/2` returns either an integer index or `nil`. Wrapping it in
+  a `case` with a `nil -> default` and `index -> index` pattern is verbose;
+  `Enum.find_index(...) || default` is clearer and more idiomatic.
+
+  The rewrite is behaviour-preserving: `||` returns the left side when it is
+  truthy (non-nil, non-false), and the right side otherwise. Since
+  `Enum.find_index/2` returns either an integer (truthy) or `nil` (falsy),
+  the two forms are equivalent for every input.
+
+  ## Bad
+
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> default
+        index -> index
+      end
+
+  ## Good
+
+      Enum.find_index(list, &(&1 == target)) || default
+
+  ## Not flagged
+
+      # Uses `Enum.find` instead of `Enum.find_index`
+      case Enum.find(list, &(&1 == target)) do
+        nil -> default
+        item -> item
+      end
+
+      # Different case structure (not the nil/identity pattern)
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> :not_found
+        index -> {:ok, index}
+      end
+
+      # Returns something other than the matched variable
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> default
+        index -> index + 1
+      end
+  """
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+  alias Credence.RuleHelpers
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn node, issues ->
+        case check_node(node) do
+          {:ok, issue} -> {node, [issue | issues]}
+          :error -> {node, issues}
+        end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, fn
+      {:case, _meta, [_expr, branches]} = node ->
+        case try_fix(node) do
+          {:ok, replacement} -> replacement
+          :error -> node
+        end
+
+      node ->
+        node
+    end)
+  end
+
+  defp check_node({:case, meta, [_expr, branches]} = node) do
+    if find_index_case_pattern?(node) do
+      {:ok,
+       %Issue{
+         rule: :prefer_enum_find_index_with_default,
+         message:
+           "Using `case` to provide a default for `Enum.find_index/2` is verbose. " <>
+             "Use `||` instead: `Enum.find_index(...) || default`.",
+         meta: %{line: Keyword.get(meta, :line)}
+       }}
+    else
+      :error
+    end
+  end
+
+  defp check_node(_), do: :error
+
+  defp find_index_case_pattern?({:case, _, [expr, branches]}) do
+    with true <- find_index_call?(expr),
+         {:ok, nil_clause, identity_clause} <- extract_clauses(branches) do
+      nil_returns_default?(nil_clause) and identity_returns_var?(identity_clause)
+    else
+      _ -> false
+    end
+  end
+
+  defp find_index_call?(expr) do
+    case expr do
+      {{:., _, [{:__aliases__, _, [:Enum]}, :find_index]}, _, _} -> true
+      _ -> false
+    end
+  end
+
+  defp extract_clauses(branches) when is_list(branches) do
+    # Sourceror wraps do/else keys as {:__block__, _, [:do]}
+    do_body =
+      Enum.find_value(branches, fn
+        {{:__block__, _, [:do]}, body} -> body
+        _ -> nil
+      end)
+
+    case do_body do
+      [clause1, clause2] ->
+        # Determine which is nil clause and which is identity clause
+        case {clause1, clause2} do
+          {{:->, _, [[{:__block__, _, [nil]}, _default]}, _} ->
+            {:ok, clause1, clause2}
+
+          {{:->, _, [[_var], _value]}, _} ->
+            {:ok, clause2, clause1}
+
+          _ ->
+            :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  defp nil_returns_default?({:->, _, [[{:__block__, _, [nil]}], _default]}), do: true
+  defp nil_returns_default?(_), do: false
+
+  defp identity_returns_var?({:->, _, [[var], value]}) do
+    # Check that the value is the same variable as the matched pattern
+    case {var, value} do
+      {{name, _, nil}, {name, _, nil}} when is_atom(name) -> true
+      _ -> false
+    end
+  end
+
+  defp try_fix({:case, _, [expr, branches]} = node) do
+    with true <- find_index_call?(expr),
+         {:ok, nil_clause, identity_clause} <- extract_clauses(branches),
+         true <- nil_returns_default?(nil_clause),
+         true <- identity_returns_var?(identity_clause) do
+      # Extract the default value from the nil clause
+      {:->, _, [[{:__block__, _, [nil]}], default]} = nil_clause
+
+      # Build the replacement: expr || default
+      {:ok, {:||, [], [expr, default]}}
+    else
+      _ -> :error
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:34:22.879 [info] [Pi] step 14: write
+    content: defmodule Credence.Pattern.PreferEnumFindIndexWithDefaultCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferEnumFindIndexWithDefault
+
+  describe "flags the anti-pattern" do
+    test "flags case with nil -> default, index -> index" do
+      code = """
+      defmodule Example do
+        def find_index_with_default(list, target, default) do
+          case Enum.find_index(list, &(&1 == target)) do
+            nil -> default
+            index -> index
+          end
+        end
+      end
+      """
+
+      assert flagged?(PreferEnumFindIndexWithDefault, code)
+    end
+
+    test "flags case with reversed clause order" do
+      code = """
+      defmodule Example do
+        def find_index_with_default(list, target, default) do
+          case Enum.find_index(list, &(&1 == target)) do
+            index -> index
+            nil -> default
+          end
+        end
+      end
+      """
+
+      assert flagged?(PreferEnumFindIndexWithDefault, code)
+    end
+
+    test "flags case with complex default expression" do
+      code = """
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> compute_default()
+        index -> index
+      end
+      """
+
+      assert flagged?(PreferEnumFindIndexWithDefault, code)
+    end
+  end
+
+  describe "leaves good code alone" do
+    test "does not flag when already using ||" do
+      code = """
+      Enum.find_index(list, &(&1 == target)) || default
+      """
+
+      assert clean?(PreferEnumFindIndexWithDefault, code)
+    end
+
+    test "does not flag when case returns different value for non-nil" do
+      code = """
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> :not_found
+        index -> {:ok, index}
+      end
+      """
+
+      assert clean?(PreferEnumFindIndexWithDefault, code)
+    end
+
+    test "does not flag when nil clause returns a different value" do
+      code = """
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> default
+        index -> index + 1
+      end
+      """
+
+      assert clean?(PreferEnumFindIndexWithDefault, code)
+    end
+
+    test "does not flag when using Enum.find instead of Enum.find_index" do
+      code = """
+      case Enum.find(list, &(&1 == target)) do
+        nil -> default
+        item -> item
+      end
+      """
+
+      assert clean?(PreferEnumFindIndexWithDefault, code)
+    end
+
+    test "does not flag when case has more than two clauses" do
+      code = """
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> default
+        0 -> :first
+        index -> index
+      end
+      """
+
+      assert clean?(PreferEnumFindIndexWithDefault, code)
+    end
+
+    test "does not flag regular case expressions" do
+      code = """
+      case some_function() do
+        :ok -> :success
+        :error -> :failure
+      end
+      """
+
+      assert clean?(PreferEnumFindIndexWithDefault, code)
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_find_index_with_default_check_test.exs[0m
+[22m10:34:30.169 [info] [Pi] step 15: bash
+    command: cd /home/kly/projects/credence && mix compile 2>&1 | head -50[0m
+[22m10:34:41.878 [info] [Pi] step 16: edit
+    edits: [%{"newText" => "    case do_body do\n      [clause1, clause2] ->\n        # Determine which is nil clause and which is identity clause\n        case {clause1, clause2} do\n          {{:->, _, [[{:__block__, _, [nil]}, _default]}, _} ->\n            {:ok, clause1, clause2}\n\n          {{:->, _, [[_var], _value]}, _} ->\n            {:ok, clause2, clause1}\n\n          _ ->\n            :error\n        end\n\n      _ ->\n        :error\n    end", "oldText" => "    case do_body do\n      [clause1, clause2] ->\n        # Determine which is nil clause and which is identity clause\n        case {clause1, clause2} do\n          {{:->, _, [[{:__block__, _, [nil]}, _default]}, _} ->\n            {:ok, clause1, clause2}\n\n          {{:->, _, [[_var], _value]}, _} ->\n            {:ok, clause2, clause1}\n\n          _ ->\n            :error\n        end\n\n      _ ->\n        :error\n    end"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:34:45.511 [info] [Pi] step 17: read
+    limit: 30
+    offset: 110
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:34:55.478 [info] [Budget] HEARTBEAT — 885 paid calls, est $4.0107 over 1094.7min → ~$0.2198/hr, ~$5.28/day (tok in=5122982 cache_rd=42921024 out=1870857)[0m
+[22m10:34:56.879 [info] [Pi] step 18: edit
+    edits: [%{"newText" => "    case do_body do\n      [clause1, clause2] ->\n        # Determine which is nil clause and which is identity clause\n        case {clause1, clause2} do\n          {{:->, _, [[{:__block__, _, [nil]}, _default]}, _} ->\n            {:ok, clause1, clause2}\n\n          {{:->, _, [[_var], _value]}, _} ->\n            {:ok, clause2, clause1}\n\n          _ ->\n            :error\n        end\n\n      _ ->\n        :error\n    end", "oldText" => "    case do_body do\n      [clause1, clause2] ->\n        # Determine which is nil clause and which is identity clause\n        case {clause1, clause2} do\n          {{:->, _, [[{:__block__, _, [nil]}, _default]}, _} ->\n            {:ok, clause1, clause2}\n\n          {{:->, _, [[_var], _value]}, _} ->\n            {:ok, clause2, clause1}\n\n          _ ->\n            :error\n        end\n\n      _ ->\n        :error\n    end"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:35:03.713 [info] [Pi] step 19: read
+    limit: 10
+    offset: 120
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:35:12.778 [info] [Pi] step 20: edit
+    edits: [%{"newText" => "        # Determine which is nil clause and which is identity clause\n        case {clause1, clause2} do\n          {{:->, _, [[{:__block__, _, [nil]}, _default]}, _} ->\n            {:ok, clause1, clause2}\n\n          {{:->, _, [[_var], _value]}, _} ->\n            {:ok, clause2, clause1}\n\n          _ ->\n            :error\n        end", "oldText" => "        # Determine which is nil clause and which is identity clause\n        case {clause1, clause2} do\n          {{:->, _, [[{:__block__, _, [nil]}, _default]}, _} ->\n            {:ok, clause1, clause2}\n\n          {{:->, _, [[_var], _value]}, _} ->\n            {:ok, clause2, clause1}\n\n          _ ->\n            :error\n        end"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:35:19.553 [info] [Pi] step 21: bash
+    command: sed -n '122p' /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:35:50.498 [info] [Pi] step 22: write
+    content: defmodule Credence.Pattern.PreferEnumFindIndexWithDefault do
+  @moduledoc """
+  Readability rule: flags `case Enum.find_index(...)` used solely to provide a
+  default for `nil`, and rewrites it to use `||`.
+
+  `Enum.find_index/2` returns either an integer index or `nil`. Wrapping it in
+  a `case` with a `nil -> default` and `index -> index` pattern is verbose;
+  `Enum.find_index(...) || default` is clearer and more idiomatic.
+
+  The rewrite is behaviour-preserving: `||` returns the left side when it is
+  truthy (non-nil, non-false), and the right side otherwise. Since
+  `Enum.find_index/2` returns either an integer (truthy) or `nil` (falsy),
+  the two forms are equivalent for every input.
+
+  ## Bad
+
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> default
+        index -> index
+      end
+
+  ## Good
+
+      Enum.find_index(list, &(&1 == target)) || default
+
+  ## Not flagged
+
+      # Uses `Enum.find` instead of `Enum.find_index`
+      case Enum.find(list, &(&1 == target)) do
+        nil -> default
+        item -> item
+      end
+
+      # Different case structure (not the nil/identity pattern)
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> :not_found
+        index -> {:ok, index}
+      end
+
+      # Returns something other than the matched variable
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> default
+        index -> index + 1
+      end
+  """
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+  alias Credence.RuleHelpers
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn node, issues ->
+        case check_node(node) do
+          {:ok, issue} -> {node, [issue | issues]}
+          :error -> {node, issues}
+        end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, fn
+      {:case, _meta, [_expr, _branches]} = node ->
+        case try_fix(node) do
+          {:ok, replacement} -> replacement
+          :error -> node
+        end
+
+      node ->
+        node
+    end)
+  end
+
+  defp check_node({:case, meta, [_expr, _branches]} = node) do
+    if find_index_case_pattern?(node) do
+      {:ok,
+       %Issue{
+         rule: :prefer_enum_find_index_with_default,
+         message:
+           "Using `case` to provide a default for `Enum.find_index/2` is verbose. " <>
+             "Use `||` instead: `Enum.find_index(...) || default`.",
+         meta: %{line: Keyword.get(meta, :line)}
+       }}
+    else
+      :error
+    end
+  end
+
+  defp check_node(_), do: :error
+
+  defp find_index_case_pattern?({:case, _, [expr, branches]}) do
+    with true <- find_index_call?(expr),
+         {:ok, nil_clause, identity_clause} <- extract_clauses(branches) do
+      nil_returns_default?(nil_clause) and identity_returns_var?(identity_clause)
+    else
+      _ -> false
+    end
+  end
+
+  defp find_index_call?(expr) do
+    case expr do
+      {{:., _, [{:__aliases__, _, [:Enum]}, :find_index]}, _, _} -> true
+      _ -> false
+    end
+  end
+
+  defp extract_clauses(branches) when is_list(branches) do
+    # Sourceror wraps do/else keys as {:__block__, _, [:do]}
+    do_body =
+      Enum.find_value(branches, fn
+        {{:__block__, _, [:do]}, body} -> body
+        _ -> nil
+      end)
+
+    case do_body do
+      [clause1, clause2] ->
+        # Determine which is nil clause and which is identity clause
+        case {clause1, clause2} do
+          {{:->, _, [[{:__block__, _, [nil]}, _default]}, _} ->
+            {:ok, clause1, clause2}
+
+          {{:->, _, [[_var], _value]}, _} ->
+            {:ok, clause2, clause1}
+
+          _ ->
+            :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  defp nil_returns_default?({:->, _, [[{:__block__, _, [nil]}], _default]}), do: true
+  defp nil_returns_default?(_), do: false
+
+  defp identity_returns_var?({:->, _, [[var], value]}) do
+    # Check that the value is the same variable as the matched pattern
+    case {var, value} do
+      {{name, _, nil}, {name, _, nil}} when is_atom(name) -> true
+      _ -> false
+    end
+  end
+
+  defp try_fix({:case, _, [expr, branches]} = node) do
+    with true <- find_index_call?(expr),
+         {:ok, nil_clause, identity_clause} <- extract_clauses(branches),
+         true <- nil_returns_default?(nil_clause),
+         true <- identity_returns_var?(identity_clause) do
+      # Extract the default value from the nil clause
+      {:->, _, [[{:__block__, _, [nil]}], default]} = nil_clause
+
+      # Build the replacement: expr || default
+      {:ok, {:||, [], [expr, default]}}
+    else
+      _ -> :error
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:35:54.833 [info] [Pi] step 23: bash
+    command: cd /home/kly/projects/credence && mix compile 2>&1 | head -50[0m
+[22m10:36:08.691 [info] [Pi] step 24: read
+    limit: 30
+    offset: 110
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:36:18.903 [info] [Pi] step 25: edit
+    edits: [%{"newText" => "    case do_body do\n      [clause1, clause2] ->\n        # Determine which is nil clause and which is identity clause\n        case {clause1, clause2} do\n          {{:->, _, [[{:__block__, _, [nil]}], _default]}, _} ->\n            {:ok, clause1, clause2}\n\n          {{:->, _, [[_var], _value]}, _} ->\n            {:ok, clause2, clause1}\n\n          _ ->\n            :error\n        end\n\n      _ ->\n        :error\n    end", "oldText" => "    case do_body do\n      [clause1, clause2] ->\n        # Determine which is nil clause and which is identity clause\n        case {clause1, clause2} do\n          {{:->, _, [[{:__block__, _, [nil]}, _default]}, _} ->\n            {:ok, clause1, clause2}\n\n          {{:->, _, [[_var], _value]}, _} ->\n            {:ok, clause2, clause1}\n\n          _ ->\n            :error\n        end\n\n      _ ->\n        :error\n    end"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:36:26.826 [info] [Pi] step 26: bash
+    command: cd /home/kly/projects/credence && mix compile 2>&1 | head -50[0m
+[22m10:36:35.354 [info] [Pi] step 27: edit
+    edits: [%{"newText" => "  defp try_fix({:case, _, [expr, branches]}) do", "oldText" => "  defp try_fix({:case, _, [expr, branches]} = node) do"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:36:40.191 [info] [Pi] step 28: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_find_index_with_default*_test.exs 2>&1 | head -100[0m
+[22m10:36:47.913 [info] [Pi] step 29: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_find_index_with_default_fix_test.exs[0m
+[22m10:37:14.096 [info] [Pi] step 30: write
+    content: defmodule Credence.Pattern.PreferEnumFindIndexWithDefaultFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferEnumFindIndexWithDefault
+
+  describe "fix" do
+    test "rewrites the anti-pattern" do
+      input = """
+      defmodule Example do
+        def find_index_with_default(list, target, default) do
+          case Enum.find_index(list, &(&1 == target)) do
+            nil -> default
+            index -> index
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def find_index_with_default(list, target, default) do
+          Enum.find_index(list, &(&1 == target)) || default
+        end
+      end
+      """
+
+      assert fix(PreferEnumFindIndexWithDefault, input) == expected
+    end
+
+    test "rewrites with reversed clause order" do
+      input = """
+      case Enum.find_index(list, &(&1 == target)) do
+        index -> index
+        nil -> default
+      end
+      """
+
+      expected = """
+      Enum.find_index(list, &(&1 == target)) || default
+      """
+
+      assert fix(PreferEnumFindIndexWithDefault, input) == expected
+    end
+
+    test "rewrites with complex default expression" do
+      input = """
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> compute_default()
+        index -> index
+      end
+      """
+
+      expected = """
+      Enum.find_index(list, &(&1 == target)) || compute_default()
+      """
+
+      assert fix(PreferEnumFindIndexWithDefault, input) == expected
+    end
+
+    test "rewrites in function context" do
+      input = """
+      defmodule MyModule do
+        def find_or_default(list, target, default) do
+          case Enum.find_index(list, &(&1 == target)) do
+            nil -> default
+            idx -> idx
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule MyModule do
+        def find_or_default(list, target, default) do
+          Enum.find_index(list, &(&1 == target)) || default
+        end
+      end
+      """
+
+      assert fix(PreferEnumFindIndexWithDefault, input) == expected
+    end
+
+    test "preserves surrounding code" do
+      input = """
+      defmodule Example do
+        def process(list, target, fallback) do
+          idx = case Enum.find_index(list, &(&1 == target)) do
+            nil -> fallback
+            i -> i
+          end
+          other = do_something_else()
+          {idx, other}
+        end
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def process(list, target, fallback) do
+          idx = Enum.find_index(list, &(&1 == target)) || fallback
+          other = do_something_else()
+          {idx, other}
+        end
+      end
+      """
+
+      assert fix(PreferEnumFindIndexWithDefault, input) == expected
+    end
+
+    test "does not change code that uses Enum.find instead of Enum.find_index" do
+      code = """
+      case Enum.find(list, &(&1 == target)) do
+        nil -> default
+        item -> item
+      end
+      """
+
+      assert fix(PreferEnumFindIndexWithDefault, code) == code
+    end
+
+    test "does not change code with different case structure" do
+      code = """
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> :not_found
+        index -> {:ok, index}
+      end
+      """
+
+      assert fix(PreferEnumFindIndexWithDefault, code) == code
+    end
+
+    test "does not change code when nil clause returns different value" do
+      code = """
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> default
+        index -> index + 1
+      end
+      """
+
+      assert fix(PreferEnumFindIndexWithDefault, code) == code
+    end
+
+    test "idempotent: running fix twice produces same result" do
+      input = """
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> default
+        index -> index
+      end
+      """
+
+      once = fix(PreferEnumFindIndexWithDefault, input)
+      twice = fix(PreferEnumFindIndexWithDefault, once)
+      assert once == twice
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_find_index_with_default_fix_test.exs[0m
+[22m10:37:17.601 [info] [Pi] step 31: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_find_index_with_default_equivalence_test.exs[0m
+[22m10:37:33.446 [info] [Pi] step 32: write
+    content: defmodule Credence.Pattern.PreferEnumFindIndexWithDefaultEquivalenceTest do
+  @moduledoc """
+  Tier 1 (expression), value-kind dimension.
+
+  `case Enum.find_index(list, &(&1 == target)) do nil -> default; index -> index end`
+  → `Enum.find_index(list, &(&1 == target)) || default`.
+
+  The rule rewrites a verbose case-expression into a concise `||` default.
+  The inputs include cases where the target is present (returning an integer
+  index) and absent (returning the default value), exercising both branches.
+  """
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferEnumFindIndexWithDefault
+
+  @inputs [
+    {[1, 2, 3], 2, :not_found},
+    {[1, 2, 3], 5, :not_found},
+    {[:a, :b, :c], :b, -1},
+    {[:a, :b, :c], :z, -1},
+    {[nil, false, true], false, :default},
+    {[nil, false, true], :missing, :default},
+    {[], 1, :empty},
+    {[1], 1, :empty},
+    {Enum.to_list(1..100), 50, :not_found}
+  ]
+
+  test "case Enum.find_index with nil/identity pattern preserves behaviour" do
+    assert_equivalent(
+      """
+      case Enum.find_index(list, &(&1 == target)) do
+        nil -> default
+        index -> index
+      end
+      """,
+      rule: PreferEnumFindIndexWithDefault,
+      vars: [:list, :target, :default],
+      inputs: @inputs
+    )
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_find_index_with_default_equivalence_test.exs[0m
+[22m10:37:39.419 [info] [Pi] step 33: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_find_index_with_default*_test.exs 2>&1[0m
+[22m10:37:45.866 [info] [Pi] step 34: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_find_index_with_default*_test.exs 2>&1[0m
+[22m10:37:51.736 [info] [Pi] step 35: bash
+    command: cd /home/kly/projects/credence && mix compile --force 2>&1 | head -20[0m
+[22m10:38:01.586 [info] [Pi] step 36: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_find_index_with_default*_test.exs --trace 2>&1[0m
+[22m10:38:06.494 [info] [Pi] step 37: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -30[0m
+[22m10:38:21.639 [info] [Pi] step 38: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_find_index_with_default.ex[0m
+[22m10:38:25.909 [info] [Pi] step 39: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_find_index_with_default_check_test.exs[0m
+[22m10:38:34.545 [info] [Pi] step 40: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_find_index_with_default_fix_test.exs[0m
+[22m10:38:39.820 [info] [Pi] step 41: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_find_index_with_default_equivalence_test.exs[0m
+[22m10:38:47.419 [info] [Pi] step 42: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_find_index_with_default*_test.exs --trace 2>&1[0m
+[22m10:39:03.366 [info] [Pi] agent done — exit=0 steps=42 stop=stop[0m
+[36m10:39:03.366 [debug] [Budget] spent so far (est.): $4.0451[0m
+[22m10:39:03.872 [info] [Gate] staged entries: [{"A", ["lib/pattern/prefer_enum_find_index_with_default.ex"]}, {"A", ["test/pattern/prefer_enum_find_index_with_default_check_test.exs"]}, {"A", ["test/pattern/prefer_enum_find_index_with_default_equivalence_test.exs"]}, {"A", ["test/pattern/prefer_enum_find_index_with_default_fix_test.exs"]}][0m
+[36m10:39:04.514 [debug] [Gate] mix test ["test/pattern/prefer_enum_find_index_with_default_check_test.exs", "test/pattern/prefer_enum_find_index_with_default_equivalence_test.exs", "test/pattern/prefer_enum_find_index_with_default_fix_test.exs"] exit=2
+Generated credence app
+Running ExUnit with seed: 299688, max_cases: 48
+
+
+
+  1) test fix rewrites with complex default expression (Credence.Pattern.PreferEnumFindIndexWithDefaultFixTest)
+     test/pattern/prefer_enum_find_index_with_default_fix_test.exs:45
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFindIndexWithDefault.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumFindIndexWithDefault is not available)
+     code: assert fix(PreferEnumFindIndexWithDefault, input) == expected
+     stacktrace:
+       Credence.Pattern.PreferEnumFindIndexWithDefault.fix_patches({:case, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 4], do: [line: 1, column: 45], end: [line: 4, column: 1], line: 1, column: 1], [{{:., [trailing_comments: [], line: 1, column: 10], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 6], line: 1, column: 6], [:Enum]}, :find_index]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 43], line: 1, column: 11], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 22], nil}, {:&, [trailing_comments: [], leading_comments: [], line: 1, column: 28], [{:==, [trailing_comments: [], parens: [line: 1, column: 29, closing: [line: 1, column: 42]], line: 1, column: 33], [{:&, [trailing_comments: [], leading_comments: [], line: 1, column: 30], [1]}, {:target, [trailing_comments: [], leading_comments: [], line: 1, column: 36], nil}]}]}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], ...], ...}, ...}]]}, [source: "case Enum.find_index(list, &(&1 == target)) do\n  nil -> compute_default()\n  index -> index\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_enum_find_index_with_default_fix_test.exs:57: (test)
+
+
+
+  2) test case Enum.find_index with nil/identity pattern preserves behaviour (Credence.Pattern.PreferEnumFindIndexWithDefaultEquivalenceTest)
+     test/pattern/prefer_enum_find_index_with_default_equivalence_test.exs:28
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFindIndexWithDefault.check/2 is undefined (module Credence.Pattern.PreferEnumFindIndexWithDefault is not available)
+     code: assert_equivalent(
+     stacktrace:
+       Credence.Pattern.PreferEnumFindIndexWithDefault.check({:case, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 4], do: [line: 1, column: 45], end: [line: 4, column: 1], line: 1, column: 1], [{{:., [trailing_comments: [], line: 1, column: 10], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 6], line: 1, column: 6], [:Enum]}, :find_index]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 43], line: 1, column: 11], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 22], nil}, {:&, [trailing_comments: [], leading_comments: [], line: 1, column: 28], [{:==, [trailing_comments: [], parens: [line: 1, column: 29, closing: [line: 1, column: 42]], line: 1, column: 33], [{:&, [trailing_comments: [], leading_comments: [], line: 1, column: 30], [1]}, {:target, [trailing_comments: [], leading_comments: [], line: 1, column: 36], nil}]}]}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], ...], ...}, ...}]]}, [source: "case Enum.find_index(list, &(&1 == target)) do\n  nil -> default\n  index -> index\nend\n"])
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:293: Credence.BehaviourEquivalence.rule_fires?/2
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:240: Credence.BehaviourEquivalence.precheck!/4
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:75: Credence.BehaviourEquivalence.assert_equivalent/2
+       test/pattern/prefer_enum_find_index_with_default_equivalence_test.exs:29: (test)
+
+
+
+  3) test fix does not change code with different case structure (Credence.Pattern.PreferEnumFindIndexWithDefaultFixTest)
+     test/pattern/prefer_enum_find_index_with_default_fix_test.exs:121
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFindIndexWithDefault.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumFindIndexWithDefault is not available)
+     code: assert fix(PreferEnumFindIndexWithDefault, code) == code
+     stacktrace:
+       Credence.Pattern.PreferEnumFindIndexWithDefault.fix_patches({:case, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 4], do: [line: 1, column: 45], end: [line: 4, column: 1], line: 1, column: 1], [{{:., [trailing_comments: [], line: 1, column: 10], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 6], line: 1, column: 6], [:Enum]}, :find_index]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 43], line: 1, column: 11], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 22], nil}, {:&, [trailing_comments: [], leading_comments: [], line: 1, column: 28], [{:==, [trailing_comments: [], parens: [line: 1, column: 29, closing: [line: 1, column: 42]], line: 1, column: 33], [{:&, [trailing_comments: [], leading_comments: [], line: 1, column: 30], [1]}, {:target, [trailing_comments: [], leading_comments: [], line: 1, column: 36], nil}]}]}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], ...], ...}, ...}]]}, [source: "case Enum.find_index(list, &(&1 == target)) do\n  nil -> :not_found\n  index -> {:ok, index}\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_enum_find_index_with_default_fix_test.exs:129: (test)
+
+
+
+  4) test fix idempotent: running fix twice produces same result (Credence.Pattern.PreferEnumFindIndexWithDefaultFixTest)
+     test/pattern/prefer_enum_find_index_with_default_fix_test.exs:143
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFindIndexWithDefault.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumFindIndexWithDefault is not available)
+     code: once = fix(PreferEnumFindIndexWithDefault, input)
+     stacktrace:
+       Credence.Pattern.PreferEnumFindIndexWithDefault.fix_patches({:case, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 4], do: [line: 1, column: 45], end: [line: 4, column: 1], line: 1, column: 1], [{{:., [trailing_comments: [], line: 1, column: 10], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 6], line: 1, column: 6], [:Enum]}, :find_index]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 43], line: 1, column: 11], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 22], nil}, {:&, [trailing_comments: [], leading_comments: [], line: 1, column: 28], [{:==, [trailing_comments: [], parens: [line: 1, column: 29, closing: [line: 1, column: 42]], line: 1, column: 33], [{:&, [trailing_comments: [], leading_comments: [], line: 1, column: 30], [1]}, {:target, [trailing_comments: [], leading_comments: [], line: 1, column: 36], nil}]}]}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], ...], ...}, ...}]]}, [source: "case Enum.find_index(list, &(&1 == target)) do\n  nil -> default\n  index -> index\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_enum_find_index_with_default_fix_test.exs:151: (test)
+
+
+
+  5) test fix rewrites the anti-pattern (Credence.Pattern.PreferEnumFindIndexWithDefaultFixTest)
+     test/pattern/prefer_enum_find_index_with_default_fix_test.exs:7
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFindIndexWithDefault.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumFindIndexWit (truncated)[0m
+[22m10:39:04.519 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m10:39:13.148 [debug] [Gate] mix test [] exit=2
+Compiling 1 file (.ex)
+Running ExUnit with seed: 984416, max_cases: 48
+
+........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+
+  1) test every fix test exercises at least one real transformation (not all no-ops) (Credence.FixMetaTest)
+     test/fix_meta_test.exs:83
+     fix tests with no `fix(rule, input) == expected` where expected differs from input:
+       - Credence.Pattern.PreferPrependInAccumulator — test/pattern/prefer_prepend_in_accumulator_fix_test.exs
+     code: assert bad == [],
+     stacktrace:
+       test/fix_meta_test.exs:86: (test)
+
+...
+
+  2) test every fix test compares whole strings (no =~ / substring / normalize) (Credence.FixMetaTest)
+     test/fix_meta_test.exs:75
+     fix tests using a partial or normalized comparison instead of whole-string ==:
+       - Credence.Pattern.PreferPrependInAccumulator — test/pattern/prefer_prepend_in_accumulator_fix_test.exs
+     code: assert bad == [],
+     stacktrace:
+       test/fix_meta_test.exs:78: (test)
+
+.......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Finished in 8.0 seconds (3.8s async, 4.2s sync)
+5 properties, 4607 tests, 2 failures
+[0m
+[33m10:39:13.149 [warning] [Gate] REJECT: :full_suite_red — discarding[0m

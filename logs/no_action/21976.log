@@ -1,0 +1,2265 @@
+[22m20:45:16.993 [info] [idx=21976] entry_point=is_match[0m
+[36m20:45:16.993 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to check if a given string matches a given wildcard pattern. The pattern string can contain '?' and '*' as the following:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+
+## Python Solution
+```python
+def is_match(s: str, p: str) -> bool:
+    dp = [[False] * (len(p) + 1) for _ in range(len(s) + 1)]
+    dp[-1][-1] = True
+    for i in range(len(s), -1, -1):
+        for j in range(len(p) - 1, -1, -1):
+            match = i < len(s) and (p[j] == s[i] or p[j] == '?')
+            if p[j] == '*':
+                dp[i][j] = dp[i][j+1] or ((i < len(s)) and dp[i+1][j])
+            elif match:
+                dp[i][j] = dp[i+1][j+1]
+    return dp[0][0]
+```
+
+## Python Tests
+assert is_match("aa", "a") == False
+assert is_match("aa", "*") == True
+assert is_match("adceb", "*a*b") == True
+assert is_match("acdcb", "a*c?b") == False
+assert is_match("cb", "?a") == False
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `match?`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m20:46:27.032 [debug] [LLM.call] finish=stop len=1871 usage=%{"completion_tokens" => 2784, "completion_tokens_details" => %{"reasoning_tokens" => 2276}, "prompt_tokens" => 650, "prompt_tokens_details" => %{}, "total_tokens" => 3434}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function to check if a given string matches a given wildcard pattern. The pattern string can contain '?' and '*' as the following:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+The function name must be `match?`, taking two strings and returning a boolean.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  def match?(s, p) do
+    s_len = String.length(s)
+    p_len = String.length(p)
+    dp = for _ <- 0..s_len, do: List.duplicate(false, p_len + 1)
+    dp = dp |> List.update_at(s_len, fn row -> List.update_at(row, p_len, fn _ -> true end) end)
+
+    dp =
+      for i <- s_len..0, reduce: dp do
+        dp ->
+          for j <- (p_len - 1)..0, reduce: dp do
+            dp ->
+              s_char = if i < s_len, do: String.at(s, i)
+              p_char = String.at(p, j)
+
+              new_val =
+                cond do
+                  p_char == "*" ->
+                    dp_i_j_plus1 = dp |> Enum.at(i) |> Enum.at(j + 1)
+                    dp_i_plus1_j = i < s_len and (dp |> Enum.at(i + 1) |> Enum.at(j))
+                    dp_i_j_plus1 or dp_i_plus1_j
+
+                  i < s_len and (p_char == "?" or p_char == s_char) ->
+                    dp |> Enum.at(i + 1) |> Enum.at(j + 1)
+
+                  true ->
+                    false
+                end
+
+              dp |> List.update_at(i, fn row -> List.update_at(row, j, fn _ -> new_val end) end)
+          end
+      end
+
+    dp |> Enum.at(0) |> Enum.at(0)
+  end
+end
+---END---[0m
+[22m20:46:27.032 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 70038ms — ok[0m
+[36m20:46:27.033 [debug] [Budget] spent so far (est.): $0.7757[0m
+[22m20:46:28.078 [info] [RoundTrip] reference PASSED tests[0m
+[22m20:46:28.078 [info] [idx=21976] translation fresh — solving[0m
+[22m20:46:28.078 [info] ===SOLVE_BOUNDARY===[0m
+[22m20:46:28.078 [info] [Solve attempt 1] generating (fn=match?)[0m
+[36m20:46:28.078 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function to check if a given string matches a given wildcard pattern. The pattern string can contain '?' and '*' as the following:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+The function name must be `match?`, taking two strings and returning a boolean.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end
+```
+
+Module: `Solution`. Function: `match?`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:46:32.966 [debug] [LLM.call] finish=stop len=1908 usage=%{"completion_tokens" => 538, "prompt_tokens" => 436, "prompt_tokens_details" => %{"cached_tokens" => 0}, "total_tokens" => 974}
+[LLM.call] response:
+---MODULE---
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(String.to_charlist(text), String.to_charlist(pattern))
+end
+
+defp do_match([], []), do: true
+defp do_match([], pattern), do: has_wildcard?(pattern)
+defp do_match([_char | text_rest], pattern) when pattern == [], do: false
+
+defp do_match([char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, [pattern_char | pattern_rest]) when pattern_char == '*' do
+  # Try matching zero characters, then one, then two, etc.
+  match_star(text, pattern_rest)
+end
+
+defp do_match([char | text_rest], [pattern_char | pattern_rest]) when char == pattern_char do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_, _), do: false
+
+defp match_star(text, pattern) do
+  # Option 1: '*' matches empty sequence, so try matching rest of text with rest of pattern
+  if do_match(text, pattern) do
+    true
+  else
+    # Option 2: '*' matches at least one character, so consume one char from text and retry
+    if text == [] do
+      false
+    else
+      do_match(elem(text, 1), pattern) |> (fn
+        true -> true
+        _ -> match_star(elem(text, 1), pattern)
+      end).()
+    end
+  end
+end
+
+defp has_wildcard?(pattern) do
+  Enum.all?(pattern, &(&1 == ?*))
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end
+---END---[0m
+[22m20:46:32.966 [info] [LLM.call] local_qwen_thinking completed in 4887ms — ok[0m
+[22m20:46:32.966 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:46:32.966 [debug] [Validator.run] module code (1532 chars):
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(String.to_charlist(text), String.to_charlist(pattern))
+end
+
+defp do_match([], []), do: true
+defp do_match([], pattern), do: has_wildcard?(pattern)
+defp do_match([_char | text_rest], pattern) when pattern == [], do: false
+
+defp do_match([char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, [pattern_char | pattern_rest]) when pattern_char == '*' do
+  # Try matching zero characters, then one, then two, etc.
+  match_star(text, pattern_rest)
+end
+
+defp do_match([char | text_rest], [pattern_char | pattern_rest]) when char == pattern_char do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_, _), do: false
+
+defp match_star(text, pattern) do
+  # Option 1: '*' matches empty sequence, so try matching rest of text with rest of pattern
+  if do_match(text, pattern) do
+    true
+  else
+    # Option 2: '*' matches at least one character, so consume one char from text and retry
+    if text == [] do
+      false
+    else
+      do_match(elem(text, 1), pattern) |> (fn
+        true -> true
+        _ -> match_star(elem(text, 1), pattern)
+      end).()
+    end
+  end
+end
+
+defp has_wildcard?(pattern) do
+  Enum.all?(pattern, &(&1 == ?*))
+end[0m
+[36m20:46:32.966 [debug] [Validator.run] test code (341 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end[0m
+[36m20:46:32.966 [debug] [Budget] spent so far (est.): $0.7764[0m
+[22m20:46:32.966 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:46:32.966 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:46:33.643 [debug] [run_credence_fix] exit=0 output:
+
+20:46:33.483 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:46:33.484 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+20:46:33.488 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+20:46:33.488 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+20:46:33.488 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+20:46:33.490 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Check if a given string matches a given wildcard pattern.
+  L2 + @doc """
+  L3 - The pattern can contain '?' and '*' where:
+  L3 + Check if a given string matches a given wildcard pattern.
+  L4 - '?' Matches any single character.
+  L4 + The pattern can contain '?' and '*' where:
+  L5 - '*' Matches any sequence of characters (including the empty sequence).
+  L5 + '?' Matches any single character.
+  L6 - """
+  L6 + '*' Matches any sequence of characters (including the empty sequence).
+  L7 - @spec match?(String.t(), String.t()) :: boolean()
+  L7 + """
+  L8 - def match?(text, pattern) do
+  L8 + @spec match?(String.t(), String.t()) :: boolean()
+  L9 -   do_match(String.to_charlist(text), String.to_charlist(pattern))
+  L9 + def match?(text, pattern) do
+  L10 - end
+  L10 +   do_match(String.to_charlist(text), String.to_charlist(pattern))
+  L11 - 
+  L11 + end
+  L12 - defp do_match([], []), do: true
+  L12 + 
+  L13 - defp do_match([], pattern), do: has_wildcard?(pattern)
+  L13 + defp do_match([], []), do: true
+  L14 - defp do_match([_char | text_rest], pattern) when pattern == [], do: false
+  L14 + defp do_match([], pattern), do: has_wildcard?(pattern)
+  L15 - 
+  L15 + defp do_match([_char | text_rest], pattern) when pattern == [], do: false
+  L16 - defp do_match([char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+  L16 + 
+  L17 -   do_match(text_rest, pattern_rest)
+  L17 + defp do_match([char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+  L18 - end
+  L18 +   do_match(text_rest, pattern_rest)
+  L19 - 
+  L19 + end
+  L20 - defp do_match(text, [pattern_char | pattern_rest]) when pattern_char == '*' do
+  L20 + 
+  L21 -   # Try matching zero characters, then one, then two, etc.
+  L21 + defp do_match(text, [pattern_char | pattern_rest]) when pattern_char == '*' do
+  L22 -   match_star(text, pattern_rest)
+  L22 +   # Try matching zero characters, then one, then two, etc.
+  L23 - end
+  L23 +   match_star(text, pattern_rest)
+  L24 - 
+  L24 + end
+  L25 - defp do_match([char | text_rest], [pattern_char | pattern_rest]) when char == pattern_char do
+  L25 + 
+  L26 -   do_match(text_rest, pattern_rest)
+  L26 + defp do_match([char | text_rest], [pattern_char | pattern_rest]) when char == pattern_char do
+  L27 - end
+  L27 +   do_match(text_rest, pattern_rest)
+  L28 - 
+  L28 + end
+  L29 - defp do_match(_, _), do: false
+  L29 + 
+  L30 - 
+  L30 + defp do_match(_, _), do: false
+  L31 - defp match_star(text, pattern) do
+  L31 + 
+  L32 -   # Option 1: '*' matches empty sequence, so try matching rest of text with rest of pattern
+  L32 + defp match_star(text, pattern) do
+  L33 -   if do_match(text, pattern) do
+  L33 +   # Option 1: '*' matches empty sequence, so try matching rest of text with rest of pattern
+  L34 -     true
+  L34 +   if do_match(text, pattern) do
+  L35 -   else
+  L35 +     true
+  L36 -     # Option 2: '*' matches at least one character, so consume one char from text and retry
+  L36 +   else
+  L37 -     if text == [] do
+  L37 +     # Option 2: '*' matches at least one character, so consume one char from text and retry
+  L38 -       false
+  L38 +     if text == [] do
+  L39 -     else
+  L39 +       false
+  L40 -       do_match(elem(text, 1), pattern) |> (fn
+  L40 +     else
+  L41 -         true -> true
+  L41 +       do_match(elem(text, 1), pattern) |> (fn
+  L42 -         _ -> match_star(elem(text, 1), pattern)
+  L42 +         true -> true
+  L43 -       end).()
+  L43 +         _ -> match_star(elem(text, 1), pattern)
+  L44 -     end
+  L44 +       end).()
+  L45 -   end
+  L45 +     end
+  L46 - end
+  L46 +   end
+  L47 - 
+  L47 + end
+  L48 - defp has_wildcard?(pattern) do
+  L48 + 
+  L49 -   Enum.all?(pattern, &(&1 == ?*))
+  L49 + defp has_wildcard?(pattern) do
+  L50 - end
+  L50 +   Enum.all?(pattern, &(&1 == ?*))
+  L51 + end
+  L52 + end
+  L53 + 
+
+20:46:33.490 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+20:46:33.502 [debug] [credence_fix] semantic pass 2: compilation OK, 5 warning(s)
+
+20:46:33.509 [debug] [credence_fix] no rule matched diagnostic: %{message: "using single-quoted strings to represent charlists is deprecated.\nUse ~c\"\" if you indeed want a charlist or use \"\" instead.\nYou may run \"mix format --migrate\" to change all single-quoted\nstrings to use the ~c sigil and fix this warning.", position: {21, 73}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:46:33.509 [debug] [credence_fix] no rule matched diagnostic: %{message: "using single-quoted strings to represent charlists is deprecated.\nUse ~c\"\" if you indeed want a charlist or use \"\" instead.\nYou may run \"mix format --migrate\" to change all single-quoted\nstrings to use the ~c sigil and fix this warning.", position: {17, 87}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:46:33.509 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:46:33.509 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L17 - defp do_match([char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+  L17 + defp do_match([_char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+
+20:46:33.509 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:46:33.509 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L15 - defp do_match([_char | text_rest], pattern) when pattern == [], do: false
+  L15 + defp do_match([_char | _text_rest], pattern) when pattern == [], do: false
+
+20:46:33.509 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:46:33.509 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UnusedVariable(1), UnusedVariable(1)]
+
+20:46:33.509 [debug] [credence_fix] starting pattern fix pipeline (119 rules)
+
+20:46:33.529 [debug] [credence_fix] NoAnonFnApplicationInPipe: check found 1 issue(s), running fix...
+
+20:46:33.544 [debug] [credence_fix] NoAnonFnApplicationInPipe: source CHANGED:
+  L41 -       do_match(elem(text, 1), pattern) |> (fn
+  L41 +       do_match(elem(text, 1), pattern) |> then(fn
+  L44 -       end).()
+  L44 +       end)
+
+20:46:33.615 [debug] [credence_fix] done. Applied: [NoAnonFnApplicationInPipe(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UnusedVariable, 1}, {Credence.Semantic.UnusedVariable, 1}, {Credence.Pattern.NoAnonFnApplicationInPipe, 1}]
+[0m
+[22m20:46:33.643 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m20:46:34.202 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m20:46:34.202 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: using single-quoted strings to represent charlists is deprecated.
+    Use ~c"" if you indeed want a charlist or use "" instead.
+    You may run "mix format --migrate" to change all single-quoted
+    strings to use the ~c sigil and fix this warning.
+    │
+ 17 │ defp do_match([_char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+    │                                                                                        ~
+    │
+    └─ lib/solution.ex:17:88
+
+    warning: using single-quoted strings to represent charlists is deprecated.
+    Use ~c"" if you indeed want a charlist or use "" instead.
+    You may run "mix format --migrate" to change all single-quoted
+    strings to use the ~c sigil and fix this warning.
+    │
+ 21 │ defp do_match(text, [pattern_char | pattern_rest]) when pattern_char == '*' do
+    │                                                                         ~
+    │
+    └─ lib/solution.ex:21:73
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m20:46:34.687 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m20:46:34.687 [info] [Validator.run] step 2/6: compile[0m
+[22m20:46:35.272 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:46:35.273 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: using single-quoted strings to represent charlists is deprecated.
+    Use ~c"" if you indeed want a charlist or use "" instead.
+    You may run "mix format --migrate" to change all single-quoted
+    strings to use the ~c sigil and fix this warning.
+    │
+ 16 │ defp do_match([char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+    │                                                                                       ~
+    │
+    └─ lib/solution.ex:16:87
+
+    warning: using single-quoted strings to represent charlists is deprecated.
+    Use ~c"" if you indeed want a charlist or use "" instead.
+    You may run "mix format --migrate" to change all single-quoted
+    strings to use the ~c sigil and fix this warning.
+    │
+ 20 │ defp do_match(text, [pattern_char | pattern_rest]) when pattern_char == '*' do
+    │                                                                         ~
+    │
+    └─ lib/solution.ex:20:73
+
+
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+[0m
+[22m20:46:35.273 [info] [Validator.run] step 3/6: format[0m
+[22m20:46:35.273 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:46:35.273 [info] [Validator.run] step 4/6: credo[0m
+[22m20:46:35.273 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:46:35.273 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:46:35.273 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:46:35.273 [info] [Validator.run] step 6/6: tests[0m
+[22m20:46:35.273 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:46:35.273 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:46:35.273 [debug] [Validator.run] final module (1532 chars):
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(String.to_charlist(text), String.to_charlist(pattern))
+end
+
+defp do_match([], []), do: true
+defp do_match([], pattern), do: has_wildcard?(pattern)
+defp do_match([_char | text_rest], pattern) when pattern == [], do: false
+
+defp do_match([char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, [pattern_char | pattern_rest]) when pattern_char == '*' do
+  # Try matching zero characters, then one, then two, etc.
+  match_star(text, pattern_rest)
+end
+
+defp do_match([char | text_rest], [pattern_char | pattern_rest]) when char == pattern_char do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_, _), do: false
+
+defp match_star(text, pattern) do
+  # Option 1: '*' matches empty sequence, so try matching rest of text with rest of pattern
+  if do_match(text, pattern) do
+    true
+  else
+    # Option 2: '*' matches at least one character, so consume one char from text and retry
+    if text == [] do
+      false
+    else
+      do_match(elem(text, 1), pattern) |> (fn
+        true -> true
+        _ -> match_star(elem(text, 1), pattern)
+      end).()
+    end
+  end
+end
+
+defp has_wildcard?(pattern) do
+  Enum.all?(pattern, &(&1 == ?*))
+end[0m
+[36m20:46:35.273 [debug] [Validator.run] final test (341 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end[0m
+[33m20:46:35.273 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m20:46:35.273 [info] [Solve attempt 2] generating (fn=match?)[0m
+[36m20:46:35.273 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(String.to_charlist(text), String.to_charlist(pattern))
+end
+
+defp do_match([], []), do: true
+defp do_match([], pattern), do: has_wildcard?(pattern)
+defp do_match([_char | text_rest], pattern) when pattern == [], do: false
+
+defp do_match([char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, [pattern_char | pattern_rest]) when pattern_char == '*' do
+  # Try matching zero characters, then one, then two, etc.
+  match_star(text, pattern_rest)
+end
+
+defp do_match([char | text_rest], [pattern_char | pattern_rest]) when char == pattern_char do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_, _), do: false
+
+defp match_star(text, pattern) do
+  # Option 1: '*' matches empty sequence, so try matching rest of text with rest of pattern
+  if do_match(text, pattern) do
+    true
+  else
+    # Option 2: '*' matches at least one character, so consume one char from text and retry
+    if text == [] do
+      false
+    else
+      do_match(elem(text, 1), pattern) |> (fn
+        true -> true
+        _ -> match_star(elem(text, 1), pattern)
+      end).()
+    end
+  end
+end
+
+defp has_wildcard?(pattern) do
+  Enum.all?(pattern, &(&1 == ?*))
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: using single-quoted strings to represent charlists is deprecated.
+    Use ~c"" if you indeed want a charlist or use "" instead.
+    You may run "mix format --migrate" to change all single-quoted
+    strings to use the ~c sigil and fix this warning.
+    │
+ 16 │ defp do_match([char | text_rest], [pattern_char | pattern_rest]) when pattern_char == '?' do
+    │                                                                                       ~
+    │
+    └─ lib/solution.ex:16:87
+
+    warning: using single-quoted strings to represent charlists is deprecated.
+    Use ~c"" if you indeed want a charlist or use "" instead.
+    You may run "mix format --migrate" to change all single-quoted
+    strings to use the ~c sigil and fix this warning.
+    │
+ 20 │ defp do_match(text, [pattern_char | pattern_rest]) when pattern_char == '*' do
+    │                                                                         ~
+    │
+    └─ lib/solution.ex:20:73
+
+
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+
+Reminder: module `Solution`, function `match?` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:46:41.057 [debug] [LLM.call] finish=stop len=1998 usage=%{"completion_tokens" => 585, "prompt_tokens" => 1155, "prompt_tokens_details" => %{"cached_tokens" => 0}, "total_tokens" => 1740}
+[LLM.call] response:
+---MODULE---
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  match_star(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star("", pattern) do
+  all_asterisks?(pattern)
+end
+
+defp match_star(text, pattern) do
+  if do_match(text, pattern) do
+    true
+  else
+    case :binary.split(text, <<>>) do
+      [<<>>, _rest] ->
+        # text is empty, already handled above
+        false
+      _ ->
+        # Consume one character from text and retry
+        do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> (fn
+          true -> true
+          false -> match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+        end).()
+    end
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end
+---END---[0m
+[22m20:46:41.057 [info] [LLM.call] local_qwen_thinking completed in 5783ms — ok[0m
+[22m20:46:41.057 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:46:41.057 [debug] [Validator.run] module code (1622 chars):
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  match_star(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star("", pattern) do
+  all_asterisks?(pattern)
+end
+
+defp match_star(text, pattern) do
+  if do_match(text, pattern) do
+    true
+  else
+    case :binary.split(text, <<>>) do
+      [<<>>, _rest] ->
+        # text is empty, already handled above
+        false
+      _ ->
+        # Consume one character from text and retry
+        do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> (fn
+          true -> true
+          false -> match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+        end).()
+    end
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false[0m
+[36m20:46:41.057 [debug] [Validator.run] test code (341 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end[0m
+[36m20:46:41.057 [debug] [Budget] spent so far (est.): $0.7774[0m
+[22m20:46:41.065 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:46:41.065 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:46:41.748 [debug] [run_credence_fix] exit=0 output:
+
+20:46:41.573 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:46:41.575 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+20:46:41.577 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+20:46:41.577 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+20:46:41.577 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+20:46:41.579 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Check if a given string matches a given wildcard pattern.
+  L2 + @doc """
+  L3 - The pattern can contain '?' and '*' where:
+  L3 + Check if a given string matches a given wildcard pattern.
+  L4 - '?' Matches any single character.
+  L4 + The pattern can contain '?' and '*' where:
+  L5 - '*' Matches any sequence of characters (including the empty sequence).
+  L5 + '?' Matches any single character.
+  L6 - """
+  L6 + '*' Matches any sequence of characters (including the empty sequence).
+  L7 - @spec match?(String.t(), String.t()) :: boolean()
+  L7 + """
+  L8 - def match?(text, pattern) do
+  L8 + @spec match?(String.t(), String.t()) :: boolean()
+  L9 -   do_match(text, pattern)
+  L9 + def match?(text, pattern) do
+  L10 - end
+  L10 +   do_match(text, pattern)
+  L11 - 
+  L11 + end
+  L12 - defp do_match("", ""), do: true
+  L12 + 
+  L13 - defp do_match("", pattern), do: all_asterisks?(pattern)
+  L13 + defp do_match("", ""), do: true
+  L14 - defp do_match(_text, ""), do: false
+  L14 + defp do_match("", pattern), do: all_asterisks?(pattern)
+  L15 - 
+  L15 + defp do_match(_text, ""), do: false
+  L16 - defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  L16 + 
+  L17 -   do_match(text_rest, pattern_rest)
+  L17 + defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  L18 - end
+  L18 +   do_match(text_rest, pattern_rest)
+  L19 - 
+  L19 + end
+  L20 - defp do_match(<<char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  L20 + 
+  L21 -   match_star(text_rest, pattern_rest)
+  L21 + defp do_match(<<char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  L22 - end
+  L22 +   match_star(text_rest, pattern_rest)
+  L23 - 
+  L23 + end
+  L24 - defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  L24 + 
+  L25 -   do_match(text_rest, pattern_rest)
+  L25 + defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  L26 - end
+  L26 +   do_match(text_rest, pattern_rest)
+  L27 - 
+  L27 + end
+  L28 - defp do_match(_text, _pattern), do: false
+  L28 + 
+  L29 - 
+  L29 + defp do_match(_text, _pattern), do: false
+  L30 - defp match_star("", pattern) do
+  L30 + 
+  L31 -   all_asterisks?(pattern)
+  L31 + defp match_star("", pattern) do
+  L32 - end
+  L32 +   all_asterisks?(pattern)
+  L33 - 
+  L33 + end
+  L34 - defp match_star(text, pattern) do
+  L34 + 
+  L35 -   if do_match(text, pattern) do
+  L35 + defp match_star(text, pattern) do
+  L36 -     true
+  L36 +   if do_match(text, pattern) do
+  L37 -   else
+  L37 +     true
+  L38 -     case :binary.split(text, <<>>) do
+  L38 +   else
+  L39 -       [<<>>, _rest] ->
+  L39 +     case :binary.split(text, <<>>) do
+  L40 -         # text is empty, already handled above
+  L40 +       [<<>>, _rest] ->
+  L41 -         false
+  L41 +         # text is empty, already handled above
+  L42 -       _ ->
+  L42 +         false
+  L43 -         # Consume one character from text and retry
+  L43 +       _ ->
+  L44 -         do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> (fn
+  L44 +         # Consume one character from text and retry
+  L45 -           true -> true
+  L45 +         do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> (fn
+  L46 -           false -> match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+  L46 +           true -> true
+  L47 -         end).()
+  L47 +           false -> match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+  L48 -     end
+  L48 +         end).()
+  L49 -   end
+  L49 +     end
+  L50 - end
+  L50 +   end
+  L51 - 
+  L51 + end
+  L52 - defp all_asterisks?(<<>>), do: true
+  L52 + 
+  L53 - defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+  L53 + defp all_asterisks?(<<>>), do: true
+  L54 - defp all_asterisks?(_rest), do: false
+  L54 + defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+  L55 + defp all_asterisks?(_rest), do: false
+  L56 + end
+  L57 + 
+
+20:46:41.579 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+20:46:41.599 [debug] [credence_fix] semantic pass 2: compilation OK, 2 warning(s)
+
+20:46:41.599 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:46:41.599 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L21 - defp do_match(<<char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  L21 + defp do_match(<<_char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+
+20:46:41.599 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:46:41.599 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L17 - defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  L17 + defp do_match(<<_char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+
+20:46:41.599 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UnusedVariable(1), UnusedVariable(1)]
+
+20:46:41.599 [debug] [credence_fix] starting pattern fix pipeline (119 rules)
+
+20:46:41.621 [debug] [credence_fix] NoAnonFnApplicationInPipe: check found 1 issue(s), running fix...
+
+20:46:41.639 [debug] [credence_fix] NoAnonFnApplicationInPipe: source CHANGED:
+  L45 -         do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> (fn
+  L45 +         do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> then(fn
+  L48 -         end).()
+  L48 +         end)
+
+20:46:41.721 [debug] [credence_fix] done. Applied: [NoAnonFnApplicationInPipe(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UnusedVariable, 1}, {Credence.Semantic.UnusedVariable, 1}, {Credence.Pattern.NoAnonFnApplicationInPipe, 1}]
+[0m
+[22m20:46:41.748 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m20:46:42.433 [info] [run_credence_fix] fix compiles OK[0m
+[36m20:46:42.433 [debug] [run_credence_fix] original:
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  match_star(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star("", pattern) do
+  all_asterisks?(pattern)
+end
+
+defp match_star(text, pattern) do
+  if do_match(text, pattern) do
+    true
+  else
+    case :binary.split(text, <<>>) do
+      [<<>>, _rest] ->
+        # text is empty, already handled above
+        false
+      _ ->
+        # Consume one character from text and retry
+        do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> (fn
+          true -> true
+          false -> match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+        end).()
+    end
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false[0m
+[36m20:46:42.433 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<_char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(<<_char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  match_star(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star("", pattern) do
+  all_asterisks?(pattern)
+end
+
+defp match_star(text, pattern) do
+  if do_match(text, pattern) do
+    true
+  else
+    case :binary.split(text, <<>>) do
+      [<<>>, _rest] ->
+        # text is empty, already handled above
+        false
+      _ ->
+        # Consume one character from text and retry
+        do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> then(fn
+          true -> true
+          false -> match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+        end)
+    end
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false
+end
+[0m
+[22m20:46:42.433 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m20:46:42.433 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  match_star(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star("", pattern) do
+  all_asterisks?(pattern)
+end
+
+defp match_star(text, pattern) do
+  if do_match(text, pattern) do
+    true
+  else
+    case :binary.split(text, <<>>) do
+      [<<>>, _rest] ->
+        # text is empty, already handled above
+        false
+      _ ->
+        # Consume one character from text and retry
+        do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> (fn
+          true -> true
+          false -> match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+        end).()
+    end
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false[0m
+[36m20:46:42.433 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<_char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(<<_char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  match_star(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star("", pattern) do
+  all_asterisks?(pattern)
+end
+
+defp match_star(text, pattern) do
+  if do_match(text, pattern) do
+    true
+  else
+    case :binary.split(text, <<>>) do
+      [<<>>, _rest] ->
+        # text is empty, already handled above
+        false
+      _ ->
+        # Consume one character from text and retry
+        do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> then(fn
+          true -> true
+          false -> match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+        end)
+    end
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false
+end
+[0m
+[36m20:46:42.434 [debug] [propagate_is_renames] old functions: ["match?", "do_match", "match_star", "all_asterisks?"][0m
+[36m20:46:42.434 [debug] [propagate_is_renames] new functions: ["match?", "do_match", "match_star", "all_asterisks?"][0m
+[36m20:46:42.434 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m20:46:42.434 [info] [Validator.run] step 2/6: compile[0m
+[22m20:46:42.994 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m20:46:42.994 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m20:46:42.994 [info] [Validator.run] step 3/6: format[0m
+[22m20:46:43.299 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m20:46:43.599 [debug] [Validator.run] format fix output: [0m
+[22m20:46:43.599 [info] [Validator.run] step 4/6: credo[0m
+[36m20:46:44.074 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m20:46:44.074 [info] [Validator.run] credo: no issues[0m
+[22m20:46:44.074 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:46:44.792 [info] [Validator.run] credence check exit=0[0m
+[36m20:46:44.792 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m20:46:44.792 [info] [Validator.run] credence check: passed[0m
+[22m20:46:44.792 [info] [Validator.run] step 6/6: tests[0m
+[22m20:46:45.280 [info] [Validator.run] test exit=2[0m
+[36m20:46:45.280 [debug] [Validator.run] test output:
+Running ExUnit with seed: 233509, max_cases: 48
+
+
+
+  1) test example cases (SolutionTest)
+     test/solution_test.exs:4
+     ** (ArgumentError) errors were found at the given arguments:
+
+       * 2nd argument: not a valid pattern
+
+     code: assert Solution.match?("aa", "*") == true
+     stacktrace:
+       (stdlib 7.3) :binary.split("a", "")
+       (workspace 0.1.0) lib/solution.ex:39: Solution.match_star/2
+       test/solution_test.exs:6: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+1 test, 1 failure
+[0m
+[33m20:46:45.280 [warning] [Validator.run] tests: FAILED[0m
+[22m20:46:45.280 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m20:46:45.280 [debug] [Validator.run] final module (1784 chars):
+defmodule Solution do
+  @doc """
+  Check if a given string matches a given wildcard pattern.
+  The pattern can contain '?' and '*' where:
+  '?' Matches any single character.
+  '*' Matches any sequence of characters (including the empty sequence).
+  """
+  @spec match?(String.t(), String.t()) :: boolean()
+  def match?(text, pattern) do
+    do_match(text, pattern)
+  end
+
+  defp do_match("", ""), do: true
+  defp do_match("", pattern), do: all_asterisks?(pattern)
+  defp do_match(_text, ""), do: false
+
+  defp do_match(<<_char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+    do_match(text_rest, pattern_rest)
+  end
+
+  defp do_match(<<_char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+    match_star(text_rest, pattern_rest)
+  end
+
+  defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+    do_match(text_rest, pattern_rest)
+  end
+
+  defp do_match(_text, _pattern), do: false
+
+  defp match_star("", pattern) do
+    all_asterisks?(pattern)
+  end
+
+  defp match_star(text, pattern) do
+    if do_match(text, pattern) do
+      true
+    else
+      case :binary.split(text, <<>>) do
+        [<<>>, _rest] ->
+          # text is empty, already handled above
+          false
+
+        _ ->
+          # Consume one character from text and retry
+          do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern)
+          |> then(fn
+            true ->
+              true
+
+            false ->
+              match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+          end)
+      end
+    end
+  end
+
+  defp all_asterisks?(<<>>), do: true
+  defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+  defp all_asterisks?(_rest), do: false
+end
+[0m
+[36m20:46:45.280 [debug] [Validator.run] final test (342 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end
+[0m
+[33m20:46:45.280 [warning] [Solve attempt 2] validation FAILED: [:test][0m
+[22m20:46:45.280 [info] [Solve attempt 3] generating (fn=match?)[0m
+[36m20:46:45.280 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"*", pattern_rest::binary>>) do
+  match_star(text_rest, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star("", pattern) do
+  all_asterisks?(pattern)
+end
+
+defp match_star(text, pattern) do
+  if do_match(text, pattern) do
+    true
+  else
+    case :binary.split(text, <<>>) do
+      [<<>>, _rest] ->
+        # text is empty, already handled above
+        false
+      _ ->
+        # Consume one character from text and retry
+        do_match(elem(:binary.split(text, <<>>, [:global, :return_binary]), 0), pattern) |> (fn
+          true -> true
+          false -> match_star(elem(:binary.split(text, <<>>, [:global, :return_binary]), 1), pattern)
+        end).()
+    end
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 233509, max_cases: 48
+
+
+
+  1) test example cases (SolutionTest)
+     test/solution_test.exs:4
+     ** (ArgumentError) errors were found at the given arguments:
+
+       * 2nd argument: not a valid pattern
+
+     code: assert Solution.match?("aa", "*") == true
+     stacktrace:
+       (stdlib 7.3) :binary.split("a", "")
+       (workspace 0.1.0) lib/solution.ex:39: Solution.match_star/2
+       test/solution_test.exs:6: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+1 test, 1 failure
+
+Reminder: module `Solution`, function `match?` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:46:50.743 [debug] [LLM.call] finish=stop len=1878 usage=%{"completion_tokens" => 548, "prompt_tokens" => 1054, "prompt_tokens_details" => %{"cached_tokens" => 0}, "total_tokens" => 1602}
+[LLM.call] response:
+---MODULE---
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, <<"*", pattern_rest::binary>>) do
+  match_star(text, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star(text, pattern) do
+  # Try matching the rest of the pattern with the current text (skipping the *)
+  if do_match(text, pattern) do
+    true
+  else
+    # Try skipping one character from text and retry
+    match_star_with_skip(text, pattern)
+  end
+end
+
+defp match_star_with_skip("", _pattern), do: false
+
+defp match_star_with_skip(<<char::binary-1, text_rest::binary>>, pattern) do
+  if do_match(text_rest, pattern) do
+    true
+  else
+    match_star_with_skip(text_rest, pattern)
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end
+---END---[0m
+[22m20:46:50.743 [info] [LLM.call] local_qwen_thinking completed in 5462ms — ok[0m
+[22m20:46:50.743 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:46:50.743 [debug] [Validator.run] module code (1502 chars):
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, <<"*", pattern_rest::binary>>) do
+  match_star(text, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star(text, pattern) do
+  # Try matching the rest of the pattern with the current text (skipping the *)
+  if do_match(text, pattern) do
+    true
+  else
+    # Try skipping one character from text and retry
+    match_star_with_skip(text, pattern)
+  end
+end
+
+defp match_star_with_skip("", _pattern), do: false
+
+defp match_star_with_skip(<<char::binary-1, text_rest::binary>>, pattern) do
+  if do_match(text_rest, pattern) do
+    true
+  else
+    match_star_with_skip(text_rest, pattern)
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false[0m
+[36m20:46:50.743 [debug] [Validator.run] test code (341 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end[0m
+[36m20:46:50.743 [debug] [Budget] spent so far (est.): $0.7783[0m
+[22m20:46:50.751 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:46:50.751 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:46:51.416 [debug] [run_credence_fix] exit=0 output:
+
+20:46:51.271 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:46:51.273 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+20:46:51.275 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+20:46:51.275 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+20:46:51.275 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+20:46:51.278 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Check if a given string matches a given wildcard pattern.
+  L2 + @doc """
+  L3 - The pattern can contain '?' and '*' where:
+  L3 + Check if a given string matches a given wildcard pattern.
+  L4 - '?' Matches any single character.
+  L4 + The pattern can contain '?' and '*' where:
+  L5 - '*' Matches any sequence of characters (including the empty sequence).
+  L5 + '?' Matches any single character.
+  L6 - """
+  L6 + '*' Matches any sequence of characters (including the empty sequence).
+  L7 - @spec match?(String.t(), String.t()) :: boolean()
+  L7 + """
+  L8 - def match?(text, pattern) do
+  L8 + @spec match?(String.t(), String.t()) :: boolean()
+  L9 -   do_match(text, pattern)
+  L9 + def match?(text, pattern) do
+  L10 - end
+  L10 +   do_match(text, pattern)
+  L11 - 
+  L11 + end
+  L12 - defp do_match("", ""), do: true
+  L12 + 
+  L13 - defp do_match("", pattern), do: all_asterisks?(pattern)
+  L13 + defp do_match("", ""), do: true
+  L14 - defp do_match(_text, ""), do: false
+  L14 + defp do_match("", pattern), do: all_asterisks?(pattern)
+  L15 - 
+  L15 + defp do_match(_text, ""), do: false
+  L16 - defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  L16 + 
+  L17 -   do_match(text_rest, pattern_rest)
+  L17 + defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  L18 - end
+  L18 +   do_match(text_rest, pattern_rest)
+  L19 - 
+  L19 + end
+  L20 - defp do_match(text, <<"*", pattern_rest::binary>>) do
+  L20 + 
+  L21 -   match_star(text, pattern_rest)
+  L21 + defp do_match(text, <<"*", pattern_rest::binary>>) do
+  L22 - end
+  L22 +   match_star(text, pattern_rest)
+  L23 - 
+  L23 + end
+  L24 - defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  L24 + 
+  L25 -   do_match(text_rest, pattern_rest)
+  L25 + defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  L26 - end
+  L26 +   do_match(text_rest, pattern_rest)
+  L27 - 
+  L27 + end
+  L28 - defp do_match(_text, _pattern), do: false
+  L28 + 
+  L29 - 
+  L29 + defp do_match(_text, _pattern), do: false
+  L30 - defp match_star(text, pattern) do
+  L30 + 
+  L31 -   # Try matching the rest of the pattern with the current text (skipping the *)
+  L31 + defp match_star(text, pattern) do
+  L32 -   if do_match(text, pattern) do
+  L32 +   # Try matching the rest of the pattern with the current text (skipping the *)
+  L33 -     true
+  L33 +   if do_match(text, pattern) do
+  L34 -   else
+  L34 +     true
+  L35 -     # Try skipping one character from text and retry
+  L35 +   else
+  L36 -     match_star_with_skip(text, pattern)
+  L36 +     # Try skipping one character from text and retry
+  L37 -   end
+  L37 +     match_star_with_skip(text, pattern)
+  L38 - end
+  L38 +   end
+  L39 - 
+  L39 + end
+  L40 - defp match_star_with_skip("", _pattern), do: false
+  L40 + 
+  L41 - 
+  L41 + defp match_star_with_skip("", _pattern), do: false
+  L42 - defp match_star_with_skip(<<char::binary-1, text_rest::binary>>, pattern) do
+  L42 + 
+  L43 -   if do_match(text_rest, pattern) do
+  L43 + defp match_star_with_skip(<<char::binary-1, text_rest::binary>>, pattern) do
+  L44 -     true
+  L44 +   if do_match(text_rest, pattern) do
+  L45 -   else
+  L45 +     true
+  L46 -     match_star_with_skip(text_rest, pattern)
+  L46 +   else
+  L47 -   end
+  L47 +     match_star_with_skip(text_rest, pattern)
+  L48 - end
+  L48 +   end
+  L49 - 
+  L49 + end
+  L50 - defp all_asterisks?(<<>>), do: true
+  L50 + 
+  L51 - defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+  L51 + defp all_asterisks?(<<>>), do: true
+  L52 - defp all_asterisks?(_rest), do: false
+  L52 + defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+  L53 + defp all_asterisks?(_rest), do: false
+  L54 + end
+  L55 + 
+
+20:46:51.278 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+20:46:51.293 [debug] [credence_fix] semantic pass 2: compilation OK, 3 warning(s)
+
+20:46:51.294 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:46:51.294 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L43 - defp match_star_with_skip(<<char::binary-1, text_rest::binary>>, pattern) do
+  L43 + defp match_star_with_skip(<<_char::binary-1, text_rest::binary>>, pattern) do
+
+20:46:51.294 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:46:51.294 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L17 - defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  L17 + defp do_match(<<_char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+
+20:46:51.299 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:46:51.299 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UnusedVariable(1), UnusedVariable(1)]
+
+20:46:51.299 [debug] [credence_fix] starting pattern fix pipeline (119 rules)
+
+20:46:51.386 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UnusedVariable, 1}, {Credence.Semantic.UnusedVariable, 1}]
+[0m
+[22m20:46:51.416 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m20:46:51.978 [info] [run_credence_fix] fix compiles OK[0m
+[36m20:46:51.978 [debug] [run_credence_fix] original:
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, <<"*", pattern_rest::binary>>) do
+  match_star(text, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star(text, pattern) do
+  # Try matching the rest of the pattern with the current text (skipping the *)
+  if do_match(text, pattern) do
+    true
+  else
+    # Try skipping one character from text and retry
+    match_star_with_skip(text, pattern)
+  end
+end
+
+defp match_star_with_skip("", _pattern), do: false
+
+defp match_star_with_skip(<<char::binary-1, text_rest::binary>>, pattern) do
+  if do_match(text_rest, pattern) do
+    true
+  else
+    match_star_with_skip(text_rest, pattern)
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false[0m
+[36m20:46:51.978 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<_char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, <<"*", pattern_rest::binary>>) do
+  match_star(text, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star(text, pattern) do
+  # Try matching the rest of the pattern with the current text (skipping the *)
+  if do_match(text, pattern) do
+    true
+  else
+    # Try skipping one character from text and retry
+    match_star_with_skip(text, pattern)
+  end
+end
+
+defp match_star_with_skip("", _pattern), do: false
+
+defp match_star_with_skip(<<_char::binary-1, text_rest::binary>>, pattern) do
+  if do_match(text_rest, pattern) do
+    true
+  else
+    match_star_with_skip(text_rest, pattern)
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false
+end
+[0m
+[22m20:46:51.978 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m20:46:51.978 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, <<"*", pattern_rest::binary>>) do
+  match_star(text, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star(text, pattern) do
+  # Try matching the rest of the pattern with the current text (skipping the *)
+  if do_match(text, pattern) do
+    true
+  else
+    # Try skipping one character from text and retry
+    match_star_with_skip(text, pattern)
+  end
+end
+
+defp match_star_with_skip("", _pattern), do: false
+
+defp match_star_with_skip(<<char::binary-1, text_rest::binary>>, pattern) do
+  if do_match(text_rest, pattern) do
+    true
+  else
+    match_star_with_skip(text_rest, pattern)
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false[0m
+[36m20:46:51.978 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Check if a given string matches a given wildcard pattern.
+The pattern can contain '?' and '*' where:
+'?' Matches any single character.
+'*' Matches any sequence of characters (including the empty sequence).
+"""
+@spec match?(String.t(), String.t()) :: boolean()
+def match?(text, pattern) do
+  do_match(text, pattern)
+end
+
+defp do_match("", ""), do: true
+defp do_match("", pattern), do: all_asterisks?(pattern)
+defp do_match(_text, ""), do: false
+
+defp do_match(<<_char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(text, <<"*", pattern_rest::binary>>) do
+  match_star(text, pattern_rest)
+end
+
+defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+  do_match(text_rest, pattern_rest)
+end
+
+defp do_match(_text, _pattern), do: false
+
+defp match_star(text, pattern) do
+  # Try matching the rest of the pattern with the current text (skipping the *)
+  if do_match(text, pattern) do
+    true
+  else
+    # Try skipping one character from text and retry
+    match_star_with_skip(text, pattern)
+  end
+end
+
+defp match_star_with_skip("", _pattern), do: false
+
+defp match_star_with_skip(<<_char::binary-1, text_rest::binary>>, pattern) do
+  if do_match(text_rest, pattern) do
+    true
+  else
+    match_star_with_skip(text_rest, pattern)
+  end
+end
+
+defp all_asterisks?(<<>>), do: true
+defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+defp all_asterisks?(_rest), do: false
+end
+[0m
+[36m20:46:51.978 [debug] [propagate_is_renames] old functions: ["match?", "do_match", "match_star", "match_star_with_skip", "all_asterisks?"][0m
+[36m20:46:51.978 [debug] [propagate_is_renames] new functions: ["match?", "do_match", "match_star", "match_star_with_skip", "all_asterisks?"][0m
+[36m20:46:51.978 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m20:46:51.978 [info] [Validator.run] step 2/6: compile[0m
+[22m20:46:52.544 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m20:46:52.544 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m20:46:52.544 [info] [Validator.run] step 3/6: format[0m
+[22m20:46:52.873 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m20:46:53.173 [debug] [Validator.run] format fix output: [0m
+[22m20:46:53.173 [info] [Validator.run] step 4/6: credo[0m
+[36m20:46:53.663 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m20:46:53.663 [info] [Validator.run] credo: no issues[0m
+[22m20:46:53.663 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:46:54.360 [info] [Validator.run] credence check exit=0[0m
+[36m20:46:54.361 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m20:46:54.361 [info] [Validator.run] credence check: passed[0m
+[22m20:46:54.361 [info] [Validator.run] step 6/6: tests[0m
+[22m20:46:54.823 [info] [Validator.run] test exit=0[0m
+[36m20:46:54.823 [debug] [Validator.run] test output:
+Running ExUnit with seed: 783501, max_cases: 48
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+1 test, 0 failures
+[0m
+[22m20:46:54.823 [info] [Validator.run] tests: PASSED[0m
+[22m20:46:54.823 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m20:46:54.823 [debug] [Validator.run] final module (1617 chars):
+defmodule Solution do
+  @doc """
+  Check if a given string matches a given wildcard pattern.
+  The pattern can contain '?' and '*' where:
+  '?' Matches any single character.
+  '*' Matches any sequence of characters (including the empty sequence).
+  """
+  @spec match?(String.t(), String.t()) :: boolean()
+  def match?(text, pattern) do
+    do_match(text, pattern)
+  end
+
+  defp do_match("", ""), do: true
+  defp do_match("", pattern), do: all_asterisks?(pattern)
+  defp do_match(_text, ""), do: false
+
+  defp do_match(<<_char::binary-1, text_rest::binary>>, <<"?", pattern_rest::binary>>) do
+    do_match(text_rest, pattern_rest)
+  end
+
+  defp do_match(text, <<"*", pattern_rest::binary>>) do
+    match_star(text, pattern_rest)
+  end
+
+  defp do_match(<<char::binary-1, text_rest::binary>>, <<char::binary-1, pattern_rest::binary>>) do
+    do_match(text_rest, pattern_rest)
+  end
+
+  defp do_match(_text, _pattern), do: false
+
+  defp match_star(text, pattern) do
+    # Try matching the rest of the pattern with the current text (skipping the *)
+    if do_match(text, pattern) do
+      true
+    else
+      # Try skipping one character from text and retry
+      match_star_with_skip(text, pattern)
+    end
+  end
+
+  defp match_star_with_skip("", _pattern), do: false
+
+  defp match_star_with_skip(<<_char::binary-1, text_rest::binary>>, pattern) do
+    if do_match(text_rest, pattern) do
+      true
+    else
+      match_star_with_skip(text_rest, pattern)
+    end
+  end
+
+  defp all_asterisks?(<<>>), do: true
+  defp all_asterisks?(<<"*", rest::binary>>), do: all_asterisks?(rest)
+  defp all_asterisks?(_rest), do: false
+end
+[0m
+[36m20:46:54.823 [debug] [Validator.run] final test (342 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example cases" do
+    assert Solution.match?("aa", "a") == false
+    assert Solution.match?("aa", "*") == true
+    assert Solution.match?("adceb", "*a*b") == true
+    assert Solution.match?("acdcb", "a*c?b") == false
+    assert Solution.match?("cb", "?a") == false
+  end
+end
+[0m
+[22m20:46:54.824 [info] [Solve attempt 3] validation PASSED[0m
+[36m20:46:54.836 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Semantic.UnusedVariable
+  - Credence.Pattern.NoAnonFnApplicationInPipe
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, self-contained defmodule isola (truncated)[0m
+[36m20:47:12.247 [debug] [LLM.call] finish=stop len=301 usage=%{"completion_tokens" => 531, "completion_tokens_details" => %{"reasoning_tokens" => 462}, "prompt_tokens" => 25082, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 25613}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+Final code is clean idiomatic Elixir with binary pattern matching; all three rules (RequireDefmoduleWrapper, UnusedVariable, NoAnonFnApplicationInPipe) fired correctly on genuine issues; no non-idiomatic residual pattern detected in the final output.
+===END===[0m
+[22m20:47:12.247 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 17410ms — ok[0m
+[36m20:47:12.248 [debug] [Budget] spent so far (est.): $0.7897[0m

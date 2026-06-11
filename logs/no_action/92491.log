@@ -1,0 +1,1149 @@
+[22m06:22:13.382 [info] [idx=92491] entry_point=calculate_digit_sum[0m
+[36m06:22:13.382 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to calculate the sum of the digits of a given non-negative integer.
+
+## Python Solution
+```python
+def calculate_digit_sum(num):
+    sum = 0
+    while num > 0:
+        sum += num % 10
+        num //= 10
+    return sum
+```
+
+## Python Tests
+assert calculate_digit_sum(456) == 15
+assert calculate_digit_sum(123) == 6
+assert calculate_digit_sum(789) == 24
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `calculate_digit_sum`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m06:22:55.970 [debug] [LLM.call] finish=stop len=1432 usage=%{"completion_tokens" => 1757, "completion_tokens_details" => %{"reasoning_tokens" => 1374}, "prompt_tokens" => 465, "prompt_tokens_details" => %{}, "total_tokens" => 2222}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `calculate_digit_sum/1` that takes a non-negative integer and returns the sum of its digits. For example, given 456, the sum is 4 + 5 + 6 = 15. The function should handle the input 0 by returning 0.
+
+The function should be implemented in a module named `Solution`.
+
+The function should be implemented without using any built-in functions for digit extraction or string conversion. Instead, use arithmetic operations (modulus and integer division) to extract digits and sum them.
+
+The function must be defined to accept a single integer argument and return an integer.
+
+The function should be efficient and not use excessive memory, operating in O(d) time where d is the number of digits in the input.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "calculate digit sum of 456" do
+    assert Solution.calculate_digit_sum(456) == 15
+  end
+
+  test "calculate digit sum of 123" do
+    assert Solution.calculate_digit_sum(123) == 6
+  end
+
+  test "calculate digit sum of 789" do
+    assert Solution.calculate_digit_sum(789) == 24
+  end
+
+  test "calculate digit sum of 0" do
+    assert Solution.calculate_digit_sum(0) == 0
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  @spec calculate_digit_sum(integer) :: integer
+  def calculate_digit_sum(0), do: 0
+  def calculate_digit_sum(num) when num > 0 do
+    rem(num, 10) + calculate_digit_sum(div(num, 10))
+  end
+end
+---END---[0m
+[22m06:22:55.970 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 42588ms — ok[0m
+[36m06:22:55.971 [debug] [Budget] spent so far (est.): $3.0578[0m
+[22m06:22:56.985 [info] [RoundTrip] reference PASSED tests[0m
+[22m06:22:56.985 [info] [idx=92491] translation fresh — solving[0m
+[22m06:22:56.985 [info] ===SOLVE_BOUNDARY===[0m
+[22m06:22:56.985 [info] [Solve attempt 1] generating (fn=calculate_digit_sum)[0m
+[36m06:22:56.985 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `calculate_digit_sum/1` that takes a non-negative integer and returns the sum of its digits. For example, given 456, the sum is 4 + 5 + 6 = 15. The function should handle the input 0 by returning 0.
+
+The function should be implemented in a module named `Solution`.
+
+The function should be implemented without using any built-in functions for digit extraction or string conversion. Instead, use arithmetic operations (modulus and integer division) to extract digits and sum them.
+
+The function must be defined to accept a single integer argument and return an integer.
+
+The function should be efficient and not use excessive memory, operating in O(d) time where d is the number of digits in the input.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "calculate digit sum of 456" do
+    assert Solution.calculate_digit_sum(456) == 15
+  end
+
+  test "calculate digit sum of 123" do
+    assert Solution.calculate_digit_sum(123) == 6
+  end
+
+  test "calculate digit sum of 789" do
+    assert Solution.calculate_digit_sum(789) == 24
+  end
+
+  test "calculate digit sum of 0" do
+    assert Solution.calculate_digit_sum(0) == 0
+  end
+end
+```
+
+Module: `Solution`. Function: `calculate_digit_sum`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m06:23:00.880 [debug] [LLM.call] finish=stop len=1300 usage=%{"completion_tokens" => 396, "prompt_tokens" => 574, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 970}
+[LLM.call] response:
+---MODULE---
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(0), do: 0
+
+def calculate_digit_sum(number) when is_integer(number) and number > 0 do
+  sum_digits(number, 0)
+end
+
+@doc """
+Helper function to recursively sum digits using arithmetic operations.
+"""
+@spec sum_digits(integer(), integer()) :: integer()
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "calculate digit sum of 456" do
+    assert Solution.calculate_digit_sum(456) == 15
+  end
+
+  test "calculate digit sum of 123" do
+    assert Solution.calculate_digit_sum(123) == 6
+  end
+
+  test "calculate digit sum of 789" do
+    assert Solution.calculate_digit_sum(789) == 24
+  end
+
+  test "calculate digit sum of 0" do
+    assert Solution.calculate_digit_sum(0) == 0
+  end
+end
+---END---[0m
+[22m06:23:00.881 [info] [LLM.call] local_qwen_thinking completed in 3895ms — ok[0m
+[22m06:23:00.881 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m06:23:00.881 [debug] [Validator.run] module code (822 chars):
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(0), do: 0
+
+def calculate_digit_sum(number) when is_integer(number) and number > 0 do
+  sum_digits(number, 0)
+end
+
+@doc """
+Helper function to recursively sum digits using arithmetic operations.
+"""
+@spec sum_digits(integer(), integer()) :: integer()
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end[0m
+[36m06:23:00.881 [debug] [Validator.run] test code (443 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "calculate digit sum of 456" do
+    assert Solution.calculate_digit_sum(456) == 15
+  end
+
+  test "calculate digit sum of 123" do
+    assert Solution.calculate_digit_sum(123) == 6
+  end
+
+  test "calculate digit sum of 789" do
+    assert Solution.calculate_digit_sum(789) == 24
+  end
+
+  test "calculate digit sum of 0" do
+    assert Solution.calculate_digit_sum(0) == 0
+  end
+end[0m
+[36m06:23:00.881 [debug] [Budget] spent so far (est.): $3.0584[0m
+[22m06:23:00.881 [info] [Validator.run] step 1/6: credence fix[0m
+[36m06:23:00.881 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m06:23:01.498 [debug] [run_credence_fix] exit=0 output:
+
+06:23:01.412 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+06:23:01.414 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+06:23:01.417 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+06:23:01.417 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+06:23:01.417 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+06:23:01.419 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Calculates the sum of the digits of a non-negative integer.
+  L2 + @doc """
+  L3 - 
+  L3 + Calculates the sum of the digits of a non-negative integer.
+  L4 - ## Examples
+  L4 + 
+  L5 - 
+  L5 + ## Examples
+  L6 -     iex> Solution.calculate_digit_sum(456)
+  L6 + 
+  L7 -     15
+  L7 +     iex> Solution.calculate_digit_sum(456)
+  L8 - 
+  L8 +     15
+  L9 -     iex> Solution.calculate_digit_sum(123)
+  L9 + 
+  L10 -     6
+  L10 +     iex> Solution.calculate_digit_sum(123)
+  L11 - 
+  L11 +     6
+  L12 -     iex> Solution.calculate_digit_sum(0)
+  L12 + 
+  L13 -     0
+  L13 +     iex> Solution.calculate_digit_sum(0)
+  L14 - 
+  L14 +     0
+  L15 -     iex> Solution.calculate_digit_sum(789)
+  L15 + 
+  L16 -     24
+  L16 +     iex> Solution.calculate_digit_sum(789)
+  L17 - """
+  L17 +     24
+  L18 - @spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+  L18 + """
+  L19 - def calculate_digit_sum(0), do: 0
+  L19 + @spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+  L20 - 
+  L20 + def calculate_digit_sum(0), do: 0
+  L21 - def calculate_digit_sum(number) when is_integer(number) and number > 0 do
+  L21 + 
+  L22 -   sum_digits(number, 0)
+  L22 + def calculate_digit_sum(number) when is_integer(number) and number > 0 do
+  L23 - end
+  L23 +   sum_digits(number, 0)
+  L24 - 
+  L24 + end
+  L25 - @doc """
+  L25 + 
+  L26 - Helper function to recursively sum digits using arithmetic operations.
+  L26 + @doc """
+  L27 - """
+  L27 + Helper function to recursively sum digits using arithmetic operations.
+  L28 - @spec sum_digits(integer(), integer()) :: integer()
+  L28 + """
+  L29 - defp sum_digits(0, accumulator), do: accumulator
+  L29 + @spec sum_digits(integer(), integer()) :: integer()
+  L30 - 
+  L30 + defp sum_digits(0, accumulator), do: accumulator
+  L31 - defp sum_digits(number, accumulator) do
+  L31 + 
+  L32 -   digit = rem(number, 10)
+  L32 + defp sum_digits(number, accumulator) do
+  L33 -   new_number = div(number, 10)
+  L33 +   digit = rem(number, 10)
+  L34 -   sum_digits(new_number, accumulator + digit)
+  L34 +   new_number = div(number, 10)
+  L35 - end
+  L35 +   sum_digits(new_number, accumulator + digit)
+  L36 + end
+  L37 + end
+  L38 + 
+
+06:23:01.419 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+06:23:01.429 [debug] [credence_fix] semantic pass 2: compilation OK, 2 warning(s)
+
+06:23:01.436 [debug] [credence_fix] no rule matched diagnostic: %{message: "defp sum_digits/2 is private, @doc attribute is always discarded for private functions/macros/types", position: 26, file: "credence_check.ex", stacktrace: [{Solution, :sum_digits, 2, [file: ~c"credence_check.ex", line: 26]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+06:23:01.436 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+06:23:01.436 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+06:23:01.436 [debug] [credence_fix] starting pattern fix pipeline (127 rules)
+
+06:23:01.477 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m06:23:01.498 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m06:23:02.046 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m06:23:02.046 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: defp sum_digits/2 is private, @doc attribute is always discarded for private functions/macros/types
+    │
+ 26 │ @doc """
+    │ ~~~~~~~~
+    │
+    └─ lib/solution.ex:26: Solution.sum_digits/2
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m06:23:02.531 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m06:23:02.531 [info] [Validator.run] step 2/6: compile[0m
+[22m06:23:03.132 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m06:23:03.132 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+[0m
+[22m06:23:03.132 [info] [Validator.run] step 3/6: format[0m
+[22m06:23:03.132 [info] [Validator.run] skipping format (compile failed)[0m
+[22m06:23:03.132 [info] [Validator.run] step 4/6: credo[0m
+[22m06:23:03.132 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m06:23:03.132 [info] [Validator.run] step 5/6: credence check[0m
+[22m06:23:03.132 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m06:23:03.132 [info] [Validator.run] step 6/6: tests[0m
+[22m06:23:03.132 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m06:23:03.132 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m06:23:03.132 [debug] [Validator.run] final module (822 chars):
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(0), do: 0
+
+def calculate_digit_sum(number) when is_integer(number) and number > 0 do
+  sum_digits(number, 0)
+end
+
+@doc """
+Helper function to recursively sum digits using arithmetic operations.
+"""
+@spec sum_digits(integer(), integer()) :: integer()
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end[0m
+[36m06:23:03.132 [debug] [Validator.run] final test (443 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "calculate digit sum of 456" do
+    assert Solution.calculate_digit_sum(456) == 15
+  end
+
+  test "calculate digit sum of 123" do
+    assert Solution.calculate_digit_sum(123) == 6
+  end
+
+  test "calculate digit sum of 789" do
+    assert Solution.calculate_digit_sum(789) == 24
+  end
+
+  test "calculate digit sum of 0" do
+    assert Solution.calculate_digit_sum(0) == 0
+  end
+end[0m
+[33m06:23:03.132 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m06:23:03.132 [info] [Solve attempt 2] generating (fn=calculate_digit_sum)[0m
+[36m06:23:03.132 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(0), do: 0
+
+def calculate_digit_sum(number) when is_integer(number) and number > 0 do
+  sum_digits(number, 0)
+end
+
+@doc """
+Helper function to recursively sum digits using arithmetic operations.
+"""
+@spec sum_digits(integer(), integer()) :: integer()
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "calculate digit sum of 456" do
+    assert Solution.calculate_digit_sum(456) == 15
+  end
+
+  test "calculate digit sum of 123" do
+    assert Solution.calculate_digit_sum(123) == 6
+  end
+
+  test "calculate digit sum of 789" do
+    assert Solution.calculate_digit_sum(789) == 24
+  end
+
+  test "calculate digit sum of 0" do
+    assert Solution.calculate_digit_sum(0) == 0
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+
+Reminder: module `Solution`, function `calculate_digit_sum` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m06:23:06.759 [debug] [LLM.call] finish=stop len=1130 usage=%{"completion_tokens" => 355, "prompt_tokens" => 776, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1131}
+[LLM.call] response:
+---MODULE---
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(number) when is_integer(number) and number >= 0 do
+  sum_digits(number, 0)
+end
+
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "calculate digit sum of 456" do
+    assert Solution.calculate_digit_sum(456) == 15
+  end
+
+  test "calculate digit sum of 123" do
+    assert Solution.calculate_digit_sum(123) == 6
+  end
+
+  test "calculate digit sum of 789" do
+    assert Solution.calculate_digit_sum(789) == 24
+  end
+
+  test "calculate digit sum of 0" do
+    assert Solution.calculate_digit_sum(0) == 0
+  end
+end
+---END---[0m
+[22m06:23:06.759 [info] [LLM.call] local_qwen_thinking completed in 3626ms — ok[0m
+[22m06:23:06.760 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m06:23:06.760 [debug] [Validator.run] module code (652 chars):
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(number) when is_integer(number) and number >= 0 do
+  sum_digits(number, 0)
+end
+
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end[0m
+[36m06:23:06.760 [debug] [Validator.run] test code (443 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "calculate digit sum of 456" do
+    assert Solution.calculate_digit_sum(456) == 15
+  end
+
+  test "calculate digit sum of 123" do
+    assert Solution.calculate_digit_sum(123) == 6
+  end
+
+  test "calculate digit sum of 789" do
+    assert Solution.calculate_digit_sum(789) == 24
+  end
+
+  test "calculate digit sum of 0" do
+    assert Solution.calculate_digit_sum(0) == 0
+  end
+end[0m
+[36m06:23:06.760 [debug] [Budget] spent so far (est.): $3.059[0m
+[22m06:23:06.760 [info] [Validator.run] step 1/6: credence fix[0m
+[36m06:23:06.760 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m06:23:07.348 [debug] [run_credence_fix] exit=0 output:
+
+06:23:07.285 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+06:23:07.287 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+06:23:07.289 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+06:23:07.289 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+06:23:07.289 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+06:23:07.291 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Calculates the sum of the digits of a non-negative integer.
+  L2 + @doc """
+  L3 - 
+  L3 + Calculates the sum of the digits of a non-negative integer.
+  L4 - ## Examples
+  L4 + 
+  L5 - 
+  L5 + ## Examples
+  L6 -     iex> Solution.calculate_digit_sum(456)
+  L6 + 
+  L7 -     15
+  L7 +     iex> Solution.calculate_digit_sum(456)
+  L8 - 
+  L8 +     15
+  L9 -     iex> Solution.calculate_digit_sum(123)
+  L9 + 
+  L10 -     6
+  L10 +     iex> Solution.calculate_digit_sum(123)
+  L11 - 
+  L11 +     6
+  L12 -     iex> Solution.calculate_digit_sum(0)
+  L12 + 
+  L13 -     0
+  L13 +     iex> Solution.calculate_digit_sum(0)
+  L14 - 
+  L14 +     0
+  L15 -     iex> Solution.calculate_digit_sum(789)
+  L15 + 
+  L16 -     24
+  L16 +     iex> Solution.calculate_digit_sum(789)
+  L17 - """
+  L17 +     24
+  L18 - @spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+  L18 + """
+  L19 - def calculate_digit_sum(number) when is_integer(number) and number >= 0 do
+  L19 + @spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+  L20 -   sum_digits(number, 0)
+  L20 + def calculate_digit_sum(number) when is_integer(number) and number >= 0 do
+  L21 - end
+  L21 +   sum_digits(number, 0)
+  L22 - 
+  L22 + end
+  L23 - defp sum_digits(0, accumulator), do: accumulator
+  L23 + 
+  L24 - 
+  L24 + defp sum_digits(0, accumulator), do: accumulator
+  L25 - defp sum_digits(number, accumulator) do
+  L25 + 
+  L26 -   digit = rem(number, 10)
+  L26 + defp sum_digits(number, accumulator) do
+  L27 -   new_number = div(number, 10)
+  L27 +   digit = rem(number, 10)
+  L28 -   sum_digits(new_number, accumulator + digit)
+  L28 +   new_number = div(number, 10)
+  L29 - end
+  L29 +   sum_digits(new_number, accumulator + digit)
+  L30 + end
+  L31 + end
+  L32 + 
+
+06:23:07.291 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+06:23:07.298 [debug] [credence_fix] semantic pass 2: compilation OK, 0 warning(s)
+
+06:23:07.298 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+06:23:07.298 [debug] [credence_fix] starting pattern fix pipeline (127 rules)
+
+06:23:07.328 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m06:23:07.348 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m06:23:08.021 [info] [run_credence_fix] fix compiles OK[0m
+[36m06:23:08.021 [debug] [run_credence_fix] original:
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(number) when is_integer(number) and number >= 0 do
+  sum_digits(number, 0)
+end
+
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end[0m
+[36m06:23:08.021 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(number) when is_integer(number) and number >= 0 do
+  sum_digits(number, 0)
+end
+
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end
+end
+[0m
+[22m06:23:08.021 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m06:23:08.021 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(number) when is_integer(number) and number >= 0 do
+  sum_digits(number, 0)
+end
+
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end[0m
+[36m06:23:08.021 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Calculates the sum of the digits of a non-negative integer.
+
+## Examples
+
+    iex> Solution.calculate_digit_sum(456)
+    15
+
+    iex> Solution.calculate_digit_sum(123)
+    6
+
+    iex> Solution.calculate_digit_sum(0)
+    0
+
+    iex> Solution.calculate_digit_sum(789)
+    24
+"""
+@spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+def calculate_digit_sum(number) when is_integer(number) and number >= 0 do
+  sum_digits(number, 0)
+end
+
+defp sum_digits(0, accumulator), do: accumulator
+
+defp sum_digits(number, accumulator) do
+  digit = rem(number, 10)
+  new_number = div(number, 10)
+  sum_digits(new_number, accumulator + digit)
+end
+end
+[0m
+[36m06:23:08.021 [debug] [propagate_is_renames] old functions: ["calculate_digit_sum", "sum_digits"][0m
+[36m06:23:08.021 [debug] [propagate_is_renames] new functions: ["calculate_digit_sum", "sum_digits"][0m
+[36m06:23:08.021 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m06:23:08.021 [info] [Validator.run] step 2/6: compile[0m
+[22m06:23:08.579 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m06:23:08.579 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m06:23:08.579 [info] [Validator.run] step 3/6: format[0m
+[22m06:23:08.888 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m06:23:09.205 [debug] [Validator.run] format fix output: [0m
+[22m06:23:09.205 [info] [Validator.run] step 4/6: credo[0m
+[36m06:23:09.669 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m06:23:09.669 [info] [Validator.run] credo: no issues[0m
+[22m06:23:09.669 [info] [Validator.run] step 5/6: credence check[0m
+[22m06:23:10.359 [info] [Validator.run] credence check exit=0[0m
+[36m06:23:10.359 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m06:23:10.359 [info] [Validator.run] credence check: passed[0m
+[22m06:23:10.359 [info] [Validator.run] step 6/6: tests[0m
+[22m06:23:10.830 [info] [Validator.run] test exit=0[0m
+[36m06:23:10.830 [debug] [Validator.run] test output:
+Running ExUnit with seed: 791756, max_cases: 48
+
+....
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+4 tests, 0 failures
+[0m
+[22m06:23:10.830 [info] [Validator.run] tests: PASSED[0m
+[22m06:23:10.830 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m06:23:10.830 [debug] [Validator.run] final module (723 chars):
+defmodule Solution do
+  @doc """
+  Calculates the sum of the digits of a non-negative integer.
+
+  ## Examples
+
+      iex> Solution.calculate_digit_sum(456)
+      15
+
+      iex> Solution.calculate_digit_sum(123)
+      6
+
+      iex> Solution.calculate_digit_sum(0)
+      0
+
+      iex> Solution.calculate_digit_sum(789)
+      24
+  """
+  @spec calculate_digit_sum(non_neg_integer()) :: non_neg_integer()
+  def calculate_digit_sum(number) when is_integer(number) and number >= 0 do
+    sum_digits(number, 0)
+  end
+
+  defp sum_digits(0, accumulator), do: accumulator
+
+  defp sum_digits(number, accumulator) do
+    digit = rem(number, 10)
+    new_number = div(number, 10)
+    sum_digits(new_number, accumulator + digit)
+  end
+end
+[0m
+[36m06:23:10.830 [debug] [Validator.run] final test (444 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "calculate digit sum of 456" do
+    assert Solution.calculate_digit_sum(456) == 15
+  end
+
+  test "calculate digit sum of 123" do
+    assert Solution.calculate_digit_sum(123) == 6
+  end
+
+  test "calculate digit sum of 789" do
+    assert Solution.calculate_digit_sum(789) == 24
+  end
+
+  test "calculate digit sum of 0" do
+    assert Solution.calculate_digit_sum(0) == 0
+  end
+end
+[0m
+[22m06:23:10.830 [info] [Solve attempt 2] validation PASSED[0m
+[36m06:23:10.841 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE on (truncated)[0m
+[36m06:23:22.216 [debug] [LLM.call] finish=stop len=215 usage=%{"completion_tokens" => 297, "completion_tokens_details" => %{"reasoning_tokens" => 247}, "prompt_tokens" => 11750, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 12047}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+Final code is clean idiomatic Elixir — recursive accumulator with proper guards, pattern matching, private helper; no non-idiomatic residual and no rule over-fired.
+===END===[0m
+[22m06:23:22.216 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 11374ms — ok[0m
+[36m06:23:22.216 [debug] [Budget] spent so far (est.): $3.0644[0m

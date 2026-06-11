@@ -1,0 +1,972 @@
+[22m00:36:49.456 [info] [idx=49657] entry_point=sum_two_nums[0m
+[36m00:36:49.456 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to find the sum of two numbers in a given list that equals a target value.
+
+## Python Solution
+```python
+def sum_two_nums(nums, target):
+    hash_map = {}
+    for i, num in enumerate(nums):
+        if target - num in hash_map:
+            return [hash_map[target - num], i]
+        hash_map[num] = i
+    return []
+```
+
+## Python Tests
+assert sum_two_nums([3, 3], 6) == [0, 1]
+assert sum_two_nums([3, 2, 4], 6) == [1, 2]
+assert sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `sum_two_nums`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m00:37:35.636 [debug] [LLM.call] finish=stop len=1302 usage=%{"completion_tokens" => 2170, "completion_tokens_details" => %{"reasoning_tokens" => 1784}, "prompt_tokens" => 513, "prompt_tokens_details" => %{}, "total_tokens" => 2683}
+[LLM.call] response:
+---INSTRUCTION---
+Given a list of integers and a target integer, find two indices in the list such that the numbers at these indices sum to the target. Return a list containing the two indices in ascending order. If no such pair exists, return an empty list. Each input will have at most one valid solution, and the same element may not be used twice. The function should be named `sum_two_nums` and take the list and the target as arguments. The expected time complexity is linear in the length of the list.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.sum_two_nums([3, 3], 6) == [0, 1]
+  end
+
+  test "example 2" do
+    assert Solution.sum_two_nums([3, 2, 4], 6) == [1, 2]
+  end
+
+  test "example 3" do
+    assert Solution.sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  def sum_two_nums(nums, target) do
+    do_sum_two_nums(nums, target, 0, %{})
+  end
+
+  defp do_sum_two_nums([], _target, _index, _map), do: []
+  defp do_sum_two_nums([num | rest], target, index, map) do
+    complement = target - num
+    if Map.has_key?(map, complement) do
+      [Map.get(map, complement), index]
+    else
+      do_sum_two_nums(rest, target, index + 1, Map.put(map, num, index))
+    end
+  end
+end
+---END---[0m
+[22m00:37:35.637 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 46180ms — ok[0m
+[36m00:37:35.637 [debug] [Budget] spent so far (est.): $1.7562[0m
+[22m00:37:36.662 [info] [RoundTrip] reference PASSED tests[0m
+[22m00:37:36.662 [info] [idx=49657] translation fresh — solving[0m
+[22m00:37:36.662 [info] ===SOLVE_BOUNDARY===[0m
+[22m00:37:36.662 [info] [Solve attempt 1] generating (fn=sum_two_nums)[0m
+[36m00:37:36.662 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Given a list of integers and a target integer, find two indices in the list such that the numbers at these indices sum to the target. Return a list containing the two indices in ascending order. If no such pair exists, return an empty list. Each input will have at most one valid solution, and the same element may not be used twice. The function should be named `sum_two_nums` and take the list and the target as arguments. The expected time complexity is linear in the length of the list.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.sum_two_nums([3, 3], 6) == [0, 1]
+  end
+
+  test "example 2" do
+    assert Solution.sum_two_nums([3, 2, 4], 6) == [1, 2]
+  end
+
+  test "example 3" do
+    assert Solution.sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+  end
+end
+```
+
+Module: `Solution`. Function: `sum_two_nums`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m00:37:43.061 [debug] [LLM.call] finish=stop len=2332 usage=%{"completion_tokens" => 696, "prompt_tokens" => 508, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 1204}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Given a list of integers and a target integer, find two indices in the list
+  such that the numbers at these indices sum to the target.
+
+  Returns a list containing the two indices in ascending order.
+  If no such pair exists, returns an empty list.
+  Each input will have at most one valid solution.
+  The same element may not be used twice.
+  Time complexity: O(n)
+  """
+  @spec sum_two_nums([integer()], integer()) :: [integer()]
+  def sum_two_nums(nums, target) do
+    solve(nums, target, %{}, -1)
+  end
+
+  defp solve([], _target, _seen, _last_idx), do: []
+
+  defp solve([head | tail], target, seen, _last_idx) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        # Return the indices in ascending order
+        if complement_idx < head_idx_from_context?(head, complement_idx, _check = true),
+          do: [complement_idx, _idx],
+          else: [_idx, complement_idx]
+        # Actually, we need to track current index. Let's refactor to pass index.
+        _skip = head
+        _skip = tail
+        _skip = target
+        _skip = seen
+        []
+
+      :error ->
+        # Add current value and its index to the map
+        # We need to track index, so let's use a different approach
+        _skip = head
+        _skip = tail
+        _skip = target
+        _skip = seen
+        []
+    end
+  end
+
+  # Let me rewrite properly with index tracking
+  defp solve2(nums, target, seen) do
+    solve2(nums, target, seen, 0)
+  end
+
+  defp solve2([], _target, _seen, _index), do: []
+
+  defp solve2([head | tail], target, seen, index) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        if index < complement_idx,
+          do: [index, complement_idx],
+          else: [complement_idx, index]
+
+      :error ->
+        new_seen = Map.put(seen, head, index)
+        solve2(tail, target, new_seen, index + 1)
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.sum_two_nums([3, 3], 6) == [0, 1]
+  end
+
+  test "example 2" do
+    assert Solution.sum_two_nums([3, 2, 4], 6) == [1, 2]
+  end
+
+  test "example 3" do
+    assert Solution.sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+  end
+end
+---END---[0m
+[22m00:37:43.061 [info] [LLM.call] local_qwen_thinking completed in 6399ms — ok[0m
+[22m00:37:43.061 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m00:37:43.061 [debug] [Validator.run] module code (1976 chars):
+defmodule Solution do
+  @doc """
+  Given a list of integers and a target integer, find two indices in the list
+  such that the numbers at these indices sum to the target.
+
+  Returns a list containing the two indices in ascending order.
+  If no such pair exists, returns an empty list.
+  Each input will have at most one valid solution.
+  The same element may not be used twice.
+  Time complexity: O(n)
+  """
+  @spec sum_two_nums([integer()], integer()) :: [integer()]
+  def sum_two_nums(nums, target) do
+    solve(nums, target, %{}, -1)
+  end
+
+  defp solve([], _target, _seen, _last_idx), do: []
+
+  defp solve([head | tail], target, seen, _last_idx) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        # Return the indices in ascending order
+        if complement_idx < head_idx_from_context?(head, complement_idx, _check = true),
+          do: [complement_idx, _idx],
+          else: [_idx, complement_idx]
+        # Actually, we need to track current index. Let's refactor to pass index.
+        _skip = head
+        _skip = tail
+        _skip = target
+        _skip = seen
+        []
+
+      :error ->
+        # Add current value and its index to the map
+        # We need to track index, so let's use a different approach
+        _skip = head
+        _skip = tail
+        _skip = target
+        _skip = seen
+        []
+    end
+  end
+
+  # Let me rewrite properly with index tracking
+  defp solve2(nums, target, seen) do
+    solve2(nums, target, seen, 0)
+  end
+
+  defp solve2([], _target, _seen, _index), do: []
+
+  defp solve2([head | tail], target, seen, index) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        if index < complement_idx,
+          do: [index, complement_idx],
+          else: [complement_idx, index]
+
+      :error ->
+        new_seen = Map.put(seen, head, index)
+        solve2(tail, target, new_seen, index + 1)
+    end
+  end
+end[0m
+[36m00:37:43.062 [debug] [Validator.run] test code (321 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.sum_two_nums([3, 3], 6) == [0, 1]
+  end
+
+  test "example 2" do
+    assert Solution.sum_two_nums([3, 2, 4], 6) == [1, 2]
+  end
+
+  test "example 3" do
+    assert Solution.sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+  end
+end[0m
+[36m00:37:43.062 [debug] [Budget] spent so far (est.): $1.7571[0m
+[22m00:37:43.069 [info] [Validator.run] step 1/6: credence fix[0m
+[36m00:37:43.069 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m00:37:43.629 [debug] [run_credence_fix] exit=0 output:
+
+00:37:43.596 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+00:37:43.599 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+00:37:43.605 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+00:37:43.605 [debug] [credence_fix] semantic pass 1: compilation FAILED, 3 error(s)
+
+00:37:43.609 [debug] [credence_fix] no rule matched diagnostic: %{message: "undefined variable \"_idx\"", position: {27, 18}, file: "credence_check.ex", stacktrace: [{Solution, :solve, 4, [file: "credence_check.ex", column: 18, line: 27]}], source: "credence_check.ex", span: {27, 22}, severity: :error}
+
+00:37:43.609 [debug] [credence_fix] no rule matched diagnostic: %{message: "undefined variable \"_idx\"", position: {26, 32}, file: "credence_check.ex", stacktrace: [{Solution, :solve, 4, [file: "credence_check.ex", column: 32, line: 26]}], source: "credence_check.ex", span: {26, 36}, severity: :error}
+
+00:37:43.609 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+00:37:43.609 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+00:37:43.609 [debug] [credence_fix] semantic done. Applied: []
+
+00:37:43.609 [debug] [credence_fix] starting pattern fix pipeline (123 rules)
+
+00:37:43.611 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+00:37:43.611 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+00:37:43.614 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m00:37:43.629 [debug] [run_credence_fix] no changes needed[0m
+[22m00:37:43.629 [info] [Validator.run] credence: no changes needed[0m
+[22m00:37:43.629 [info] [Validator.run] step 2/6: compile[0m
+[22m00:37:44.126 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m00:37:44.126 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    error: undefined variable "_idx"
+    │
+ 26 │           do: [complement_idx, _idx],
+    │                                ^^^^
+    │
+    └─ lib/solution.ex:26:32: Solution.solve/4
+
+    error: undefined variable "_idx"
+    │
+ 27 │           else: [_idx, complement_idx]
+    │                  ^^^^
+    │
+    └─ lib/solution.ex:27:18: Solution.solve/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[22m00:37:44.126 [info] [Validator.run] step 3/6: format[0m
+[22m00:37:44.126 [info] [Validator.run] skipping format (compile failed)[0m
+[22m00:37:44.126 [info] [Validator.run] step 4/6: credo[0m
+[22m00:37:44.126 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m00:37:44.126 [info] [Validator.run] step 5/6: credence check[0m
+[22m00:37:44.126 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m00:37:44.126 [info] [Validator.run] step 6/6: tests[0m
+[22m00:37:44.126 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m00:37:44.126 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m00:37:44.126 [debug] [Validator.run] final module (1976 chars):
+defmodule Solution do
+  @doc """
+  Given a list of integers and a target integer, find two indices in the list
+  such that the numbers at these indices sum to the target.
+
+  Returns a list containing the two indices in ascending order.
+  If no such pair exists, returns an empty list.
+  Each input will have at most one valid solution.
+  The same element may not be used twice.
+  Time complexity: O(n)
+  """
+  @spec sum_two_nums([integer()], integer()) :: [integer()]
+  def sum_two_nums(nums, target) do
+    solve(nums, target, %{}, -1)
+  end
+
+  defp solve([], _target, _seen, _last_idx), do: []
+
+  defp solve([head | tail], target, seen, _last_idx) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        # Return the indices in ascending order
+        if complement_idx < head_idx_from_context?(head, complement_idx, _check = true),
+          do: [complement_idx, _idx],
+          else: [_idx, complement_idx]
+        # Actually, we need to track current index. Let's refactor to pass index.
+        _skip = head
+        _skip = tail
+        _skip = target
+        _skip = seen
+        []
+
+      :error ->
+        # Add current value and its index to the map
+        # We need to track index, so let's use a different approach
+        _skip = head
+        _skip = tail
+        _skip = target
+        _skip = seen
+        []
+    end
+  end
+
+  # Let me rewrite properly with index tracking
+  defp solve2(nums, target, seen) do
+    solve2(nums, target, seen, 0)
+  end
+
+  defp solve2([], _target, _seen, _index), do: []
+
+  defp solve2([head | tail], target, seen, index) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        if index < complement_idx,
+          do: [index, complement_idx],
+          else: [complement_idx, index]
+
+      :error ->
+        new_seen = Map.put(seen, head, index)
+        solve2(tail, target, new_seen, index + 1)
+    end
+  end
+end[0m
+[36m00:37:44.126 [debug] [Validator.run] final test (321 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.sum_two_nums([3, 3], 6) == [0, 1]
+  end
+
+  test "example 2" do
+    assert Solution.sum_two_nums([3, 2, 4], 6) == [1, 2]
+  end
+
+  test "example 3" do
+    assert Solution.sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+  end
+end[0m
+[33m00:37:44.126 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m00:37:44.126 [info] [Solve attempt 2] generating (fn=sum_two_nums)[0m
+[36m00:37:44.126 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Given a list of integers and a target integer, find two indices in the list
+  such that the numbers at these indices sum to the target.
+
+  Returns a list containing the two indices in ascending order.
+  If no such pair exists, returns an empty list.
+  Each input will have at most one valid solution.
+  The same element may not be used twice.
+  Time complexity: O(n)
+  """
+  @spec sum_two_nums([integer()], integer()) :: [integer()]
+  def sum_two_nums(nums, target) do
+    solve(nums, target, %{}, -1)
+  end
+
+  defp solve([], _target, _seen, _last_idx), do: []
+
+  defp solve([head | tail], target, seen, _last_idx) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        # Return the indices in ascending order
+        if complement_idx < head_idx_from_context?(head, complement_idx, _check = true),
+          do: [complement_idx, _idx],
+          else: [_idx, complement_idx]
+        # Actually, we need to track current index. Let's refactor to pass index.
+        _skip = head
+        _skip = tail
+        _skip = target
+        _skip = seen
+        []
+
+      :error ->
+        # Add current value and its index to the map
+        # We need to track index, so let's use a different approach
+        _skip = head
+        _skip = tail
+        _skip = target
+        _skip = seen
+        []
+    end
+  end
+
+  # Let me rewrite properly with index tracking
+  defp solve2(nums, target, seen) do
+    solve2(nums, target, seen, 0)
+  end
+
+  defp solve2([], _target, _seen, _index), do: []
+
+  defp solve2([head | tail], target, seen, index) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        if index < complement_idx,
+          do: [index, complement_idx],
+          else: [complement_idx, index]
+
+      :error ->
+        new_seen = Map.put(seen, head, index)
+        solve2(tail, target, new_seen, index + 1)
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.sum_two_nums([3, 3], 6) == [0, 1]
+  end
+
+  test "example 2" do
+    assert Solution.sum_two_nums([3, 2, 4], 6) == [1, 2]
+  end
+
+  test "example 3" do
+    assert Solution.sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+  end
+end
+---END---
+
+## Errors
+### compile error:
+error: undefined variable "_idx"
+    │
+ 26 │           do: [complement_idx, _idx],
+    │                                ^^^^
+    │
+    └─ lib/solution.ex:26:32: Solution.solve/4
+
+    error: undefined variable "_idx"
+    │
+ 27 │           else: [_idx, complement_idx]
+    │                  ^^^^
+    │
+    └─ lib/solution.ex:27:18: Solution.solve/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+Reminder: module `Solution`, function `sum_two_nums` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m00:37:48.411 [debug] [LLM.call] finish=stop len=1280 usage=%{"completion_tokens" => 409, "prompt_tokens" => 1137, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 1546}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Given a list of integers and a target integer, find two indices in the list
+  such that the numbers at these indices sum to the target.
+
+  Returns a list containing the two indices in ascending order.
+  If no such pair exists, returns an empty list.
+  Each input will have at most one valid solution.
+  The same element may not be used twice.
+  Time complexity: O(n)
+  """
+  @spec sum_two_nums([integer()], integer()) :: [integer()]
+  def sum_two_nums(nums, target) do
+    solve(nums, target, %{}, 0)
+  end
+
+  defp solve([], _target, _seen, _index), do: []
+
+  defp solve([head | tail], target, seen, index) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        [complement_idx, index] |> Enum.sort()
+
+      :error ->
+        new_seen = Map.put(seen, head, index)
+        solve(tail, target, new_seen, index + 1)
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.sum_two_nums([3, 3], 6) == [0, 1]
+  end
+
+  test "example 2" do
+    assert Solution.sum_two_nums([3, 2, 4], 6) == [1, 2]
+  end
+
+  test "example 3" do
+    assert Solution.sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+  end
+end
+---END---[0m
+[22m00:37:48.411 [info] [LLM.call] local_qwen_thinking completed in 4284ms — ok[0m
+[22m00:37:48.411 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m00:37:48.411 [debug] [Validator.run] module code (924 chars):
+defmodule Solution do
+  @doc """
+  Given a list of integers and a target integer, find two indices in the list
+  such that the numbers at these indices sum to the target.
+
+  Returns a list containing the two indices in ascending order.
+  If no such pair exists, returns an empty list.
+  Each input will have at most one valid solution.
+  The same element may not be used twice.
+  Time complexity: O(n)
+  """
+  @spec sum_two_nums([integer()], integer()) :: [integer()]
+  def sum_two_nums(nums, target) do
+    solve(nums, target, %{}, 0)
+  end
+
+  defp solve([], _target, _seen, _index), do: []
+
+  defp solve([head | tail], target, seen, index) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        [complement_idx, index] |> Enum.sort()
+
+      :error ->
+        new_seen = Map.put(seen, head, index)
+        solve(tail, target, new_seen, index + 1)
+    end
+  end
+end[0m
+[36m00:37:48.411 [debug] [Validator.run] test code (321 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.sum_two_nums([3, 3], 6) == [0, 1]
+  end
+
+  test "example 2" do
+    assert Solution.sum_two_nums([3, 2, 4], 6) == [1, 2]
+  end
+
+  test "example 3" do
+    assert Solution.sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+  end
+end[0m
+[36m00:37:48.411 [debug] [Budget] spent so far (est.): $1.7579[0m
+[22m00:37:48.412 [info] [Validator.run] step 1/6: credence fix[0m
+[36m00:37:48.412 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m00:37:49.018 [debug] [run_credence_fix] exit=0 output:
+
+00:37:48.935 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+00:37:48.937 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+00:37:48.945 [debug] [credence_fix] semantic pass 1: compilation OK, 0 warning(s)
+
+00:37:48.945 [debug] [credence_fix] semantic done. Applied: []
+
+00:37:48.946 [debug] [credence_fix] starting pattern fix pipeline (123 rules)
+
+00:37:48.995 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m00:37:49.018 [debug] [run_credence_fix] no changes needed[0m
+[22m00:37:49.018 [info] [Validator.run] credence: no changes needed[0m
+[22m00:37:49.018 [info] [Validator.run] step 2/6: compile[0m
+[22m00:37:49.673 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m00:37:49.673 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m00:37:49.673 [info] [Validator.run] step 3/6: format[0m
+[22m00:37:49.974 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m00:37:50.268 [debug] [Validator.run] format fix output: [0m
+[22m00:37:50.268 [info] [Validator.run] step 4/6: credo[0m
+[36m00:37:50.733 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m00:37:50.733 [info] [Validator.run] credo: no issues[0m
+[22m00:37:50.733 [info] [Validator.run] step 5/6: credence check[0m
+[22m00:37:51.414 [info] [Validator.run] credence check exit=0[0m
+[36m00:37:51.414 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m00:37:51.414 [info] [Validator.run] credence check: passed[0m
+[22m00:37:51.414 [info] [Validator.run] step 6/6: tests[0m
+[22m00:37:51.882 [info] [Validator.run] test exit=0[0m
+[36m00:37:51.882 [debug] [Validator.run] test output:
+Running ExUnit with seed: 843319, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m00:37:51.882 [info] [Validator.run] tests: PASSED[0m
+[22m00:37:51.883 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m00:37:51.883 [debug] [Validator.run] final module (925 chars):
+defmodule Solution do
+  @doc """
+  Given a list of integers and a target integer, find two indices in the list
+  such that the numbers at these indices sum to the target.
+
+  Returns a list containing the two indices in ascending order.
+  If no such pair exists, returns an empty list.
+  Each input will have at most one valid solution.
+  The same element may not be used twice.
+  Time complexity: O(n)
+  """
+  @spec sum_two_nums([integer()], integer()) :: [integer()]
+  def sum_two_nums(nums, target) do
+    solve(nums, target, %{}, 0)
+  end
+
+  defp solve([], _target, _seen, _index), do: []
+
+  defp solve([head | tail], target, seen, index) do
+    complement = target - head
+
+    case Map.fetch(seen, complement) do
+      {:ok, complement_idx} ->
+        [complement_idx, index] |> Enum.sort()
+
+      :error ->
+        new_seen = Map.put(seen, head, index)
+        solve(tail, target, new_seen, index + 1)
+    end
+  end
+end
+[0m
+[36m00:37:51.883 [debug] [Validator.run] final test (322 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.sum_two_nums([3, 3], 6) == [0, 1]
+  end
+
+  test "example 2" do
+    assert Solution.sum_two_nums([3, 2, 4], 6) == [1, 2]
+  end
+
+  test "example 3" do
+    assert Solution.sum_two_nums([2, 7, 11, 15], 9) == [0, 1]
+  end
+end
+[0m
+[22m00:37:51.883 [info] [Solve attempt 2] validation PASSED[0m
+[36m00:37:51.893 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+(none fired — BUGFIX is not possible this row)
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, self-contained defmodule isolating ONE issue)
+===AFTER===    (truncated)[0m
+[36m00:38:07.767 [debug] [LLM.call] finish=stop len=178 usage=%{"completion_tokens" => 485, "completion_tokens_details" => %{"reasoning_tokens" => 443}, "prompt_tokens" => 10169, "prompt_tokens_details" => %{"cached_tokens" => 2048}, "total_tokens" => 10654}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+The final compiling code is clean and idiomatic; no non-idiomatic residual that a human expert would deterministically rewrite.
+===END===[0m
+[22m00:38:07.767 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 15873ms — ok[0m
+[36m00:38:07.767 [debug] [Budget] spent so far (est.): $1.7627[0m

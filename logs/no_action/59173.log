@@ -1,0 +1,1884 @@
+[22m23:29:29.120 [info] [idx=59173] entry_point=most_frequent_non_banned_word[0m
+[36m23:29:29.120 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that takes a string and a list of banned words, then returns the most frequent non-banned word in the string. The words in the string are case-insensitive, and the string may contain punctuation. The answer should be returned in lowercase.
+
+## Python Solution
+```python
+import collections
+import re
+
+def most_frequent_non_banned_word(paragraph, banned):
+    ban = set(banned)
+    words = re.findall(r'\w+', paragraph.lower())
+    return collections.Counter(w for w in words if w not in ban).most_common(1)[0][0]
+```
+
+## Python Tests
+assert most_frequent_non_banned_word("Hello world, hello Python, hello world again.", ["hello"]) == "world"
+assert most_frequent_non_banned_word("a.", []) == "a"
+assert most_frequent_non_banned_word("Bob hit a ball, the hit BALL flew far after it was hit.", ["hit"]) == "ball"
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `most_frequent_non_banned_word`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[22m23:29:55.479 [info] [Budget] HEARTBEAT — 290 paid calls, est $1.3961 over 429.7min → ~$0.1949/hr, ~$4.68/day (tok in=1796090 cache_rd=17643904 out=633664)[0m
+[36m23:30:16.914 [debug] [LLM.call] finish=stop len=1654 usage=%{"completion_tokens" => 1815, "completion_tokens_details" => %{"reasoning_tokens" => 1382}, "prompt_tokens" => 559, "prompt_tokens_details" => %{}, "total_tokens" => 2374}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function that, given a string and a list of banned words, returns the most frequent non-banned word from the string. The comparison is case-insensitive; the result must be in lowercase. Ignore punctuation when extracting words.
+
+Your function must be named `most_frequent_non_banned_word` and take two arguments: a string and a list of strings. It returns a single string. If multiple non-banned words share the same highest frequency, you may return any one of them.
+
+---TEST---
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end
+```
+
+---REFERENCE---
+```elixir
+defmodule Solution do
+  def most_frequent_non_banned_word(paragraph, banned) do
+    banned_set = MapSet.new(banned, &String.downcase/1)
+
+    paragraph
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> Enum.frequencies()
+    |> Enum.max_by(fn {_, count} -> count end, fn -> nil end)
+    |> case do
+      {word, _} -> word
+      nil -> raise ArgumentError, "no non-banned words"
+    end
+  end
+
+  defp extract_words(string) do
+    Regex.scan(~r/[[:alnum:]]+/, string) |> List.flatten()
+  end
+end
+```
+---END---[0m
+[22m23:30:16.914 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 47794ms — ok[0m
+[36m23:30:16.914 [debug] [Budget] spent so far (est.): $1.3979[0m
+[22m23:30:17.989 [info] [RoundTrip] reference PASSED tests[0m
+[22m23:30:17.990 [info] [idx=59173] translation fresh — solving[0m
+[22m23:30:17.990 [info] ===SOLVE_BOUNDARY===[0m
+[22m23:30:17.990 [info] [Solve attempt 1] generating (fn=most_frequent_non_banned_word)[0m
+[36m23:30:17.990 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function that, given a string and a list of banned words, returns the most frequent non-banned word from the string. The comparison is case-insensitive; the result must be in lowercase. Ignore punctuation when extracting words.
+
+Your function must be named `most_frequent_non_banned_word` and take two arguments: a string and a list of strings. It returns a single string. If multiple non-banned words share the same highest frequency, you may return any one of them.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end
+```
+
+Module: `Solution`. Function: `most_frequent_non_banned_word`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m23:30:23.404 [debug] [LLM.call] finish=stop len=1962 usage=%{"completion_tokens" => 582, "prompt_tokens" => 533, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 1115}
+[LLM.call] response:
+---MODULE---
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+  
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+  
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/, trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequencies(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end
+---END---[0m
+[22m23:30:23.404 [info] [LLM.call] local_qwen_thinking completed in 5414ms — ok[0m
+[22m23:30:23.405 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m23:30:23.405 [debug] [Validator.run] module code (1384 chars):
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+  
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+  
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/, trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequencies(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end[0m
+[36m23:30:23.405 [debug] [Validator.run] test code (543 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end[0m
+[36m23:30:23.405 [debug] [Budget] spent so far (est.): $1.3987[0m
+[22m23:30:23.412 [info] [Validator.run] step 1/6: credence fix[0m
+[36m23:30:23.412 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m23:30:23.975 [debug] [run_credence_fix] exit=0 output:
+
+23:30:23.928 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+23:30:23.930 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+23:30:23.932 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+23:30:23.932 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+23:30:23.932 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+23:30:23.943 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @moduledoc """
+  L1 + defmodule Solution do
+  L2 - Provides functionality to find the most frequent non-banned word in a string.
+  L2 +   @moduledoc """
+  L3 - """
+  L3 +   Provides functionality to find the most frequent non-banned word in a string.
+  L4 - 
+  L4 +   """
+  L5 - defmodule Solution do
+  L5 + 
+  L8 - 
+  L8 + 
+  L11 - 
+  L11 + 
+  L45 -   defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+  L45 +   defp most_frequencies(freq_map) when map_size(freq_map) == 0, do: ""
+  L46 -     do: ""
+  L46 + 
+  L47 - 
+  L47 +   defp most_frequencies(freq_map) do
+  L48 -   defp most_frequencies(freq_map) do
+  L48 +     freq_map
+  L49 -     freq_map
+  L49 +     |> Enum.max_by(fn {_word, count} -> count end)
+  L50 -     |> Enum.max_by(fn {_word, count} -> count end)
+  L50 +     |> elem(0)
+  L51 -     |> elem(0)
+  L51 +   end
+  L52 -   end
+  L52 + end
+  L53 - end
+
+23:30:23.943 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+23:30:23.950 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+23:30:23.950 [debug] [credence_fix] semantic pass 2: compilation FAILED, 2 error(s)
+
+23:30:23.950 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+23:30:23.950 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+23:30:23.952 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+23:30:23.952 [debug] [credence_fix] semantic pass 2: no rule could fix the error(s), stopping
+
+23:30:23.952 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UndefinedFunction(1)]
+
+23:30:23.952 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+23:30:23.955 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+23:30:23.955 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+23:30:23.959 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UndefinedFunction, 1}]
+REMAINING_ISSUES: 5 unfixable issue(s)
+undefined_function: undefined function most_frequent/1 (expected Solution to define such a function or for it to be imported, but none are available) (line 26)
+no_doc_false_on_private: `@doc false` before `defp` is redundant — private functions cannot have documentation. Remove the `@doc false` annotation. (line 29)
+no_doc_false_on_private: `@doc false` before `defp` is redundant — private functions cannot have documentation. Remove the `@doc false` annotation. (line 37)
+no_doc_false_on_private: `@doc false` before `defp` is redundant — private functions cannot have documentation. Remove the `@doc false` annotation. (line 44)
+no_manual_frequencies: Manual frequency counting with `Enum.reduce/3` + `Map.update/4` and an empty map can be replaced with `Enum.frequencies/1` (or `Enum.frequencies_by/2` when the key is derived from the element), which is clearer and optimized. (line 39)
+[0m
+[22m23:30:23.975 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m23:30:24.461 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m23:30:24.461 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: function most_frequencies/1 is unused
+    │
+ 45 │   defp most_frequencies(freq_map) when map_size(freq_map) == 0, do: ""
+    │        ~
+    │
+    └─ lib/solution.ex:45:8: Solution (module)
+
+    error: undefined function most_frequent/1 (expected Solution to define such a function or for it to be imported, but none are available)
+    │
+ 26 │     |> most_frequent()
+    │        ^^^^^^^^^^^^^
+    │
+    └─ lib/solution.ex:26:8: Solution.most_frequent_non_banned_word/2
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[33m23:30:25.049 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m23:30:25.049 [info] [Validator.run] step 2/6: compile[0m
+[22m23:30:25.644 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m23:30:25.644 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+[0m
+[22m23:30:25.644 [info] [Validator.run] step 3/6: format[0m
+[22m23:30:25.644 [info] [Validator.run] skipping format (compile failed)[0m
+[22m23:30:25.644 [info] [Validator.run] step 4/6: credo[0m
+[22m23:30:25.644 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m23:30:25.644 [info] [Validator.run] step 5/6: credence check[0m
+[22m23:30:25.644 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m23:30:25.644 [info] [Validator.run] step 6/6: tests[0m
+[22m23:30:25.644 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m23:30:25.644 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m23:30:25.644 [debug] [Validator.run] final module (1384 chars):
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+  
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+  
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/, trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequencies(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end[0m
+[36m23:30:25.644 [debug] [Validator.run] final test (543 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end[0m
+[33m23:30:25.644 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m23:30:25.644 [info] [Solve attempt 2] generating (fn=most_frequent_non_banned_word)[0m
+[36m23:30:25.645 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+  
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+  
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/, trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequencies(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+
+Reminder: module `Solution`, function `most_frequent_non_banned_word` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m23:30:31.299 [debug] [LLM.call] finish=stop len=1946 usage=%{"completion_tokens" => 576, "prompt_tokens" => 966, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 1542}
+[LLM.call] response:
+---MODULE---
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequencies(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end
+---END---[0m
+[22m23:30:31.299 [info] [LLM.call] local_qwen_thinking completed in 5654ms — ok[0m
+[22m23:30:31.299 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m23:30:31.299 [debug] [Validator.run] module code (1368 chars):
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequencies(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end[0m
+[36m23:30:31.299 [debug] [Validator.run] test code (543 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end[0m
+[36m23:30:31.299 [debug] [Budget] spent so far (est.): $1.3996[0m
+[22m23:30:31.307 [info] [Validator.run] step 1/6: credence fix[0m
+[36m23:30:31.307 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m23:30:31.862 [debug] [run_credence_fix] exit=0 output:
+
+23:30:31.819 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+23:30:31.821 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+23:30:31.823 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+23:30:31.823 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+23:30:31.823 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+23:30:31.834 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @moduledoc """
+  L1 + defmodule Solution do
+  L2 - Provides functionality to find the most frequent non-banned word in a string.
+  L2 +   @moduledoc """
+  L3 - """
+  L3 +   Provides functionality to find the most frequent non-banned word in a string.
+  L4 - 
+  L4 +   """
+  L5 - defmodule Solution do
+  L5 + 
+  L45 -   defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+  L45 +   defp most_frequencies(freq_map) when map_size(freq_map) == 0, do: ""
+  L46 -     do: ""
+  L46 + 
+  L47 - 
+  L47 +   defp most_frequencies(freq_map) do
+  L48 -   defp most_frequencies(freq_map) do
+  L48 +     freq_map
+  L49 -     freq_map
+  L49 +     |> Enum.max_by(fn {_word, count} -> count end)
+  L50 -     |> Enum.max_by(fn {_word, count} -> count end)
+  L50 +     |> elem(0)
+  L51 -     |> elem(0)
+  L51 +   end
+  L52 -   end
+  L52 + end
+  L53 - end
+
+23:30:31.834 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+23:30:31.840 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+23:30:31.840 [debug] [credence_fix] semantic pass 2: compilation FAILED, 2 error(s)
+
+23:30:31.840 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+23:30:31.840 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+23:30:31.842 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+23:30:31.842 [debug] [credence_fix] semantic pass 2: no rule could fix the error(s), stopping
+
+23:30:31.842 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UndefinedFunction(1)]
+
+23:30:31.842 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+23:30:31.845 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+23:30:31.845 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+23:30:31.849 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UndefinedFunction, 1}]
+REMAINING_ISSUES: 5 unfixable issue(s)
+undefined_function: undefined function most_frequent/1 (expected Solution to define such a function or for it to be imported, but none are available) (line 26)
+no_doc_false_on_private: `@doc false` before `defp` is redundant — private functions cannot have documentation. Remove the `@doc false` annotation. (line 29)
+no_doc_false_on_private: `@doc false` before `defp` is redundant — private functions cannot have documentation. Remove the `@doc false` annotation. (line 37)
+no_doc_false_on_private: `@doc false` before `defp` is redundant — private functions cannot have documentation. Remove the `@doc false` annotation. (line 44)
+no_manual_frequencies: Manual frequency counting with `Enum.reduce/3` + `Map.update/4` and an empty map can be replaced with `Enum.frequencies/1` (or `Enum.frequencies_by/2` when the key is derived from the element), which is clearer and optimized. (line 39)
+[0m
+[22m23:30:31.862 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m23:30:32.448 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m23:30:32.448 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: function most_frequencies/1 is unused
+    │
+ 45 │   defp most_frequencies(freq_map) when map_size(freq_map) == 0, do: ""
+    │        ~
+    │
+    └─ lib/solution.ex:45:8: Solution (module)
+
+    error: undefined function most_frequent/1 (expected Solution to define such a function or for it to be imported, but none are available)
+    │
+ 26 │     |> most_frequent()
+    │        ^^^^^^^^^^^^^
+    │
+    └─ lib/solution.ex:26:8: Solution.most_frequent_non_banned_word/2
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[33m23:30:33.027 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m23:30:33.027 [info] [Validator.run] step 2/6: compile[0m
+[22m23:30:33.649 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m23:30:33.649 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+[0m
+[22m23:30:33.649 [info] [Validator.run] step 3/6: format[0m
+[22m23:30:33.649 [info] [Validator.run] skipping format (compile failed)[0m
+[22m23:30:33.649 [info] [Validator.run] step 4/6: credo[0m
+[22m23:30:33.649 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m23:30:33.649 [info] [Validator.run] step 5/6: credence check[0m
+[22m23:30:33.649 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m23:30:33.650 [info] [Validator.run] step 6/6: tests[0m
+[22m23:30:33.650 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m23:30:33.650 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m23:30:33.650 [debug] [Validator.run] final module (1368 chars):
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequencies(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end[0m
+[36m23:30:33.650 [debug] [Validator.run] final test (543 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end[0m
+[33m23:30:33.650 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m23:30:33.650 [info] [Solve attempt 3] generating (fn=most_frequent_non_banned_word)[0m
+[36m23:30:33.650 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequencies(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequencies(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+
+Reminder: module `Solution`, function `most_frequent_non_banned_word` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m23:30:39.359 [debug] [LLM.call] finish=stop len=1940 usage=%{"completion_tokens" => 576, "prompt_tokens" => 960, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 1536}
+[LLM.call] response:
+---MODULE---
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequent(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequent(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end
+---END---[0m
+[22m23:30:39.359 [info] [LLM.call] local_qwen_thinking completed in 5709ms — ok[0m
+[22m23:30:39.359 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m23:30:39.359 [debug] [Validator.run] module code (1362 chars):
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequent(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequent(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end[0m
+[36m23:30:39.359 [debug] [Validator.run] test code (543 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+      "Hello world, hello Python, hello world again.",
+      ["hello"]
+    ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+      "Bob hit a ball, the hit BALL flew far after it was hit.",
+      ["hit"]
+    ) == "ball"
+  end
+end[0m
+[36m23:30:39.359 [debug] [Budget] spent so far (est.): $1.4005[0m
+[22m23:30:39.367 [info] [Validator.run] step 1/6: credence fix[0m
+[36m23:30:39.367 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m23:30:40.022 [debug] [run_credence_fix] exit=0 output:
+
+23:30:39.877 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+23:30:39.879 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+23:30:39.881 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+23:30:39.881 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+23:30:39.881 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+23:30:39.892 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @moduledoc """
+  L1 + defmodule Solution do
+  L2 - Provides functionality to find the most frequent non-banned word in a string.
+  L2 +   @moduledoc """
+  L3 - """
+  L3 +   Provides functionality to find the most frequent non-banned word in a string.
+  L4 - 
+  L4 +   """
+  L5 - defmodule Solution do
+  L5 + 
+  L45 -   defp most_frequent(freq_map) when map_size(freq_map) == 0,
+  L45 +   defp most_frequent(freq_map) when map_size(freq_map) == 0, do: ""
+  L46 -     do: ""
+  L46 + 
+  L47 - 
+  L47 +   defp most_frequent(freq_map) do
+  L48 -   defp most_frequent(freq_map) do
+  L48 +     freq_map
+  L49 -     freq_map
+  L49 +     |> Enum.max_by(fn {_word, count} -> count end)
+  L50 -     |> Enum.max_by(fn {_word, count} -> count end)
+  L50 +     |> elem(0)
+  L51 -     |> elem(0)
+  L51 +   end
+  L52 -   end
+  L52 + end
+  L53 - end
+
+23:30:39.892 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+23:30:39.902 [debug] [credence_fix] semantic pass 2: compilation OK, 0 warning(s)
+
+23:30:39.902 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+23:30:39.903 [debug] [credence_fix] starting pattern fix pipeline (120 rules)
+
+23:30:39.926 [debug] [credence_fix] NoDocFalseOnPrivate: check found 3 issue(s), running fix...
+
+23:30:39.936 [debug] [credence_fix] NoDocFalseOnPrivate: source CHANGED:
+  L29 -   @doc false
+  L29 +   defp extract_words(text) do
+  L30 -   defp extract_words(text) do
+  L30 +     text
+  L31 -     text
+  L31 +     |> String.split(~r/[^\p{L}\p{N}]+/)
+  L32 -     |> String.split(~r/[^\p{L}\p{N}]+/)
+  L32 +     |> Enum.map(&String.trim/1)
+  L33 -     |> Enum.map(&String.trim/1)
+  L33 +     |> Enum.reject(&(&1 == ""))
+  L34 -     |> Enum.reject(&(&1 == ""))
+  L34 +   end
+  L35 -   end
+  L35 + 
+  L36 - 
+  L36 +   defp count_frequencies(words) do
+  L37 -   @doc false
+  L37 +     Enum.reduce(words, %{}, fn word, acc ->
+  L38 -   defp count_frequencies(words) do
+  L38 +       Map.update(acc, word, 1, &(&1 + 1))
+  L39 -     Enum.reduce(words, %{}, fn word, acc ->
+  L39 +     end)
+  L40 -       Map.update(acc, word, 1, &(&1 + 1))
+  L40 +   end
+  L41 -     end)
+  L41 + 
+  L42 -   end
+  L42 +   defp most_frequent(freq_map) when map_size(freq_map) == 0, do: ""
+  L44 -   @doc false
+  L44 +   defp most_frequent(freq_map) do
+  L45 -   defp most_frequent(freq_map) when map_size(freq_map) == 0, do: ""
+  L45 +     freq_map
+  L46 - 
+  L46 +     |> Enum.max_by(fn {_word, count} -> count end)
+  L47 -   defp most_frequent(freq_map) do
+  L47 +     |> elem(0)
+  L48 -     freq_map
+  L48 +   end
+  L49 -     |> Enum.max_by(fn {_word, count} -> count end)
+  L49 + end
+  L50 -     |> elem(0)
+  L51 -   end
+  L52 - end
+
+23:30:39.960 [debug] [credence_fix] NoManualFrequencies: check found 1 issue(s), running fix...
+
+23:30:39.969 [debug] [credence_fix] NoManualFrequencies: source CHANGED:
+  L37 -     Enum.reduce(words, %{}, fn word, acc ->
+  L37 +     Enum.frequencies(words)
+  L38 -       Map.update(acc, word, 1, &(&1 + 1))
+  L38 +   end
+  L39 -     end)
+  L39 + 
+  L40 -   end
+  L40 +   defp most_frequent(freq_map) when map_size(freq_map) == 0, do: ""
+  L42 -   defp most_frequent(freq_map) when map_size(freq_map) == 0, do: ""
+  L42 +   defp most_frequent(freq_map) do
+  L43 - 
+  L43 +     freq_map
+  L44 -   defp most_frequent(freq_map) do
+  L44 +     |> Enum.max_by(fn {_word, count} -> count end)
+  L45 -     freq_map
+  L45 +     |> elem(0)
+  L46 -     |> Enum.max_by(fn {_word, count} -> count end)
+  L46 +   end
+  L47 -     |> elem(0)
+  L47 + end
+  L48 -   end
+  L49 - end
+
+23:30:39.998 [debug] [credence_fix] done. Applied: [NoDocFalseOnPrivate(3), NoManualFrequencies(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Pattern.NoDocFalseOnPrivate, 3}, {Credence.Pattern.NoManualFrequencies, 1}]
+[0m
+[22m23:30:40.022 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m23:30:40.680 [info] [run_credence_fix] fix compiles OK[0m
+[36m23:30:40.680 [debug] [run_credence_fix] original:
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequent(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequent(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end[0m
+[36m23:30:40.680 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to find the most frequent non-banned word in a string.
+  """
+
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp count_frequencies(words) do
+    Enum.frequencies(words)
+  end
+
+  defp most_frequent(freq_map) when map_size(freq_map) == 0, do: ""
+
+  defp most_frequent(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end[0m
+[22m23:30:40.680 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m23:30:40.680 [debug] [Validator.run] module BEFORE credence fix:
+@moduledoc """
+Provides functionality to find the most frequent non-banned word in a string.
+"""
+
+defmodule Solution do
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  @doc false
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc false
+  defp count_frequencies(words) do
+    Enum.reduce(words, %{}, fn word, acc ->
+      Map.update(acc, word, 1, &(&1 + 1))
+    end)
+  end
+
+  @doc false
+  defp most_frequent(freq_map) when map_size(freq_map) == 0,
+    do: ""
+
+  defp most_frequent(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end[0m
+[36m23:30:40.680 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to find the most frequent non-banned word in a string.
+  """
+
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp count_frequencies(words) do
+    Enum.frequencies(words)
+  end
+
+  defp most_frequent(freq_map) when map_size(freq_map) == 0, do: ""
+
+  defp most_frequent(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end[0m
+[36m23:30:40.680 [debug] [propagate_is_renames] old functions: ["most_frequent_non_banned_word", "extract_words", "count_frequencies", "most_frequent"][0m
+[36m23:30:40.680 [debug] [propagate_is_renames] new functions: ["most_frequent_non_banned_word", "extract_words", "count_frequencies", "most_frequent"][0m
+[36m23:30:40.680 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m23:30:40.680 [info] [Validator.run] step 2/6: compile[0m
+[22m23:30:41.237 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m23:30:41.237 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m23:30:41.237 [info] [Validator.run] step 3/6: format[0m
+[22m23:30:41.537 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m23:30:41.842 [debug] [Validator.run] format fix output: [0m
+[22m23:30:41.842 [info] [Validator.run] step 4/6: credo[0m
+[36m23:30:42.328 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m23:30:42.328 [info] [Validator.run] credo: no issues[0m
+[22m23:30:42.328 [info] [Validator.run] step 5/6: credence check[0m
+[22m23:30:43.038 [info] [Validator.run] credence check exit=0[0m
+[36m23:30:43.038 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m23:30:43.038 [info] [Validator.run] credence check: passed[0m
+[22m23:30:43.038 [info] [Validator.run] step 6/6: tests[0m
+[22m23:30:43.499 [info] [Validator.run] test exit=0[0m
+[36m23:30:43.499 [debug] [Validator.run] test output:
+Running ExUnit with seed: 453937, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m23:30:43.499 [info] [Validator.run] tests: PASSED[0m
+[22m23:30:43.499 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m23:30:43.499 [debug] [Validator.run] final module (1259 chars):
+defmodule Solution do
+  @moduledoc """
+  Provides functionality to find the most frequent non-banned word in a string.
+  """
+
+  @doc """
+  Given a string and a list of banned words, returns the most frequent non-banned word.
+
+  The comparison is case-insensitive, and the result is returned in lowercase.
+  Punctuation is ignored when extracting words.
+
+  If multiple words share the same highest frequency, any one of them may be returned.
+  """
+  @spec most_frequent_non_banned_word(String.t(), [String.t()]) :: String.t()
+  def most_frequent_non_banned_word(text, banned_words) do
+    banned_set =
+      banned_words
+      |> Enum.map(&String.downcase/1)
+      |> MapSet.new()
+
+    text
+    |> String.downcase()
+    |> extract_words()
+    |> Enum.reject(&MapSet.member?(banned_set, &1))
+    |> count_frequencies()
+    |> most_frequent()
+  end
+
+  defp extract_words(text) do
+    text
+    |> String.split(~r/[^\p{L}\p{N}]+/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp count_frequencies(words) do
+    Enum.frequencies(words)
+  end
+
+  defp most_frequent(freq_map) when map_size(freq_map) == 0, do: ""
+
+  defp most_frequent(freq_map) do
+    freq_map
+    |> Enum.max_by(fn {_word, count} -> count end)
+    |> elem(0)
+  end
+end
+[0m
+[36m23:30:43.499 [debug] [Validator.run] final test (586 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example from Python" do
+    assert Solution.most_frequent_non_banned_word(
+             "Hello world, hello Python, hello world again.",
+             ["hello"]
+           ) == "world"
+  end
+
+  test "single word with no banned" do
+    assert Solution.most_frequent_non_banned_word("a.", []) == "a"
+  end
+
+  test "sentence with punctuation" do
+    assert Solution.most_frequent_non_banned_word(
+             "Bob hit a ball, the hit BALL flew far after it was hit.",
+             ["hit"]
+           ) == "ball"
+  end
+end
+[0m
+[22m23:30:43.499 [info] [Solve attempt 3] validation PASSED[0m
+[36m23:30:43.511 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Semantic.UndefinedFunction
+  - Credence.Pattern.NoDocFalseOnPrivate
+  - Credence.Pattern.NoManualFrequencies
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule i (truncated)[0m
+[36m23:31:22.079 [debug] [LLM.call] finish=stop len=396 usage=%{"completion_tokens" => 1053, "completion_tokens_details" => %{"reasoning_tokens" => 967}, "prompt_tokens" => 19301, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 20354}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+Solve succeeded cleanly; existing rules (RequireDefmoduleWrapper, NoDocFalseOnPrivate, NoManualFrequencies) fired appropriately with no over-firing. No deterministically fixable non-idiomatic residual remains — the thin wrapper around Enum.frequencies is a style preference without a safe always-correct inline fix given the public API contract.
+===END===[0m
+[22m23:31:22.079 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 38567ms — ok[0m
+[36m23:31:22.079 [debug] [Budget] spent so far (est.): $1.4098[0m

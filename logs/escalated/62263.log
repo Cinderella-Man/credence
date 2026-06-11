@@ -1,0 +1,1959 @@
+[22m07:30:11.077 [info] [idx=62263] entry_point=dec_to_bin_stack[0m
+[36m07:30:11.077 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to convert a decimal number to a binary number using a stack data structure.
+
+## Python Solution
+```python
+class Stack:
+    def __init__(self):
+        self.items = []
+    def push(self, item):
+        self.items.append(item)
+    def pop(self):
+        return self.items.pop()
+    def is_empty(self):
+        return self.items == []
+    def size(self):
+        return len(self.items)
+def dec_to_bin_stack(dec_number):
+    s = Stack()
+    while dec_number > 0:
+        remainder = dec_number % 2
+        s.push(remainder)
+        dec_number = dec_number // 2
+    bin_number = ""
+    while not s.is_empty():
+        bin_number += str(s.pop())
+    return bin_number
+```
+
+## Python Tests
+assert dec_to_bin_stack(255) == '11111111'
+assert dec_to_bin_stack(10) == '1010'
+assert dec_to_bin_stack(32) == '100000'
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `dec_to_bin_stack`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m07:31:18.478 [debug] [LLM.call] finish=stop len=1484 usage=%{"completion_tokens" => 3137, "completion_tokens_details" => %{"reasoning_tokens" => 2725}, "prompt_tokens" => 575, "prompt_tokens_details" => %{}, "total_tokens" => 3712}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function named `dec_to_bin_stack` that takes a non-negative integer and returns a string representing the binary number. Use a stack data structure to reverse the order of remainders obtained during conversion by repeatedly dividing the number by 2. The function should handle zero correctly, returning "0". The conversion process must be performed by first pushing remainders onto the stack and then popping them off to construct the binary string. The time complexity should be O(log n) where n is the input number.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "convert 255 to binary" do
+    assert Solution.dec_to_bin_stack(255) == "11111111"
+  end
+
+  test "convert 10 to binary" do
+    assert Solution.dec_to_bin_stack(10) == "1010"
+  end
+
+  test "convert 32 to binary" do
+    assert Solution.dec_to_bin_stack(32) == "100000"
+  end
+
+  test "convert 0 to binary" do
+    assert Solution.dec_to_bin_stack(0) == "0"
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  @spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+  def dec_to_bin_stack(0), do: "0"
+
+  def dec_to_bin_stack(dec_number) when is_integer(dec_number) and dec_number > 0 do
+    dec_number
+    |> build_stack([])
+    |> Enum.reduce("", fn digit, acc -> acc <> to_string(digit) end)
+  end
+
+  defp build_stack(0, stack), do: stack
+
+  defp build_stack(n, stack) do
+    remainder = rem(n, 2)
+    build_stack(div(n, 2), [remainder | stack])
+  end
+end
+
+---END---[0m
+[22m07:31:18.478 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 67400ms — ok[0m
+[36m07:31:18.478 [debug] [Budget] spent so far (est.): $3.4542[0m
+[22m07:31:19.530 [info] [RoundTrip] reference PASSED tests[0m
+[22m07:31:19.530 [info] [idx=62263] translation fresh — solving[0m
+[22m07:31:19.530 [info] ===SOLVE_BOUNDARY===[0m
+[22m07:31:19.530 [info] [Solve attempt 1] generating (fn=dec_to_bin_stack)[0m
+[36m07:31:19.530 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function named `dec_to_bin_stack` that takes a non-negative integer and returns a string representing the binary number. Use a stack data structure to reverse the order of remainders obtained during conversion by repeatedly dividing the number by 2. The function should handle zero correctly, returning "0". The conversion process must be performed by first pushing remainders onto the stack and then popping them off to construct the binary string. The time complexity should be O(log n) where n is the input number.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "convert 255 to binary" do
+    assert Solution.dec_to_bin_stack(255) == "11111111"
+  end
+
+  test "convert 10 to binary" do
+    assert Solution.dec_to_bin_stack(10) == "1010"
+  end
+
+  test "convert 32 to binary" do
+    assert Solution.dec_to_bin_stack(32) == "100000"
+  end
+
+  test "convert 0 to binary" do
+    assert Solution.dec_to_bin_stack(0) == "0"
+  end
+end
+```
+
+Module: `Solution`. Function: `dec_to_bin_stack`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m07:31:23.655 [debug] [LLM.call] finish=stop len=1240 usage=%{"completion_tokens" => 424, "prompt_tokens" => 530, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 954}
+[LLM.call] response:
+---MODULE---
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  String.new(remainders, fn remainder -> <<remainder>> end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "convert 255 to binary" do
+    assert Solution.dec_to_bin_stack(255) == "11111111"
+  end
+
+  test "convert 10 to binary" do
+    assert Solution.dec_to_bin_stack(10) == "1010"
+  end
+
+  test "convert 32 to binary" do
+    assert Solution.dec_to_bin_stack(32) == "100000"
+  end
+
+  test "convert 0 to binary" do
+    assert Solution.dec_to_bin_stack(0) == "0"
+  end
+end
+---END---[0m
+[22m07:31:23.655 [info] [LLM.call] local_qwen_thinking completed in 4124ms — ok[0m
+[22m07:31:23.655 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m07:31:23.655 [debug] [Validator.run] module code (776 chars):
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  String.new(remainders, fn remainder -> <<remainder>> end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end[0m
+[36m07:31:23.655 [debug] [Validator.run] test code (428 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "convert 255 to binary" do
+    assert Solution.dec_to_bin_stack(255) == "11111111"
+  end
+
+  test "convert 10 to binary" do
+    assert Solution.dec_to_bin_stack(10) == "1010"
+  end
+
+  test "convert 32 to binary" do
+    assert Solution.dec_to_bin_stack(32) == "100000"
+  end
+
+  test "convert 0 to binary" do
+    assert Solution.dec_to_bin_stack(0) == "0"
+  end
+end[0m
+[36m07:31:23.655 [debug] [Budget] spent so far (est.): $3.4548[0m
+[22m07:31:23.656 [info] [Validator.run] step 1/6: credence fix[0m
+[36m07:31:23.656 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m07:31:24.279 [debug] [run_credence_fix] exit=0 output:
+
+07:31:24.185 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+07:31:24.187 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+07:31:24.189 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+07:31:24.189 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+07:31:24.189 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+07:31:24.191 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Converts a non-negative integer to its binary string representation using a stack.
+  L2 + @doc """
+  L3 - 
+  L3 + Converts a non-negative integer to its binary string representation using a stack.
+  L4 - ## Examples
+  L4 + 
+  L5 - 
+  L5 + ## Examples
+  L6 -     iex> Solution.dec_to_bin_stack(255)
+  L6 + 
+  L7 -     "11111111"
+  L7 +     iex> Solution.dec_to_bin_stack(255)
+  L8 - 
+  L8 +     "11111111"
+  L9 -     iex> Solution.dec_to_bin_stack(10)
+  L9 + 
+  L10 -     "1010"
+  L10 +     iex> Solution.dec_to_bin_stack(10)
+  L11 - 
+  L11 +     "1010"
+  L12 -     iex> Solution.dec_to_bin_stack(32)
+  L12 + 
+  L13 -     "100000"
+  L13 +     iex> Solution.dec_to_bin_stack(32)
+  L14 - 
+  L14 +     "100000"
+  L15 -     iex> Solution.dec_to_bin_stack(0)
+  L15 + 
+  L16 -     "0"
+  L16 +     iex> Solution.dec_to_bin_stack(0)
+  L17 - """
+  L17 +     "0"
+  L18 - @spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+  L18 + """
+  L19 - def dec_to_bin_stack(0), do: "0"
+  L19 + @spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+  L20 - 
+  L20 + def dec_to_bin_stack(0), do: "0"
+  L21 - def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  L21 + 
+  L22 -   remainders = build_remainders(number, [])
+  L22 + def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  L23 -   String.new(remainders, fn remainder -> <<remainder>> end)
+  L23 +   remainders = build_remainders(number, [])
+  L24 - end
+  L24 +   String.new(remainders, fn remainder -> <<remainder>> end)
+  L25 - 
+  L25 + end
+  L26 - defp build_remainders(0, acc), do: acc
+  L26 + 
+  L27 - 
+  L27 + defp build_remainders(0, acc), do: acc
+  L28 - defp build_remainders(number, acc) do
+  L28 + 
+  L29 -   remainder = rem(number, 2)
+  L29 + defp build_remainders(number, acc) do
+  L30 -   new_number = div(number, 2)
+  L30 +   remainder = rem(number, 2)
+  L31 -   build_remainders(new_number, [remainder | acc])
+  L31 +   new_number = div(number, 2)
+  L32 - end
+  L32 +   build_remainders(new_number, [remainder | acc])
+  L33 + end
+  L34 + end
+  L35 + 
+
+07:31:24.191 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+07:31:24.206 [debug] [credence_fix] semantic pass 2: compilation OK, 2 warning(s)
+
+07:31:24.206 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+07:31:24.207 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+07:31:24.212 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+07:31:24.212 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UndefinedFunction(1)]
+
+07:31:24.212 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+07:31:24.257 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}, {Credence.Semantic.UndefinedFunction, 1}]
+REMAINING_ISSUES: 1 unfixable issue(s)
+undefined_function: String.new/2 is undefined or private (line 24)
+[0m
+[22m07:31:24.279 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m07:31:24.851 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m07:31:24.851 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: String.new/2 is undefined or private
+    │
+ 24 │   String.new(remainders, fn remainder -> <<remainder>> end)
+    │          ~
+    │
+    └─ lib/solution.ex:24:10: Solution.dec_to_bin_stack/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m07:31:25.330 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m07:31:25.330 [info] [Validator.run] step 2/6: compile[0m
+[22m07:31:25.920 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m07:31:25.920 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+[0m
+[22m07:31:25.921 [info] [Validator.run] step 3/6: format[0m
+[22m07:31:25.921 [info] [Validator.run] skipping format (compile failed)[0m
+[22m07:31:25.921 [info] [Validator.run] step 4/6: credo[0m
+[22m07:31:25.921 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m07:31:25.921 [info] [Validator.run] step 5/6: credence check[0m
+[22m07:31:25.921 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m07:31:25.921 [info] [Validator.run] step 6/6: tests[0m
+[22m07:31:25.921 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m07:31:25.921 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m07:31:25.921 [debug] [Validator.run] final module (776 chars):
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  String.new(remainders, fn remainder -> <<remainder>> end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end[0m
+[36m07:31:25.921 [debug] [Validator.run] final test (428 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "convert 255 to binary" do
+    assert Solution.dec_to_bin_stack(255) == "11111111"
+  end
+
+  test "convert 10 to binary" do
+    assert Solution.dec_to_bin_stack(10) == "1010"
+  end
+
+  test "convert 32 to binary" do
+    assert Solution.dec_to_bin_stack(32) == "100000"
+  end
+
+  test "convert 0 to binary" do
+    assert Solution.dec_to_bin_stack(0) == "0"
+  end
+end[0m
+[33m07:31:25.921 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m07:31:25.921 [info] [Solve attempt 2] generating (fn=dec_to_bin_stack)[0m
+[36m07:31:25.921 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  String.new(remainders, fn remainder -> <<remainder>> end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "convert 255 to binary" do
+    assert Solution.dec_to_bin_stack(255) == "11111111"
+  end
+
+  test "convert 10 to binary" do
+    assert Solution.dec_to_bin_stack(10) == "1010"
+  end
+
+  test "convert 32 to binary" do
+    assert Solution.dec_to_bin_stack(32) == "100000"
+  end
+
+  test "convert 0 to binary" do
+    assert Solution.dec_to_bin_stack(0) == "0"
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+
+Reminder: module `Solution`, function `dec_to_bin_stack` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m07:31:30.241 [debug] [LLM.call] finish=stop len=1258 usage=%{"completion_tokens" => 428, "prompt_tokens" => 805, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1233}
+[LLM.call] response:
+---MODULE---
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  Enum.map_join(remainders, fn remainder -> Integer.to_string(remainder) end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "convert 255 to binary" do
+    assert Solution.dec_to_bin_stack(255) == "11111111"
+  end
+
+  test "convert 10 to binary" do
+    assert Solution.dec_to_bin_stack(10) == "1010"
+  end
+
+  test "convert 32 to binary" do
+    assert Solution.dec_to_bin_stack(32) == "100000"
+  end
+
+  test "convert 0 to binary" do
+    assert Solution.dec_to_bin_stack(0) == "0"
+  end
+end
+---END---[0m
+[22m07:31:30.241 [info] [LLM.call] local_qwen_thinking completed in 4319ms — ok[0m
+[22m07:31:30.241 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m07:31:30.241 [debug] [Validator.run] module code (794 chars):
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  Enum.map_join(remainders, fn remainder -> Integer.to_string(remainder) end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end[0m
+[36m07:31:30.241 [debug] [Validator.run] test code (428 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "convert 255 to binary" do
+    assert Solution.dec_to_bin_stack(255) == "11111111"
+  end
+
+  test "convert 10 to binary" do
+    assert Solution.dec_to_bin_stack(10) == "1010"
+  end
+
+  test "convert 32 to binary" do
+    assert Solution.dec_to_bin_stack(32) == "100000"
+  end
+
+  test "convert 0 to binary" do
+    assert Solution.dec_to_bin_stack(0) == "0"
+  end
+end[0m
+[36m07:31:30.241 [debug] [Budget] spent so far (est.): $3.4555[0m
+[22m07:31:30.241 [info] [Validator.run] step 1/6: credence fix[0m
+[36m07:31:30.242 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m07:31:30.848 [debug] [run_credence_fix] exit=0 output:
+
+07:31:30.762 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+07:31:30.764 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+07:31:30.766 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+07:31:30.766 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+07:31:30.766 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+07:31:30.768 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Converts a non-negative integer to its binary string representation using a stack.
+  L2 + @doc """
+  L3 - 
+  L3 + Converts a non-negative integer to its binary string representation using a stack.
+  L4 - ## Examples
+  L4 + 
+  L5 - 
+  L5 + ## Examples
+  L6 -     iex> Solution.dec_to_bin_stack(255)
+  L6 + 
+  L7 -     "11111111"
+  L7 +     iex> Solution.dec_to_bin_stack(255)
+  L8 - 
+  L8 +     "11111111"
+  L9 -     iex> Solution.dec_to_bin_stack(10)
+  L9 + 
+  L10 -     "1010"
+  L10 +     iex> Solution.dec_to_bin_stack(10)
+  L11 - 
+  L11 +     "1010"
+  L12 -     iex> Solution.dec_to_bin_stack(32)
+  L12 + 
+  L13 -     "100000"
+  L13 +     iex> Solution.dec_to_bin_stack(32)
+  L14 - 
+  L14 +     "100000"
+  L15 -     iex> Solution.dec_to_bin_stack(0)
+  L15 + 
+  L16 -     "0"
+  L16 +     iex> Solution.dec_to_bin_stack(0)
+  L17 - """
+  L17 +     "0"
+  L18 - @spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+  L18 + """
+  L19 - def dec_to_bin_stack(0), do: "0"
+  L19 + @spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+  L20 - 
+  L20 + def dec_to_bin_stack(0), do: "0"
+  L21 - def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  L21 + 
+  L22 -   remainders = build_remainders(number, [])
+  L22 + def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  L23 -   Enum.map_join(remainders, fn remainder -> Integer.to_string(remainder) end)
+  L23 +   remainders = build_remainders(number, [])
+  L24 - end
+  L24 +   Enum.map_join(remainders, fn remainder -> Integer.to_string(remainder) end)
+  L25 - 
+  L25 + end
+  L26 - defp build_remainders(0, acc), do: acc
+  L26 + 
+  L27 - 
+  L27 + defp build_remainders(0, acc), do: acc
+  L28 - defp build_remainders(number, acc) do
+  L28 + 
+  L29 -   remainder = rem(number, 2)
+  L29 + defp build_remainders(number, acc) do
+  L30 -   new_number = div(number, 2)
+  L30 +   remainder = rem(number, 2)
+  L31 -   build_remainders(new_number, [remainder | acc])
+  L31 +   new_number = div(number, 2)
+  L32 - end
+  L32 +   build_remainders(new_number, [remainder | acc])
+  L33 + end
+  L34 + end
+  L35 + 
+
+07:31:30.768 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+07:31:30.776 [debug] [credence_fix] semantic pass 2: compilation OK, 0 warning(s)
+
+07:31:30.776 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+07:31:30.777 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+07:31:30.824 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m07:31:30.848 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m07:31:31.526 [info] [run_credence_fix] fix compiles OK[0m
+[36m07:31:31.526 [debug] [run_credence_fix] original:
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  Enum.map_join(remainders, fn remainder -> Integer.to_string(remainder) end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end[0m
+[36m07:31:31.526 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  Enum.map_join(remainders, fn remainder -> Integer.to_string(remainder) end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end
+end
+[0m
+[22m07:31:31.526 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m07:31:31.526 [debug] [Validator.run] module BEFORE credence fix:
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  Enum.map_join(remainders, fn remainder -> Integer.to_string(remainder) end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end[0m
+[36m07:31:31.526 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+@doc """
+Converts a non-negative integer to its binary string representation using a stack.
+
+## Examples
+
+    iex> Solution.dec_to_bin_stack(255)
+    "11111111"
+
+    iex> Solution.dec_to_bin_stack(10)
+    "1010"
+
+    iex> Solution.dec_to_bin_stack(32)
+    "100000"
+
+    iex> Solution.dec_to_bin_stack(0)
+    "0"
+"""
+@spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+def dec_to_bin_stack(0), do: "0"
+
+def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+  remainders = build_remainders(number, [])
+  Enum.map_join(remainders, fn remainder -> Integer.to_string(remainder) end)
+end
+
+defp build_remainders(0, acc), do: acc
+
+defp build_remainders(number, acc) do
+  remainder = rem(number, 2)
+  new_number = div(number, 2)
+  build_remainders(new_number, [remainder | acc])
+end
+end
+[0m
+[36m07:31:31.526 [debug] [propagate_is_renames] old functions: ["dec_to_bin_stack", "build_remainders"][0m
+[36m07:31:31.526 [debug] [propagate_is_renames] new functions: ["dec_to_bin_stack", "build_remainders"][0m
+[36m07:31:31.526 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m07:31:31.526 [info] [Validator.run] step 2/6: compile[0m
+[22m07:31:32.098 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m07:31:32.098 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m07:31:32.098 [info] [Validator.run] step 3/6: format[0m
+[22m07:31:32.406 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m07:31:32.703 [debug] [Validator.run] format fix output: [0m
+[22m07:31:32.704 [info] [Validator.run] step 4/6: credo[0m
+[36m07:31:33.181 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m07:31:33.181 [info] [Validator.run] credo: no issues[0m
+[22m07:31:33.181 [info] [Validator.run] step 5/6: credence check[0m
+[22m07:31:33.905 [info] [Validator.run] credence check exit=0[0m
+[36m07:31:33.905 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m07:31:33.906 [info] [Validator.run] credence check: passed[0m
+[22m07:31:33.906 [info] [Validator.run] step 6/6: tests[0m
+[22m07:31:34.373 [info] [Validator.run] test exit=0[0m
+[36m07:31:34.373 [debug] [Validator.run] test output:
+Running ExUnit with seed: 333412, max_cases: 48
+
+....
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+4 tests, 0 failures
+[0m
+[22m07:31:34.373 [info] [Validator.run] tests: PASSED[0m
+[22m07:31:34.374 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m07:31:34.374 [debug] [Validator.run] final module (869 chars):
+defmodule Solution do
+  @doc """
+  Converts a non-negative integer to its binary string representation using a stack.
+
+  ## Examples
+
+      iex> Solution.dec_to_bin_stack(255)
+      "11111111"
+
+      iex> Solution.dec_to_bin_stack(10)
+      "1010"
+
+      iex> Solution.dec_to_bin_stack(32)
+      "100000"
+
+      iex> Solution.dec_to_bin_stack(0)
+      "0"
+  """
+  @spec dec_to_bin_stack(non_neg_integer()) :: String.t()
+  def dec_to_bin_stack(0), do: "0"
+
+  def dec_to_bin_stack(number) when is_integer(number) and number > 0 do
+    remainders = build_remainders(number, [])
+    Enum.map_join(remainders, fn remainder -> Integer.to_string(remainder) end)
+  end
+
+  defp build_remainders(0, acc), do: acc
+
+  defp build_remainders(number, acc) do
+    remainder = rem(number, 2)
+    new_number = div(number, 2)
+    build_remainders(new_number, [remainder | acc])
+  end
+end
+[0m
+[36m07:31:34.374 [debug] [Validator.run] final test (429 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "convert 255 to binary" do
+    assert Solution.dec_to_bin_stack(255) == "11111111"
+  end
+
+  test "convert 10 to binary" do
+    assert Solution.dec_to_bin_stack(10) == "1010"
+  end
+
+  test "convert 32 to binary" do
+    assert Solution.dec_to_bin_stack(32) == "100000"
+  end
+
+  test "convert 0 to binary" do
+    assert Solution.dec_to_bin_stack(0) == "0"
+  end
+end
+[0m
+[22m07:31:34.374 [info] [Solve attempt 2] validation PASSED[0m
+[36m07:31:34.385 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Semantic.UndefinedFunction
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## row 68345 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 3135 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_graphemes_for_character_comparisons
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+ (truncated)[0m
+[36m07:32:32.347 [debug] [LLM.call] finish=stop len=537 usage=%{"completion_tokens" => 3091, "completion_tokens_details" => %{"reasoning_tokens" => 2928}, "prompt_tokens" => 12392, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 15483}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_join_over_map_join_with_integer_to_string
+===PHASE===
+pattern
+===BEFORE===
+defmodule Example do
+  def example do
+    list = [1, 0, 1, 0]
+    Enum.map_join(list, fn x -> Integer.to_string(x) end)
+  end
+end
+===AFTER===
+defmodule Example do
+  def example do
+    list = [1, 0, 1, 0]
+    Enum.join(list, "")
+  end
+end
+===ASSUMPTIONS===
+===RATIONALE===
+Enum.join/2 is the idiomatic way to join a list of integers without a separator, avoiding an explicit mapping function.
+===END===[0m
+[22m07:32:32.347 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 57962ms — ok[0m
+[36m07:32:32.347 [debug] [Budget] spent so far (est.): $3.4636[0m
+[22m07:32:34.283 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m07:32:39.189 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" | head -50[0m
+[22m07:32:42.232 [info] [Pi] step 2: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_reverse_two.ex[0m
+[22m07:32:44.758 [info] [Pi] step 3: read
+    path: /home/kly/projects/credence/lib/pattern/no_manual_string_reverse.ex[0m
+[22m07:32:54.784 [info] [Pi] step 4: read
+    path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m07:32:57.228 [info] [Pi] step 5: read
+    path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m07:32:59.580 [info] [Pi] step 6: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_reverse_two_check_test.exs[0m
+[22m07:33:02.354 [info] [Pi] step 7: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_reverse_two_fix_test.exs[0m
+[22m07:33:05.623 [info] [Pi] step 8: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_reverse_two_equivalence_test.exs[0m
+[22m07:33:08.247 [info] [Pi] step 9: read
+    path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m07:33:11.526 [info] [Pi] step 10: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_join_over_map_join_with_integer_to_string.ex[0m
+[22m07:33:16.717 [info] [Pi] step 11: read
+    path: /home/kly/projects/credence/test/pattern/prefer_join_over_map_join_with_integer_to_string_check_test.exs[0m
+[22m07:33:19.747 [info] [Pi] step 12: read
+    path: /home/kly/projects/credence/test/pattern/prefer_join_over_map_join_with_integer_to_string_fix_test.exs[0m
+[22m07:33:23.153 [info] [Pi] step 13: read
+    path: /home/kly/projects/credence/test/pattern/prefer_join_over_map_join_with_integer_to_string_equivalence_test.exs[0m
+[22m07:33:27.180 [info] [Pi] step 14: read
+    path: /home/kly/projects/credence/lib/pattern/no_filter_then_first.ex[0m
+[22m07:33:32.188 [info] [Pi] step 15: read
+    path: /home/kly/projects/credence/lib/pattern.ex[0m
+[22m07:33:47.460 [info] [Pi] step 16: read
+    path: /home/kly/projects/credence/test/support/equivalence_inputs.ex[0m
+[22m07:33:51.270 [info] [Pi] step 17: bash
+    command: find /home/kly/projects/credence/lib -name "rule.ex" | xargs grep -l "Pattern" 2>/dev/null | head -5[0m
+[22m07:33:53.931 [info] [Pi] step 18: bash
+    command: cat /home/kly/projects/credence/lib/pattern/rule.ex[0m
+[22m07:33:57.077 [info] [Pi] step 19: read
+    path: /home/kly/projects/credence/lib/pattern/no_case_true_false.ex[0m
+[22m07:34:29.948 [info] [Pi] step 20: read
+    path: /home/kly/projects/credence/lib/pattern/no_enum_at_negative_index.ex[0m
+[22m07:34:50.481 [info] [Pi] step 21: write
+    content: defmodule Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString do
+  @moduledoc """
+  Detects `Enum.map_join(list, fn x -> Integer.to_string(x) end)` and
+  rewrites it to `Enum.join(list, "")`.
+
+  `Enum.join/2` is the idiomatic way to join a list of integers without a
+  separator. Using `Enum.map_join/2` with an explicit `Integer.to_string/1`
+  mapping function is verbose and unnecessary.
+
+  ## Bad
+
+      Enum.map_join(list, fn x -> Integer.to_string(x) end)
+
+  ## Good
+
+      Enum.join(list, "")
+  """
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        node, issues ->
+          case match_map_join_pattern(node) do
+            {:ok, meta} -> {node, [build_issue(meta) | issues]}
+            :error -> {node, issues}
+          end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
+      node ->
+        case match_map_join_pattern(node) do
+          {:ok, _meta} ->
+            {{:., [], [{:__aliases__, [], [:Enum]}, :join]}, [],
+             [
+               get_list_arg(node),
+               {:__block__, [delimiter: "\""], [""]}
+             ]}
+
+          :error ->
+            node
+        end
+    end)
+  end
+
+  # Matches: Enum.map_join(list, fn x -> Integer.to_string(x) end)
+  defp match_map_join_pattern(
+         {{:., meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _,
+          [
+            _list,
+            {:fn, _,
+             [
+               {:->, _,
+                [
+                  [{var_name, _, nil}],
+                  {{:., _}, _,
+                   [
+                     {:__aliases__, _, [:Integer]},
+                     :to_string
+                   ]} = _to_string_call
+                ]}
+             ]}
+          ]}
+       ) do
+    # Verify the Integer.to_string call uses the same variable
+    case node do
+      {{:., _}, _, [{var_name2, _, nil}]} when var_name2 == var_name -> {:ok, meta}
+      _ -> :error
+    end
+  end
+
+  defp match_map_join_pattern(
+         {{:., meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _,
+          [
+            _list,
+            {:fn, _,
+             [
+               {:->, _,
+                [
+                  [{var_name, _, nil}],
+                  {{:., _},
+                   _,
+                   [
+                     {:__aliases__, _, [:Integer]},
+                     :to_string
+                   ]},
+                  [{var_name2, _, nil}]
+                ]}
+             ]}
+          ]}
+       )
+       when var_name == var_name2 do
+    {:ok, meta}
+  end
+
+  defp match_map_join_pattern(_), do: :error
+
+  defp get_list_arg(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :map_join]}, _,
+          [list | _]}
+       ) do
+    list
+  end
+
+  defp build_issue(meta) do
+    %Issue{
+      rule: :prefer_join_over_map_join_with_integer_to_string,
+      message:
+        "Use `Enum.join(list, \"\")` instead of `Enum.map_join(list, fn x -> Integer.to_string(x) end)`.",
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_join_over_map_join_with_integer_to_string.ex[0m
+[22m07:34:55.478 [info] [Budget] HEARTBEAT — 750 paid calls, est $3.4636 over 914.7min → ~$0.2272/hr, ~$5.45/day (tok in=4424252 cache_rd=38724480 out=1608805)[0m
+[22m07:35:00.560 [info] [Pi] step 22: write
+    content: defmodule Credence.Pattern.PreferJoinOverMapJoinWithIntegerToStringCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString
+
+  test "flags the anti-pattern" do
+    assert flagged?(PreferJoinOverMapJoinWithIntegerToString, """
+    Enum.map_join(list, fn x -> Integer.to_string(x) end)
+    """)
+  end
+
+  test "flags the anti-pattern inside a module" do
+    assert flagged?(PreferJoinOverMapJoinWithIntegerToString, """
+    defmodule Example do
+      def example do
+        list = [1, 0, 1, 0]
+        Enum.map_join(list, fn x -> Integer.to_string(x) end)
+      end
+    end
+    """)
+  end
+
+  test "leaves good code alone" do
+    assert clean?(PreferJoinOverMapJoinWithIntegerToString, """
+    Enum.join(list, "")
+    """)
+  end
+
+  test "leaves Enum.join with separator alone" do
+    assert clean?(PreferJoinOverMapJoinWithIntegerToString, """
+    Enum.join(list, ", ")
+    """)
+  end
+
+  test "leaves Enum.map_join with different function alone" do
+    assert clean?(PreferJoinOverMapJoinWithIntegerToString, """
+    Enum.map_join(list, fn x -> to_string(x) end)
+    """)
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_join_over_map_join_with_integer_to_string_check_test.exs[0m
+[22m07:35:17.943 [info] [Pi] step 23: bash
+    command: cd /home/kly/projects/credence && cat > /tmp/test_ast.exs << 'EOF'
+code = "Enum.map_join(list, fn x -> Integer.to_string(x) end)"
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity)
+EOF
+elixir -r mix/mix.exs /tmp/test_ast.exs 2>/dev/null || mix run /tmp/test_ast.exs 2>/dev/null[0m
+[22m07:35:22.860 [info] [Pi] step 24: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = "Enum.map_join(list, fn x -> Integer.to_string(x) end)"
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity, structs: false)
+'[0m
+[22m07:36:51.106 [info] [Pi] step 25: write
+    content: defmodule Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString do
+  @moduledoc """
+  Detects `Enum.map_join(list, fn x -> Integer.to_string(x) end)` and
+  rewrites it to `Enum.join(list, "")`.
+
+  `Enum.join/2` is the idiomatic way to join a list of integers without a
+  separator. Using `Enum.map_join/2` with an explicit `Integer.to_string/1`
+  mapping function is verbose and unnecessary.
+
+  ## Bad
+
+      Enum.map_join(list, fn x -> Integer.to_string(x) end)
+
+  ## Good
+
+      Enum.join(list, "")
+  """
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        node, issues ->
+          case match_map_join_pattern(node) do
+            {:ok, meta} -> {node, [build_issue(meta) | issues]}
+            :error -> {node, issues}
+          end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
+      {{:., _meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _call_meta,
+       [
+         list,
+         {:fn, _,
+          [
+            {:->, _,
+             [
+               [_param],
+               {{:., _}, _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, [_arg]
+             ]}
+          ]}
+       ]} ->
+        {{:., [], [{:__aliases__, [], [:Enum]}, :join]}, [],
+         [
+           list,
+           {:__block__, [delimiter: "\""], [""]}
+         ]}
+
+      node ->
+        node
+    end)
+  end
+
+  # Matches: Enum.map_join(list, fn x -> Integer.to_string(x) end)
+  defp match_map_join_pattern(
+         {{:., meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _call_meta,
+          [
+            _list,
+            {:fn, _,
+             [
+               {:->, _,
+                [
+                  [{var_name, _, nil}],
+                  {{:., _}, _,
+                   [
+                     {:__aliases__, _, [:Integer]},
+                     :to_string
+                   ]},
+                  [{var_name2, _, nil}]
+                ]}
+             ]}
+          ]}
+       )
+       when var_name == var_name2 do
+    {:ok, meta}
+  end
+
+  defp match_map_join_pattern(_), do: :error
+
+  defp build_issue(meta) do
+    %Issue{
+      rule: :prefer_join_over_map_join_with_integer_to_string,
+      message:
+        "Use `Enum.join(list, \"\")` instead of `Enum.map_join(list, fn x -> Integer.to_string(x) end)`.",
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_join_over_map_join_with_integer_to_string.ex[0m
+[22m07:37:40.162 [info] [Pi] step 26: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = "Enum.map_join(list, fn x -> Integer.to_string(x) end)"
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity, structs: false)
+' 2>&1[0m
+[22m07:37:59.825 [info] [Pi] step 27: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+ast = Sourceror.parse_string!("Enum.map_join(list, fn x -> Integer.to_string(x) end)")
+
+result = Macro.prewalk(ast, :not_found, fn
+  {{:., meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _call_meta,
+   [
+     _list,
+     {:fn, _,
+      [
+        {:->, _,
+         [
+           [{var_name, _, nil}],
+           {{:., _}, _,
+            [
+              {:__aliases__, _, [:Integer]},
+              :to_string
+            ]},
+           [{var_name2, _, nil}]
+         ]}
+      ]}
+   ]} = node, _acc when var_name == var_name2 ->
+    {node, {:found, meta}}
+
+  node, acc ->
+    {node, acc}
+end)
+
+IO.inspect(result, label: "result")
+' 2>&1[0m
+[22m07:38:10.635 [info] [Pi] step 28: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+ast = Sourceror.parse_string!("Enum.map_join(list, fn x -> Integer.to_string(x) end)")
+
+{_ast, acc} = Macro.prewalk(ast, :not_found, fn
+  {{:., meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _call_meta,
+   [
+     _list,
+     {:fn, _,
+      [
+        {:->, _,
+         [
+           [{var_name, _, nil}],
+           {{:., _}, _,
+            [
+              {:__aliases__, _, [:Integer]},
+              :to_string
+            ]},
+           [{var_name2, _, nil}]
+         ]}
+      ]}
+   ]} = node, _acc when var_name == var_name2 ->
+    {node, {:found, meta}}
+
+  node, acc ->
+    {node, acc}
+end)
+
+IO.inspect(acc, label: "accumulator")
+' 2>&1[0m
+[22m07:38:18.650 [info] [Pi] step 29: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+ast = Sourceror.parse_string!("Enum.map_join(list, fn x -> Integer.to_string(x) end)")
+
+# Extract the map_join call args
+{{:., _meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _call_meta, args} = ast
+IO.puts("args count: #{length(args)}")
+IO.inspect(Enum.at(args, 1), label: "fn node")
+
+fn_node = Enum.at(args, 1)
+{:fn, _, fn_children} = fn_node
+IO.puts("fn children count: #{length(fn_children)}")
+
+arrow = hd(fn_children)
+{:->, _, arrow_children} = arrow
+IO.puts("arrow children count: #{length(arrow_children)}")
+IO.inspect(arrow_children, label: "arrow_children", limit: :infinity)
+' 2>&1[0m
+[22m07:39:15.059 [info] [Pi] step 30: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+ast = Sourceror.parse_string!("Enum.map_join(list, fn x -> Integer.to_string(x) end)")
+
+{_ast, acc} = Macro.prewalk(ast, :not_found, fn
+  {{:., meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _call_meta,
+   [
+     _list,
+     {:fn, _,
+      [
+        {:->, _,
+         [
+           [{var_name, _, nil}],
+           {{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, [{var_name2, _, nil}]}
+         ]}
+      ]}
+   ]} = node, _acc when var_name == var_name2 ->
+    {node, {:found, meta}}
+
+  node, acc ->
+    {node, acc}
+end)
+
+IO.inspect(acc, label: "accumulator")
+' 2>&1[0m
+[22m07:39:31.036 [info] [Pi] step 31: write
+    content: defmodule Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString do
+  @moduledoc """
+  Detects `Enum.map_join(list, fn x -> Integer.to_string(x) end)` and
+  rewrites it to `Enum.join(list, "")`.
+
+  `Enum.join/2` is the idiomatic way to join a list of integers without a
+  separator. Using `Enum.map_join/2` with an explicit `Integer.to_string/1`
+  mapping function is verbose and unnecessary.
+
+  ## Bad
+
+      Enum.map_join(list, fn x -> Integer.to_string(x) end)
+
+  ## Good
+
+      Enum.join(list, "")
+  """
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+
+  @map_join_pattern {{:., [], [{:__aliases__, [], [:Enum]}, :map_join]}, [],
+                      [
+                        nil,
+                        {:fn, [],
+                         [
+                           {:->, [],
+                            [
+                              [{:x, [], nil}],
+                              {{:., [],
+                                [{:__aliases__, [], [:Integer]}, :to_string]}, [],
+                               [{:x, [], nil}]}
+                            ]}
+                         ]}
+                      ]}
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        node, issues ->
+          case match_map_join_pattern(node) do
+            {:ok, meta} -> {node, [build_issue(meta) | issues]}
+            :error -> {node, issues}
+          end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn
+      {{:., _meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _call_meta,
+       [
+         list,
+         {:fn, _,
+          [
+            {:->, _,
+             [
+               [_param],
+               {{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, [_arg]}
+             ]}
+          ]}
+       ]} ->
+        {{:., [], [{:__aliases__, [], [:Enum]}, :join]}, [],
+         [
+           list,
+           {:__block__, [delimiter: "\""], [""]}
+         ]}
+
+      node ->
+        node
+    end)
+  end
+
+  # Matches: Enum.map_join(list, fn x -> Integer.to_string(x) end)
+  defp match_map_join_pattern(
+         {{:., meta, [{:__aliases__, _, [:Enum]}, :map_join]}, _call_meta,
+          [
+            _list,
+            {:fn, _,
+             [
+               {:->, _,
+                [
+                  [{var_name, _, nil}],
+                  {{:., _, [{:__aliases__, _, [:Integer]}, :to_string]}, _, [{var_name2, _, nil}]}
+                ]}
+             ]}
+          ]}
+       )
+       when var_name == var_name2 do
+    {:ok, meta}
+  end
+
+  defp match_map_join_pattern(_), do: :error
+
+  defp build_issue(meta) do
+    %Issue{
+      rule: :prefer_join_over_map_join_with_integer_to_string,
+      message:
+        "Use `Enum.join(list, \"\")` instead of `Enum.map_join(list, fn x -> Integer.to_string(x) end)`.",
+      meta: %{line: Keyword.get(meta, :line)}
+    }
+  end
+end
+
+    path: /home/kly/projects/credence/lib/pattern/prefer_join_over_map_join_with_integer_to_string.ex[0m
+[22m07:39:34.836 [info] [Pi] step 32: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_join_over_map_join_with_integer_to_string_check_test.exs 2>&1[0m
+[22m07:39:40.435 [info] [Pi] step 33: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+import Credence.RuleHelpers
+
+input = "Enum.map_join(list, fn x -> Integer.to_string(x) end)"
+result = apply_rule_fix(Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString, input)
+IO.inspect(result, label: "result")
+' 2>&1[0m
+[22m07:39:48.099 [info] [Pi] step 34: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+import Credence.RuleHelpers
+
+input = "Enum.map_join(list, fn x -> Integer.to_string(x) end)\n"
+result = apply_rule_fix(Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString, input)
+IO.inspect(result, label: "result")
+IO.inspect(String.ends_with?(result, "\n"), label: "has newline")
+' 2>&1[0m
+[22m07:39:55.478 [info] [Budget] HEARTBEAT — 750 paid calls, est $3.4636 over 919.7min → ~$0.226/hr, ~$5.42/day (tok in=4424252 cache_rd=38724480 out=1608805)[0m
+[22m07:39:58.063 [info] [Pi] step 35: write
+    content: defmodule Credence.Pattern.PreferJoinOverMapJoinWithIntegerToStringFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString
+
+  test "rewrites the anti-pattern" do
+    input = """
+    Enum.map_join(list, fn x -> Integer.to_string(x) end)
+    """
+
+    expected = """
+    Enum.join(list, "")
+    """
+
+    assert fix(PreferJoinOverMapJoinWithIntegerToString, input) == expected
+  end
+
+  test "rewrites inside a module" do
+    input = """
+    defmodule Example do
+      def example do
+        list = [1, 0, 1, 0]
+        Enum.map_join(list, fn x -> Integer.to_string(x) end)
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      def example do
+        list = [1, 0, 1, 0]
+        Enum.join(list, "")
+      end
+    end
+    """
+
+    assert fix(PreferJoinOverMapJoinWithIntegerToString, input) == expected
+  end
+
+  test "rewrites multiple occurrences" do
+    input = """
+    Enum.map_join(a, fn x -> Integer.to_string(x) end)
+    Enum.map_join(b, fn y -> Integer.to_string(y) end)
+    """
+
+    expected = """
+    Enum.join(a, "")
+    Enum.join(b, "")
+    """
+
+    assert fix(PreferJoinOverMapJoinWithIntegerToString, input) == expected
+  end
+
+  test "does not modify code that is already correct" do
+    code = """
+    Enum.join(list, "")
+    """
+
+    assert fix(PreferJoinOverMapJoinWithIntegerToString, code) == code
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_join_over_map_join_with_integer_to_string_fix_test.exs[0m
+[22m07:40:01.316 [info] [Pi] step 36: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_join_over_map_join_with_integer_to_string_fix_test.exs 2>&1[0m
+[22m07:40:11.482 [info] [Pi] step 37: write
+    content: defmodule Credence.Pattern.PreferJoinOverMapJoinWithIntegerToStringEquivalenceTest do
+  @moduledoc """
+  Tier 1 (expression). `Enum.map_join(list, fn x -> Integer.to_string(x) end)`
+  → `Enum.join(list, "")`.
+
+  `Enum.join/2` calls `to_string/1` on each element, which for integers produces
+  the same output as `Integer.to_string/1`. The empty-string separator is the
+  default for `Enum.join/2`, matching the no-separator semantics of
+  `Enum.map_join/2` (which concatenates without a separator).
+
+  The input set covers empty/single/multi-element lists of integers, plus
+  edge cases that could expose a type-change divergence.
+  """
+  use Credence.RuleCase, async: true
+
+  import Credence.BehaviourEquivalence
+  alias Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString
+
+  test "Enum.map_join(list, fn x -> Integer.to_string(x) end) → Enum.join(list, \"\") preserves the string" do
+    assert_equivalent(
+      """
+      Enum.map_join(list, fn x -> Integer.to_string(x) end)
+      """,
+      rule: PreferJoinOverMapJoinWithIntegerToString,
+      vars: [:list],
+      inputs: [[], [1], [1, 2, 3], [0, 0, 0], [-1, 0, 1], Enum.to_list(1..20)]
+    )
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_join_over_map_join_with_integer_to_string_equivalence_test.exs[0m
+[22m07:40:15.226 [info] [Pi] step 38: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_join_over_map_join_with_integer_to_string_equivalence_test.exs 2>&1[0m
+[22m07:40:20.056 [info] [Pi] step 39: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_join_over_map_join_with_integer_to_string*_test.exs 2>&1[0m
+[22m07:40:26.358 [info] [Pi] step 40: edit
+    edits: [%{"newText" => "  @impl true", "oldText" => "  @map_join_pattern {{:., [], [{:__aliases__, [], [:Enum]}, :map_join]}, [],\n                      [\n                        nil,\n                        {:fn, [],\n                         [\n                           {:->, [],\n                            [\n                              [{:x, [], nil}],\n                              {{:., [],\n                                [{:__aliases__, [], [:Integer]}, :to_string]}, [],\n                               [{:x, [], nil}]}\n                            ]}\n                         ]}\n                      ]}\n\n  @impl true"}]
+    path: /home/kly/projects/credence/lib/pattern/prefer_join_over_map_join_with_integer_to_string.ex[0m
+[22m07:40:29.660 [info] [Pi] step 41: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_join_over_map_join_with_integer_to_string*_test.exs 2>&1[0m
+[22m07:40:34.110 [info] [Pi] step 42: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_join_over_map_join_with_integer_to_string.ex[0m
+[22m07:40:38.729 [info] [Pi] step 43: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -20[0m
+[22m07:40:52.836 [info] [Pi] step 44: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_join_over_map_join_with_integer_to_string*_test.exs 2>&1[0m
+[22m07:41:12.050 [info] [Pi] agent done — exit=0 steps=44 stop=stop[0m
+[36m07:41:12.050 [debug] [Budget] spent so far (est.): $3.5137[0m
+[22m07:41:12.534 [info] [Gate] staged entries: [{"A", ["lib/pattern/prefer_join_over_map_join_with_integer_to_string.ex"]}, {"A", ["test/pattern/prefer_join_over_map_join_with_integer_to_string_check_test.exs"]}, {"A", ["test/pattern/prefer_join_over_map_join_with_integer_to_string_equivalence_test.exs"]}, {"A", ["test/pattern/prefer_join_over_map_join_with_integer_to_string_fix_test.exs"]}][0m
+[36m07:41:13.138 [debug] [Gate] mix test ["test/pattern/prefer_join_over_map_join_with_integer_to_string_check_test.exs", "test/pattern/prefer_join_over_map_join_with_integer_to_string_equivalence_test.exs", "test/pattern/prefer_join_over_map_join_with_integer_to_string_fix_test.exs"] exit=2
+Generated credence app
+Running ExUnit with seed: 978153, max_cases: 48
+
+
+
+  1) test leaves Enum.map_join with different function alone (Credence.Pattern.PreferJoinOverMapJoinWithIntegerToStringCheckTest)
+     test/pattern/prefer_join_over_map_join_with_integer_to_string_check_test.exs:35
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.check/2 is undefined (module Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString is not available)
+     code: assert clean?(PreferJoinOverMapJoinWithIntegerToString, """
+     stacktrace:
+       Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.check({{:., [trailing_comments: [], line: 1, column: 5], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 1], line: 1, column: 1], [:Enum]}, :map_join]}, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 1, column: 46], closing: [line: 1, column: 45], line: 1, column: 6], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 15], nil}, {:fn, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 42], line: 1, column: 21], [{:->, [trailing_comments: [], leading_comments: [], line: 1, column: 26], [[{:x, [trailing_comments: [], leading_comments: [], line: 1, column: 24], nil}], {:to_string, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 40], line: 1, column: 29], [{:x, [trailing_comments: [], leading_comments: [], line: 1, column: 39], nil}]}]}]}]}, [source: "Enum.map_join(list, fn x -> to_string(x) end)\n"])
+       (credence 0.7.1) test/support/rule_case.ex:69: Credence.RuleCase.clean?/2
+       test/pattern/prefer_join_over_map_join_with_integer_to_string_check_test.exs:36: (test)
+
+
+
+  2) test Enum.map_join(list, fn x -> Integer.to_string(x) end) → Enum.join(list, "") preserves the string (Credence.Pattern.PreferJoinOverMapJoinWithIntegerToStringEquivalenceTest)
+     test/pattern/prefer_join_over_map_join_with_integer_to_string_equivalence_test.exs:19
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.check/2 is undefined (module Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString is not available)
+     code: assert_equivalent(
+     stacktrace:
+       Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.check({{:., [trailing_comments: [], line: 1, column: 5], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 1], line: 1, column: 1], [:Enum]}, :map_join]}, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 1, column: 54], closing: [line: 1, column: 53], line: 1, column: 6], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 15], nil}, {:fn, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 50], line: 1, column: 21], [{:->, [trailing_comments: [], leading_comments: [], line: 1, column: 26], [[{:x, [trailing_comments: [], leading_comments: [], line: 1, column: 24], nil}], {{:., [trailing_comments: [], line: 1, column: 36], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 29], line: 1, column: 29], [:Integer]}, :to_string]}, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 48], line: 1, column: 37], [{...}]}]}]}]}, [source: "Enum.map_join(list, fn x -> Integer.to_string(x) end)\n"])
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:293: Credence.BehaviourEquivalence.rule_fires?/2
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:240: Credence.BehaviourEquivalence.precheck!/4
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:75: Credence.BehaviourEquivalence.assert_equivalent/2
+       test/pattern/prefer_join_over_map_join_with_integer_to_string_equivalence_test.exs:20: (test)
+
+
+
+  3) test rewrites inside a module (Credence.Pattern.PreferJoinOverMapJoinWithIntegerToStringFixTest)
+     test/pattern/prefer_join_over_map_join_with_integer_to_string_fix_test.exs:18
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.fix_patches/2 is undefined (module Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString is not available)
+     code: assert fix(PreferJoinOverMapJoinWithIntegerToString, input) == expected
+     stacktrace:
+       Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 6, column: 4], do: [line: 1, column: 19], end: [line: 6, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Example]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 19], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 5, column: 6], do: [line: 2, column: 15], end: [line: 5, column: 3], line: 2, column: 3], [{:example, [trailing_comments: [], leading_comments: [], line: 2, column: 7], nil}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 15], [:do]}, {:__block__, [trailing_comments: [], leading_comments: []], [{:=, [trailing_comments: [], end_of_expression: [newlines: 1, line: 3, column: 24], line: 3, column: 10], [{:list, [trailing_comments: [], leading_comments: [], line: 3, ...], ...}, ...]}, ...]}}]]}}]]}, [source: "defmodule Example do\n  def example do\n    list = [1, 0, 1, 0]\n    Enum.map_join(list, fn x -> Integer.to_string(x) end)\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_join_over_map_join_with_integer_to_string_fix_test.exs:37: (test)
+
+
+
+  4) test does not modify code that is already correct (Credence.Pattern.PreferJoinOverMapJoinWithIntegerToStringFixTest)
+     test/pattern/prefer_join_over_map_join_with_integer_to_string_fix_test.exs:54
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.fix_patches/2 is undefined (module Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString is not available)
+     code: assert fix(PreferJoinOverMapJoinWithIntegerToString, code) == code
+     stacktrace:
+       Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.fix_patches({{:., [trailing_comments: [], line: 1, column: 5], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 1], line: 1, column: 1], [:Enum]}, :join]}, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 1, column: 20], closing: [line: 1, column: 19], line: 1, column: 6], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 11], nil}, {:__block__, [trailing_comments: [], leading_comments: [], delimiter: "\"", line: 1, column: 17], [""]}]}, [source: "Enum.join(list, \"\")\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_join_over_map_join_with_integer_to_string_fix_test.exs:59: (test)
+
+
+
+  5) test flags the anti-pattern inside a module (Credence.Pattern.PreferJoinOverMapJoinWithIntegerToStringCheckTest)
+     test/pattern/prefer_join_over_map_join_with_integer_to_string_check_test.exs:12
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.check/2 is undefined (module Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString is not available)
+     code: assert flagged?(PreferJoinOverMapJoinWithIntegerToString, """
+     stacktrace:
+       Credence.Pattern.PreferJoinOverMapJoinWithIntegerToString.check({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 6, column: 4],  (truncated)[0m
+[22m07:41:13.143 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m07:41:22.047 [debug] [Gate] mix test [] exit=2
+Compiling 1 file (.ex)
+Generated credence app
+Running ExUnit with seed: 604189, max_cases: 48
+
+...........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+
+  1) test every fix test exercises at least one real transformation (not all no-ops) (Credence.FixMetaTest)
+     test/fix_meta_test.exs:83
+     fix tests with no `fix(rule, input) == expected` where expected differs from input:
+       - Credence.Pattern.PreferPrependInAccumulator — test/pattern/prefer_prepend_in_accumulator_fix_test.exs
+     code: assert bad == [],
+     stacktrace:
+       test/fix_meta_test.exs:86: (test)
+
+..
+
+  2) test every fix test compares whole strings (no =~ / substring / normalize) (Credence.FixMetaTest)
+     test/fix_meta_test.exs:75
+     fix tests using a partial or normalized comparison instead of whole-string ==:
+       - Credence.Pattern.PreferPrependInAccumulator — test/pattern/prefer_prepend_in_accumulator_fix_test.exs
+     code: assert bad == [],
+     stacktrace:
+       test/fix_meta_test.exs:78: (test)
+
+............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Finished in 8.3 seconds (4.0s async, 4.3s sync)
+5 properties, 4598 tests, 2 failures
+[0m
+[33m07:41:22.047 [warning] [Gate] REJECT: :full_suite_red — discarding[0m

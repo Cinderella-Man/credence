@@ -1,0 +1,3068 @@
+[22m00:09:59.173 [info] [idx=62431] entry_point=can_reorder_diff_one[0m
+[36m00:09:59.173 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to check if a list of integers can be reordered such that every consecutive element has a difference of 1.
+
+## Python Solution
+```python
+def can_reorder_diff_one(arr):
+    if len(arr) < 2:
+        return False
+    arr.sort()
+    for i in range(1, len(arr)):
+        if abs(arr[i] - arr[i-1]) != 1:
+            return False
+    return True
+```
+
+## Python Tests
+assert can_reorder_diff_one([1, 3, 2, 4]) == True
+assert can_reorder_diff_one([5, 4, 3, 2, 1]) == True
+assert can_reorder_diff_one([1, 3, 5, 7]) == False
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `can_reorder_diff_one`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m00:10:55.805 [debug] [LLM.call] finish=stop len=956 usage=%{"completion_tokens" => 2253, "completion_tokens_details" => %{"reasoning_tokens" => 1979}, "prompt_tokens" => 521, "prompt_tokens_details" => %{}, "total_tokens" => 2774}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function that determines if a list of integers can be rearranged into a sequence where the absolute difference between each pair of adjacent elements is exactly 1. The function should return `true` if such an arrangement exists and `false` otherwise. For lists with fewer than two elements, return `false`.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "can reorder with consecutive difference of 1" do
+    assert Solution.can_reorder_diff_one([1, 3, 2, 4]) == true
+    assert Solution.can_reorder_diff_one([5, 4, 3, 2, 1]) == true
+    assert Solution.can_reorder_diff_one([1, 3, 5, 7]) == false
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def can_reorder_diff_one(list) when length(list) < 2, do: false
+  def can_reorder_diff_one(list) do
+    sorted = Enum.sort(list)
+    sorted
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.all?(fn [a, b] -> abs(a - b) == 1 end)
+  end
+end
+
+---END---[0m
+[22m00:10:55.805 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 56632ms — ok[0m
+[36m00:10:55.806 [debug] [Budget] spent so far (est.): $1.6219[0m
+[22m00:10:56.942 [info] [RoundTrip] reference PASSED tests[0m
+[22m00:10:56.942 [info] [idx=62431] translation fresh — solving[0m
+[22m00:10:56.942 [info] ===SOLVE_BOUNDARY===[0m
+[22m00:10:56.942 [info] [Solve attempt 1] generating (fn=can_reorder_diff_one)[0m
+[36m00:10:56.942 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function that determines if a list of integers can be rearranged into a sequence where the absolute difference between each pair of adjacent elements is exactly 1. The function should return `true` if such an arrangement exists and `false` otherwise. For lists with fewer than two elements, return `false`.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "can reorder with consecutive difference of 1" do
+    assert Solution.can_reorder_diff_one([1, 3, 2, 4]) == true
+    assert Solution.can_reorder_diff_one([5, 4, 3, 2, 1]) == true
+    assert Solution.can_reorder_diff_one([1, 3, 5, 7]) == false
+  end
+end
+```
+
+Module: `Solution`. Function: `can_reorder_diff_one`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m00:11:19.623 [debug] [LLM.call] finish=stop len=9181 usage=%{"completion_tokens" => 2546, "prompt_tokens" => 442, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 2988}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one(list) when length(list) < 2, do: false
+
+  def can_reorder_diff_one(list) do
+    sorted = Enum.sort(list)
+    can_reorder?(sorted)
+  end
+
+  defp can_reorder?([]), do: true
+  defp can_reorder?([_]), do: true
+
+  defp can_reorder?([a, b | rest]) when abs(a - b) == 1 do
+    can_reorder?([b | rest])
+  end
+
+  defp can_reorder?([a, b | _]) when a < b and abs(a - b) > 1 do
+    false
+  end
+
+  defp can_reorder?([a, b | _rest]) when a == b do
+    # If we have duplicates, we need to check if there's a way to interleave them.
+    # For a sequence with diff 1, duplicates can only appear if there's a "zigzag"
+    # like 1,2,1 or 2,1,2. So we need at least 3 elements for duplicates to work.
+    # Let's collect all duplicates and check if we can form a valid chain.
+    # A simpler approach: if there are duplicates, the sorted list will have them adjacent.
+    # We need to break up duplicates by inserting elements in between.
+    # This is only possible if we have enough "gap" elements.
+    
+    # Let's use a different strategy: check if the sorted list, when considering
+    # the counts, can form a valid consecutive sequence.
+    
+    # Actually, let's reconsider. The problem is asking if we can REARRANGE the list.
+    # So we're not constrained to the sorted order. We just need to know if
+    # there EXISTS any permutation where adjacent diffs are 1.
+    
+    # This means we need to check if all elements can form a single connected
+    # component where each consecutive number differs by 1.
+    # In other words, all elements must belong to a single contiguous range
+    # and every integer in that range must be present with sufficient counts.
+    
+    # Wait, not exactly. Consider [1, 2, 2, 3]. Sorted: [1, 2, 2, 3].
+    # We can do 1, 2, 3, 2 or 2, 1, ... no, 1, 2, 3, 2: diffs are 1, 1, 1. Yes.
+    # Or 2, 1, 2, 3: diffs are 1, 1, 1. Yes.
+    
+    # Consider [1, 1, 3, 3]. Can we? 1, 3 has diff 2. 1, 1 has diff 0. No valid arrangement.
+    
+    # Key insight: For a valid arrangement to exist, the multiset of numbers must
+    # form a "consecutive" structure. Specifically, if we look at the unique elements
+    # and their counts, they must form a contiguous range, and the counts must allow
+    # a valid traversal.
+    
+    # Let me think about it differently. Group by value, sort by value.
+    # For each group, we need to "consume" the duplicates by zigzagging.
+    
+    # Actually, the simplest correct approach:
+    # 1. Check if all elements can be part of a single consecutive chain.
+    # 2. For duplicates to be accommodated, we need "spare" elements to interleave.
+    
+    # Let's think about the structure. If we have a valid arrangement, it's a path
+    # on the number line where each step is +/-1. This means the entire set of
+    # numbers must be within a single interval [min, max] where max - min + 1 <= length,
+    # and more specifically, the counts must allow a valid Eulerian-like path.
+    
+    # For a sequence with adjacent diff 1, consider the counts of each number.
+    # At most two numbers can have an odd count (the endpoints of the path).
+    # All other numbers must have even counts (since you enter and leave each number).
+    
+    # Let's verify: [1, 2, 2, 3]. Counts: 1->1, 2->2, 3->1. Odd counts: 1 and 3 (two odds). Valid!
+    # [1, 2, 3]. Counts: 1->1, 2->1, 3->1. Three odds. But wait, 1,2,3 works! Hmm.
+    
+    # Actually, for a path, the number of vertices with odd degree (count) can be 0 or 2
+    # for an Eulerian circuit/path... but this is not exactly graph theory because
+    # we're dealing with a line graph.
+    
+    # Let me reconsider. In a valid arrangement a1, a2, ..., an:
+    # - Each internal element ai (not first or last) appears in two adjacent pairs:
+    #   (ai-1, ai) and (ai, ai+1). So ai is "used" twice as a bridge.
+    # - The first and last elements are used once.
+    
+    # So if we think of counts: the sum of counts must equal n.
+    # For a valid chain, we can model this as: start at some value, step +/-1 each time.
+    
+    # I think the right approach is:
+    # 1. Check that all numbers form a contiguous range (no gaps when unique sorted).
+    # 2. Check that the count constraints allow a valid traversal.
+    
+    # For condition 2: in a valid traversal, every number except possibly two endpoints
+    # must appear an even number of times... No, that's for Eulerian paths on undirected graphs.
+    
+    # Let's just try a greedy/construction approach:
+    # Sort the list. Try to build a valid sequence greedily.
+    
+    # Actually, I realize the problem is equivalent to checking if the sorted list,
+    # after handling duplicates, can form a valid consecutive chain.
+    
+    # New approach: use a frequency map and try to construct the chain.
+    freqs = Enum.group_by(list, &(&1)) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+    
+    case unique_sorted do
+      [] -> true
+      _ ->
+        # Check that all unique elements form a contiguous range
+        min = hd(unique_sorted)
+        max = List.last(unique_sorted)
+        
+        if length(unique_sorted) != max - min + 1 do
+          false
+        else
+          # All consecutive integers from min to max are present.
+          # Now check if counts allow a valid arrangement.
+          # In any valid arrangement, we can think of it as going up and down.
+          # The key constraint: at any point, we can't get stuck.
+          
+          # A necessary and sufficient condition for such a multiset to have
+          # a valid consecutive arrangement:
+          # - The numbers form a contiguous range (already checked).
+          # - At most two values have odd counts (the endpoints).
+          # Wait, let me verify:
+          # [1, 2, 3]: counts 1,1,1. Three odds. But 1-2-3 works. 
+          # Hmm, the first and last elements of the sequence each appear once in the
+          # "degree" sense. Internal nodes appear... let me think again.
+          
+          # Each occurrence of a number in the sequence (except first and last) 
+          # is "connected" to two neighbors. First and last to one neighbor.
+          # So in terms of "incidence", each number's count contributes to edges.
+          
+          # For a path graph representation, this is getting complex. Let me just
+          # try constructing a valid arrangement using a greedy algorithm with backtracking
+          # or a smarter method.
+          
+          # Simpler correct approach: 
+          # For a contiguous range of integers, a valid arrangement exists if and only if
+          # at most one value has an odd count... no, [1,2,3] has three values with odd count.
+          
+          # Let me just try: build the sequence greedily from smallest, always preferring
+          # to go to the next number if available, else go back.
+          
+          can_construct?(freqs, min, max)
+        end
+    end
+  end
+
+  defp can_construct?(freqs, min, max) do
+    # Try to build a valid sequence starting from min
+    case build_sequence(freqs, min, max, Map.get(freqs, min, 0)) do
+      {:ok, _sequence} -> true
+      :error -> false
+    end
+  end
+
+  defp build_sequence(_freqs, min, max, count) when count == 0 and min == max do
+    # Edge case: single unique element with count 0 after decrement? Shouldn't happen.
+    :error
+  end
+
+  defp build_sequence(freqs, current, max, _count) when current > max do
+    # Check if all counts are zero
+    if all_zero?(freqs) do
+      {:ok, []}
+    else
+      :error
+    end
+  end
+
+  defp build_sequence(freqs, current (truncated)[0m
+[22m00:11:19.623 [info] [LLM.call] local_qwen_thinking completed in 22680ms — ok[0m
+[22m00:11:19.623 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m00:11:19.623 [debug] [Validator.run] module code (8828 chars):
+defmodule Solution do
+  @doc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one(list) when length(list) < 2, do: false
+
+  def can_reorder_diff_one(list) do
+    sorted = Enum.sort(list)
+    can_reorder?(sorted)
+  end
+
+  defp can_reorder?([]), do: true
+  defp can_reorder?([_]), do: true
+
+  defp can_reorder?([a, b | rest]) when abs(a - b) == 1 do
+    can_reorder?([b | rest])
+  end
+
+  defp can_reorder?([a, b | _]) when a < b and abs(a - b) > 1 do
+    false
+  end
+
+  defp can_reorder?([a, b | _rest]) when a == b do
+    # If we have duplicates, we need to check if there's a way to interleave them.
+    # For a sequence with diff 1, duplicates can only appear if there's a "zigzag"
+    # like 1,2,1 or 2,1,2. So we need at least 3 elements for duplicates to work.
+    # Let's collect all duplicates and check if we can form a valid chain.
+    # A simpler approach: if there are duplicates, the sorted list will have them adjacent.
+    # We need to break up duplicates by inserting elements in between.
+    # This is only possible if we have enough "gap" elements.
+    
+    # Let's use a different strategy: check if the sorted list, when considering
+    # the counts, can form a valid consecutive sequence.
+    
+    # Actually, let's reconsider. The problem is asking if we can REARRANGE the list.
+    # So we're not constrained to the sorted order. We just need to know if
+    # there EXISTS any permutation where adjacent diffs are 1.
+    
+    # This means we need to check if all elements can form a single connected
+    # component where each consecutive number differs by 1.
+    # In other words, all elements must belong to a single contiguous range
+    # and every integer in that range must be present with sufficient counts.
+    
+    # Wait, not exactly. Consider [1, 2, 2, 3]. Sorted: [1, 2, 2, 3].
+    # We can do 1, 2, 3, 2 or 2, 1, ... no, 1, 2, 3, 2: diffs are 1, 1, 1. Yes.
+    # Or 2, 1, 2, 3: diffs are 1, 1, 1. Yes.
+    
+    # Consider [1, 1, 3, 3]. Can we? 1, 3 has diff 2. 1, 1 has diff 0. No valid arrangement.
+    
+    # Key insight: For a valid arrangement to exist, the multiset of numbers must
+    # form a "consecutive" structure. Specifically, if we look at the unique elements
+    # and their counts, they must form a contiguous range, and the counts must allow
+    # a valid traversal.
+    
+    # Let me think about it differently. Group by value, sort by value.
+    # For each group, we need to "consume" the duplicates by zigzagging.
+    
+    # Actually, the simplest correct approach:
+    # 1. Check if all elements can be part of a single consecutive chain.
+    # 2. For duplicates to be accommodated, we need "spare" elements to interleave.
+    
+    # Let's think about the structure. If we have a valid arrangement, it's a path
+    # on the number line where each step is +/-1. This means the entire set of
+    # numbers must be within a single interval [min, max] where max - min + 1 <= length,
+    # and more specifically, the counts must allow a valid Eulerian-like path.
+    
+    # For a sequence with adjacent diff 1, consider the counts of each number.
+    # At most two numbers can have an odd count (the endpoints of the path).
+    # All other numbers must have even counts (since you enter and leave each number).
+    
+    # Let's verify: [1, 2, 2, 3]. Counts: 1->1, 2->2, 3->1. Odd counts: 1 and 3 (two odds). Valid!
+    # [1, 2, 3]. Counts: 1->1, 2->1, 3->1. Three odds. But wait, 1,2,3 works! Hmm.
+    
+    # Actually, for a path, the number of vertices with odd degree (count) can be 0 or 2
+    # for an Eulerian circuit/path... but this is not exactly graph theory because
+    # we're dealing with a line graph.
+    
+    # Let me reconsider. In a valid arrangement a1, a2, ..., an:
+    # - Each internal element ai (not first or last) appears in two adjacent pairs:
+    #   (ai-1, ai) and (ai, ai+1). So ai is "used" twice as a bridge.
+    # - The first and last elements are used once.
+    
+    # So if we think of counts: the sum of counts must equal n.
+    # For a valid chain, we can model this as: start at some value, step +/-1 each time.
+    
+    # I think the right approach is:
+    # 1. Check that all numbers form a contiguous range (no gaps when unique sorted).
+    # 2. Check that the count constraints allow a valid traversal.
+    
+    # For condition 2: in a valid traversal, every number except possibly two endpoints
+    # must appear an even number of times... No, that's for Eulerian paths on undirected graphs.
+    
+    # Let's just try a greedy/construction approach:
+    # Sort the list. Try to build a valid sequence greedily.
+    
+    # Actually, I realize the problem is equivalent to checking if the sorted list,
+    # after handling duplicates, can form a valid consecutive chain.
+    
+    # New approach: use a frequency map and try to construct the chain.
+    freqs = Enum.group_by(list, &(&1)) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+    
+    case unique_sorted do
+      [] -> true
+      _ ->
+        # Check that all unique elements form a contiguous range
+        min = hd(unique_sorted)
+        max = List.last(unique_sorted)
+        
+        if length(unique_sorted) != max - min + 1 do
+          false
+        else
+          # All consecutive integers from min to max are present.
+          # Now check if counts allow a valid arrangement.
+          # In any valid arrangement, we can think of it as going up and down.
+          # The key constraint: at any point, we can't get stuck.
+          
+          # A necessary and sufficient condition for such a multiset to have
+          # a valid consecutive arrangement:
+          # - The numbers form a contiguous range (already checked).
+          # - At most two values have odd counts (the endpoints).
+          # Wait, let me verify:
+          # [1, 2, 3]: counts 1,1,1. Three odds. But 1-2-3 works. 
+          # Hmm, the first and last elements of the sequence each appear once in the
+          # "degree" sense. Internal nodes appear... let me think again.
+          
+          # Each occurrence of a number in the sequence (except first and last) 
+          # is "connected" to two neighbors. First and last to one neighbor.
+          # So in terms of "incidence", each number's count contributes to edges.
+          
+          # For a path graph representation, this is getting complex. Let me just
+          # try constructing a valid arrangement using a greedy algorithm with backtracking
+          # or a smarter method.
+          
+          # Simpler correct approach: 
+          # For a contiguous range of integers, a valid arrangement exists if and only if
+          # at most one value has an odd count... no, [1,2,3] has three values with odd count.
+          
+          # Let me just try: build the sequence greedily from smallest, always preferring
+          # to go to the next number if available, else go back.
+          
+          can_construct?(freqs, min, max)
+        end
+    end
+  end
+
+  defp can_construct?(freqs, min, max) do
+    # Try to build a valid sequence starting from min
+    case build_sequence(freqs, min, max, Map.get(freqs, min, 0)) do
+      {:ok, _sequence} -> true
+      :error -> false
+    end
+  end
+
+  defp build_sequence(_freqs, min, max, count) when count == 0 and min == max do
+    # Edge case: single unique element with count 0 after decrement? Shouldn't happen.
+    :error
+  end
+
+  defp build_sequence(freqs, current, max, _count) when current > max do
+    # Check if all counts are zero
+    if all_zero?(freqs) do
+      {:ok, []}
+    else
+      :error
+    end
+  end
+
+  defp build_sequence(freqs, current, max, count) do
+    # Try to place 'count' instances of 'current' value
+    # We can place them in a zigzag pattern if needed
+    
+    # For now, let's try a diff (truncated)[0m
+[36m00:11:19.624 [debug] [Validator.run] test code (318 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "can reorder with consecutive difference of 1" do
+    assert Solution.can_reorder_diff_one([1, 3, 2, 4]) == true
+    assert Solution.can_reorder_diff_one([5, 4, 3, 2, 1]) == true
+    assert Solution.can_reorder_diff_one([1, 3, 5, 7]) == false
+  end
+end[0m
+[36m00:11:19.624 [debug] [Budget] spent so far (est.): $1.6243[0m
+[22m00:11:19.624 [info] [Validator.run] step 1/6: credence fix[0m
+[36m00:11:19.624 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m00:11:20.185 [debug] [run_credence_fix] exit=0 output:
+
+00:11:20.140 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+00:11:20.142 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+00:11:20.150 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+00:11:20.150 [debug] [credence_fix] semantic pass 1: compilation FAILED, 2 error(s)
+
+00:11:20.155 [debug] [credence_fix] no rule matched diagnostic: %{message: "undefined variable \"list\"", position: {103, 27}, file: "credence_check.ex", stacktrace: [{Solution, :can_reorder?, 1, [file: "credence_check.ex", column: 27, line: 103]}], source: "credence_check.ex", span: {103, 31}, severity: :error}
+
+00:11:20.155 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+00:11:20.155 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+00:11:20.155 [debug] [credence_fix] semantic done. Applied: []
+
+00:11:20.155 [debug] [credence_fix] starting pattern fix pipeline (122 rules)
+
+00:11:20.158 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+00:11:20.158 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+00:11:20.163 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 15 unfixable issue(s)
+avoid_length_guard_less_than2: `length(x) < 2` in a guard traverses the entire list. Use pattern matching `[]` and `[_]` instead — both are O(1). (line 8)
+inconsistent_param_names: Inconsistent parameter names in `defp build_sequence/4` at position 2: `min`, `current`.
+
+Using different names for the same parameter across clauses makes the code harder to follow. Choose one name and use it consistently, or use `_` to indicate the parameter is unused in that clause. (line 158)
+no_kernel_shadowing: The variable `min` shadows the built-in `Kernel.min/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `min(min, other)`.
+
+Consider renaming this variable to `min_val`, `global_min`, or
+something more descriptive.
+ (line 110)
+no_kernel_shadowing: The variable `max` shadows the built-in `Kernel.max/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `max(max, other)`.
+
+Consider renaming this variable to `max_val`, `global_max`, or
+something more descriptive.
+ (line 111)
+no_kernel_shadowing: The variable `max` shadows the built-in `Kernel.max/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `max(max, other)`.
+
+Consider renaming this variable to `max_val`, `global_max`, or
+something more descriptive.
+ (line 150)
+no_kernel_shadowing: The variable `min` shadows the built-in `Kernel.min/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `min(min, other)`.
+
+Consider renaming this variable to `min_val`, `global_min`, or
+something more descriptive.
+ (line 150)
+no_kernel_shadowing: The variable `min` shadows the built-in `Kernel.min/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `min(min, other)`.
+
+Consider renaming this variable to `min_val`, `global_min`, or
+something more descriptive.
+ (line 158)
+no_kernel_shadowing: The variable `max` shadows the built-in `Kernel.max/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `max(max, other)`.
+
+Consider renaming this variable to `max_val`, `global_max`, or
+something more descriptive.
+ (line 158)
+no_kernel_shadowing: The variable `min` shadows the built-in `Kernel.min/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `min(min, other)`.
+
+Consider renaming this variable to `min_val`, `global_min`, or
+something more descriptive.
+ (line 158)
+no_kernel_shadowing: The variable `max` shadows the built-in `Kernel.max/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `max(max, other)`.
+
+Consider renaming this variable to `max_val`, `global_max`, or
+something more descriptive.
+ (line 158)
+no_kernel_shadowing: The variable `max` shadows the built-in `Kernel.max/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `max(max, other)`.
+
+Consider renaming this variable to `max_val`, `global_max`, or
+something more descriptive.
+ (line 163)
+no_kernel_shadowing: The variable `max` shadows the built-in `Kernel.max/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `max(max, other)`.
+
+Consider renaming this variable to `max_val`, `global_max`, or
+something more descriptive.
+ (line 163)
+no_kernel_shadowing: The variable `max` shadows the built-in `Kernel.max/2` function.
+
+This is unidiomatic and can make code harder to read, especially when
+calling `max(max, other)`.
+
+Consider renaming this variable to `max_val`, `global_max`, or
+something more descriptive.
+ (line 172)
+no_map_keys_or_values_for_iteration: `Map.values/1` creates an intermediate list before passing to `Enum.count`. Iterate the map directly — `Enum` functions accept maps and yield `{key, value}` pairs. (line 192)
+no_map_keys_or_values_for_iteration: `Map.values/1` creates an intermediate list before passing to `Enum.all?`. Iterate the map directly — `Enum` functions accept maps and yield `{key, value}` pairs. (line 200)
+[0m
+[36m00:11:20.185 [debug] [run_credence_fix] no changes needed[0m
+[22m00:11:20.185 [info] [Validator.run] credence: no changes needed[0m
+[22m00:11:20.185 [info] [Validator.run] step 2/6: compile[0m
+[22m00:11:20.672 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m00:11:20.672 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+     warning: variable "count" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 172 │   defp build_sequence(freqs, current, max, count) do
+     │                                            ~~~~~
+     │
+     └─ lib/solution.ex:172:44: Solution.build_sequence/4
+
+     warning: variable "current" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 172 │   defp build_sequence(freqs, current, max, count) do
+     │                              ~~~~~~~
+     │
+     └─ lib/solution.ex:172:30: Solution.build_sequence/4
+
+     warning: variable "max" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 172 │   defp build_sequence(freqs, current, max, count) do
+     │                                       ~~~
+     │
+     └─ lib/solution.ex:172:39: Solution.build_sequence/4
+
+     error: undefined variable "list"
+     │
+ 103 │     freqs = Enum.group_by(list, &(&1)) |> Map.new(fn {k, v} -> {k, length(v)} end)
+     │                           ^^^^
+     │
+     └─ lib/solution.ex:103:27: Solution.can_reorder?/1
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[22m00:11:20.672 [info] [Validator.run] step 3/6: format[0m
+[22m00:11:20.672 [info] [Validator.run] skipping format (compile failed)[0m
+[22m00:11:20.672 [info] [Validator.run] step 4/6: credo[0m
+[22m00:11:20.672 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m00:11:20.672 [info] [Validator.run] step 5/6: credence check[0m
+[22m00:11:20.672 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m00:11:20.672 [info] [Validator.run] step 6/6: tests[0m
+[22m00:11:20.672 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m00:11:20.672 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m00:11:20.672 [debug] [Validator.run] final module (8828 chars):
+defmodule Solution do
+  @doc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one(list) when length(list) < 2, do: false
+
+  def can_reorder_diff_one(list) do
+    sorted = Enum.sort(list)
+    can_reorder?(sorted)
+  end
+
+  defp can_reorder?([]), do: true
+  defp can_reorder?([_]), do: true
+
+  defp can_reorder?([a, b | rest]) when abs(a - b) == 1 do
+    can_reorder?([b | rest])
+  end
+
+  defp can_reorder?([a, b | _]) when a < b and abs(a - b) > 1 do
+    false
+  end
+
+  defp can_reorder?([a, b | _rest]) when a == b do
+    # If we have duplicates, we need to check if there's a way to interleave them.
+    # For a sequence with diff 1, duplicates can only appear if there's a "zigzag"
+    # like 1,2,1 or 2,1,2. So we need at least 3 elements for duplicates to work.
+    # Let's collect all duplicates and check if we can form a valid chain.
+    # A simpler approach: if there are duplicates, the sorted list will have them adjacent.
+    # We need to break up duplicates by inserting elements in between.
+    # This is only possible if we have enough "gap" elements.
+    
+    # Let's use a different strategy: check if the sorted list, when considering
+    # the counts, can form a valid consecutive sequence.
+    
+    # Actually, let's reconsider. The problem is asking if we can REARRANGE the list.
+    # So we're not constrained to the sorted order. We just need to know if
+    # there EXISTS any permutation where adjacent diffs are 1.
+    
+    # This means we need to check if all elements can form a single connected
+    # component where each consecutive number differs by 1.
+    # In other words, all elements must belong to a single contiguous range
+    # and every integer in that range must be present with sufficient counts.
+    
+    # Wait, not exactly. Consider [1, 2, 2, 3]. Sorted: [1, 2, 2, 3].
+    # We can do 1, 2, 3, 2 or 2, 1, ... no, 1, 2, 3, 2: diffs are 1, 1, 1. Yes.
+    # Or 2, 1, 2, 3: diffs are 1, 1, 1. Yes.
+    
+    # Consider [1, 1, 3, 3]. Can we? 1, 3 has diff 2. 1, 1 has diff 0. No valid arrangement.
+    
+    # Key insight: For a valid arrangement to exist, the multiset of numbers must
+    # form a "consecutive" structure. Specifically, if we look at the unique elements
+    # and their counts, they must form a contiguous range, and the counts must allow
+    # a valid traversal.
+    
+    # Let me think about it differently. Group by value, sort by value.
+    # For each group, we need to "consume" the duplicates by zigzagging.
+    
+    # Actually, the simplest correct approach:
+    # 1. Check if all elements can be part of a single consecutive chain.
+    # 2. For duplicates to be accommodated, we need "spare" elements to interleave.
+    
+    # Let's think about the structure. If we have a valid arrangement, it's a path
+    # on the number line where each step is +/-1. This means the entire set of
+    # numbers must be within a single interval [min, max] where max - min + 1 <= length,
+    # and more specifically, the counts must allow a valid Eulerian-like path.
+    
+    # For a sequence with adjacent diff 1, consider the counts of each number.
+    # At most two numbers can have an odd count (the endpoints of the path).
+    # All other numbers must have even counts (since you enter and leave each number).
+    
+    # Let's verify: [1, 2, 2, 3]. Counts: 1->1, 2->2, 3->1. Odd counts: 1 and 3 (two odds). Valid!
+    # [1, 2, 3]. Counts: 1->1, 2->1, 3->1. Three odds. But wait, 1,2,3 works! Hmm.
+    
+    # Actually, for a path, the number of vertices with odd degree (count) can be 0 or 2
+    # for an Eulerian circuit/path... but this is not exactly graph theory because
+    # we're dealing with a line graph.
+    
+    # Let me reconsider. In a valid arrangement a1, a2, ..., an:
+    # - Each internal element ai (not first or last) appears in two adjacent pairs:
+    #   (ai-1, ai) and (ai, ai+1). So ai is "used" twice as a bridge.
+    # - The first and last elements are used once.
+    
+    # So if we think of counts: the sum of counts must equal n.
+    # For a valid chain, we can model this as: start at some value, step +/-1 each time.
+    
+    # I think the right approach is:
+    # 1. Check that all numbers form a contiguous range (no gaps when unique sorted).
+    # 2. Check that the count constraints allow a valid traversal.
+    
+    # For condition 2: in a valid traversal, every number except possibly two endpoints
+    # must appear an even number of times... No, that's for Eulerian paths on undirected graphs.
+    
+    # Let's just try a greedy/construction approach:
+    # Sort the list. Try to build a valid sequence greedily.
+    
+    # Actually, I realize the problem is equivalent to checking if the sorted list,
+    # after handling duplicates, can form a valid consecutive chain.
+    
+    # New approach: use a frequency map and try to construct the chain.
+    freqs = Enum.group_by(list, &(&1)) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+    
+    case unique_sorted do
+      [] -> true
+      _ ->
+        # Check that all unique elements form a contiguous range
+        min = hd(unique_sorted)
+        max = List.last(unique_sorted)
+        
+        if length(unique_sorted) != max - min + 1 do
+          false
+        else
+          # All consecutive integers from min to max are present.
+          # Now check if counts allow a valid arrangement.
+          # In any valid arrangement, we can think of it as going up and down.
+          # The key constraint: at any point, we can't get stuck.
+          
+          # A necessary and sufficient condition for such a multiset to have
+          # a valid consecutive arrangement:
+          # - The numbers form a contiguous range (already checked).
+          # - At most two values have odd counts (the endpoints).
+          # Wait, let me verify:
+          # [1, 2, 3]: counts 1,1,1. Three odds. But 1-2-3 works. 
+          # Hmm, the first and last elements of the sequence each appear once in the
+          # "degree" sense. Internal nodes appear... let me think again.
+          
+          # Each occurrence of a number in the sequence (except first and last) 
+          # is "connected" to two neighbors. First and last to one neighbor.
+          # So in terms of "incidence", each number's count contributes to edges.
+          
+          # For a path graph representation, this is getting complex. Let me just
+          # try constructing a valid arrangement using a greedy algorithm with backtracking
+          # or a smarter method.
+          
+          # Simpler correct approach: 
+          # For a contiguous range of integers, a valid arrangement exists if and only if
+          # at most one value has an odd count... no, [1,2,3] has three values with odd count.
+          
+          # Let me just try: build the sequence greedily from smallest, always preferring
+          # to go to the next number if available, else go back.
+          
+          can_construct?(freqs, min, max)
+        end
+    end
+  end
+
+  defp can_construct?(freqs, min, max) do
+    # Try to build a valid sequence starting from min
+    case build_sequence(freqs, min, max, Map.get(freqs, min, 0)) do
+      {:ok, _sequence} -> true
+      :error -> false
+    end
+  end
+
+  defp build_sequence(_freqs, min, max, count) when count == 0 and min == max do
+    # Edge case: single unique element with count 0 after decrement? Shouldn't happen.
+    :error
+  end
+
+  defp build_sequence(freqs, current, max, _count) when current > max do
+    # Check if all counts are zero
+    if all_zero?(freqs) do
+      {:ok, []}
+    else
+      :error
+    end
+  end
+
+  defp build_sequence(freqs, current, max, count) do
+    # Try to place 'count' instances of 'current' value
+    # We can place them in a zigzag pattern if needed
+    
+    # For now, let's try a dif (truncated)[0m
+[36m00:11:20.672 [debug] [Validator.run] final test (318 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "can reorder with consecutive difference of 1" do
+    assert Solution.can_reorder_diff_one([1, 3, 2, 4]) == true
+    assert Solution.can_reorder_diff_one([5, 4, 3, 2, 1]) == true
+    assert Solution.can_reorder_diff_one([1, 3, 5, 7]) == false
+  end
+end[0m
+[33m00:11:20.672 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m00:11:20.672 [info] [Solve attempt 2] generating (fn=can_reorder_diff_one)[0m
+[36m00:11:20.672 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one(list) when length(list) < 2, do: false
+
+  def can_reorder_diff_one(list) do
+    sorted = Enum.sort(list)
+    can_reorder?(sorted)
+  end
+
+  defp can_reorder?([]), do: true
+  defp can_reorder?([_]), do: true
+
+  defp can_reorder?([a, b | rest]) when abs(a - b) == 1 do
+    can_reorder?([b | rest])
+  end
+
+  defp can_reorder?([a, b | _]) when a < b and abs(a - b) > 1 do
+    false
+  end
+
+  defp can_reorder?([a, b | _rest]) when a == b do
+    # If we have duplicates, we need to check if there's a way to interleave them.
+    # For a sequence with diff 1, duplicates can only appear if there's a "zigzag"
+    # like 1,2,1 or 2,1,2. So we need at least 3 elements for duplicates to work.
+    # Let's collect all duplicates and check if we can form a valid chain.
+    # A simpler approach: if there are duplicates, the sorted list will have them adjacent.
+    # We need to break up duplicates by inserting elements in between.
+    # This is only possible if we have enough "gap" elements.
+    
+    # Let's use a different strategy: check if the sorted list, when considering
+    # the counts, can form a valid consecutive sequence.
+    
+    # Actually, let's reconsider. The problem is asking if we can REARRANGE the list.
+    # So we're not constrained to the sorted order. We just need to know if
+    # there EXISTS any permutation where adjacent diffs are 1.
+    
+    # This means we need to check if all elements can form a single connected
+    # component where each consecutive number differs by 1.
+    # In other words, all elements must belong to a single contiguous range
+    # and every integer in that range must be present with sufficient counts.
+    
+    # Wait, not exactly. Consider [1, 2, 2, 3]. Sorted: [1, 2, 2, 3].
+    # We can do 1, 2, 3, 2 or 2, 1, ... no, 1, 2, 3, 2: diffs are 1, 1, 1. Yes.
+    # Or 2, 1, 2, 3: diffs are 1, 1, 1. Yes.
+    
+    # Consider [1, 1, 3, 3]. Can we? 1, 3 has diff 2. 1, 1 has diff 0. No valid arrangement.
+    
+    # Key insight: For a valid arrangement to exist, the multiset of numbers must
+    # form a "consecutive" structure. Specifically, if we look at the unique elements
+    # and their counts, they must form a contiguous range, and the counts must allow
+    # a valid traversal.
+    
+    # Let me think about it differently. Group by value, sort by value.
+    # For each group, we need to "consume" the duplicates by zigzagging.
+    
+    # Actually, the simplest correct approach:
+    # 1. Check if all elements can be part of a single consecutive chain.
+    # 2. For duplicates to be accommodated, we need "spare" elements to interleave.
+    
+    # Let's think about the structure. If we have a valid arrangement, it's a path
+    # on the number line where each step is +/-1. This means the entire set of
+    # numbers must be within a single interval [min, max] where max - min + 1 <= length,
+    # and more specifically, the counts must allow a valid Eulerian-like path.
+    
+    # For a sequence with adjacent diff 1, consider the counts of each number.
+    # At most two numbers can have an odd count (the endpoints of the path).
+    # All other numbers must have even counts (since you enter and leave each number).
+    
+    # Let's verify: [1, 2, 2, 3]. Counts: 1->1, 2->2, 3->1. Odd counts: 1 and 3 (two odds). Valid!
+    # [1, 2, 3]. Counts: 1->1, 2->1, 3->1. Three odds. But wait, 1,2,3 works! Hmm.
+    
+    # Actually, for a path, the number of vertices with odd degree (count) can be 0 or 2
+    # for an Eulerian circuit/path... but this is not exactly graph theory because
+    # we're dealing with a line graph.
+    
+    # Let me reconsider. In a valid arrangement a1, a2, ..., an:
+    # - Each internal element ai (not first or last) appears in two adjacent pairs:
+    #   (ai-1, ai) and (ai, ai+1). So ai is "used" twice as a bridge.
+    # - The first and last elements are used once.
+    
+    # So if we think of counts: the sum of counts must equal n.
+    # For a valid chain, we can model this as: start at some value, step +/-1 each time.
+    
+    # I think the right approach is:
+    # 1. Check that all numbers form a contiguous range (no gaps when unique sorted).
+    # 2. Check that the count constraints allow a valid traversal.
+    
+    # For condition 2: in a valid traversal, every number except possibly two endpoints
+    # must appear an even number of times... No, that's for Eulerian paths on undirected graphs.
+    
+    # Let's just try a greedy/construction approach:
+    # Sort the list. Try to build a valid sequence greedily.
+    
+    # Actually, I realize the problem is equivalent to checking if the sorted list,
+    # after handling duplicates, can form a valid consecutive chain.
+    
+    # New approach: use a frequency map and try to construct the chain.
+    freqs = Enum.group_by(list, &(&1)) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+    
+    case unique_sorted do
+      [] -> true
+      _ ->
+        # Check that all unique elements form a contiguous range
+        min = hd(unique_sorted)
+        max = List.last(unique_sorted)
+        
+        if length(unique_sorted) != max - min + 1 do
+          false
+        else
+          # All consecutive integers from min to max are present.
+          # Now check if counts allow a valid arrangement.
+          # In any valid arrangement, we can think of it as going up and down.
+          # The key constraint: at any point, we can't get stuck.
+          
+          # A necessary and sufficient condition for such a multiset to have
+          # a valid consecutive arrangement:
+          # - The numbers form a contiguous range (already checked).
+          # - At most two values have odd counts (the endpoints).
+          # Wait, let me verify:
+          # [1, 2, 3]: counts 1,1,1. Three odds. But 1-2-3 works. 
+          # Hmm, the first and last elements of the sequence each appear once in the
+          # "degree" sense. Internal nodes appear... let me think again.
+          
+          # Each occurrence of a number in the sequence (except first and last) 
+          # is "connected" to two neighbors. First and last to one neighbor.
+          # So in terms of "incidence", each number's count contributes to edges.
+          
+          # For a path graph representation, this is getting complex. Let me just
+          # try constructing a valid arrangement using a greedy algorithm with backtracking
+          # or a smarter method.
+          
+          # Simpler correct approach: 
+          # For a contiguous range of integers, a valid arrangement exists if and only if
+          # at most one value has an odd count... no, [1,2,3] has three values with odd count.
+          
+          # Let me just try: build the sequence greedily from small (truncated)[0m
+[36m00:11:34.608 [debug] [LLM.call] finish=stop len=4232 usage=%{"completion_tokens" => 1305, "prompt_tokens" => 3205, "prompt_tokens_details" => %{"cached_tokens" => 109}, "total_tokens" => 4510}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  """
+
+  @doc """
+  Returns true if the list can be rearranged into a consecutive sequence,
+  false otherwise. Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one(list) when length(list) < 2, do: false
+
+  def can_reorder_diff_one(list) do
+    freqs = Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+
+    case unique_sorted do
+      [] -> true
+      _ ->
+        min_val = hd(unique_sorted)
+        max_val = List.last(unique_sorted)
+        expected_length = max_val - min_val + 1
+
+        # Check if all integers in range [min_val, max_val] are present
+        if length(unique_sorted) != expected_length do
+          false
+        else
+          # Check if the frequency counts allow for a valid consecutive arrangement.
+          # A necessary condition for a valid arrangement on a line graph is that
+          # at most two values have odd frequencies (the endpoints).
+          # However, this is for Eulerian paths on undirected graphs.
+          # For a simple consecutive arrangement a1, a2, ..., an where |ai - ai+1| = 1:
+          # The multiset must form a contiguous range (checked above).
+          # Additionally, we need to ensure the "flow" works.
+          
+          # Actually, the condition is simpler:
+          # If we have a contiguous range of integers, a valid permutation always exists
+          # IF AND ONLY IF the maximum frequency is not too large relative to the others.
+          # Specifically, in a valid sequence, no element can appear more than ceil(n/2) times?
+          # No, that's for non-adjacent duplicates.
+          
+          # Let's think about it: 1,2,3,2 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 2,1,2,3 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 1,2,3 -> counts: 1:1, 2:1, 3:1. Valid.
+          # 2,2,2,3 -> counts: 2:3, 3:1. Can we do it? 2,3,2,2? No, last two are diff 0.
+          # 2,2,3,2 -> 2-2 diff 0. No.
+          # 3,2,2,2 -> No.
+          # So 2,2,2,3 is invalid.
+          
+          # What's the condition?
+          # In any valid sequence, between two occurrences of the same number x,
+          # there must be at least one number. So if a number appears k times,
+          # we need at least k-1 "separators" which are different numbers.
+          # The total number of other elements is n - k.
+          # We need n - k >= k - 1, so n + 1 >= 2k, or k <= (n + 1) / 2.
+          
+          # Let's verify:
+          # [1,2,3,2]: n=4, max_freq=2. 2 <= (4+1)/2 = 2.5. True. Valid.
+          # [2,2,2,3]: n=4, max_freq=3. 3 <= 2.5. False. Invalid. Correct!
+          # [1,1]: n=2, max_freq=2. 2 <= 1.5. False. Invalid. Correct (diff is 0).
+          # [1,2]: n=2, max_freq=1. 1 <= 1.5. True. Valid.
+          # [1,2,2,3]: n=4, max_freq=2. 2 <= 2.5. True. Valid.
+          
+          # So the conditions are:
+          # 1. All numbers form a contiguous range.
+          # 2. max_frequency <= (length + 1) // 2
+          
+          n = length(list)
+          max_freq = Enum.max(Map.values(freqs))
+          max_freq <= div(n + 1, 2)
+        end
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "can reorder with consecutive difference of 1" do
+    assert Solution.can_reorder_diff_one([1, 3, 2, 4]) == true
+    assert Solution.can_reorder_diff_one([5, 4, 3, 2, 1]) == true
+    assert Solution.can_reorder_diff_one([1, 3, 5, 7]) == false
+  end
+
+  test "cannot reorder with duplicates that are too frequent" do
+    assert Solution.can_reorder_diff_one([2, 2, 2, 3]) == false
+  end
+
+  test "cannot reorder with duplicate single value" do
+    assert Solution.can_reorder_diff_one([1, 1]) == false
+  end
+
+  test "can reorder with two different values" do
+    assert Solution.can_reorder_diff_one([1, 2]) == true
+  end
+
+  test "can reorder with duplicate middle value" do
+    assert Solution.can_reorder_diff_one([1, 2, 2, 3]) == true
+  end
+end
+---END---[0m
+[22m00:11:34.608 [info] [LLM.call] local_qwen_thinking completed in 13935ms — ok[0m
+[22m00:11:34.608 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m00:11:34.608 [debug] [Validator.run] module code (3387 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  """
+
+  @doc """
+  Returns true if the list can be rearranged into a consecutive sequence,
+  false otherwise. Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one(list) when length(list) < 2, do: false
+
+  def can_reorder_diff_one(list) do
+    freqs = Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+
+    case unique_sorted do
+      [] -> true
+      _ ->
+        min_val = hd(unique_sorted)
+        max_val = List.last(unique_sorted)
+        expected_length = max_val - min_val + 1
+
+        # Check if all integers in range [min_val, max_val] are present
+        if length(unique_sorted) != expected_length do
+          false
+        else
+          # Check if the frequency counts allow for a valid consecutive arrangement.
+          # A necessary condition for a valid arrangement on a line graph is that
+          # at most two values have odd frequencies (the endpoints).
+          # However, this is for Eulerian paths on undirected graphs.
+          # For a simple consecutive arrangement a1, a2, ..., an where |ai - ai+1| = 1:
+          # The multiset must form a contiguous range (checked above).
+          # Additionally, we need to ensure the "flow" works.
+          
+          # Actually, the condition is simpler:
+          # If we have a contiguous range of integers, a valid permutation always exists
+          # IF AND ONLY IF the maximum frequency is not too large relative to the others.
+          # Specifically, in a valid sequence, no element can appear more than ceil(n/2) times?
+          # No, that's for non-adjacent duplicates.
+          
+          # Let's think about it: 1,2,3,2 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 2,1,2,3 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 1,2,3 -> counts: 1:1, 2:1, 3:1. Valid.
+          # 2,2,2,3 -> counts: 2:3, 3:1. Can we do it? 2,3,2,2? No, last two are diff 0.
+          # 2,2,3,2 -> 2-2 diff 0. No.
+          # 3,2,2,2 -> No.
+          # So 2,2,2,3 is invalid.
+          
+          # What's the condition?
+          # In any valid sequence, between two occurrences of the same number x,
+          # there must be at least one number. So if a number appears k times,
+          # we need at least k-1 "separators" which are different numbers.
+          # The total number of other elements is n - k.
+          # We need n - k >= k - 1, so n + 1 >= 2k, or k <= (n + 1) / 2.
+          
+          # Let's verify:
+          # [1,2,3,2]: n=4, max_freq=2. 2 <= (4+1)/2 = 2.5. True. Valid.
+          # [2,2,2,3]: n=4, max_freq=3. 3 <= 2.5. False. Invalid. Correct!
+          # [1,1]: n=2, max_freq=2. 2 <= 1.5. False. Invalid. Correct (diff is 0).
+          # [1,2]: n=2, max_freq=1. 1 <= 1.5. True. Valid.
+          # [1,2,2,3]: n=4, max_freq=2. 2 <= 2.5. True. Valid.
+          
+          # So the conditions are:
+          # 1. All numbers form a contiguous range.
+          # 2. max_frequency <= (length + 1) // 2
+          
+          n = length(list)
+          max_freq = Enum.max(Map.values(freqs))
+          max_freq <= div(n + 1, 2)
+        end
+    end
+  end
+end[0m
+[36m00:11:34.608 [debug] [Validator.run] test code (810 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "can reorder with consecutive difference of 1" do
+    assert Solution.can_reorder_diff_one([1, 3, 2, 4]) == true
+    assert Solution.can_reorder_diff_one([5, 4, 3, 2, 1]) == true
+    assert Solution.can_reorder_diff_one([1, 3, 5, 7]) == false
+  end
+
+  test "cannot reorder with duplicates that are too frequent" do
+    assert Solution.can_reorder_diff_one([2, 2, 2, 3]) == false
+  end
+
+  test "cannot reorder with duplicate single value" do
+    assert Solution.can_reorder_diff_one([1, 1]) == false
+  end
+
+  test "can reorder with two different values" do
+    assert Solution.can_reorder_diff_one([1, 2]) == true
+  end
+
+  test "can reorder with duplicate middle value" do
+    assert Solution.can_reorder_diff_one([1, 2, 2, 3]) == true
+  end
+end[0m
+[36m00:11:34.608 [debug] [Budget] spent so far (est.): $1.6268[0m
+[22m00:11:34.609 [info] [Validator.run] step 1/6: credence fix[0m
+[36m00:11:34.609 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m00:11:35.299 [debug] [run_credence_fix] exit=0 output:
+
+00:11:35.126 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+00:11:35.128 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+00:11:35.140 [debug] [credence_fix] semantic pass 1: compilation OK, 0 warning(s)
+
+00:11:35.140 [debug] [credence_fix] semantic done. Applied: []
+
+00:11:35.141 [debug] [credence_fix] starting pattern fix pipeline (122 rules)
+
+00:11:35.154 [debug] [credence_fix] AvoidLengthGuardLessThan2: check found 1 issue(s), running fix...
+
+00:11:35.176 [debug] [credence_fix] AvoidLengthGuardLessThan2: source CHANGED:
+  L12 -   def can_reorder_diff_one(list) when length(list) < 2, do: false
+  L12 +   def can_reorder_diff_one([]), do: false
+  L14 -   def can_reorder_diff_one(list) do
+  L14 +   def can_reorder_diff_one([_]), do: false
+  L15 -     freqs = Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+  L15 + 
+  L16 -     unique_sorted = Map.keys(freqs) |> Enum.sort()
+  L16 +   def can_reorder_diff_one(list) do
+  L17 - 
+  L17 +     freqs = Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+  L18 -     case unique_sorted do
+  L18 +     unique_sorted = Map.keys(freqs) |> Enum.sort()
+  L19 -       [] -> true
+  L19 + 
+  L20 -       _ ->
+  L20 +     case unique_sorted do
+  L21 -         min_val = hd(unique_sorted)
+  L21 +       [] -> true
+  L22 -         max_val = List.last(unique_sorted)
+  L22 +       _ ->
+  L23 -         expected_length = max_val - min_val + 1
+  L23 +         min_val = hd(unique_sorted)
+  L24 - 
+  L24 +         max_val = List.last(unique_sorted)
+  L25 -         # Check if all integers in range [min_val, max_val] are present
+  L25 +         expected_length = max_val - min_val + 1
+  L26 -         if length(unique_sorted) != expected_length do
+  L26 + 
+  L27 -           false
+  L27 +         # Check if all integers in range [min_val, max_val] are present
+  L28 -         else
+  L28 +         if length(unique_sorted) != expected_length do
+  L29 -           # Check if the frequency counts allow for a valid consecutive arrangement.
+  L29 +           false
+  L30 -           # A necessary condition for a valid arrangement on a line graph is that
+  L30 +         else
+  L31 -           # at most two values have odd frequencies (the endpoints).
+  L31 +           # Check if the frequency counts allow for a valid consecutive arrangement.
+  L32 -           # However, this is for Eulerian paths on undirected graphs.
+  L32 +           # A necessary condition for a valid arrangement on a line graph is that
+  L33 -           # For a simple consecutive arrangement a1, a2, ..., an where |ai - ai+1| = 1:
+  L33 +           # at most two values have odd frequencies (the endpoints).
+  L34 -           # The multiset must form a contiguous range (checked above).
+  L34 +           # However, this is for Eulerian paths on undirected graphs.
+  L35 -           # Additionally, we need to ensure the "flow" works.
+  L35 +           # For a simple consecutive arrangement a1, a2, ..., an where |ai - ai+1| = 1:
+  L36 - 
+  L36 +           # The multiset must form a contiguous range (checked above).
+  L37 -           # Actually, the condition is simpler:
+  L37 +           # Additionally, we need to ensure the "flow" works.
+  L38 -           # If we have a contiguous range of integers, a valid permutation always exists
+  L38 + 
+  L39 -           # IF AND ONLY IF the maximum frequency is not too large relative to the others.
+  L39 +           # Actually, the condition is simpler:
+  L40 -           # Specifically, in a valid sequence, no element can appear more than ceil(n/2) times?
+  L40 +           # If we have a contiguous range of integers, a valid permutation always exists
+  L41 -           # No, that's for non-adjacent duplicates.
+  L41 +           # IF AND ONLY IF the maximum frequency is not too large relative to the others.
+  L42 - 
+  L42 +           # Specifically, in a valid sequence, no element can appear more than ceil(n/2) times?
+  L43 -           # Let's think about it: 1,2,3,2 -> counts: 1:1, 2:2, 3:1. Valid.
+  L43 +           # No, that's for non-adjacent duplicates.
+  L44 -           # 2,1,2,3 -> counts: 1:1, 2:2, 3:1. Valid.
+  L44 + 
+  L45 -           # 1,2,3 -> counts: 1:1, 2:1, 3:1. Valid.
+  L45 +           # Let's think about it: 1,2,3,2 -> counts: 1:1, 2:2, 3:1. Valid.
+  L46 -           # 2,2,2,3 -> counts: 2:3, 3:1. Can we do it? 2,3,2,2? No, last two are diff 0.
+  L46 +           # 2,1,2,3 -> counts: 1:1, 2:2, 3:1. Valid.
+  L47 -           # 2,2,3,2 -> 2-2 diff 0. No.
+  L47 +           # 1,2,3 -> counts: 1:1, 2:1, 3:1. Valid.
+  L48 -           # 3,2,2,2 -> No.
+  L48 +           # 2,2,2,3 -> counts: 2:3, 3:1. Can we do it? 2,3,2,2? No, last two are diff 0.
+  L49 -           # So 2,2,2,3 is invalid.
+  L49 +           # 2,2,3,2 -> 2-2 diff 0. No.
+  L50 - 
+  L50 +           # 3,2,2,2 -> No.
+  L51 -           # What's the condition?
+  L51 +           # So 2,2,2,3 is invalid.
+  L52 -           # In any valid sequence, between two occurrences of the same number x,
+  L52 + 
+  L53 -           # there must be at least one number. So if a number appears k times,
+  L53 +           # What's the condition?
+  L54 -           # we need at least k-1 "separators" which are different numbers.
+  L54 +           # In any valid sequence, between two occurrences of the same number x,
+  L55 -           # The total number of other elements is n - k.
+  L55 +           # there must be at least one number. So if a number appears k times,
+  L56 -           # We need n - k >= k - 1, so n + 1 >= 2k, or k <= (n + 1) / 2.
+  L56 +           # we need at least k-1 "separators" which are different numbers.
+  L57 - 
+  L57 +           # The total number of other elements is n - k.
+  L58 -           # Let's verify:
+  L58 +           # We need n - k >= k - 1, so n + 1 >= 2k, or k <= (n + 1) / 2.
+  L59 -           # [1,2,3,2]: n=4, max_freq=2. 2 <= (4+1)/2 = 2.5. True. Valid.
+  L59 + 
+  L60 -           # [2,2,2,3]: n=4, max_freq=3. 3 <= 2.5. False. Invalid. Correct!
+  L60 +           # Let's verify:
+  L61 -           # [1,1]: n=2, max_freq=2. 2 <= 1.5. False. Invalid. Correct (diff is 0).
+  L61 +           # [1,2,3,2]: n=4, max_freq=2. 2 <= (4+1)/2 = 2.5. True. Valid.
+  L62 -           # [1,2]: n=2, max_freq=1. 1 <= 1.5. True. Valid.
+  L62 +           # [2,2,2,3]: n=4, max_freq=3. 3 <= 2.5. False. Invalid. Correct!
+  L63 -           # [1,2,2,3]: n=4, max_freq=2. 2 <= 2.5. True. Valid.
+  L63 +           # [1,1]: n=2, max_freq=2. 2 <= 1.5. False. Invalid. Correct (diff is 0).
+  L64 - 
+  L64 +           # [1,2]: n=2, max_freq=1. 1 <= 1.5. True. Valid.
+  L65 -           # So the conditions are:
+  L65 +           # [1,2,2,3]: n=4, max_freq=2. 2 <= 2.5. True. Valid.
+  L66 -           # 1. All numbers form a contiguous range.
+  L66 + 
+  L67 -           # 2. max_frequency <= (length + 1) // 2
+  L67 +           # So the conditions are:
+  L68 - 
+  L68 +           # 1. All numbers form a contiguous range.
+  L69 -           n = length(list)
+  L69 +           # 2. max_frequency <= (length + 1) // 2
+  L70 -           max_freq = Enum.max(Map.values(freqs))
+  L70 + 
+  L71 -           max_freq <= div(n + 1, 2)
+  L71 +           n = length(list)
+  L72 -         end
+  L72 +           max_freq = Enum.max(Map.values(freqs))
+  L73 -     end
+  L73 +           max_freq <= div(n + 1, 2)
+  L74 -   end
+  L74 +         end
+  L75 - end
+  L75 +     end
+  L76 +   end
+  L77 + end
+
+00:11:35.274 [debug] [credence_fix] done. Applied: [AvoidLengthGuardLessThan2(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.AvoidLengthGuardLessThan2, 1}]
+[0m
+[22m00:11:35.299 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m00:11:35.974 [info] [run_credence_fix] fix compiles OK[0m
+[36m00:11:35.974 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @moduledoc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  """
+
+  @doc """
+  Returns true if the list can be rearranged into a consecutive sequence,
+  false otherwise. Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one(list) when length(list) < 2, do: false
+
+  def can_reorder_diff_one(list) do
+    freqs = Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+
+    case unique_sorted do
+      [] -> true
+      _ ->
+        min_val = hd(unique_sorted)
+        max_val = List.last(unique_sorted)
+        expected_length = max_val - min_val + 1
+
+        # Check if all integers in range [min_val, max_val] are present
+        if length(unique_sorted) != expected_length do
+          false
+        else
+          # Check if the frequency counts allow for a valid consecutive arrangement.
+          # A necessary condition for a valid arrangement on a line graph is that
+          # at most two values have odd frequencies (the endpoints).
+          # However, this is for Eulerian paths on undirected graphs.
+          # For a simple consecutive arrangement a1, a2, ..., an where |ai - ai+1| = 1:
+          # The multiset must form a contiguous range (checked above).
+          # Additionally, we need to ensure the "flow" works.
+          
+          # Actually, the condition is simpler:
+          # If we have a contiguous range of integers, a valid permutation always exists
+          # IF AND ONLY IF the maximum frequency is not too large relative to the others.
+          # Specifically, in a valid sequence, no element can appear more than ceil(n/2) times?
+          # No, that's for non-adjacent duplicates.
+          
+          # Let's think about it: 1,2,3,2 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 2,1,2,3 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 1,2,3 -> counts: 1:1, 2:1, 3:1. Valid.
+          # 2,2,2,3 -> counts: 2:3, 3:1. Can we do it? 2,3,2,2? No, last two are diff 0.
+          # 2,2,3,2 -> 2-2 diff 0. No.
+          # 3,2,2,2 -> No.
+          # So 2,2,2,3 is invalid.
+          
+          # What's the condition?
+          # In any valid sequence, between two occurrences of the same number x,
+          # there must be at least one number. So if a number appears k times,
+          # we need at least k-1 "separators" which are different numbers.
+          # The total number of other elements is n - k.
+          # We need n - k >= k - 1, so n + 1 >= 2k, or k <= (n + 1) / 2.
+          
+          # Let's verify:
+          # [1,2,3,2]: n=4, max_freq=2. 2 <= (4+1)/2 = 2.5. True. Valid.
+          # [2,2,2,3]: n=4, max_freq=3. 3 <= 2.5. False. Invalid. Correct!
+          # [1,1]: n=2, max_freq=2. 2 <= 1.5. False. Invalid. Correct (diff is 0).
+          # [1,2]: n=2, max_freq=1. 1 <= 1.5. True. Valid.
+          # [1,2,2,3]: n=4, max_freq=2. 2 <= 2.5. True. Valid.
+          
+          # So the conditions are:
+          # 1. All numbers form a contiguous range.
+          # 2. max_frequency <= (length + 1) // 2
+          
+          n = length(list)
+          max_freq = Enum.max(Map.values(freqs))
+          max_freq <= div(n + 1, 2)
+        end
+    end
+  end
+end[0m
+[36m00:11:35.974 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @moduledoc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  """
+
+  @doc """
+  Returns true if the list can be rearranged into a consecutive sequence,
+  false otherwise. Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one([]), do: false
+
+  def can_reorder_diff_one([_]), do: false
+
+  def can_reorder_diff_one(list) do
+    freqs = Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+
+    case unique_sorted do
+      [] -> true
+      _ ->
+        min_val = hd(unique_sorted)
+        max_val = List.last(unique_sorted)
+        expected_length = max_val - min_val + 1
+
+        # Check if all integers in range [min_val, max_val] are present
+        if length(unique_sorted) != expected_length do
+          false
+        else
+          # Check if the frequency counts allow for a valid consecutive arrangement.
+          # A necessary condition for a valid arrangement on a line graph is that
+          # at most two values have odd frequencies (the endpoints).
+          # However, this is for Eulerian paths on undirected graphs.
+          # For a simple consecutive arrangement a1, a2, ..., an where |ai - ai+1| = 1:
+          # The multiset must form a contiguous range (checked above).
+          # Additionally, we need to ensure the "flow" works.
+
+          # Actually, the condition is simpler:
+          # If we have a contiguous range of integers, a valid permutation always exists
+          # IF AND ONLY IF the maximum frequency is not too large relative to the others.
+          # Specifically, in a valid sequence, no element can appear more than ceil(n/2) times?
+          # No, that's for non-adjacent duplicates.
+
+          # Let's think about it: 1,2,3,2 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 2,1,2,3 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 1,2,3 -> counts: 1:1, 2:1, 3:1. Valid.
+          # 2,2,2,3 -> counts: 2:3, 3:1. Can we do it? 2,3,2,2? No, last two are diff 0.
+          # 2,2,3,2 -> 2-2 diff 0. No.
+          # 3,2,2,2 -> No.
+          # So 2,2,2,3 is invalid.
+
+          # What's the condition?
+          # In any valid sequence, between two occurrences of the same number x,
+          # there must be at least one number. So if a number appears k times,
+          # we need at least k-1 "separators" which are different numbers.
+          # The total number of other elements is n - k.
+          # We need n - k >= k - 1, so n + 1 >= 2k, or k <= (n + 1) / 2.
+
+          # Let's verify:
+          # [1,2,3,2]: n=4, max_freq=2. 2 <= (4+1)/2 = 2.5. True. Valid.
+          # [2,2,2,3]: n=4, max_freq=3. 3 <= 2.5. False. Invalid. Correct!
+          # [1,1]: n=2, max_freq=2. 2 <= 1.5. False. Invalid. Correct (diff is 0).
+          # [1,2]: n=2, max_freq=1. 1 <= 1.5. True. Valid.
+          # [1,2,2,3]: n=4, max_freq=2. 2 <= 2.5. True. Valid.
+
+          # So the conditions are:
+          # 1. All numbers form a contiguous range.
+          # 2. max_frequency <= (length + 1) // 2
+
+          n = length(list)
+          max_freq = Enum.max(Map.values(freqs))
+          max_freq <= div(n + 1, 2)
+        end
+    end
+  end
+end[0m
+[22m00:11:35.974 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m00:11:35.974 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @moduledoc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  """
+
+  @doc """
+  Returns true if the list can be rearranged into a consecutive sequence,
+  false otherwise. Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one(list) when length(list) < 2, do: false
+
+  def can_reorder_diff_one(list) do
+    freqs = Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+
+    case unique_sorted do
+      [] -> true
+      _ ->
+        min_val = hd(unique_sorted)
+        max_val = List.last(unique_sorted)
+        expected_length = max_val - min_val + 1
+
+        # Check if all integers in range [min_val, max_val] are present
+        if length(unique_sorted) != expected_length do
+          false
+        else
+          # Check if the frequency counts allow for a valid consecutive arrangement.
+          # A necessary condition for a valid arrangement on a line graph is that
+          # at most two values have odd frequencies (the endpoints).
+          # However, this is for Eulerian paths on undirected graphs.
+          # For a simple consecutive arrangement a1, a2, ..., an where |ai - ai+1| = 1:
+          # The multiset must form a contiguous range (checked above).
+          # Additionally, we need to ensure the "flow" works.
+          
+          # Actually, the condition is simpler:
+          # If we have a contiguous range of integers, a valid permutation always exists
+          # IF AND ONLY IF the maximum frequency is not too large relative to the others.
+          # Specifically, in a valid sequence, no element can appear more than ceil(n/2) times?
+          # No, that's for non-adjacent duplicates.
+          
+          # Let's think about it: 1,2,3,2 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 2,1,2,3 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 1,2,3 -> counts: 1:1, 2:1, 3:1. Valid.
+          # 2,2,2,3 -> counts: 2:3, 3:1. Can we do it? 2,3,2,2? No, last two are diff 0.
+          # 2,2,3,2 -> 2-2 diff 0. No.
+          # 3,2,2,2 -> No.
+          # So 2,2,2,3 is invalid.
+          
+          # What's the condition?
+          # In any valid sequence, between two occurrences of the same number x,
+          # there must be at least one number. So if a number appears k times,
+          # we need at least k-1 "separators" which are different numbers.
+          # The total number of other elements is n - k.
+          # We need n - k >= k - 1, so n + 1 >= 2k, or k <= (n + 1) / 2.
+          
+          # Let's verify:
+          # [1,2,3,2]: n=4, max_freq=2. 2 <= (4+1)/2 = 2.5. True. Valid.
+          # [2,2,2,3]: n=4, max_freq=3. 3 <= 2.5. False. Invalid. Correct!
+          # [1,1]: n=2, max_freq=2. 2 <= 1.5. False. Invalid. Correct (diff is 0).
+          # [1,2]: n=2, max_freq=1. 1 <= 1.5. True. Valid.
+          # [1,2,2,3]: n=4, max_freq=2. 2 <= 2.5. True. Valid.
+          
+          # So the conditions are:
+          # 1. All numbers form a contiguous range.
+          # 2. max_frequency <= (length + 1) // 2
+          
+          n = length(list)
+          max_freq = Enum.max(Map.values(freqs))
+          max_freq <= div(n + 1, 2)
+        end
+    end
+  end
+end[0m
+[36m00:11:35.974 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @moduledoc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  """
+
+  @doc """
+  Returns true if the list can be rearranged into a consecutive sequence,
+  false otherwise. Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one([]), do: false
+
+  def can_reorder_diff_one([_]), do: false
+
+  def can_reorder_diff_one(list) do
+    freqs = Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+
+    case unique_sorted do
+      [] -> true
+      _ ->
+        min_val = hd(unique_sorted)
+        max_val = List.last(unique_sorted)
+        expected_length = max_val - min_val + 1
+
+        # Check if all integers in range [min_val, max_val] are present
+        if length(unique_sorted) != expected_length do
+          false
+        else
+          # Check if the frequency counts allow for a valid consecutive arrangement.
+          # A necessary condition for a valid arrangement on a line graph is that
+          # at most two values have odd frequencies (the endpoints).
+          # However, this is for Eulerian paths on undirected graphs.
+          # For a simple consecutive arrangement a1, a2, ..., an where |ai - ai+1| = 1:
+          # The multiset must form a contiguous range (checked above).
+          # Additionally, we need to ensure the "flow" works.
+
+          # Actually, the condition is simpler:
+          # If we have a contiguous range of integers, a valid permutation always exists
+          # IF AND ONLY IF the maximum frequency is not too large relative to the others.
+          # Specifically, in a valid sequence, no element can appear more than ceil(n/2) times?
+          # No, that's for non-adjacent duplicates.
+
+          # Let's think about it: 1,2,3,2 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 2,1,2,3 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 1,2,3 -> counts: 1:1, 2:1, 3:1. Valid.
+          # 2,2,2,3 -> counts: 2:3, 3:1. Can we do it? 2,3,2,2? No, last two are diff 0.
+          # 2,2,3,2 -> 2-2 diff 0. No.
+          # 3,2,2,2 -> No.
+          # So 2,2,2,3 is invalid.
+
+          # What's the condition?
+          # In any valid sequence, between two occurrences of the same number x,
+          # there must be at least one number. So if a number appears k times,
+          # we need at least k-1 "separators" which are different numbers.
+          # The total number of other elements is n - k.
+          # We need n - k >= k - 1, so n + 1 >= 2k, or k <= (n + 1) / 2.
+
+          # Let's verify:
+          # [1,2,3,2]: n=4, max_freq=2. 2 <= (4+1)/2 = 2.5. True. Valid.
+          # [2,2,2,3]: n=4, max_freq=3. 3 <= 2.5. False. Invalid. Correct!
+          # [1,1]: n=2, max_freq=2. 2 <= 1.5. False. Invalid. Correct (diff is 0).
+          # [1,2]: n=2, max_freq=1. 1 <= 1.5. True. Valid.
+          # [1,2,2,3]: n=4, max_freq=2. 2 <= 2.5. True. Valid.
+
+          # So the conditions are:
+          # 1. All numbers form a contiguous range.
+          # 2. max_frequency <= (length + 1) // 2
+
+          n = length(list)
+          max_freq = Enum.max(Map.values(freqs))
+          max_freq <= div(n + 1, 2)
+        end
+    end
+  end
+end[0m
+[36m00:11:35.974 [debug] [propagate_is_renames] old functions: ["can_reorder_diff_one"][0m
+[36m00:11:35.974 [debug] [propagate_is_renames] new functions: ["can_reorder_diff_one"][0m
+[36m00:11:35.974 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m00:11:35.974 [info] [Validator.run] step 2/6: compile[0m
+[22m00:11:36.534 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m00:11:36.534 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m00:11:36.534 [info] [Validator.run] step 3/6: format[0m
+[22m00:11:36.849 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m00:11:37.158 [debug] [Validator.run] format fix output: [0m
+[22m00:11:37.158 [info] [Validator.run] step 4/6: credo[0m
+[36m00:11:37.637 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m00:11:37.637 [info] [Validator.run] credo: no issues[0m
+[22m00:11:37.638 [info] [Validator.run] step 5/6: credence check[0m
+[22m00:11:38.345 [info] [Validator.run] credence check exit=0[0m
+[36m00:11:38.345 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m00:11:38.345 [info] [Validator.run] credence check: passed[0m
+[22m00:11:38.345 [info] [Validator.run] step 6/6: tests[0m
+[22m00:11:38.827 [info] [Validator.run] test exit=0[0m
+[36m00:11:38.827 [debug] [Validator.run] test output:
+Running ExUnit with seed: 786220, max_cases: 48
+
+.....
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+5 tests, 0 failures
+[0m
+[22m00:11:38.828 [info] [Validator.run] tests: PASSED[0m
+[22m00:11:38.828 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m00:11:38.828 [debug] [Validator.run] final module (3357 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if a list of integers can be rearranged into a sequence where
+  the absolute difference between each pair of adjacent elements is exactly 1.
+  """
+
+  @doc """
+  Returns true if the list can be rearranged into a consecutive sequence,
+  false otherwise. Returns false for lists with fewer than two elements.
+  """
+  @spec can_reorder_diff_one([integer()]) :: boolean()
+  def can_reorder_diff_one([]), do: false
+
+  def can_reorder_diff_one([_]), do: false
+
+  def can_reorder_diff_one(list) do
+    freqs = Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    unique_sorted = Map.keys(freqs) |> Enum.sort()
+
+    case unique_sorted do
+      [] ->
+        true
+
+      _ ->
+        min_val = hd(unique_sorted)
+        max_val = List.last(unique_sorted)
+        expected_length = max_val - min_val + 1
+
+        # Check if all integers in range [min_val, max_val] are present
+        if length(unique_sorted) != expected_length do
+          false
+        else
+          # Check if the frequency counts allow for a valid consecutive arrangement.
+          # A necessary condition for a valid arrangement on a line graph is that
+          # at most two values have odd frequencies (the endpoints).
+          # However, this is for Eulerian paths on undirected graphs.
+          # For a simple consecutive arrangement a1, a2, ..., an where |ai - ai+1| = 1:
+          # The multiset must form a contiguous range (checked above).
+          # Additionally, we need to ensure the "flow" works.
+
+          # Actually, the condition is simpler:
+          # If we have a contiguous range of integers, a valid permutation always exists
+          # IF AND ONLY IF the maximum frequency is not too large relative to the others.
+          # Specifically, in a valid sequence, no element can appear more than ceil(n/2) times?
+          # No, that's for non-adjacent duplicates.
+
+          # Let's think about it: 1,2,3,2 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 2,1,2,3 -> counts: 1:1, 2:2, 3:1. Valid.
+          # 1,2,3 -> counts: 1:1, 2:1, 3:1. Valid.
+          # 2,2,2,3 -> counts: 2:3, 3:1. Can we do it? 2,3,2,2? No, last two are diff 0.
+          # 2,2,3,2 -> 2-2 diff 0. No.
+          # 3,2,2,2 -> No.
+          # So 2,2,2,3 is invalid.
+
+          # What's the condition?
+          # In any valid sequence, between two occurrences of the same number x,
+          # there must be at least one number. So if a number appears k times,
+          # we need at least k-1 "separators" which are different numbers.
+          # The total number of other elements is n - k.
+          # We need n - k >= k - 1, so n + 1 >= 2k, or k <= (n + 1) / 2.
+
+          # Let's verify:
+          # [1,2,3,2]: n=4, max_freq=2. 2 <= (4+1)/2 = 2.5. True. Valid.
+          # [2,2,2,3]: n=4, max_freq=3. 3 <= 2.5. False. Invalid. Correct!
+          # [1,1]: n=2, max_freq=2. 2 <= 1.5. False. Invalid. Correct (diff is 0).
+          # [1,2]: n=2, max_freq=1. 1 <= 1.5. True. Valid.
+          # [1,2,2,3]: n=4, max_freq=2. 2 <= 2.5. True. Valid.
+
+          # So the conditions are:
+          # 1. All numbers form a contiguous range.
+          # 2. max_frequency <= (length + 1) // 2
+
+          n = length(list)
+          max_freq = Enum.max(Map.values(freqs))
+          max_freq <= div(n + 1, 2)
+        end
+    end
+  end
+end
+[0m
+[36m00:11:38.828 [debug] [Validator.run] final test (811 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "can reorder with consecutive difference of 1" do
+    assert Solution.can_reorder_diff_one([1, 3, 2, 4]) == true
+    assert Solution.can_reorder_diff_one([5, 4, 3, 2, 1]) == true
+    assert Solution.can_reorder_diff_one([1, 3, 5, 7]) == false
+  end
+
+  test "cannot reorder with duplicates that are too frequent" do
+    assert Solution.can_reorder_diff_one([2, 2, 2, 3]) == false
+  end
+
+  test "cannot reorder with duplicate single value" do
+    assert Solution.can_reorder_diff_one([1, 1]) == false
+  end
+
+  test "can reorder with two different values" do
+    assert Solution.can_reorder_diff_one([1, 2]) == true
+  end
+
+  test "can reorder with duplicate middle value" do
+    assert Solution.can_reorder_diff_one([1, 2, 2, 3]) == true
+  end
+end
+[0m
+[22m00:11:38.828 [info] [Solve attempt 2] validation PASSED[0m
+[36m00:11:38.841 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Pattern.AvoidLengthGuardLessThan2
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern | syntax | semantic)
+===BEFORE===             (a full, self-contained defmodule isolating ONE issue)
+ (truncated)[0m
+[36m00:12:50.657 [debug] [LLM.call] finish=stop len=521 usage=%{"completion_tokens" => 2881, "completion_tokens_details" => %{"reasoning_tokens" => 2731}, "prompt_tokens" => 26304, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 29185}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_enum_frequencies_over_group_by
+===PHASE===
+pattern
+===BEFORE===
+defmodule FrequencyExample do
+  def count_items(list) do
+    Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+  end
+end
+===AFTER===
+defmodule FrequencyExample do
+  def count_items(list) do
+    Enum.frequencies(list)
+  end
+end
+===ASSUMPTIONS===
+===RATIONALE===
+`Enum.frequencies/1` is the idiomatic and more efficient way to build a frequency map from an enumerable.
+===END===[0m
+[22m00:12:50.658 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 71817ms — ok[0m
+[36m00:12:50.658 [debug] [Budget] spent so far (est.): $1.6408[0m
+[22m00:12:52.999 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m00:12:57.215 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" -o -name "*.exs" | head -40[0m
+[22m00:12:57.215 [info] [Pi] step 2: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_frequencies_over_group_by.ex[0m
+[22m00:13:00.362 [info] [Pi] step 3: bash
+    command: ls /home/kly/projects/credence/lib/pattern/[0m
+[22m00:13:00.362 [info] [Pi] step 4: read
+    path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m00:13:00.362 [info] [Pi] step 5: read
+    path: /home/kly/projects/credence/test/support/equivalence_inputs.ex[0m
+[22m00:13:03.638 [info] [Pi] step 6: read
+    path: /home/kly/projects/credence/lib/pattern/no_group_by_for_frequencies.ex[0m
+[22m00:13:03.638 [info] [Pi] step 7: read
+    path: /home/kly/projects/credence/lib/pattern/rule.ex[0m
+[22m00:13:03.638 [info] [Pi] step 8: read
+    path: /home/kly/projects/credence/lib/pattern/no_manual_frequencies.ex[0m
+[22m00:13:07.652 [info] [Pi] step 9: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_frequencies_over_group_by_check_test.exs[0m
+[22m00:13:07.652 [info] [Pi] step 10: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs[0m
+[22m00:13:07.652 [info] [Pi] step 11: read
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_frequencies_over_group_by_equivalence_test.exs[0m
+[22m00:13:10.245 [info] [Pi] step 12: bash
+    command: ls /home/kly/projects/credence/test/pattern/no_group_by_for_frequencies*[0m
+[22m00:13:12.223 [info] [Pi] step 13: read
+    path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m00:13:18.843 [info] [Pi] step 14: bash
+    command: grep -n "patches_from_postwalk" /home/kly/projects/credence/lib/rule_helpers.ex | head -5[0m
+[22m00:13:22.999 [info] [Pi] step 15: read
+    limit: 50
+    offset: 348
+    path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m00:13:22.999 [info] [Pi] step 16: read
+    path: /home/kly/projects/credence/test/pattern/no_group_by_for_frequencies_check_test.exs[0m
+[22m00:14:55.478 [info] [Budget] HEARTBEAT — 321 paid calls, est $1.6408 over 474.7min → ~$0.2074/hr, ~$4.98/day (tok in=2103323 cache_rd=21218176 out=746474)[0m
+[22m00:16:21.823 [info] [Pi] step 17: bash
+    command: cat /home/kly/projects/credence/lib/issue.ex 2>/dev/null || find /home/kly/projects/credence/lib -name "issue*" -type f[0m
+[22m00:16:21.823 [info] [Pi] step 18: read
+    path: /home/kly/projects/credence/test/pattern/no_group_by_for_frequencies_fix_test.exs[0m
+[22m00:16:21.823 [info] [Pi] step 19: read
+    path: /home/kly/projects/credence/test/pattern/no_group_by_for_frequencies_equivalence_test.exs[0m
+[22m00:19:55.479 [info] [Budget] HEARTBEAT — 321 paid calls, est $1.6408 over 479.7min → ~$0.2052/hr, ~$4.93/day (tok in=2103323 cache_rd=21218176 out=746474)[0m
+[22m00:24:55.478 [info] [Budget] HEARTBEAT — 321 paid calls, est $1.6408 over 484.7min → ~$0.2031/hr, ~$4.87/day (tok in=2103323 cache_rd=21218176 out=746474)[0m
+[22m00:26:49.231 [info] [Pi] step 20: read
+    limit: 50
+    offset: 1
+    path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m00:26:49.231 [info] [Pi] step 21: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_frequencies_over_group_by*_test.exs 2>&1 | tail -30[0m
+[22m00:26:54.700 [info] [Pi] step 22: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = """
+Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+"""
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity)
+'[0m
+[22m00:27:01.889 [info] [Pi] step 23: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = """
+Enum.group_by(list, fn x -> x end) |> Map.new(fn {k, v} -> {k, length(v)} end)
+"""
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity)
+' 2>&1 | head -40[0m
+[22m00:27:01.889 [info] [Pi] step 24: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = """
+Enum.frequencies(list)
+"""
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity)
+'[0m
+[22m00:27:06.047 [info] [Pi] step 25: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+code = """
+Map.new(Enum.group_by(list, & &1), fn {k, v} -> {k, length(v)} end)
+"""
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, limit: :infinity)
+' 2>&1 | head -50[0m
+[22m00:27:40.093 [info] [Pi] step 26: write
+    content: defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
+  @moduledoc """
+  Detects `Enum.group_by(enum, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)`
+  which counts occurrences of each element — exactly what `Enum.frequencies/1` does,
+  but with unnecessary intermediate per-element lists.
+
+  Using `Enum.group_by/2` with the identity function to count occurrences is
+  unnecessarily verbose. `Enum.frequencies/1` does exactly this in one call,
+  is clearer, and is optimized internally.
+
+  ## Bad
+
+      Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+
+      Map.new(Enum.group_by(list, & &1), fn {k, v} -> {k, length(v)} end)
+
+  ## Good
+
+      Enum.frequencies(list)
+  """
+
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn node, issues ->
+        case check_node(node) do
+          {:ok, issue} -> {node, [issue | issues]}
+          :error -> {node, issues}
+        end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
+      case fix_node(node) do
+        {:ok, replacement} -> replacement
+        :error -> node
+      end
+    end)
+  end
+
+  # ── Check ──────────────────────────────────────────────────────────────
+
+  # Two-step pipe: Enum.group_by(enum, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+  defp check_node({:|>, _, [group_by_call, map_new_call]}) do
+    if identity_group_by_direct?(group_by_call) and map_new_length_step?(map_new_call) do
+      {{:., meta, _}, _, _} = group_by_call
+      {:ok, build_issue(meta)}
+    else
+      :error
+    end
+  end
+
+  # Three+ step pipe: ... |> Enum.group_by(& &1) |> Map.new(fn ...)
+  defp check_node({:|>, _, _} = node) do
+    steps = flatten_pipeline(node)
+
+    if length(steps) >= 3 do
+      [group_by_step, map_new_step] = Enum.take(steps, -2)
+
+      if identity_group_by_piped?(group_by_step) and map_new_length_step?(map_new_step) do
+        {{:., meta, _}, _, _} = group_by_step
+        {:ok, build_issue(meta)}
+      else
+        :error
+      end
+    else
+      :error
+    end
+  end
+
+  # Direct: Map.new(Enum.group_by(enum, & &1), fn {k, v} -> {k, length(v)} end)
+  defp check_node(
+         {{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _,
+          [group_by_call, callback]}
+       ) do
+    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+      {:ok, build_issue(meta)}
+    else
+      :error
+    end
+  end
+
+  defp check_node(_), do: :error
+
+  # ── Fix ────────────────────────────────────────────────────────────────
+
+  # Two-step pipe: Enum.group_by(enum, & &1) |> Map.new(fn ...)
+  defp fix_node({:|>, _, [group_by_call, map_new_call]}) do
+    if identity_group_by_direct?(group_by_call) and map_new_length_step?(map_new_call) do
+      {{:., meta, _}, _, [enum, _key_fn]} = group_by_call
+      {:ok, enum_frequencies(meta, enum)}
+    else
+      :error
+    end
+  end
+
+  # Three+ step pipe
+  defp fix_node({:|>, _, _} = node) do
+    steps = flatten_pipeline(node)
+
+    case find_identity_group_by_pair(steps) do
+      {:ok, before_steps, group_by_step, _map_new_step, after_steps} ->
+        {{:., _, _}, _, group_by_args} = group_by_step
+
+        enum_source = extract_enum(before_steps, group_by_args)
+
+        if enum_source do
+          {{:., meta, _}, _, _} = group_by_step
+          frequencies = enum_frequencies(meta, enum_source)
+
+          case after_steps do
+            [] ->
+              {:ok, frequencies}
+
+            remaining ->
+              rebuilt =
+                Enum.reduce(remaining, frequencies, fn step, acc ->
+                  {:|>, [], [acc, step]}
+                end)
+
+              {:ok, rebuilt}
+          end
+        else
+          :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  # Direct: Map.new(Enum.group_by(enum, & &1), fn ...)
+  defp fix_node(
+         {{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _,
+          [group_by_call, callback]}
+       ) do
+    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+      {{:., _, _}, _, [enum, _key_fn]} = group_by_call
+      {:ok, enum_frequencies(meta, enum)}
+    else
+      :error
+    end
+  end
+
+  defp fix_node(_), do: :error
+
+  # ── Helpers ────────────────────────────────────────────────────────────
+
+  defp enum_frequencies(meta, enum) do
+    {{:., [], [{:__aliases__, [], [:Enum]}, :frequencies]}, meta, [enum]}
+  end
+
+  defp find_identity_group_by_pair(steps) do
+    steps
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.with_index()
+    |> Enum.find_value(fn {[first, second], idx} ->
+      if identity_group_by_piped?(first) and map_new_length_step?(second) do
+        before = Enum.take(steps, idx)
+        after_ = Enum.drop(steps, idx + 2)
+        {:ok, before, first, second, after_}
+      end
+    end)
+  end
+
+  defp extract_enum([], [enum, _key_fn]), do: enum
+
+  defp extract_enum(before_steps, [_key_fn]) do
+    case before_steps do
+      [single] ->
+        single
+
+      multiple ->
+        Enum.reduce(tl(multiple), hd(multiple), fn step, acc ->
+          {:|>, [], [acc, step]}
+        end)
+    end
+  end
+
+  defp extract_enum(_, _), do: nil
+
+  # Enum.group_by(enum, & &1) — two explicit args (head-position / direct)
+  defp identity_group_by_direct?(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [_enum, key_fn]}
+       ) do
+    identity_function?(key_fn)
+  end
+
+  defp identity_group_by_direct?(_), do: false
+
+  # Enum.group_by(& &1) — one explicit arg (piped form)
+  defp identity_group_by_piped?(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [key_fn]}
+       ) do
+    identity_function?(key_fn)
+  end
+
+  defp identity_group_by_piped?(_), do: false
+
+  # & &1 — capture of first argument
+  defp identity_function?({:&, _, [{:&, _, [n]}]}) when is_integer(n), do: n == 1
+
+  # fn x -> x end
+  defp identity_function?({:fn, _, [{:->, _, [[{name, _, ctx}], {name, _, ctx}]}]})
+       when is_atom(name) and is_atom(ctx),
+       do: true
+
+  defp identity_function?(_), do: false
+
+  defp map_new_length_step?({{:., _, [{:__aliases__, _, [:Map]}, :new]}, _, [callback]}),
+    do: is_length_of_group_fn?(callback)
+
+  defp map_new_length_step?(_), do: false
+
+  # Checks that the callback is of the form: fn {k, group} -> {k, length(group)} end
+  # Sourceror wraps 2-tuples in {:__block__, _, [tuple]}, so we handle both
+  # the wrapped and unwrapped forms.
+
+  # 3+ element tuple form: fn {a, b, c} -> ... — uses {:{}} tag
+  defp is_length_of_group_fn?(
+         {:fn, _,
+          [
+            {:->, _,
+             [
+               [{:{}, _, [k_var, g_var]}],
+               {:{}, _, [k_var2, length_call]}
+             ]}
+          ]}
+       ) do
+    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+  end
+
+  # 2-tuple form, Sourceror-wrapped: fn {k, group} -> {k, length(group)} end
+  defp is_length_of_group_fn?(
+         {:fn, _,
+          [
+            {:->, _,
+             [
+               [{:__block__, _, [{k_var, g_var}]}],
+               {:__block__, _, [{k_var2, length_call}]}
+             ]}
+          ]}
+       ) do
+    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+  end
+
+  # 2-tuple form, raw: fn {k, group} -> {k, length(group)} end
+  defp is_length_of_group_fn?(
+         {:fn, _,
+          [
+            {:->, _,
+             [
+               [{k_var, g_var}],
+               {k_var2, length_call}
+             ]}
+          ]}
+       ) do
+    same_var?(k_var, k_var2) and is_length_call_on (truncated)[0m
+[22m00:27:53.904 [info] [Pi] step 27: write
+    content: defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferEnumFrequenciesOverGroupBy
+
+  describe "flags the anti-pattern" do
+    test "head-position pipe: Enum.group_by(enum, & &1) |> Map.new(...)" do
+      code = """
+      Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      issues = check(PreferEnumFrequenciesOverGroupBy, code)
+      assert length(issues) == 1
+      assert hd(issues).rule == :prefer_enum_frequencies_over_group_by
+    end
+
+    test "piped form: list |> Enum.group_by(& &1) |> Map.new(...)" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "direct form: Map.new(Enum.group_by(enum, & &1), fn ...)" do
+      code = """
+      Map.new(Enum.group_by(list, & &1), fn {k, v} -> {k, length(v)} end)
+      """
+
+      assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "fn x -> x end identity variant" do
+      code = """
+      list
+      |> Enum.group_by(fn x -> x end)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "Enum.count variant" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, g} -> {k, Enum.count(g)} end)
+      """
+
+      assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "Kernel.length variant" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, g} -> {k, Kernel.length(g)} end)
+      """
+
+      assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "inside a module" do
+      code = """
+      defmodule FrequencyExample do
+        def count_items(list) do
+          Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+        end
+      end
+      """
+
+      assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+  end
+
+  describe "does not flag — out of scope" do
+    test "Enum.frequencies/1 (already idiomatic)" do
+      code = """
+      Enum.frequencies(list)
+      """
+
+      assert clean?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "Enum.frequencies_by/2 (non-identity key function)" do
+      code = """
+      Enum.frequencies_by(words, &String.downcase/1)
+      """
+
+      assert clean?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "non-identity key function" do
+      code = """
+      list
+      |> Enum.group_by(&String.downcase/1)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      assert clean?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "group_by alone, without Map.new" do
+      code = """
+      Enum.group_by(list, & &1)
+      """
+
+      assert clean?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "Map.new alone, without group_by" do
+      code = """
+      Map.new(list, fn x -> {x, x} end)
+      """
+
+      assert clean?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "non-length transform" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, items} -> {k, hd(items)} end)
+      """
+
+      assert clean?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "arithmetic on length" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, g} -> {k, length(g) + 1} end)
+      """
+
+      assert clean?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "second argument capture & &2" do
+      code = """
+      list
+      |> Enum.group_by(& &2)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      assert clean?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_frequencies_over_group_by_check_test.exs[0m
+[22m00:28:05.471 [info] [Pi] step 28: write
+    content: defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferEnumFrequenciesOverGroupBy
+
+  describe "rewrites to Enum.frequencies/1" do
+    test "head-position pipe: Enum.group_by(enum, & &1) |> Map.new(...)" do
+      code = """
+      Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      expected = """
+      Enum.frequencies(list)
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+    end
+
+    test "piped form: list |> Enum.group_by(& &1) |> Map.new(...)" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      expected = """
+      Enum.frequencies(list)
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+    end
+
+    test "direct form: Map.new(Enum.group_by(enum, & &1), fn ...)" do
+      code = """
+      Map.new(Enum.group_by(list, & &1), fn {k, v} -> {k, length(v)} end)
+      """
+
+      expected = """
+      Enum.frequencies(list)
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+    end
+
+    test "fn x -> x end identity variant" do
+      code = """
+      list
+      |> Enum.group_by(fn x -> x end)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      expected = """
+      Enum.frequencies(list)
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+    end
+
+    test "preserves surrounding code" do
+      code = """
+      defmodule FrequencyExample do
+        def count_items(list) do
+          Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+        end
+      end
+      """
+
+      expected = """
+      defmodule FrequencyExample do
+        def count_items(list) do
+          Enum.frequencies(list)
+        end
+      end
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+    end
+
+    test "preserves leading pipe steps as the enum source" do
+      code = """
+      data
+      |> Enum.map(fn x -> x.name end)
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      expected = """
+      Enum.frequencies(data |> Enum.map(fn x -> x.name end))
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+    end
+  end
+
+  describe "no-op — leaves code unchanged" do
+    test "non-identity key function" do
+      code = """
+      list
+      |> Enum.group_by(&String.downcase/1)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == code
+    end
+
+    test "non-frequency transform" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, items} -> {k, hd(items)} end)
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == code
+    end
+
+    test "Enum.frequencies (already correct)" do
+      code = """
+      Enum.frequencies(list)
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == code
+    end
+  end
+
+  describe "round-trip" do
+    test "fixed code no longer triggers the rule" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      fixed = fix(PreferEnumFrequenciesOverGroupBy, code)
+      assert clean?(PreferEnumFrequenciesOverGroupBy, fixed)
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs[0m
+[22m00:28:10.994 [info] [Pi] step 29: write
+    content: defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByEquivalenceTest do
+  @moduledoc """
+  Tier 2 (module-call).
+  `Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)` →
+  `Enum.frequencies(list)`. Grouping by identity then taking each group's length
+  is exactly a frequency count. Input set covers duplicates, empty, mixed types.
+  """
+  use Credence.RuleCase, async: true
+
+  import Credence.BehaviourEquivalence
+  alias Credence.Pattern.PreferEnumFrequenciesOverGroupBy
+
+  @before """
+  defmodule FrequencyExample do
+    def count_items(list) do
+      Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+    end
+  end
+  """
+
+  test "group_by(& &1) |> Map.new(length) → Enum.frequencies preserves the counts" do
+    assert_equivalent_module(@before,
+      rule: PreferEnumFrequenciesOverGroupBy,
+      call: {:count_items, 1},
+      inputs: Credence.EquivalenceInputs.term_lists()
+    )
+  end
+end
+
+    path: /home/kly/projects/credence/test/pattern/prefer_enum_frequencies_over_group_by_equivalence_test.exs[0m
+[22m00:28:13.945 [info] [Pi] step 30: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_frequencies_over_group_by*_test.exs 2>&1[0m
+[22m00:29:17.099 [info] [Pi] step 31: read
+    path: /home/kly/projects/credence/lib/pattern/prefer_enum_frequencies_over_group_by.ex[0m
+[22m00:29:45.745 [info] [Pi] step 32: write
+    content: defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
+  @moduledoc """
+  Detects `Enum.group_by(enum, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)`
+  which counts occurrences of each element — exactly what `Enum.frequencies/1` does,
+  but with unnecessary intermediate per-element lists.
+
+  Using `Enum.group_by/2` with the identity function to count occurrences is
+  unnecessarily verbose. `Enum.frequencies/1` does exactly this in one call,
+  is clearer, and is optimized internally.
+
+  ## Bad
+
+      Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+
+      list
+      |> Enum.group_by(& &1)
+      |> Map.new(fn {k, v} -> {k, length(v)} end)
+
+      Map.new(Enum.group_by(list, & &1), fn {k, v} -> {k, length(v)} end)
+
+  ## Good
+
+      Enum.frequencies(list)
+  """
+
+  use Credence.Pattern.Rule
+  alias Credence.Issue
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn node, issues ->
+        case check_node(node) do
+          {:ok, issue} -> {node, [issue | issues]}
+          :error -> {node, issues}
+        end
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    Credence.RuleHelpers.patches_from_postwalk(ast, fn node ->
+      case fix_node(node) do
+        {:ok, replacement} -> replacement
+        :error -> node
+      end
+    end)
+  end
+
+  # ── Check ──────────────────────────────────────────────────────────────
+
+  # All pipe forms: flatten and check the last two steps
+  defp check_node({:|>, _, _} = node) do
+    steps = flatten_pipeline(node)
+
+    if length(steps) >= 2 do
+      [group_by_step, map_new_step] = Enum.take(steps, -2)
+      group_by_idx = length(steps) - 2
+
+      if map_new_length_step?(map_new_step) do
+        cond do
+          # Piped form: Enum.group_by(key_fun) — one explicit arg
+          identity_group_by_piped?(group_by_step) ->
+            {{:., meta, _}, _, _} = group_by_step
+            {:ok, build_issue(meta)}
+
+          # Head-position form: Enum.group_by(enum, key_fun) — two explicit args
+          # Only when it's the first step in the pipe
+          group_by_idx == 0 and identity_group_by_direct?(group_by_step) ->
+            {{:., meta, _}, _, _} = group_by_step
+            {:ok, build_issue(meta)}
+
+          true ->
+            :error
+        end
+      else
+        :error
+      end
+    else
+      :error
+    end
+  end
+
+  # Direct: Map.new(Enum.group_by(enum, & &1), fn {k, v} -> {k, length(v)} end)
+  defp check_node(
+         {{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _,
+          [group_by_call, callback]}
+       ) do
+    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+      {:ok, build_issue(meta)}
+    else
+      :error
+    end
+  end
+
+  defp check_node(_), do: :error
+
+  # ── Fix ────────────────────────────────────────────────────────────────
+
+  # All pipe forms: flatten and fix the last two steps
+  defp fix_node({:|>, _, _} = node) do
+    steps = flatten_pipeline(node)
+
+    if length(steps) >= 2 do
+      [group_by_step, map_new_step] = Enum.take(steps, -2)
+      group_by_idx = length(steps) - 2
+      after_steps = Enum.drop(steps, group_by_idx + 2)
+
+      if map_new_length_step?(map_new_step) do
+        cond do
+          # Piped form: Enum.group_by(key_fun) — one explicit arg
+          identity_group_by_piped?(group_by_step) ->
+            before_steps = Enum.take(steps, group_by_idx)
+            {{:., _, _}, _, [key_fn]} = group_by_step
+            enum_source = extract_enum(before_steps, [key_fn])
+            build_fix(group_by_step, enum_source, after_steps)
+
+          # Head-position form: Enum.group_by(enum, key_fun) — two explicit args
+          group_by_idx == 0 and identity_group_by_direct?(group_by_step) ->
+            {{:., _, _}, _, [enum, _key_fn]} = group_by_step
+            build_fix(group_by_step, enum, after_steps)
+
+          true ->
+            :error
+        end
+      else
+        :error
+      end
+    else
+      :error
+    end
+  end
+
+  # Direct: Map.new(Enum.group_by(enum, & &1), fn ...)
+  defp fix_node(
+         {{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _,
+          [group_by_call, callback]}
+       ) do
+    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+      {{:., _, _}, _, [enum, _key_fn]} = group_by_call
+      {:ok, enum_frequencies(meta, enum)}
+    else
+      :error
+    end
+  end
+
+  defp fix_node(_), do: :error
+
+  # ── Helpers ────────────────────────────────────────────────────────────
+
+  defp build_fix(group_by_step, enum_source, after_steps) do
+    {{:., meta, _}, _, _} = group_by_step
+    frequencies = enum_frequencies(meta, enum_source)
+
+    case after_steps do
+      [] ->
+        {:ok, frequencies}
+
+      remaining ->
+        rebuilt =
+          Enum.reduce(remaining, frequencies, fn step, acc ->
+            {:|>, [], [acc, step]}
+          end)
+
+        {:ok, rebuilt}
+    end
+  end
+
+  defp enum_frequencies(meta, enum) do
+    {{:., [], [{:__aliases__, [], [:Enum]}, :frequencies]}, meta, [enum]}
+  end
+
+  defp extract_enum([], [enum, _key_fn]), do: enum
+
+  defp extract_enum(before_steps, [_key_fn]) do
+    case before_steps do
+      [single] ->
+        single
+
+      multiple ->
+        Enum.reduce(tl(multiple), hd(multiple), fn step, acc ->
+          {:|>, [], [acc, step]}
+        end)
+    end
+  end
+
+  defp extract_enum(_, _), do: nil
+
+  # Enum.group_by(enum, & &1) — two explicit args (head-position / direct)
+  defp identity_group_by_direct?(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [_enum, key_fn]}
+       ) do
+    identity_function?(key_fn)
+  end
+
+  defp identity_group_by_direct?(_), do: false
+
+  # Enum.group_by(& &1) — one explicit arg (piped form)
+  defp identity_group_by_piped?(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [key_fn]}
+       ) do
+    identity_function?(key_fn)
+  end
+
+  defp identity_group_by_piped?(_), do: false
+
+  # & &1 — capture of first argument
+  defp identity_function?({:&, _, [{:&, _, [n]}]}) when is_integer(n), do: n == 1
+
+  # fn x -> x end
+  defp identity_function?({:fn, _, [{:->, _, [[{name, _, ctx}], {name, _, ctx}]}]})
+       when is_atom(name) and is_atom(ctx),
+       do: true
+
+  defp identity_function?(_), do: false
+
+  defp map_new_length_step?({{:., _, [{:__aliases__, _, [:Map]}, :new]}, _, [callback]}),
+    do: is_length_of_group_fn?(callback)
+
+  defp map_new_length_step?(_), do: false
+
+  # Checks that the callback is of the form: fn {k, group} -> {k, length(group)} end
+  # Sourceror wraps 2-tuples in {:__block__, _, [tuple]}, so we handle both
+  # the wrapped and unwrapped forms.
+
+  # 3+ element tuple form: fn {a, b, c} -> ... — uses {:{}} tag
+  defp is_length_of_group_fn?(
+         {:fn, _,
+          [
+            {:->, _,
+             [
+               [{:{}, _, [k_var, g_var]}],
+               {:{}, _, [k_var2, length_call]}
+             ]}
+          ]}
+       ) do
+    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+  end
+
+  # 2-tuple form, Sourceror-wrapped: fn {k, group} -> {k, length(group)} end
+  defp is_length_of_group_fn?(
+         {:fn, _,
+          [
+            {:->, _,
+             [
+               [{:__block__, _, [{k_var, g_var}]}],
+               {:__block__, _, [{k_var2, length_call}]}
+             ]}
+          ]}
+       ) do
+    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+  end
+
+  # 2-tuple form, raw: fn {k, group} -> {k, length(group)} end
+  defp is_length_of_group_fn?(
+         {:fn, _,
+          [
+            {:->, _,
+             [
+               [{k_var, g_var}],
+               {k_var2, length_call}
+             ]}
+          ]}
+    (truncated)[0m
+[22m00:29:50.203 [info] [Pi] step 33: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_frequencies_over_group_by*_test.exs 2>&1[0m
+[22m00:29:54.025 [info] [Pi] step 34: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -20[0m
+[22m00:29:55.478 [info] [Budget] HEARTBEAT — 321 paid calls, est $1.6408 over 489.7min → ~$0.201/hr, ~$4.82/day (tok in=2103323 cache_rd=21218176 out=746474)[0m
+[22m00:30:07.775 [info] [Pi] step 35: bash
+    command: cd /home/kly/projects/credence && mix run -e '
+alias Credence.Pattern.PreferEnumFrequenciesOverGroupBy
+alias Credence.RuleHelpers
+
+code = """
+defmodule FrequencyExample do
+  def count_items(list) do
+    Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
+  end
+end
+"""
+
+result = RuleHelpers.apply_rule_fix(PreferEnumFrequenciesOverGroupBy, code)
+IO.puts("=== FIX OUTPUT ===")
+IO.write(result)
+'[0m
+[22m00:30:11.546 [info] [Pi] step 36: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/prefer_enum_frequencies_over_group_by*_test.exs --trace 2>&1[0m
+[22m00:30:18.341 [info] [Pi] agent done — exit=0 steps=36 stop=stop[0m
+[36m00:30:18.341 [debug] [Budget] spent so far (est.): $1.7303[0m
+[22m00:30:18.860 [info] [Gate] staged entries: [{"A", ["lib/pattern/prefer_enum_frequencies_over_group_by.ex"]}, {"A", ["test/pattern/prefer_enum_frequencies_over_group_by_check_test.exs"]}, {"A", ["test/pattern/prefer_enum_frequencies_over_group_by_equivalence_test.exs"]}, {"A", ["test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs"]}][0m
+[36m00:30:19.567 [debug] [Gate] mix test ["test/pattern/prefer_enum_frequencies_over_group_by_check_test.exs", "test/pattern/prefer_enum_frequencies_over_group_by_equivalence_test.exs", "test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs"] exit=2
+Generated credence app
+Running ExUnit with seed: 291741, max_cases: 48
+
+
+
+  1) test group_by(& &1) |> Map.new(length) → Enum.frequencies preserves the counts (Credence.Pattern.PreferEnumFrequenciesOverGroupByEquivalenceTest)
+     test/pattern/prefer_enum_frequencies_over_group_by_equivalence_test.exs:21
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFrequenciesOverGroupBy.check/2 is undefined (module Credence.Pattern.PreferEnumFrequenciesOverGroupBy is not available)
+     code: assert_equivalent_module(@before,
+     stacktrace:
+       Credence.Pattern.PreferEnumFrequenciesOverGroupBy.check({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 5, column: 4], do: [line: 1, column: 28], end: [line: 5, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:FrequencyExample]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 28], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 6], do: [line: 2, column: 25], end: [line: 4, column: 3], line: 2, column: 3], [{:count_items, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 23], line: 2, column: 7], [{:list, [trailing_comments: [], leading_comments: [], line: 2, column: 19], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 25], [:do]}, {:|>, [trailing_comments: [], end_of_expression: [newlines: 1, line: 3, column: 74], line: 3, column: 31], [{...}, ...]}}]]}}]]}, [source: "defmodule FrequencyExample do\n  def count_items(list) do\n    Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)\n  end\nend\n"])
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:293: Credence.BehaviourEquivalence.rule_fires?/2
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:240: Credence.BehaviourEquivalence.precheck!/4
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:116: Credence.BehaviourEquivalence.assert_equivalent_module/2
+       test/pattern/prefer_enum_frequencies_over_group_by_equivalence_test.exs:22: (test)
+
+
+
+  2) test round-trip fixed code no longer triggers the rule (Credence.Pattern.PreferEnumFrequenciesOverGroupByFixTest)
+     test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs:126
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFrequenciesOverGroupBy.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumFrequenciesOverGroupBy is not available)
+     code: fixed = fix(PreferEnumFrequenciesOverGroupBy, code)
+     stacktrace:
+       Credence.Pattern.PreferEnumFrequenciesOverGroupBy.fix_patches({:|>, [trailing_comments: [], end_of_expression: [newlines: 1, line: 3, column: 44], newlines: 1, line: 3, column: 1], [{:|>, [trailing_comments: [], newlines: 1, line: 2, column: 1], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 1], nil}, {{:., [trailing_comments: [], line: 2, column: 8], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 2, column: 4], line: 2, column: 4], [:Enum]}, :group_by]}, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 22], line: 2, column: 9], [{:&, [trailing_comments: [], leading_comments: [], line: 2, column: 18], [{:&, [trailing_comments: [], leading_comments: [], line: 2, column: 20], [1]}]}]}]}, {{:., [trailing_comments: [], line: 3, column: 7], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 3, column: 4], line: 3, column: 4], [:Map]}, :new]}, [trailing_comments: [], leading_comments: [], closing: [line: 3, ...], ...], ...}]}, [source: "list\n|> Enum.group_by(& &1)\n|> Map.new(fn {k, v} -> {k, length(v)} end)\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs:133: (test)
+
+
+
+  3) test no-op — leaves code unchanged Enum.frequencies (already correct) (Credence.Pattern.PreferEnumFrequenciesOverGroupByFixTest)
+     test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs:116
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFrequenciesOverGroupBy.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumFrequenciesOverGroupBy is not available)
+     code: assert fix(PreferEnumFrequenciesOverGroupBy, code) == code
+     stacktrace:
+       Credence.Pattern.PreferEnumFrequenciesOverGroupBy.fix_patches({{:., [trailing_comments: [], line: 1, column: 5], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 1], line: 1, column: 1], [:Enum]}, :frequencies]}, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 1, column: 23], closing: [line: 1, column: 22], line: 1, column: 6], [{:list, [trailing_comments: [], leading_comments: [], line: 1, column: 18], nil}]}, [source: "Enum.frequencies(list)\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs:121: (test)
+
+
+
+  4) test rewrites to Enum.frequencies/1 preserves surrounding code (Credence.Pattern.PreferEnumFrequenciesOverGroupByFixTest)
+     test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs:59
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFrequenciesOverGroupBy.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumFrequenciesOverGroupBy is not available)
+     code: assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+     stacktrace:
+       Credence.Pattern.PreferEnumFrequenciesOverGroupBy.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 5, column: 4], do: [line: 1, column: 28], end: [line: 5, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:FrequencyExample]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 28], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 6], do: [line: 2, column: 25], end: [line: 4, column: 3], line: 2, column: 3], [{:count_items, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 23], line: 2, column: 7], [{:list, [trailing_comments: [], leading_comments: [], line: 2, column: 19], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 25], [:do]}, {:|>, [trailing_comments: [], end_of_expression: [newlines: 1, line: 3, column: 74], line: 3, column: 31], [{...}, ...]}}]]}}]]}, [source: "defmodule FrequencyExample do\n  def count_items(list) do\n    Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs:76: (test)
+
+
+
+  5) test rewrites to Enum.frequencies/1 head-position pipe: Enum.group_by(enum, & &1) |> Map.new(...) (Credence.Pattern.PreferEnumFrequenciesOverGroupByFixTest)
+     test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs:7
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferEnumFrequenciesOverGroupBy.fix_patches/2 is undefined (module Credence.Pattern.PreferEnumFrequenciesOverGroupBy is not available)
+     code: assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+     stacktrace:
+       Credence.Pattern.PreferEnumFrequenciesOverGroupBy.fix_patches({:|>, [trailing_comments: [], end_of_expression: [newlines: 1, line: 1, column: 70], line: 1, column: 27], [{{:., [trailing_comments: [], line: 1, column: 5], [{:__a (truncated)[0m
+[22m00:30:19.571 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m00:30:28.083 [debug] [Gate] mix test [] exit=0
+Compiling 1 file (.ex)
+Generated credence app
+Running ExUnit with seed: 48550, max_cases: 48
+
+.............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Finished in 7.9 seconds (3.7s async, 4.1s sync)
+5 properties, 4536 tests, 0 failures
+[0m
+[22m00:30:28.083 [info] [Gate] full suite GREEN[0m
+[22m00:30:28.096 [info] [Git] committed: cred-gen: new(pattern): prefer_enum_frequencies_over_group_by [row 62431][0m
+[22m00:30:28.096 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m00:30:30.158 [info] [Workspace] ✓ credence recompiled[0m
+[22m00:30:31.459 [info] [Git] pushed origin/evolution[0m
+[22m00:30:31.459 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m00:30:33.505 [info] [Workspace] ✓ credence recompiled[0m

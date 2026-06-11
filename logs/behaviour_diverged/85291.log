@@ -1,0 +1,611 @@
+[22m02:26:29.813 [info] [idx=85291] entry_point=smallest_equal_digit[0m
+[36m02:26:29.813 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to find the smallest positive integer, x, such that 2x, 3x, 4x, 5x, and 6x, contain the same digits in some order.
+
+## Python Solution
+```python
+def smallest_equal_digit(n):
+    number = 1
+    while True:
+        if sorted(str(number)) == sorted(str(2 * number)) == sorted(str(3 * number)) == sorted(str(4 * number)) == sorted(str(5 * number)) == sorted(str(6 * number)):
+            return number
+        number += 1
+```
+
+## Python Tests
+assert smallest_equal_digit(6) == 142857
+assert smallest_equal_digit(2) == 142857
+assert smallest_equal_digit(4) == 142857
+assert smallest_equal_digit(3) == 142857
+assert smallest_equal_digit(1) == 142857
+assert smallest_equal_digit(5) == 142857
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `smallest_equal_digit`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m02:27:44.847 [debug] [LLM.call] finish=stop len=1528 usage=%{"completion_tokens" => 2969, "completion_tokens_details" => %{"reasoning_tokens" => 2455}, "prompt_tokens" => 580, "prompt_tokens_details" => %{}, "total_tokens" => 3549}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `smallest_equal_digit/1` that takes an integer argument (the intended maximum multiple, but the problem is fixed to multiples 2 through 6) and returns the smallest positive integer x such that 2x, 3x, 4x, 5x, and 6x contain exactly the same digits in any order. The function may ignore its input.
+
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "for n=6" do
+    assert Solution.smallest_equal_digit(6) == 142857
+  end
+
+  test "for n=2" do
+    assert Solution.smallest_equal_digit(2) == 142857
+  end
+
+  test "for n=4" do
+    assert Solution.smallest_equal_digit(4) == 142857
+  end
+
+  test "for n=3" do
+    assert Solution.smallest_equal_digit(3) == 142857
+  end
+
+  test "for n=1" do
+    assert Solution.smallest_equal_digit(1) == 142857
+  end
+
+  test "for n=5" do
+    assert Solution.smallest_equal_digit(5) == 142857
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  @moduledoc """
+  Find the smallest positive integer x such that 2x, 3x, 4x, 5x, and 6x
+  contain the same digits in some order.
+  """
+
+  @doc """
+  Returns the smallest positive integer with the property that 2x, 3x, 4x, 5x, and 6x
+  are digit permutations of x. The argument `n` is ignored.
+  """
+  def smallest_equal_digit(_n) do
+    find(1)
+  end
+
+  defp find(x) do
+    digits = digit_set(x)
+    if Enum.all?(2..6, fn m -> digit_set(x * m) == digits end) do
+      x
+    else
+      find(x + 1)
+    end
+  end
+
+  defp digit_set(n) do
+    n
+    |> Integer.digits()
+    |> Enum.sort()
+  end
+end
+
+---END---[0m
+[22m02:27:44.847 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 75033ms — ok[0m
+[36m02:27:44.847 [debug] [Budget] spent so far (est.): $2.3473[0m
+[22m02:27:46.108 [info] [RoundTrip] reference PASSED tests[0m
+[22m02:27:46.108 [info] [idx=85291] translation fresh — solving[0m
+[22m02:27:46.108 [info] ===SOLVE_BOUNDARY===[0m
+[22m02:27:46.108 [info] [Solve attempt 1] generating (fn=smallest_equal_digit)[0m
+[36m02:27:46.108 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `smallest_equal_digit/1` that takes an integer argument (the intended maximum multiple, but the problem is fixed to multiples 2 through 6) and returns the smallest positive integer x such that 2x, 3x, 4x, 5x, and 6x contain exactly the same digits in any order. The function may ignore its input.
+
+## Tests (your module must pass these)
+```elixir
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "for n=6" do
+    assert Solution.smallest_equal_digit(6) == 142857
+  end
+
+  test "for n=2" do
+    assert Solution.smallest_equal_digit(2) == 142857
+  end
+
+  test "for n=4" do
+    assert Solution.smallest_equal_digit(4) == 142857
+  end
+
+  test "for n=3" do
+    assert Solution.smallest_equal_digit(3) == 142857
+  end
+
+  test "for n=1" do
+    assert Solution.smallest_equal_digit(1) == 142857
+  end
+
+  test "for n=5" do
+    assert Solution.smallest_equal_digit(5) == 142857
+  end
+end
+```
+
+Module: `Solution`. Function: `smallest_equal_digit`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m02:27:51.024 [debug] [LLM.call] finish=stop len=1633 usage=%{"completion_tokens" => 513, "prompt_tokens" => 561, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1074}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the smallest positive integer x such that 2x, 3x, 4x, 5x, and 6x
+  contain exactly the same digits in any order.
+
+  The input argument is ignored as the problem is fixed to multiples 2-6.
+  """
+  @spec smallest_equal_digit(integer()) :: integer()
+  def smallest_equal_digit(_n) do
+    Stream.iterate(1, &(&1 + 1))
+    |> Enum.find(fn x ->
+      check_equal_digits?(x)
+    end)
+  end
+
+  defp check_equal_digits?(x) do
+    digits = Integer.to_string(x) |> String.codepoints() |> Enum.sort()
+
+    digits ==
+      (Integer.to_string(2 * x) |> String.codepoints() |> Enum.sort()) &&
+        digits ==
+          (Integer.to_string(3 * x) |> String.codepoints() |> Enum.sort()) &&
+            digits ==
+              (Integer.to_string(4 * x) |> String.codepoints() |> Enum.sort()) &&
+                digits ==
+                  (Integer.to_string(5 * x) |> String.codepoints() |> Enum.sort()) &&
+                    digits ==
+                      (Integer.to_string(6 * x) |> String.codepoints() |> Enum.sort())
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "for n=6" do
+    assert Solution.smallest_equal_digit(6) == 142857
+  end
+
+  test "for n=2" do
+    assert Solution.smallest_equal_digit(2) == 142857
+  end
+
+  test "for n=4" do
+    assert Solution.smallest_equal_digit(4) == 142857
+  end
+
+  test "for n=3" do
+    assert Solution.smallest_equal_digit(3) == 142857
+  end
+
+  test "for n=1" do
+    assert Solution.smallest_equal_digit(1) == 142857
+  end
+
+  test "for n=5" do
+    assert Solution.smallest_equal_digit(5) == 142857
+  end
+end
+---END---[0m
+[22m02:27:51.024 [info] [LLM.call] local_qwen_thinking completed in 4916ms — ok[0m
+[22m02:27:51.024 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m02:27:51.024 [debug] [Validator.run] module code (1059 chars):
+defmodule Solution do
+  @doc """
+  Returns the smallest positive integer x such that 2x, 3x, 4x, 5x, and 6x
+  contain exactly the same digits in any order.
+
+  The input argument is ignored as the problem is fixed to multiples 2-6.
+  """
+  @spec smallest_equal_digit(integer()) :: integer()
+  def smallest_equal_digit(_n) do
+    Stream.iterate(1, &(&1 + 1))
+    |> Enum.find(fn x ->
+      check_equal_digits?(x)
+    end)
+  end
+
+  defp check_equal_digits?(x) do
+    digits = Integer.to_string(x) |> String.codepoints() |> Enum.sort()
+
+    digits ==
+      (Integer.to_string(2 * x) |> String.codepoints() |> Enum.sort()) &&
+        digits ==
+          (Integer.to_string(3 * x) |> String.codepoints() |> Enum.sort()) &&
+            digits ==
+              (Integer.to_string(4 * x) |> String.codepoints() |> Enum.sort()) &&
+                digits ==
+                  (Integer.to_string(5 * x) |> String.codepoints() |> Enum.sort()) &&
+                    digits ==
+                      (Integer.to_string(6 * x) |> String.codepoints() |> Enum.sort())
+  end
+end[0m
+[36m02:27:51.024 [debug] [Validator.run] test code (539 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "for n=6" do
+    assert Solution.smallest_equal_digit(6) == 142857
+  end
+
+  test "for n=2" do
+    assert Solution.smallest_equal_digit(2) == 142857
+  end
+
+  test "for n=4" do
+    assert Solution.smallest_equal_digit(4) == 142857
+  end
+
+  test "for n=3" do
+    assert Solution.smallest_equal_digit(3) == 142857
+  end
+
+  test "for n=1" do
+    assert Solution.smallest_equal_digit(1) == 142857
+  end
+
+  test "for n=5" do
+    assert Solution.smallest_equal_digit(5) == 142857
+  end
+end[0m
+[36m02:27:51.024 [debug] [Budget] spent so far (est.): $2.348[0m
+[22m02:27:51.024 [info] [Validator.run] step 1/6: credence fix[0m
+[36m02:27:51.024 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m02:27:51.686 [debug] [run_credence_fix] exit=0 output:
+
+02:27:51.550 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+02:27:51.552 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+02:27:51.567 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+02:27:51.573 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+02:27:51.573 [debug] [credence_fix] semantic done. Applied: []
+
+02:27:51.573 [debug] [credence_fix] starting pattern fix pipeline (125 rules)
+
+02:27:51.659 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m02:27:51.686 [debug] [run_credence_fix] no changes needed[0m
+[22m02:27:51.686 [info] [Validator.run] credence: no changes needed[0m
+[22m02:27:51.686 [info] [Validator.run] step 2/6: compile[0m
+[22m02:27:52.271 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m02:27:52.271 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m02:27:52.271 [info] [Validator.run] step 3/6: format[0m
+[22m02:27:52.578 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m02:27:52.875 [debug] [Validator.run] format fix output: [0m
+[22m02:27:52.875 [info] [Validator.run] step 4/6: credo[0m
+[36m02:27:53.343 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m02:27:53.343 [info] [Validator.run] credo: no issues[0m
+[22m02:27:53.343 [info] [Validator.run] step 5/6: credence check[0m
+[22m02:27:54.067 [info] [Validator.run] credence check exit=0[0m
+[36m02:27:54.067 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m02:27:54.067 [info] [Validator.run] credence check: passed[0m
+[22m02:27:54.067 [info] [Validator.run] step 6/6: tests[0m
+[22m02:27:55.030 [info] [Validator.run] test exit=0[0m
+[36m02:27:55.030 [debug] [Validator.run] test output:
+Running ExUnit with seed: 486774, max_cases: 48
+
+......
+Finished in 0.5 seconds (0.00s async, 0.5s sync)
+6 tests, 0 failures
+[0m
+[22m02:27:55.030 [info] [Validator.run] tests: PASSED[0m
+[22m02:27:55.030 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m02:27:55.030 [debug] [Validator.run] final module (986 chars):
+defmodule Solution do
+  @doc """
+  Returns the smallest positive integer x such that 2x, 3x, 4x, 5x, and 6x
+  contain exactly the same digits in any order.
+
+  The input argument is ignored as the problem is fixed to multiples 2-6.
+  """
+  @spec smallest_equal_digit(integer()) :: integer()
+  def smallest_equal_digit(_n) do
+    Stream.iterate(1, &(&1 + 1))
+    |> Enum.find(fn x ->
+      check_equal_digits?(x)
+    end)
+  end
+
+  defp check_equal_digits?(x) do
+    digits = Integer.to_string(x) |> String.codepoints() |> Enum.sort()
+
+    digits ==
+      Integer.to_string(2 * x) |> String.codepoints() |> Enum.sort() &&
+      digits ==
+        Integer.to_string(3 * x) |> String.codepoints() |> Enum.sort() &&
+      digits ==
+        Integer.to_string(4 * x) |> String.codepoints() |> Enum.sort() &&
+      digits ==
+        Integer.to_string(5 * x) |> String.codepoints() |> Enum.sort() &&
+      digits ==
+        Integer.to_string(6 * x) |> String.codepoints() |> Enum.sort()
+  end
+end
+[0m
+[36m02:27:55.030 [debug] [Validator.run] final test (546 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "for n=6" do
+    assert Solution.smallest_equal_digit(6) == 142_857
+  end
+
+  test "for n=2" do
+    assert Solution.smallest_equal_digit(2) == 142_857
+  end
+
+  test "for n=4" do
+    assert Solution.smallest_equal_digit(4) == 142_857
+  end
+
+  test "for n=3" do
+    assert Solution.smallest_equal_digit(3) == 142_857
+  end
+
+  test "for n=1" do
+    assert Solution.smallest_equal_digit(1) == 142_857
+  end
+
+  test "for n=5" do
+    assert Solution.smallest_equal_digit(5) == 142_857
+  end
+end
+[0m
+[22m02:27:55.030 [info] [Solve attempt 1] validation PASSED[0m
+[36m02:27:55.040 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+(none fired — BUGFIX is not possible this row)
+
+## Dead-ends already tried (do NOT re-propose)
+## row 2015 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 73757 â gave_up
+implementer gave_up: {:pi, "timeout"}
+
+## row 47103 â gate_reject (:full_suite_red)
+attempted: new(pattern): prefer_for_comprehension_over_reduce
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a rule is proposed: pattern |  (truncated)[0m
+[36m02:29:49.084 [debug] [LLM.call] finish=stop len=905 usage=%{"completion_tokens" => 4547, "completion_tokens_details" => %{"reasoning_tokens" => 4310}, "prompt_tokens" => 5769, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 10316}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_integer_digits_over_string_codepoints
+===PHASE===
+pattern
+===BEFORE===
+defmodule Example do
+  def digits_equal?(x) do
+    sorted_codepoints = Integer.to_string(x) |> String.codepoints() |> Enum.sort()
+    
+    sorted_codepoints == (Integer.to_string(2 * x) |> String.codepoints() |> Enum.sort()) &&
+    sorted_codepoints == (Integer.to_string(3 * x) |> String.codepoints() |> Enum.sort())
+  end
+end
+===AFTER===
+defmodule Example do
+  def digits_equal?(x) do
+    sorted_digits = Integer.digits(x) |> Enum.sort()
+    
+    sorted_digits == (Integer.digits(2 * x) |> Enum.sort()) &&
+    sorted_digits == (Integer.digits(3 * x) |> Enum.sort())
+  end
+end
+===ASSUMPTIONS===
+===RATIONALE===
+For comparing digit composition of non-negative integers, using Integer.digits/1 is more direct and idiomatic than converting to string and codepoints.
+===END===[0m
+[22m02:29:49.084 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 114044ms — ok[0m
+[36m02:29:49.085 [debug] [Budget] spent so far (est.): $2.3544[0m
+[22m02:29:50.151 [info] [Router] equiv: DIVERGES (input=[] before={:raise, ArgumentError} after={:raise, FunctionClauseError} minimal_set=none) — behaviour_diverged[0m
