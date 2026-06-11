@@ -1,0 +1,3147 @@
+[22m14:50:49.064 [info] [idx=29986] entry_point=get_permutations[0m
+[36m14:50:49.291 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to generate all possible permutations of a string with unique characters.
+
+## Python Solution
+```python
+def get_permutations(string):
+    if len(string) == 1:
+        return [string]
+    
+    permutations = []
+    for i in range(len(string)):
+        char = string[i]
+        remaining_chars = string[:i] + string[i+1:]
+        sub_permutations = get_permutations(remaining_chars)
+        
+        for sub_permutation in sub_permutations:
+            permutations.append(char + sub_permutation)
+    
+    return permutations
+```
+
+## Python Tests
+assert get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+assert get_permutations("ab") == ["ab", "ba"]
+assert get_permutations("a") == ["a"]
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `get_permutations`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m14:50:57.281 [debug] [LLM.call] finish=stop len=1228 usage=%{"completion_tokens" => 355, "completion_tokens_details" => %{"reasoning_tokens" => 33}, "prompt_tokens" => 526, "prompt_tokens_details" => %{}, "total_tokens" => 881}
+[LLM.call] response:
+---INSTRUCTION---
+Write an Elixir function that generates all possible permutations of a given string containing unique characters.
+
+The function `get_permutations/1` takes a string as input and returns a list of all permutation strings. When the input string has length 1, the result is a list containing just that single-character string.
+
+---TEST---
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+```
+
+---REFERENCE---
+```elixir
+defmodule Solution do
+  def get_permutations(string) when is_binary(string) do
+    string
+    |> String.graphemes()
+    |> do_permutations()
+    |> Enum.map(&Enum.join/1)
+  end
+
+  defp do_permutations([char]), do: [[char]]
+
+  defp do_permutations(list) do
+    for {char, index} <- Enum.with_index(list),
+        sub <- do_permutations(List.delete_at(list, index)) do
+      [char | sub]
+    end
+  end
+end
+```
+
+---END---[0m
+[22m14:50:57.281 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 7990ms — ok[0m
+[36m14:50:57.281 [debug] [Budget] spent so far (est.): $0.001[0m
+[22m14:50:58.436 [info] [RoundTrip] reference PASSED tests[0m
+[22m14:50:58.437 [info] [idx=29986] translation fresh — solving[0m
+[22m14:50:58.437 [info] ===SOLVE_BOUNDARY===[0m
+[22m14:50:58.502 [info] [Solve attempt 1] generating (fn=get_permutations)[0m
+[36m14:50:58.503 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write an Elixir function that generates all possible permutations of a given string containing unique characters.
+
+The function `get_permutations/1` takes a string as input and returns a list of all permutation strings. When the input string has length 1, the result is a list containing just that single-character string.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+```
+
+Module: `Solution`. Function: `get_permutations`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m14:51:03.739 [debug] [LLM.call] finish=stop len=2007 usage=%{"completion_tokens" => 584, "prompt_tokens" => 455, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1039}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Generates all possible permutations of a given string containing unique characters.
+
+  ## Examples
+
+      iex> Solution.get_permutations("abc")
+      ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+      iex> Solution.get_permutations("ab")
+      ["ab", "ba"]
+
+      iex> Solution.get_permutations("a")
+      ["a"]
+  """
+  @spec get_permutations(String.t()) :: [String.t()]
+  def get_permutations(<<char>>) do
+    [<<char>>]
+  end
+
+  def get_permutations(<<first, rest::binary>>) do
+    sub_permutations = get_permutations(rest)
+
+    for perm <- sub_permutations,
+        do: insert_char_at_all_positions(first, perm)
+    |> List.flatten()
+  end
+
+  defp insert_char_at_all_positions(_char, <<>>), do: []
+
+  defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+    char_inserted = insert_char_before(first_char, rest, char)
+    [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+  end
+
+  defp insert_char_at_all_positions(_char, <<last_char>>),
+    do: [<<last_char, char()>>]
+
+  defp insert_char_at_all_positions(char, string) do
+    chars = String.graphemes(string)
+    do_insert(char, chars, 0)
+  end
+
+  defp do_insert(_char, [], _index), do: []
+
+  defp do_insert(char, [_first | rest], index) do
+    # This approach is tricky with binary pattern matching
+    # Let's use a simpler recursive approach
+    []
+  end
+
+  defp insert_char_before(char, <<>>), do: <<char>>
+
+  defp insert_char_before(char, <<first, rest::binary>>) do
+    <<first, char, rest::binary>>
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+---END---[0m
+[22m14:51:03.739 [info] [LLM.call] local_qwen_thinking completed in 5236ms — ok[0m
+[36m14:51:03.739 [debug] [Budget] spent so far (est.): $0.0017[0m
+[22m14:51:03.821 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m14:51:03.821 [debug] [Validator.run] module code (1556 chars):
+defmodule Solution do
+  @doc """
+  Generates all possible permutations of a given string containing unique characters.
+
+  ## Examples
+
+      iex> Solution.get_permutations("abc")
+      ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+      iex> Solution.get_permutations("ab")
+      ["ab", "ba"]
+
+      iex> Solution.get_permutations("a")
+      ["a"]
+  """
+  @spec get_permutations(String.t()) :: [String.t()]
+  def get_permutations(<<char>>) do
+    [<<char>>]
+  end
+
+  def get_permutations(<<first, rest::binary>>) do
+    sub_permutations = get_permutations(rest)
+
+    for perm <- sub_permutations,
+        do: insert_char_at_all_positions(first, perm)
+    |> List.flatten()
+  end
+
+  defp insert_char_at_all_positions(_char, <<>>), do: []
+
+  defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+    char_inserted = insert_char_before(first_char, rest, char)
+    [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+  end
+
+  defp insert_char_at_all_positions(_char, <<last_char>>),
+    do: [<<last_char, char()>>]
+
+  defp insert_char_at_all_positions(char, string) do
+    chars = String.graphemes(string)
+    do_insert(char, chars, 0)
+  end
+
+  defp do_insert(_char, [], _index), do: []
+
+  defp do_insert(char, [_first | rest], index) do
+    # This approach is tricky with binary pattern matching
+    # Let's use a simpler recursive approach
+    []
+  end
+
+  defp insert_char_before(char, <<>>), do: <<char>>
+
+  defp insert_char_before(char, <<first, rest::binary>>) do
+    <<first, char, rest::binary>>
+  end
+end[0m
+[36m14:51:03.822 [debug] [Validator.run] test code (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[22m14:51:03.822 [info] [Validator.run] step 1/6: credence fix[0m
+[36m14:51:03.822 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m14:51:04.387 [debug] [run_credence_fix] exit=0 output:
+
+14:51:04.357 [debug] [credence_fix] starting syntax fix pipeline (11 rules), parse error at line 33: unexpected token:  near "]"
+
+14:51:04.365 [debug] [credence_fix] syntax fix pipeline: source still does not parse (line 33: unexpected token:  near "]")
+
+14:51:04.365 [debug] [credence_fix] syntax done. Applied: []
+
+14:51:04.365 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+14:51:04.368 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:33:84:
+    error: unexpected token: ]
+    │
+ 33 │     [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                         │                          └ mismatched closing delimiter (expected ">>")
+    │                                                         └ unclosed delimiter
+    │
+    └─ credence_check.ex:33:84
+
+14:51:04.368 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+14:51:04.370 [debug] [credence_fix] no rule matched diagnostic: %{message: "mismatched delimiter found on credence_check.ex:33:84:\n    error: unexpected token: ]\n    │\n 33 │     [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]\n    │                                                         │                          └ mismatched closing delimiter (expected \">>\")\n    │                                                         └ unclosed delimiter\n    │\n    └─ credence_check.ex:33:84", position: 33, file: "credence_check.ex", severity: :error}
+
+14:51:04.371 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+14:51:04.371 [debug] [credence_fix] semantic done. Applied: []
+
+14:51:04.371 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+14:51:04.371 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:33:84:
+    error: unexpected token: ]
+    │
+ 33 │     [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                         │                          └ mismatched closing delimiter (expected ">>")
+    │                                                         └ unclosed delimiter
+    │
+    └─ credence_check.ex:33:84
+
+14:51:04.371 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+14:51:04.376 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:33:84:
+    error: unexpected token: ]
+    │
+ 33 │     [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                         │                          └ mismatched closing delimiter (expected ">>")
+    │                                                         └ unclosed delimiter
+    │
+    └─ credence_check.ex:33:84
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 1 unfixable issue(s)
+parse_error: Syntax error: unexpected token:  at token "]" (line 33)
+[0m
+[36m14:51:04.387 [debug] [run_credence_fix] no changes needed[0m
+[22m14:51:04.387 [info] [Validator.run] credence: no changes needed[0m
+[22m14:51:04.387 [info] [Validator.run] step 2/6: compile[0m
+[22m14:51:04.876 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m14:51:04.876 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (MismatchedDelimiterError) mismatched delimiter found on lib/solution.ex:33:84:
+    error: unexpected token: ]
+    │
+ 33 │     [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                         │                          └ mismatched closing delimiter (expected ">>")
+    │                                                         └ unclosed delimiter
+    │
+    └─ lib/solution.ex:33:84
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m14:51:04.877 [info] [Validator.run] step 3/6: format[0m
+[22m14:51:04.877 [info] [Validator.run] skipping format (compile failed)[0m
+[22m14:51:04.877 [info] [Validator.run] step 4/6: credo[0m
+[22m14:51:04.877 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m14:51:04.877 [info] [Validator.run] step 5/6: credence check[0m
+[22m14:51:04.877 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m14:51:04.877 [info] [Validator.run] step 6/6: tests[0m
+[22m14:51:04.877 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m14:51:04.877 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m14:51:04.877 [debug] [Validator.run] final module (1556 chars):
+defmodule Solution do
+  @doc """
+  Generates all possible permutations of a given string containing unique characters.
+
+  ## Examples
+
+      iex> Solution.get_permutations("abc")
+      ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+      iex> Solution.get_permutations("ab")
+      ["ab", "ba"]
+
+      iex> Solution.get_permutations("a")
+      ["a"]
+  """
+  @spec get_permutations(String.t()) :: [String.t()]
+  def get_permutations(<<char>>) do
+    [<<char>>]
+  end
+
+  def get_permutations(<<first, rest::binary>>) do
+    sub_permutations = get_permutations(rest)
+
+    for perm <- sub_permutations,
+        do: insert_char_at_all_positions(first, perm)
+    |> List.flatten()
+  end
+
+  defp insert_char_at_all_positions(_char, <<>>), do: []
+
+  defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+    char_inserted = insert_char_before(first_char, rest, char)
+    [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+  end
+
+  defp insert_char_at_all_positions(_char, <<last_char>>),
+    do: [<<last_char, char()>>]
+
+  defp insert_char_at_all_positions(char, string) do
+    chars = String.graphemes(string)
+    do_insert(char, chars, 0)
+  end
+
+  defp do_insert(_char, [], _index), do: []
+
+  defp do_insert(char, [_first | rest], index) do
+    # This approach is tricky with binary pattern matching
+    # Let's use a simpler recursive approach
+    []
+  end
+
+  defp insert_char_before(char, <<>>), do: <<char>>
+
+  defp insert_char_before(char, <<first, rest::binary>>) do
+    <<first, char, rest::binary>>
+  end
+end[0m
+[36m14:51:04.877 [debug] [Validator.run] final test (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[33m14:51:04.877 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m14:51:04.963 [info] [Solve attempt 2] generating (fn=get_permutations)[0m
+[36m14:51:04.963 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Generates all possible permutations of a given string containing unique characters.
+
+  ## Examples
+
+      iex> Solution.get_permutations("abc")
+      ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+      iex> Solution.get_permutations("ab")
+      ["ab", "ba"]
+
+      iex> Solution.get_permutations("a")
+      ["a"]
+  """
+  @spec get_permutations(String.t()) :: [String.t()]
+  def get_permutations(<<char>>) do
+    [<<char>>]
+  end
+
+  def get_permutations(<<first, rest::binary>>) do
+    sub_permutations = get_permutations(rest)
+
+    for perm <- sub_permutations,
+        do: insert_char_at_all_positions(first, perm)
+    |> List.flatten()
+  end
+
+  defp insert_char_at_all_positions(_char, <<>>), do: []
+
+  defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+    char_inserted = insert_char_before(first_char, rest, char)
+    [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+  end
+
+  defp insert_char_at_all_positions(_char, <<last_char>>),
+    do: [<<last_char, char()>>]
+
+  defp insert_char_at_all_positions(char, string) do
+    chars = String.graphemes(string)
+    do_insert(char, chars, 0)
+  end
+
+  defp do_insert(_char, [], _index), do: []
+
+  defp do_insert(char, [_first | rest], index) do
+    # This approach is tricky with binary pattern matching
+    # Let's use a simpler recursive approach
+    []
+  end
+
+  defp insert_char_before(char, <<>>), do: <<char>>
+
+  defp insert_char_before(char, <<first, rest::binary>>) do
+    <<first, char, rest::binary>>
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (MismatchedDelimiterError) mismatched delimiter found on lib/solution.ex:33:84:
+    error: unexpected token: ]
+    │
+ 33 │     [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                         │                          └ mismatched closing delimiter (expected ">>")
+    │                                                         └ unclosed delimiter
+    │
+    └─ lib/solution.ex:33:84
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `get_permutations` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m14:51:10.202 [debug] [LLM.call] finish=stop len=1913 usage=%{"completion_tokens" => 529, "prompt_tokens" => 1034, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1563}
+[LLM.call] response:
+---MODULE---
+  @moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert = insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_before(first_char, rest, char)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_before(char, <<>>, _before_char) do
+      <<char>>
+    end
+
+    defp insert_char_before(char, <<first, rest::binary>>, before_char) do
+      <<first, char, rest::binary>>
+    end
+  end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+---END---[0m
+[22m14:51:10.202 [info] [LLM.call] local_qwen_thinking completed in 5231ms — ok[0m
+[22m14:51:10.202 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m14:51:10.202 [debug] [Validator.run] module code (1460 chars):
+@moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert = insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_before(first_char, rest, char)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_before(char, <<>>, _before_char) do
+      <<char>>
+    end
+
+    defp insert_char_before(char, <<first, rest::binary>>, before_char) do
+      <<first, char, rest::binary>>
+    end
+  end[0m
+[36m14:51:10.202 [debug] [Validator.run] test code (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[36m14:51:10.202 [debug] [Budget] spent so far (est.): $0.0026[0m
+[22m14:51:10.203 [info] [Validator.run] step 1/6: credence fix[0m
+[36m14:51:10.203 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m14:51:10.762 [debug] [run_credence_fix] exit=0 output:
+
+14:51:10.733 [debug] [credence_fix] starting syntax fix pipeline (11 rules), parse error at line 38: unexpected token:  near "]"
+
+14:51:10.741 [debug] [credence_fix] syntax fix pipeline: source still does not parse (line 38: unexpected token:  near "]")
+
+14:51:10.741 [debug] [credence_fix] syntax done. Applied: []
+
+14:51:10.741 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+14:51:10.744 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+
+14:51:10.744 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+14:51:10.746 [debug] [credence_fix] no rule matched diagnostic: %{message: "mismatched delimiter found on credence_check.ex:38:86:\n    error: unexpected token: ]\n    │\n 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]\n    │                                                           │                          └ mismatched closing delimiter (expected \">>\")\n    │                                                           └ unclosed delimiter\n    │\n    └─ credence_check.ex:38:86", position: 38, file: "credence_check.ex", severity: :error}
+
+14:51:10.746 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+14:51:10.746 [debug] [credence_fix] semantic done. Applied: []
+
+14:51:10.746 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+14:51:10.747 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+
+14:51:10.747 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+14:51:10.751 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 1 unfixable issue(s)
+parse_error: Syntax error: unexpected token:  at token "]" (line 38)
+[0m
+[36m14:51:10.762 [debug] [run_credence_fix] no changes needed[0m
+[22m14:51:10.762 [info] [Validator.run] credence: no changes needed[0m
+[22m14:51:10.762 [info] [Validator.run] step 2/6: compile[0m
+[22m14:51:11.368 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m14:51:11.368 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (MismatchedDelimiterError) mismatched delimiter found on lib/solution.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ lib/solution.ex:38:86
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m14:51:11.368 [info] [Validator.run] step 3/6: format[0m
+[22m14:51:11.368 [info] [Validator.run] skipping format (compile failed)[0m
+[22m14:51:11.368 [info] [Validator.run] step 4/6: credo[0m
+[22m14:51:11.368 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m14:51:11.368 [info] [Validator.run] step 5/6: credence check[0m
+[22m14:51:11.368 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m14:51:11.368 [info] [Validator.run] step 6/6: tests[0m
+[22m14:51:11.368 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m14:51:11.368 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m14:51:11.368 [debug] [Validator.run] final module (1460 chars):
+@moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert = insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_before(first_char, rest, char)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_before(char, <<>>, _before_char) do
+      <<char>>
+    end
+
+    defp insert_char_before(char, <<first, rest::binary>>, before_char) do
+      <<first, char, rest::binary>>
+    end
+  end[0m
+[36m14:51:11.368 [debug] [Validator.run] final test (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[33m14:51:11.368 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m14:51:11.368 [info] [Solve attempt 3] generating (fn=get_permutations)[0m
+[36m14:51:11.369 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+  @moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert = insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_before(first_char, rest, char)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_before(char, <<>>, _before_char) do
+      <<char>>
+    end
+
+    defp insert_char_before(char, <<first, rest::binary>>, before_char) do
+      <<first, char, rest::binary>>
+    end
+  end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (MismatchedDelimiterError) mismatched delimiter found on lib/solution.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ lib/solution.ex:38:86
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `get_permutations` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m14:51:16.645 [debug] [LLM.call] finish=stop len=1914 usage=%{"completion_tokens" => 529, "prompt_tokens" => 979, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1508}
+[LLM.call] response:
+---MODULE---
+  @moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_before(first_char, rest, char)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_before(char, <<>>, _before_char) do
+      <<char>>
+    end
+
+    defp insert_char_before(char, <<first, rest::binary>>, before_char) do
+      <<first, char, rest::binary>>
+    end
+  end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+---END---[0m
+[22m14:51:16.645 [info] [LLM.call] local_qwen_thinking completed in 5277ms — ok[0m
+[22m14:51:16.646 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m14:51:16.646 [debug] [Validator.run] module code (1461 chars):
+@moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_before(first_char, rest, char)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_before(char, <<>>, _before_char) do
+      <<char>>
+    end
+
+    defp insert_char_before(char, <<first, rest::binary>>, before_char) do
+      <<first, char, rest::binary>>
+    end
+  end[0m
+[36m14:51:16.646 [debug] [Validator.run] test code (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[36m14:51:16.646 [debug] [Budget] spent so far (est.): $0.0035[0m
+[22m14:51:16.653 [info] [Validator.run] step 1/6: credence fix[0m
+[36m14:51:16.653 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m14:51:17.209 [debug] [run_credence_fix] exit=0 output:
+
+14:51:17.178 [debug] [credence_fix] starting syntax fix pipeline (11 rules), parse error at line 38: unexpected token:  near "]"
+
+14:51:17.186 [debug] [credence_fix] syntax fix pipeline: source still does not parse (line 38: unexpected token:  near "]")
+
+14:51:17.186 [debug] [credence_fix] syntax done. Applied: []
+
+14:51:17.186 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+14:51:17.190 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+
+14:51:17.190 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+14:51:17.192 [debug] [credence_fix] no rule matched diagnostic: %{message: "mismatched delimiter found on credence_check.ex:38:86:\n    error: unexpected token: ]\n    │\n 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]\n    │                                                           │                          └ mismatched closing delimiter (expected \">>\")\n    │                                                           └ unclosed delimiter\n    │\n    └─ credence_check.ex:38:86", position: 38, file: "credence_check.ex", severity: :error}
+
+14:51:17.192 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+14:51:17.192 [debug] [credence_fix] semantic done. Applied: []
+
+14:51:17.192 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+14:51:17.192 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+
+14:51:17.192 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+14:51:17.197 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 1 unfixable issue(s)
+parse_error: Syntax error: unexpected token:  at token "]" (line 38)
+[0m
+[36m14:51:17.209 [debug] [run_credence_fix] no changes needed[0m
+[22m14:51:17.210 [info] [Validator.run] credence: no changes needed[0m
+[22m14:51:17.210 [info] [Validator.run] step 2/6: compile[0m
+[22m14:51:17.806 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m14:51:17.806 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (MismatchedDelimiterError) mismatched delimiter found on lib/solution.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ lib/solution.ex:38:86
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m14:51:17.806 [info] [Validator.run] step 3/6: format[0m
+[22m14:51:17.806 [info] [Validator.run] skipping format (compile failed)[0m
+[22m14:51:17.806 [info] [Validator.run] step 4/6: credo[0m
+[22m14:51:17.806 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m14:51:17.806 [info] [Validator.run] step 5/6: credence check[0m
+[22m14:51:17.806 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m14:51:17.806 [info] [Validator.run] step 6/6: tests[0m
+[22m14:51:17.806 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m14:51:17.806 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m14:51:17.806 [debug] [Validator.run] final module (1461 chars):
+@moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_before(first_char, rest, char)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_before(char, <<>>, _before_char) do
+      <<char>>
+    end
+
+    defp insert_char_before(char, <<first, rest::binary>>, before_char) do
+      <<first, char, rest::binary>>
+    end
+  end[0m
+[36m14:51:17.806 [debug] [Validator.run] final test (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[33m14:51:17.806 [warning] [Solve attempt 3] validation FAILED: [:compile][0m
+[22m14:51:17.806 [info] [Solve attempt 4] generating (fn=get_permutations)[0m
+[36m14:51:17.807 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+  @moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_before(first_char, rest, char)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_before(char, <<>>, _before_char) do
+      <<char>>
+    end
+
+    defp insert_char_before(char, <<first, rest::binary>>, before_char) do
+      <<first, char, rest::binary>>
+    end
+  end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (MismatchedDelimiterError) mismatched delimiter found on lib/solution.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ lib/solution.ex:38:86
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `get_permutations` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m14:51:22.892 [debug] [LLM.call] finish=stop len=1828 usage=%{"completion_tokens" => 503, "prompt_tokens" => 979, "prompt_tokens_details" => %{"cached_tokens" => 186}, "total_tokens" => 1482}
+[LLM.call] response:
+---MODULE---
+  @moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_at_position(char, first_char, rest)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_at_position(char, first_char, rest) do
+      <<first_char, char, rest::binary>>
+    end
+  end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+---END---[0m
+[22m14:51:22.892 [info] [LLM.call] local_qwen_thinking completed in 5085ms — ok[0m
+[22m14:51:22.892 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m14:51:22.892 [debug] [Validator.run] module code (1375 chars):
+@moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_at_position(char, first_char, rest)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_at_position(char, first_char, rest) do
+      <<first_char, char, rest::binary>>
+    end
+  end[0m
+[36m14:51:22.892 [debug] [Validator.run] test code (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[36m14:51:22.892 [debug] [Budget] spent so far (est.): $0.0043[0m
+[22m14:51:22.892 [info] [Validator.run] step 1/6: credence fix[0m
+[36m14:51:22.892 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m14:51:23.447 [debug] [run_credence_fix] exit=0 output:
+
+14:51:23.418 [debug] [credence_fix] starting syntax fix pipeline (11 rules), parse error at line 38: unexpected token:  near "]"
+
+14:51:23.425 [debug] [credence_fix] syntax fix pipeline: source still does not parse (line 38: unexpected token:  near "]")
+
+14:51:23.425 [debug] [credence_fix] syntax done. Applied: []
+
+14:51:23.426 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+14:51:23.429 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+
+14:51:23.429 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+14:51:23.431 [debug] [credence_fix] no rule matched diagnostic: %{message: "mismatched delimiter found on credence_check.ex:38:86:\n    error: unexpected token: ]\n    │\n 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]\n    │                                                           │                          └ mismatched closing delimiter (expected \">>\")\n    │                                                           └ unclosed delimiter\n    │\n    └─ credence_check.ex:38:86", position: 38, file: "credence_check.ex", severity: :error}
+
+14:51:23.431 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+14:51:23.431 [debug] [credence_fix] semantic done. Applied: []
+
+14:51:23.431 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+14:51:23.431 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+
+14:51:23.431 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+14:51:23.436 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 1 unfixable issue(s)
+parse_error: Syntax error: unexpected token:  at token "]" (line 38)
+[0m
+[36m14:51:23.448 [debug] [run_credence_fix] no changes needed[0m
+[22m14:51:23.448 [info] [Validator.run] credence: no changes needed[0m
+[22m14:51:23.448 [info] [Validator.run] step 2/6: compile[0m
+[22m14:51:24.038 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m14:51:24.038 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (MismatchedDelimiterError) mismatched delimiter found on lib/solution.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ lib/solution.ex:38:86
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m14:51:24.039 [info] [Validator.run] step 3/6: format[0m
+[22m14:51:24.039 [info] [Validator.run] skipping format (compile failed)[0m
+[22m14:51:24.039 [info] [Validator.run] step 4/6: credo[0m
+[22m14:51:24.039 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m14:51:24.039 [info] [Validator.run] step 5/6: credence check[0m
+[22m14:51:24.039 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m14:51:24.039 [info] [Validator.run] step 6/6: tests[0m
+[22m14:51:24.039 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m14:51:24.039 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m14:51:24.039 [debug] [Validator.run] final module (1375 chars):
+@moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_at_position(char, first_char, rest)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_at_position(char, first_char, rest) do
+      <<first_char, char, rest::binary>>
+    end
+  end[0m
+[36m14:51:24.039 [debug] [Validator.run] final test (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[33m14:51:24.039 [warning] [Solve attempt 4] validation FAILED: [:compile][0m
+[22m14:51:24.039 [info] [Solve attempt 5] generating (fn=get_permutations)[0m
+[36m14:51:24.039 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+  @moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_at_position(char, first_char, rest)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_at_position(char, first_char, rest) do
+      <<first_char, char, rest::binary>>
+    end
+  end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (MismatchedDelimiterError) mismatched delimiter found on lib/solution.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ lib/solution.ex:38:86
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `get_permutations` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m14:51:28.898 [debug] [LLM.call] finish=stop len=1828 usage=%{"completion_tokens" => 503, "prompt_tokens" => 953, "prompt_tokens_details" => %{"cached_tokens" => 463}, "total_tokens" => 1456}
+[LLM.call] response:
+---MODULE---
+  @moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_at_position(char, first_char, rest)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_at_position(char, first_char, rest) do
+      <<first_char, char, rest::binary>>
+    end
+  end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end
+---END---[0m
+[22m14:51:28.898 [info] [LLM.call] local_qwen_thinking completed in 4858ms — ok[0m
+[22m14:51:28.898 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m14:51:28.898 [debug] [Validator.run] module code (1375 chars):
+@moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_at_position(char, first_char, rest)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_at_position(char, first_char, rest) do
+      <<first_char, char, rest::binary>>
+    end
+  end[0m
+[36m14:51:28.898 [debug] [Validator.run] test code (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[36m14:51:28.898 [debug] [Budget] spent so far (est.): $0.0052[0m
+[22m14:51:28.898 [info] [Validator.run] step 1/6: credence fix[0m
+[36m14:51:28.899 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m14:51:29.447 [debug] [run_credence_fix] exit=0 output:
+
+14:51:29.419 [debug] [credence_fix] starting syntax fix pipeline (11 rules), parse error at line 38: unexpected token:  near "]"
+
+14:51:29.426 [debug] [credence_fix] syntax fix pipeline: source still does not parse (line 38: unexpected token:  near "]")
+
+14:51:29.426 [debug] [credence_fix] syntax done. Applied: []
+
+14:51:29.427 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 9 rules)
+
+14:51:29.430 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+
+14:51:29.430 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+14:51:29.432 [debug] [credence_fix] no rule matched diagnostic: %{message: "mismatched delimiter found on credence_check.ex:38:86:\n    error: unexpected token: ]\n    │\n 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]\n    │                                                           │                          └ mismatched closing delimiter (expected \">>\")\n    │                                                           └ unclosed delimiter\n    │\n    └─ credence_check.ex:38:86", position: 38, file: "credence_check.ex", severity: :error}
+
+14:51:29.432 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+14:51:29.432 [debug] [credence_fix] semantic done. Applied: []
+
+14:51:29.432 [debug] [credence_fix] starting pattern fix pipeline (128 rules)
+
+14:51:29.432 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+
+14:51:29.432 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+14:51:29.437 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ credence_check.ex:38:86
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 1 unfixable issue(s)
+parse_error: Syntax error: unexpected token:  at token "]" (line 38)
+[0m
+[36m14:51:29.447 [debug] [run_credence_fix] no changes needed[0m
+[22m14:51:29.447 [info] [Validator.run] credence: no changes needed[0m
+[22m14:51:29.447 [info] [Validator.run] step 2/6: compile[0m
+[22m14:51:30.056 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m14:51:30.056 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (MismatchedDelimiterError) mismatched delimiter found on lib/solution.ex:38:86:
+    error: unexpected token: ]
+    │
+ 38 │       [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    │                                                           │                          └ mismatched closing delimiter (expected ">>")
+    │                                                           └ unclosed delimiter
+    │
+    └─ lib/solution.ex:38:86
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m14:51:30.056 [info] [Validator.run] step 3/6: format[0m
+[22m14:51:30.056 [info] [Validator.run] skipping format (compile failed)[0m
+[22m14:51:30.056 [info] [Validator.run] step 4/6: credo[0m
+[22m14:51:30.056 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m14:51:30.056 [info] [Validator.run] step 5/6: credence check[0m
+[22m14:51:30.056 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m14:51:30.056 [info] [Validator.run] step 6/6: tests[0m
+[22m14:51:30.056 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m14:51:30.056 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m14:51:30.056 [debug] [Validator.run] final module (1375 chars):
+@moduledoc """
+  Generates all possible permutations of a given string containing unique characters.
+  """
+  defmodule Solution do
+    @doc """
+    Generates all possible permutations of a given string containing unique characters.
+
+    ## Examples
+
+        iex> Solution.get_permutations("abc")
+        ["abc", "acb", "bac", "bca", "cab", "cba"]
+
+        iex> Solution.get_permutations("ab")
+        ["ab", "ba"]
+
+        iex> Solution.get_permutations("a")
+        ["a"]
+    """
+    @spec get_permutations(String.t()) :: [String.t()]
+    def get_permutations(<<char>>) do
+      [<<char>>]
+    end
+
+    def get_permutations(<<first, rest::binary>>) do
+      sub_permutations = get_permutations(rest)
+
+      for perm <- sub_permutations,
+          insert <- insert_char_at_all_positions(first, perm),
+          into: [] do
+        insert
+      end
+    end
+
+    defp insert_char_at_all_positions(_char, <<>>), do: []
+
+    defp insert_char_at_all_positions(char, <<first_char, rest::binary>>) do
+      char_inserted = insert_char_at_position(char, first_char, rest)
+      [char_inserted | insert_char_at_all_positions(char, <<first_char, rest::binary>])]
+    end
+
+    defp insert_char_at_all_positions(char, <<last_char>>) do
+      [<<last_char, char>>]
+    end
+
+    defp insert_char_at_position(char, first_char, rest) do
+      <<first_char, char, rest::binary>>
+    end
+  end[0m
+[36m14:51:30.056 [debug] [Validator.run] final test (415 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "permutations of three characters" do
+    assert Solution.get_permutations("abc") == ["abc", "acb", "bac", "bca", "cab", "cba"]
+  end
+
+  test "permutations of two characters" do
+    assert Solution.get_permutations("ab") == ["ab", "ba"]
+  end
+
+  test "permutations of single character" do
+    assert Solution.get_permutations("a") == ["a"]
+  end
+end[0m
+[33m14:51:30.056 [warning] [Solve attempt 5] validation FAILED: [:compile][0m
+[33m14:51:30.056 [warning] [Solve] giving up after 5 attempts[0m
+[36m14:51:31.080 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve FAILED — there is NO clean final. Judge the attempts for an ISSUE they repeatedly hit that NO existing rule fixed (a new Syntax/Semantic rule — e.g. a Python-ism like `a div b`, an unfixed warning), plus any existing rule that over-fired (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+(none fired — BUGFIX is not possible this row)
+These rules ALREADY engaged on this row — Credence handled what they target.
+Do NOT propose a POTENTIAL_NEW_RULE for an idiom one of them already fixes;
+that is already covered. (If such a rule MIS-fired or under-fired, that's a
+BUGFIX_RULE, not a new rule.)
+
+## Dead-ends already tried (do NOT re-propose)
+(none)
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (when a ru (truncated)[0m
+[36m14:55:13.218 [debug] [LLM.call] finish=stop len=668 usage=%{"completion_tokens" => 9961, "completion_tokens_details" => %{"reasoning_tokens" => 9766}, "prompt_tokens" => 24222, "prompt_tokens_details" => %{}, "total_tokens" => 34183}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+fix_truncated_binary_close
+===PHASE===
+syntax
+===BEFORE===
+defmodule Solution do
+  def insert(char, <<first, rest::binary>>) do
+    result = <<first, char, rest::binary>>
+    [result | insert(char, <<first, rest::binary>])]
+  end
+end
+===AFTER===
+defmodule Solution do
+  def insert(char, <<first, rest::binary>>) do
+    result = <<first, char, rest::binary>>
+    [result | insert(char, <<first, rest::binary>>)]
+  end
+end
+===RATIONALE===
+LLM repeatedly truncates `<<...::binary>>` to `<<...::binary>)` inside nested delimiters across all 5 attempts; regex `::binary>)`→`::binary>>)` unblocks syntax parse.
+===END===[0m
+[22m14:55:13.218 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 222137ms — ok[0m
+[36m14:55:13.219 [debug] [Budget] spent so far (est.): $0.0244[0m
+[22m14:55:14.715 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m14:55:17.447 [info] [Budget] HEARTBEAT — 11 paid calls, est $0.0244 over 4.7min → ~$0.3107/hr, ~$7.46/day (tok in=30042 cache_rd=1024 out=13013)[0m
+[22m14:55:20.391 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" -o -name "*.exs" | head -30[0m
+[22m14:55:25.302 [info] [Pi] step 2: read
+    path: /home/kly/projects/credence/lib/syntax[0m
+[22m14:55:25.302 [info] [Pi] step 3: read
+    path: /home/kly/projects/credence/lib/syntax/rule.ex[0m
+[22m14:55:27.546 [info] [Pi] step 4: bash
+    command: ls /home/kly/projects/credence/lib/syntax/[0m
+[22m14:55:30.164 [info] [Pi] step 5: read
+    path: /home/kly/projects/credence/lib/syntax/fix_scientific_notation.ex[0m
+[22m14:55:30.164 [info] [Pi] step 6: read
+    path: /home/kly/projects/credence/lib/syntax/fix_python_floor_div.ex[0m
+[22m14:55:34.306 [info] [Pi] step 7: read
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_analyze_test.exs[0m
+[22m14:55:34.306 [info] [Pi] step 8: read
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:55:34.306 [info] [Pi] step 9: read
+    path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m14:55:38.778 [info] [Pi] step 10: read
+    path: /home/kly/projects/credence/lib/syntax/fix_truncated_binary_close.ex[0m
+[22m14:55:41.572 [info] [Pi] step 11: bash
+    command: ls /home/kly/projects/credence/test/syntax/ | head -20[0m
+[22m14:55:44.586 [info] [Pi] step 12: read
+    path: /home/kly/projects/credence/test/syntax/fix_scientific_notation_analyze_test.exs[0m
+[22m14:55:44.586 [info] [Pi] step 13: read
+    path: /home/kly/projects/credence/test/syntax/fix_scientific_notation_fix_test.exs[0m
+[22m14:55:47.254 [info] [Pi] step 14: bash
+    command: grep -r "defstruct" /home/kly/projects/credence/lib/issue.ex 2>/dev/null || find /home/kly/projects/credence/lib -name "issue.ex" -exec cat {} \;[0m
+[22m14:56:02.663 [info] [Pi] step 15: edit
+    edits: [%{"newText" => "defmodule Credence.Syntax.FixTruncatedBinaryClose do\n  @moduledoc \"\"\"\n  Fixes truncated binary close delimiters caused by LLM output truncation.\n\n  LLMs repeatedly truncate `<<...::binary>>` to `<<...::binary>)` inside\n  nested delimiters (e.g. inside function calls or list constructors).\n  This regex-based fix restores the missing `>` character.\n\n  ## Bad (won't parse)\n\n      result = <<first, char, rest::binary>\n      [result | insert(char, <<first, rest::binary>)]\n\n  ## Good\n\n      result = <<first, char, rest::binary>>\n      [result | insert(char, <<first, rest::binary>>)]\n  \"\"\"\n  use Credence.Syntax.Rule\n  alias Credence.Issue\n\n  # Matches `::binary>)` where the closing `>>` was truncated to `)`\n  # This captures `::binary` followed by one `>` and then `)` instead of `>>`\n  @pattern ~r/::binary\\)>/\n\n  @impl true\n  def analyze(source) do\n    source\n    |> String.split(\"\\n\")\n    |> Enum.with_index(1)\n    |> Enum.flat_map(fn {line, line_no} ->\n      if Regex.match?(@pattern, line) do\n        [build_issue(line_no)]\n      else\n        []\n      end\n    end)\n  end\n\n  @impl true\n  def fix(source) do\n    source\n    |> String.split(\"\\n\")\n    |> Enum.map_join(\"\\n\", &fix_line/1)\n  end\n\n  defp fix_line(line) do\n    Regex.replace(@pattern, line, \"::binary>>)\")\n  end\n\n  defp build_issue(line_no) do\n    %Issue{\n      rule: :fix_truncated_binary_close,\n      message:\n        \"Truncated binary close delimiter (`::binary>)`) should be `::binary>>)`.\",\n      meta: %{line: line_no}\n    }\n  end\nend", "oldText" => "defmodule Credence.Syntax.FixTruncatedBinaryClose do\n  @moduledoc \"\"\"\n  TODO: describe the unparseable syntax this rule detects and fixes.\n  \"\"\"\n  use Credence.Syntax.Rule\n\n  @impl true\n  def analyze(_source) do\n    # TODO: scan the source and return issues, e.g.:\n    #   [%Credence.Issue{rule: :fix_truncated_binary_close, message: \"...\", meta: %{line: line}}]\n    []\n  end\n\n  @impl true\n  def fix(source) do\n    # TODO: return the repaired source\n    source\n  end\nend"}]
+    path: /home/kly/projects/credence/lib/syntax/fix_truncated_binary_close.ex[0m
+[22m14:56:14.385 [info] [Pi] step 16: edit
+    edits: [%{"newText" => "defmodule Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest do\n  use ExUnit.Case\n\n  alias Credence.Issue\n  alias Credence.Syntax.FixTruncatedBinaryClose\n\n  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)\n\n  describe \"flags truncated binary close\" do\n    test \"inside list constructor\" do\n      assert [%Issue{rule: :fix_truncated_binary_close}] =\n               analyze(\"\"\"\n               [result | insert(char, <<first, rest::binary>)]\n               \"\"\")\n    end\n\n    test \"in assignment with nested call\" do\n      assert [%Issue{rule: :fix_truncated_binary_close}] =\n               analyze(\"\"\"\n               result = <<first, char, rest::binary>\n               \"\"\")\n    end\n\n    test \"multiple occurrences\" do\n      assert [%Issue{}, %Issue{}] =\n               analyze(\"\"\"\n               result = <<first, char, rest::binary>\n               [result | insert(char, <<first, rest::binary>)]\n               \"\"\")\n    end\n  end\n\n  describe \"leaves good code alone\" do\n    test \"correctly closed binary\" do\n      assert analyze(\"\"\"\n             result = <<first, char, rest::binary>>\n             \"\"\") == []\n    end\n\n    test \"plain code without binary\" do\n      assert analyze(\"\"\"\n             foo(bar)\n             \"\"\") == []\n    end\n\n    test \"binary in function head\" do\n      assert analyze(\"\"\"\n             def insert(char, <<first, rest::binary>>) do\n             \"\"\") == []\n    end\n  end\nend", "oldText" => "defmodule Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest do\n  use ExUnit.Case\n\n  alias Credence.Issue\n  alias Credence.Syntax.FixTruncatedBinaryClose\n\n  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)\n\n  test \"flags the unparseable code\" do\n    # TODO: replace with real code the rule should flag\n    assert [%Issue{rule: :fix_truncated_binary_close}] =\n             analyze(\"\"\"\n             foo(bar)\n             \"\"\")\n  end\n\n  test \"leaves good code alone\" do\n    # TODO: replace with real code the rule should ignore\n    assert analyze(\"\"\"\n           baz(qux)\n           \"\"\") == []\n  end\nend"}]
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_analyze_test.exs[0m
+[22m14:56:32.878 [info] [Pi] step 17: edit
+    edits: [%{"newText" => "defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do\n  use ExUnit.Case\n\n  import Credence.RuleCase, only: [valid_syntax?: 1]\n\n  alias Credence.Syntax.FixTruncatedBinaryClose\n\n  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)\n  defp fix(code), do: FixTruncatedBinaryClose.fix(code)\n\n  describe \"fixes truncated binary close\" do\n    test \"inside list constructor\" do\n      input = \"\"\"\n      [result | insert(char, <<first, rest::binary>)]\"\"\"\n\n      expected = \"\"\"\n      [result | insert(char, <<first, rest::binary>>)]\"\"\"\n\n      assert fix(input) == expected\n    end\n\n    test \"in assignment\" do\n      input = \"\"\"\n      result = <<first, char, rest::binary>\"\"\"\n\n      expected = \"\"\"\n      result = <<first, char, rest::binary>>\"\"\"\n\n      assert fix(input) == expected\n    end\n\n    test \"multiple occurrences\" do\n      input = \"\"\"\n      result = <<first, char, rest::binary>\n      [result | insert(char, <<first, rest::binary>)]\"\"\"\n\n      expected = \"\"\"\n      result = <<first, char, rest::binary>>\n      [result | insert(char, <<first, rest::binary>>)]\"\"\"\n\n      assert fix(input) == expected\n    end\n  end\n\n  describe \"leaves correct code unchanged\" do\n    test \"properly closed binary\" do\n      code = \"\"\"\n      result = <<first, char, rest::binary>>\"\"\"\n\n      assert fix(code) == code\n    end\n\n    test \"plain code\" do\n      code = \"\"\"\n      foo(bar)\"\"\"\n\n      assert fix(code) == code\n    end\n  end\n\n  describe \"fixed output no longer flags\" do\n    test \"inside list constructor\" do\n      assert analyze(\n               fix(\"\"\"\n               [result | insert(char, <<first, rest::binary>)]\"\"\"\n               )\n             ) == []\n    end\n\n    test \"in assignment\" do\n      assert analyze(\n               fix(\"\"\"\n               result = <<first, char, rest::binary>\"\"\"\n               )\n             ) == []\n    end\n  end\n\n  describe \"fixed output is well-formed (parses)\" do\n    test \"inside list constructor\" do\n      assert valid_syntax?(\n               fix(\"\"\"\n               [result | insert(char, <<first, rest::binary>)]\"\"\"\n               )\n             )\n    end\n\n    test \"in assignment\" do\n      assert valid_syntax?(\n               fix(\"\"\"\n               result = <<first, char, rest::binary>\"\"\"\n               )\n             )\n    end\n  end\nend", "oldText" => "defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do\n  use ExUnit.Case\n\n  import Credence.RuleCase, only: [valid_syntax?: 1]\n\n  alias Credence.Syntax.FixTruncatedBinaryClose\n\n  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)\n  defp fix(code), do: FixTruncatedBinaryClose.fix(code)\n\n  test \"fixes the syntax error\" do\n    # TODO: replace input/expected with a real before/after pair\n    input = \"\"\"\n    foo(bar)\n    \"\"\"\n\n    expected = \"\"\"\n    baz(qux)\n    \"\"\"\n\n    assert fix(input) == expected\n  end\n\n  test \"fixed output no longer flags\" do\n    # TODO: replace with real code the rule should flag, then fix to clean\n    assert analyze(\n             fix(\"\"\"\n             foo(bar)\n             \"\"\")\n           ) == []\n  end\n\n  test \"fixed output is well-formed (parses)\" do\n    # the repaired source must be valid Elixir\n    assert valid_syntax?(\n             fix(\"\"\"\n             foo(bar)\n             \"\"\")\n           )\n  end\nend"}]
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:56:35.815 [info] [Pi] step 18: bash
+    command: cd /home/kly/projects/credence && mix test test/syntax/fix_truncated_binary_close*_test.exs 2>&1
+    timeout: 120[0m
+[22m14:56:41.256 [info] [Pi] step 19: read
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:56:52.676 [info] [Pi] step 20: write
+    content: defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
+  use ExUnit.Case
+
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
+  alias Credence.Syntax.FixTruncatedBinaryClose
+
+  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+  defp fix(code), do: FixTruncatedBinaryClose.fix(code)
+
+  describe "fixes truncated binary close" do
+    test "inside list constructor" do
+      input = """
+      [result | insert(char, <<first, rest::binary>)]\
+      """
+
+      expected = """
+      [result | insert(char, <<first, rest::binary>>)]\
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "in assignment" do
+      input = """
+      result = <<first, char, rest::binary>>\
+      """
+
+      expected = """
+      result = <<first, char, rest::binary>>>\
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "multiple occurrences" do
+      input = """
+      result = <<first, char, rest::binary>)
+      [result | insert(char, <<first, rest::binary>)]\
+      """
+
+      expected = """
+      result = <<first, char, rest::binary>>)
+      [result | insert(char, <<first, rest::binary>>)]\
+      """
+
+      assert fix(input) == expected
+    end
+  end
+
+  describe "leaves correct code unchanged" do
+    test "properly closed binary" do
+      code = """
+      result = <<first, char, rest::binary>>\
+      """
+
+      assert fix(code) == code
+    end
+
+    test "plain code" do
+      code = """
+      foo(bar)\
+      """
+
+      assert fix(code) == code
+    end
+  end
+
+  describe "fixed output no longer flags" do
+    test "inside list constructor" do
+      assert analyze(
+               fix("""
+               [result | insert(char, <<first, rest::binary>)]\
+               """)
+             ) == []
+    end
+
+    test "in assignment" do
+      assert analyze(
+               fix("""
+               result = <<first, char, rest::binary>)\
+               """)
+             ) == []
+    end
+  end
+
+  describe "fixed output is well-formed (parses)" do
+    test "inside list constructor" do
+      assert valid_syntax?(
+               fix("""
+               [result | insert(char, <<first, rest::binary>)]\
+               """)
+             )
+    end
+
+    test "in assignment" do
+      assert valid_syntax?(
+               fix("""
+               result = <<first, char, rest::binary>)\
+               """)
+             )
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:57:17.779 [info] [Pi] step 21: write
+    content: defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
+  use ExUnit.Case
+
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
+  alias Credence.Syntax.FixTruncatedBinaryClose
+
+  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+  defp fix(code), do: FixTruncatedBinaryClose.fix(code)
+
+  describe "fixes truncated binary close" do
+    test "inside list constructor with nested call" do
+      input = "[result | insert(char, <<first, rest::binary>)]"
+      expected = "[result | insert(char, <<first, rest::binary>>)]"
+
+      assert fix(input) == expected
+    end
+
+    test "in assignment with closing paren" do
+      input = "result = <<first, char, rest::binary>)"
+      expected = "result = <<first, char, rest::binary>>)"
+
+      assert fix(input) == expected
+    end
+
+    test "multiple occurrences on different lines" do
+      input = """
+      result = <<first, char, rest::binary>)
+      [result | insert(char, <<first, rest::binary>)]\
+      """
+
+      expected = """
+      result = <<first, char, rest::binary>>)
+      [result | insert(char, <<first, rest::binary>>)]\
+      """
+
+      assert fix(input) == expected
+    end
+  end
+
+  describe "leaves correct code unchanged" do
+    test "properly closed binary without truncation" do
+      code = "result = <<first, char, rest::binary>>"
+      assert fix(code) == code
+    end
+
+    test "plain code without binary pattern" do
+      code = "foo(bar)"
+      assert fix(code) == code
+    end
+
+    test "binary in function head is correct" do
+      code = "def insert(char, <<first, rest::binary>>) do"
+      assert fix(code) == code
+    end
+  end
+
+  describe "fixed output no longer flags" do
+    test "inside list constructor" do
+      input = "[result | insert(char, <<first, rest::binary>)]"
+      assert analyze(fix(input)) == []
+    end
+
+    test "in assignment" do
+      input = "result = <<first, char, rest::binary>)"
+      assert analyze(fix(input)) == []
+    end
+  end
+
+  describe "fixed output is well-formed (parses)" do
+    test "inside list constructor" do
+      assert valid_syntax?(fix("[result | insert(char, <<first, rest::binary>)]"))
+    end
+
+    test "in assignment" do
+      assert valid_syntax?(fix("result = <<first, char, rest::binary>)"))
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:57:26.047 [info] [Pi] step 22: write
+    content: defmodule Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest do
+  use ExUnit.Case
+
+  alias Credence.Issue
+  alias Credence.Syntax.FixTruncatedBinaryClose
+
+  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+
+  describe "flags truncated binary close" do
+    test "inside list constructor with nested call" do
+      assert [%Issue{rule: :fix_truncated_binary_close}] =
+               analyze("[result | insert(char, <<first, rest::binary>)]")
+    end
+
+    test "in assignment with closing paren" do
+      assert [%Issue{rule: :fix_truncated_binary_close}] =
+               analyze("result = <<first, char, rest::binary>)")
+    end
+
+    test "multiple occurrences" do
+      code = """
+      result = <<first, char, rest::binary>)
+      [result | insert(char, <<first, rest::binary>)]\
+      """
+
+      assert [%Issue{}, %Issue{}] = analyze(code)
+    end
+  end
+
+  describe "leaves good code alone" do
+    test "correctly closed binary without truncation" do
+      assert analyze("result = <<first, char, rest::binary>>") == []
+    end
+
+    test "plain code without binary pattern" do
+      assert analyze("foo(bar)") == []
+    end
+
+    test "binary in function head is correct" do
+      assert analyze("def insert(char, <<first, rest::binary>>) do") == []
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_analyze_test.exs[0m
+[22m14:57:30.393 [info] [Pi] step 23: bash
+    command: cd /home/kly/projects/credence && mix test test/syntax/fix_truncated_binary_close*_test.exs 2>&1
+    timeout: 120[0m
+[22m14:57:41.521 [info] [Pi] step 24: read
+    path: /home/kly/projects/credence/lib/syntax/fix_truncated_binary_close.ex[0m
+[22m14:57:48.763 [info] [Pi] step 25: edit
+    edits: [%{"newText" => "  # Matches `::binary>)` where the closing `>>` was truncated to `>` then `)`\n  # This captures `::binary` followed by one `>` and then `)` instead of `>>`\n  @pattern ~r/::binary>\\)/", "oldText" => "  # Matches `::binary>)` where the closing `>>` was truncated to `)`\n  # This captures `::binary` followed by one `>` and then `)` instead of `>>`\n  @pattern ~r/::binary\\)>/"}]
+    path: /home/kly/projects/credence/lib/syntax/fix_truncated_binary_close.ex[0m
+[22m14:57:53.475 [info] [Pi] step 26: bash
+    command: cd /home/kly/projects/credence && mix test test/syntax/fix_truncated_binary_close*_test.exs 2>&1
+    timeout: 120[0m
+[22m14:58:21.001 [info] [Pi] step 27: write
+    content: defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
+  use ExUnit.Case
+
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
+  alias Credence.Syntax.FixTruncatedBinaryClose
+
+  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+  defp fix(code), do: FixTruncatedBinaryClose.fix(code)
+
+  describe "fixes truncated binary close" do
+    test "inside list constructor with nested call" do
+      input = "[result | insert(char, <<first, rest::binary>)]"
+      expected = "[result | insert(char, <<first, rest::binary>>)]"
+
+      assert fix(input) == expected
+    end
+
+    test "in pipe chain with nested call" do
+      input = "char |> insert(<<first, rest::binary>)]"
+      expected = "char |> insert(<<first, rest::binary>>)]"
+
+      assert fix(input) == expected
+    end
+
+    test "multiple occurrences on different lines" do
+      input = """
+      x = <<first, rest::binary>)
+      y = <<second, tail::binary>)\
+      """
+
+      expected = """
+      x = <<first, rest::binary>>)
+      y = <<second, tail::binary>>)\
+      """
+
+      assert fix(input) == expected
+    end
+  end
+
+  describe "leaves correct code unchanged" do
+    test "properly closed binary without truncation" do
+      code = "result = <<first, char, rest::binary>>"
+      assert fix(code) == code
+    end
+
+    test "plain code without binary pattern" do
+      code = "foo(bar)"
+      assert fix(code) == code
+    end
+
+    test "binary in function head is correct" do
+      code = "def insert(char, <<first, rest::binary>>) do"
+      assert fix(code) == code
+    end
+  end
+
+  describe "fixed output no longer flags" do
+    test "inside list constructor" do
+      input = "[result | insert(char, <<first, rest::binary>)]"
+      assert analyze(fix(input)) == []
+    end
+
+    test "in pipe chain" do
+      input = "char |> insert(<<first, rest::binary>)]"
+      assert analyze(fix(input)) == []
+    end
+  end
+
+  describe "fixed output is well-formed (parses)" do
+    test "inside list constructor" do
+      assert valid_syntax?(fix("[result | insert(char, <<first, rest::binary>)]"))
+    end
+
+    test "in pipe chain" do
+      assert valid_syntax?(fix("char |> insert(<<first, rest::binary>)]"))
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:58:36.065 [info] [Pi] step 28: bash
+    command: cd /home/kly/projects/credence && mix test test/syntax/fix_truncated_binary_close*_test.exs 2>&1
+    timeout: 120[0m
+[22m14:58:42.585 [info] [Pi] step 29: edit
+    edits: [%{"newText" => "    test \"in assignment with nested call\" do\n      input = \"result = insert(char, <<first, rest::binary>)\"\n      expected = \"result = insert(char, <<first, rest::binary>>)\"\n\n      assert fix(input) == expected\n    end", "oldText" => "    test \"in pipe chain with nested call\" do\n      input = \"char |> insert(<<first, rest::binary>)]\"\n      expected = \"char |> insert(<<first, rest::binary>>)\"\n\n      assert fix(input) == expected\n    end"}]
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:58:46.242 [info] [Pi] step 30: read
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:58:53.225 [info] [Pi] step 31: edit
+    edits: [%{"newText" => "    test \"in assignment with nested call\" do\n      input = \"result = insert(char, <<first, rest::binary>)\"\n      expected = \"result = insert(char, <<first, rest::binary>>)\"\n\n      assert fix(input) == expected\n    end\n\n    test \"multiple occurrences on different lines\" do", "oldText" => "    test \"in pipe chain with nested call\" do\n      input = \"char |> insert(<<first, rest::binary>)]\"\n      expected = \"char |> insert(<<first, rest::binary>>)\"\n\n      assert fix(input) == expected\n    end\n\n    test \"multiple occurrences on different lines\" do"}]
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:59:05.746 [info] [Pi] step 32: write
+    content: defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
+  use ExUnit.Case
+
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
+  alias Credence.Syntax.FixTruncatedBinaryClose
+
+  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+  defp fix(code), do: FixTruncatedBinaryClose.fix(code)
+
+  describe "fixes truncated binary close" do
+    test "inside list constructor with nested call" do
+      input = "[result | insert(char, <<first, rest::binary>)]"
+      expected = "[result | insert(char, <<first, rest::binary>>)]"
+
+      assert fix(input) == expected
+    end
+
+    test "in assignment with nested call" do
+      input = "result = insert(char, <<first, rest::binary>)"
+      expected = "result = insert(char, <<first, rest::binary>>)"
+
+      assert fix(input) == expected
+    end
+
+    test "multiple occurrences on different lines" do
+      input = """
+      x = <<first, rest::binary>)
+      y = <<second, tail::binary>)\
+      """
+
+      expected = """
+      x = <<first, rest::binary>>)
+      y = <<second, tail::binary>>)\
+      """
+
+      assert fix(input) == expected
+    end
+  end
+
+  describe "leaves correct code unchanged" do
+    test "properly closed binary without truncation" do
+      code = "result = <<first, char, rest::binary>>"
+      assert fix(code) == code
+    end
+
+    test "plain code without binary pattern" do
+      code = "foo(bar)"
+      assert fix(code) == code
+    end
+
+    test "binary in function head is correct" do
+      code = "def insert(char, <<first, rest::binary>>) do"
+      assert fix(code) == code
+    end
+  end
+
+  describe "fixed output no longer flags" do
+    test "inside list constructor" do
+      input = "[result | insert(char, <<first, rest::binary>)]"
+      assert analyze(fix(input)) == []
+    end
+
+    test "in assignment" do
+      input = "result = insert(char, <<first, rest::binary>)"
+      assert analyze(fix(input)) == []
+    end
+  end
+
+  describe "fixed output is well-formed (parses)" do
+    test "inside list constructor" do
+      assert valid_syntax?(fix("[result | insert(char, <<first, rest::binary>)]"))
+    end
+
+    test "in assignment" do
+      assert valid_syntax?(fix("result = insert(char, <<first, rest::binary>)"))
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m14:59:14.554 [info] [Pi] step 33: write
+    content: defmodule Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest do
+  use ExUnit.Case
+
+  alias Credence.Issue
+  alias Credence.Syntax.FixTruncatedBinaryClose
+
+  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+
+  describe "flags truncated binary close" do
+    test "inside list constructor with nested call" do
+      assert [%Issue{rule: :fix_truncated_binary_close}] =
+               analyze("[result | insert(char, <<first, rest::binary>)]")
+    end
+
+    test "in assignment with nested call" do
+      assert [%Issue{rule: :fix_truncated_binary_close}] =
+               analyze("result = insert(char, <<first, rest::binary>)")
+    end
+
+    test "multiple occurrences" do
+      code = """
+      x = <<first, rest::binary>)
+      y = <<second, tail::binary>)\
+      """
+
+      assert [%Issue{}, %Issue{}] = analyze(code)
+    end
+  end
+
+  describe "leaves good code alone" do
+    test "correctly closed binary without truncation" do
+      assert analyze("result = <<first, char, rest::binary>>") == []
+    end
+
+    test "plain code without binary pattern" do
+      assert analyze("foo(bar)") == []
+    end
+
+    test "binary in function head is correct" do
+      assert analyze("def insert(char, <<first, rest::binary>>) do") == []
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_analyze_test.exs[0m
+[22m14:59:18.078 [info] [Pi] step 34: bash
+    command: cd /home/kly/projects/credence && mix test test/syntax/fix_truncated_binary_close*_test.exs 2>&1
+    timeout: 120[0m
+[22m14:59:24.095 [info] [Pi] step 35: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -30
+    timeout: 120[0m
+[22m14:59:37.231 [info] [Pi] step 36: read
+    path: /home/kly/projects/credence/test/fixture_string_escaping_test.exs[0m
+[22m14:59:47.212 [info] [Pi] step 37: write
+    content: defmodule Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest do
+  use ExUnit.Case
+
+  alias Credence.Issue
+  alias Credence.Syntax.FixTruncatedBinaryClose
+
+  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+
+  describe "flags truncated binary close" do
+    test "inside list constructor with nested call" do
+      assert [%Issue{rule: :fix_truncated_binary_close}] =
+               analyze("""
+               [result | insert(char, <<first, rest::binary>)]\
+               """)
+    end
+
+    test "in assignment with nested call" do
+      assert [%Issue{rule: :fix_truncated_binary_close}] =
+               analyze("""
+               result = insert(char, <<first, rest::binary>)\
+               """)
+    end
+
+    test "multiple occurrences" do
+      assert [%Issue{}, %Issue{}] =
+               analyze("""
+               x = <<first, rest::binary>)
+               y = <<second, tail::binary>)\
+               """)
+    end
+  end
+
+  describe "leaves good code alone" do
+    test "correctly closed binary without truncation" do
+      assert analyze("""
+             result = <<first, char, rest::binary>>\
+             """) == []
+    end
+
+    test "plain code without binary pattern" do
+      assert analyze("""
+             foo(bar)\
+             """) == []
+    end
+
+    test "binary in function head is correct" do
+      assert analyze("""
+             def insert(char, <<first, rest::binary>>) do\
+             """) == []
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_analyze_test.exs[0m
+[22m14:59:59.915 [info] [Pi] step 38: write
+    content: defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
+  use ExUnit.Case
+
+  import Credence.RuleCase, only: [valid_syntax?: 1]
+
+  alias Credence.Syntax.FixTruncatedBinaryClose
+
+  defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+  defp fix(code), do: FixTruncatedBinaryClose.fix(code)
+
+  describe "fixes truncated binary close" do
+    test "inside list constructor with nested call" do
+      input = """
+      [result | insert(char, <<first, rest::binary>)]\
+      """
+
+      expected = """
+      [result | insert(char, <<first, rest::binary>>)]\
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "in assignment with nested call" do
+      input = """
+      result = insert(char, <<first, rest::binary>)\
+      """
+
+      expected = """
+      result = insert(char, <<first, rest::binary>>)\
+      """
+
+      assert fix(input) == expected
+    end
+
+    test "multiple occurrences on different lines" do
+      input = """
+      x = <<first, rest::binary>)
+      y = <<second, tail::binary>)\
+      """
+
+      expected = """
+      x = <<first, rest::binary>>)
+      y = <<second, tail::binary>>)\
+      """
+
+      assert fix(input) == expected
+    end
+  end
+
+  describe "leaves correct code unchanged" do
+    test "properly closed binary without truncation" do
+      code = """
+      result = <<first, char, rest::binary>>\
+      """
+
+      assert fix(code) == code
+    end
+
+    test "plain code without binary pattern" do
+      code = """
+      foo(bar)\
+      """
+
+      assert fix(code) == code
+    end
+
+    test "binary in function head is correct" do
+      code = """
+      def insert(char, <<first, rest::binary>>) do\
+      """
+
+      assert fix(code) == code
+    end
+  end
+
+  describe "fixed output no longer flags" do
+    test "inside list constructor" do
+      assert analyze(
+               fix("""
+               [result | insert(char, <<first, rest::binary>)]\
+               """)
+             ) == []
+    end
+
+    test "in assignment" do
+      assert analyze(
+               fix("""
+               result = insert(char, <<first, rest::binary>)\
+               """)
+             ) == []
+    end
+  end
+
+  describe "fixed output is well-formed (parses)" do
+    test "inside list constructor" do
+      assert valid_syntax?(
+               fix("""
+               [result | insert(char, <<first, rest::binary>)]\
+               """)
+             )
+    end
+
+    test "in assignment" do
+      assert valid_syntax?(
+               fix("""
+               result = insert(char, <<first, rest::binary>)\
+               """)
+             )
+    end
+  end
+end
+
+    path: /home/kly/projects/credence/test/syntax/fix_truncated_binary_close_fix_test.exs[0m
+[22m15:00:03.629 [info] [Pi] step 39: bash
+    command: cd /home/kly/projects/credence && mix test test/syntax/fix_truncated_binary_close*_test.exs 2>&1
+    timeout: 120[0m
+[22m15:00:12.071 [info] [Pi] step 40: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1 | tail -10
+    timeout: 120[0m
+[22m15:00:17.447 [info] [Budget] HEARTBEAT — 11 paid calls, est $0.0244 over 9.7min → ~$0.1507/hr, ~$3.62/day (tok in=30042 cache_rd=1024 out=13013)[0m
+[22m15:00:29.785 [info] [Pi] step 41: read
+    path: /home/kly/projects/credence/lib/syntax/fix_truncated_binary_close.ex[0m
+[22m15:00:37.449 [info] [Pi] agent done — exit=0 steps=41 stop=stop[0m
+[36m15:00:37.449 [debug] [Budget] spent so far (est.): $0.0494[0m
+[22m15:00:38.525 [info] [Gate] staged entries: [{"A", ["lib/syntax/fix_truncated_binary_close.ex"]}, {"A", ["test/syntax/fix_truncated_binary_close_analyze_test.exs"]}, {"A", ["test/syntax/fix_truncated_binary_close_fix_test.exs"]}][0m
+[36m15:00:39.182 [debug] [Gate] mix test ["test/syntax/fix_truncated_binary_close_analyze_test.exs", "test/syntax/fix_truncated_binary_close_fix_test.exs"] exit=2
+Generated credence app
+Running ExUnit with seed: 964916, max_cases: 48
+
+    warning: Credence.Syntax.FixTruncatedBinaryClose.analyze/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available or is yet to be defined)
+    │
+  7 │   defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+    │                                                   ~
+    │
+    └─ test/syntax/fix_truncated_binary_close_analyze_test.exs:7:51: Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest.analyze/1
+
+    warning: Credence.Syntax.FixTruncatedBinaryClose.analyze/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available or is yet to be defined)
+    │
+  8 │   defp analyze(code), do: FixTruncatedBinaryClose.analyze(code)
+    │                                                   ~
+    │
+    └─ test/syntax/fix_truncated_binary_close_fix_test.exs:8:51: Credence.Syntax.FixTruncatedBinaryCloseFixTest.analyze/1
+
+    warning: Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available or is yet to be defined)
+    │
+  9 │   defp fix(code), do: FixTruncatedBinaryClose.fix(code)
+    │                                               ~
+    │
+    └─ test/syntax/fix_truncated_binary_close_fix_test.exs:9:47: Credence.Syntax.FixTruncatedBinaryCloseFixTest.fix/1
+
+
+
+  1) test fixes truncated binary close in assignment with nested call (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:24
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: assert fix(input) == expected
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("result = insert(char, <<first, rest::binary>)")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:33: (test)
+
+
+
+  2) test fixes truncated binary close multiple occurrences on different lines (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:36
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: assert fix(input) == expected
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("x = <<first, rest::binary>)\ny = <<second, tail::binary>)")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:47: (test)
+
+
+
+  3) test leaves correct code unchanged binary in function head is correct (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:68
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: assert fix(code) == code
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("def insert(char, <<first, rest::binary>>) do")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:73: (test)
+
+
+
+  4) test fixed output is well-formed (parses) inside list constructor (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:96
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: fix("""
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("[result | insert(char, <<first, rest::binary>)]")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:98: (test)
+
+
+
+  5) test fixed output no longer flags inside list constructor (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:78
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: fix("""
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("[result | insert(char, <<first, rest::binary>)]")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:80: (test)
+
+
+
+  6) test leaves correct code unchanged plain code without binary pattern (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:60
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: assert fix(code) == code
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("foo(bar)")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:65: (test)
+
+
+
+  7) test fixed output no longer flags in assignment (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:86
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: fix("""
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("result = insert(char, <<first, rest::binary>)")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:88: (test)
+
+
+
+  8) test fixes truncated binary close inside list constructor with nested call (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:12
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: assert fix(input) == expected
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("[result | insert(char, <<first, rest::binary>)]")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:21: (test)
+
+
+
+  9) test leaves correct code unchanged properly closed binary without truncation (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:52
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: assert fix(code) == code
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("result = <<first, char, rest::binary>>")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:57: (test)
+
+
+
+ 10) test fixed output is well-formed (parses) in assignment (Credence.Syntax.FixTruncatedBinaryCloseFixTest)
+     test/syntax/fix_truncated_binary_close_fix_test.exs:104
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.fix/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: fix("""
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.fix("result = insert(char, <<first, rest::binary>)")
+       test/syntax/fix_truncated_binary_close_fix_test.exs:106: (test)
+
+
+
+ 11) test flags truncated binary close in assignment with nested call (Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest)
+     test/syntax/fix_truncated_binary_close_analyze_test.exs:17
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.analyze/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not available)
+     code: analyze("""
+     stacktrace:
+       Credence.Syntax.FixTruncatedBinaryClose.analyze("result = insert(char, <<first, rest::binary>)")
+       test/syntax/fix_truncated_binary_close_analyze_test.exs:19: (test)
+
+
+
+ 12) test flags truncated binary close multiple occurrences (Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest)
+     test/syntax/fix_truncated_binary_close_analyze_test.exs:24
+     ** (UndefinedFunctionError) function Credence.Syntax.FixTruncatedBinaryClose.analyze/1 is undefined (module Credence.Syntax.FixTruncatedBinaryClose is not availab (truncated)[0m
+[22m15:00:39.187 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m15:00:48.093 [debug] [Gate] mix test [] exit=0
+Compiling 1 file (.ex)
+Generated credence app
+Running ExUnit with seed: 645188, max_cases: 48
+
+...............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Finished in 8.3 seconds (4.0s async, 4.3s sync)
+5 properties, 4618 tests, 0 failures
+[0m
+[22m15:00:48.093 [info] [Gate] full suite GREEN[0m
+[22m15:00:48.192 [info] [Git] committed: cred-gen: new(syntax): fix_truncated_binary_close [row 29986][0m
+[22m15:00:48.193 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m15:00:50.359 [info] [Workspace] ✓ credence recompiled[0m
+[22m15:01:06.841 [info] [Git] pushed origin/evolution[0m
+[22m15:01:06.841 [info] [Workspace] recompiling credence path dep in var/run/workspace[0m
+[22m15:01:08.940 [info] [Workspace] ✓ credence recompiled[0m
