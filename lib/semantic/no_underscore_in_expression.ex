@@ -22,8 +22,7 @@ defmodule Credence.Semantic.NoUnderscoreInExpression do
 
   @impl true
   def match?(%{message: msg}) when is_binary(msg) do
-    String.contains?(msg, "invalid use of _") or
-      String.contains?(msg, "redefining module Solution")
+    String.contains?(msg, "invalid use of _")
   end
 
   def match?(_), do: false

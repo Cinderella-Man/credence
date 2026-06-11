@@ -35,14 +35,14 @@ defmodule Credence.Semantic.NoUnderscoreInExpressionFixTest do
     """
 
     message =
-      "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)"
+      "invalid use of _. _ can only be used inside patterns to ignore values and cannot be used in expressions. Make sure you are inside a pattern or change it accordingly"
 
     assert fix(input, message) == expected
   end
 
   test "fixed output is well-formed (parses)" do
     message =
-      "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)"
+      "invalid use of _. _ can only be used inside patterns to ignore values and cannot be used in expressions. Make sure you are inside a pattern or change it accordingly"
 
     assert valid_syntax?(
              fix(
@@ -72,7 +72,7 @@ defmodule Credence.Semantic.NoUnderscoreInExpressionFixTest do
     """
 
     message =
-      "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)"
+      "invalid use of _. _ can only be used inside patterns to ignore values and cannot be used in expressions. Make sure you are inside a pattern or change it accordingly"
 
     assert fix(input, message) == input
   end
