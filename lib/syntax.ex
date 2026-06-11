@@ -48,9 +48,18 @@ defmodule Credence.Syntax do
       {:error, {meta, error_msg, token}} ->
         line = Keyword.get(meta, :line)
 
+        # parse errors carry either a binary message or an {opening, hint} tuple
+        # (e.g. "unexpected reserved word" guidance) - interpolating the tuple raised
+        error_str =
+          case error_msg do
+            msg when is_binary(msg) -> msg
+            {opening, hint} when is_binary(opening) and is_binary(hint) -> opening <> "..." <> hint
+            other -> inspect(other)
+          end
+
         Logger.debug(
           "[credence_fix] starting syntax fix pipeline (#{length(all_rules)} rules), " <>
-            "parse error at line #{line}: #{error_msg} near #{inspect(token)}"
+            "parse error at line #{line}: #{error_str} near #{inspect(token)}"
         )
 
         {fixed, applied} =
@@ -78,9 +87,16 @@ defmodule Credence.Syntax do
           {:error, {meta, error_msg, token}} ->
             line = Keyword.get(meta, :line)
 
+            error_str =
+              case error_msg do
+                msg when is_binary(msg) -> msg
+                {opening, hint} when is_binary(opening) and is_binary(hint) -> opening <> "..." <> hint
+                other -> inspect(other)
+              end
+
             Logger.debug(
               "[credence_fix] syntax fix pipeline: source still does not parse " <>
-                "(line #{line}: #{error_msg} near #{inspect(token)})"
+                "(line #{line}: #{error_str} near #{inspect(token)})"
             )
         end
 
