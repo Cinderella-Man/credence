@@ -11,11 +11,11 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
   describe "fixes truncated binary close" do
     test "inside list constructor with nested call" do
       input = """
-      [result | insert(char, <<first, rest::binary>)]\
+      [result | insert(char, <<first, rest::binary>)]
       """
 
       expected = """
-      [result | insert(char, <<first, rest::binary>>)]\
+      [result | insert(char, <<first, rest::binary>>)]
       """
 
       assert fix(input) == expected
@@ -23,11 +23,11 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
 
     test "in assignment with nested call" do
       input = """
-      result = insert(char, <<first, rest::binary>)\
+      result = insert(char, <<first, rest::binary>)
       """
 
       expected = """
-      result = insert(char, <<first, rest::binary>>)\
+      result = insert(char, <<first, rest::binary>>)
       """
 
       assert fix(input) == expected
@@ -36,12 +36,12 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
     test "multiple occurrences on different lines" do
       input = """
       x = <<first, rest::binary>)
-      y = <<second, tail::binary>)\
+      y = <<second, tail::binary>)
       """
 
       expected = """
       x = <<first, rest::binary>>)
-      y = <<second, tail::binary>>)\
+      y = <<second, tail::binary>>)
       """
 
       assert fix(input) == expected
@@ -51,7 +51,7 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
   describe "leaves correct code unchanged" do
     test "properly closed binary without truncation" do
       code = """
-      result = <<first, char, rest::binary>>\
+      result = <<first, char, rest::binary>>
       """
 
       assert fix(code) == code
@@ -59,7 +59,7 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
 
     test "plain code without binary pattern" do
       code = """
-      foo(bar)\
+      foo(bar)
       """
 
       assert fix(code) == code
@@ -67,7 +67,7 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
 
     test "binary in function head is correct" do
       code = """
-      def insert(char, <<first, rest::binary>>) do\
+      def insert(char, <<first, rest::binary>>) do
       """
 
       assert fix(code) == code
@@ -78,7 +78,7 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
     test "inside list constructor" do
       assert analyze(
                fix("""
-               [result | insert(char, <<first, rest::binary>)]\
+               [result | insert(char, <<first, rest::binary>)]
                """)
              ) == []
     end
@@ -86,7 +86,7 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
     test "in assignment" do
       assert analyze(
                fix("""
-               result = insert(char, <<first, rest::binary>)\
+               result = insert(char, <<first, rest::binary>)
                """)
              ) == []
     end
@@ -96,7 +96,7 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
     test "inside list constructor" do
       assert valid_syntax?(
                fix("""
-               [result | insert(char, <<first, rest::binary>)]\
+               [result | insert(char, <<first, rest::binary>)]
                """)
              )
     end
@@ -104,7 +104,7 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseFixTest do
     test "in assignment" do
       assert valid_syntax?(
                fix("""
-               result = insert(char, <<first, rest::binary>)\
+               result = insert(char, <<first, rest::binary>)
                """)
              )
     end

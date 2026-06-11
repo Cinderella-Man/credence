@@ -10,14 +10,14 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest do
     test "inside list constructor with nested call" do
       assert [%Issue{rule: :fix_truncated_binary_close}] =
                analyze("""
-               [result | insert(char, <<first, rest::binary>)]\
+               [result | insert(char, <<first, rest::binary>)]
                """)
     end
 
     test "in assignment with nested call" do
       assert [%Issue{rule: :fix_truncated_binary_close}] =
                analyze("""
-               result = insert(char, <<first, rest::binary>)\
+               result = insert(char, <<first, rest::binary>)
                """)
     end
 
@@ -25,7 +25,7 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest do
       assert [%Issue{}, %Issue{}] =
                analyze("""
                x = <<first, rest::binary>)
-               y = <<second, tail::binary>)\
+               y = <<second, tail::binary>)
                """)
     end
   end
@@ -33,19 +33,19 @@ defmodule Credence.Syntax.FixTruncatedBinaryCloseAnalyzeTest do
   describe "leaves good code alone" do
     test "correctly closed binary without truncation" do
       assert analyze("""
-             result = <<first, char, rest::binary>>\
+             result = <<first, char, rest::binary>>
              """) == []
     end
 
     test "plain code without binary pattern" do
       assert analyze("""
-             foo(bar)\
+             foo(bar)
              """) == []
     end
 
     test "binary in function head is correct" do
       assert analyze("""
-             def insert(char, <<first, rest::binary>>) do\
+             def insert(char, <<first, rest::binary>>) do
              """) == []
     end
   end
