@@ -35,19 +35,28 @@ defmodule Credence.Semantic.PreferKernelMaxOverLocal do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
-    case parse(source) do
-      {:ok, ast} ->
-        transformed = remove_defp_max(ast)
-
-        if transformed == ast do
-          source
-        else
-          Sourceror.to_string(transformed) <> "\n"
-        end
-
-      :error ->
+  def fix(source, diagnostic) do
+    case extract_conflicting_func(diagnostic) do
+      nil ->
         source
+
+      func_name ->
+        case parse(source) do
+          {:ok, ast} ->
+            transformed =
+              ast
+              |> remove_defp_name(func_name)
+              |> qualify_calls(func_name)
+
+            if transformed == ast do
+              source
+            else
+              Sourceror.to_string(transformed) <> "\n"
+            end
+
+          :error ->
+            source
+        end
     end
   end
 
@@ -57,16 +66,36 @@ defmodule Credence.Semantic.PreferKernelMaxOverLocal do
     _ -> :error
   end
 
-  defp remove_defp_max(ast) do
+  defp extract_conflicting_func(%{message: msg}) when is_binary(msg) do
+    case Regex.run(~r/Kernel\.([a-z_][a-z0-9_]*)\//, msg) do
+      [_, name] -> String.to_atom(name)
+      _ -> nil
+    end
+  end
+
+  defp extract_conflicting_func(_), do: nil
+
+  defp remove_defp_name(ast, func_name) do
     Macro.prewalk(ast, fn
       {:__block__, meta, stmts} when is_list(stmts) ->
         filtered =
-          Enum.reject(stmts, fn
-            {:defp, _, _} -> true
-            _ -> false
-          end)
+          Enum.reject(stmts, fn stmt -> defp_named?(stmt, func_name) end)
 
         {:__block__, meta, filtered}
+
+      node ->
+        node
+    end)
+  end
+
+  defp defp_named?({:defp, _, [{name, _, _} | _]}, name), do: true
+  defp defp_named?({:defp, _, [{:when, _, [{name, _, _} | _]} | _]}, name), do: true
+  defp defp_named?(_, _), do: false
+
+  defp qualify_calls(ast, func_name) do
+    Macro.prewalk(ast, fn
+      {^func_name, meta, args} when is_list(args) and args != [] ->
+        {{:., [], [{:__aliases__, [], [:Kernel]}, func_name]}, meta, args}
 
       node ->
         node
