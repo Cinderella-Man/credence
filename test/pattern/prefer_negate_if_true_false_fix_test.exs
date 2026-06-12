@@ -22,4 +22,22 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
 
     assert fix(PreferNegateIfTrueFalse, input) == expected
   end
+
+  test "wraps binary condition in parens when negating" do
+    input = """
+    if len_a != len_b do
+      false
+    else
+      do_work(a, b)
+    end
+    """
+
+    expected = """
+    if !(len_a != len_b) do
+      do_work(a, b)
+    end
+    """
+
+    assert fix(PreferNegateIfTrueFalse, input) == expected
+  end
 end

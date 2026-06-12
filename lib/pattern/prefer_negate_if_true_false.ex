@@ -61,13 +61,32 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
             else_body = extract_clause(branches, :else)
             rendered_else = Sourceror.to_string(else_body)
 
-            # Patch 1: Add ! before the condition
-            cond_start = Sourceror.get_range(condition).start
+            # Patch 1: Negate the condition, wrapping in parens if binary op
+            cond_range = Sourceror.get_range(condition)
 
-            negate_patch = %{
-              range: %{start: cond_start, end: cond_start},
-              change: "!"
-            }
+            negate_patches =
+              if binary_op?(condition) do
+                # ! binds tighter than binary operators, so we need parens
+                cond_end = cond_range.end
+
+                [
+                  %{
+                    range: %{start: cond_end, end: cond_end},
+                    change: ")"
+                  },
+                  %{
+                    range: %{start: cond_range.start, end: cond_range.start},
+                    change: "!("
+                  }
+                ]
+              else
+                [
+                  %{
+                    range: %{start: cond_range.start, end: cond_range.start},
+                    change: "!"
+                  }
+                ]
+              end
 
             # Patch 2: Replace from do keyword to end with new do block
             do_pos = if_meta[:do]
@@ -96,7 +115,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
               change: new_do_block
             }
 
-            {node, [body_patch, negate_patch | acc]}
+            {node, [body_patch | negate_patches ++ acc]}
           else
             {node, acc}
           end
@@ -107,6 +126,23 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
 
     Enum.reverse(patches)
   end
+
+  # Check if a node is a binary operation that needs parentheses when negated.
+  # ! binds tighter than binary operators, so !a OP b parses as (!a) OP b.
+  defp binary_op?({op, _meta, [_left, _right]}) when is_atom(op) do
+    op in [
+      :==, :!=, :===, :!==, :=~,
+      :<, :>, :<=, :>=,
+      :+, :-, :*, :/, :div, :rem,
+      :<>, :++, :--,
+      :and, :or, :&&, :||,
+      :.., :in, :"not in",
+      :|>, :<<<, :>>>,
+      :"~>>", :"<<~", :"~>", :"<~", :"<|>", :"<~>"
+    ]
+  end
+
+  defp binary_op?(_), do: false
 
   # Returns true when the if matches: do branch is `false`, else branch exists.
   defp anti_pattern?(_condition, branches) when is_list(branches) do

@@ -22,4 +22,14 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseCheckTest do
            end
            """)
   end
+
+  test "flags the anti-pattern with a binary condition" do
+    assert flagged?(PreferNegateIfTrueFalse, """
+           if len_a != len_b do
+             false
+           else
+             do_work(a, b)
+           end
+           """)
+  end
 end
