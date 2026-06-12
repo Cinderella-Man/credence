@@ -53,6 +53,34 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
 
       assert length(check(NoIfEmptyForEnumMinMax, code)) == 1
     end
+
+    test "detects the Enum.filter(...) form when guard and branch match" do
+      code = """
+      defmodule Bad do
+        def run(nums) do
+          if Enum.empty?(Enum.filter(nums, fn n -> rem(n, 3) == 0 end)),
+            do: nil,
+            else: Enum.max(Enum.filter(nums, fn n -> rem(n, 3) == 0 end))
+        end
+      end
+      """
+
+      assert length(check(NoIfEmptyForEnumMinMax, code)) == 1
+    end
+
+    test "detects the negated Enum.reject(...) form" do
+      code = """
+      defmodule Bad do
+        def run(nums) do
+          if not Enum.empty?(Enum.reject(nums, &(&1 < 0))),
+            do: Enum.min(Enum.reject(nums, &(&1 < 0))),
+            else: 0
+        end
+      end
+      """
+
+      assert length(check(NoIfEmptyForEnumMinMax, code)) == 1
+    end
   end
 
   describe "check — does not fire" do
@@ -85,6 +113,32 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
       defmodule Good do
         def run(a, b) do
           if Enum.empty?(a), do: 0, else: Enum.min(b)
+        end
+      end
+      """
+
+      assert check(NoIfEmptyForEnumMinMax, code) == []
+    end
+
+    test "does NOT fire when the filter predicates differ between guard and branch" do
+      code = """
+      defmodule Good do
+        def run(nums) do
+          if Enum.empty?(Enum.filter(nums, &odd?/1)),
+            do: nil,
+            else: Enum.max(Enum.filter(nums, &even?/1))
+        end
+      end
+      """
+
+      assert check(NoIfEmptyForEnumMinMax, code) == []
+    end
+
+    test "does NOT fire on a non-filter/reject call (may be impure / re-evaluated)" do
+      code = """
+      defmodule Good do
+        def run do
+          if Enum.empty?(fetch_rows()), do: nil, else: Enum.max(fetch_rows())
         end
       end
       """

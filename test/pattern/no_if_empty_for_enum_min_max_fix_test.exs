@@ -52,6 +52,30 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxFixTest do
                """
     end
 
+    test "Enum.filter(...) form → Enum.max(Enum.filter(...), fn -> default end)" do
+      assert fix(
+               NoIfEmptyForEnumMinMax,
+               """
+               if Enum.empty?(Enum.filter(nums, &(rem(&1, 3) == 0))), do: nil, else: Enum.max(Enum.filter(nums, &(rem(&1, 3) == 0)))
+               """
+             ) ==
+               """
+               Enum.max(Enum.filter(nums, &(rem(&1, 3) == 0)), fn -> nil end)
+               """
+    end
+
+    test "negated Enum.reject(...) form → Enum.min(Enum.reject(...), fn -> default end)" do
+      assert fix(
+               NoIfEmptyForEnumMinMax,
+               """
+               if not Enum.empty?(Enum.reject(nums, &(&1 < 0))), do: Enum.min(Enum.reject(nums, &(&1 < 0))), else: 0
+               """
+             ) ==
+               """
+               Enum.min(Enum.reject(nums, &(&1 < 0)), fn -> 0 end)
+               """
+    end
+
     test "rewrites inside surrounding code, leaving the rest intact" do
       code = """
       defmodule Example do

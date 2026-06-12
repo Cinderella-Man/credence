@@ -6,6 +6,16 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
 
   Prefer `Enum.min(var, fn -> default end)` with the `empty_fallback` parameter.
 
+  The guarded enumerable may be a bare variable or an `Enum.filter/2` /
+  `Enum.reject/2` call — as long as the **same** expression appears in both the
+  `Enum.empty?(...)` guard and the `Enum.min/max(...)` branch. This catches the
+  common "max of the matching elements, or a default if there are none" shape:
+
+      if Enum.empty?(Enum.filter(nums, pred)),
+        do: nil,
+        else: Enum.max(Enum.filter(nums, pred))
+      #  →  Enum.max(Enum.filter(nums, pred), fn -> nil end)
+
   Only the `Enum.empty?/1` forms are flagged. The `if var == []` /
   `if var != []` and `case var do [] -> default; v -> Enum.min(v) end` forms are
   deliberately NOT flagged: their empty test only matches the literal empty list,
@@ -14,6 +24,12 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
   while `Enum.min(var, fn -> default end)` returns the default — a behaviour
   change. `Enum.empty?/1` reports emptiness for every enumerable, matching
   `Enum.min/2`'s empty_fallback exactly, so those forms rewrite identically.
+
+  The guarded expression is restricted to a bare variable or an
+  `Enum.filter/2` / `Enum.reject/2` call so the only re-evaluated work is a
+  predicate (the original already evaluates the expression twice: once in the
+  guard, once in the branch). This matches the purity convention the other
+  filter-based structural rules rely on.
   """
 
   use Credence.Pattern.Rule
@@ -49,8 +65,8 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {:if, _meta, [condition, opts]} = node ->
         case detect_empty_guard(condition, opts) do
-          %{var: var, default: default, enum_fn: enum_fn} ->
-            build_enum_call(enum_fn, var, default)
+          %{enum_expr: enum_expr, default: default, enum_fn: enum_fn} ->
+            build_enum_call(enum_fn, enum_expr, default)
 
           nil ->
             node
@@ -73,15 +89,15 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
     end
   end
 
-  # `if Enum.empty?(var), do: default, else: Enum.min(var)`
+  # `if Enum.empty?(expr), do: default, else: Enum.min(expr)`
   defp detect_enum_empty(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :empty?]}, _, [var]},
+         {{:., _, [{:__aliases__, _, [:Enum]}, :empty?]}, _, [guard_expr]},
          default,
          enum_call
        ) do
-    case enum_min_max_call(enum_call, var) do
-      {enum_fn, matched_var, arity} ->
-        %{var: matched_var, default: default, enum_fn: enum_fn, arity: arity}
+    case enum_min_max_call(enum_call, guard_expr) do
+      {enum_fn, matched_expr, arity} ->
+        %{enum_expr: matched_expr, default: default, enum_fn: enum_fn, arity: arity}
 
       nil ->
         nil
@@ -90,20 +106,20 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
 
   defp detect_enum_empty(_, _, _), do: nil
 
-  # `if !Enum.empty?(var), do: Enum.min(var), else: default`
-  # `if not Enum.empty?(var), do: Enum.min(var), else: default`
+  # `if !Enum.empty?(expr), do: Enum.min(expr), else: default`
+  # `if not Enum.empty?(expr), do: Enum.min(expr), else: default`
   defp detect_negated_enum_empty(
          {neg, _,
           [
-            {{:., _, [{:__aliases__, _, [:Enum]}, :empty?]}, _, [var]}
+            {{:., _, [{:__aliases__, _, [:Enum]}, :empty?]}, _, [guard_expr]}
           ]},
          enum_call,
          default
        )
        when neg in [:!, :not] do
-    case enum_min_max_call(enum_call, var) do
-      {enum_fn, matched_var, arity} ->
-        %{var: matched_var, default: default, enum_fn: enum_fn, arity: arity}
+    case enum_min_max_call(enum_call, guard_expr) do
+      {enum_fn, matched_expr, arity} ->
+        %{enum_expr: matched_expr, default: default, enum_fn: enum_fn, arity: arity}
 
       nil ->
         nil
@@ -112,25 +128,46 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
 
   defp detect_negated_enum_empty(_, _, _), do: nil
 
-  # Match `Enum.min(var)` or `Enum.max(var)` and verify it uses the same var
-  defp enum_min_max_call({{:., _, [{:__aliases__, _, [:Enum]}, fn_name]}, _, [arg]}, var)
+  # Match `Enum.min(expr)` or `Enum.max(expr)` where `expr` is an eligible
+  # enumerable (a bare var or an `Enum.filter/2` / `Enum.reject/2` call) and is
+  # the SAME expression as the one tested by `Enum.empty?` in the guard.
+  defp enum_min_max_call({{:., _, [{:__aliases__, _, [:Enum]}, fn_name]}, _, [arg]}, guard_expr)
        when fn_name in [:min, :max] do
-    if same_var?(arg, var), do: {fn_name, arg, 1}, else: nil
+    if eligible_enum_expr?(arg) and same_expr?(arg, guard_expr) do
+      {fn_name, arg, 1}
+    else
+      nil
+    end
   end
 
   defp enum_min_max_call(_, _), do: nil
 
-  defp same_var?({name, _, ctx1}, {name, _, ctx2})
-       when is_atom(name) and is_atom(ctx1) and is_atom(ctx2),
+  # A bare variable...
+  defp eligible_enum_expr?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
+
+  # ...or an `Enum.filter(_, _)` / `Enum.reject(_, _)` call (pure modulo predicate).
+  defp eligible_enum_expr?({{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, [_enum, _pred]})
+       when fun in [:filter, :reject],
        do: true
 
-  defp same_var?(_, _), do: false
+  defp eligible_enum_expr?(_), do: false
 
-  defp build_enum_call(fn_name, var, default) do
-    # Enum.min(var, fn -> default end) or Enum.max(var, fn -> default end)
+  # Structural equality ignoring metadata (line numbers, Sourceror wrappers'
+  # positions) so two textually-identical expressions compare equal.
+  defp same_expr?(a, b), do: strip_meta(a) == strip_meta(b)
+
+  defp strip_meta(ast) do
+    Macro.prewalk(ast, fn
+      {form, _meta, args} -> {form, [], args}
+      other -> other
+    end)
+  end
+
+  defp build_enum_call(fn_name, enum_expr, default) do
+    # Enum.min(enum_expr, fn -> default end) / Enum.max(enum_expr, fn -> default end)
     fallback_fn = {:fn, [], [{:->, [], [[], default]}]}
 
-    {{:., [], [{:__aliases__, [], [:Enum]}, fn_name]}, [], [var, fallback_fn]}
+    {{:., [], [{:__aliases__, [], [:Enum]}, fn_name]}, [], [enum_expr, fallback_fn]}
   end
 
   # Sourceror wraps keyword keys as {{:__block__, _, [:key]}, value}
