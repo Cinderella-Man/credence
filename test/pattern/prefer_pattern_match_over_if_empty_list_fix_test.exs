@@ -84,4 +84,30 @@ defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyListFixTest do
 
     assert check(PreferPatternMatchOverIfEmptyList, fix(PreferPatternMatchOverIfEmptyList, code)) == []
   end
+
+  test "rewrites guarded if Enum.empty?(list), preserving the is_list guard on fall-through" do
+    code = """
+    defmodule M do
+      def total(list) when is_list(list) do
+        if Enum.empty?(list) do
+          :none
+        else
+          Enum.sum(list)
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule M do
+      def total([]), do: :none
+
+      def total(list) when is_list(list) do
+        Enum.sum(list)
+      end
+    end
+    """
+
+    assert fix(PreferPatternMatchOverIfEmptyList, code) == expected
+  end
 end

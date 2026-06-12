@@ -29,4 +29,23 @@ defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyListEquivalenceTest do
       inputs: [[], [1], [1, 2, 3], [-1, 0, 1], Enum.to_list(1..50)]
     )
   end
+
+  test "guarded Enum.empty? form preserves behaviour (is_list guard restricts to lists)" do
+    assert_equivalent_module(
+      """
+      defmodule Solution do
+        def process(list) when is_list(list) do
+          if Enum.empty?(list) do
+            0
+          else
+            Enum.sum(list)
+          end
+        end
+      end
+      """,
+      rule: PreferPatternMatchOverIfEmptyList,
+      call: {:process, 1},
+      inputs: [[], [1], [1, 2, 3], [-1, 0, 1], Enum.to_list(1..50)]
+    )
+  end
 end

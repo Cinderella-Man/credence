@@ -21,10 +21,32 @@ defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyList do
         Enum.sum(list)
       end
 
+  ## `Enum.empty?` — only under an `is_list` guard
+
+  The `if Enum.empty?(var)` form is rewritten too, but ONLY when the clause is
+  guarded by exactly `when is_list(var)`:
+
+      def process(list) when is_list(list) do
+        if Enum.empty?(list), do: 0, else: Enum.sum(list)
+      end
+      #  →
+      def process([]), do: 0
+      def process(list) when is_list(list), do: Enum.sum(list)
+
+  `Enum.empty?/1` reports emptiness for every enumerable (`%{}`, an empty range,
+  an empty `MapSet`), but a `[]` clause only matches the empty *list*. Without
+  the `is_list` guard the rewrite would diverge on a non-list empty enumerable
+  (original takes the empty branch; the `[]` clause does not match → falls
+  through). The `is_list(var)` guard restricts the runtime value to a list, where
+  `Enum.empty?(var)` and `var == []` coincide, so the rewrite is safe — and `[]`
+  itself is a list, so it still satisfies the (now removed-from-that-clause)
+  guard.
+
   ## Auto-fix
 
-  Replaces the `if var == []` guard with a dedicated `def name([]), do: do_body`
-  clause and keeps the else body as the original clause body.
+  Replaces the `if var == []` / guarded `if Enum.empty?(var)` check with a
+  dedicated `def name([]), do: do_body` clause and keeps the else body as the
+  original clause body (preserving the original guard on the fall-through clause).
   """
 
   use Credence.Pattern.Rule
@@ -69,7 +91,36 @@ defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyList do
          param_name: elem(param, 0),
          do_body: do_body,
          else_body: else_body,
-         kind: kind
+         kind: kind,
+         guard: nil
+       }}
+    else
+      _ -> :no
+    end
+  end
+
+  # Guarded form: `def name(param) when is_list(param) do
+  #   if Enum.empty?(param), do: A, else: B end`.
+  # The `is_list` guard makes `Enum.empty?(param)` equivalent to `param == []`,
+  # so the `[]`-clause rewrite is behaviour-preserving. The guard is carried over
+  # to the fall-through clause.
+  defp detect_anti_pattern(
+         {kind, meta, [{:when, _, [{name, _, [param]}, guard]}, body_kw]}
+       )
+       when kind in [:def, :defp] and is_atom(name) and is_list(body_kw) do
+    with true <- bare_variable?(param),
+         true <- guard_is_is_list?(guard, param),
+         {:ok, if_body} <- extract_do_body(body_kw),
+         {:ok, do_body, else_body} <- extract_if_enum_empty(if_body, param) do
+      {:ok,
+       %{
+         line: Keyword.get(meta, :line),
+         name: name,
+         param_name: elem(param, 0),
+         do_body: do_body,
+         else_body: else_body,
+         kind: kind,
+         guard: guard
        }}
     else
       _ -> :no
@@ -77,6 +128,35 @@ defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyList do
   end
 
   defp detect_anti_pattern(_), do: :no
+
+  # Exactly `is_list(param)` — nothing else. A compound guard (e.g.
+  # `is_list(x) and length(x) > 0`) could exclude `[]`, which would make a bare
+  # `[]` clause diverge, so only the lone `is_list/1` guard qualifies.
+  defp guard_is_is_list?({:is_list, _, [arg]}, param), do: same_var_name?(arg, param)
+  defp guard_is_is_list?(_, _), do: false
+
+  defp extract_if_enum_empty({:if, _meta, [condition, branches]}, param)
+       when is_list(branches) do
+    case condition do
+      {{:., _, [{:__aliases__, _, [:Enum]}, :empty?]}, _, [arg]} ->
+        if same_var_name?(arg, param) do
+          {:ok, extract_branch(branches, :do), extract_branch(branches, :else)}
+        else
+          :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  defp extract_if_enum_empty(_, _), do: :error
+
+  defp same_var_name?({name, _, ctx1}, {name, _, ctx2})
+       when is_atom(name) and is_atom(ctx1) and is_atom(ctx2),
+       do: true
+
+  defp same_var_name?(_, _), do: false
 
   defp bare_variable?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
   defp bare_variable?(_), do: false
@@ -134,7 +214,7 @@ defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyList do
   end
 
   defp build_patch(node, %{kind: kind, name: name, param_name: param_name,
-                            do_body: do_body, else_body: else_body}) do
+                            do_body: do_body, else_body: else_body, guard: guard}) do
     range = Sourceror.get_range(node)
 
     do_str = Sourceror.to_string(do_body)
@@ -142,7 +222,14 @@ defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyList do
 
     kw = if kind == :defp, do: "defp", else: "def"
     empty_clause = "#{kw} #{name}([]), do: #{do_str}"
-    fallthrough = "#{kw} #{name}(#{param_name}) do\n  #{else_str}\nend"
+
+    head =
+      case guard do
+        nil -> "#{kw} #{name}(#{param_name})"
+        g -> "#{kw} #{name}(#{param_name}) when #{Sourceror.to_string(g)}"
+      end
+
+    fallthrough = "#{head} do\n  #{else_str}\nend"
     raw_change = empty_clause <> "\n\n" <> fallthrough
 
     # Parse and re-render to normalize indentation

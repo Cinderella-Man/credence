@@ -108,4 +108,46 @@ defmodule Credence.Pattern.PreferPatternMatchOverIfEmptyListCheckTest do
            end
            """)
   end
+
+  test "flags guarded if Enum.empty?(list) when is_list(list)" do
+    assert flagged?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def total(list) when is_list(list) do
+               if Enum.empty?(list) do
+                 :none
+               else
+                 Enum.sum(list)
+               end
+             end
+           end
+           """)
+  end
+
+  test "does NOT flag Enum.empty? WITHOUT an is_list guard (non-list enumerables diverge)" do
+    assert clean?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def total(coll) do
+               if Enum.empty?(coll) do
+                 :none
+               else
+                 Enum.sum(coll)
+               end
+             end
+           end
+           """)
+  end
+
+  test "does NOT flag Enum.empty? under a compound guard that can exclude []" do
+    assert clean?(PreferPatternMatchOverIfEmptyList, """
+           defmodule M do
+             def total(list) when is_list(list) and length(list) > 0 do
+               if Enum.empty?(list) do
+                 :none
+               else
+                 Enum.sum(list)
+               end
+             end
+           end
+           """)
+  end
 end
