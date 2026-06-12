@@ -61,37 +61,43 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
   end
 
   @impl true
-  def fix_patches(ast, opts) do
-    source = Keyword.get(opts, :source) || Sourceror.to_string(ast)
+  def fix_patches(ast, _opts) do
+    # Emit a DELETE patch over each unreachable clause's own source range.
+    # Re-rendering the whole module (the previous `patches_from_ast_transform`
+    # approach) left the surviving nodes with stale Sourceror positions, so the
+    # render swallowed the module's closing `end` and produced non-compiling
+    # output that was reverted. Deleting exact ranges touches nothing else.
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        {:__block__, _meta, stmts} = node, acc when is_list(stmts) ->
+          {node, block_patches(stmts) ++ acc}
 
-    Credence.RuleHelpers.patches_from_ast_transform(ast, source, fn ast ->
-      Macro.prewalk(ast, fn
-        {:__block__, meta, stmts} when is_list(stmts) ->
-          {:__block__, meta, remove_unreachable_from_block(stmts)}
-
-        node ->
-          node
+        node, acc ->
+          {node, acc}
       end)
-    end)
+
+    patches
   end
 
-  # Given a list of statements in a block, find consecutive def/defp groups
-  # and remove unreachable clauses.
-  defp remove_unreachable_from_block(stmts) do
-    # Build a set of unreachable nodes to remove
-    unreachable =
-      stmts
-      |> filter_def_nodes()
-      |> Enum.chunk_by(fn {name, arity, _, _, _} -> {name, arity} end)
-      |> Enum.flat_map(fn group ->
-        case find_unreachable_in_group(group) do
-          {_, []} -> []
-          {_catchall, unreachable} -> Enum.map(unreachable, &elem(&1, 4))
-        end
-      end)
-      |> MapSet.new()
+  # Per consecutive same-name/arity group, delete one merged range running from
+  # the END of the catch-all clause through the END of the last unreachable
+  # clause — consuming the unreachable clauses AND the blank lines between them
+  # in one go, leaving the kept clauses untouched.
+  defp block_patches(stmts) do
+    stmts
+    |> filter_def_nodes()
+    |> Enum.chunk_by(fn {name, arity, _, _, _} -> {name, arity} end)
+    |> Enum.flat_map(fn group ->
+      case find_unreachable_in_group(group) do
+        {_catchall, []} ->
+          []
 
-    Enum.reject(stmts, &MapSet.member?(unreachable, &1))
+        {catchall, unreachable} ->
+          catchall_end = Sourceror.get_range(elem(catchall, 4)).end
+          last_end = unreachable |> List.last() |> elem(4) |> Sourceror.get_range() |> Map.get(:end)
+          [%{range: %{start: catchall_end, end: last_end}, change: ""}]
+      end
+    end)
   end
 
   # Walk the AST and extract def/defp groups for analysis (used by check/2).

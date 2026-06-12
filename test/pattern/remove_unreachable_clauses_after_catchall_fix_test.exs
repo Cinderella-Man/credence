@@ -100,5 +100,36 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
 
       assert fix(RemoveUnreachableClausesAfterCatchall, code) == code
     end
+
+    # Regression (row 111548): removing two trailing unreachable clauses used to
+    # re-render the whole module and swallow its closing `end` (non-compiling →
+    # reverted). The merged-range delete keeps the module structure intact.
+    test "removes two trailing unreachable clauses, preserving the module end" do
+      code = """
+      defmodule M do
+        def count(_str, _char) do
+          :catchall
+        end
+
+        def count(_str, "") do
+          0
+        end
+
+        def count(_str, char) when byte_size(char) != 1 do
+          0
+        end
+      end
+      """
+
+      expected = """
+      defmodule M do
+        def count(_str, _char) do
+          :catchall
+        end
+      end
+      """
+
+      assert fix(RemoveUnreachableClausesAfterCatchall, code) == expected
+    end
   end
 end
