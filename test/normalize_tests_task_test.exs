@@ -3,6 +3,16 @@ defmodule Credence.NormalizeTestsTaskTest do
 
   alias Mix.Tasks.Credence.NormalizeTests
 
+  # The task prints `[normalize] …` via `Mix.shell().info/1` — correct as a CLI,
+  # but pure noise interleaved with the test dots here. Silence `info` (errors
+  # still print) for this module only and restore it afterwards.
+  setup do
+    shell = Mix.shell()
+    Mix.shell(Mix.Shell.Quiet)
+    on_exit(fn -> Mix.shell(shell) end)
+    :ok
+  end
+
   # Two `\`-terminated heredocs: SAFE (removal tolerated) + LOADBEARING (removal
   # would change the byte-exact value). Markers let a fake runner decide.
   @content ~S'''

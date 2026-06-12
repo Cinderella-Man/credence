@@ -122,7 +122,7 @@ defmodule Credence.Pattern.PreferPatternMatchEmptyStringFixTest do
       """
 
       fixed = fix(PreferPatternMatchEmptyString, code)
-      assert fix(PreferPatternMatchEmptyString, code) == """
+      assert fixed == """
       defmodule Example do
         def reverse_left_words("" = str, _count), do: str
         def reverse_left_words(str, count) do
