@@ -261,5 +261,39 @@ defmodule Credence.Syntax.FixDivRemTest do
                """)
              )
     end
+
+    test "does not mangle div inside function call arguments" do
+      source = """
+          moves_minus = do_minto1((n - 1) div 2, 0)
+          moves_plus = do_minto1((n + 1) div 2, 0)
+      """
+
+      result = FixDivRem.fix(source)
+
+      assert result =~ "Kernel.div"
+      assert result =~ "do_minto1"
+      # The outer function call structure must be preserved
+      assert result =~ "do_minto1(Kernel.div"
+      # Must not produce the mangled form
+      refute result =~ "div(do_minto1"
+    end
+
+    test "fixed code with function args produces valid Elixir" do
+      source = """
+      defmodule KernelDivTest do
+        def minto1(n) do
+          moves_minus = do_minto1((n - 1) div 2, 0)
+          moves_plus = do_minto1((n + 1) div 2, 0)
+          min(moves_minus, moves_plus)
+        end
+
+        defp do_minto1(1, moves), do: moves
+        defp do_minto1(n, moves), do: do_minto1(div(n, 2), moves + 1)
+      end
+      """
+
+      fixed = FixDivRem.fix(source)
+      assert valid_syntax?(fixed)
+    end
   end
 end
