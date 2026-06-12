@@ -17,6 +17,8 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
     if !MapSet.member?(seen, current) do
       MapSet.put(seen, current)
       |> loop(sum_of_squared_digits(current))
+    else
+      false
     end
     """
 
@@ -35,6 +37,8 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
     expected = """
     if !(len_a != len_b) do
       do_work(a, b)
+    else
+      false
     end
     """
 

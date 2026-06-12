@@ -32,4 +32,12 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseCheckTest do
            end
            """)
   end
+
+  test "does not fire when else branch is missing" do
+    assert clean?(PreferNegateIfTrueFalse, """
+           if cond do
+             false
+           end
+           """)
+  end
 end

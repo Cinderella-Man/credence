@@ -1,13 +1,14 @@
 defmodule Credence.Pattern.PreferNegateIfTrueFalse do
   @moduledoc """
   Detects `if cond do false else body end` and rewrites it to
-  `if !cond do body end`.
+  `if !cond do body else false end`.
 
   ## Why this matters
 
   The pattern `if cond do false else body end` is non-idiomatic Elixir.
-  When the `do` branch is just `false`, negate the condition and keep
-  only the non-false body.
+  When the `do` branch is just `false`, negate the condition, swap the
+  branches, and keep the explicit `false` in the else branch to preserve
+  the boolean return type.
 
   ## Bad
 
@@ -23,12 +24,14 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
       if !MapSet.member?(seen, current) do
         MapSet.put(seen, current)
         |> loop(sum_of_squared_digits(current))
+      else
+        false
       end
 
   ## Auto-fix
 
-  Negates the condition and moves the else body to the do branch,
-  removing the else branch entirely.
+  Negates the condition and swaps the branches: moves the else body to
+  the do branch, and places an explicit `false` in the else branch.
   """
 
   use Credence.Pattern.Rule
@@ -108,7 +111,10 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
                 if String.trim(line) == "", do: "", else: indent_str <> line
               end)
 
-            new_do_block = "do\n#{indented_else}\nend"
+            # Indent the false literal for the else branch
+            false_str = indent_str <> "false"
+
+            new_do_block = "do\n#{indented_else}\nelse\n#{false_str}\nend"
 
             body_patch = %{
               range: %{start: do_start, end: end_start},
@@ -171,7 +177,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
       rule: :prefer_negate_if_true_false,
       message:
         "`if cond do false else body end` is non-idiomatic. " <>
-          "Negate the condition: `if !cond do body end`.",
+          "Negate the condition: `if !cond do body else false end`.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end
