@@ -1,0 +1,1398 @@
+[22m12:09:35.224 [info] [idx=96344] entry_point=find_equilibrium_index[0m
+[36m12:09:35.224 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to find the equilibrium index of an array. An index of an array is called equilibrium index if the sum of elements at lower indexes is equal to the sum of elements at higher indexes.
+
+## Python Solution
+```python
+def find_equilibrium_index(arr):
+    total_sum = sum(arr)
+    left_sum = 0
+    for i, num in enumerate(arr):
+        total_sum -= num
+        if left_sum == total_sum:
+            return i
+        left_sum += num
+    return -1
+```
+
+## Python Tests
+assert find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+assert find_equilibrium_index([1,100,50,-51,1,1]) == 1
+assert find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `find_equilibrium_index`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[22m12:10:25.467 [info] [Budget] HEARTBEAT — 74 paid calls, est $0.3149 over 94.9min → ~$0.1992/hr, ~$4.78/day (tok in=402782 cache_rd=2548928 out=150072)[0m
+[36m12:11:06.269 [debug] [LLM.call] finish=stop len=1864 usage=%{"completion_tokens" => 2754, "completion_tokens_details" => %{"reasoning_tokens" => 2171}, "prompt_tokens" => 549, "prompt_tokens_details" => %{}, "total_tokens" => 3303}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function to find the equilibrium index of a list of integers. An index is an equilibrium index if the sum of elements at lower indexes equals the sum of elements at higher indexes. The function should return the first equilibrium index found, or -1 if none exists.
+
+The function must be named `find_equilibrium_index/1` and take one argument, a list of integers, and return an integer.
+
+The algorithm should run in O(n) time and use O(1) additional space. Handle empty lists by returning -1.
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  @doc """
+  Finds the equilibrium index of a list.
+  Returns the first index where the sum of elements before it equals the sum after it, or -1 if none.
+  """
+  def find_equilibrium_index(list) do
+    total = Enum.sum(list)
+    find_eq_index(list, 0, 0, total)
+  end
+
+  defp find_eq_index([], _index, _left_sum, _total_sum), do: -1
+  defp find_eq_index([head | tail], index, left_sum, total_sum) do
+    right_sum = total_sum - head
+    if left_sum == right_sum do
+      index
+    else
+      find_eq_index(tail, index + 1, left_sum + head, right_sum)
+    end
+  end
+end
+---END---[0m
+[22m12:11:06.270 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 91045ms — ok[0m
+[36m12:11:06.270 [debug] [Budget] spent so far (est.): $0.3176[0m
+[22m12:11:07.295 [info] [RoundTrip] reference PASSED tests[0m
+[22m12:11:07.295 [info] [idx=96344] translation fresh — solving[0m
+[22m12:11:07.295 [info] ===SOLVE_BOUNDARY===[0m
+[22m12:11:07.295 [info] [Solve attempt 1] generating (fn=find_equilibrium_index)[0m
+[36m12:11:07.295 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function to find the equilibrium index of a list of integers. An index is an equilibrium index if the sum of elements at lower indexes equals the sum of elements at higher indexes. The function should return the first equilibrium index found, or -1 if none exists.
+
+The function must be named `find_equilibrium_index/1` and take one argument, a list of integers, and return an integer.
+
+The algorithm should run in O(n) time and use O(1) additional space. Handle empty lists by returning -1.
+
+## Tests (your module must pass these)
+```elixir
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end
+```
+
+Module: `Solution`. Function: `find_equilibrium_index`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m12:11:12.920 [debug] [LLM.call] finish=stop len=1790 usage=%{"completion_tokens" => 605, "prompt_tokens" => 666, "prompt_tokens_details" => %{"cached_tokens" => 169}, "total_tokens" => 1271}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    find_equilibrium_index(nums, total, 0)
+  end
+
+  defp find_equilibrium_index([], _total, _left_sum), do: -1
+
+  defp find_equilibrium_index([_ | _] = nums, _total, left_sum) do
+    {left_sum, right_sum, idx} =
+      Enum.reduce_while(
+        nums,
+        {0, _total, 0},
+        fn
+          val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - val ->
+            :halt({acc_left, acc_total, i})
+
+          val, {acc_left, acc_total, i} when acc_left != acc_total - acc_left - val ->
+            :cont({acc_left + val, acc_total, i + 1})
+        end
+      )
+
+    case idx do
+      nil -> -1
+      _ -> idx
+    end
+  end
+end
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end
+---END---[0m
+[22m12:11:12.920 [info] [LLM.call] local_qwen_thinking completed in 5624ms — ok[0m
+[22m12:11:12.921 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m12:11:12.921 [debug] [Validator.run] module code (1037 chars):
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    find_equilibrium_index(nums, total, 0)
+  end
+
+  defp find_equilibrium_index([], _total, _left_sum), do: -1
+
+  defp find_equilibrium_index([_ | _] = nums, _total, left_sum) do
+    {left_sum, right_sum, idx} =
+      Enum.reduce_while(
+        nums,
+        {0, _total, 0},
+        fn
+          val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - val ->
+            :halt({acc_left, acc_total, i})
+
+          val, {acc_left, acc_total, i} when acc_left != acc_total - acc_left - val ->
+            :cont({acc_left + val, acc_total, i + 1})
+        end
+      )
+
+    case idx do
+      nil -> -1
+      _ -> idx
+    end
+  end
+end[0m
+[36m12:11:12.921 [debug] [Validator.run] test code (718 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end[0m
+[36m12:11:12.921 [debug] [Budget] spent so far (est.): $0.3184[0m
+[22m12:11:12.921 [info] [Validator.run] step 1/6: credence fix[0m
+[36m12:11:12.921 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m12:11:13.501 [debug] [run_credence_fix] exit=0 output:
+
+12:11:13.470 [debug] [credence_fix] starting syntax fix pipeline (14 rules), parse error at line 24: syntax error before:  near "'('"
+
+12:11:13.476 [debug] [credence_fix] PreferFnEndSyntax: fix produced a change
+
+12:11:13.477 [debug] [credence_fix] PreferFnEndSyntax: source CHANGED:
+  L23 -           val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - val ->
+  L23 +           val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - fn val ->  end
+  L26 -           val, {acc_left, acc_total, i} when acc_left != acc_total - acc_left - val ->
+  L26 +           val, {acc_left, acc_total, i} when acc_left != acc_total - acc_left - fn val ->  end
+
+12:11:13.477 [debug] [credence_fix] syntax fix pipeline: source still does not parse (line 23: syntax error before:  near "eol")
+
+12:11:13.477 [debug] [credence_fix] syntax done. Applied: [PreferFnEndSyntax(1)]
+
+12:11:13.477 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 14 rules)
+
+12:11:13.483 [debug] [credence_fix] Code.compile_string raised: invalid syntax found on credence_check.ex:23:95:
+    error: unexpectedly reached end of line. The current expression is invalid or incomplete
+    │
+ 23 │           val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - fn val ->  end
+    │                                                                                               ^
+    │
+    └─ credence_check.ex:23:95
+
+12:11:13.483 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+12:11:13.485 [debug] [credence_fix] no rule matched diagnostic: %{message: "invalid syntax found on credence_check.ex:23:95:\n    error: unexpectedly reached end of line. The current expression is invalid or incomplete\n    │\n 23 │           val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - fn val ->  end\n    │                                                                                               ^\n    │\n    └─ credence_check.ex:23:95", position: 23, file: "credence_check.ex", severity: :error}
+
+12:11:13.486 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+12:11:13.486 [debug] [credence_fix] semantic done. Applied: []
+
+12:11:13.486 [debug] [credence_fix] starting pattern fix pipeline (153 rules)
+
+12:11:13.486 [debug] [credence_fix] Code.compile_string raised: invalid syntax found on credence_check.ex:23:95:
+    error: unexpectedly reached end of line. The current expression is invalid or incomplete
+    │
+ 23 │           val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - fn val ->  end
+    │                                                                                               ^
+    │
+    └─ credence_check.ex:23:95
+
+12:11:13.486 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+12:11:13.490 [debug] [credence_fix] Code.compile_string raised: invalid syntax found on credence_check.ex:23:95:
+    error: unexpectedly reached end of line. The current expression is invalid or incomplete
+    │
+ 23 │           val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - fn val ->  end
+    │                                                                                               ^
+    │
+    └─ credence_check.ex:23:95
+FIXED
+APPLIED_RULES: [{Credence.Syntax.PreferFnEndSyntax, 1}]
+REMAINING_ISSUES: 1 unfixable issue(s)
+parse_error: Syntax error: syntax error before:  at token "eol" (line 23)
+[0m
+[22m12:11:13.501 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m12:11:14.000 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m12:11:14.000 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: an expression is always required on the right side of ->. Please provide a value after ->
+    │
+ 23 │           val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - fn val ->  end
+    │                                                                                        ~
+    │
+    └─ lib/solution.ex:23:88
+
+
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:23:95:
+    error: unexpectedly reached end of line. The current expression is invalid or incomplete
+    │
+ 23 │           val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - fn val ->  end
+    │                                                                                               ^
+    │
+    └─ lib/solution.ex:23:95
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[33m12:11:14.637 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m12:11:14.637 [info] [Validator.run] step 2/6: compile[0m
+[22m12:11:15.263 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m12:11:15.263 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:24:18:
+    error: syntax error before: '('
+    │
+ 24 │             :halt({acc_left, acc_total, i})
+    │                  ^
+    │
+    └─ lib/solution.ex:24:18
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m12:11:15.263 [info] [Validator.run] step 3/6: format[0m
+[22m12:11:15.263 [info] [Validator.run] skipping format (compile failed)[0m
+[22m12:11:15.263 [info] [Validator.run] step 4/6: credo[0m
+[22m12:11:15.263 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m12:11:15.263 [info] [Validator.run] step 5/6: credence check[0m
+[22m12:11:15.264 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m12:11:15.264 [info] [Validator.run] step 6/6: tests[0m
+[22m12:11:15.264 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m12:11:15.264 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m12:11:15.264 [debug] [Validator.run] final module (1037 chars):
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    find_equilibrium_index(nums, total, 0)
+  end
+
+  defp find_equilibrium_index([], _total, _left_sum), do: -1
+
+  defp find_equilibrium_index([_ | _] = nums, _total, left_sum) do
+    {left_sum, right_sum, idx} =
+      Enum.reduce_while(
+        nums,
+        {0, _total, 0},
+        fn
+          val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - val ->
+            :halt({acc_left, acc_total, i})
+
+          val, {acc_left, acc_total, i} when acc_left != acc_total - acc_left - val ->
+            :cont({acc_left + val, acc_total, i + 1})
+        end
+      )
+
+    case idx do
+      nil -> -1
+      _ -> idx
+    end
+  end
+end[0m
+[36m12:11:15.264 [debug] [Validator.run] final test (718 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end[0m
+[33m12:11:15.264 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m12:11:15.264 [info] [Solve attempt 2] generating (fn=find_equilibrium_index)[0m
+[36m12:11:15.264 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    find_equilibrium_index(nums, total, 0)
+  end
+
+  defp find_equilibrium_index([], _total, _left_sum), do: -1
+
+  defp find_equilibrium_index([_ | _] = nums, _total, left_sum) do
+    {left_sum, right_sum, idx} =
+      Enum.reduce_while(
+        nums,
+        {0, _total, 0},
+        fn
+          val, {acc_left, acc_total, i} when acc_left == acc_total - acc_left - val ->
+            :halt({acc_left, acc_total, i})
+
+          val, {acc_left, acc_total, i} when acc_left != acc_total - acc_left - val ->
+            :cont({acc_left + val, acc_total, i + 1})
+        end
+      )
+
+    case idx do
+      nil -> -1
+      _ -> idx
+    end
+  end
+end
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:24:18:
+    error: syntax error before: '('
+    │
+ 24 │             :halt({acc_left, acc_total, i})
+    │                  ^
+    │
+    └─ lib/solution.ex:24:18
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `find_equilibrium_index` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m12:11:23.292 [debug] [LLM.call] finish=stop len=2685 usage=%{"completion_tokens" => 844, "prompt_tokens" => 1023, "prompt_tokens_details" => %{"cached_tokens" => 169}, "total_tokens" => 1867}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    find_equilibrium_index(nums, total, 0)
+  end
+
+  defp find_equilibrium_index([], _total, _left_sum), do: -1
+
+  defp find_equilibrium_index([head | tail], total, left_sum) do
+    right_sum = total - left_sum - head
+
+    if left_sum == right_sum do
+      # Calculate the index by counting how many elements we've skipped
+      find_equilibrium_index_index(head, tail, 1)
+    else
+      find_equilibrium_index(tail, total, left_sum + head)
+    end
+  end
+
+  defp find_equilibrium_index_index(_head, tail, index) do
+    # We need to find the index in the original list.
+    # Since we are iterating through the original list, the current index is what we need.
+    # But the recursive call doesn't track index. Let's restructure.
+    find_equilibrium_index_index(tail, index)
+  end
+
+  defp find_equilibrium_index_index([], _index), do: -1
+
+  defp find_equilibrium_index_index(_head, index) do
+    index - 1
+  end
+
+  # Wait, the above approach is flawed. Let me rewrite properly with index tracking.
+  def find_equilibrium_index(_nums), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    do_find_equilibrium_index(nums, total, 0, 0)
+  end
+
+  defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+
+  defp do_find_equilibrium_index([_head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - _head do
+    index
+  end
+
+  defp do_find_equilibrium_index([head | tail], total, left_sum, index) do
+    do_find_equilibrium_index(tail, total, left_sum + head, index + 1)
+  end
+end
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end
+---END---[0m
+[22m12:11:23.292 [info] [LLM.call] local_qwen_thinking completed in 8028ms — ok[0m
+[22m12:11:23.292 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m12:11:23.292 [debug] [Validator.run] module code (1932 chars):
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    find_equilibrium_index(nums, total, 0)
+  end
+
+  defp find_equilibrium_index([], _total, _left_sum), do: -1
+
+  defp find_equilibrium_index([head | tail], total, left_sum) do
+    right_sum = total - left_sum - head
+
+    if left_sum == right_sum do
+      # Calculate the index by counting how many elements we've skipped
+      find_equilibrium_index_index(head, tail, 1)
+    else
+      find_equilibrium_index(tail, total, left_sum + head)
+    end
+  end
+
+  defp find_equilibrium_index_index(_head, tail, index) do
+    # We need to find the index in the original list.
+    # Since we are iterating through the original list, the current index is what we need.
+    # But the recursive call doesn't track index. Let's restructure.
+    find_equilibrium_index_index(tail, index)
+  end
+
+  defp find_equilibrium_index_index([], _index), do: -1
+
+  defp find_equilibrium_index_index(_head, index) do
+    index - 1
+  end
+
+  # Wait, the above approach is flawed. Let me rewrite properly with index tracking.
+  def find_equilibrium_index(_nums), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    do_find_equilibrium_index(nums, total, 0, 0)
+  end
+
+  defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+
+  defp do_find_equilibrium_index([_head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - _head do
+    index
+  end
+
+  defp do_find_equilibrium_index([head | tail], total, left_sum, index) do
+    do_find_equilibrium_index(tail, total, left_sum + head, index + 1)
+  end
+end[0m
+[36m12:11:23.292 [debug] [Validator.run] test code (718 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end[0m
+[36m12:11:23.292 [debug] [Budget] spent so far (est.): $0.3196[0m
+[22m12:11:23.292 [info] [Validator.run] step 1/6: credence fix[0m
+[36m12:11:23.292 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m12:11:23.990 [debug] [run_credence_fix] exit=0 output:
+
+12:11:23.825 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+12:11:23.827 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 14 rules)
+
+12:11:23.839 [debug] [credence_fix] semantic pass 1: compilation OK, 4 warning(s)
+
+12:11:23.840 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+12:11:23.843 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L51 -   defp do_find_equilibrium_index([_head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - _head do
+  L51 +   defp do_find_equilibrium_index([head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - head do
+
+12:11:23.843 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+12:11:23.843 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L51 -   defp do_find_equilibrium_index([head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - head do
+  L51 +   defp do_find_equilibrium_index([head | _tail], total, left_sum, index) when left_sum == total - left_sum - head do
+
+12:11:23.847 [debug] [credence_fix] no rule matched diagnostic: %{message: "this clause for find_equilibrium_index/1 cannot match because a previous clause at line 42 always matches", position: {44, 7}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+12:11:23.848 [debug] [credence_fix] no rule matched diagnostic: %{message: "clauses with the same name and arity (number of arguments) should be grouped together, \"def find_equilibrium_index/1\" was previously defined (credence_check.ex:8)", position: {42, 7}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+12:11:23.848 [debug] [credence_fix] semantic done. Applied: [UsedUnderscoreVariable(1), UsedUnderscoreVariable(1)]
+
+12:11:23.848 [debug] [credence_fix] starting pattern fix pipeline (153 rules)
+
+12:11:23.921 [debug] [credence_fix] NonGroupedClauses: check found 1 issue(s), running fix...
+
+12:11:23.931 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+12:11:23.931 [warning] [credence_fix] NonGroupedClauses: fix produced non-compiling output, reverting
+
+12:11:23.931 [debug] [credence_fix] NonGroupedClauses: source CHANGED:
+  L42 -   def find_equilibrium_index(_nums), do: -1
+  L42 +   def find_equilibrium_index([_ | _] = nums), do: total = Enum.sum(nums)
+  L43 - 
+  L43 +   do_find_equilibrium_index(nums, total, 0, 0)
+  L44 -   def find_equilibrium_index([_ | _] = nums) do
+  L44 + 
+  L45 -     total = Enum.sum(nums)
+  L45 +   def find_equilibrium_index(_nums) do
+  L46 -     do_find_equilibrium_index(nums, total, 0, 0)
+  L46 +     -1
+
+12:11:23.952 [debug] [credence_fix] RemoveUnreachableClausesAfterCatchall: check found 1 issue(s), running fix...
+
+12:11:23.962 [debug] [credence_fix] RemoveUnreachableClausesAfterCatchall: source CHANGED:
+  L20 -     if left_sum == right_sum do
+  L20 +     # Calculate the index by counting how many elements we've skipped
+  L21 -       # Calculate the index by counting how many elements we've skipped
+  L21 +     if left_sum == right_sum do
+  L28 -   defp find_equilibrium_index_index(_head, tail, index) do
+  L28 +   # We need to find the index in the original list.
+  L29 -     # We need to find the index in the original list.
+  L29 +   # Since we are iterating through the original list, the current index is what we need.
+  L30 -     # Since we are iterating through the original list, the current index is what we need.
+  L30 +   # But the recursive call doesn't track index. Let's restructure.
+  L31 -     # But the recursive call doesn't track index. Let's restructure.
+  L31 +   defp find_equilibrium_index_index(_head, tail, index) do
+  L44 -   def find_equilibrium_index([_ | _] = nums) do
+  L44 +   defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+  L45 -     total = Enum.sum(nums)
+  L45 + 
+  L46 -     do_find_equilibrium_index(nums, total, 0, 0)
+  L46 +   defp do_find_equilibrium_index([head | _tail], total, left_sum, index)
+  L47 -   end
+  L47 +        when left_sum == total - left_sum - head do
+  L48 - 
+  L48 +     index
+  L49 -   defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+  L49 +   end
+  L51 -   defp do_find_equilibrium_index([head | _tail], total, left_sum, index) when left_sum == total - left_sum - head do
+  L51 +   defp do_find_equilibrium_index([head | tail], total, left_sum, index) do
+  L52 -     index
+  L52 +     do_find_equilibrium_index(tail, total, left_sum + head, index + 1)
+  L54 - 
+  L54 + end
+  L55 -   defp do_find_equilibrium_index([head | tail], total, left_sum, index) do
+  L56 -     do_find_equilibrium_index(tail, total, left_sum + head, index + 1)
+  L57 -   end
+  L58 - end
+
+12:11:23.966 [debug] [credence_fix] done. Applied: [NonGroupedClauses(reverted), RemoveUnreachableClausesAfterCatchall(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UsedUnderscoreVariable, 1}, {Credence.Semantic.UsedUnderscoreVariable, 1}, {Credence.Pattern.NonGroupedClauses, :reverted}, {Credence.Pattern.RemoveUnreachableClausesAfterCatchall, 1}]
+REMAINING_ISSUES: 1 unfixable issue(s)
+non_grouped_clauses: Clauses of `find_equilibrium_index/1` are not grouped together. Move all clauses to be consecutive. (line 42)
+[0m
+[22m12:11:23.990 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m12:11:24.703 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m12:11:24.703 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: clauses with the same name and arity (number of arguments) should be grouped together, "def find_equilibrium_index/1" was previously defined (lib/solution.ex:8)
+    │
+ 42 │   def find_equilibrium_index(_nums), do: -1
+    │       ~
+    │
+    └─ lib/solution.ex:42:7
+
+    warning: function do_find_equilibrium_index/4 is unused
+    │
+ 44 │   defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+    │        ~
+    │
+    └─ lib/solution.ex:44:8: Solution (module)
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m12:11:25.265 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m12:11:25.265 [info] [Validator.run] step 2/6: compile[0m
+[22m12:11:25.830 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m12:11:25.830 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: clauses with the same name and arity (number of arguments) should be grouped together, "def find_equilibrium_index/1" was previously defined (lib/solution.ex:8)
+    │
+ 42 │   def find_equilibrium_index(_nums), do: -1
+    │       ~
+    │
+    └─ lib/solution.ex:42:7
+
+    warning: the underscored variable "_total" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 51 │   defp do_find_equilibrium_index([_head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - _head do
+    │                                                                                             ~
+    │
+    └─ lib/solution.ex:51:93: Solution.do_find_equilibrium_index/4
+
+    warning: the underscored variable "_head" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 51 │   defp do_find_equilibrium_index([_head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - _head do
+    │                                                                                                                 ~
+    │
+    └─ lib/solution.ex:51:113: Solution.do_find_equilibrium_index/4
+
+    warning: this clause for find_equilibrium_index/1 cannot match because a previous clause at line 42 always matches
+    │
+ 44 │   def find_equilibrium_index([_ | _] = nums) do
+    │       ~
+    │
+    └─ lib/solution.ex:44:7
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m12:11:25.830 [info] [Validator.run] step 3/6: format[0m
+[22m12:11:25.830 [info] [Validator.run] skipping format (compile failed)[0m
+[22m12:11:25.830 [info] [Validator.run] step 4/6: credo[0m
+[22m12:11:25.830 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m12:11:25.830 [info] [Validator.run] step 5/6: credence check[0m
+[22m12:11:25.830 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m12:11:25.831 [info] [Validator.run] step 6/6: tests[0m
+[22m12:11:25.831 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m12:11:25.831 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m12:11:25.831 [debug] [Validator.run] final module (1932 chars):
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    find_equilibrium_index(nums, total, 0)
+  end
+
+  defp find_equilibrium_index([], _total, _left_sum), do: -1
+
+  defp find_equilibrium_index([head | tail], total, left_sum) do
+    right_sum = total - left_sum - head
+
+    if left_sum == right_sum do
+      # Calculate the index by counting how many elements we've skipped
+      find_equilibrium_index_index(head, tail, 1)
+    else
+      find_equilibrium_index(tail, total, left_sum + head)
+    end
+  end
+
+  defp find_equilibrium_index_index(_head, tail, index) do
+    # We need to find the index in the original list.
+    # Since we are iterating through the original list, the current index is what we need.
+    # But the recursive call doesn't track index. Let's restructure.
+    find_equilibrium_index_index(tail, index)
+  end
+
+  defp find_equilibrium_index_index([], _index), do: -1
+
+  defp find_equilibrium_index_index(_head, index) do
+    index - 1
+  end
+
+  # Wait, the above approach is flawed. Let me rewrite properly with index tracking.
+  def find_equilibrium_index(_nums), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    do_find_equilibrium_index(nums, total, 0, 0)
+  end
+
+  defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+
+  defp do_find_equilibrium_index([_head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - _head do
+    index
+  end
+
+  defp do_find_equilibrium_index([head | tail], total, left_sum, index) do
+    do_find_equilibrium_index(tail, total, left_sum + head, index + 1)
+  end
+end[0m
+[36m12:11:25.831 [debug] [Validator.run] final test (718 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end[0m
+[33m12:11:25.831 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m12:11:25.831 [info] [Solve attempt 3] generating (fn=find_equilibrium_index)[0m
+[36m12:11:25.831 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    find_equilibrium_index(nums, total, 0)
+  end
+
+  defp find_equilibrium_index([], _total, _left_sum), do: -1
+
+  defp find_equilibrium_index([head | tail], total, left_sum) do
+    right_sum = total - left_sum - head
+
+    if left_sum == right_sum do
+      # Calculate the index by counting how many elements we've skipped
+      find_equilibrium_index_index(head, tail, 1)
+    else
+      find_equilibrium_index(tail, total, left_sum + head)
+    end
+  end
+
+  defp find_equilibrium_index_index(_head, tail, index) do
+    # We need to find the index in the original list.
+    # Since we are iterating through the original list, the current index is what we need.
+    # But the recursive call doesn't track index. Let's restructure.
+    find_equilibrium_index_index(tail, index)
+  end
+
+  defp find_equilibrium_index_index([], _index), do: -1
+
+  defp find_equilibrium_index_index(_head, index) do
+    index - 1
+  end
+
+  # Wait, the above approach is flawed. Let me rewrite properly with index tracking.
+  def find_equilibrium_index(_nums), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    do_find_equilibrium_index(nums, total, 0, 0)
+  end
+
+  defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+
+  defp do_find_equilibrium_index([_head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - _head do
+    index
+  end
+
+  defp do_find_equilibrium_index([head | tail], total, left_sum, index) do
+    do_find_equilibrium_index(tail, total, left_sum + head, index + 1)
+  end
+end
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: clauses with the same name and arity (number of arguments) should be grouped together, "def find_equilibrium_index/1" was previously defined (lib/solution.ex:8)
+    │
+ 42 │   def find_equilibrium_index(_nums), do: -1
+    │       ~
+    │
+    └─ lib/solution.ex:42:7
+
+    warning: the underscored variable "_total" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 51 │   defp do_find_equilibrium_index([_head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - _head do
+    │                                                                                             ~
+    │
+    └─ lib/solution.ex:51:93: Solution.do_find_equilibrium_index/4
+
+    warning: the underscored variable "_head" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 51 │   defp do_find_equilibrium_index([_head | _tail], _total, left_sum, index) when left_sum == _total - left_sum - _head do
+    │                                                                                                                 ~
+    │
+    └─ lib/solution.ex:51:113: Solution.do_find_equilibrium_index/4
+
+    warning: this clause for find_equilibrium_index/1 cannot match because a previous clause at line 42 always matches
+    │
+ 44 │   def find_equilibrium_index([_ | _] = nums) do
+    │       ~
+    │
+    └─ lib/solution.ex:44:7
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+
+Reminder: module `Solution`, function `find_equilibrium_index` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m12:11:31.380 [debug] [LLM.call] finish=stop len=1534 usage=%{"completion_tokens" => 521, "prompt_tokens" => 1550, "prompt_tokens_details" => %{"cached_tokens" => 169}, "total_tokens" => 2071}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    do_find_equilibrium_index(nums, total, 0, 0)
+  end
+
+  defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+
+  defp do_find_equilibrium_index([head | tail], total, left_sum, index) do
+    right_sum = total - left_sum - head
+
+    if left_sum == right_sum do
+      index
+    else
+      do_find_equilibrium_index(tail, total, left_sum + head, index + 1)
+    end
+  end
+end
+---TEST---
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end
+---END---[0m
+[22m12:11:31.381 [info] [LLM.call] local_qwen_thinking completed in 5550ms — ok[0m
+[22m12:11:31.381 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m12:11:31.381 [debug] [Validator.run] module code (781 chars):
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    do_find_equilibrium_index(nums, total, 0, 0)
+  end
+
+  defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+
+  defp do_find_equilibrium_index([head | tail], total, left_sum, index) do
+    right_sum = total - left_sum - head
+
+    if left_sum == right_sum do
+      index
+    else
+      do_find_equilibrium_index(tail, total, left_sum + head, index + 1)
+    end
+  end
+end[0m
+[36m12:11:31.381 [debug] [Validator.run] test code (718 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1,2,3,4,3,2,1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1,100,50,-51,1,1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20,10,-80,10,10,15,35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1,2,3]) == -1
+  end
+end[0m
+[36m12:11:31.381 [debug] [Budget] spent so far (est.): $0.3207[0m
+[22m12:11:31.388 [info] [Validator.run] step 1/6: credence fix[0m
+[36m12:11:31.388 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m12:11:32.035 [debug] [run_credence_fix] exit=0 output:
+
+12:11:31.941 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+12:11:31.943 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 14 rules)
+
+12:11:31.955 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+12:11:31.961 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+12:11:31.961 [debug] [credence_fix] semantic done. Applied: []
+
+12:11:31.961 [debug] [credence_fix] starting pattern fix pipeline (153 rules)
+
+12:11:32.013 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m12:11:32.035 [debug] [run_credence_fix] no changes needed[0m
+[22m12:11:32.035 [info] [Validator.run] credence: no changes needed[0m
+[22m12:11:32.035 [info] [Validator.run] step 2/6: compile[0m
+[22m12:11:32.592 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m12:11:32.592 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m12:11:32.593 [info] [Validator.run] step 3/6: format[0m
+[22m12:11:32.892 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m12:11:33.187 [debug] [Validator.run] format fix output: [0m
+[22m12:11:33.187 [info] [Validator.run] step 4/6: credo[0m
+[36m12:11:33.651 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m12:11:33.651 [info] [Validator.run] credo: no issues[0m
+[22m12:11:33.651 [info] [Validator.run] step 5/6: credence check[0m
+[22m12:11:34.388 [info] [Validator.run] credence check exit=0[0m
+[36m12:11:34.388 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m12:11:34.388 [info] [Validator.run] credence check: passed[0m
+[22m12:11:34.388 [info] [Validator.run] step 6/6: tests[0m
+[22m12:11:34.859 [info] [Validator.run] test exit=0[0m
+[36m12:11:34.859 [debug] [Validator.run] test output:
+Running ExUnit with seed: 816484, max_cases: 48
+
+.....
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+5 tests, 0 failures
+[0m
+[22m12:11:34.859 [info] [Validator.run] tests: PASSED[0m
+[22m12:11:34.859 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m12:11:34.859 [debug] [Validator.run] final module (782 chars):
+defmodule Solution do
+  @doc """
+  Finds the first equilibrium index in a list of integers.
+  An equilibrium index is where the sum of elements at lower indexes
+  equals the sum of elements at higher indexes.
+  """
+  @spec find_equilibrium_index(list(integer())) :: integer()
+  def find_equilibrium_index([]), do: -1
+
+  def find_equilibrium_index([_ | _] = nums) do
+    total = Enum.sum(nums)
+    do_find_equilibrium_index(nums, total, 0, 0)
+  end
+
+  defp do_find_equilibrium_index([], _total, _left_sum, _index), do: -1
+
+  defp do_find_equilibrium_index([head | tail], total, left_sum, index) do
+    right_sum = total - left_sum - head
+
+    if left_sum == right_sum do
+      index
+    else
+      do_find_equilibrium_index(tail, total, left_sum + head, index + 1)
+    end
+  end
+end
+[0m
+[36m12:11:34.859 [debug] [Validator.run] final test (738 chars):
+defmodule TestSolution do
+  use ExUnit.Case, async: false
+
+  test "find_equilibrium_index of [1,2,3,4,3,2,1] is 3" do
+    assert Solution.find_equilibrium_index([1, 2, 3, 4, 3, 2, 1]) == 3
+  end
+
+  test "find_equilibrium_index of [1,100,50,-51,1,1] is 1" do
+    assert Solution.find_equilibrium_index([1, 100, 50, -51, 1, 1]) == 1
+  end
+
+  test "find_equilibrium_index of [20,10,-80,10,10,15,35] is 0" do
+    assert Solution.find_equilibrium_index([20, 10, -80, 10, 10, 15, 35]) == 0
+  end
+
+  test "find_equilibrium_index of empty list returns -1" do
+    assert Solution.find_equilibrium_index([]) == -1
+  end
+
+  test "find_equilibrium_index of [1,2,3] returns -1" do
+    assert Solution.find_equilibrium_index([1, 2, 3]) == -1
+  end
+end
+[0m
+[22m12:11:34.859 [info] [Solve attempt 3] validation PASSED[0m
+[22m12:11:34.871 [info] [Router] :reverted culprit Credence.Pattern.NonGroupedClauses — deterministic bugfix, no classifier[0m
+[22m12:11:34.876 [info] [Pi] running agent (cwd=/home/kly/projects/credence, model=mimo-v2.5-pro, thinking=low, timeout=1800s)[0m
+[22m12:11:42.692 [info] [Pi] step 1: bash
+    command: find /home/kly/projects/credence -type f -name "*.ex" -o -name "*.exs" | grep -i non_grouped[0m
+[22m12:11:56.717 [info] [Pi] step 2: read
+    path: /home/kly/projects/credence/lib/pattern/non_grouped_clauses.ex[0m
+[22m12:11:56.717 [info] [Pi] step 3: read
+    path: /home/kly/projects/credence/test/pattern/non_grouped_clauses_check_test.exs[0m
+[22m12:11:56.717 [info] [Pi] step 4: read
+    path: /home/kly/projects/credence/test/pattern/non_grouped_clauses_equivalence_test.exs[0m
+[22m12:11:56.717 [info] [Pi] step 5: read
+    path: /home/kly/projects/credence/test/pattern/non_grouped_clauses_fix_test.exs[0m
+[22m12:12:12.064 [info] [Pi] step 6: bash
+    command: cd /home/kly/projects/credence && mix test test/pattern/non_grouped_clauses_check_test.exs test/pattern/non_grouped_clauses_equivalence_test.exs test/pattern/non_grouped_clauses_fix_test.exs 2>&1
+    timeout: 60[0m
+[22m12:12:18.042 [info] [Pi] step 7: bash
+    command: cd /home/kly/projects/credence && mix compile --warnings-as-errors 2>&1
+    timeout: 60[0m
+[22m12:12:24.299 [info] [Pi] step 8: bash
+    command: cd /home/kly/projects/credence && mix test 2>&1
+    timeout: 120[0m
+[36m12:12:49.992 [debug] [Budget] spent so far (est.): $0.3263[0m
+[22m12:12:49.992 [info] [Pi] agent done — exit=0 steps=8 stop=stop[0m
+[22m12:12:51.377 [info] [Gate] staged entries: [][0m
+[33m12:12:51.377 [warning] [Gate] REJECT: :no_lib_change — discarding[0m

@@ -1,0 +1,1064 @@
+[22m13:25:17.759 [info] [idx=39705] entry_point=count_good_numbers[0m
+[36m13:25:17.760 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to find the number of 'good' numbers less than or equal to a given number n. A 'good' number is a number that after rotating each digit individually by 180 degrees, we get a valid number that is different from the original number. Each digit must be rotated - we cannot choose to leave it alone.
+A number is valid if each digit remains a digit after rotation. 0, 1, and 8 rotate to themselves; 2 and 5 rotate to each other (on this case, they are rotated in a different direction, in other words, 2 or 5 gets mirrored); 6 and 9 rotate to each other, and the rest of the numbers do not rotate to any other number and become invalid.
+
+## Python Solution
+```python
+def count_good_numbers(n):
+    def is_good_number(num):
+        rotate_map = {'0': '0', '1': '1', '8': '8', '2': '5', '5': '2', '6': '9', '9': '6'}
+        original = str(num)
+        rotated = ''
+        for digit in original:
+            if digit not in rotate_map:
+                return False
+            rotated += rotate_map[digit]
+        return original != rotated
+
+    count = 0
+    for i in range(1, n + 1):
+        if is_good_number(i):
+            count += 1
+    return count
+```
+
+## Python Tests
+assert count_good_numbers(10) == 4
+assert count_good_numbers(1) == 0
+assert count_good_numbers(2) == 1
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `count_good_numbers`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[22m13:25:25.466 [info] [Budget] HEARTBEAT — 137 paid calls, est $0.6462 over 169.9min → ~$0.2283/hr, ~$5.48/day (tok in=857076 cache_rd=6552384 out=287153)[0m
+[36m13:25:54.302 [debug] [LLM.call] finish=stop len=1750 usage=%{"completion_tokens" => 1179, "completion_tokens_details" => %{"reasoning_tokens" => 674}, "prompt_tokens" => 696, "prompt_tokens_details" => %{}, "total_tokens" => 1875}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function that counts how many positive integers up to and including a given integer `n` are "good" numbers. A number is considered "good" if rotating every one of its digits 180 degrees produces a valid number that is different from the original. All digits must be rotated.
+
+The rotation rules are:
+- Digits 0, 1, and 8 rotate to themselves.
+- Digits 2 and 5 rotate to each other.
+- Digits 6 and 9 rotate to each other.
+- Any other digit (3, 4, 7) makes the number invalid after rotation.
+
+Your function should return the count of such numbers from 1 up to `n` inclusive.
+
+The function signature must be:
+```
+@spec count_good_numbers(integer()) :: integer()
+```
+
+---TEST---
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "count_good_numbers with n=10" do
+    assert Solution.count_good_numbers(10) == 4
+  end
+
+  test "count_good_numbers with n=1" do
+    assert Solution.count_good_numbers(1) == 0
+  end
+
+  test "count_good_numbers with n=2" do
+    assert Solution.count_good_numbers(2) == 1
+  end
+end
+```
+
+---REFERENCE---
+```elixir
+defmodule Solution do
+  @spec count_good_numbers(integer()) :: integer()
+  def count_good_numbers(n) do
+    1..n
+    |> Enum.count(&good_number?/1)
+  end
+
+  defp good_number?(num) do
+    original = Integer.to_string(num)
+    rotated = rotate_number(original)
+    original != rotated
+  end
+
+  defp rotate_number(digits) do
+    rotate_map = %{"0" => "0", "1" => "1", "8" => "8", "2" => "5", "5" => "2", "6" => "9", "9" => "6"}
+    digits
+    |> String.graphemes()
+    |> Enum.reduce_while("", fn digit, acc ->
+      case Map.get(rotate_map, digit) do
+        nil -> {:halt, nil}
+        rotated -> {:cont, acc <> rotated}
+      end
+    end)
+  end
+end
+```
+---END---[0m
+[22m13:25:54.303 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 36543ms — ok[0m
+[36m13:25:54.303 [debug] [Budget] spent so far (est.): $0.6476[0m
+[22m13:25:55.379 [info] [RoundTrip] reference FAILED tests:
+Running ExUnit with seed: 331225, max_cases: 48
+
+..
+
+  1) test count_good_numbers with n=10 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.count_good_numbers(10) == 4
+     left:  7
+     right: 4
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 1 failure
+[0m
+[33m13:25:55.379 [warning] [RoundTrip] reference failed tests — re-translating once[0m
+[36m13:25:55.379 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to find the number of 'good' numbers less than or equal to a given number n. A 'good' number is a number that after rotating each digit individually by 180 degrees, we get a valid number that is different from the original number. Each digit must be rotated - we cannot choose to leave it alone.
+A number is valid if each digit remains a digit after rotation. 0, 1, and 8 rotate to themselves; 2 and 5 rotate to each other (on this case, they are rotated in a different direction, in other words, 2 or 5 gets mirrored); 6 and 9 rotate to each other, and the rest of the numbers do not rotate to any other number and become invalid.
+
+## Python Solution
+```python
+def count_good_numbers(n):
+    def is_good_number(num):
+        rotate_map = {'0': '0', '1': '1', '8': '8', '2': '5', '5': '2', '6': '9', '9': '6'}
+        original = str(num)
+        rotated = ''
+        for digit in original:
+            if digit not in rotate_map:
+                return False
+            rotated += rotate_map[digit]
+        return original != rotated
+
+    count = 0
+    for i in range(1, n + 1):
+        if is_good_number(i):
+            count += 1
+    return count
+```
+
+## Python Tests
+assert count_good_numbers(10) == 4
+assert count_good_numbers(1) == 0
+assert count_good_numbers(2) == 1
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `count_good_numbers`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m13:27:30.059 [debug] [LLM.call] finish=stop len=2224 usage=%{"completion_tokens" => 3544, "completion_tokens_details" => %{"reasoning_tokens" => 2914}, "prompt_tokens" => 696, "prompt_tokens_details" => %{"cached_tokens" => 640}, "total_tokens" => 4240}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `count_good_numbers/1` that takes an integer `n` and returns the count of 'good' numbers between 1 and `n` (inclusive). A 'good' number is defined as follows: when each digit is rotated 180 degrees individually, we get a valid number that is different from the original. The rotation of digits must be applied to every digit, and we cannot leave any digit unrotated.
+
+The rotation rules:
+- 0, 1, and 8 rotate to themselves.
+- 2 and 5 rotate to each other (2 becomes 5, 5 becomes 2).
+- 6 and 9 rotate to each other (6 becomes 9, 9 becomes 6).
+- Any other digit (3, 4, 7) does not have a valid rotation, so if the number contains any such digit, the rotated number is invalid.
+
+The rotated number is formed by rotating every digit, and the original number is good if and only if:
+1. The rotated number is valid (i.e., every digit after rotation is a digit) and
+2. The rotated number is different from the original number.
+
+The function should handle non-negative integers. For n=0, return 0. The function should be efficient enough for n up to at least 100000.
+
+Example: count_good_numbers(10) returns 4 because the good numbers <=10 are 2,5,6,9.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "count good numbers up to 10" do
+    assert Solution.count_good_numbers(10) == 4
+  end
+
+  test "count good numbers up to 1" do
+    assert Solution.count_good_numbers(1) == 0
+  end
+
+  test "count good numbers up to 2" do
+    assert Solution.count_good_numbers(2) == 1
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  def count_good_numbers(n) do
+    1..n
+    |> Enum.count(&good_number?/1)
+  end
+
+  defp good_number?(num) do
+    rotate_map = %{
+      "0" => "0",
+      "1" => "1",
+      "8" => "8",
+      "2" => "5",
+      "5" => "2",
+      "6" => "9",
+      "9" => "6"
+    }
+
+    original = Integer.to_string(num)
+
+    rotated =
+      Enum.reduce_while(String.graphemes(original), "", fn digit, acc ->
+        case rotate_map do
+          %{^digit => rotated} -> {:cont, acc <> rotated}
+          _ -> {:halt, :invalid}
+        end
+      end)
+
+    case rotated do
+      :invalid -> false
+      rotated_string -> original != rotated_string
+    end
+  end
+end
+---END---[0m
+[22m13:27:30.059 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 94679ms — ok[0m
+[36m13:27:30.059 [debug] [Budget] spent so far (est.): $0.651[0m
+[22m13:27:31.121 [info] [RoundTrip] reference PASSED tests[0m
+[22m13:27:31.121 [info] [idx=39705] translation fresh — solving[0m
+[22m13:27:31.121 [info] ===SOLVE_BOUNDARY===[0m
+[22m13:27:31.121 [info] [Solve attempt 1] generating (fn=count_good_numbers)[0m
+[36m13:27:31.121 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `count_good_numbers/1` that takes an integer `n` and returns the count of 'good' numbers between 1 and `n` (inclusive). A 'good' number is defined as follows: when each digit is rotated 180 degrees individually, we get a valid number that is different from the original. The rotation of digits must be applied to every digit, and we cannot leave any digit unrotated.
+
+The rotation rules:
+- 0, 1, and 8 rotate to themselves.
+- 2 and 5 rotate to each other (2 becomes 5, 5 becomes 2).
+- 6 and 9 rotate to each other (6 becomes 9, 9 becomes 6).
+- Any other digit (3, 4, 7) does not have a valid rotation, so if the number contains any such digit, the rotated number is invalid.
+
+The rotated number is formed by rotating every digit, and the original number is good if and only if:
+1. The rotated number is valid (i.e., every digit after rotation is a digit) and
+2. The rotated number is different from the original number.
+
+The function should handle non-negative integers. For n=0, return 0. The function should be efficient enough for n up to at least 100000.
+
+Example: count_good_numbers(10) returns 4 because the good numbers <=10 are 2,5,6,9.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "count good numbers up to 10" do
+    assert Solution.count_good_numbers(10) == 4
+  end
+
+  test "count good numbers up to 1" do
+    assert Solution.count_good_numbers(1) == 0
+  end
+
+  test "count good numbers up to 2" do
+    assert Solution.count_good_numbers(2) == 1
+  end
+end
+```
+
+Module: `Solution`. Function: `count_good_numbers`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m13:27:37.089 [debug] [LLM.call] finish=stop len=2084 usage=%{"completion_tokens" => 627, "prompt_tokens" => 695, "prompt_tokens_details" => %{"cached_tokens" => 169}, "total_tokens" => 1322}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Count the number of 'good' numbers from 1 to n (inclusive).
+  A good number is one where rotating each digit 180 degrees results in a valid
+  different number.
+  """
+  @spec count_good_numbers(non_neg_integer()) :: non_neg_integer()
+  def count_good_numbers(n) when n < 0, do: 0
+  def count_good_numbers(n) when n == 0, do: 0
+
+  def count_good_numbers(n) do
+    1..n
+    |> Stream.map(fn num -> num end)
+    |> Enum.count(&is_good_number/1)
+  end
+
+  @spec is_good_number(non_neg_integer()) :: boolean()
+  defp is_good_number(num) do
+    digits = Integer.digits(num)
+    
+    case rotate_digits(digits) do
+      nil -> false
+      rotated_digits -> 
+        rotated_num = digits_to_number(rotated_digits)
+        rotated_num != num
+    end
+  end
+
+  @spec rotate_digits(list(non_neg_integer())) :: list(non_neg_integer()) | nil
+  defp rotate_digits([]), do: []
+
+  defp rotate_digits([digit | rest]) do
+    case rotate_single_digit(digit) do
+      nil -> nil
+      rotated_digit ->
+        case rotate_digits(rest) do
+          nil -> nil
+          rotated_rest -> [rotated_digit | rotated_rest]
+        end
+    end
+  end
+
+  @spec rotate_single_digit(non_neg_integer()) :: non_neg_integer() | nil
+  defp rotate_single_digit(0), do: 0
+  defp rotate_single_digit(1), do: 1
+  defp rotate_single_digit(8), do: 8
+  defp rotate_single_digit(2), do: 5
+  defp rotate_single_digit(5), do: 2
+  defp rotate_single_digit(6), do: 9
+  defp rotate_single_digit(9), do: 6
+  defp rotate_single_digit(_), do: nil
+
+  @spec digits_to_number(list(non_neg_integer())) :: non_neg_integer()
+  defp digits_to_number(digits) do
+    digits
+    |> Enum.reduce(0, fn d, acc -> acc * 10 + d end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "count good numbers up to 10" do
+    assert Solution.count_good_numbers(10) == 4
+  end
+
+  test "count good numbers up to 1" do
+    assert Solution.count_good_numbers(1) == 0
+  end
+
+  test "count good numbers up to 2" do
+    assert Solution.count_good_numbers(2) == 1
+  end
+end
+---END---[0m
+[22m13:27:37.089 [info] [LLM.call] local_qwen_thinking completed in 5967ms — ok[0m
+[22m13:27:37.090 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m13:27:37.090 [debug] [Validator.run] module code (1707 chars):
+defmodule Solution do
+  @doc """
+  Count the number of 'good' numbers from 1 to n (inclusive).
+  A good number is one where rotating each digit 180 degrees results in a valid
+  different number.
+  """
+  @spec count_good_numbers(non_neg_integer()) :: non_neg_integer()
+  def count_good_numbers(n) when n < 0, do: 0
+  def count_good_numbers(n) when n == 0, do: 0
+
+  def count_good_numbers(n) do
+    1..n
+    |> Stream.map(fn num -> num end)
+    |> Enum.count(&is_good_number/1)
+  end
+
+  @spec is_good_number(non_neg_integer()) :: boolean()
+  defp is_good_number(num) do
+    digits = Integer.digits(num)
+    
+    case rotate_digits(digits) do
+      nil -> false
+      rotated_digits -> 
+        rotated_num = digits_to_number(rotated_digits)
+        rotated_num != num
+    end
+  end
+
+  @spec rotate_digits(list(non_neg_integer())) :: list(non_neg_integer()) | nil
+  defp rotate_digits([]), do: []
+
+  defp rotate_digits([digit | rest]) do
+    case rotate_single_digit(digit) do
+      nil -> nil
+      rotated_digit ->
+        case rotate_digits(rest) do
+          nil -> nil
+          rotated_rest -> [rotated_digit | rotated_rest]
+        end
+    end
+  end
+
+  @spec rotate_single_digit(non_neg_integer()) :: non_neg_integer() | nil
+  defp rotate_single_digit(0), do: 0
+  defp rotate_single_digit(1), do: 1
+  defp rotate_single_digit(8), do: 8
+  defp rotate_single_digit(2), do: 5
+  defp rotate_single_digit(5), do: 2
+  defp rotate_single_digit(6), do: 9
+  defp rotate_single_digit(9), do: 6
+  defp rotate_single_digit(_), do: nil
+
+  @spec digits_to_number(list(non_neg_integer())) :: non_neg_integer()
+  defp digits_to_number(digits) do
+    digits
+    |> Enum.reduce(0, fn d, acc -> acc * 10 + d end)
+  end
+end[0m
+[36m13:27:37.090 [debug] [Validator.run] test code (342 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "count good numbers up to 10" do
+    assert Solution.count_good_numbers(10) == 4
+  end
+
+  test "count good numbers up to 1" do
+    assert Solution.count_good_numbers(1) == 0
+  end
+
+  test "count good numbers up to 2" do
+    assert Solution.count_good_numbers(2) == 1
+  end
+end[0m
+[36m13:27:37.090 [debug] [Budget] spent so far (est.): $0.6518[0m
+[22m13:27:37.090 [info] [Validator.run] step 1/6: credence fix[0m
+[36m13:27:37.090 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m13:27:37.827 [debug] [run_credence_fix] exit=0 output:
+
+13:27:37.637 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+13:27:37.639 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 15 rules)
+
+13:27:37.654 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+13:27:37.659 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+13:27:37.659 [debug] [credence_fix] semantic done. Applied: []
+
+13:27:37.659 [debug] [credence_fix] starting pattern fix pipeline (155 rules)
+
+13:27:37.705 [debug] [credence_fix] NoIsPrefixForNonGuard: check found 1 issue(s), running fix...
+
+13:27:37.724 [debug] [credence_fix] NoIsPrefixForNonGuard: source CHANGED:
+  L14 -     |> Enum.count(&is_good_number/1)
+  L14 +     |> Enum.count(&good_number?/1)
+  L17 -   @spec is_good_number(non_neg_integer()) :: boolean()
+  L17 +   @spec good_number?(non_neg_integer()) :: boolean()
+  L18 -   defp is_good_number(num) do
+  L18 +   defp good_number?(num) do
+  L20 - 
+  L20 + 
+  L23 -       rotated_digits ->
+  L23 +       rotated_digits ->
+
+13:27:37.799 [debug] [credence_fix] done. Applied: [NoIsPrefixForNonGuard(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.NoIsPrefixForNonGuard, 1}]
+[0m
+[22m13:27:37.827 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m13:27:38.417 [info] [run_credence_fix] fix compiles OK[0m
+[36m13:27:38.417 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Count the number of 'good' numbers from 1 to n (inclusive).
+  A good number is one where rotating each digit 180 degrees results in a valid
+  different number.
+  """
+  @spec count_good_numbers(non_neg_integer()) :: non_neg_integer()
+  def count_good_numbers(n) when n < 0, do: 0
+  def count_good_numbers(n) when n == 0, do: 0
+
+  def count_good_numbers(n) do
+    1..n
+    |> Stream.map(fn num -> num end)
+    |> Enum.count(&is_good_number/1)
+  end
+
+  @spec is_good_number(non_neg_integer()) :: boolean()
+  defp is_good_number(num) do
+    digits = Integer.digits(num)
+    
+    case rotate_digits(digits) do
+      nil -> false
+      rotated_digits -> 
+        rotated_num = digits_to_number(rotated_digits)
+        rotated_num != num
+    end
+  end
+
+  @spec rotate_digits(list(non_neg_integer())) :: list(non_neg_integer()) | nil
+  defp rotate_digits([]), do: []
+
+  defp rotate_digits([digit | rest]) do
+    case rotate_single_digit(digit) do
+      nil -> nil
+      rotated_digit ->
+        case rotate_digits(rest) do
+          nil -> nil
+          rotated_rest -> [rotated_digit | rotated_rest]
+        end
+    end
+  end
+
+  @spec rotate_single_digit(non_neg_integer()) :: non_neg_integer() | nil
+  defp rotate_single_digit(0), do: 0
+  defp rotate_single_digit(1), do: 1
+  defp rotate_single_digit(8), do: 8
+  defp rotate_single_digit(2), do: 5
+  defp rotate_single_digit(5), do: 2
+  defp rotate_single_digit(6), do: 9
+  defp rotate_single_digit(9), do: 6
+  defp rotate_single_digit(_), do: nil
+
+  @spec digits_to_number(list(non_neg_integer())) :: non_neg_integer()
+  defp digits_to_number(digits) do
+    digits
+    |> Enum.reduce(0, fn d, acc -> acc * 10 + d end)
+  end
+end[0m
+[36m13:27:38.417 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Count the number of 'good' numbers from 1 to n (inclusive).
+  A good number is one where rotating each digit 180 degrees results in a valid
+  different number.
+  """
+  @spec count_good_numbers(non_neg_integer()) :: non_neg_integer()
+  def count_good_numbers(n) when n < 0, do: 0
+  def count_good_numbers(n) when n == 0, do: 0
+
+  def count_good_numbers(n) do
+    1..n
+    |> Stream.map(fn num -> num end)
+    |> Enum.count(&good_number?/1)
+  end
+
+  @spec good_number?(non_neg_integer()) :: boolean()
+  defp good_number?(num) do
+    digits = Integer.digits(num)
+
+    case rotate_digits(digits) do
+      nil -> false
+      rotated_digits ->
+        rotated_num = digits_to_number(rotated_digits)
+        rotated_num != num
+    end
+  end
+
+  @spec rotate_digits(list(non_neg_integer())) :: list(non_neg_integer()) | nil
+  defp rotate_digits([]), do: []
+
+  defp rotate_digits([digit | rest]) do
+    case rotate_single_digit(digit) do
+      nil -> nil
+      rotated_digit ->
+        case rotate_digits(rest) do
+          nil -> nil
+          rotated_rest -> [rotated_digit | rotated_rest]
+        end
+    end
+  end
+
+  @spec rotate_single_digit(non_neg_integer()) :: non_neg_integer() | nil
+  defp rotate_single_digit(0), do: 0
+  defp rotate_single_digit(1), do: 1
+  defp rotate_single_digit(8), do: 8
+  defp rotate_single_digit(2), do: 5
+  defp rotate_single_digit(5), do: 2
+  defp rotate_single_digit(6), do: 9
+  defp rotate_single_digit(9), do: 6
+  defp rotate_single_digit(_), do: nil
+
+  @spec digits_to_number(list(non_neg_integer())) :: non_neg_integer()
+  defp digits_to_number(digits) do
+    digits
+    |> Enum.reduce(0, fn d, acc -> acc * 10 + d end)
+  end
+end[0m
+[22m13:27:38.417 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m13:27:38.417 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Count the number of 'good' numbers from 1 to n (inclusive).
+  A good number is one where rotating each digit 180 degrees results in a valid
+  different number.
+  """
+  @spec count_good_numbers(non_neg_integer()) :: non_neg_integer()
+  def count_good_numbers(n) when n < 0, do: 0
+  def count_good_numbers(n) when n == 0, do: 0
+
+  def count_good_numbers(n) do
+    1..n
+    |> Stream.map(fn num -> num end)
+    |> Enum.count(&is_good_number/1)
+  end
+
+  @spec is_good_number(non_neg_integer()) :: boolean()
+  defp is_good_number(num) do
+    digits = Integer.digits(num)
+    
+    case rotate_digits(digits) do
+      nil -> false
+      rotated_digits -> 
+        rotated_num = digits_to_number(rotated_digits)
+        rotated_num != num
+    end
+  end
+
+  @spec rotate_digits(list(non_neg_integer())) :: list(non_neg_integer()) | nil
+  defp rotate_digits([]), do: []
+
+  defp rotate_digits([digit | rest]) do
+    case rotate_single_digit(digit) do
+      nil -> nil
+      rotated_digit ->
+        case rotate_digits(rest) do
+          nil -> nil
+          rotated_rest -> [rotated_digit | rotated_rest]
+        end
+    end
+  end
+
+  @spec rotate_single_digit(non_neg_integer()) :: non_neg_integer() | nil
+  defp rotate_single_digit(0), do: 0
+  defp rotate_single_digit(1), do: 1
+  defp rotate_single_digit(8), do: 8
+  defp rotate_single_digit(2), do: 5
+  defp rotate_single_digit(5), do: 2
+  defp rotate_single_digit(6), do: 9
+  defp rotate_single_digit(9), do: 6
+  defp rotate_single_digit(_), do: nil
+
+  @spec digits_to_number(list(non_neg_integer())) :: non_neg_integer()
+  defp digits_to_number(digits) do
+    digits
+    |> Enum.reduce(0, fn d, acc -> acc * 10 + d end)
+  end
+end[0m
+[36m13:27:38.417 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Count the number of 'good' numbers from 1 to n (inclusive).
+  A good number is one where rotating each digit 180 degrees results in a valid
+  different number.
+  """
+  @spec count_good_numbers(non_neg_integer()) :: non_neg_integer()
+  def count_good_numbers(n) when n < 0, do: 0
+  def count_good_numbers(n) when n == 0, do: 0
+
+  def count_good_numbers(n) do
+    1..n
+    |> Stream.map(fn num -> num end)
+    |> Enum.count(&good_number?/1)
+  end
+
+  @spec good_number?(non_neg_integer()) :: boolean()
+  defp good_number?(num) do
+    digits = Integer.digits(num)
+
+    case rotate_digits(digits) do
+      nil -> false
+      rotated_digits ->
+        rotated_num = digits_to_number(rotated_digits)
+        rotated_num != num
+    end
+  end
+
+  @spec rotate_digits(list(non_neg_integer())) :: list(non_neg_integer()) | nil
+  defp rotate_digits([]), do: []
+
+  defp rotate_digits([digit | rest]) do
+    case rotate_single_digit(digit) do
+      nil -> nil
+      rotated_digit ->
+        case rotate_digits(rest) do
+          nil -> nil
+          rotated_rest -> [rotated_digit | rotated_rest]
+        end
+    end
+  end
+
+  @spec rotate_single_digit(non_neg_integer()) :: non_neg_integer() | nil
+  defp rotate_single_digit(0), do: 0
+  defp rotate_single_digit(1), do: 1
+  defp rotate_single_digit(8), do: 8
+  defp rotate_single_digit(2), do: 5
+  defp rotate_single_digit(5), do: 2
+  defp rotate_single_digit(6), do: 9
+  defp rotate_single_digit(9), do: 6
+  defp rotate_single_digit(_), do: nil
+
+  @spec digits_to_number(list(non_neg_integer())) :: non_neg_integer()
+  defp digits_to_number(digits) do
+    digits
+    |> Enum.reduce(0, fn d, acc -> acc * 10 + d end)
+  end
+end[0m
+[36m13:27:38.418 [debug] [propagate_is_renames] old functions: ["count_good_numbers", "is_good_number", "rotate_digits", "rotate_single_digit", "digits_to_number"][0m
+[36m13:27:38.418 [debug] [propagate_is_renames] new functions: ["count_good_numbers", "good_number?", "rotate_digits", "rotate_single_digit", "digits_to_number"][0m
+[22m13:27:38.418 [info] [propagate_is_renames] applying renames: [{"is_good_number", "good_number?"}][0m
+[22m13:27:38.418 [info] [Validator.run] step 2/6: compile[0m
+[22m13:27:38.996 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m13:27:38.996 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m13:27:38.996 [info] [Validator.run] step 3/6: format[0m
+[22m13:27:39.303 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m13:27:39.611 [debug] [Validator.run] format fix output: [0m
+[22m13:27:39.611 [info] [Validator.run] step 4/6: credo[0m
+[36m13:27:40.096 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m13:27:40.096 [info] [Validator.run] credo: no issues[0m
+[22m13:27:40.096 [info] [Validator.run] step 5/6: credence check[0m
+[22m13:27:40.821 [info] [Validator.run] credence check exit=0[0m
+[36m13:27:40.821 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m13:27:40.821 [info] [Validator.run] credence check: passed[0m
+[22m13:27:40.821 [info] [Validator.run] step 6/6: tests[0m
+[22m13:27:41.283 [info] [Validator.run] test exit=0[0m
+[36m13:27:41.283 [debug] [Validator.run] test output:
+Running ExUnit with seed: 239823, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m13:27:41.283 [info] [Validator.run] tests: PASSED[0m
+[22m13:27:41.283 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m13:27:41.283 [debug] [Validator.run] final module (1715 chars):
+defmodule Solution do
+  @doc """
+  Count the number of 'good' numbers from 1 to n (inclusive).
+  A good number is one where rotating each digit 180 degrees results in a valid
+  different number.
+  """
+  @spec count_good_numbers(non_neg_integer()) :: non_neg_integer()
+  def count_good_numbers(n) when n < 0, do: 0
+  def count_good_numbers(n) when n == 0, do: 0
+
+  def count_good_numbers(n) do
+    1..n
+    |> Stream.map(fn num -> num end)
+    |> Enum.count(&good_number?/1)
+  end
+
+  @spec good_number?(non_neg_integer()) :: boolean()
+  defp good_number?(num) do
+    digits = Integer.digits(num)
+
+    case rotate_digits(digits) do
+      nil ->
+        false
+
+      rotated_digits ->
+        rotated_num = digits_to_number(rotated_digits)
+        rotated_num != num
+    end
+  end
+
+  @spec rotate_digits(list(non_neg_integer())) :: list(non_neg_integer()) | nil
+  defp rotate_digits([]), do: []
+
+  defp rotate_digits([digit | rest]) do
+    case rotate_single_digit(digit) do
+      nil ->
+        nil
+
+      rotated_digit ->
+        case rotate_digits(rest) do
+          nil -> nil
+          rotated_rest -> [rotated_digit | rotated_rest]
+        end
+    end
+  end
+
+  @spec rotate_single_digit(non_neg_integer()) :: non_neg_integer() | nil
+  defp rotate_single_digit(0), do: 0
+  defp rotate_single_digit(1), do: 1
+  defp rotate_single_digit(8), do: 8
+  defp rotate_single_digit(2), do: 5
+  defp rotate_single_digit(5), do: 2
+  defp rotate_single_digit(6), do: 9
+  defp rotate_single_digit(9), do: 6
+  defp rotate_single_digit(_), do: nil
+
+  @spec digits_to_number(list(non_neg_integer())) :: non_neg_integer()
+  defp digits_to_number(digits) do
+    digits
+    |> Enum.reduce(0, fn d, acc -> acc * 10 + d end)
+  end
+end
+[0m
+[36m13:27:41.283 [debug] [Validator.run] final test (343 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "count good numbers up to 10" do
+    assert Solution.count_good_numbers(10) == 4
+  end
+
+  test "count good numbers up to 1" do
+    assert Solution.count_good_numbers(1) == 0
+  end
+
+  test "count good numbers up to 2" do
+    assert Solution.count_good_numbers(2) == 1
+  end
+end
+[0m
+[22m13:27:41.283 [info] [Solve attempt 1] validation PASSED[0m
+[36m13:27:41.294 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Pattern.NoIsPrefixForNonGuard
+These rules ALREADY engaged on this row — Credence handled what they target.
+Do NOT propose a POTENTIAL_NEW_RULE for an idiom one of them already fixes;
+that is already covered. (If such a rule MIS-fired or under-fired, that's a
+BUGFIX_RULE, not a new rule.)
+
+## Dead-ends already tried (do NOT re-propose)
+## row 61262 â gate_reject (:full_suite_red)
+attempted: new(semantic): prefer_sigil_charlist
+
+## row 101469 â gate_reject (:no_lib_change)
+attempted: bugfix(broke_compile): lib/pattern/avoid_length_guard_less_than2.ex
+
+## row 101389 â gate_reject (:no_lib_change)
+attempted: bugfix(over (truncated)[0m
+[22m13:30:25.466 [info] [Budget] HEARTBEAT — 140 paid calls, est $0.6518 over 174.9min → ~$0.2236/hr, ~$5.37/day (tok in=859163 cache_rd=6552384 out=292503)[0m
+[22m13:35:25.466 [info] [Budget] HEARTBEAT — 140 paid calls, est $0.6518 over 179.9min → ~$0.2174/hr, ~$5.22/day (tok in=859163 cache_rd=6552384 out=292503)[0m
+[22m13:40:25.466 [info] [Budget] HEARTBEAT — 140 paid calls, est $0.6518 over 184.9min → ~$0.2115/hr, ~$5.08/day (tok in=859163 cache_rd=6552384 out=292503)[0m
+[22m13:45:25.466 [info] [Budget] HEARTBEAT — 140 paid calls, est $0.6518 over 189.9min → ~$0.206/hr, ~$4.94/day (tok in=859163 cache_rd=6552384 out=292503)[0m
+[22m13:50:25.466 [info] [Budget] HEARTBEAT — 140 paid calls, est $0.6518 over 194.9min → ~$0.2007/hr, ~$4.82/day (tok in=859163 cache_rd=6552384 out=292503)[0m
+[22m13:55:25.466 [info] [Budget] HEARTBEAT — 140 paid calls, est $0.6518 over 199.9min → ~$0.1957/hr, ~$4.7/day (tok in=859163 cache_rd=6552384 out=292503)[0m
+[31m13:57:46.588 [error] [LLM.call] request error: %Req.TransportError{reason: :timeout}[0m
+[22m13:57:46.588 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 1805165ms — error[0m
+[22m13:57:46.657 [info] [Router] transient timeout — row 39705 (attempt 1) → not consuming[0m
