@@ -96,15 +96,16 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   end
 
   # Match def/defp with explicit body keyword list
-  defp check_node({def_kind, meta, [_head, body_kw]})
+  defp check_node({def_kind, meta, [head, body_kw]})
        when def_kind in [:def, :defp] and is_list(body_kw) do
     body = extract_body(body_kw)
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition) and not simple_equality_with_literal?(condition),
-          do: {:ok, meta[:line]},
-          else: :error
+        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
+             not head_has_bitstring?(head),
+           do: {:ok, meta[:line]},
+           else: :error
 
       :error ->
         :error
@@ -113,13 +114,29 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   defp check_node(_), do: :error
 
+  # A function head containing a binary/bitstring pattern (`<<c::utf8, rest::binary>>`)
+  # is skipped: the clause-splitting rewrite re-renders the head and
+  # `underscore_unused_params/2` mistakes the segment type specifiers (`utf8`,
+  # `binary`, …) for unused variables, underscoring them into `_utf8`/`_binary`
+  # — invalid specifiers that don't compile (the reverted bug).
+  defp head_has_bitstring?(head_ast) do
+    {_node, found?} =
+      Macro.prewalk(head_ast, false, fn
+        {:<<>>, _, _} = node, _acc -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found?
+  end
+
   defp try_build_patch({def_kind, _meta, [head_ast, body_kw]} = node)
        when def_kind in [:def, :defp] and is_list(body_kw) do
     body = extract_body(body_kw)
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) do
+        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
+             not head_has_bitstring?(head_ast) do
           {call, existing_guard} = extract_head_parts(head_ast)
           {do_body, else_body} = extract_branches(body)
 

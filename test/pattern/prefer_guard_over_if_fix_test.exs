@@ -302,4 +302,23 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
 
     assert fix(PreferGuardOverIf, code) == code
   end
+
+  # Regression (row 110054): a head with a binary pattern must be left untouched.
+  # Splitting it underscored the segment type specifiers (`utf8`/`binary`) into
+  # invalid `_utf8`/`_binary`, producing non-compiling code that was reverted.
+  test "does not touch a function head with a binary/bitstring pattern" do
+    code = """
+    defmodule M do
+      defp collect(<<c1::utf8, rest1::binary>>, <<c2::utf8, rest2::binary>>, acc) do
+        if c1 == c2 do
+          collect(rest1, rest2, acc)
+        else
+          collect(rest1, rest2, [{c1, c2} | acc])
+        end
+      end
+    end
+    """
+
+    assert fix(PreferGuardOverIf, code) == code
+  end
 end
