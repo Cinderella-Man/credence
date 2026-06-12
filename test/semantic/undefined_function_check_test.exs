@@ -39,6 +39,10 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     test "List.at/2" do
       assert UndefinedFunction.match?(warning("List.at/2 is undefined or private"))
     end
+
+    test "Enum.length/1" do
+      assert UndefinedFunction.match?(warning("Enum.length/1 is undefined or private"))
+    end
   end
 
   describe "match?/1 – qualified: deprecated" do

@@ -634,6 +634,79 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
   end
 
+  describe "Enum.length → length" do
+    test "direct call" do
+      assert fix(
+               """
+               Enum.length(list)
+               """,
+               """
+               Enum.length/1 is undefined or private
+               """
+             ) == """
+             length(list)
+             """
+    end
+
+    test "in assignment" do
+      assert fix(
+               """
+               n = Enum.length(items)
+               """,
+               """
+               Enum.length/1 is undefined or private
+               """
+             ) == """
+             n = length(items)
+             """
+    end
+
+    test "only on reported line" do
+      input = """
+      Enum.count(x)
+      Enum.length(x)
+      Enum.at(x, 0)
+      """
+
+      assert fix(
+               input,
+               """
+               Enum.length/1 is undefined or private
+               """,
+               2
+             ) ==
+               """
+               Enum.count(x)
+               length(x)
+               Enum.at(x, 0)
+               """
+    end
+
+    test "realistic context from LLM log" do
+      input = """
+      defmodule Solution do
+        @spec partition_array(list(integer()), integer()) :: integer()
+        def partition_array(list, k) when is_list(list) and is_integer(k) do
+          {less, _greater_equal} = Enum.split_with(list, fn element -> element < k end)
+          Enum.length(less)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Solution do
+        @spec partition_array(list(integer()), integer()) :: integer()
+        def partition_array(list, k) when is_list(list) and is_integer(k) do
+          {less, _greater_equal} = Enum.split_with(list, fn element -> element < k end)
+          length(less)
+        end
+      end
+      """
+
+      assert fix(input, "Enum.length/1 is undefined or private", 5) == expected
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "qualified: no-ops" do

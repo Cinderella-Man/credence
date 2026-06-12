@@ -62,7 +62,10 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"List", "second", 1} => {:rename_add_arg, "Enum", "at", "1"},
 
     # Hallucinated Enum.take_last — use Enum.take(list, -n)
-    {"Enum", "take_last", 2} => {:rename_negate_arg, "Enum", "take", 1}
+    {"Enum", "take_last", 2} => {:rename_negate_arg, "Enum", "take", 1},
+
+    # Enum.length/1 does not exist; use Kernel.length/1 (bare local call)
+    {"Enum", "length", 1} => {:drop_module, "length"}
   }
 
   @local_replacements %{
@@ -157,6 +160,10 @@ defmodule Credence.Semantic.UndefinedFunction do
           "#{new_mod}.#{new_fun}",
           arg_index
         )
+
+      {:drop_module, new_fun} ->
+        # Replace Module.fun(...) with new_fun(...) — strips the module prefix
+        replace_drop_module(source, line_no, mod, fun, new_fun)
 
       nil ->
         case Credence.FunctionMatcher.suggest(source, mod, fun, arity, visibility: :public_only) do
@@ -253,6 +260,30 @@ defmodule Credence.Semantic.UndefinedFunction do
     else
       result
     end
+  end
+
+  defp replace_drop_module(source, line_no, mod, fun, new_fun) do
+    # Replace Module.fun with new_fun — preserves args, strips module prefix
+    # Match both Module.fun(...) and Module.fun forms
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.map_join("\n", fn
+      {line, ^line_no} ->
+        line
+        |> String.replace("#{mod}.#{fun}(", "#{new_fun}(", global: false)
+        |> then(fn result ->
+          if result == line do
+            # Try without parens (e.g. piped Enum.length())
+            String.replace(line, "#{mod}.#{fun}", new_fun, global: false)
+          else
+            result
+          end
+        end)
+
+      {line, _} ->
+        line
+    end)
   end
 
   defp replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text) do
