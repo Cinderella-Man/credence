@@ -50,7 +50,8 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
                if current_char == prev_char do
                  process(rest, index + 1, result, prev_char, count + 1)
                else
-                 process(rest, index + 1, result, current_char, 1)
+                 new_result = result <> prev_char <> Integer.to_string(count)
+                 process(rest, index + 1, new_result, current_char, 1)
                end
              end
              """)

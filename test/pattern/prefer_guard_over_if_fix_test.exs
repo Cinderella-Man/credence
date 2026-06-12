@@ -141,7 +141,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     assert fix(PreferGuardOverIf, code) == expected
   end
 
-  test "var == var equality renames later param and strips guard (Compress regression)" do
+  test "var == var equality uses when guard (Compress regression)" do
     code = """
     defmodule Compress do
       def process([], _index, result, current_char, count) do
@@ -165,11 +165,12 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
         result <> Integer.to_string(count)
       end
 
-      def process([current_char | rest], index, result, current_char, count) do
-        process(rest, index + 1, result, current_char, count + 1)
+      def process([current_char | rest], index, result, prev_char, count)
+          when current_char == prev_char do
+        process(rest, index + 1, result, prev_char, count + 1)
       end
-      def process([current_char | rest], index, result, current_char, count) do
-        new_result = result <> current_char <> Integer.to_string(count)
+      def process([current_char | rest], index, result, prev_char, count) do
+        new_result = result <> prev_char <> Integer.to_string(count)
         process(rest, index + 1, new_result, current_char, 1)
       end
     end
@@ -182,7 +183,7 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
   # NO-OP — left untouched (unsafe or undesirable to rewrite)
   # ═══════════════════════════════════════════════════════════════════
 
-  test "var == var equality with and in condition (knight_moves regression)" do
+  test "var == var equality with and in condition uses when guard (knight_moves regression)" do
     code = """
     defmodule Solution do
       defp bfs_step([], _visited, _target_x, _target_y), do: 0
@@ -203,13 +204,14 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
     defmodule Solution do
       defp bfs_step([], _visited, _target_x, _target_y), do: 0
 
-      defp bfs_step([{_cx, _cy, moves} | _rest], _visited, _cx, _cy) do
+      defp bfs_step([{cx, cy, moves} | _rest], _visited, target_x, target_y)
+           when cx == target_x and cy == target_y do
         moves
       end
-      defp bfs_step([{cx, cy, _moves} | _rest], visited, cx, cy) do
+      defp bfs_step([{_cx, _cy, _moves} | _rest], visited, target_x, target_y) do
         possible_moves = []
         new_queue = []
-        bfs_step(new_queue, visited, cx, cy)
+        bfs_step(new_queue, visited, target_x, target_y)
       end
     end
     """
