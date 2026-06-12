@@ -80,7 +80,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
   # indentation-sensitive, so `mix format` (run after the fix) restores layout.
   defp whole_node_patch(node, condition, branches) do
     else_body = extract_clause(branches, :else)
-    negated = {:!, [], [condition]}
+    negated = negate_condition(condition)
     new_if = {:if, [], [negated, [do: else_body, else: false]]}
 
     %{
@@ -88,6 +88,17 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
       change: Sourceror.to_string(new_if)
     }
   end
+
+  # Negate comparison operators directly to avoid double-negatives like
+  # `!(x != 0)`. Flip the operator instead of wrapping in `!`.
+  defp negate_condition({:!=, meta, [left, right]}), do: {:==, meta, [left, right]}
+  defp negate_condition({:==, meta, [left, right]}), do: {:!=, meta, [left, right]}
+  defp negate_condition({:>, meta, [left, right]}), do: {:<=, meta, [left, right]}
+  defp negate_condition({:<, meta, [left, right]}), do: {:>=, meta, [left, right]}
+  defp negate_condition({:>=, meta, [left, right]}), do: {:<, meta, [left, right]}
+  defp negate_condition({:<=, meta, [left, right]}), do: {:>, meta, [left, right]}
+  # Default: wrap with !
+  defp negate_condition(condition), do: {:!, [], [condition]}
 
   # Returns true when the if matches: do branch is `false`, else branch exists.
   defp anti_pattern?(_condition, branches) when is_list(branches) do

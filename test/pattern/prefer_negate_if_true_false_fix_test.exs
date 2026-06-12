@@ -25,7 +25,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
     assert fix(PreferNegateIfTrueFalse, input) == expected
   end
 
-  test "wraps binary condition in parens when negating" do
+  test "flips comparison operator instead of wrapping in !" do
     input = """
     if len_a != len_b do
       false
@@ -35,7 +35,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
     """
 
     expected = """
-    if !(len_a != len_b) do
+    if len_a == len_b do
       do_work(a, b)
     else
       false
@@ -45,10 +45,8 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
     assert fix(PreferNegateIfTrueFalse, input) == expected
   end
 
-  # Regression (row 39705): a binary-op condition together with a MULTI-statement
-  # else block previously dropped the closing paren of `!(cond)`, producing
-  # `if !(rotated_digits == nil do ...` — a syntax error that had to be reverted.
-  test "binary condition + multi-statement else block stays valid" do
+  # Comparison operator is flipped directly — no wrapping in `!()`.
+  test "binary condition + multi-statement else block — flips operator" do
     input = """
     if rotated_digits == nil do
       false
@@ -59,7 +57,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
     """
 
     expected = """
-    if !(rotated_digits == nil) do
+    if rotated_digits != nil do
       rotated_value = List.to_integer(rotated_digits)
       n != rotated_value
     else
