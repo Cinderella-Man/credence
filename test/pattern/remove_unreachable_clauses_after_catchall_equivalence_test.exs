@@ -47,4 +47,15 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallEquivalenceTest 
       ]
     )
   end
+
+  # over_fire: the catch-all precedes a guarded clause. The fix reorders
+  # (moves catch-all to end), changing runtime behaviour — the guarded clause
+  # now handles list inputs instead of falling through to the catch-all.
+  # This is a REPAIR (the programmer placed the catch-all in the wrong position),
+  # not a behaviour-preserving rewrite.
+  test "over_fire: reordering catch-all after guarded clause is a repair" do
+    mark_equivalence_repair(
+      "catch-all precedes guarded clause; reordering changes dispatch for list inputs"
+    )
+  end
 end

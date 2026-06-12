@@ -79,10 +79,10 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
     patches
   end
 
-  # Per consecutive same-name/arity group, delete one merged range running from
-  # the END of the catch-all clause through the END of the last unreachable
-  # clause — consuming the unreachable clauses AND the blank lines between them
-  # in one go, leaving the kept clauses untouched.
+  # Per consecutive same-name/arity group, either:
+  #  - DELETE unreachable clauses when they are all guard-less (existing behaviour), or
+  #  - MOVE the catch-all to the end when any unreachable clause has a guard,
+  #    so the guarded clause becomes reachable (over_fire fix).
   defp block_patches(stmts) do
     stmts
     |> filter_def_nodes()
@@ -93,12 +93,49 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
           []
 
         {catchall, unreachable} ->
-          catchall_end = Sourceror.get_range(elem(catchall, 4)).end
-          last_end = unreachable |> List.last() |> elem(4) |> Sourceror.get_range() |> Map.get(:end)
-          [%{range: %{start: catchall_end, end: last_end}, change: ""}]
+          if any_have_guards?(unreachable) do
+            move_catchall_to_end(catchall, unreachable)
+          else
+            delete_unreachable_patches(catchall, unreachable)
+          end
       end
     end)
   end
+
+  # Delete one merged range from END of catch-all through END of last unreachable
+  # clause — existing behaviour for guard-less unreachable clauses.
+  defp delete_unreachable_patches(catchall, unreachable) do
+    catchall_end = Sourceror.get_range(elem(catchall, 4)).end
+    last_end = unreachable |> List.last() |> elem(4) |> Sourceror.get_range() |> Map.get(:end)
+    [%{range: %{start: catchall_end, end: last_end}, change: ""}]
+  end
+
+  # Move the catch-all clause to the end of the group so guarded clauses
+  # become reachable. Two patches: delete the catch-all (and blank lines before
+  # the first unreachable), then insert it after the last unreachable clause.
+  defp move_catchall_to_end(catchall, unreachable) do
+    catchall_node = elem(catchall, 4)
+    catchall_range = Sourceror.get_range(catchall_node)
+    catchall_source = Sourceror.to_string(catchall_node)
+
+    first_unreachable_range = unreachable |> hd() |> elem(4) |> Sourceror.get_range()
+    last_unreachable_range = unreachable |> List.last() |> elem(4) |> Sourceror.get_range()
+
+    [
+      # Delete the catch-all clause and trailing blank lines up to the first unreachable
+      %{range: %{start: catchall_range.start, end: first_unreachable_range.start}, change: ""},
+      # Insert the catch-all after the last unreachable clause
+      %{range: %{start: last_unreachable_range.end, end: last_unreachable_range.end},
+        change: "\n\n" <> catchall_source}
+    ]
+  end
+
+  defp any_have_guards?(clauses) do
+    Enum.any?(clauses, fn {_, _, _, _, node} -> has_guard?(node) end)
+  end
+
+  defp has_guard?({dt, _, [{:when, _, _} | _]}) when dt in [:def, :defp], do: true
+  defp has_guard?(_), do: false
 
   # Walk the AST and extract def/defp groups for analysis (used by check/2).
   defp extract_def_groups({:defmodule, _meta, [_alias, kw]}) when is_list(kw) do

@@ -68,6 +68,27 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallCheckTest do
       assert issue.rule == :remove_unreachable_clauses_after_catchall
       assert issue.meta.line == 12
     end
+
+    test "flags guarded clause after catch-all (over_fire)" do
+      code = """
+      defmodule Solution do
+        def car_fleets(_target, _positions, _speeds) do
+          0
+        end
+
+        def car_fleets(target, positions, speeds) when is_list(positions) and is_list(speeds) do
+          Enum.zip(positions, speeds)
+          |> Enum.sort_by(fn {pos, _speed} -> -pos end)
+          |> Enum.map(fn {pos, speed} -> (target - pos) / speed end)
+          |> Enum.count()
+        end
+      end
+      """
+
+      [issue] = check(RemoveUnreachableClausesAfterCatchall, code)
+      assert issue.rule == :remove_unreachable_clauses_after_catchall
+      assert issue.meta.line == 6
+    end
   end
 
   describe "leaves good code alone" do

@@ -123,6 +123,14 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
 
       expected = """
       defmodule M do
+        def count(_str, "") do
+          0
+        end
+
+        def count(_str, char) when byte_size(char) != 1 do
+          0
+        end
+
         def count(_str, _char) do
           :catchall
         end
@@ -130,6 +138,42 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       """
 
       assert fix(RemoveUnreachableClausesAfterCatchall, code) == expected
+    end
+
+    # over_fire (row 113007): a wildcard catch-all preceding a guarded clause
+    # should be reordered to the end, not have the guarded clause deleted.
+    test "reorders catch-all after guarded clause (over_fire)" do
+      input = """
+      defmodule Solution do
+        def car_fleets(_target, _positions, _speeds) do
+          0
+        end
+
+        def car_fleets(target, positions, speeds) when is_list(positions) and is_list(speeds) do
+          Enum.zip(positions, speeds)
+          |> Enum.sort_by(fn {pos, _speed} -> -pos end)
+          |> Enum.map(fn {pos, speed} -> (target - pos) / speed end)
+          |> Enum.count()
+        end
+      end
+      """
+
+      expected = """
+      defmodule Solution do
+        def car_fleets(target, positions, speeds) when is_list(positions) and is_list(speeds) do
+          Enum.zip(positions, speeds)
+          |> Enum.sort_by(fn {pos, _speed} -> -pos end)
+          |> Enum.map(fn {pos, speed} -> (target - pos) / speed end)
+          |> Enum.count()
+        end
+
+        def car_fleets(_target, _positions, _speeds) do
+          0
+        end
+      end
+      """
+
+      assert fix(RemoveUnreachableClausesAfterCatchall, input) == expected
     end
   end
 end
