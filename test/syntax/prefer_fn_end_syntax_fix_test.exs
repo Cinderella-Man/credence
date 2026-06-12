@@ -64,6 +64,21 @@ defmodule Credence.Syntax.PreferFnEndSyntaxFixTest do
 
       assert fix(code) == code
     end
+
+    test "cond expression unchanged" do
+      code = """
+      defmodule Solution do
+        def check(value) do
+          cond do
+            value > 3 -> :big
+            true -> :small
+          end
+        end
+      end
+      """
+
+      assert fix(code) == code
+    end
   end
 
   test "fixed output no longer flags" do

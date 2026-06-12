@@ -81,8 +81,22 @@ defmodule Credence.Syntax.PreferFnEndSyntax do
     has_comma = Regex.match?(~r/^\s*[a-z_]\w*\s*,/, line)
     # Also check if line contains case/receive/cond/try ... do ... ->
     has_case_context = Regex.match?(~r/\b(case|receive|cond|try|fn)\b.*\bdo\b.*->/, line)
+    # Check if the char before -> (ignoring whitespace) is not a letter/underscore.
+    # This catches clause expressions like: value > 3 ->, {x, y} ->, is_atom(x) ->
+    # Lambda params always end with an identifier char (letter/underscore).
+    non_identifier_before_arrow? = non_identifier_before_arrow?(line)
     
-    (starts_with_pattern and not has_comma) or has_case_context
+    (starts_with_pattern and not has_comma) or has_case_context or non_identifier_before_arrow?
+  end
+
+  defp non_identifier_before_arrow?(line) do
+    case Regex.run(~r/(\S)\s*->/, line, capture: :all_but_first) do
+      [<<c>>] when c >= ?a and c <= ?z -> false
+      [<<c>>] when c >= ?A and c <= ?Z -> false
+      [<<c, _::binary>>] when c == ?_ -> false
+      [_] -> true
+      _ -> false
+    end
   end
 
   defp fix_line(line) do

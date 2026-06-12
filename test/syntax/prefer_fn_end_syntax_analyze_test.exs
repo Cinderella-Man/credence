@@ -42,6 +42,15 @@ defmodule Credence.Syntax.PreferFnEndSyntaxAnalyzeTest do
              """) == []
     end
 
+    test "cond expression" do
+      assert analyze("""
+             cond do
+               value > 3 -> :big
+               true -> :small
+             end
+             """) == []
+    end
+
     test "no arrow at all" do
       assert analyze("""
              x + 1
