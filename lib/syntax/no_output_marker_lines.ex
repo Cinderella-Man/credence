@@ -9,14 +9,17 @@ defmodule Credence.Syntax.NoOutputMarkerLines do
   unfixable `syntax error before: '---'` at line 1 because `---` is not
   valid Elixir syntax.
 
-  This rule strips every line whose entire content matches `^---[A-Z_]+---$`
-  (before Sourceror parsing), rescuing the code deterministically.
+  This rule strips every line whose entire content is a marker — optionally
+  surrounded by whitespace, so indented markers and CRLF (`---END---\\r`) line
+  endings are caught too — before Sourceror parsing, rescuing the code
+  deterministically. (A line that is nothing but `---WORD---` is never valid
+  Elixir, so allowing surrounding whitespace introduces no false positives.)
   """
   use Credence.Syntax.Rule
 
   alias Credence.Issue
 
-  @marker_pattern ~r/^---[A-Z_]+---$/
+  @marker_pattern ~r/^\s*---[A-Z_]+---\s*$/
 
   @impl true
   def analyze(source) do
