@@ -123,9 +123,16 @@ defmodule Credence.Pattern.NonGroupedClauses do
 
     # Don't move clauses preceded by a module attribute (`@impl true`, `@doc`,
     # etc.) — the attribute would be orphaned. `check/2` still flags them.
+    #
+    # Also don't move a clause with a MULTI-STATEMENT block body: reordering it
+    # leaves stale Sourceror `do`/`end` positions that make `Sourceror.to_string`
+    # render the block as a `do:` one-liner, dropping every statement after the
+    # first (uncompilable → the whole fix is reverted, losing all the other
+    # groupings too). Skipping just those strays lets the safe clauses regroup.
     stray_set =
       stray_set
       |> Enum.reject(&preceded_by_attr?(body, &1))
+      |> Enum.reject(&multi_statement_body?(Enum.at(body, &1)))
       |> MapSet.new()
 
     if MapSet.size(stray_set) == 0 do
@@ -147,6 +154,25 @@ defmodule Credence.Pattern.NonGroupedClauses do
         insert_after_last_sibling(acc, key, clauses)
       end)
     end
+  end
+
+  # A clause whose do-body is a multi-statement block (`do s1\n s2 end`). Moving
+  # such a clause mis-renders under Sourceror (see the reject in group_clauses).
+  defp multi_statement_body?({kind, _, args}) when kind in [:def, :defp] and is_list(args) do
+    case List.last(args) do
+      kw when is_list(kw) -> match?({:__block__, _, [_, _ | _]}, do_body_value(kw))
+      _ -> false
+    end
+  end
+
+  defp multi_statement_body?(_), do: false
+
+  defp do_body_value(kw) do
+    Enum.find_value(kw, fn
+      {{:__block__, _, [:do]}, value} -> value
+      {:do, value} -> value
+      _ -> nil
+    end)
   end
 
   defp insert_after_last_sibling(body, key, clauses) do

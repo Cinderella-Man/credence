@@ -172,5 +172,46 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
 
       assert fix(NonGroupedClauses, input) == input
     end
+
+    # Regression (row 96344): a stray clause with a MULTI-STATEMENT block body
+    # used to be reordered into a broken `def ..., do: stmt1` one-liner (dropping
+    # stmt2) → non-compiling → the whole fix reverted. It is now left in place.
+    test "does not move a stray clause with a multi-statement block body" do
+      input = """
+      defmodule M do
+        def foo(_x), do: -1
+
+        def bar(y), do: y
+
+        def foo([_ | _] = z) do
+          t = Enum.sum(z)
+          t + 1
+        end
+      end
+      """
+
+      assert fix(NonGroupedClauses, input) == input
+    end
+
+    # ...but other safe strays still regroup even when a block-body stray is present.
+    test "groups do: strays while leaving the block-body stray alone" do
+      input = """
+      defmodule M do
+        def foo(0), do: :zero
+        def bar(y), do: y
+        def foo(n), do: n + 1
+      end
+      """
+
+      expected = """
+      defmodule M do
+        def foo(0), do: :zero
+        def foo(n), do: n + 1
+        def bar(y), do: y
+      end
+      """
+
+      assert fix(NonGroupedClauses, input) == expected
+    end
   end
 end
