@@ -180,4 +180,51 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       assert valid_syntax?(fix(AvoidLengthGuardLessThan2, code))
     end
   end
+
+  # Regression (row 101469): when the body references the guarded variable, the
+  # split clauses must BIND it (`[] = var`) — bare `[]`/`[_]` left it unbound and
+  # the fix was reverted as non-compiling. A multi-line block body must also
+  # survive (it used to mis-render into a broken one-liner).
+  describe "preserves the variable when the body uses it" do
+    test "binds the variable for a block body that references it" do
+      input = """
+      defmodule Example do
+        def two(items) when length(items) < 2 do
+          Enum.reverse(items)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def two([] = items) do
+          Enum.reverse(items)
+        end
+
+        def two([_] = items) do
+          Enum.reverse(items)
+        end
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, input) == expected
+    end
+
+    test "does not add a binding when the body ignores the variable" do
+      input = """
+      defmodule Example do
+        def f(list) when length(list) < 2, do: 0
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def f([]), do: 0
+        def f([_]), do: 0
+      end
+      """
+
+      assert fix(AvoidLengthGuardLessThan2, input) == expected
+    end
+  end
 end
