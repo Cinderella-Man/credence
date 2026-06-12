@@ -59,69 +59,9 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
   def fix_patches(ast, _opts) do
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
-        {:if, if_meta, [condition, branches]} = node, acc ->
+        {:if, _if_meta, [condition, branches]} = node, acc ->
           if anti_pattern?(condition, branches) do
-            else_body = extract_clause(branches, :else)
-            rendered_else = Sourceror.to_string(else_body)
-
-            # Patch 1: Negate the condition, wrapping in parens if binary op
-            cond_range = Sourceror.get_range(condition)
-
-            negate_patches =
-              if binary_op?(condition) do
-                # ! binds tighter than binary operators, so we need parens
-                cond_end = cond_range.end
-
-                [
-                  %{
-                    range: %{start: cond_end, end: cond_end},
-                    change: ")"
-                  },
-                  %{
-                    range: %{start: cond_range.start, end: cond_range.start},
-                    change: "!("
-                  }
-                ]
-              else
-                [
-                  %{
-                    range: %{start: cond_range.start, end: cond_range.start},
-                    change: "!"
-                  }
-                ]
-              end
-
-            # Patch 2: Replace from do keyword to end with new do block
-            do_pos = if_meta[:do]
-            end_pos = if_meta[:end]
-            do_start = [line: do_pos[:line], column: do_pos[:column]]
-            # end keyword is 3 chars, so we need to extend past column 1
-            end_start = [line: end_pos[:line], column: end_pos[:column] + 3]
-
-            # Get the indentation from the else body
-            else_range = Sourceror.get_range(else_body)
-            indent = else_range.start[:column] - 1
-            indent_str = String.duplicate(" ", indent)
-
-            # Indent each line of the rendered else body
-            indented_else =
-              rendered_else
-              |> String.split("\n")
-              |> Enum.map_join("\n", fn line ->
-                if String.trim(line) == "", do: "", else: indent_str <> line
-              end)
-
-            # Indent the false literal for the else branch
-            false_str = indent_str <> "false"
-
-            new_do_block = "do\n#{indented_else}\nelse\n#{false_str}\nend"
-
-            body_patch = %{
-              range: %{start: do_start, end: end_start},
-              change: new_do_block
-            }
-
-            {node, [body_patch | negate_patches ++ acc]}
+            {node, [whole_node_patch(node, condition, branches) | acc]}
           else
             {node, acc}
           end
@@ -133,22 +73,21 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
     Enum.reverse(patches)
   end
 
-  # Check if a node is a binary operation that needs parentheses when negated.
-  # ! binds tighter than binary operators, so !a OP b parses as (!a) OP b.
-  defp binary_op?({op, _meta, [_left, _right]}) when is_atom(op) do
-    op in [
-      :==, :!=, :===, :!==, :=~,
-      :<, :>, :<=, :>=,
-      :+, :-, :*, :/, :div, :rem,
-      :<>, :++, :--,
-      :and, :or, :&&, :||,
-      :.., :in, :"not in",
-      :|>, :<<<, :>>>,
-      :"~>>", :"<<~", :"~>", :"<~", :"<|>", :"<~>"
-    ]
-  end
+  # Replace the whole `if` expression in one shot. Building the negated/swapped
+  # `if` as AST and rendering it once avoids the fragile multi-range patch
+  # arithmetic that previously dropped the closing paren of `!(cond)` whenever
+  # the moved else-body was a multi-statement block. Elixir is not
+  # indentation-sensitive, so `mix format` (run after the fix) restores layout.
+  defp whole_node_patch(node, condition, branches) do
+    else_body = extract_clause(branches, :else)
+    negated = {:!, [], [condition]}
+    new_if = {:if, [], [negated, [do: else_body, else: false]]}
 
-  defp binary_op?(_), do: false
+    %{
+      range: Sourceror.get_range(node),
+      change: Sourceror.to_string(new_if)
+    }
+  end
 
   # Returns true when the if matches: do branch is `false`, else branch exists.
   defp anti_pattern?(_condition, branches) when is_list(branches) do

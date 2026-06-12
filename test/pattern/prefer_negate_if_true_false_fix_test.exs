@@ -44,4 +44,29 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
 
     assert fix(PreferNegateIfTrueFalse, input) == expected
   end
+
+  # Regression (row 39705): a binary-op condition together with a MULTI-statement
+  # else block previously dropped the closing paren of `!(cond)`, producing
+  # `if !(rotated_digits == nil do ...` — a syntax error that had to be reverted.
+  test "binary condition + multi-statement else block stays valid" do
+    input = """
+    if rotated_digits == nil do
+      false
+    else
+      rotated_value = List.to_integer(rotated_digits)
+      n != rotated_value
+    end
+    """
+
+    expected = """
+    if !(rotated_digits == nil) do
+      rotated_value = List.to_integer(rotated_digits)
+      n != rotated_value
+    else
+      false
+    end
+    """
+
+    assert fix(PreferNegateIfTrueFalse, input) == expected
+  end
 end
