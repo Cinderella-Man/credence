@@ -73,6 +73,24 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByCheckTest do
 
       assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
     end
+
+    test "piped Enum.into(%{}) collector" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Enum.into(%{}, fn {k, v} -> {k, length(v)} end)
+      """
+
+      assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "direct Enum.into(group_by, %{}, ...) collector" do
+      code = """
+      Enum.into(Enum.group_by(list, & &1), %{}, fn {k, v} -> {k, length(v)} end)
+      """
+
+      assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
+    end
   end
 
   describe "does not flag — out of scope" do
@@ -143,6 +161,16 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByCheckTest do
       list
       |> Enum.group_by(& &2)
       |> Map.new(fn {k, v} -> {k, length(v)} end)
+      """
+
+      assert clean?(PreferEnumFrequenciesOverGroupBy, code)
+    end
+
+    test "Enum.into into a non-map target (would produce a list, not a map)" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Enum.into([], fn {k, v} -> {k, length(v)} end)
       """
 
       assert clean?(PreferEnumFrequenciesOverGroupBy, code)

@@ -76,6 +76,32 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByFixTest do
       assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
     end
 
+    test "piped Enum.into(%{}) collector: list |> Enum.group_by(& &1) |> Enum.into(%{}, ...)" do
+      code = """
+      list
+      |> Enum.group_by(& &1)
+      |> Enum.into(%{}, fn {k, v} -> {k, length(v)} end)
+      """
+
+      expected = """
+      Enum.frequencies(list)
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+    end
+
+    test "direct Enum.into form: Enum.into(Enum.group_by(enum, & &1), %{}, fn ...)" do
+      code = """
+      Enum.into(Enum.group_by(list, & &1), %{}, fn {k, v} -> {k, length(v)} end)
+      """
+
+      expected = """
+      Enum.frequencies(list)
+      """
+
+      assert fix(PreferEnumFrequenciesOverGroupBy, code) == expected
+    end
+
     test "preserves leading pipe steps as the enum source" do
       code = """
       data

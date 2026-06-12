@@ -4,6 +4,10 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
   which counts occurrences of each element — exactly what `Enum.frequencies/1` does,
   but with unnecessary intermediate per-element lists.
 
+  The collecting step may be `Map.new/2` or the equivalent `Enum.into(%{}, ...)`
+  — both build the same `%{element => count}` map, so both rewrite to
+  `Enum.frequencies/1`.
+
   Using `Enum.group_by/2` with the identity function to count occurrences is
   unnecessarily verbose. `Enum.frequencies/1` does exactly this in one call,
   is clearer, and is optimized internally.
@@ -17,6 +21,12 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
       |> Map.new(fn {k, v} -> {k, length(v)} end)
 
       Map.new(Enum.group_by(list, & &1), fn {k, v} -> {k, length(v)} end)
+
+      list
+      |> Enum.group_by(& &1)
+      |> Enum.into(%{}, fn {k, v} -> {k, length(v)} end)
+
+      Enum.into(Enum.group_by(list, & &1), %{}, fn {k, v} -> {k, length(v)} end)
 
   ## Good
 
@@ -56,10 +66,10 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
     steps = flatten_pipeline(node)
 
     if length(steps) >= 2 do
-      [group_by_step, map_new_step] = Enum.take(steps, -2)
+      [group_by_step, collect_step] = Enum.take(steps, -2)
       group_by_idx = length(steps) - 2
 
-      if map_new_length_step?(map_new_step) do
+      if count_collect_step?(collect_step) do
         cond do
           # Piped form: Enum.group_by(key_fun) — one explicit arg
           identity_group_by_piped?(group_by_step) ->
@@ -95,6 +105,18 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
     end
   end
 
+  # Direct: Enum.into(Enum.group_by(enum, & &1), %{}, fn {k, v} -> {k, length(v)} end)
+  defp check_node(
+         {{:., meta, [{:__aliases__, _, [:Enum]}, :into]}, _,
+          [group_by_call, {:%{}, _, []}, callback]}
+       ) do
+    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+      {:ok, build_issue(meta)}
+    else
+      :error
+    end
+  end
+
   defp check_node(_), do: :error
 
   # ── Fix ────────────────────────────────────────────────────────────────
@@ -104,11 +126,11 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
     steps = flatten_pipeline(node)
 
     if length(steps) >= 2 do
-      [group_by_step, map_new_step] = Enum.take(steps, -2)
+      [group_by_step, collect_step] = Enum.take(steps, -2)
       group_by_idx = length(steps) - 2
       after_steps = Enum.drop(steps, group_by_idx + 2)
 
-      if map_new_length_step?(map_new_step) do
+      if count_collect_step?(collect_step) do
         cond do
           # Piped form: Enum.group_by(key_fun) — one explicit arg
           identity_group_by_piped?(group_by_step) ->
@@ -137,6 +159,19 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
   defp fix_node(
          {{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _,
           [group_by_call, callback]}
+       ) do
+    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+      {{:., _, _}, _, [enum, _key_fn]} = group_by_call
+      {:ok, enum_frequencies(meta, enum)}
+    else
+      :error
+    end
+  end
+
+  # Direct: Enum.into(Enum.group_by(enum, & &1), %{}, fn ...)
+  defp fix_node(
+         {{:., meta, [{:__aliases__, _, [:Enum]}, :into]}, _,
+          [group_by_call, {:%{}, _, []}, callback]}
        ) do
     if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
       {{:., _, _}, _, [enum, _key_fn]} = group_by_call
@@ -216,10 +251,17 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
 
   defp identity_function?(_), do: false
 
-  defp map_new_length_step?({{:., _, [{:__aliases__, _, [:Map]}, :new]}, _, [callback]}),
+  # Piped collecting step: `|> Map.new(fn {k, v} -> {k, length(v)} end)` or the
+  # equivalent `|> Enum.into(%{}, fn {k, v} -> {k, length(v)} end)`.
+  defp count_collect_step?({{:., _, [{:__aliases__, _, [:Map]}, :new]}, _, [callback]}),
     do: is_length_of_group_fn?(callback)
 
-  defp map_new_length_step?(_), do: false
+  defp count_collect_step?(
+         {{:., _, [{:__aliases__, _, [:Enum]}, :into]}, _, [{:%{}, _, []}, callback]}
+       ),
+       do: is_length_of_group_fn?(callback)
+
+  defp count_collect_step?(_), do: false
 
   # Checks that the callback is of the form: fn {k, group} -> {k, length(group)} end
   # Sourceror wraps 2-tuples in {:__block__, _, [tuple]}, so we handle both
