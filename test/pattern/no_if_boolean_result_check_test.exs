@@ -71,12 +71,12 @@ defmodule Credence.Pattern.NoIfBooleanResultCheckTest do
     test "flags multiple occurrences" do
       code = """
       def run(a, b, c, d) do
-        x = if a do
+        x = if a > 0 do
           true
         else
           b
         end
-        y = if c do
+        y = if c > 0 do
           d
         else
           false

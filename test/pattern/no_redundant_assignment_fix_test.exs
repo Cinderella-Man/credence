@@ -196,7 +196,9 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
   # TIER 2 — tuple/list of plain variables
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "removes tuple pattern assign-and-return" do
+  # Tuple/list patterns are left unchanged — narrowed to a single plain variable
+  # (collapsing `{a, b} = f(); {a, b}` would discard the match's arity assertion).
+  describe "leaves tuple/list pattern assign-and-return unchanged" do
     test "two-element tuple" do
       input = """
       def run(input) do
@@ -205,13 +207,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      expected = """
-      def run(input) do
-        process(input)
-      end
-      """
-
-      assert fix(NoRedundantAssignment, input) == expected
+      assert fix(NoRedundantAssignment, input) == input
     end
 
     test "three-element tuple" do
@@ -222,17 +218,9 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      expected = """
-      def run(input) do
-        compute(input)
-      end
-      """
-
-      assert fix(NoRedundantAssignment, input) == expected
+      assert fix(NoRedundantAssignment, input) == input
     end
-  end
 
-  describe "removes list pattern assign-and-return" do
     test "head-tail cons pattern" do
       input = """
       def run(list) do
@@ -241,13 +229,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      expected = """
-      def run(list) do
-        list
-      end
-      """
-
-      assert fix(NoRedundantAssignment, input) == expected
+      assert fix(NoRedundantAssignment, input) == input
     end
 
     test "flat list of variables" do
@@ -258,13 +240,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      expected = """
-      def run(input) do
-        process(input)
-      end
-      """
-
-      assert fix(NoRedundantAssignment, input) == expected
+      assert fix(NoRedundantAssignment, input) == input
     end
   end
 

@@ -52,7 +52,7 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
         {:case, meta, [subject, kw]} = node, acc when is_list(kw) ->
           case extract_do_clauses(kw) do
             [clause_a, clause_b] ->
-              if not plain_variable?(subject) and
+              if provably_boolean?(subject) and
                    boolean_clause_pair?(clause_pattern(clause_a), clause_pattern(clause_b)) do
                 {node, [build_issue(meta) | acc]}
               else
@@ -72,7 +72,7 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
         {:|>, _, [expr, {:case, case_meta, [kw]}]} = node, acc when is_list(kw) ->
           case extract_do_clauses(kw) do
             [clause_a, clause_b] ->
-              if not plain_variable?(expr) and
+              if provably_boolean?(expr) and
                    boolean_clause_pair?(clause_pattern(clause_a), clause_pattern(clause_b)) do
                 {node, [build_issue(case_meta) | acc]}
               else
@@ -102,12 +102,52 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp clause_pattern({:->, _, [[pattern], _body]}), do: pattern
   defp clause_pattern(_), do: :no_match
 
-  # A plain variable like `some_flag` — legitimate pattern match, not flagged.
-  defp plain_variable?({name, _meta, context})
-       when is_atom(name) and is_atom(context),
-       do: true
+  # Only a *provably boolean* subject is safe to rewrite to `if`: a `case` on a
+  # boolean literal raises `CaseClauseError` on a non-boolean, whereas `if`
+  # treats any truthy value as `true`. Comparisons, boolean operators, `is_*`
+  # guards, `?`-suffixed predicate calls (local or remote), and known boolean
+  # stdlib calls qualify; plain variables, `Access` (`opts[:flag]`), and opaque
+  # calls (`fun.(x)`, non-`?` functions) do not.
+  @comparison_ops [:==, :!=, :===, :!==, :<, :>, :<=, :>=, :=~]
+  @boolean_ops [:and, :or, :not, :!, :in]
+  @type_guards [
+    :is_atom,
+    :is_binary,
+    :is_bitstring,
+    :is_boolean,
+    :is_float,
+    :is_function,
+    :is_integer,
+    :is_list,
+    :is_map,
+    :is_map_key,
+    :is_nil,
+    :is_number,
+    :is_pid,
+    :is_port,
+    :is_reference,
+    :is_struct,
+    :is_tuple
+  ]
 
-  defp plain_variable?(_), do: false
+  defp provably_boolean?({op, _, [_, _]}) when op in @comparison_ops, do: true
+  defp provably_boolean?({op, _, args}) when op in @boolean_ops and is_list(args), do: true
+  defp provably_boolean?({op, _, args}) when op in @type_guards and is_list(args), do: true
+
+  # A pipe takes the type of its right-most step: `x |> f() |> valid?()`.
+  defp provably_boolean?({:|>, _, [_left, right]}), do: provably_boolean?(right)
+
+  # Remote predicate call `Mod.fun?(...)`
+  defp provably_boolean?({{:., _, [_mod, fun]}, _, args}) when is_atom(fun) and is_list(args),
+    do: predicate_name?(fun)
+
+  # Local predicate call `fun?(...)` (operator/guard atoms are handled above)
+  defp provably_boolean?({fun, _, args}) when is_atom(fun) and is_list(args),
+    do: predicate_name?(fun)
+
+  defp provably_boolean?(_), do: false
+
+  defp predicate_name?(name), do: name |> Atom.to_string() |> String.ends_with?("?")
 
   # Recognises the boolean pairs we flag: true/false, true/_, false/_
   # and their flipped orderings.
@@ -143,7 +183,7 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp maybe_rewrite_case({:case, meta, [subject, kw]} = node) when is_list(kw) do
     case extract_do_clauses(kw) do
       [clause_a, clause_b] ->
-        if plain_variable?(subject) do
+        if not provably_boolean?(subject) do
           node
         else
           case rewrite_clauses(clause_a, clause_b) do
@@ -166,7 +206,7 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
        when is_list(kw) do
     case extract_do_clauses(kw) do
       [clause_a, clause_b] ->
-        if plain_variable?(expr) do
+        if not provably_boolean?(expr) do
           node
         else
           case rewrite_clauses(clause_a, clause_b) do

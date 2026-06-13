@@ -42,7 +42,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {:if, meta, [condition, branches]} = node, acc ->
-          if anti_pattern?(condition, branches) do
+          if block_form?(meta) and anti_pattern?(condition, branches) do
             {node, [build_issue(meta) | acc]}
           else
             {node, acc}
@@ -59,8 +59,8 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
   def fix_patches(ast, _opts) do
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
-        {:if, _if_meta, [condition, branches]} = node, acc ->
-          if anti_pattern?(condition, branches) do
+        {:if, if_meta, [condition, branches]} = node, acc ->
+          if block_form?(if_meta) and anti_pattern?(condition, branches) do
             {node, [whole_node_patch(node, condition, branches) | acc]}
           else
             {node, acc}
@@ -99,6 +99,12 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
   defp negate_condition({:<=, meta, [left, right]}), do: {:>, meta, [left, right]}
   # Default: wrap with !
   defp negate_condition(condition), do: {:!, [], [condition]}
+
+  # Only block-form `if cond do … end` (which carries the `:do`/`:end` tokens in
+  # its node metadata) is rewritten. A single-line keyword `if cond, do: …,
+  # else: …` — especially inside string interpolation — would be corrupted by
+  # rendering the swapped `if` as a multi-line block.
+  defp block_form?(meta), do: Keyword.has_key?(meta, :do)
 
   # Returns true when the if matches: do branch is `false`, else branch exists.
   defp anti_pattern?(_condition, branches) when is_list(branches) do

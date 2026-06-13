@@ -124,10 +124,87 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   def fix_patches(ast, opts) do
     source = Keyword.fetch!(opts, :source)
 
-    Credence.RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
-      transform_ast(input)
+    ast
+    |> Credence.RuleHelpers.patches_from_ast_transform(source, &transform_ast/1)
+    |> Enum.map(&correct_capture_range(&1, source))
+  end
+
+  # Sourceror's `get_range/1` under-reports the span of a parenthesized
+  # `&(...)` capture whose body ends in a nested call (e.g. `&(not blank?(&1))`):
+  # the `&` node carries no closing-paren metadata, so the range stops at the
+  # inner call's `)` and omits the capture's own wrapping `)`. When we replace
+  # such a capture with a `fn`, the diff-based patch is one paren short and
+  # orphans that `)` (`fn … end)` — non-compiling output. We recompute the true
+  # end by paren-matching the `&(` directly in the source and extend the patch.
+  defp correct_capture_range(%{range: %{start: start} = range, change: change} = patch, source)
+       when is_binary(change) do
+    if String.starts_with?(change, "fn") do
+      case capture_paren_end(source, start) do
+        nil -> patch
+        new_end -> %{patch | range: %{range | end: new_end}}
+      end
+    else
+      patch
+    end
+  end
+
+  defp correct_capture_range(patch, _source), do: patch
+
+  # If the source at `start` is a parenthesized capture `&(...)`, return the
+  # `[line:, column:]` position one past its matching `)`. `nil` for a bare
+  # capture (`& &1`, `&foo/1`) — those range correctly and need no correction.
+  defp capture_paren_end(source, line: sl, column: sc) do
+    chars =
+      source
+      |> positioned_chars()
+      |> Enum.drop_while(fn {_ch, l, c} -> {l, c} < {sl, sc} end)
+
+    case chars do
+      [{"&", _, _} | rest] -> scan_to_open_paren(rest)
+      _ -> nil
+    end
+  end
+
+  # Flatten the source into `{grapheme, line, column}` triples (1-based),
+  # including a synthetic newline at each line end so positions stay contiguous.
+  defp positioned_chars(source) do
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.flat_map(fn {ln, lineno} ->
+      line_chars =
+        ln
+        |> String.graphemes()
+        |> Enum.with_index(1)
+        |> Enum.map(fn {ch, col} -> {ch, lineno, col} end)
+
+      line_chars ++ [{"\n", lineno, String.length(ln) + 1}]
     end)
   end
+
+  defp scan_to_open_paren([{" ", _, _} | rest]), do: scan_to_open_paren(rest)
+  defp scan_to_open_paren([{"(", _, _} | rest]), do: scan_paren(rest, 1)
+  defp scan_to_open_paren(_), do: nil
+
+  # Skip string-literal contents so parens inside `"…"` don't unbalance the count.
+  defp scan_paren([{"\"", _, _} | rest], depth), do: scan_paren(skip_string(rest), depth)
+  defp scan_paren([{"(", _, _} | rest], depth), do: scan_paren(rest, depth + 1)
+
+  defp scan_paren([{")", l, c} | rest], 1) do
+    case rest do
+      [{_ch, nl, nc} | _] -> [line: nl, column: nc]
+      [] -> [line: l, column: c + 1]
+    end
+  end
+
+  defp scan_paren([{")", _, _} | rest], depth), do: scan_paren(rest, depth - 1)
+  defp scan_paren([_ | rest], depth), do: scan_paren(rest, depth)
+  defp scan_paren([], _depth), do: nil
+
+  defp skip_string([{"\\", _, _}, _escaped | rest]), do: skip_string(rest)
+  defp skip_string([{"\"", _, _} | rest]), do: rest
+  defp skip_string([_ | rest]), do: skip_string(rest)
+  defp skip_string([]), do: []
 
   defp transform_ast(ast) do
     Macro.postwalk(ast, fn

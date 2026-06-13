@@ -29,15 +29,19 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
         when is_atom(var_name) and is_atom(fn_name) ->
           case extract_integer(arity_block) do
             {:ok, arity} when arity > 0 ->
-              issue = %Issue{
-                rule: :no_redundant_local_capture,
-                message:
-                  "Redundant capture of local function #{fn_name}/#{arity}. " <>
-                    "Call #{fn_name}() directly instead of capturing and applying via #{var_name}().()",
-                meta: %{line: Keyword.get(meta, :line)}
-              }
+              if exclusively_applied?(ast, var_name, arity) do
+                issue = %Issue{
+                  rule: :no_redundant_local_capture,
+                  message:
+                    "Redundant capture of local function #{fn_name}/#{arity}. " <>
+                      "Call #{fn_name}() directly instead of capturing and applying via #{var_name}().()",
+                  meta: %{line: Keyword.get(meta, :line)}
+                }
 
-              {node, [issue | issues]}
+                {node, [issue | issues]}
+              else
+                {node, issues}
+              end
 
             _ ->
               {node, issues}
@@ -74,7 +78,11 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
         when is_atom(var_name) and is_atom(fn_name) ->
           case extract_integer(arity_block) do
             {:ok, arity} when arity > 0 ->
-              {node, Map.put(acc, var_name, {fn_name, arity, node})}
+              if exclusively_applied?(ast, var_name, arity) do
+                {node, Map.put(acc, var_name, {fn_name, arity, node})}
+              else
+                {node, acc}
+              end
 
             _ ->
               {node, acc}
@@ -155,4 +163,43 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
   defp extract_integer({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
   defp extract_integer(n) when is_integer(n), do: {:ok, n}
   defp extract_integer(_), do: :error
+
+  # True if `var` is used somewhere AND every one of its references is the
+  # function position of a `var.(args)` application with the captured arity — it
+  # is never passed or used as a plain value. Only then is removing the capture
+  # and inlining the calls behavior-preserving and still-compiling. (Capturing a
+  # local just to pass it to a higher-order function — `&f(recorder, &1)` — is
+  # idiomatic, and the rule must leave it alone.)
+  defp exclusively_applied?(ast, var, arity) do
+    refs = count_var_refs(ast, var)
+    refs > 0 and refs == count_applied(ast, var, arity)
+  end
+
+  # References to `var` as a plain variable, NOT counting the capture
+  # assignment's own LHS (those subtrees are skipped).
+  defp count_var_refs(ast, var) do
+    {_ast, n} =
+      Macro.prewalk(ast, 0, fn
+        {:=, _, [{^var, _, nil}, {:&, _, [{:/, _, _}]}]}, acc -> {:__skip__, acc}
+        {^var, _, nil} = node, acc -> {node, acc + 1}
+        node, acc -> {node, acc}
+      end)
+
+    n
+  end
+
+  # `var.(args)` applications whose arity matches the captured arity.
+  defp count_applied(ast, var, arity) do
+    {_ast, n} =
+      Macro.prewalk(ast, 0, fn
+        {{:., _, [{^var, _, nil}]}, _, args} = node, acc
+        when is_list(args) and length(args) == arity ->
+          {node, acc + 1}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    n
+  end
 end

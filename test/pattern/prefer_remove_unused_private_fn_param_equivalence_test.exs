@@ -1,8 +1,9 @@
 defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamEquivalenceTest do
   @moduledoc """
-  Tier 2 (module-call). A private function with an unused `_table` parameter
-  is rewritten to remove that parameter and its argument at every call site.
-  The public entry point's behaviour must be identical for every input.
+  Tier 2 (module-call). A private function with an unused (un-underscored)
+  `table` parameter is rewritten to remove that parameter and its argument at
+  every call site. The public entry point's behaviour must be identical for
+  every input.
   """
   use Credence.RuleCase, async: true
 
@@ -15,7 +16,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamEquivalenceTest do
       compute_lcs(String.to_charlist(first), String.to_charlist(second), nil)
     end
 
-    defp compute_lcs(chars_first, chars_second, _table)
+    defp compute_lcs(chars_first, chars_second, table)
          when chars_first != [] and chars_second != [] do
       first_char = hd(chars_first)
       rest_first = tl(chars_first)
@@ -32,12 +33,12 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamEquivalenceTest do
       end
     end
 
-    defp compute_lcs([], _second, _table), do: 0
-    defp compute_lcs(_first, [], _table), do: 0
+    defp compute_lcs([], _second, table), do: 0
+    defp compute_lcs(_first, [], table), do: 0
   end
   """
 
-  test "removing unused _table param preserves LCS behaviour" do
+  test "removing unused table param preserves LCS behaviour" do
     assert_equivalent_module(@before,
       rule: PreferRemoveUnusedPrivateFnParam,
       call: {:find_lcs_length, 2},

@@ -213,14 +213,18 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
 
   # --- issue builder ---
 
-  defp build_issue(meta) do
+  # Accepts either a metadata keyword list (nested form passes the `Map.new`
+  # call's meta) or a whole AST node (the pipe form passes the `Enum.map` step);
+  # `get_line/1` resolves a `:line` from either.
+  defp build_issue(node_or_meta) do
     %Issue{
       rule: :prefer_map_new_with_transform,
       message: "`Enum.map/2` followed by `Map.new/0` allocates an intermediate list. Use `Map.new/2` instead for a single-pass conversion.",
-      meta: %{line: get_line(meta)}
+      meta: %{line: get_line(node_or_meta)}
     }
   end
 
   defp get_line(meta) when is_list(meta), do: Keyword.get(meta, :line)
+  defp get_line({_, meta, _}) when is_list(meta), do: Keyword.get(meta, :line)
   defp get_line(_), do: nil
 end

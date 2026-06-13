@@ -203,12 +203,12 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
     test "two matching ifs in same function" do
       input = """
       def run(a, b, c, d) do
-        x = if a do
+        x = if a > 0 do
           true
         else
           b
         end
-        y = if c do
+        y = if c > 0 do
           d
         else
           false
@@ -219,8 +219,8 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
 
       expected = """
       def run(a, b, c, d) do
-        x = a or b
-        y = c and d
+        x = a > 0 or b
+        y = c > 0 and d
         {x, y}
       end
       """

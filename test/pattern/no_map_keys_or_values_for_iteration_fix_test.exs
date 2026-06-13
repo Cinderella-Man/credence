@@ -919,6 +919,19 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
                Enum.map(m, fn {_k, x} -> x + 1 end)
                """
     end
+
+    # Regression: a capture whose body ends in a nested call (`blank?(&1)`)
+    # makes Sourceror under-report the `&(...)` range by its wrapping `)`. The
+    # patch must still cover the whole capture so the result compiles (no
+    # orphaned `)` after `end`). See `correct_capture_range/2`.
+    test "capture body ending in a call covers the full &(...) span" do
+      assert fix(NoMapKeysOrValuesForIteration, """
+             Enum.any?(Map.values(m), &(not blank?(&1)))
+             """) ==
+               """
+               Enum.any?(m, fn {_k, x} -> not blank?(x) end)
+               """
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════

@@ -125,5 +125,35 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallCheckTest do
 
       assert clean?(RemoveUnreachableClausesAfterCatchall, code)
     end
+
+    test "repeated-variable head is not a catch-all (non-linear pattern)" do
+      # `split_key(_binary, start, start)` only matches when args 2 and 3 are
+      # equal, so the next clause is reachable. Flagging it would delete live
+      # code (real example: plug's Plug.Conn.Query.split_key/3).
+      code = """
+      defmodule Good do
+        defp split_key(_binary, start, start), do: nil
+        defp split_key(binary, current, start), do: binary_part(binary, start, current - start)
+      end
+      """
+
+      assert clean?(RemoveUnreachableClausesAfterCatchall, code)
+    end
+
+    test "bodiless function head is not a catch-all" do
+      # `def code(integer_or_atom)` declares default args / attaches docs; it
+      # generates no clause and matches nothing, so the real clauses below stay
+      # reachable (real example: plug's Plug.Conn.Status.code/1).
+      code = """
+      defmodule Good do
+        def code(integer_or_atom)
+
+        def code(integer) when integer in 100..999, do: integer
+        def code(_other), do: nil
+      end
+      """
+
+      assert clean?(RemoveUnreachableClausesAfterCatchall, code)
+    end
   end
 end

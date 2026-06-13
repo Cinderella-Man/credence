@@ -157,9 +157,14 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
   defp extract_def_groups(_), do: []
 
   # Filter and annotate def/defp nodes from a list of AST statements.
+  #
+  # Only clauses *with a body* are real clauses. A bodiless head
+  # (`def code(integer_or_atom)` — the 1-element `[head]` form used to declare
+  # default args / attach docs) generates no runtime clause and matches nothing,
+  # so it must never be treated as a catch-all (or as an unreachable clause).
   defp filter_def_nodes(stmts) do
     Enum.flat_map(stmts, fn
-      {dt, meta, [head | _]} = node when dt in [:def, :defp] ->
+      {dt, meta, [head, _body]} = node when dt in [:def, :defp] ->
         name = extract_name(head)
         args = extract_args(head)
         [{name, length(args), dt, meta, node}]
@@ -186,14 +191,19 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
   end
 
   # A catch-all clause has only bare variables or underscores as arguments,
-  # and no guard.
+  # no guard, and no repeated variable name. A repeated name (other than the
+  # bare `_`) is a non-linear pattern that imposes an equality constraint
+  # (`def f(x, x)`, `defp split_key(_b, start, start)`) — it matches only when
+  # those args are equal, so it is NOT a catch-all and clauses after it stay
+  # reachable.
   defp catch_all?({dt, _, [head | _]}) when dt in [:def, :defp] do
     case head do
       {:when, _, _} ->
         false
 
       {_, _, args} when is_list(args) ->
-        args != [] and Enum.all?(args, &bare_var_or_underscore?/1)
+        args != [] and Enum.all?(args, &bare_var_or_underscore?/1) and
+          not repeated_named_var?(args)
 
       _ ->
         false
@@ -201,6 +211,18 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
   end
 
   defp catch_all?(_), do: false
+
+  # True if any non-`_` variable name appears more than once in the arg list.
+  defp repeated_named_var?(args) do
+    names =
+      Enum.flat_map(args, fn
+        {:_, _, ctx} when is_atom(ctx) -> []
+        {name, _, ctx} when is_atom(name) and is_atom(ctx) -> [name]
+        _ -> []
+      end)
+
+    names != Enum.uniq(names)
+  end
 
   defp bare_var_or_underscore?({:_, _, ctx}) when is_atom(ctx), do: true
 

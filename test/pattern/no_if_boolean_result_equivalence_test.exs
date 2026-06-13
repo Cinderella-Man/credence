@@ -1,19 +1,20 @@
 defmodule Credence.Pattern.NoIfBooleanResultEquivalenceTest do
   @moduledoc """
   Tier 1 (expression). `if cond do true else expr end` → `cond or expr` and
-  `if cond do expr else false end` → `cond and expr` — safe because the rule
-  fires on residuals from `NoCaseTrueFalse` where the condition is boolean.
-  Input set drives the condition and the other branch both ways.
+  `if cond do expr else false end` → `cond and expr` — safe only because the
+  rule fires solely on a *provably-boolean* condition (here a comparison), so
+  feeding it into `or`/`and` cannot raise BadBooleanError. Input set drives the
+  condition and the other branch both ways.
   """
   use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoIfBooleanResult
 
-  test "if a do true else b end → a or b preserves the boolean" do
+  test "if a == true do true else b end → (a == true) or b preserves the boolean" do
     assert_equivalent(
       """
-      if a do
+      if a == true do
         true
       else
         b
@@ -25,10 +26,10 @@ defmodule Credence.Pattern.NoIfBooleanResultEquivalenceTest do
     )
   end
 
-  test "if a do b else false end → a and b preserves the boolean" do
+  test "if a == true do b else false end → (a == true) and b preserves the boolean" do
     assert_equivalent(
       """
-      if a do
+      if a == true do
         b
       else
         false

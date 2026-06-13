@@ -23,29 +23,30 @@ defmodule Credence.Pattern.PreferExplicitBinaryArithmetic do
 
   @impl true
   def check(ast, _opts) do
+    chained = chained_arith_pipes(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:|>, pipe_meta,
-         [
-           left,
-           {fun, fun_meta, [right]}
-         ]} = node,
-        issues
+        {:|>, pipe_meta, [left, {fun, fun_meta, [right]}]} = node, issues
         when fun in @binary_arithmetic_fns and is_list(fun_meta) and
                is_list(pipe_meta) and right != nil and left != nil ->
-          line = Keyword.get(fun_meta, :line) || Keyword.get(pipe_meta, :line)
+          if standalone?(node, left, chained) do
+            line = Keyword.get(fun_meta, :line) || Keyword.get(pipe_meta, :line)
 
-          {node,
-           [
-             %Issue{
-               rule: :prefer_explicit_binary_arithmetic,
-               message:
-                 "Piping into `#{fun}/2` obscures which argument is the dividend. " <> 
-                   "Use `#{fun}(a, b)` for clarity.",
-               meta: %{line: line}
-             }
-             | issues
-           ]}
+            {node,
+             [
+               %Issue{
+                 rule: :prefer_explicit_binary_arithmetic,
+                 message:
+                   "Piping into `#{fun}/2` obscures which argument is the dividend. " <>
+                     "Use `#{fun}(a, b)` for clarity.",
+                 meta: %{line: line}
+               }
+               | issues
+             ]}
+          else
+            {node, issues}
+          end
 
         node, issues ->
           {node, issues}
@@ -55,18 +56,42 @@ defmodule Credence.Pattern.PreferExplicitBinaryArithmetic do
   end
 
   @impl true
-  def fix_patches(ast, _opts) do
-    RuleHelpers.patches_from_postwalk(ast, fn
-      {:|>, _pipe_meta,
-       [
-         left,
-         {fun, _fun_meta, [right]}
-       ]}
-      when fun in @binary_arithmetic_fns and right != nil and left != nil ->
-        {fun, [], [left, right]}
+  def fix_patches(ast, opts) do
+    chained = chained_arith_pipes(ast)
+    source = Keyword.get(opts, :source) || Sourceror.to_string(ast)
 
-      node ->
-        node
+    RuleHelpers.patches_from_ast_transform(ast, source, fn tree ->
+      Macro.prewalk(tree, fn
+        {:|>, _pipe_meta, [left, {fun, _fun_meta, [right]}]} = node
+        when fun in @binary_arithmetic_fns and right != nil and left != nil ->
+          if standalone?(node, left, chained), do: {fun, [], [left, right]}, else: node
+
+        node ->
+          node
+      end)
     end)
+  end
+
+  # Only a *single* pipe (`x |> div(n)`) is flagged — not a div/rem step inside a
+  # longer chain, where the pipe form reads naturally
+  # (`diff |> div(1000) |> Integer.to_string()`).
+  defp standalone?(node, left, chained) do
+    not match?({:|>, _, _}, left) and node not in chained
+  end
+
+  # div/rem pipes that are the left operand of an enclosing pipe — i.e. piped
+  # onward into another step, so part of a chain rather than a single pipe.
+  defp chained_arith_pipes(ast) do
+    {_ast, acc} =
+      Macro.prewalk(ast, [], fn
+        {:|>, _, [{:|>, _, [_, {lfun, _, [_]}]} = inner, _right]} = node, acc
+        when lfun in @binary_arithmetic_fns ->
+          {node, [inner | acc]}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    acc
   end
 end

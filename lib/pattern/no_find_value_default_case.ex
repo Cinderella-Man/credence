@@ -54,7 +54,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCase do
       Macro.prewalk(ast, [], fn
         # case Enum.find_value(coll, fun) do nil -> d; v -> v end
         {:case, meta, [find_call, kw]} = node, acc when is_list(kw) ->
-          if find2?(find_call) and nil_identity?(kw) do
+          if find2?(find_call) and nil_identity?(kw) and eager_safe?(extract_default(kw)) do
             {node, [build_issue(:case, meta, find_call) | acc]}
           else
             {node, acc}
@@ -70,7 +70,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCase do
          ]} = node,
         acc
         when is_list(kw) ->
-          if find1?(find1_call) and nil_identity?(kw) do
+          if find1?(find1_call) and nil_identity?(kw) and eager_safe?(extract_default(kw)) do
             {node, [build_issue(:case, meta, find1_call) | acc]}
           else
             {node, acc}
@@ -78,15 +78,15 @@ defmodule Credence.Pattern.NoFindValueDefaultCase do
 
         # Enum.find_value(coll, fun) |> case do nil -> d; v -> v end
         {:|>, _, [find_call, {:case, meta, [kw]}]} = node, acc when is_list(kw) ->
-          if find2?(find_call) and nil_identity?(kw) do
+          if find2?(find_call) and nil_identity?(kw) and eager_safe?(extract_default(kw)) do
             {node, [build_issue(:case, meta, find_call) | acc]}
           else
             {node, acc}
           end
 
         # Enum.find_value(coll, fun) || default
-        {:||, meta, [find_call, _default]} = node, acc ->
-          if find2?(find_call) do
+        {:||, meta, [find_call, default]} = node, acc ->
+          if find2?(find_call) and eager_safe?(default) do
             {node, [build_issue(:or, meta, find_call) | acc]}
           else
             {node, acc}
@@ -104,7 +104,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCase do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # case Enum.find_value(coll, fun) do nil -> d; v -> v end
       {:case, _, [find_call, kw]} = node ->
-        if find2?(find_call) and nil_identity?(kw) do
+        if find2?(find_call) and nil_identity?(kw) and eager_safe?(extract_default(kw)) do
           rewrite_2arg(find_call, extract_default(kw))
         else
           node
@@ -113,7 +113,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCase do
       # coll |> Enum.find_value(fun) |> case do nil -> d; v -> v end
       # (must precede the 2-arg pipe clause below)
       {:|>, _, [{:|>, _, [coll, find1_call]}, {:case, _, [kw]}]} = node ->
-        if find1?(find1_call) and nil_identity?(kw) do
+        if find1?(find1_call) and nil_identity?(kw) and eager_safe?(extract_default(kw)) do
           rewrite_1arg_pipe(coll, find1_call, extract_default(kw))
         else
           node
@@ -121,7 +121,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCase do
 
       # Enum.find_value(coll, fun) |> case do nil -> d; v -> v end
       {:|>, _, [find_call, {:case, _, [kw]}]} = node ->
-        if find2?(find_call) and nil_identity?(kw) do
+        if find2?(find_call) and nil_identity?(kw) and eager_safe?(extract_default(kw)) do
           rewrite_2arg(find_call, extract_default(kw))
         else
           node
@@ -129,7 +129,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCase do
 
       # Enum.find_value(coll, fun) || default
       {:||, _, [find_call, default]} = node ->
-        if find2?(find_call) do
+        if find2?(find_call) and eager_safe?(default) do
           rewrite_2arg(find_call, default)
         else
           node
@@ -139,6 +139,22 @@ defmodule Credence.Pattern.NoFindValueDefaultCase do
         node
     end)
   end
+
+  # A default that is safe to evaluate eagerly as the find_value/3 argument:
+  # literals, variables, and data structures built only from those. Excludes
+  # calls (`raise`, function calls, operators) whose eager evaluation could have
+  # side effects or cost that the lazy `||` / `case nil ->` form deferred.
+  defp eager_safe?({:__block__, _, [inner]}), do: eager_safe?(inner)
+  defp eager_safe?(lit) when is_atom(lit) or is_number(lit) or is_binary(lit), do: true
+  defp eager_safe?({var, _, ctx}) when is_atom(var) and is_atom(ctx), do: true
+  defp eager_safe?({:{}, _, elems}) when is_list(elems), do: Enum.all?(elems, &eager_safe?/1)
+  defp eager_safe?({a, b}), do: eager_safe?(a) and eager_safe?(b)
+  defp eager_safe?(list) when is_list(list), do: Enum.all?(list, &eager_safe?/1)
+
+  defp eager_safe?({:%{}, _, pairs}) when is_list(pairs),
+    do: Enum.all?(pairs, fn {k, v} -> eager_safe?(k) and eager_safe?(v) end)
+
+  defp eager_safe?(_), do: false
 
   # ── Matchers ───────────────────────────────────────────────────────────
 

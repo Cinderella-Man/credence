@@ -69,29 +69,16 @@ defmodule Credence.Pattern.NoDuplicateSpec do
     {_, issues} =
       Enum.reduce(stmts, {MapSet.new(), []}, fn
         {:@, _, [{:spec, _, _}]} = node, {seen, issues} ->
-          case extract_spec_fun_name(node) do
+          case spec_key(node) do
             nil ->
               {seen, issues}
 
-            name ->
-              if MapSet.member?(seen, name) do
-                issue = build_issue(elem(node, 1), name)
-                {seen, [issue | issues]}
+            key ->
+              if MapSet.member?(seen, key) do
+                {seen, [build_issue(node) | issues]}
               else
-                {MapSet.put(seen, name), issues}
+                {MapSet.put(seen, key), issues}
               end
-          end
-
-        {dt, _, _} = def_node, {seen, issues} when dt in [:def, :defp] ->
-          # A function definition resets the seen set — clauses of the same
-          # function are normal, but a new @spec for a *different* function
-          # should not be blocked by an earlier function's spec.
-          name = extract_def_fun_name(def_node)
-
-          if name do
-            {MapSet.put(seen, name), issues}
-          else
-            {seen, issues}
           end
 
         _node, acc ->
@@ -101,32 +88,23 @@ defmodule Credence.Pattern.NoDuplicateSpec do
     issues
   end
 
-  # Walk the statement list and remove @spec annotations that are duplicates,
-  # keeping only the first @spec per function name.
+  # Walk the statement list and remove @spec annotations that duplicate an
+  # earlier identical @spec, keeping the first of each.
   defp strip_duplicate_specs(stmts) do
     {_, filtered} =
       Enum.reduce(stmts, {MapSet.new(), []}, fn
         {:@, _, [{:spec, _, _}]} = node, {seen, acc} ->
-          case extract_spec_fun_name(node) do
+          case spec_key(node) do
             nil ->
               {seen, [node | acc]}
 
-            name ->
-              if MapSet.member?(seen, name) do
+            key ->
+              if MapSet.member?(seen, key) do
                 # Duplicate — drop it
                 {seen, acc}
               else
-                {MapSet.put(seen, name), [node | acc]}
+                {MapSet.put(seen, key), [node | acc]}
               end
-          end
-
-        {dt, _, _} = def_node, {seen, acc} when dt in [:def, :defp] ->
-          name = extract_def_fun_name(def_node)
-
-          if name do
-            {MapSet.put(seen, name), [def_node | acc]}
-          else
-            {seen, [def_node | acc]}
           end
 
         node, {seen, acc} ->
@@ -136,36 +114,34 @@ defmodule Credence.Pattern.NoDuplicateSpec do
     Enum.reverse(filtered)
   end
 
-  # Extract the function name from a @spec annotation.
-  # @spec foo(args) :: return  =>  :foo
-  # @spec foo(args) :: return when constraints  =>  :foo
-  defp extract_spec_fun_name({:@, _, [{:spec, _, [spec_expr]}]}) do
-    extract_fun_from_spec(spec_expr)
-  end
+  # Metadata-independent dedup key for a @spec: its full text (name, arity, AND
+  # types). Two specs are duplicates only if all three match — distinct
+  # overloaded specs for one function (e.g. two `@spec find/2` with different
+  # types) are valid and kept.
+  defp spec_key({:@, _, [{:spec, _, [spec_expr]}]}), do: Macro.to_string(spec_expr)
+  defp spec_key(_), do: nil
 
-  defp extract_spec_fun_name(_), do: nil
+  # {name, arity} of a @spec, for the issue message.
+  defp spec_name_arity({:@, _, [{:spec, _, [spec_expr]}]}), do: fun_name_arity(spec_expr)
+  defp spec_name_arity(_), do: {:unknown, 0}
 
-  # Handle the :: with optional when clause
-  defp extract_fun_from_spec({:when, _, [spec_expr, _constraints]}) do
-    extract_fun_from_spec(spec_expr)
-  end
+  defp fun_name_arity({:when, _, [spec_expr, _constraints]}), do: fun_name_arity(spec_expr)
 
-  defp extract_fun_from_spec({:"::", _, [{name, _, _} | _]}) when is_atom(name), do: name
-  defp extract_fun_from_spec(_), do: nil
+  defp fun_name_arity({:"::", _, [{name, _, args} | _]}) when is_atom(name),
+    do: {name, arity(args)}
 
-  # Extract the function name from a def/defp head (handles guards).
-  defp extract_def_fun_name({_, _, [{:when, _, [{name, _, _} | _]} | _]})
-       when is_atom(name),
-       do: name
+  defp fun_name_arity(_), do: {:unknown, 0}
 
-  defp extract_def_fun_name({_, _, [{name, _, _} | _]}) when is_atom(name), do: name
-  defp extract_def_fun_name(_), do: nil
+  defp arity(args) when is_list(args), do: length(args)
+  defp arity(_), do: 0
 
-  defp build_issue(meta, name) do
+  defp build_issue(node) do
+    {name, arity} = spec_name_arity(node)
+    meta = elem(node, 1)
     %Issue{
       rule: :no_duplicate_spec,
       message:
-        "Duplicate `@spec` for `#{name}`. " <>
+        "Duplicate `@spec` for `#{name}/#{arity}`. " <>
           "`@spec` is a compile-time annotation; the second one is redundant and should be removed.",
       meta: %{line: Keyword.get(meta, :line)}
     }

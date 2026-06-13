@@ -67,7 +67,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
         {dt, _, _} = node, {seen, issues} when dt in [:def, :defp] ->
           case extract_clause_info(node) do
             {name, arity, args, guard} ->
-              sig = {name, arity, normalize_args(args), guard}
+              sig = signature(name, arity, args, guard)
 
               if MapSet.member?(seen, sig) do
                 meta = elem(node, 1)
@@ -95,7 +95,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
         {dt, _, _} = node, {seen, acc} when dt in [:def, :defp] ->
           case extract_clause_info(node) do
             {name, arity, args, guard} ->
-              sig = {name, arity, normalize_args(args), guard}
+              sig = signature(name, arity, args, guard)
 
               if MapSet.member?(seen, sig) do
                 # Duplicate — drop it
@@ -115,14 +115,18 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
     Enum.reverse(filtered)
   end
 
-  # Extract {name, arity, args, guard} from a def/defp node.
-  defp extract_clause_info({dt, _, [head | _]}) when dt in [:def, :defp] do
+  # Extract {name, arity, args, guard_parts} from a def/defp node.
+  #
+  # Requires a body (`[head, _body]`): a bodiless head (`def code(x)` — the
+  # 1-element `[head]` declaration form for default args / docs) generates no
+  # runtime clause and must not be compared against the real clauses below it.
+  defp extract_clause_info({dt, _, [head, _body]}) when dt in [:def, :defp] do
     case head do
       {:when, _, [{name, _, args} | guard_parts]} when is_atom(name) and is_list(args) ->
-        {name, length(args), args, extract_guard(guard_parts)}
+        {name, length(args), args, guard_parts}
 
       {name, _, args} when is_atom(name) and is_list(args) ->
-        {name, length(args), args, nil}
+        {name, length(args), args, []}
 
       _ ->
         nil
@@ -131,37 +135,54 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
 
   defp extract_clause_info(_), do: nil
 
-  # Extract a comparable guard representation from the guard parts.
-  # After the `{:when, _, [head | guards]}` split, `guards` is a list of guard
-  # expressions (for multi-guard `when g1, g2` it's a list; for a single guard
-  # it's a single-element list).
-  defp extract_guard([]), do: nil
-  defp extract_guard([single]), do: normalize_ast(single)
-  defp extract_guard(multi), do: Enum.map(multi, &normalize_ast/1)
-
-  # Normalize arguments to a comparable form.
-  # Bare variables are replaced with :_var so that `def bar(x, y)` and
-  # `def bar(a, b)` compare as identical.
-  defp normalize_args(args) do
-    Enum.map(args, &normalize_ast/1)
+  # Build a comparable signature for a clause. Args and guards are normalized
+  # together with a shared binding map so that variable identity is preserved:
+  # the Nth distinct variable name becomes `{:v, N}`, and a *repeated* name reuses
+  # its placeholder. This keeps `def f(x, x)` (a non-linear equality constraint)
+  # distinct from `def f(a, b)` — without it, both collapse to two placeholders
+  # and reachable clauses get flagged as duplicates.
+  defp signature(name, arity, args, guard_parts) do
+    {normalized_args, state} = Enum.map_reduce(args, {%{}, 0}, &normalize_node/2)
+    {normalized_guards, _state} = Enum.map_reduce(guard_parts, state, &normalize_node/2)
+    {name, arity, normalized_args, normalized_guards}
   end
 
-  # Recursively normalize an AST node, replacing variable names and stripping
-  # positional metadata so that structurally identical clauses compare equal.
-  defp normalize_ast({name, _, ctx}) when is_atom(name) and is_atom(ctx) do
-    # Bare variable — normalize to a placeholder
-    :_var
+  # Stateful normalization threading `{name => placeholder_index, next_index}`.
+  # Bare `_` is always a fresh placeholder (each underscore is independent).
+  defp normalize_node({:_, _, ctx}, {names, n}) when is_atom(ctx) do
+    {{:v, n}, {names, n + 1}}
   end
 
-  defp normalize_ast({form, _meta, args}) when is_list(args) do
-    {form, Enum.map(args, &normalize_ast/1)}
+  defp normalize_node({var, _, ctx}, {names, n}) when is_atom(var) and is_atom(ctx) do
+    case names do
+      %{^var => idx} -> {{:v, idx}, {names, n}}
+      _ -> {{:v, n}, {Map.put(names, var, n), n + 1}}
+    end
   end
 
-  defp normalize_ast({form, _meta, args}) when is_atom(args) do
-    {form, args}
+  # Module attribute `@name` — the name is a constant identifier, not a bindable
+  # variable; keep it literal so e.g. `@joins` and `@from_join_opts` (and the
+  # guards that reference them) do not normalize equal.
+  defp normalize_node({:@, _, [{name, _, ctx}]}, state) when is_atom(name) and is_atom(ctx) do
+    {{:@, name}, state}
   end
 
-  defp normalize_ast(other), do: other
+  defp normalize_node({form, _meta, args}, state) when is_list(args) do
+    {normalized, state} = Enum.map_reduce(args, state, &normalize_node/2)
+    {{form, normalized}, state}
+  end
+
+  defp normalize_node({left, right}, state) do
+    {nl, state} = normalize_node(left, state)
+    {nr, state} = normalize_node(right, state)
+    {{nl, nr}, state}
+  end
+
+  defp normalize_node(list, state) when is_list(list) do
+    Enum.map_reduce(list, state, &normalize_node/2)
+  end
+
+  defp normalize_node(other, state), do: {other, state}
 
   defp build_issue(meta, name, arity) do
     %Issue{

@@ -3,13 +3,13 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
 
   alias Credence.Pattern.PreferNoQuestionMarkForNonBoolean
 
-  test "rewrites function with ? suffix and non-boolean return type" do
+  test "rewrites private function with ? suffix and non-boolean return type" do
     input = """
     defmodule Solution do
       @spec find_max_integer?([any()]) :: integer() | nil
-      def find_max_integer?([]), do: nil
+      defp find_max_integer?([]), do: nil
 
-      def find_max_integer?(list) when is_list(list) do
+      defp find_max_integer?(list) when is_list(list) do
         if Enum.any?(list, fn element -> not is_integer(element) end) do
           nil
         else
@@ -22,9 +22,9 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
     expected = """
     defmodule Solution do
       @spec find_max_integer([any()]) :: integer() | nil
-      def find_max_integer([]), do: nil
+      defp find_max_integer([]), do: nil
 
-      def find_max_integer(list) when is_list(list) do
+      defp find_max_integer(list) when is_list(list) do
         if Enum.any?(list, fn element -> not is_integer(element) end) do
           nil
         else
@@ -37,8 +37,28 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
     assert fix(PreferNoQuestionMarkForNonBoolean, input) == expected
   end
 
-  test "rewrites function with ? suffix returning String.t()" do
+  test "rewrites private function with ? suffix returning String.t()" do
     input = """
+    defmodule Example do
+      @spec get_name?(atom()) :: String.t() | nil
+      defp get_name?(:foo), do: "bar"
+      defp get_name?(_), do: nil
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      @spec get_name(atom()) :: String.t() | nil
+      defp get_name(:foo), do: "bar"
+      defp get_name(_), do: nil
+    end
+    """
+
+    assert fix(PreferNoQuestionMarkForNonBoolean, input) == expected
+  end
+
+  test "no-op on a public def with ? suffix (breaking API rename)" do
+    code = """
     defmodule Example do
       @spec get_name?(atom()) :: String.t() | nil
       def get_name?(:foo), do: "bar"
@@ -46,15 +66,7 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
     end
     """
 
-    expected = """
-    defmodule Example do
-      @spec get_name(atom()) :: String.t() | nil
-      def get_name(:foo), do: "bar"
-      def get_name(_), do: nil
-    end
-    """
-
-    assert fix(PreferNoQuestionMarkForNonBoolean, input) == expected
+    assert fix(PreferNoQuestionMarkForNonBoolean, code) == code
   end
 
   test "no-op on boolean predicate" do

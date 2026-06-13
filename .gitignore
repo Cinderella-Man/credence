@@ -7,6 +7,10 @@
 # The directory Mix downloads your dependencies sources to.
 /deps/
 
+# Real-world corpus: source of popular hex packages fetched (once) by the
+# over-firing test layer via `mix hex.package fetch`. See test/support/corpus.ex.
+/corpus/
+
 # Where third-party dependencies like ExDoc output generated docs.
 /doc/
 

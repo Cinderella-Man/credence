@@ -62,9 +62,7 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
         {:defmodule, meta, [_name, kw]} = node, acc when is_list(kw) ->
           case Credence.RuleHelpers.extract_do_body(kw) do
             {:ok, body} ->
-              statements = block_to_list(body)
-
-              if has_logger_macro_call?(body) and not has_logger_require?(statements) do
+              if has_logger_macro_call?(body) and not has_logger_require?(body) do
                 {node, [build_issue(meta) | acc]}
               else
                 {node, acc}
@@ -95,8 +93,13 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
         _node, true ->
           {nil, true}
 
-        # Replace nested defmodule with an atom to prevent descent
+        # Replace nested defmodule / quote with an atom to prevent descent.
+        # A Logger call inside a `quote` belongs to the *generated* code (which
+        # carries its own `require Logger`), not the module defining the macro.
         {:defmodule, _, _}, acc ->
+          {:__skip__, acc}
+
+        {:quote, _, _}, acc ->
           {:__skip__, acc}
 
         {{:., _, [{:__aliases__, _, [:Logger]}, func]}, _, _}, _acc
@@ -110,15 +113,25 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
     found
   end
 
-  # Checks whether any top-level statement in the module body is
-  # `require Logger`, `import Logger`, or `use Logger`.
-  defp has_logger_require?(statements) do
-    Enum.any?(statements, fn
-      {:require, _, [{:__aliases__, _, [:Logger]} | _]} -> true
-      {:import, _, [{:__aliases__, _, [:Logger]} | _]} -> true
-      {:use, _, [{:__aliases__, _, [:Logger]} | _]} -> true
-      _ -> false
-    end)
+  # A `require Logger` (or import/use) anywhere in the module body satisfies the
+  # requirement — including inside a function body or a `quote`. Checking only
+  # top-level statements falsely flags a module whose require is co-located with
+  # the call inside a function, or lives in the `quote` alongside the call.
+  defp has_logger_require?(body) do
+    {_, found} =
+      Macro.prewalk(body, false, fn
+        _node, true ->
+          {nil, true}
+
+        {directive, _, [{:__aliases__, _, [:Logger]} | _]}, _acc
+        when directive in [:require, :import, :use] ->
+          {nil, true}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found
   end
 
   defp block_to_list({:__block__, _, stmts}), do: stmts
@@ -132,7 +145,7 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
       body ->
         statements = block_to_list(body)
 
-        if has_logger_macro_call?(body) and not has_logger_require?(statements) do
+        if has_logger_macro_call?(body) and not has_logger_require?(body) do
           new_statements = insert_require(statements)
           new_body = {:__block__, [], new_statements}
           {:defmodule, meta, [name, replace_do_body(kw, new_body)]}

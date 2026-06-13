@@ -187,13 +187,16 @@ defmodule Credence.Pattern.NonGroupedClauses do
     before ++ clauses ++ after_part
   end
 
-  defp function_key({kind, _, [{:when, _, [{name, _, args} | _]} | _]})
+  # Require a body (`[head, _body]`): a bodiless head (`def f(a, b)` — a forward
+  # declaration for default args / docs) generates no clause and must not be
+  # counted toward grouping.
+  defp function_key({kind, _, [{:when, _, [{name, _, args} | _]}, _body]})
        when kind in [:def, :defp] and is_atom(name) do
     arity = if is_list(args), do: length(args), else: 0
     {name, arity}
   end
 
-  defp function_key({kind, _, [{name, _, args} | _]})
+  defp function_key({kind, _, [{name, _, args}, _body]})
        when kind in [:def, :defp] and is_atom(name) do
     arity = if is_list(args), do: length(args), else: 0
     {name, arity}
@@ -206,7 +209,33 @@ defmodule Credence.Pattern.NonGroupedClauses do
   # Preserve `prev_key` across them so `def foo / @doc / def foo` is still
   # seen as a consecutive group; reset on any other non-function statement.
   defp previous_key_after_non_function({:@, _, _}, prev_key), do: prev_key
-  defp previous_key_after_non_function(_expr, _prev_key), do: nil
+
+  # A module-level binding between clauses may be load-bearing — its value can be
+  # used in a later clause's guard (e.g. poison's `max_sig = 1 <<< 53` used via
+  # `unquote(max_sig)`). Reordering across it would break compilation, so treat
+  # it as group-preserving rather than a separator.
+  defp previous_key_after_non_function({:=, _, _}, prev_key), do: prev_key
+
+  defp previous_key_after_non_function(expr, prev_key) do
+    # A compile-time construct that defines clauses inside it (`for ... do def
+    # ... end`, and other macro blocks) is transparent to grouping: Elixir does
+    # not emit the grouped-clauses warning across macro-generated clauses, so a
+    # literal clause after such a block is not "ungrouped". Preserve prev_key;
+    # reset only on genuine non-clause statements.
+    if generates_clauses?(expr), do: prev_key, else: nil
+  end
+
+  # True if `expr` contains a nested def/defp (e.g. a `for`/comprehension or
+  # macro block that generates function clauses at compile time).
+  defp generates_clauses?(expr) do
+    {_, found} =
+      Macro.prewalk(expr, false, fn
+        {dt, _, _} = node, _acc when dt in [:def, :defp] -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
+  end
 
   defp preceded_by_attr?(body, idx) do
     idx > 0 and match?({:@, _, _}, Enum.at(body, idx - 1))

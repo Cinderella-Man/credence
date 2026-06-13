@@ -4,27 +4,11 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
   alias Credence.Pattern.PreferRemoveUnusedPrivateFnParam
 
   # ═══════════════════════════════════════════════════════════════════
-  # REWRITES — removes unused parameter
+  # REWRITES — removes an unused, un-underscored parameter
   # ═══════════════════════════════════════════════════════════════════
 
   describe "removes unused private function parameter" do
-    test "single clause — removes trailing unused param" do
-      input = """
-      defmodule M do
-        defp compute(x, _unused), do: x + 1
-      end
-      """
-
-      expected = """
-      defmodule M do
-        defp compute(x), do: x + 1
-      end
-      """
-
-      assert fix(PreferRemoveUnusedPrivateFnParam, input) == expected
-    end
-
-    test "single clause — removes non-underscore unused param" do
+    test "single clause — removes non-underscore unused param and updates call site" do
       input = """
       defmodule M do
         def run(x), do: compute(x, nil)
@@ -47,8 +31,8 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
       defmodule M do
         def run(list), do: process(list, :unused)
 
-        defp process([], _extra), do: 0
-        defp process([h | t], _extra), do: h + process(t, nil)
+        defp process([], extra), do: 0
+        defp process([h | t], extra), do: h + process(t, nil)
       end
       """
 
@@ -74,6 +58,27 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
       input = """
       defmodule M do
         defp compute(x, y), do: x + y
+      end
+      """
+
+      assert fix(PreferRemoveUnusedPrivateFnParam, input) == input
+    end
+
+    test "underscore-prefixed unused param is left alone" do
+      input = """
+      defmodule M do
+        defp compute(x, _unused), do: x + 1
+      end
+      """
+
+      assert fix(PreferRemoveUnusedPrivateFnParam, input) == input
+    end
+
+    test "param reused in another argument's pattern is left alone" do
+      input = """
+      defmodule M do
+        defp check(pk, [pk | rest]), do: rest
+        defp check(pk, []), do: []
       end
       """
 

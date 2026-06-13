@@ -37,11 +37,15 @@ defmodule Credence.Pattern.NoIfBooleanResult do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:if, meta, [_condition, clauses]} = node, acc when is_list(clauses) ->
-          case classify_if(clauses) do
-            :true_expr -> {node, [build_issue(meta, :or) | acc]}
-            :expr_false -> {node, [build_issue(meta, :and) | acc]}
-            _ -> {node, acc}
+        {:if, meta, [condition, clauses]} = node, acc when is_list(clauses) ->
+          if provably_boolean?(condition) do
+            case classify_if(clauses) do
+              :true_expr -> {node, [build_issue(meta, :or) | acc]}
+              :expr_false -> {node, [build_issue(meta, :and) | acc]}
+              _ -> {node, acc}
+            end
+          else
+            {node, acc}
           end
 
         node, acc ->
@@ -100,21 +104,67 @@ defmodule Credence.Pattern.NoIfBooleanResult do
 
   # Postwalk callback: rewrite matching if nodes.
   defp maybe_rewrite({:if, _meta, [condition, clauses]} = node) when is_list(clauses) do
-    case classify_if(clauses) do
-      :true_expr ->
-        else_body = extract_clause(clauses, :else)
-        {:or, [], [condition, else_body]}
+    if provably_boolean?(condition) do
+      case classify_if(clauses) do
+        :true_expr ->
+          else_body = extract_clause(clauses, :else)
+          {:or, [], [condition, else_body]}
 
-      :expr_false ->
-        do_body = extract_clause(clauses, :do)
-        {:and, [], [condition, do_body]}
+        :expr_false ->
+          do_body = extract_clause(clauses, :do)
+          {:and, [], [condition, do_body]}
 
-      _ ->
-        node
+        _ ->
+          node
+      end
+    else
+      node
     end
   end
 
   defp maybe_rewrite(node), do: node
+
+  # Only a provably-boolean condition is safe to feed into `and`/`or`: those
+  # operators raise BadBooleanError on a non-boolean left operand, whereas `if`
+  # accepts any truthy value. (Comparison / boolean / `is_*` / `?`-predicate /
+  # pipe-ending-in-one expressions qualify; plain vars, `&&`/`||`, `Access`, and
+  # opaque calls do not.)
+  @comparison_ops [:==, :!=, :===, :!==, :<, :>, :<=, :>=, :=~]
+  @boolean_ops [:and, :or, :not, :!, :in]
+  @type_guards [
+    :is_atom,
+    :is_binary,
+    :is_bitstring,
+    :is_boolean,
+    :is_float,
+    :is_function,
+    :is_integer,
+    :is_list,
+    :is_map,
+    :is_map_key,
+    :is_nil,
+    :is_number,
+    :is_pid,
+    :is_port,
+    :is_reference,
+    :is_struct,
+    :is_tuple
+  ]
+
+  defp provably_boolean?({op, _, [_, _]}) when op in @comparison_ops, do: true
+  defp provably_boolean?({op, _, args}) when op in @boolean_ops and is_list(args), do: true
+  defp provably_boolean?({op, _, args}) when op in @type_guards and is_list(args), do: true
+  defp provably_boolean?({:|>, _, [_left, right]}), do: provably_boolean?(right)
+
+  defp provably_boolean?({{:., _, [_mod, fun]}, _, args}) when is_atom(fun) and is_list(args),
+    do: predicate_name?(fun)
+
+  defp provably_boolean?({fun, _, args}) when is_atom(fun) and is_list(args),
+    do: predicate_name?(fun)
+
+  defp provably_boolean?(_), do: false
+
+  defp predicate_name?(name), do: name |> Atom.to_string() |> String.ends_with?("?")
 
   defp build_issue(meta, operator) do
     %Issue{

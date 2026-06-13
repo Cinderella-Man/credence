@@ -122,8 +122,15 @@ defmodule Credence.Pattern.NoUnusedComputation do
   defp underscore_var?(_), do: false
 
   # Check if the RHS is a known-pure function call.
+  #
+  # A call that takes a function argument (`&f/1`, `fn -> … end`) is NEVER
+  # treated as discardable even if the receiver is otherwise pure: the passed
+  # function can raise or have side effects, so the call may be load-bearing
+  # despite its result being thrown away (e.g. `_ = Enum.each(keys, &cast!/1)`,
+  # where `cast!` validates by raising). Deleting it would silently drop that
+  # work, so we bail out whenever any argument is a function.
   defp pure_call?({func, _, args}) when is_atom(func) and is_list(args) and args != [] do
-    func in known_pure_functions()
+    func in known_pure_functions() and not any_fun_arg?(args)
   end
 
   # Qualified call: Module.function(args)
@@ -135,12 +142,23 @@ defmodule Credence.Pattern.NoUnusedComputation do
     full_mod = Module.concat([mod])
 
     case Map.fetch(known_pure_module_functions(), full_mod) do
-      {:ok, fns} -> func in fns
+      {:ok, fns} -> func in fns and not any_fun_arg?(args)
       :error -> false
     end
   end
 
   defp pure_call?(_), do: false
+
+  # True if any argument is a function literal or capture (`fn … end`, `&…`).
+  # Such an argument can raise or perform side effects, so a call carrying one
+  # is not safely discardable.
+  defp any_fun_arg?(args) do
+    Enum.any?(args, fn
+      {:fn, _, _} -> true
+      {:&, _, _} -> true
+      _ -> false
+    end)
+  end
 
   # Known-pure unqualified functions (Kernel and friends).
   defp known_pure_functions do
@@ -264,7 +282,6 @@ defmodule Credence.Pattern.NoUnusedComputation do
         :sample,
         :take_every,
         :intersperse,
-        :each,
         :to_list,
         :concat,
         :map_join,

@@ -5,8 +5,10 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanEquivalenceTest do
   syntactic — the function body is unchanged, so the runtime behaviour is
   identical for every input.
 
-  A wrapper function `f/1` delegates to the renamed function so both the
-  before- and after-module expose the same call target for the harness.
+  The renamed function is `defp` (the rule only flags private functions, since
+  renaming a public one is a breaking API change). A public wrapper `f/1`
+  delegates to it so both the before- and after-module expose the same call
+  target for the harness.
   """
   use Credence.RuleCase, async: true
 
@@ -16,9 +18,9 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanEquivalenceTest do
   @before """
   defmodule Solution do
     @spec find_max_integer?([any()]) :: integer() | nil
-    def find_max_integer?([]), do: nil
+    defp find_max_integer?([]), do: nil
 
-    def find_max_integer?(list) when is_list(list) do
+    defp find_max_integer?(list) when is_list(list) do
       if Enum.any?(list, fn element -> not is_integer(element) end) do
         nil
       else

@@ -4,18 +4,10 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamCheckTest do
   alias Credence.Pattern.PreferRemoveUnusedPrivateFnParam
 
   # ═══════════════════════════════════════════════════════════════════
-  # POSITIVE — should be flagged
+  # POSITIVE — should be flagged (unused AND not underscored)
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "flags unused private function parameters" do
-    test "single clause with underscore-prefixed unused param" do
-      assert flagged?(PreferRemoveUnusedPrivateFnParam, """
-             defmodule M do
-               defp compute(x, _unused), do: x + 1
-             end
-             """)
-    end
-
+  describe "flags unused, un-underscored private function parameters" do
     test "single clause with non-underscore unused param" do
       assert flagged?(PreferRemoveUnusedPrivateFnParam, """
              defmodule M do
@@ -24,36 +16,11 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamCheckTest do
              """)
     end
 
-    test "multi-clause function with unused param in all clauses" do
+    test "multi-clause function with non-underscore unused param in all clauses" do
       assert flagged?(PreferRemoveUnusedPrivateFnParam, """
              defmodule M do
-               defp compute([], _table), do: 0
-               defp compute([h | t], _table), do: h + compute(t, nil)
-             end
-             """)
-    end
-
-    test "recursive LCS-style function with unused table param" do
-      assert flagged?(PreferRemoveUnusedPrivateFnParam, """
-             defmodule Solution do
-               def find_lcs_length(first, second) do
-                 compute_lcs(String.to_charlist(first), String.to_charlist(second), nil)
-               end
-
-               defp compute_lcs(chars_first, chars_second, _table)
-                    when chars_first != [] and chars_second != [] do
-                 if hd(chars_first) == hd(chars_second) do
-                   compute_lcs(tl(chars_first), tl(chars_second), nil) + 1
-                 else
-                   max(
-                     compute_lcs(tl(chars_first), chars_second, nil),
-                     compute_lcs(chars_first, tl(chars_second), nil)
-                   )
-                 end
-               end
-
-               defp compute_lcs([], _second, _table), do: 0
-               defp compute_lcs(_first, [], _table), do: 0
+               defp compute([], table), do: 0
+               defp compute([h | t], table), do: h + compute(t, nil)
              end
              """)
     end
@@ -80,6 +47,35 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamCheckTest do
              """)
     end
 
+    test "underscore-prefixed unused param is left alone (intentional marker)" do
+      assert clean?(PreferRemoveUnusedPrivateFnParam, """
+             defmodule M do
+               defp compute(x, _unused), do: x + 1
+             end
+             """)
+    end
+
+    test "underscore-prefixed unused param across all clauses is left alone" do
+      assert clean?(PreferRemoveUnusedPrivateFnParam, """
+             defmodule M do
+               defp compute([], _table), do: 0
+               defp compute([h | t], _table), do: h + compute(t, nil)
+             end
+             """)
+    end
+
+    test "param reused in another argument's pattern (non-linear match) is left alone" do
+      # `pk` at position 0 never appears in a body/guard, but position 1's
+      # pattern `[pk | rest]` requires arg0 == hd(arg1). Removing it would change
+      # what the clause matches.
+      assert clean?(PreferRemoveUnusedPrivateFnParam, """
+             defmodule M do
+               defp check(pk, [pk | rest]), do: rest
+               defp check(pk, []), do: []
+             end
+             """)
+    end
+
     test "public function with unused param is not flagged" do
       assert clean?(PreferRemoveUnusedPrivateFnParam, """
              defmodule M do
@@ -93,14 +89,6 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamCheckTest do
              defmodule M do
                defp compute([], table), do: table
                defp compute([_h | t], table), do: compute(t, table)
-             end
-             """)
-    end
-
-    test "underscore param is considered used when referenced" do
-      assert clean?(PreferRemoveUnusedPrivateFnParam, """
-             defmodule M do
-               defp compute(x, _table), do: _table + x
              end
              """)
     end

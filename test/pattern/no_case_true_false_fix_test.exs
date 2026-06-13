@@ -272,7 +272,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
 
     test "pipe into case with flipped false/true" do
       input = """
-      check(x)
+      valid?(x)
       |> case do
         false -> :error
         true -> :ok
@@ -280,7 +280,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       """
 
       expected = """
-      if check(x) do
+      if valid?(x) do
         :ok
       else
         :error

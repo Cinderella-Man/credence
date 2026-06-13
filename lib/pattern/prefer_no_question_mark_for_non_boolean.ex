@@ -8,11 +8,17 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBoolean do
   `integer() | nil`, `String.t()`, or any other non-boolean type should
   not use the `?` suffix.
 
+  Only **private** (`defp`) functions are flagged. Renaming a public `def` is a
+  breaking API change for callers in other modules, and the rename can't reach
+  `@doc`/`c:Mod.fun?/n` references outside the analysed AST; a `?` on a public
+  function is also often a deliberate mirror of a wrapped boolean API. So the
+  rule cleans up only private helpers, whose every call site lives in-module.
+
   ## Bad
 
       @spec find_max_integer?([any()]) :: integer() | nil
-      def find_max_integer?([]), do: nil
-      def find_max_integer?(list) when is_list(list) do
+      defp find_max_integer?([]), do: nil
+      defp find_max_integer?(list) when is_list(list) do
         if Enum.any?(list, fn element -> not is_integer(element) end) do
           nil
         else
@@ -23,8 +29,8 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBoolean do
   ## Good
 
       @spec find_max_integer([any()]) :: integer() | nil
-      def find_max_integer([]), do: nil
-      def find_max_integer(list) when is_list(list) do
+      defp find_max_integer([]), do: nil
+      defp find_max_integer(list) when is_list(list) do
         if Enum.any?(list, fn element -> not is_integer(element) end) do
           nil
         else
@@ -34,8 +40,8 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBoolean do
 
   ## Auto-fix
 
-  Renames all occurrences of the flagged function (in `@spec`, `def`/`defp`,
-  and call sites) to the name without the `?` suffix.
+  Renames all occurrences of the flagged private function (in `@spec`, `defp`,
+  and in-module call sites) to the name without the `?` suffix.
   """
 
   use Credence.Pattern.Rule
@@ -85,13 +91,24 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBoolean do
 
   # Collect function names from @spec attributes that end with ? and have
   # a non-boolean return type.
+  #
+  # Restricted to *private* (`defp`) functions: renaming a public `def` is a
+  # breaking API change for callers in other modules, and the rename also can't
+  # reach `@doc`/`c:Mod.fun?/n` references outside this AST. A `?` on a public
+  # function is often a deliberate mirror of a wrapped boolean API (e.g.
+  # `Ecto.Multi.exists?` mirroring `Repo.exists?`), so we leave public names
+  # alone and only clean up private helpers whose callers all live in-module.
   defp collect_flagged_names(ast) do
+    private = private_only_names(ast)
+
     {_ast, names} =
       Macro.prewalk(ast, [], fn
         {:@, _meta, [{:spec, spec_meta, [spec_body]}]} = node, acc ->
           case extract_spec_info(spec_body) do
             {:ok, name, return_type} ->
-              if String.ends_with?(Atom.to_string(name), "?") and not boolean_type?(return_type) do
+              if String.ends_with?(Atom.to_string(name), "?") and
+                   not boolean_type?(return_type) and
+                   MapSet.member?(private, name) do
                 clean_name =
                   name |> Atom.to_string() |> String.trim_trailing("?") |> String.to_atom()
 
@@ -111,6 +128,36 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBoolean do
 
     Enum.reverse(names)
   end
+
+  # Names defined by `defp` and NOT also by `def`. A name with any public clause
+  # is treated as public (and skipped), since the rename would still break that
+  # public arity.
+  defp private_only_names(ast) do
+    {_ast, {public, private}} =
+      Macro.prewalk(ast, {MapSet.new(), MapSet.new()}, fn
+        {:def, _, [head | _]} = node, {pub, priv} ->
+          {node, {put_fun_name(pub, head), priv}}
+
+        {:defp, _, [head | _]} = node, {pub, priv} ->
+          {node, {pub, put_fun_name(priv, head)}}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    MapSet.difference(private, public)
+  end
+
+  defp put_fun_name(set, head) do
+    case fun_name(head) do
+      nil -> set
+      name -> MapSet.put(set, name)
+    end
+  end
+
+  defp fun_name({:when, _, [inner | _]}), do: fun_name(inner)
+  defp fun_name({name, _, _}) when is_atom(name), do: name
+  defp fun_name(_), do: nil
 
   # Extract function name and return type from a spec body.
   # spec_body is typically {:"::", meta, [fun_spec, return_type]}

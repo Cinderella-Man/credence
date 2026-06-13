@@ -7,40 +7,38 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParam do
   ## Why this matters
 
   An unused parameter is dead code — often a leftover from an unfinished
-  refactor or a generated DP skeleton where a table/cache argument was
-  planned but never wired in. Removing it makes the function's actual
-  contract visible and stops callers from constructing a value that nobody
-  reads.
+  refactor. Removing it makes the function's actual contract visible and stops
+  callers from constructing a value that nobody reads.
 
   Only **private** functions are flagged. Public API surfaces may carry
-  parameters for future extensibility or protocol conformance; this rule
-  does not judge those.
+  parameters for future extensibility or protocol conformance; this rule does
+  not judge those.
+
+  ### Exemptions (intentional / load-bearing parameters)
+
+  Two kinds of "unused" parameter are deliberately left alone, because removing
+  them would fight the author or change behaviour:
+
+    * **`_`-prefixed parameters** (`_table`, `_opts`) — the underscore is the
+      author's explicit "I know this is unused; it is kept for the signature,
+      arity, callback contract, or future use."
+    * **parameters reused in another argument's pattern** — a non-linear match
+      like `f(pk, [pk | tail])` only matches when the positions agree, so the
+      name is load-bearing even though it never appears in the body.
 
   ## Bad
 
-      defp compute_lcs(chars_first, chars_second, _table)
-           when chars_first != [] and chars_second != [] do
-        # body never references _table
-        ...
-      end
-
-      defp compute_lcs([], _second, _table), do: 0
-      defp compute_lcs(_first, [], _table), do: 0
+      # `cache` is never used and not underscored
+      defp compute(x, cache), do: x + 1
 
       # callers pass a pointless value:
-      compute_lcs(rest_first, rest_second, nil)
+      compute(value, nil)
 
   ## Good
 
-      defp compute_lcs(chars_first, chars_second)
-           when chars_first != [] and chars_second != [] do
-        ...
-      end
+      defp compute(x), do: x + 1
 
-      defp compute_lcs([], _second), do: 0
-      defp compute_lcs(_first, []), do: 0
-
-      compute_lcs(rest_first, rest_second)
+      compute(value)
   """
 
   use Credence.Pattern.Rule
@@ -123,15 +121,25 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParam do
 
   defp find_unused_param_indices(clauses) do
     args_per_clause = Enum.map(clauses, &extract_defp_args/1)
-    arity = args_per_clause |> hd() |> length()
 
-    Enum.reduce(0..(arity - 1), [], fn pos, acc ->
-      if param_unused_at_position?(pos, args_per_clause, clauses) do
-        acc ++ [pos]
-      else
-        acc
-      end
-    end)
+    case args_per_clause do
+      # A zero-arity head (`defp foo do ... end`) has no params to remove, and
+      # `0..(arity - 1)` would become the non-empty `0..-1` range. Bail out
+      # unless the first clause actually has positional arguments.
+      [first | _] when first != [] ->
+        arity = length(first)
+
+        Enum.reduce(0..(arity - 1), [], fn pos, acc ->
+          if param_unused_at_position?(pos, args_per_clause, clauses) do
+            acc ++ [pos]
+          else
+            acc
+          end
+        end)
+
+      _ ->
+        []
+    end
   end
 
   # A parameter at `pos` is unused if:
@@ -148,11 +156,48 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParam do
       [first | rest] ->
         first != nil and first != "_" and
           Enum.all?(rest, fn n -> n == first end) and
+          # An `_`-prefixed name in any clause means the author deliberately
+          # marked the parameter unused (kept for the signature/arity/contract).
+          # Respect that — only remove a param the author left un-underscored.
+          not any_underscored?(params_at_pos) and
+          # A name reused in another argument's pattern is load-bearing — a
+          # non-linear match like `f(pk, [pk | tail])` only matches when the
+          # positions agree; removing it changes what the clause matches.
+          not used_in_other_arg_patterns?(first, pos, args_per_clause) and
           base_unused_in_all_clauses?(first, clauses)
 
       _ ->
         false
     end
+  end
+
+  # True if the parameter at this position is `_`-prefixed in any clause.
+  defp any_underscored?(params_at_pos) do
+    Enum.any?(params_at_pos, fn
+      {name, _, ctx} when is_atom(name) and is_atom(ctx) ->
+        String.starts_with?(Atom.to_string(name), "_")
+
+      _ ->
+        false
+    end)
+  end
+
+  # True if `base_name` appears in some *other* argument's pattern in any clause.
+  defp used_in_other_arg_patterns?(base_name, pos, args_per_clause) do
+    Enum.any?(args_per_clause, fn args ->
+      args
+      |> Enum.with_index()
+      |> Enum.any?(fn {arg, idx} -> idx != pos and name_in_pattern?(arg, base_name) end)
+    end)
+  end
+
+  defp name_in_pattern?(pattern, base_name) do
+    {_, found} =
+      Macro.prewalk(pattern, false, fn node, acc ->
+        {node, acc or extract_base_name(node) == base_name}
+      end)
+
+    found
   end
 
   defp base_unused_in_all_clauses?(base_name, clauses) do
@@ -168,8 +213,10 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParam do
     end)
   end
 
-  defp extract_defp_args({:defp, _, [{:when, _, [{_, _, args}, _]}, _]}), do: args
-  defp extract_defp_args({:defp, _, [{_, _, args}, _]}), do: args
+  defp extract_defp_args({:defp, _, [{:when, _, [{_, _, args}, _]}, _]}) when is_list(args),
+    do: args
+
+  defp extract_defp_args({:defp, _, [{_, _, args}, _]}) when is_list(args), do: args
   defp extract_defp_args(_), do: []
 
   defp extract_base_name({:_, _, _}), do: "_"
