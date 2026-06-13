@@ -78,4 +78,56 @@ defmodule Credence.Syntax.NoReservedWordVariableFixTest do
 
     assert valid_syntax?(fix(input))
   end
+
+  test "does not modify false atom in pattern match" do
+    input = """
+    {false, [], seen} = bar()
+    """
+
+    assert fix(input) == input
+  end
+
+  test "does not modify true atom in pattern match" do
+    input = """
+    {true, [], seen} = bar()
+    """
+
+    assert fix(input) == input
+  end
+
+  test "does not modify false atom in if expression" do
+    input = """
+    if false do
+      :ok
+    end
+    """
+
+    assert fix(input) == input
+  end
+
+  test "false in pattern match produces valid syntax" do
+    assert valid_syntax?(fix("""
+           {false, [], seen} = bar()
+           """))
+  end
+
+  test "combined: false atom and end variable — only end is renamed" do
+    input = """
+    defmodule Example do
+      def test do
+        {false, [], end} = bar()
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      def test do
+        {false, [], end_val} = bar()
+      end
+    end
+    """
+
+    assert fix(input) == expected
+  end
 end

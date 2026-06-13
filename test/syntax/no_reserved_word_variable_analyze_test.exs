@@ -33,4 +33,30 @@ defmodule Credence.Syntax.NoReservedWordVariableAnalyzeTest do
            before ++ Enum.reverse(after_val)
            """) == []
   end
+
+  test "does not flag false atom in pattern match" do
+    assert analyze("""
+           {false, [], seen} = bar()
+           """) == []
+  end
+
+  test "does not flag true atom in pattern match" do
+    assert analyze("""
+           {true, [], seen} = bar()
+           """) == []
+  end
+
+  test "does not flag false atom in if expression" do
+    assert analyze("""
+           if false do
+             :ok
+           end
+           """) == []
+  end
+
+  test "does not flag nil atom in pattern match" do
+    assert analyze("""
+           {nil, value} = bar()
+           """) == []
+  end
 end

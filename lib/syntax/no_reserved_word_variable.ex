@@ -19,14 +19,16 @@ defmodule Credence.Syntax.NoReservedWordVariable do
   use Credence.Syntax.Rule
   alias Credence.Issue
 
-  # Reserved words that can't be used as variable names
+  # Reserved words that can't be used as variable names.
+  # NOTE: `true`, `false`, `nil` are intentionally excluded — they are always
+  # atom literals in Elixir (never variable bindings), so flagging them is a
+  # false positive.
   @reserved_words ~w(
     after end fn do catch rescue else
     case cond if unless with
     import require use alias
     def defp defmodule defstruct defprotocol defimpl
     when and or not in
-    true false nil
   )
 
   @impl true
