@@ -28,7 +28,6 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
-  alias Credence.RuleHelpers
 
   @doc_attrs [:doc, :moduledoc, :typedoc]
 
@@ -62,7 +61,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
   end
 
   @impl true
-  def fix_patches(ast, _opts) do
+  def fix_patches(ast, opts) do
     # Sourceror's AST preserves both shapes of multi-line doc strings:
     # `@doc "a\\nb"` keeps the literal `\\n` in the string value, while
     # `@doc """\na\nb\n"""` carries a `:delimiter` of `~s(""")` in the
@@ -70,7 +69,37 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
     # and `real_multi_line?`. The `:delimiter` check skips already-heredoc
     # strings — re-processing one through `Sourceror.to_string` corrupts
     # indentation.
-    RuleHelpers.patches_from_postwalk(ast, &fix_doc_node/1)
+    #
+    # We render the whole fixed AST rather than emitting per-node patches
+    # because `Sourceror.patch_string` swallows the trailing newline after
+    # a patch range when the range spans multiple source lines (real
+    # newlines case).  A whole-source patch avoids this edge case.
+    source = Keyword.get(opts, :source, "")
+    transformed = Macro.postwalk(ast, &fix_doc_node/1)
+
+    if transformed == ast do
+      []
+    else
+      new_source =
+        transformed
+        |> Sourceror.to_string()
+        |> ensure_trailing_newline()
+
+      if new_source == source do
+        []
+      else
+        lines = String.split(source, "\n")
+        end_line = max(length(lines), 1)
+        end_col = (lines |> List.last() |> byte_size()) + 1
+
+        [
+          %{
+            range: %{start: [line: 1, column: 1], end: [line: end_line, column: end_col]},
+            change: new_source
+          }
+        ]
+      end
+    end
   end
 
   defp fix_doc_node({:@, meta, [{attr, attr_meta, [{:__block__, str_meta, [value]}]}]} = node)

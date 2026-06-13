@@ -235,6 +235,30 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
 
       assert fix(PreferHeredocForMultiLineDoc, code) == expected
     end
+
+    test "converts real-newline @doc (not escaped \\n) to heredoc" do
+      # This exercises the `real_multi_line?` path — the string has actual
+      # newlines (e.g. after another rule converted a heredoc to a string).
+      code = """
+      defmodule Example do
+        @doc "Line one.
+      Line two."
+        def foo, do: :ok
+      end
+      """
+
+      expected = ~S'''
+      defmodule Example do
+        @doc """
+        Line one.
+        Line two.
+        """
+        def foo, do: :ok
+      end
+      '''
+
+      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+    end
   end
 
   describe "fix/2 — no-ops" do
