@@ -35,7 +35,7 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
   @impl true
   def match?(%{message: message}) when is_binary(message) do
     String.contains?(message, "outside module") or
-      String.contains?(message, "redefining @moduledoc")
+      String.contains?(message, "redefining @")
   end
 
   def match?(_), do: false
@@ -125,15 +125,42 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
 
   defp prepend_body({:defmodule, dm_meta, [alias_node, [{do_key, body}]]}, attrs) do
     existing_stmts = body_statements(body)
-    # If we're moving in a @moduledoc with real content, strip any inner
+    # Drop incoming attrs that would duplicate an attribute already inside the
+    # module (the inner one takes precedence).  Exception: a real @moduledoc
+    # being moved in should REPLACE a `@moduledoc false` — keep the incoming one
+    # and strip the false one below.
+    existing_attr_names = existing_attr_names(existing_stmts)
+    real_moduledoc_incoming = has_real_moduledoc?(attrs)
+
+    filtered_attrs =
+      Enum.filter(attrs, fn attr ->
+        name = attr_name(attr)
+        cond do
+          is_nil(name) ->
+            true
+
+          not MapSet.member?(existing_attr_names, name) ->
+            true
+
+          # @moduledoc false in body + real @moduledoc incoming → replace false with real
+          name == :moduledoc and real_moduledoc_incoming and moduledoc_false_in?(existing_stmts) ->
+            true
+
+          true ->
+            false
+        end
+      end)
+
+    # If we kept a real @moduledoc from the incoming attrs, strip any inner
     # @moduledoc false to avoid a duplicate-attribute warning.
     cleaned =
-      if has_real_moduledoc?(attrs) do
+      if real_moduledoc_incoming do
         Enum.reject(existing_stmts, &moduledoc_false?/1)
       else
         existing_stmts
       end
-    new_body = {:__block__, [], attrs ++ cleaned}
+
+    new_body = {:__block__, [], filtered_attrs ++ cleaned}
     {:defmodule, dm_meta, [alias_node, [{do_key, new_body}]]}
   end
 
@@ -163,6 +190,21 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
   # True for `@moduledoc false`.
   defp moduledoc_false?({:@, _, [{:moduledoc, _, [{:__block__, _, [false]}]}]}), do: true
   defp moduledoc_false?(_), do: false
+
+  # Returns a MapSet of movable attribute names already present in the body.
+  defp existing_attr_names(stmts) do
+    stmts
+    |> Enum.map(&attr_name/1)
+    |> Enum.reject(&is_nil/1)
+    |> MapSet.new()
+  end
+
+  # Extracts the attribute name from a `@name ...` AST node, or nil.
+  defp attr_name({:@, _, [{name, _, _}]}) when name in @movable, do: name
+  defp attr_name(_), do: nil
+
+  # True when any statement in `stmts` is `@moduledoc false`.
+  defp moduledoc_false_in?(stmts), do: Enum.any?(stmts, &moduledoc_false?/1)
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line

@@ -93,6 +93,34 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
     assert fix(input, "cannot invoke @/1 outside module") == input
   end
 
+  test "drops incoming @doc when module already has @doc" do
+    input = """
+    @doc \"""
+    Validates whether a given string is a valid IPv4 address.
+    \"""
+    defmodule Solution do
+      @doc \"""
+      Checks if the given string is a valid IPv4 address.
+      \"""
+      def valid_ip?(address), do: true
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      @doc \"""
+      Checks if the given string is a valid IPv4 address.
+      \"""
+      def valid_ip?(address), do: true
+    end
+    """
+
+    diag_message = "redefining @doc attribute previously set at line 2"
+    result = fix(input, diag_message)
+    assert result == expected
+    assert valid_syntax?(result)
+  end
+
   test "drops inner @moduledoc false when moving real @moduledoc into module" do
     input = """
     @moduledoc \"""

@@ -22,4 +22,9 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperCheckTest do
     diag = %{severity: :warning, message: "redefining @moduledoc attribute previously set at line 2", position: {6, 1}}
     assert RequireDefmoduleWrapper.match?(diag)
   end
+
+  test "matches the redefining @doc diagnostic" do
+    diag = %{severity: :warning, message: "redefining @doc attribute previously set at line 2", position: 5, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: ~c"credence_check.ex", line: 5]}], source: "credence_check.ex", span: nil}
+    assert RequireDefmoduleWrapper.match?(diag)
+  end
 end
