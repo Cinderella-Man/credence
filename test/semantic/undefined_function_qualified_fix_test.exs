@@ -707,6 +707,126 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
   end
 
+  # ── List.* → Enum.* ─────────────────────────────────────────────
+
+  describe "List.max → Enum.max" do
+    test "direct call" do
+      assert fix(
+               """
+               List.max(integers)
+               """,
+               "List.max/1 is undefined or private"
+             ) == """
+             Enum.max(integers)
+             """
+    end
+
+    test "in expression" do
+      assert fix(
+               """
+               List.max(integers) - List.min(integers)
+               """,
+               "List.max/1 is undefined or private"
+             ) == """
+             Enum.max(integers) - List.min(integers)
+             """
+    end
+
+    test "piped" do
+      assert fix(
+               """
+               integers |> List.max()
+               """,
+               "List.max/1 is undefined or private"
+             ) == """
+             integers |> Enum.max()
+             """
+    end
+  end
+
+  describe "List.min → Enum.min" do
+    test "direct call" do
+      assert fix(
+               """
+               List.min(integers)
+               """,
+               "List.min/1 is undefined or private"
+             ) == """
+             Enum.min(integers)
+             """
+    end
+
+    test "in expression" do
+      assert fix(
+               """
+               List.max(integers) - List.min(integers)
+               """,
+               "List.min/1 is undefined or private"
+             ) == """
+             List.max(integers) - Enum.min(integers)
+             """
+    end
+
+    test "piped" do
+      assert fix(
+               """
+               integers |> List.min()
+               """,
+               "List.min/1 is undefined or private"
+             ) == """
+             integers |> Enum.min()
+             """
+    end
+  end
+
+  describe "List.sum → Enum.sum" do
+    test "direct call" do
+      assert fix(
+               """
+               List.sum(numbers)
+               """,
+               "List.sum/1 is undefined or private"
+             ) == """
+             Enum.sum(numbers)
+             """
+    end
+
+    test "piped" do
+      assert fix(
+               """
+               numbers |> List.sum()
+               """,
+               "List.sum/1 is undefined or private"
+             ) == """
+             numbers |> Enum.sum()
+             """
+    end
+  end
+
+  describe "List.product → Enum.product" do
+    test "direct call" do
+      assert fix(
+               """
+               List.product(numbers)
+               """,
+               "List.product/1 is undefined or private"
+             ) == """
+             Enum.product(numbers)
+             """
+    end
+
+    test "piped" do
+      assert fix(
+               """
+               numbers |> List.product()
+               """,
+               "List.product/1 is undefined or private"
+             ) == """
+             numbers |> Enum.product()
+             """
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "qualified: no-ops" do

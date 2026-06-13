@@ -52,6 +52,12 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"List", "pop", 1} => {:rename, "List", "last"},
     {"List", "drop", 2} => {:rename, "Enum", "drop"},
 
+    # Hallucinated List.* that should be Enum.*
+    {"List", "max", 1} => {:rename, "Enum", "max"},
+    {"List", "min", 1} => {:rename, "Enum", "min"},
+    {"List", "sum", 1} => {:rename, "Enum", "sum"},
+    {"List", "product", 1} => {:rename, "Enum", "product"},
+
     # List.at/2 does not exist; the idiomatic equivalent is Enum.at/2
     {"List", "at", 2} => {:rename, "Enum", "at"},
 
