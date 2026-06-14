@@ -84,12 +84,71 @@ defmodule Credence.Syntax.PreferSingleDocAttribute do
   end
 
   defp remove_orphaned_doc_heredocs(lines) do
+    ranges = find_removal_ranges(lines)
+
     lines
     |> Enum.with_index()
-    |> Enum.reject(fn {line, idx} ->
-      Regex.match?(@doc_heredoc_open, line) and followed_by_doc?(lines, idx)
+    |> Enum.reject(fn {_line, idx} ->
+      Enum.any?(ranges, fn {start_idx, end_idx} -> idx >= start_idx and idx <= end_idx end)
     end)
     |> Enum.map(fn {line, _idx} -> line end)
+  end
+
+  defp find_removal_ranges(lines) do
+    lines
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {line, idx} ->
+      if Regex.match?(@doc_heredoc_open, line) and followed_by_doc?(lines, idx) do
+        case find_closing_heredoc(lines, idx) do
+          nil -> [{idx, idx}]
+          close_idx -> [{idx, close_idx}]
+        end
+      else
+        []
+      end
+    end)
+  end
+
+  defp find_closing_heredoc(lines, open_idx) do
+    doc_idx = find_next_doc_line(lines, open_idx + 1)
+
+    case doc_idx do
+      nil ->
+        nil
+
+      idx ->
+        lines
+        |> Enum.drop(idx + 1)
+        |> Enum.with_index(idx + 1)
+        |> Enum.reduce_while(nil, fn {line, line_idx}, _acc ->
+          trimmed = String.trim(line)
+
+          cond do
+            trimmed == "" ->
+              {:cont, nil}
+
+            Regex.match?(~r/^\s*"""\s*$/, line) ->
+              {:halt, line_idx}
+
+            Regex.match?(~r/^\s*(def\w*|end\b|@\w+)/, trimmed) ->
+              {:halt, nil}
+
+            true ->
+              {:cont, nil}
+          end
+        end)
+    end
+  end
+
+  defp find_next_doc_line(lines, start_idx) do
+    lines
+    |> Enum.drop(start_idx)
+    |> Enum.with_index(start_idx)
+    |> Enum.find_value(fn {line, idx} ->
+      if Regex.match?(~r/^\s*@doc\b/, line) do
+        idx
+      end
+    end)
   end
 
   defp followed_by_doc?(lines, idx) do

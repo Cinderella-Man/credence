@@ -58,4 +58,61 @@ defmodule Credence.Syntax.PreferSingleDocAttributeFixTest do
              """)
            )
   end
+
+  test "fixes heredoc with closing triple-quotes" do
+    input = """
+    defmodule Solution do
+      @doc \"\"\"
+      @doc "First doc."
+      \"\"\"
+      @doc "Second doc."
+      def hello do
+        :ok
+      end
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      @doc "Second doc."
+      def hello do
+        :ok
+      end
+    end
+    """
+
+    assert fix(input) == expected
+  end
+
+  test "fixed heredoc with closing triple-quotes no longer flags" do
+    assert analyze(
+             fix("""
+             defmodule Solution do
+               @doc \"\"\"
+               @doc "First doc."
+               \"\"\"
+               @doc "Second doc."
+               def hello do
+                 :ok
+               end
+             end
+             """)
+           ) == []
+  end
+
+  test "fixed heredoc with closing triple-quotes is well-formed (parses)" do
+    assert valid_syntax?(
+             fix("""
+             defmodule Solution do
+               @doc \"\"\"
+               @doc "First doc."
+               \"\"\"
+               @doc "Second doc."
+               def hello do
+                 :ok
+               end
+             end
+             """)
+           )
+  end
 end

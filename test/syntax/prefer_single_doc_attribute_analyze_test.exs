@@ -42,4 +42,20 @@ defmodule Credence.Syntax.PreferSingleDocAttributeAnalyzeTest do
            end
            """) == []
   end
+
+  test "flags heredoc with closing triple-quotes" do
+    assert [%Issue{rule: :prefer_single_doc_attribute, meta: %{line: 2}}] =
+             analyze("""
+             defmodule Solution do
+               @doc \"\"\"
+               @doc "First doc."
+               \"\"\"
+               @doc "Second doc."
+               def hello do
+                 :ok
+               end
+             end
+             """)
+  end
+
 end
