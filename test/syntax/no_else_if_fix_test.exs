@@ -57,4 +57,55 @@ defmodule Credence.Syntax.NoElseIfFixTest do
              """)
            )
   end
+
+  test "fixes else branch with comment-only body (inserts nil)" do
+    input = """
+    if n == 0 do
+      [1]
+    else if n == 1 do
+      [1, 1]
+    else
+      # comment only, no expression
+    end
+    """
+
+    expected = """
+    cond do
+      n == 0 -> [1]
+      n == 1 -> [1, 1]
+      true -> nil
+        # comment only, no expression
+    end
+    """
+
+    assert fix(input) == expected
+  end
+
+  test "comment-only else fix is well-formed (parses)" do
+    assert valid_syntax?(
+             fix("""
+             if n == 0 do
+               [1]
+             else if n == 1 do
+               [1, 1]
+             else
+               # comment only, no expression
+             end
+             """)
+           )
+  end
+
+  test "comment-only else fix no longer flags" do
+    assert analyze(
+             fix("""
+             if n == 0 do
+               [1]
+             else if n == 1 do
+               [1, 1]
+             else
+               # comment only, no expression
+             end
+             """)
+           ) == []
+  end
 end

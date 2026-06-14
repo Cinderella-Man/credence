@@ -13,7 +13,8 @@ defmodule Credence.Semantic.PreferEnumJoin do
 
   @impl true
   def match?(%{severity: :warning, message: msg}) when is_binary(msg) do
-    String.contains?(msg, "redefining module")
+    String.contains?(msg, "String.join") and
+      String.contains?(msg, "is undefined or private")
   end
 
   def match?(_), do: false

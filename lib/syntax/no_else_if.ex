@@ -37,7 +37,13 @@ defmodule Credence.Syntax.NoElseIf do
     |> Enum.with_index(1)
     |> Enum.flat_map(fn {line, line_no} ->
       if Regex.match?(@else_if_re, line) do
-        [%Issue{rule: :no_else_if, message: "Use `cond` instead of `else if`", meta: %{line: line_no}}]
+        [
+          %Issue{
+            rule: :no_else_if,
+            message: "Use `cond` instead of `else if`",
+            meta: %{line: line_no}
+          }
+        ]
       else
         []
       end
@@ -47,9 +53,11 @@ defmodule Credence.Syntax.NoElseIf do
   @impl true
   def fix(source) do
     lines = String.split(source, "\n")
+
     case find_else_if(lines) do
       {:ok, idx} ->
         rewrite_block(lines, idx) |> Enum.join("\n")
+
       :not_found ->
         source
     end
@@ -80,15 +88,19 @@ defmodule Credence.Syntax.NoElseIf do
 
   defp scan_back_for_if(lines, idx, target_indent) when idx >= 0 do
     line = Enum.at(lines, idx)
+
     cond do
       is_if_line?(line) and get_indent(line) == target_indent ->
         {:ok, idx}
+
       get_indent(line) < target_indent ->
         :not_found
+
       true ->
         scan_back_for_if(lines, idx - 1, target_indent)
     end
   end
+
   defp scan_back_for_if(_, _, _), do: :not_found
 
   defp collect_branches(lines, if_idx, else_if_idx, else_if_indent) do
@@ -112,6 +124,7 @@ defmodule Credence.Syntax.NoElseIf do
 
   defp collect_else_if_branches(lines, idx, target_indent, acc) do
     line = Enum.at(lines, idx)
+
     if Regex.match?(@else_if_re, line) and get_indent(line) == target_indent do
       cond = extract_else_if_condition(line)
       next_idx = find_next_else(lines, idx + 1, target_indent)
@@ -125,6 +138,7 @@ defmodule Credence.Syntax.NoElseIf do
   defp find_next_else(lines, idx, target_indent) do
     Enum.find_value(idx..(length(lines) - 1), length(lines) - 1, fn i ->
       line = Enum.at(lines, i)
+
       if line != nil and get_indent(line) == target_indent and
            (Regex.match?(~r/^\s*else\b/, line) or is_if_end?(line)) do
         i
@@ -134,6 +148,7 @@ defmodule Credence.Syntax.NoElseIf do
 
   defp find_else_at_indent(lines, idx, target_indent) do
     line = Enum.at(lines, idx)
+
     if line != nil and get_indent(line) == target_indent do
       if Regex.match?(~r/^\s*else\s*$/, String.trim_trailing(line)) do
         end_idx = find_end(lines, idx + 1, target_indent)
@@ -160,13 +175,29 @@ defmodule Credence.Syntax.NoElseIf do
     branch_lines =
       Enum.flat_map(all_branches, fn {cond_str, body_lines} ->
         clean_body = Enum.reject(body_lines, &blank?/1)
-        case clean_body do
+        {expr_lines, trailing_comments} = Enum.split_with(clean_body, &(not comment?(&1)))
+
+        case expr_lines do
           [] ->
-            ["#{body_indent}#{cond_str} ->"]
+            # No expression lines — only comments (or nothing). A `cond` clause
+            # still needs a value after `->`, so insert `nil` and keep comments
+            # below it; otherwise the rewrite produces a bodyless `true ->` that
+            # the validator rejects and reverts.
+            case trailing_comments do
+              [] ->
+                ["#{body_indent}#{cond_str} ->"]
+
+              _ ->
+                nil_line = "#{body_indent}#{cond_str} -> nil"
+                comment_tail = Enum.map(trailing_comments, &"#{body_indent}  #{String.trim(&1)}")
+                [nil_line | comment_tail]
+            end
+
           _ ->
-            first = "#{body_indent}#{cond_str} -> #{String.trim(hd(clean_body))}"
-            rest = Enum.map(tl(clean_body), fn l -> "#{body_indent}  #{String.trim(l)}" end)
-            [first | rest]
+            first = "#{body_indent}#{cond_str} -> #{String.trim(hd(expr_lines))}"
+            rest = Enum.map(tl(expr_lines), &"#{body_indent}  #{String.trim(&1)}")
+            comment_tail = Enum.map(trailing_comments, &"#{body_indent}  #{String.trim(&1)}")
+            [first | rest] ++ comment_tail
         end
       end)
 
@@ -198,4 +229,5 @@ defmodule Credence.Syntax.NoElseIf do
   end
 
   defp blank?(line), do: String.trim(line) == ""
+  defp comment?(line), do: Regex.match?(~r/^\s*#/, line)
 end

@@ -5,8 +5,10 @@ defmodule Credence.Semantic.PreferEnumJoinFixTest do
 
   alias Credence.Semantic.PreferEnumJoin
 
-  defp fix(source, message, line \\ 3) do
-    PreferEnumJoin.fix(source, %{severity: :warning, message: message, position: {line, 1}})
+  @real_message "String.join/2 is undefined or private"
+
+  defp fix(source, line) do
+    PreferEnumJoin.fix(source, %{severity: :warning, message: @real_message, position: {line, 1}})
   end
 
   test "fixes String.join to Enum.join" do
@@ -26,27 +28,66 @@ defmodule Credence.Semantic.PreferEnumJoinFixTest do
     end
     """
 
-    message =
-      "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)"
+    assert fix(input, 3) == expected
+  end
 
-    assert fix(input, message) == expected
+  test "only rewrites the flagged line" do
+    input = """
+    defmodule Solution do
+      def a(list), do: String.join(list, "")
+      def b(list), do: String.join(list, "")
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      def a(list), do: Enum.join(list, "")
+      def b(list), do: String.join(list, "")
+    end
+    """
+
+    assert fix(input, 2) == expected
   end
 
   test "fixed output is well-formed (parses)" do
-    message =
-      "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)"
+    input = """
+    defmodule Solution do
+      def check_string_equality(list_a, list_b) do
+        String.join(list_a, "") == String.join(list_b, "")
+      end
+    end
+    """
 
-    assert valid_syntax?(
-             fix(
-               """
-               defmodule Solution do
-                 def check_string_equality(list_a, list_b) do
-                   String.join(list_a, "") == String.join(list_b, "")
-                 end
-               end
-               """,
-               message
-             )
-           )
+    assert valid_syntax?(fix(input, 3))
+  end
+
+  describe "integration through Credence.Semantic" do
+    test "fixes String.join end-to-end and the result compiles clean" do
+      source = """
+      defmodule EnumJoinFixInteg1 do
+        def render(list), do: String.join(list, ", ")
+      end
+      """
+
+      expected = """
+      defmodule EnumJoinFixInteg1 do
+        def render(list), do: Enum.join(list, ", ")
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      assert fixed == expected
+      assert valid_syntax?(fixed)
+    end
+
+    test "leaves correct Enum.join code untouched" do
+      source = """
+      defmodule EnumJoinFixInteg2 do
+        def render(list), do: Enum.join(list, ", ")
+      end
+      """
+
+      assert Credence.Semantic.fix(source) == source
+    end
   end
 end
