@@ -4,15 +4,11 @@ defmodule Credence.Pattern.PreferMapNewWithTransformFixTest do
   alias Credence.Pattern.PreferMapNewWithTransform
 
   test "rewrites Enum.map |> Map.new pipe pattern" do
-    input = """
-    Enum.map(1..5, fn i -> {i, i * i} end) |> Map.new()
-    """
+    input = "Enum.map(1..5, fn i -> {i, i * i} end) |> Map.new()"
 
-    expected = """
-    Map.new(1..5, fn i -> {i, i * i} end)
-    """
+    expected = "Map.new(1..5, fn i -> {i, i * i} end)"
 
-    assert fix(PreferMapNewWithTransform, input) == expected
+    confirm_fix(fix(PreferMapNewWithTransform, input), expected)
   end
 
   test "rewrites multi-line pipe pattern" do
@@ -22,23 +18,17 @@ defmodule Credence.Pattern.PreferMapNewWithTransformFixTest do
     |> Map.new()
     """
 
-    expected = """
-    Map.new(1..5, fn i -> {i, i * i} end)
-    """
+    expected = "Map.new(1..5, fn i -> {i, i * i} end)"
 
-    assert fix(PreferMapNewWithTransform, input) == expected
+    confirm_fix(fix(PreferMapNewWithTransform, input), expected)
   end
 
   test "rewrites nested Map.new(Enum.map(...)) pattern" do
-    input = """
-    Map.new(Enum.map(1..5, fn i -> {i, i * i} end))
-    """
+    input = "Map.new(Enum.map(1..5, fn i -> {i, i * i} end))"
 
-    expected = """
-    Map.new(1..5, fn i -> {i, i * i} end)
-    """
+    expected = "Map.new(1..5, fn i -> {i, i * i} end)"
 
-    assert fix(PreferMapNewWithTransform, input) == expected
+    confirm_fix(fix(PreferMapNewWithTransform, input), expected)
   end
 
   test "preserves surrounding code" do
@@ -60,30 +50,24 @@ defmodule Credence.Pattern.PreferMapNewWithTransformFixTest do
     end
     """
 
-    assert fix(PreferMapNewWithTransform, input) == expected
+    confirm_fix(fix(PreferMapNewWithTransform, input), expected)
   end
 
   test "does not change code without the pattern" do
-    code = """
-    Map.new(1..5, fn i -> {i, i * i} end)
-    """
+    code = "Map.new(1..5, fn i -> {i, i * i} end)"
 
-    assert fix(PreferMapNewWithTransform, code) == code
+    confirm_fix(fix(PreferMapNewWithTransform, code), code)
   end
 
   test "does not change Enum.map alone" do
-    code = """
-    Enum.map(1..5, fn i -> {i, i * i} end)
-    """
+    code = "Enum.map(1..5, fn i -> {i, i * i} end)"
 
-    assert fix(PreferMapNewWithTransform, code) == code
+    confirm_fix(fix(PreferMapNewWithTransform, code), code)
   end
 
   test "does not change Map.new/1 alone" do
-    code = """
-    Map.new(1..5)
-    """
+    code = "Map.new(1..5)"
 
-    assert fix(PreferMapNewWithTransform, code) == code
+    confirm_fix(fix(PreferMapNewWithTransform, code), code)
   end
 end

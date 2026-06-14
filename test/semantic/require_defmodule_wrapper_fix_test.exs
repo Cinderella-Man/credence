@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.RequireDefmoduleWrapper
 
@@ -37,7 +37,7 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
     """
 
     message = "cannot invoke @doc/1 outside module"
-    assert fix(input, message) == expected
+    confirm_fix(fix(input, message), expected)
   end
 
   test "fixed output is well-formed (parses)" do
@@ -77,7 +77,7 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
     # The message is passed INLINE (not via a var) on purpose: it exercises the
     # FixtureStringEscaping meta-test fix — a diagnostic-message arg to a
     # source-first verb is NOT a code fixture and must not be flagged.
-    assert fix(input, "cannot invoke @/1 outside module") == expected
+    confirm_fix(fix(input, "cannot invoke @/1 outside module"), expected)
     assert valid_syntax?(fix(input, "cannot invoke @/1 outside module"))
   end
 
@@ -90,7 +90,7 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
     @doc "orphan after the module"
     """
 
-    assert fix(input, "cannot invoke @/1 outside module") == input
+    confirm_fix(fix(input, "cannot invoke @/1 outside module"), input)
   end
 
   test "drops incoming @doc when module already has @doc" do
@@ -117,7 +117,7 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
 
     diag_message = "redefining @doc attribute previously set at line 2"
     result = fix(input, diag_message)
-    assert result == expected
+    confirm_fix(result, expected)
     assert valid_syntax?(result)
   end
 
@@ -188,7 +188,7 @@ defmodule Credence.Semantic.RequireDefmoduleWrapperFixTest do
 
     diag_message = "redefining @moduledoc attribute previously set at line 2"
     result = fix(input, diag_message)
-    assert result == expected
+    confirm_fix(result, expected)
     assert valid_syntax?(result)
     # Verify @moduledoc false is gone
     refute result =~ "@moduledoc false"

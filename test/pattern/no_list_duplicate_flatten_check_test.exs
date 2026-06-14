@@ -29,9 +29,7 @@ defmodule Credence.Pattern.NoListDuplicateFlattenCheckTest do
 
     test "issue carries the rule name" do
       assert [%Issue{rule: :no_list_duplicate_flatten}] =
-               check(NoListDuplicateFlatten, """
-               Enum.concat(List.duplicate(list, 2))
-               """)
+               check(NoListDuplicateFlatten, "Enum.concat(List.duplicate(list, 2))")
     end
   end
 
@@ -84,15 +82,11 @@ defmodule Credence.Pattern.NoListDuplicateFlattenCheckTest do
     end
 
     test "zero literal count" do
-      assert clean?(NoListDuplicateFlatten, """
-             Enum.concat(List.duplicate(list, 0))
-             """)
+      assert clean?(NoListDuplicateFlatten, "Enum.concat(List.duplicate(list, 0))")
     end
 
     test "negative literal count" do
-      assert clean?(NoListDuplicateFlatten, """
-             Enum.concat(List.duplicate(list, -1))
-             """)
+      assert clean?(NoListDuplicateFlatten, "Enum.concat(List.duplicate(list, -1))")
     end
   end
 
@@ -100,15 +94,11 @@ defmodule Credence.Pattern.NoListDuplicateFlattenCheckTest do
     # The closure re-evaluates the value n times; only a side-effect-free
     # variable reference is safe to move into it.
     test "duplicated value is a function call" do
-      assert clean?(NoListDuplicateFlatten, """
-             Enum.concat(List.duplicate(build_list(), 3))
-             """)
+      assert clean?(NoListDuplicateFlatten, "Enum.concat(List.duplicate(build_list(), 3))")
     end
 
     test "duplicated value is a list literal" do
-      assert clean?(NoListDuplicateFlatten, """
-             Enum.concat(List.duplicate([1, 2, 3], 3))
-             """)
+      assert clean?(NoListDuplicateFlatten, "Enum.concat(List.duplicate([1, 2, 3], 3))")
     end
 
     test "longer pipeline before List.duplicate" do
@@ -125,21 +115,15 @@ defmodule Credence.Pattern.NoListDuplicateFlattenCheckTest do
 
   describe "does not flag unrelated shapes" do
     test "standalone List.duplicate" do
-      assert clean?(NoListDuplicateFlatten, """
-             List.duplicate(list, 3)
-             """)
+      assert clean?(NoListDuplicateFlatten, "List.duplicate(list, 3)")
     end
 
     test "standalone Enum.concat" do
-      assert clean?(NoListDuplicateFlatten, """
-             Enum.concat(lists)
-             """)
+      assert clean?(NoListDuplicateFlatten, "Enum.concat(lists)")
     end
 
     test "Enum.concat of two lists" do
-      assert clean?(NoListDuplicateFlatten, """
-             Enum.concat(a, b)
-             """)
+      assert clean?(NoListDuplicateFlatten, "Enum.concat(a, b)")
     end
 
     test "List.duplicate piped to something else" do
@@ -153,9 +137,7 @@ defmodule Credence.Pattern.NoListDuplicateFlattenCheckTest do
     end
 
     test "already idiomatic Enum.flat_map" do
-      assert clean?(NoListDuplicateFlatten, """
-             Enum.flat_map(1..3, fn _ -> list end)
-             """)
+      assert clean?(NoListDuplicateFlatten, "Enum.flat_map(1..3, fn _ -> list end)")
     end
   end
 end

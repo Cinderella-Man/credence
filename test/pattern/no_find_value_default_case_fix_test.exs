@@ -12,23 +12,17 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      expected = """
-      Enum.find_value(list, :default, &process/1)
-      """
+      expected = "Enum.find_value(list, :default, &process/1)"
 
-      assert fix(NoFindValueDefaultCase, code) == expected
+      confirm_fix(fix(NoFindValueDefaultCase, code), expected)
     end
 
     test "Enum.find_value/2 || default -> Enum.find_value/3" do
-      code = """
-      Enum.find_value(list, &process/1) || :default
-      """
+      code = "Enum.find_value(list, &process/1) || :default"
 
-      expected = """
-      Enum.find_value(list, :default, &process/1)
-      """
+      expected = "Enum.find_value(list, :default, &process/1)"
 
-      assert fix(NoFindValueDefaultCase, code) == expected
+      confirm_fix(fix(NoFindValueDefaultCase, code), expected)
     end
 
     test "piped case Enum.find_value/2 -> Enum.find_value/3" do
@@ -40,11 +34,9 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      expected = """
-      Enum.find_value(list, :default, fun)
-      """
+      expected = "Enum.find_value(list, :default, fun)"
 
-      assert fix(NoFindValueDefaultCase, code) == expected
+      confirm_fix(fix(NoFindValueDefaultCase, code), expected)
     end
 
     test "1-arg pipe case -> Enum.find_value/3" do
@@ -57,11 +49,9 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      expected = """
-      Enum.find_value(list, :default, fun)
-      """
+      expected = "Enum.find_value(list, :default, fun)"
 
-      assert fix(NoFindValueDefaultCase, code) == expected
+      confirm_fix(fix(NoFindValueDefaultCase, code), expected)
     end
 
     test "preserves surrounding code" do
@@ -94,7 +84,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      assert fix(NoFindValueDefaultCase, code) == expected
+      confirm_fix(fix(NoFindValueDefaultCase, code), expected)
     end
 
     test "round-trip: fixed code produces no issues" do
@@ -119,7 +109,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      assert fix(NoFindValueDefaultCase, code) == code
+      confirm_fix(fix(NoFindValueDefaultCase, code), code)
     end
 
     test "Enum.find/2 nil-identity unchanged" do
@@ -130,15 +120,13 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      assert fix(NoFindValueDefaultCase, code) == code
+      confirm_fix(fix(NoFindValueDefaultCase, code), code)
     end
 
     test "Enum.find/2 || default unchanged" do
-      code = """
-      Enum.find(list, &valid?/1) || :not_found
-      """
+      code = "Enum.find(list, &valid?/1) || :not_found"
 
-      assert fix(NoFindValueDefaultCase, code) == code
+      confirm_fix(fix(NoFindValueDefaultCase, code), code)
     end
 
     test "Enum.find/2 tuple extraction unchanged" do
@@ -149,7 +137,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseFixTest do
       end
       """
 
-      assert fix(NoFindValueDefaultCase, code) == code
+      confirm_fix(fix(NoFindValueDefaultCase, code), code)
     end
   end
 end

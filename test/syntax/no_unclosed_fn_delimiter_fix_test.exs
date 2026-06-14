@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.NoUnclosedFnDelimiterFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.NoUnclosedFnDelimiter
 
@@ -9,15 +9,11 @@ defmodule Credence.Syntax.NoUnclosedFnDelimiterFixTest do
   defp analyze(code), do: NoUnclosedFnDelimiter.analyze(code)
 
   test "inserts end before the offending )" do
-    input = """
-    list |> Enum.max_by(fn {_, second} -> second)
-    """
+    input = "list |> Enum.max_by(fn {_, second} -> second)"
 
-    expected = """
-    list |> Enum.max_by(fn {_, second} -> second end)
-    """
+    expected = "list |> Enum.max_by(fn {_, second} -> second end)"
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixes the call inside a module" do
@@ -37,19 +33,15 @@ defmodule Credence.Syntax.NoUnclosedFnDelimiterFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "handles a body that itself contains parentheses" do
-    input = """
-    Enum.reduce(list, acc, fn x, a -> merge(x, a))
-    """
+    input = "Enum.reduce(list, acc, fn x, a -> merge(x, a))"
 
-    expected = """
-    Enum.reduce(list, acc, fn x, a -> merge(x, a) end)
-    """
+    expected = "Enum.reduce(list, acc, fn x, a -> merge(x, a) end)"
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "repairs more than one unclosed fn in the same source" do
@@ -67,31 +59,23 @@ defmodule Credence.Syntax.NoUnclosedFnDelimiterFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "leaves properly closed code untouched" do
-    source = """
-    list |> Enum.map(fn x -> x + 1 end) |> Enum.sum()
-    """
+    source = "list |> Enum.map(fn x -> x + 1 end) |> Enum.sum()"
 
-    assert fix(source) == source
+    confirm_fix(fix(source), source)
   end
 
   test "leaves a different mismatched delimiter untouched" do
-    source = """
-    value = [1, 2, 3)
-    """
+    source = "value = [1, 2, 3)"
 
-    assert fix(source) == source
+    confirm_fix(fix(source), source)
   end
 
   test "fix clears the analyze flag (fixpoint)" do
-    assert analyze(
-             fix("""
-             list |> Enum.max_by(fn {_, second} -> second)
-             """)
-           ) == []
+    assert analyze(fix("list |> Enum.max_by(fn {_, second} -> second)")) == []
   end
 
   test "fixed output is well-formed (parses)" do

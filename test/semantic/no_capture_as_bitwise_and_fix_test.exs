@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoCaptureAsBitwiseAnd
 
@@ -29,7 +29,7 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       end
       """
 
-      assert NoCaptureAsBitwiseAnd.fix(source, diag(3, 7)) == expected
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(3, 7)), expected)
     end
 
     test "keeps the surrounding text on the line intact" do
@@ -49,7 +49,7 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       end
       """
 
-      assert NoCaptureAsBitwiseAnd.fix(source, diag(3, 11)) == expected
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(3, 11)), expected)
     end
 
     test "handles multi-digit literal and extra whitespace" do
@@ -69,7 +69,7 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       end
       """
 
-      assert NoCaptureAsBitwiseAnd.fix(source, diag(3, 11)) == expected
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(3, 11)), expected)
     end
 
     test "only rewrites the flagged line" do
@@ -87,7 +87,7 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       end
       """
 
-      assert NoCaptureAsBitwiseAnd.fix(source, diag(2, 19)) == expected
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(2, 19)), expected)
     end
   end
 
@@ -106,18 +106,16 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       """
 
       diag = %{severity: :error, message: @real_message, position: 2}
-      assert NoCaptureAsBitwiseAnd.fix(source, diag) == expected
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag), expected)
     end
   end
 
   describe "fix/2 — no-ops" do
     test "returns source unchanged when position is nil" do
-      source = """
-      n & 1
-      """
+      source = "n & 1"
 
       diag = %{severity: :error, message: @real_message, position: nil}
-      assert NoCaptureAsBitwiseAnd.fix(source, diag) == source
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag), source)
     end
 
     test "returns source unchanged when flagged line has no match" do
@@ -127,7 +125,7 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       end
       """
 
-      assert NoCaptureAsBitwiseAnd.fix(source, diag(2, 14)) == source
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(2, 14)), source)
     end
   end
 
@@ -164,7 +162,7 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       """
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed == expected
+      confirm_fix(fixed, expected)
       assert valid_syntax?(fixed)
     end
 
@@ -177,7 +175,7 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == source
+      confirm_fix(Credence.Semantic.fix(source), source)
     end
   end
 end

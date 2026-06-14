@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.AvoidBinaryMidPatternFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.AvoidBinaryMidPattern
 
@@ -35,7 +35,7 @@ defmodule Credence.Semantic.AvoidBinaryMidPatternFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output is well-formed (parses)" do
@@ -61,7 +61,7 @@ defmodule Credence.Semantic.AvoidBinaryMidPatternFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "returns source unchanged when binary is at the end" do
@@ -74,7 +74,7 @@ defmodule Credence.Semantic.AvoidBinaryMidPatternFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "handles different variable names" do
@@ -97,6 +97,6 @@ defmodule Credence.Semantic.AvoidBinaryMidPatternFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 end

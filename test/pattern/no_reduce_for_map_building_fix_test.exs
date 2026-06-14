@@ -11,11 +11,9 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       end)
       """
 
-      expected = """
-      Map.new(list, fn x -> {x, String.length(x)} end)
-      """
+      expected = "Map.new(list, fn x -> {x, String.length(x)} end)"
 
-      assert fix(NoReduceForMapBuilding, code) == expected
+      confirm_fix(fix(NoReduceForMapBuilding, code), expected)
     end
 
     test "preserves surrounding code" do
@@ -43,7 +41,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       end
       """
 
-      assert fix(NoReduceForMapBuilding, code) == expected
+      confirm_fix(fix(NoReduceForMapBuilding, code), expected)
     end
   end
 
@@ -61,7 +59,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       |> Map.new(fn x -> {x, x * 2} end)
       """
 
-      assert fix(NoReduceForMapBuilding, code) == expected
+      confirm_fix(fix(NoReduceForMapBuilding, code), expected)
     end
 
     test "preserves pipeline head and tail" do
@@ -81,7 +79,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       |> Map.keys()
       """
 
-      assert fix(NoReduceForMapBuilding, code) == expected
+      confirm_fix(fix(NoReduceForMapBuilding, code), expected)
     end
   end
 
@@ -93,23 +91,17 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       end)
       """
 
-      expected = """
-      MapSet.new(list)
-      """
+      expected = "MapSet.new(list)"
 
-      assert fix(NoReduceForMapBuilding, code) == expected
+      confirm_fix(fix(NoReduceForMapBuilding, code), expected)
     end
 
     test "replaces capture form with MapSet.new" do
-      code = """
-      Enum.reduce(list, MapSet.new(), &MapSet.put(&2, &1))
-      """
+      code = "Enum.reduce(list, MapSet.new(), &MapSet.put(&2, &1))"
 
-      expected = """
-      MapSet.new(list)
-      """
+      expected = "MapSet.new(list)"
 
-      assert fix(NoReduceForMapBuilding, code) == expected
+      confirm_fix(fix(NoReduceForMapBuilding, code), expected)
     end
   end
 
@@ -127,7 +119,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       |> MapSet.new()
       """
 
-      assert fix(NoReduceForMapBuilding, code) == expected
+      confirm_fix(fix(NoReduceForMapBuilding, code), expected)
     end
 
     test "replaces piped capture form with MapSet.new" do
@@ -141,7 +133,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       |> MapSet.new()
       """
 
-      assert fix(NoReduceForMapBuilding, code) == expected
+      confirm_fix(fix(NoReduceForMapBuilding, code), expected)
     end
   end
 
@@ -153,7 +145,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       end)
       """
 
-      assert fix(NoReduceForMapBuilding, code) == code
+      confirm_fix(fix(NoReduceForMapBuilding, code), code)
     end
 
     test "leaves non-empty-accumulator reduce untouched" do
@@ -163,7 +155,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       end)
       """
 
-      assert fix(NoReduceForMapBuilding, code) == code
+      confirm_fix(fix(NoReduceForMapBuilding, code), code)
     end
 
     test "leaves acc-referencing value untouched" do
@@ -173,7 +165,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
       end)
       """
 
-      assert fix(NoReduceForMapBuilding, code) == code
+      confirm_fix(fix(NoReduceForMapBuilding, code), code)
     end
   end
 
@@ -210,9 +202,7 @@ defmodule Credence.Pattern.NoReduceForMapBuildingFixTest do
     end
 
     test "MapSet capture" do
-      code = """
-      Enum.reduce(list, MapSet.new(), &MapSet.put(&2, &1))
-      """
+      code = "Enum.reduce(list, MapSet.new(), &MapSet.put(&2, &1))"
 
       assert check(NoReduceForMapBuilding, fix(NoReduceForMapBuilding, code)) == []
     end

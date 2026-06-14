@@ -35,9 +35,7 @@ defmodule Credence.Pattern.PreferIntegerUndigitsCheckTest do
     end
 
     test "detects bare Enum.reduce without module prefix" do
-      code = """
-      Enum.reduce(list, 0, fn digit, acc -> acc * 10 + digit end)
-      """
+      code = "Enum.reduce(list, 0, fn digit, acc -> acc * 10 + digit end)"
 
       assert flagged?(PreferIntegerUndigits, code)
     end
@@ -96,33 +94,25 @@ defmodule Credence.Pattern.PreferIntegerUndigitsCheckTest do
     end
 
     test "reduce with non-0 initial accumulator" do
-      code = """
-      Enum.reduce(digits, 1, fn digit, acc -> acc * 10 + digit end)
-      """
+      code = "Enum.reduce(digits, 1, fn digit, acc -> acc * 10 + digit end)"
 
       assert clean?(PreferIntegerUndigits, code)
     end
 
     test "reduce with multiplier other than 10" do
-      code = """
-      Enum.reduce(digits, 0, fn digit, acc -> acc * 100 + digit end)
-      """
+      code = "Enum.reduce(digits, 0, fn digit, acc -> acc * 100 + digit end)"
 
       assert clean?(PreferIntegerUndigits, code)
     end
 
     test "reduce where element is multiplied, not accumulator" do
-      code = """
-      Enum.reduce(digits, 0, fn digit, acc -> digit * 10 + acc end)
-      """
+      code = "Enum.reduce(digits, 0, fn digit, acc -> digit * 10 + acc end)"
 
       assert clean?(PreferIntegerUndigits, code)
     end
 
     test "reduce with same param names" do
-      code = """
-      Enum.reduce(digits, 0, fn x, x -> x * 10 + x end)
-      """
+      code = "Enum.reduce(digits, 0, fn x, x -> x * 10 + x end)"
 
       assert clean?(PreferIntegerUndigits, code)
     end

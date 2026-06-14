@@ -12,9 +12,7 @@ defmodule Credence.Pattern.PreferSigilCharlistEquivalenceTest do
 
   test "'abc' → ~c\"abc\" is value-identical" do
     assert_equivalent(
-      """
-      c in 'abc'
-      """,
+      "c in 'abc'",
       rule: PreferSigilCharlist,
       vars: [:c],
       inputs: [?a, ?z, ?1, 97, 0, -1]

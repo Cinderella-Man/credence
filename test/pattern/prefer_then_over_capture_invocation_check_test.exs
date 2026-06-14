@@ -30,24 +30,18 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocationCheckTest do
     end
 
     test "capture with explicit args in .()" do
-      assert clean?(PreferThenOverCaptureInvocation, """
-             x |> (&(&1 + &2)).(y)
-             """)
+      assert clean?(PreferThenOverCaptureInvocation, "x |> (&(&1 + &2)).(y)")
     end
 
     test "capture with arity > 1 invoked with no args" do
       # This would raise an error, but we leave it alone because
       # then/2 would raise a different error (FunctionClauseError vs ArityError)
-      assert clean?(PreferThenOverCaptureInvocation, """
-             x |> (&(&1 + &2)).()
-             """)
+      assert clean?(PreferThenOverCaptureInvocation, "x |> (&(&1 + &2)).()")
     end
 
     test "capture without &1 placeholder" do
       # &String.reverse/1 is a function reference, not a capture with placeholders
-      assert clean?(PreferThenOverCaptureInvocation, """
-             x |> (&String.reverse/1).()
-             """)
+      assert clean?(PreferThenOverCaptureInvocation, "x |> (&String.reverse/1).()")
     end
   end
 
@@ -74,18 +68,14 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocationCheckTest do
 
     test "simple capture with &1" do
       issues =
-        check(PreferThenOverCaptureInvocation, """
-        x |> (&(&1 + 1)).()
-        """)
+        check(PreferThenOverCaptureInvocation, "x |> (&(&1 + 1)).()")
 
       assert length(issues) == 1
     end
 
     test "capture using &1 directly" do
       issues =
-        check(PreferThenOverCaptureInvocation, """
-        x |> (& &1).()
-        """)
+        check(PreferThenOverCaptureInvocation, "x |> (& &1).()")
 
       assert length(issues) == 1
     end

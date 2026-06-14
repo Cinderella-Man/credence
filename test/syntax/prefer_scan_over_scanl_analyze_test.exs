@@ -8,9 +8,7 @@ defmodule Credence.Syntax.PreferScanOverScanlAnalyzeTest do
 
   test "flags code using Enum.scanl" do
     assert [%Issue{rule: :prefer_scan_over_scanl}] =
-             analyze("""
-             Enum.scanl([1, 2, 3], 0, &+/2)
-             """)
+             analyze("Enum.scanl([1, 2, 3], 0, &+/2)")
   end
 
   test "flags Enum.scanl inside a module" do
@@ -38,20 +36,14 @@ defmodule Credence.Syntax.PreferScanOverScanlAnalyzeTest do
   end
 
   test "leaves Enum.scan alone" do
-    assert analyze("""
-           Enum.scan([1, 2, 3], 0, &+/2)
-           """) == []
+    assert analyze("Enum.scan([1, 2, 3], 0, &+/2)") == []
   end
 
   test "leaves Enum.scan/2 alone" do
-    assert analyze("""
-           Enum.scan([1, 2, 3], &+/2)
-           """) == []
+    assert analyze("Enum.scan([1, 2, 3], &+/2)") == []
   end
 
   test "leaves unrelated code alone" do
-    assert analyze("""
-           Enum.map([1, 2, 3], &(&1 * 2))
-           """) == []
+    assert analyze("Enum.map([1, 2, 3], &(&1 * 2))") == []
   end
 end

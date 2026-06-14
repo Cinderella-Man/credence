@@ -34,7 +34,7 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
     end
     """
 
-    assert fix(PreferNoQuestionMarkForNonBoolean, input) == expected
+    confirm_fix(fix(PreferNoQuestionMarkForNonBoolean, input), expected)
   end
 
   test "rewrites private function with ? suffix returning String.t()" do
@@ -54,7 +54,7 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
     end
     """
 
-    assert fix(PreferNoQuestionMarkForNonBoolean, input) == expected
+    confirm_fix(fix(PreferNoQuestionMarkForNonBoolean, input), expected)
   end
 
   test "no-op on a public def with ? suffix (breaking API rename)" do
@@ -66,7 +66,7 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
     end
     """
 
-    assert fix(PreferNoQuestionMarkForNonBoolean, code) == code
+    confirm_fix(fix(PreferNoQuestionMarkForNonBoolean, code), code)
   end
 
   test "no-op on boolean predicate" do
@@ -78,7 +78,7 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
     end
     """
 
-    assert fix(PreferNoQuestionMarkForNonBoolean, code) == code
+    confirm_fix(fix(PreferNoQuestionMarkForNonBoolean, code), code)
   end
 
   test "no-op on function without ? suffix" do
@@ -90,6 +90,6 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanFixTest do
     end
     """
 
-    assert fix(PreferNoQuestionMarkForNonBoolean, code) == code
+    confirm_fix(fix(PreferNoQuestionMarkForNonBoolean, code), code)
   end
 end

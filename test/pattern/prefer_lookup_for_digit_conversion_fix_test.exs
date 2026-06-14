@@ -34,7 +34,7 @@ defmodule Credence.Pattern.PreferLookupForDigitConversionFixTest do
     end
     """
 
-    assert fix(PreferLookupForDigitConversion, input) == expected
+    confirm_fix(fix(PreferLookupForDigitConversion, input), expected)
   end
 
   test "leaves code without hex digit anti-pattern unchanged" do
@@ -47,7 +47,7 @@ defmodule Credence.Pattern.PreferLookupForDigitConversionFixTest do
     end
     """
 
-    assert fix(PreferLookupForDigitConversion, code) == code
+    confirm_fix(fix(PreferLookupForDigitConversion, code), code)
   end
 
   test "leaves empty module unchanged" do
@@ -56,6 +56,6 @@ defmodule Credence.Pattern.PreferLookupForDigitConversionFixTest do
     end
     """
 
-    assert fix(PreferLookupForDigitConversion, code) == code
+    confirm_fix(fix(PreferLookupForDigitConversion, code), code)
   end
 end

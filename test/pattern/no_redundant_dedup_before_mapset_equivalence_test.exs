@@ -16,9 +16,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetEquivalenceTest do
 
   test "items |> Enum.uniq() |> MapSet.new() → MapSet.new(items) preserves the set" do
     assert_equivalent(
-      """
-      items |> Enum.uniq() |> MapSet.new()
-      """,
+      "items |> Enum.uniq() |> MapSet.new()",
       rule: NoRedundantDedupBeforeMapset,
       vars: [:items],
       inputs: B.term_lists()

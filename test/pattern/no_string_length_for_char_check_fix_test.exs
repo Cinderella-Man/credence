@@ -21,7 +21,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, input) == expected
+      confirm_fix(fix(NoStringLengthForCharCheck, input), expected)
     end
 
     test "replaces reversed form 1 == String.length(x)" do
@@ -41,7 +41,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, input) == expected
+      confirm_fix(fix(NoStringLengthForCharCheck, input), expected)
     end
 
     test "replaces != with not match?" do
@@ -65,7 +65,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, input) == expected
+      confirm_fix(fix(NoStringLengthForCharCheck, input), expected)
     end
 
     test "replaces reversed form 1 != String.length(x)" do
@@ -89,7 +89,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, input) == expected
+      confirm_fix(fix(NoStringLengthForCharCheck, input), expected)
     end
 
     test "replaces === the same as ==" do
@@ -109,7 +109,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, input) == expected
+      confirm_fix(fix(NoStringLengthForCharCheck, input), expected)
     end
 
     test "replaces !== the same as !=" do
@@ -133,7 +133,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, input) == expected
+      confirm_fix(fix(NoStringLengthForCharCheck, input), expected)
     end
 
     test "does not alter String.length compared to other numbers" do
@@ -145,7 +145,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, code) == code
+      confirm_fix(fix(NoStringLengthForCharCheck, code), code)
     end
 
     test "does not alter plain length/1 == 1" do
@@ -157,7 +157,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, code) == code
+      confirm_fix(fix(NoStringLengthForCharCheck, code), code)
     end
 
     test "fixes multiple occurrences in the same module" do
@@ -183,7 +183,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, input) == expected
+      confirm_fix(fix(NoStringLengthForCharCheck, input), expected)
     end
 
     test "preserves surrounding code" do
@@ -207,7 +207,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckFixTest do
       end
       """
 
-      assert fix(NoStringLengthForCharCheck, input) == expected
+      confirm_fix(fix(NoStringLengthForCharCheck, input), expected)
     end
   end
 end

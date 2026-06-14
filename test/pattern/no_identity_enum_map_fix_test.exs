@@ -17,7 +17,7 @@ defmodule Credence.Pattern.NoIdentityEnumMapFixTest do
       end
       """
 
-      assert fix(NoIdentityEnumMap, input) == expected
+      confirm_fix(fix(NoIdentityEnumMap, input), expected)
     end
 
     test "fixes Enum.map(enum, &Function.identity/1) → Enum.to_list(enum)" do
@@ -33,7 +33,7 @@ defmodule Credence.Pattern.NoIdentityEnumMapFixTest do
       end
       """
 
-      assert fix(NoIdentityEnumMap, input) == expected
+      confirm_fix(fix(NoIdentityEnumMap, input), expected)
     end
 
     test "preserves a compound argument expression" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoIdentityEnumMapFixTest do
       end
       """
 
-      assert fix(NoIdentityEnumMap, input) == expected
+      confirm_fix(fix(NoIdentityEnumMap, input), expected)
     end
   end
 
@@ -67,7 +67,7 @@ defmodule Credence.Pattern.NoIdentityEnumMapFixTest do
       end
       """
 
-      assert fix(NoIdentityEnumMap, input) == expected
+      confirm_fix(fix(NoIdentityEnumMap, input), expected)
     end
   end
 
@@ -79,7 +79,7 @@ defmodule Credence.Pattern.NoIdentityEnumMapFixTest do
       end
       """
 
-      assert fix(NoIdentityEnumMap, input) == input
+      confirm_fix(fix(NoIdentityEnumMap, input), input)
     end
   end
 end

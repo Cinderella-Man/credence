@@ -4,9 +4,7 @@ defmodule Credence.Pattern.PreferTupleForRandomAccessCheckTest do
   alias Credence.Pattern.PreferTupleForRandomAccess
 
   test "flags Enum.fetch! inside a for comprehension" do
-    assert flagged?(PreferTupleForRandomAccess, """
-           for i <- 0..3, do: Enum.fetch!(list, i)
-           """)
+    assert flagged?(PreferTupleForRandomAccess, "for i <- 0..3, do: Enum.fetch!(list, i)")
   end
 
   test "flags Enum.fetch! in for comprehension filter" do
@@ -28,15 +26,11 @@ defmodule Credence.Pattern.PreferTupleForRandomAccessCheckTest do
   end
 
   test "leaves code without Enum.fetch! alone" do
-    assert clean?(PreferTupleForRandomAccess, """
-           for i <- 0..3, do: Enum.at(list, i)
-           """)
+    assert clean?(PreferTupleForRandomAccess, "for i <- 0..3, do: Enum.at(list, i)")
   end
 
   test "leaves Enum.fetch! outside a for comprehension alone" do
-    assert clean?(PreferTupleForRandomAccess, """
-           Enum.fetch!(list, 0)
-           """)
+    assert clean?(PreferTupleForRandomAccess, "Enum.fetch!(list, 0)")
   end
 
   test "leaves non-for Enum.fetch! alone" do

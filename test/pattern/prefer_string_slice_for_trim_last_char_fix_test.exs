@@ -24,7 +24,7 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastCharFixTest do
     end
     """
 
-    assert fix(PreferStringSliceForTrimLastChar, input) == expected
+    confirm_fix(fix(PreferStringSliceForTrimLastChar, input), expected)
   end
 
   test "rewrites inside a larger function" do
@@ -54,7 +54,7 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastCharFixTest do
     end
     """
 
-    assert fix(PreferStringSliceForTrimLastChar, input) == expected
+    confirm_fix(fix(PreferStringSliceForTrimLastChar, input), expected)
   end
 
   test "does not modify code already using String.slice" do
@@ -66,6 +66,6 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastCharFixTest do
     end
     """
 
-    assert fix(PreferStringSliceForTrimLastChar, code) == code
+    confirm_fix(fix(PreferStringSliceForTrimLastChar, code), code)
   end
 end

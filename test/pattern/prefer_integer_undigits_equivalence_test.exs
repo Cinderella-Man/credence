@@ -11,9 +11,7 @@ defmodule Credence.Pattern.PreferIntegerUndigitsEquivalenceTest do
 
   test "reduce(acc * 10 + elem) -> Integer.undigits preserves digit-to-integer" do
     assert_equivalent(
-      """
-      Enum.reduce(list, 0, fn digit, acc -> acc * 10 + digit end)
-      """,
+      "Enum.reduce(list, 0, fn digit, acc -> acc * 10 + digit end)",
       rule: PreferIntegerUndigits,
       vars: [:list],
       inputs: [[], [0], [1], [1, 2, 3], [9, 8, 7], [0, 0, 1], [1, 0, 0]]

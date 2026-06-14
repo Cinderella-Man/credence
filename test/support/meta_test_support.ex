@@ -164,6 +164,15 @@ defmodule Credence.MetaTestSupport do
     end
   end
 
+  # Canonical form: `confirm_fix(fix(Rule, A), B)` where B is not structurally A.
+  def transform?({:confirm_fix, _, [a, b]}) do
+    cond do
+      fix_call?(a) -> fix_arg(a) != src(b)
+      fix_call?(b) -> fix_arg(b) != src(a)
+      true -> false
+    end
+  end
+
   def transform?(_), do: false
 
   def fix_arg({:fix, _, [_rule, code | _]}), do: src(code)
@@ -212,6 +221,15 @@ defmodule Credence.MetaTestSupport do
 
   @doc "`fix(A, ...) == B` where `src(A) != src(B)` — the fix rewrote its source."
   def fix_source_transform?({:==, _, [a, b]}) do
+    cond do
+      fix_call1?(a) -> fix_first_arg(a) != src(b)
+      fix_call1?(b) -> fix_first_arg(b) != src(a)
+      true -> false
+    end
+  end
+
+  # Canonical form: `confirm_fix(fix(A, …), B)` where `src(A) != src(B)`.
+  def fix_source_transform?({:confirm_fix, _, [a, b]}) do
     cond do
       fix_call1?(a) -> fix_first_arg(a) != src(b)
       fix_call1?(b) -> fix_first_arg(b) != src(a)
@@ -303,6 +321,11 @@ defmodule Credence.MetaTestSupport do
             {:=, _, [{var, _, ctx}, rhs]} when is_atom(var) and is_atom(ctx) ->
               if MapSet.member?(@fvars, var) and stringish?(rhs), do: [rhs], else: []
 
+            # `confirm_fix(fix(Rule, input), expected)` — the `expected` (2nd arg) is
+            # a fixture; the `input` is collected via the inner `fix(...)` verb call.
+            {:confirm_fix, _, [_actual, expected]} ->
+              if stringish?(expected), do: [expected], else: []
+
             {v, _, args} when is_atom(v) and is_list(args) ->
               if MapSet.member?(@verbs, v), do: verb_fixtures(args), else: []
 
@@ -345,9 +368,15 @@ defmodule Credence.MetaTestSupport do
   string/sigil, or code carrying `\"""` (which a heredoc can't nest)?
   """
   def fixture_ok?({:__block__, m, [s]}) when is_binary(s) do
-    Keyword.get(m, :delimiter) == "\"\"\"" or
-      String.contains?(String.replace(s, "\\\"", "\""), "\"\"\"") or
-      single_line_plain?(s)
+    cond do
+      # a literal `"""` in the value can't be a heredoc or a plain string — leave it
+      String.contains?(String.replace(s, "\\\"", "\""), "\"\"\"") -> true
+      # a heredoc is canonical ONLY when multi-line; a single-content-line heredoc
+      # must be a plain `"…"` / `~S'…'`
+      Keyword.get(m, :delimiter) == "\"\"\"" -> multi_content_line?(s)
+      # a plain `"…"` is canonical when it needs neither a heredoc nor escaping
+      true -> single_line_plain?(s)
+    end
   end
 
   def fixture_ok?({:<<>>, m, parts}),
@@ -365,27 +394,15 @@ defmodule Credence.MetaTestSupport do
   def fixture_ok?({:<>, _, _}), do: false
   def fixture_ok?(_), do: false
 
-  @doc """
-  Files whose fixtures a heredoc/sigil rewrite would break (value-sensitive).
-  Single source of truth for `FixtureStringEscapingTest` and
-  `Credence.FixtureHealer` — both skip these. Path => reason.
-  """
-  def allow do
-    %{
-      "test/pattern/no_redundant_binary_syntax_fix_test.exs" =>
-        "the fix reprints the whole expression, dropping the input's trailing " <>
-          "newline; a heredoc expected (which has one) can't match, and the quoted " <>
-          "result has no heredoc/sigil-free form",
-      "test/semantic/missing_use_exunit_case_fix_test.exs" =>
-        "the fix forces a trailing blank line; mix format trims a heredoc's, changing the value"
-    }
-  end
-
   # A plain `"…"` needs neither a heredoc nor escaping iff its value has no
   # newline and no inner double-quote.
   defp single_line_plain?(s), do: not has_newline?(s) and not String.contains?(s, "\"")
 
   defp has_newline?(s), do: String.contains?(s, "\n") or String.contains?(s, "\\n")
+
+  # A heredoc value (real newlines) with ≥2 content lines — an internal newline
+  # beyond the structural trailing one a heredoc always carries.
+  defp multi_content_line?(s), do: String.contains?(String.trim_trailing(s, "\n"), "\n")
 
   defp multiline_interp?(parts) do
     lit = parts |> Enum.filter(&is_binary/1) |> Enum.join()

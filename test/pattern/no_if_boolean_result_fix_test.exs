@@ -17,11 +17,9 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      expected = """
-      valid_ipv4?(host) or valid_domain?(host)
-      """
+      expected = "valid_ipv4?(host) or valid_domain?(host)"
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
 
     test "comparison condition and function call else" do
@@ -33,11 +31,9 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      expected = """
-      x > 0 or some_check(x)
-      """
+      expected = "x > 0 or some_check(x)"
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
 
     test "inside a module" do
@@ -61,19 +57,15 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
 
     test "inline form" do
-      input = """
-      if valid_ipv4?(host), do: true, else: valid_domain?(host)
-      """
+      input = "if valid_ipv4?(host), do: true, else: valid_domain?(host)"
 
-      expected = """
-      valid_ipv4?(host) or valid_domain?(host)
-      """
+      expected = "valid_ipv4?(host) or valid_domain?(host)"
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
 
     test "preserves surrounding code" do
@@ -95,7 +87,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
 
     test "used as expression assignment" do
@@ -117,7 +109,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
   end
 
@@ -135,11 +127,9 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      expected = """
-      x > 0 and some_check(x)
-      """
+      expected = "x > 0 and some_check(x)"
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
 
     test "comparison in do with false in else" do
@@ -151,23 +141,17 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      expected = """
-      x > 0 and y == 1
-      """
+      expected = "x > 0 and y == 1"
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
 
     test "inline form with false else" do
-      input = """
-      if x > 0, do: some_check(x), else: false
-      """
+      input = "if x > 0, do: some_check(x), else: false"
 
-      expected = """
-      x > 0 and some_check(x)
-      """
+      expected = "x > 0 and some_check(x)"
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
 
     test "inside a module" do
@@ -191,7 +175,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
   end
 
@@ -225,7 +209,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == expected
+      confirm_fix(fix(NoIfBooleanResult, input), expected)
     end
   end
 
@@ -243,7 +227,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == input
+      confirm_fix(fix(NoIfBooleanResult, input), input)
     end
 
     test "false in do and true in else" do
@@ -255,7 +239,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == input
+      confirm_fix(fix(NoIfBooleanResult, input), input)
     end
   end
 
@@ -269,7 +253,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == input
+      confirm_fix(fix(NoIfBooleanResult, input), input)
     end
 
     test "computed values in both branches" do
@@ -281,7 +265,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == input
+      confirm_fix(fix(NoIfBooleanResult, input), input)
     end
   end
 
@@ -295,7 +279,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == input
+      confirm_fix(fix(NoIfBooleanResult, input), input)
     end
 
     test "non-boolean in do with true in else" do
@@ -307,7 +291,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == input
+      confirm_fix(fix(NoIfBooleanResult, input), input)
     end
   end
 
@@ -319,7 +303,7 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == input
+      confirm_fix(fix(NoIfBooleanResult, input), input)
     end
   end
 
@@ -331,15 +315,13 @@ defmodule Credence.Pattern.NoIfBooleanResultFixTest do
       end
       """
 
-      assert fix(NoIfBooleanResult, input) == input
+      confirm_fix(fix(NoIfBooleanResult, input), input)
     end
 
     test "boolean expression" do
-      input = """
-      valid_ipv4?(host) or valid_domain?(host)
-      """
+      input = "valid_ipv4?(host) or valid_domain?(host)"
 
-      assert fix(NoIfBooleanResult, input) == input
+      confirm_fix(fix(NoIfBooleanResult, input), input)
     end
   end
 end

@@ -189,9 +189,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfCheckTest do
     end
 
     test "plain function" do
-      assert clean?(PreferCondForNestedIf, """
-             def run(x), do: x * 2
-             """)
+      assert clean?(PreferCondForNestedIf, "def run(x), do: x * 2")
     end
   end
 end

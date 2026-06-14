@@ -19,7 +19,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
     end
     """
 
-    assert fix(NoDuplicateFunctionClauses, input) == expected
+    confirm_fix(fix(NoDuplicateFunctionClauses, input), expected)
   end
 
   test "removes multiple duplicate clauses" do
@@ -39,7 +39,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
     end
     """
 
-    assert fix(NoDuplicateFunctionClauses, input) == expected
+    confirm_fix(fix(NoDuplicateFunctionClauses, input), expected)
   end
 
   test "removes duplicate with different variable names" do
@@ -58,7 +58,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
     end
     """
 
-    assert fix(NoDuplicateFunctionClauses, input) == expected
+    confirm_fix(fix(NoDuplicateFunctionClauses, input), expected)
   end
 
   test "leaves code without duplicates unchanged" do
@@ -68,7 +68,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
     end
     """
 
-    assert fix(NoDuplicateFunctionClauses, code) == code
+    confirm_fix(fix(NoDuplicateFunctionClauses, code), code)
   end
 
   test "leaves different function names unchanged" do
@@ -79,7 +79,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
     end
     """
 
-    assert fix(NoDuplicateFunctionClauses, code) == code
+    confirm_fix(fix(NoDuplicateFunctionClauses, code), code)
   end
 
   test "leaves different arities unchanged" do
@@ -90,7 +90,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
     end
     """
 
-    assert fix(NoDuplicateFunctionClauses, code) == code
+    confirm_fix(fix(NoDuplicateFunctionClauses, code), code)
   end
 
   test "leaves clauses with different patterns unchanged" do
@@ -101,6 +101,6 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
     end
     """
 
-    assert fix(NoDuplicateFunctionClauses, code) == code
+    confirm_fix(fix(NoDuplicateFunctionClauses, code), code)
   end
 end

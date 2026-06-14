@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.NoOutputMarkerLinesFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.NoOutputMarkerLines
 
@@ -24,7 +24,7 @@ defmodule Credence.Syntax.NoOutputMarkerLinesFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output no longer flags" do
@@ -70,10 +70,8 @@ defmodule Credence.Syntax.NoOutputMarkerLinesFixTest do
   end
 
   test "leaves real code containing a hyphen untouched" do
-    input = """
-    x = a - b
-    """
+    input = "x = a - b"
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 end

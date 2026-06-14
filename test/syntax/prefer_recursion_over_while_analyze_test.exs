@@ -43,8 +43,6 @@ defmodule Credence.Syntax.PreferRecursionOverWhileAnalyzeTest do
   end
 
   test "leaves code with do: keyword alone" do
-    assert analyze("""
-           if x, do: 1, else: 2
-           """) == []
+    assert analyze("if x, do: 1, else: 2") == []
   end
 end

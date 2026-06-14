@@ -33,9 +33,7 @@ defmodule Credence.Pattern.NoZipThenMapCheckTest do
     end
 
     test "nested form single line" do
-      assert flagged?(NoZipThenMap, """
-             Enum.map(Enum.zip(a, b), fn {x, y} -> x + y end)
-             """)
+      assert flagged?(NoZipThenMap, "Enum.map(Enum.zip(a, b), fn {x, y} -> x + y end)")
     end
 
     test "zip in longer pipeline" do
@@ -81,9 +79,7 @@ defmodule Credence.Pattern.NoZipThenMapCheckTest do
 
   describe "does not flag Enum.zip alone" do
     test "zip without map" do
-      assert clean?(NoZipThenMap, """
-             Enum.zip(names, scores)
-             """)
+      assert clean?(NoZipThenMap, "Enum.zip(names, scores)")
     end
 
     test "zip piped to something other than map" do
@@ -104,9 +100,7 @@ defmodule Credence.Pattern.NoZipThenMapCheckTest do
     end
 
     test "map with identity fn" do
-      assert clean?(NoZipThenMap, """
-             Enum.zip(a, b) |> Enum.map(&Function.identity/1)
-             """)
+      assert clean?(NoZipThenMap, "Enum.zip(a, b) |> Enum.map(&Function.identity/1)")
     end
   end
 
@@ -122,9 +116,7 @@ defmodule Credence.Pattern.NoZipThenMapCheckTest do
 
   describe "does not flag Enum.zip/1" do
     test "single-argument zip" do
-      assert clean?(NoZipThenMap, """
-             Enum.zip([names, scores])
-             """)
+      assert clean?(NoZipThenMap, "Enum.zip([names, scores])")
     end
   end
 
@@ -139,17 +131,13 @@ defmodule Credence.Pattern.NoZipThenMapCheckTest do
 
   describe "does not flag tuple pattern with literals" do
     test "pattern matching on literal values" do
-      assert clean?(NoZipThenMap, """
-             Enum.map(some_list, fn {1, 2} -> :match end)
-             """)
+      assert clean?(NoZipThenMap, "Enum.map(some_list, fn {1, 2} -> :match end)")
     end
   end
 
   describe "does not flag 3+ element tuple destructuring" do
     test "three-element tuple from Enum.zip/1" do
-      assert clean?(NoZipThenMap, """
-             Enum.map(some_list, fn {a, b, c} -> a + b + c end)
-             """)
+      assert clean?(NoZipThenMap, "Enum.map(some_list, fn {a, b, c} -> a + b + c end)")
     end
   end
 end

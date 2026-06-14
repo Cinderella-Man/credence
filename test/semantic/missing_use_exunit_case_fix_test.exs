@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.MissingUseExunitCase
   # The diagnostic is passed to fix/2 but the rule doesn't use it
@@ -45,7 +45,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
 
     test "module with only test blocks (no describe)" do
@@ -75,7 +75,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
 
     test "module with setup block" do
@@ -105,7 +105,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
 
     test "places use after existing @moduledoc" do
@@ -131,7 +131,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
 
     test "places use after existing directives" do
@@ -163,7 +163,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
 
     test "places use after existing require" do
@@ -191,7 +191,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
   end
 
@@ -211,7 +211,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == input
+      confirm_fix(fix(input), input)
     end
 
     test "has use ExUnit.Case with async option" do
@@ -225,7 +225,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == input
+      confirm_fix(fix(input), input)
     end
   end
 
@@ -239,7 +239,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == input
+      confirm_fix(fix(input), input)
     end
 
     test "module with a function named test (not ExUnit macro)" do
@@ -251,7 +251,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == input
+      confirm_fix(fix(input), input)
     end
   end
 
@@ -295,7 +295,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
   end
 
@@ -309,7 +309,7 @@ defmodule Credence.Semantic.MissingUseExunitCaseFixTest do
       end
       """
 
-      assert fix(input) == input
+      confirm_fix(fix(input), input)
     end
   end
 

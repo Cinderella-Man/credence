@@ -18,15 +18,11 @@ defmodule Credence.Syntax.NoDocWithDoBlockAnalyzeTest do
 
   test "flags @moduledoc with a stray do" do
     assert [%Issue{rule: :no_doc_with_do_block, meta: %{line: 1}}] =
-             analyze("""
-             @moduledoc "the module" do
-             """)
+             analyze(~S'@moduledoc "the module" do')
   end
 
   test "does not flag a proper @doc" do
-    assert analyze("""
-           @doc "top_n_items/2"
-           """) == []
+    assert analyze(~S'@doc "top_n_items/2"') == []
   end
 
   test "does not flag a real do block on a def" do
@@ -38,8 +34,6 @@ defmodule Credence.Syntax.NoDocWithDoBlockAnalyzeTest do
   end
 
   test "does not flag a @doc whose string ends in the word do" do
-    assert analyze("""
-           @doc "explains what to do"
-           """) == []
+    assert analyze(~S'@doc "explains what to do"') == []
   end
 end

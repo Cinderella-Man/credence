@@ -17,7 +17,7 @@ defmodule Credence.Pattern.PreferEnumCountFixTest do
       |> Enum.count(&(rem(&1, 2) == 1))
       """
 
-      assert fix(PreferEnumCount, input) == expected
+      confirm_fix(fix(PreferEnumCount, input), expected)
     end
 
     test "rewrites non-piped counting reduce to Enum.count/2" do
@@ -27,11 +27,9 @@ defmodule Credence.Pattern.PreferEnumCountFixTest do
       end)
       """
 
-      expected = """
-      Enum.count(list, &(&1 > 5))
-      """
+      expected = "Enum.count(list, &(&1 > 5))"
 
-      assert fix(PreferEnumCount, input) == expected
+      confirm_fix(fix(PreferEnumCount, input), expected)
     end
 
     test "handles reversed operand order (1 + acc)" do
@@ -41,19 +39,15 @@ defmodule Credence.Pattern.PreferEnumCountFixTest do
       end)
       """
 
-      expected = """
-      Enum.count(list, &(rem(&1, 3) == 0))
-      """
+      expected = "Enum.count(list, &(rem(&1, 3) == 0))"
 
-      assert fix(PreferEnumCount, input) == expected
+      confirm_fix(fix(PreferEnumCount, input), expected)
     end
 
     test "does not modify non-counting reductions" do
-      code = """
-      Enum.reduce(list, 0, fn x, acc -> acc + x end)
-      """
+      code = "Enum.reduce(list, 0, fn x, acc -> acc + x end)"
 
-      assert fix(PreferEnumCount, code) == code
+      confirm_fix(fix(PreferEnumCount, code), code)
     end
 
     test "does not modify reduce with non-zero initial accumulator" do
@@ -63,7 +57,7 @@ defmodule Credence.Pattern.PreferEnumCountFixTest do
       end)
       """
 
-      assert fix(PreferEnumCount, code) == code
+      confirm_fix(fix(PreferEnumCount, code), code)
     end
 
     test "preserves surrounding code" do
@@ -87,7 +81,7 @@ defmodule Credence.Pattern.PreferEnumCountFixTest do
       end
       """
 
-      assert fix(PreferEnumCount, input) == expected
+      confirm_fix(fix(PreferEnumCount, input), expected)
     end
 
     test "round-trip: fixed code produces no issues" do

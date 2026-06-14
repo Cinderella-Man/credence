@@ -40,9 +40,7 @@ defmodule Credence.Pattern.PreferChunkOverIndexedReduceCheckTest do
   end
 
   test "leaves good code alone" do
-    code = """
-    Enum.sum(list)
-    """
+    code = "Enum.sum(list)"
 
     assert clean?(PreferChunkOverIndexedReduce, code)
   end

@@ -29,7 +29,7 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersectionFixTest do
     end
     """
 
-    assert fix(PreferPipeMapsetIntersection, input) == expected
+    confirm_fix(fix(PreferPipeMapsetIntersection, input), expected)
   end
 
   test "rewrites two MapSet.new assignments with intersection" do
@@ -52,7 +52,7 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersectionFixTest do
     end
     """
 
-    assert fix(PreferPipeMapsetIntersection, input) == expected
+    confirm_fix(fix(PreferPipeMapsetIntersection, input), expected)
   end
 
   describe "no-op" do
@@ -69,7 +69,7 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersectionFixTest do
       end
       """
 
-      assert fix(PreferPipeMapsetIntersection, code) == code
+      confirm_fix(fix(PreferPipeMapsetIntersection, code), code)
     end
 
     test "leaves code without MapSet.new assignments alone" do
@@ -78,7 +78,7 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersectionFixTest do
       |> MapSet.to_list()
       """
 
-      assert fix(PreferPipeMapsetIntersection, code) == code
+      confirm_fix(fix(PreferPipeMapsetIntersection, code), code)
     end
   end
 

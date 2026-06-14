@@ -14,9 +14,7 @@ defmodule Credence.Pattern.NoStringLengthForEmptyCheckEquivalenceTest do
 
   test "String.length(String.trim(s)) == 0 → String.trim(s) == \"\"" do
     assert_equivalent(
-      """
-      String.length(String.trim(s)) == 0
-      """,
+      "String.length(String.trim(s)) == 0",
       rule: NoStringLengthForEmptyCheck,
       vars: [:s],
       inputs: B.unicode_strings() ++ ["   ", "  x  ", 123, :atom, nil]

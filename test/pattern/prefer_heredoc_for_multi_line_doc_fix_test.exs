@@ -22,7 +22,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "converts @moduledoc to heredoc" do
@@ -43,7 +43,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "converts @typedoc to heredoc" do
@@ -64,7 +64,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "strips trailing \\n in conversion" do
@@ -85,7 +85,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "handles blank lines from consecutive \\n" do
@@ -107,7 +107,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "preserves indentation at deeper nesting" do
@@ -132,7 +132,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "preserves surrounding code" do
@@ -159,7 +159,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "handles escaped quotes in content" do
@@ -180,7 +180,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "fixes multiple doc attrs in one file" do
@@ -208,7 +208,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "handles LLM-style verbose doc with sections" do
@@ -233,7 +233,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
 
     test "converts real-newline @doc (not escaped \\n) to heredoc" do
@@ -257,7 +257,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
   end
 
@@ -270,7 +270,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       """
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == code
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), code)
     end
 
     test "does not modify @doc with only trailing \\n" do
@@ -281,7 +281,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       """
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == code
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), code)
     end
 
     test "returns source unchanged when nothing to fix" do
@@ -291,7 +291,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       """
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == code
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), code)
     end
   end
 
@@ -312,7 +312,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == code
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), code)
     end
 
     test "leaves @doc heredoc with iex examples unchanged" do
@@ -334,7 +334,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == code
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), code)
     end
 
     test "leaves @moduledoc heredoc unchanged" do
@@ -350,7 +350,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == code
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), code)
     end
 
     test "converts single-line @doc without corrupting heredocs in same file" do
@@ -397,7 +397,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
       end
       '''
 
-      assert fix(PreferHeredocForMultiLineDoc, code) == expected
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
   end
 end

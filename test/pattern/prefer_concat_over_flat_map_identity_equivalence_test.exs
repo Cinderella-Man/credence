@@ -11,9 +11,7 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityEquivalenceTest do
 
   test "Enum.flat_map(list, fn x -> x end) → Enum.concat(list) preserves the result" do
     assert_equivalent(
-      """
-      Enum.flat_map(list, fn x -> x end)
-      """,
+      "Enum.flat_map(list, fn x -> x end)",
       rule: PreferConcatOverFlatMapIdentity,
       vars: [:list],
       inputs: [

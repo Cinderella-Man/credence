@@ -15,9 +15,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltEquivalenceTest do
 
   test "reduce_while (all :cont) → reduce preserves the accumulation" do
     assert_equivalent(
-      """
-      Enum.reduce_while(list, 0, fn x, acc -> {:cont, acc + x} end)
-      """,
+      "Enum.reduce_while(list, 0, fn x, acc -> {:cont, acc + x} end)",
       rule: NoReduceWhileWithoutHalt,
       vars: [:list],
       inputs: B.term_lists()

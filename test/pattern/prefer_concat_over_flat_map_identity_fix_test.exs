@@ -17,7 +17,7 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityFixTest do
       end
       """
 
-      assert fix(PreferConcatOverFlatMapIdentity, input) == expected
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
     end
 
     test "fixes Enum.flat_map(list, & &1) → Enum.concat(list)" do
@@ -33,7 +33,7 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityFixTest do
       end
       """
 
-      assert fix(PreferConcatOverFlatMapIdentity, input) == expected
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
     end
   end
 
@@ -51,7 +51,7 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityFixTest do
       end
       """
 
-      assert fix(PreferConcatOverFlatMapIdentity, input) == expected
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
     end
 
     test "fixes in a longer pipeline" do
@@ -71,7 +71,7 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityFixTest do
       end
       """
 
-      assert fix(PreferConcatOverFlatMapIdentity, input) == expected
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
     end
 
     test "fixes piped & &1" do
@@ -87,7 +87,7 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityFixTest do
       end
       """
 
-      assert fix(PreferConcatOverFlatMapIdentity, input) == expected
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
     end
   end
 
@@ -99,7 +99,7 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityFixTest do
       end
       """
 
-      assert fix(PreferConcatOverFlatMapIdentity, code) == code
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, code), code)
     end
 
     test "returns source unchanged when nothing to fix" do
@@ -109,7 +109,7 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityFixTest do
       end
       """
 
-      assert fix(PreferConcatOverFlatMapIdentity, code) == code
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, code), code)
     end
 
     test "preserves surrounding code" do
@@ -129,7 +129,7 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityFixTest do
       end
       """
 
-      assert fix(PreferConcatOverFlatMapIdentity, input) == expected
+      confirm_fix(fix(PreferConcatOverFlatMapIdentity, input), expected)
     end
   end
 end

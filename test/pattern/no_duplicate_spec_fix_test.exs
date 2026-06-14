@@ -29,7 +29,7 @@ defmodule Credence.Pattern.NoDuplicateSpecFixTest do
     end
     """
 
-    assert fix(NoDuplicateSpec, input) == expected
+    confirm_fix(fix(NoDuplicateSpec, input), expected)
   end
 
   test "removes multiple duplicate @spec annotations" do
@@ -57,7 +57,7 @@ defmodule Credence.Pattern.NoDuplicateSpecFixTest do
     end
     """
 
-    assert fix(NoDuplicateSpec, input) == expected
+    confirm_fix(fix(NoDuplicateSpec, input), expected)
   end
 
   test "leaves code with single @spec unchanged" do
@@ -73,7 +73,7 @@ defmodule Credence.Pattern.NoDuplicateSpecFixTest do
     end
     """
 
-    assert fix(NoDuplicateSpec, code) == code
+    confirm_fix(fix(NoDuplicateSpec, code), code)
   end
 
   test "leaves @spec for different functions unchanged" do
@@ -87,6 +87,6 @@ defmodule Credence.Pattern.NoDuplicateSpecFixTest do
     end
     """
 
-    assert fix(NoDuplicateSpec, code) == code
+    confirm_fix(fix(NoDuplicateSpec, code), code)
   end
 end

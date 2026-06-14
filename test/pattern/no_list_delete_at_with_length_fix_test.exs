@@ -20,7 +20,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthFixTest do
     end
     """
 
-    assert fix(NoListDeleteAtWithLength, code) == expected
+    confirm_fix(fix(NoListDeleteAtWithLength, code), expected)
   end
 
   test "rewrites Kernel.length(x) - 1 to the negative index -1" do
@@ -40,7 +40,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthFixTest do
     end
     """
 
-    assert fix(NoListDeleteAtWithLength, code) == expected
+    confirm_fix(fix(NoListDeleteAtWithLength, code), expected)
   end
 
   test "rewrites only the delete_at call, leaving siblings untouched" do
@@ -66,7 +66,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthFixTest do
     end
     """
 
-    assert fix(NoListDeleteAtWithLength, code) == expected
+    confirm_fix(fix(NoListDeleteAtWithLength, code), expected)
   end
 
   test "leaves offset of 2 unchanged (not equivalent to -2)" do
@@ -78,7 +78,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthFixTest do
     end
     """
 
-    assert fix(NoListDeleteAtWithLength, code) == code
+    confirm_fix(fix(NoListDeleteAtWithLength, code), code)
   end
 
   test "leaves a plain literal index unchanged" do
@@ -90,7 +90,7 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthFixTest do
     end
     """
 
-    assert fix(NoListDeleteAtWithLength, code) == code
+    confirm_fix(fix(NoListDeleteAtWithLength, code), code)
   end
 
   test "leaves a different length variable unchanged" do
@@ -102,6 +102,6 @@ defmodule Credence.Pattern.NoListDeleteAtWithLengthFixTest do
     end
     """
 
-    assert fix(NoListDeleteAtWithLength, code) == code
+    confirm_fix(fix(NoListDeleteAtWithLength, code), code)
   end
 end

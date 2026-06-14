@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.NoSpecDoBlockFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.NoSpecDoBlock
 
@@ -47,7 +47,7 @@ defmodule Credence.Syntax.NoSpecDoBlockFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output no longer flags" do
@@ -121,7 +121,7 @@ defmodule Credence.Syntax.NoSpecDoBlockFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "converts @spec do with type spec to @spec" do
@@ -147,7 +147,7 @@ defmodule Credence.Syntax.NoSpecDoBlockFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed type-spec output no longer flags" do
@@ -189,7 +189,7 @@ defmodule Credence.Syntax.NoSpecDoBlockFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "leaves valid @spec unchanged" do
@@ -202,6 +202,6 @@ defmodule Credence.Syntax.NoSpecDoBlockFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 end

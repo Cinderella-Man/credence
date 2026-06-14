@@ -5,35 +5,25 @@ defmodule Credence.Pattern.NoExplicitSumReduceFixTest do
 
   describe "fix" do
     test "replaces sum reduce with Enum.sum/1" do
-      input = """
-      Enum.reduce(list, 0, fn x, acc -> acc + x end)
-      """
+      input = "Enum.reduce(list, 0, fn x, acc -> acc + x end)"
 
-      expected = """
-      Enum.sum(list)
-      """
+      expected = "Enum.sum(list)"
 
-      assert fix(NoExplicitSumReduce, input) == expected
+      confirm_fix(fix(NoExplicitSumReduce, input), expected)
     end
 
     test "handles reversed operand order" do
-      input = """
-      Enum.reduce(list, 0, fn x, acc -> x + acc end)
-      """
+      input = "Enum.reduce(list, 0, fn x, acc -> x + acc end)"
 
-      expected = """
-      Enum.sum(list)
-      """
+      expected = "Enum.sum(list)"
 
-      assert fix(NoExplicitSumReduce, input) == expected
+      confirm_fix(fix(NoExplicitSumReduce, input), expected)
     end
 
     test "does not modify non-sum reductions" do
-      code = """
-      Enum.reduce(list, 1, fn x, acc -> x * acc end)
-      """
+      code = "Enum.reduce(list, 1, fn x, acc -> x * acc end)"
 
-      assert fix(NoExplicitSumReduce, code) == code
+      confirm_fix(fix(NoExplicitSumReduce, code), code)
     end
 
     test "preserves surrounding code" do
@@ -57,13 +47,11 @@ defmodule Credence.Pattern.NoExplicitSumReduceFixTest do
       end
       """
 
-      assert fix(NoExplicitSumReduce, input) == expected
+      confirm_fix(fix(NoExplicitSumReduce, input), expected)
     end
 
     test "round-trip: fixed code produces no issues" do
-      code = """
-      Enum.reduce(list, 0, fn x, acc -> x + acc end)
-      """
+      code = "Enum.reduce(list, 0, fn x, acc -> x + acc end)"
 
       assert check(NoExplicitSumReduce, fix(NoExplicitSumReduce, code)) == []
     end

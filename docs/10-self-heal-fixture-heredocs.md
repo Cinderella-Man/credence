@@ -1,128 +1,127 @@
-# 10 — Fixture-form convention + deterministic self-heal
+# 10 — Fixture convention (single-line ⇒ plain/sigil) + `confirm_fix` + self-heal
 
 ## Context
 
-Review of `logs/escalated/` showed **every** escalated case was a *genuine, useful* Credence rule
-rejected **solely** because its test fixtures didn't satisfy `test/fixture_string_escaping_test.exs`, which
-today demands **every** code fixture be a `"""` heredoc — even a one-line one. That meta-test runs in the
-default `mix test`; Tunex's Gate runs the suite, so a non-heredoc fixture → meta-test RED → suite RED →
-genuine rule discarded → `escalated/`. The agentic rule-writer also runs `mix test` mid-loop and burns turns
-fighting it.
+The escalated-rules review found that genuine rules were rejected only because their fixtures didn't match
+`test/fixture_string_escaping_test.exs`. The first iteration of this plan *relaxed* the convention to allow a
+single-line plain `"…"` alongside heredocs. That left ~2088 existing single-**content**-line heredocs
+(`"""\nfoo\n"""`, value `"foo\n"`) untouched, which is inconsistent and verbose.
 
-Two fixes, together:
-1. **Relax the convention** so the natural single-line form an AI writes is *allowed*, not rejected.
-2. **Deterministically self-heal** the remaining wrong forms on every `mix test`, before the suite compiles —
-   so the agent loop, the implementer's focused test, and the Gate's full suite all normalize fixtures
-   themselves. Only genuinely un-representable fixtures (the rare residue) still escalate.
+**New directive (decisive): single-line triple-quoted strings are NOT allowed — convert all of them.** Every
+fixture is exactly one canonical form, enforced and produced by the healer. The only thing that made this
+unsafe was the trailing `\n` a heredoc adds: in a fix test, `fix(R, input) == expected` compared the fix's
+output byte-for-byte, so dropping the `\n` broke ~46 rules whose fix isn't newline-transparent. The fix is a
+**global comparison helper** — `confirm_fix(fix(R, input), expected)` — that compares with trailing newlines
+trimmed. With it, trailing newlines never matter, so every single-content-line heredoc can become a plain
+string with **no per-rule guard**.
 
-Covers Credence only; the Tunex prompt nudge (§B) is a separate repo (see *Out of scope*).
+Credence only; the Tunex prompt nudge stays out of scope (separate repo).
 
-## The convention (3 canonical forms, escape-free, one way each)
+## The convention (exactly one canonical form per value)
 
-Driven by a fixture's **value** (not how it's typed):
+| Fixture value | Canonical form |
+|---|---|
+| no newline, no `"` | `"foo"` (plain) |
+| no newline, has `"` | `~S'foo "bar"'` (single-quote-delimited sigil) |
+| has a newline (multi-line) | `"""…"""` heredoc |
 
-| Value | Canonical form | Why |
-|---|---|---|
-| no newline, no `"` | `"foo"` (plain) | compact, clean |
-| no newline, has `"` | `~S'foo "bar"'` | escape-free, compact, **preserves the no-`\n` value** |
-| has a newline | `"""…"""` heredoc | escape-free multi-line |
+- **No single-content-line heredocs.** A heredoc is allowed only when its value has an *internal* newline
+  (≥2 content lines). `"""\nfoo\n"""` (value `"foo\n"`) is flagged → must become `"foo"` / `~S'…'`.
+- Sigil delimiter is fixed at `'` (rarest in Elixir code; survives malformed-code fixtures). Verified
+  value-safe + `mix format`-stable in the prior iteration.
 
-- **Sigil delimiter is fixed at `'`** (`~S'…'`). `'` (charlist quote) is the rarest character in Elixir code,
-  so it's effectively conflict-free — crucially, *syntax*-rule fixtures (malformed code) routinely have
-  unbalanced `()`/`[]`/`<>`/`|` (which break those delimiters) but essentially never a `'`. There is **one**
-  sigil form; a heredoc is the fallback only for the never-observed "value has both `"` and `'`" case.
-- A heredoc's value *always* ends in `\n`, so the 2088 existing single-content-line heredocs (value `"foo\n"`)
-  **stay heredocs** — their value contains a newline. No churn, no value changes. Single-line *plain* is for
-  genuinely-no-`\n` values (e.g. `analyze(...)` inputs — exactly the escalated cases).
+## `confirm_fix/2` — the global, newline-insensitive fix comparison
 
-## Meta-test (`fixture_ok?`) — relaxed, tested both ways
+New helper in `test/support/rule_case.ex` (available unqualified via `use Credence.RuleCase`, like `fix/2`):
 
-A plain `"..."` fixture is **flagged** iff its value has a newline (→ heredoc) **or** a `"` (→ `~S'…'`);
-otherwise allowed. `~S'…'` sigils and heredocs are allowed. Concretely (raw node form, mirroring the existing
-`multiline_interp?` substring style): flag a `{:__block__, m, [s]}` (non-heredoc) when
-`s =~ ~r/\\?n/`-style newline **or** `s` contains `\"`. **Both directions get test cases**: a clean
-single-line `"foo"` passes; `"abc\ndef"` and `"a \"b\""` fail.
+```elixir
+def confirm_fix(actual, expected) do
+  assert String.trim_trailing(actual, "\n") == String.trim_trailing(expected, "\n")
+end
+```
 
-## Decisions (resolved via design review + empirical PoC)
+Every fix test uses it instead of `assert fix(...) == expected`:
 
-- **Trigger** — heal always, in `test/test_helper.exs` (before `*_test.exs` are required). Idempotent;
-  no-op once forms are canonical.
-- **Healer scope** — exactly 3 deterministic conversions (no prettify/verbatim ambiguity — that's gone):
-  plain-with-`\n` → heredoc (real newlines); plain-with-`"`(no `'`) → `~S'…'`; plain-with-`"`-and-`'` → heredoc.
-  Clean single-line plain and existing heredocs/sigils are left alone.
-- **Write safety** — verify before write: the healed file parses, has strictly fewer flagged fixtures
-  (monotonic), and each converted fixture's *compiled value* is unchanged (±trailing `\n` for the heredoc
-  case). Per-file `rescue`. A healer bug becomes a no-op, never a suite-bricking compile error.
-- **Placement** — all new code in `/test`: `Credence.FixtureHealer` in `test/support/`; `@allow` moves into
-  `Credence.MetaTestSupport` (shared with the meta-test). **Zero lib code.** (The lib mix tasks
-  `credence.fix_tests`/`gen.rule`/`normalize_tests` + `RuleScaffold`/`RuleName` are irreducible — mix-task
-  discovery + `:dev`.)
+```elixir
+confirm_fix(fix(NoFoo, input), expected)      # was: assert fix(NoFoo, input) == expected
+```
 
-### Verified empirically (`MIX_ENV=test` PoC)
+This trims the trailing `\n` on **both** sides, so input/expected may be compact plain strings (no `\n`) or
+heredocs (which add one) interchangeably — and it also subsumes the two current `@allow` reasons
+("fix drops/forces a trailing newline"), shrinking `@allow`.
 
-- `~S'…'` preserves values exactly (quotes, backslashes, literal `#{}`), is **format-stable**
-  (`Code.format_string!` keeps the `'` delimiter), and clashes with **0** of the 20 existing single-line
-  quote-containing fixtures (none also contain a `'`).
-- Heredoc rendering: copying the value as real newlines, `patch_string` re-indents (incl. blank lines), dedent
-  cancels → values preserved.
-- `elixirc_paths(:test) = ["lib","test/support"]` (`mix.exs:23`) ⇒ `test/support` compiles before
-  `test_helper.exs` runs ⇒ `MetaTestSupport.fixtures/1`/`fixture_ok?/1` callable from the hook.
+## What the healer does (deterministic, every `mix test`, idempotent)
 
-## Implementation
+`Credence.FixtureHealer` (test/support) gains two passes on top of the existing plain→heredoc/sigil pass; all
+applied in one `Sourceror.patch_string` write per file, guarded by parse + value-eval before writing:
 
-1. **`test/support/meta_test_support.ex`** — relax `fixture_ok?` per the rule above (allow clean single-line
-   plain + `~S'…'`; flag `\n`/`\"` plain). Add `def allow, do: %{…}` (the 2 current `@allow` entries) so both
-   the meta-test and the healer share it.
-2. **`test/support/fixture_healer.ex`** (`Credence.FixtureHealer`):
-   - `heal_source(src) :: {healed, residue_count}` — `Sourceror.parse_string!` → `MetaTestSupport.fixtures`
-     → for each flagged node, pick the canonical form (heredoc / `~S'…'`) and emit a
-     `%{range: Sourceror.get_range(node), change: …}` patch → `Sourceror.patch_string`.
-     - `~S'…'` builder: `"~S'" <> value <> "'"`; if the value contains `'` (or `\n`), use a heredoc instead.
-     - heredoc builder: the value as real newlines, wrapped `"""\n…\n"""` (column-0; `patch_string` re-indents).
-   - `heal_file(path)` — read; `heal_source`; write only if the verify-before-write guards pass; skip `@allow`;
-     `rescue -> :ok`. (Mirror `Credence.FixTests.fix_file/1`, `lib/mix/tasks/credence.fix_tests.ex`.)
-   - `heal_dirs()` — `Path.wildcard("test/{pattern,semantic,syntax}/**/*_test.exs")`, `heal_file` each.
-3. **`test/test_helper.exs`** — `Credence.FixtureHealer.heal_dirs()` before `ExUnit.start(...)`.
-4. **`test/fixture_string_escaping_test.exs`** — source `@allow` from `MetaTestSupport`; otherwise unchanged
-   (still the residue arbiter).
-5. **Existing-fixture migration** (one-time, by the healer itself on first `mix test`): non-`'` single-line
-   string sigils heal to `~S'…'` where value-safe; anything that can't (multi-line sigils, `'`+`"` values) →
-   `@allow` or heredoc. Audit the diff before committing.
+1. **Convert single-content-line heredocs → plain/`~S'…'`.** Value with no newline → `"foo"` (or `~S'foo "x"'`
+   if it has a `"`). (Existing pass already handles plain-with-`\n` → heredoc and plain-with-`"` → `~S'…'`.)
+2. **Rewrite the fix assertion** `assert fix(…) == expected` → `confirm_fix(fix(…), expected)` (both operand
+   orders; multi-line operands preserved by patching the `assert`/`==` node range; also the var-bound shape
+   `result = fix(…)` then `assert result == expected`, by resolving the same-block binding). Idempotent (skip
+   if already `confirm_fix`). Leaves the 32 non-`==` fix assertions (`valid_syntax?(fix(…))`,
+   `analyze(fix(…)) == []`, `refute …`) untouched — they don't compare the fix's string output, so newlines
+   don't matter there.
 
-## Reuse
+**Safety principle (order matters):** within a fix test, a single-content-line heredoc is converted to a
+plain string **only after** its enclosing comparison is newline-insensitive — i.e. it is a `confirm_fix`
+operand (pass 2 already applied) or a non-`==` assertion. A heredoc whose comparison the healer can't
+normalize to `confirm_fix` is left as a heredoc (conservative — never breaks a `==`). Combined with
+verify-before-write and the suite that runs immediately after, no conversion can silently break a test.
 
-- `MetaTestSupport.fixtures/1` (`test/support/meta_test_support.ex:295`) + `fixture_ok?/1` (`:347`).
-- `Credence.FixTests.fix_file/1` (`lib/mix/tasks/credence.fix_tests.ex`) — read/patch/write/`rescue` shape.
-- `Sourceror.{parse_string!,get_range,patch_string}`; `Code.{string_to_quoted,eval_string,format_string!}`.
+On the current tree this is a one-time bulk change (~2042 assertion rewrites + ~2088 heredoc conversions
+across 214 files); afterward it's a no-op. The Gate's `git add -A` commits the canonical files.
 
-## Tests — `test/fixture_healer_test.exs` (at test *root*, outside the gated dirs)
+## Files to change
 
-- Meta-test convention (both ways): clean single-line `"foo"` ok; `"a\nb"` flagged; `"a \"b\""` flagged;
-  `~S'a "b"'` ok; heredoc ok.
-- `heal_source/1`: `"a\nb"` → heredoc; `"a \"b\""` → `~S'a "b"'`; `"foo"` unchanged; value containing `'`+`"`
-  → heredoc; idempotency; value-eval equality across backslash / `#{` / quotes.
-- `heal_file/1`: temp file with a `\n`/escaped fixture → healed + `fixture_ok?` passes; `@allow` untouched;
-  a non-monotonic/unparseable heal is skipped.
+- **`test/support/rule_case.ex`** — add `confirm_fix/2`. Revert the experimental `fix/2` trailing-newline
+  strip from this session (superseded by `confirm_fix`; `fix/2` returns raw bytes again).
+- **`test/support/meta_test_support.ex`** —
+  - `fixture_ok?` for `{:__block__, m, [s]}`: a `"""` heredoc is OK **only** if multi-line
+    (`String.contains?(String.trim_trailing(s, "\n"), "\n")`) or it carries `"""`; otherwise it's a
+    single-content-line heredoc → flagged. Keep the plain-`"…"` clause (no newline, no `"`) and the `~S'…'`
+    clause from the prior iteration.
+  - `transform?/1` and `fix_source_transform?/1`: also accept `{:confirm_fix, _, [fix_call, expected]}`
+    (currently only `{:==, _, [fix_call, expected]}`). `partial_match?`, `fix_call?`, `fix_call1?`,
+    `calls_any?([:fix])` are unchanged (the inner `fix(…)` call still matches).
+- **`test/support/fixture_healer.ex`** — add passes 1 & 2 above; keep verify-before-write (parse + value-eval
+  ±trailing `\n`, monotonic).
+- **`test/test_helper.exs`** — unchanged (already calls `heal_dirs/0` before the suite compiles).
+- **`test/fixture_string_escaping_test.exs`** — unchanged (still the residue arbiter; sources `@allow` from
+  `MetaTestSupport`).
+- **`lib/rule_scaffold.ex`** — the 3 fix-test templates (pattern ~line 120, syntax ~233, semantic ~347):
+  emit `confirm_fix(fix(…), expected)` and plain `"…"` single-line fixtures instead of heredocs.
+- **`test/generator_meta_test.exs`** — the pin: accept `:confirm_fix` (e.g. `calls_any?([:fix, :confirm_fix])`)
+  and the updated `transform?/1`. Fixture validation already accepts plain `"…"`.
+- **`lib/mix/tasks/credence.fix_tests.ex`** — `fix_assertion/1` (~line 205): also match
+  `{:confirm_fix, _, [{:fix, _, [alias, arg]}, rhs]}` → `{input_ref, expected_ref}`. (`credence.normalize_tests`
+  is assertion-agnostic — no change.)
 
 ## Verification
 
-- `mix test` green (meta-tests + new healer tests). Confirm heal is a **no-op on the canonical tree**.
-- Manual: plant `code = "a \"b\""` in a real `test/pattern/<x>_fix_test.exs` → `mix test` → it's now
-  `~S'a "b"'` and the meta-test passes; plant `"x\ny"` → becomes a heredoc; a clean `"foo"` is untouched.
-- Clone-smoke: a checkout whose new rule uses plain/escaped fixtures → one `mix test` self-heals + passes.
+- `mix test` green after the healer's bulk run. Re-run → **no-op** (hash-identical tree).
+- The four meta-tests that gate fix shape stay green: `fix_meta_test` (real transform via updated
+  `transform?/1`, whole-string via `partial_match?`), `generator_meta_test` pin, `fixture_string_escaping_test`
+  (now flags single-content-line heredocs, all healed), `syntax_meta`/`semantic_meta`.
+- Spot-check: `avoid_graphemes_enum_count_fix_test.exs` becomes
+  `confirm_fix(fix(AvoidGraphemesEnumCount, "Enum.count(String.graphemes(str))"), "String.length(str)")`.
+- Plant a fresh single-content-line heredoc fixture + an `assert fix(R, …) == …` in a real test → one
+  `mix test` rewrites both to canonical form, suite stays green.
+- `mix format` + `mix credo --strict` clean on changed support/lib files.
 
 ## Risks / notes
 
-- **`mix test` mutates tracked test files** (the heal + the one-time sigil migration) — accepted; idempotent;
-  the Gate's `git add -A` commits them. Audit the first migration diff.
-- **Verify-before-write is load-bearing** (heal runs every `mix test`) — keep the parse + value-eval +
-  monotonic guards.
-- **Residue still escalates** — a single-line value containing both `"` and `'`, or a value that can't be a
-  heredoc, is left for the meta-test. Vanishingly rare.
+- **Large one-time diff** (~214 files) on the first heal — expected; idempotent thereafter; the Gate commits it.
+- **`confirm_fix` failure messages** show the trimmed values; keep the message readable (it's the new default
+  for every fix test).
+- **Verify-before-write stays load-bearing** — heal runs on every `mix test`; the parse + value-eval guards
+  keep a healer/rewrite bug from bricking the suite (a file that wouldn't parse or whose values changed beyond
+  a trailing `\n` is left untouched).
+- **Residue still escalates**: a single-line value containing both `"` and `'`, or one carrying `"""`, can't be
+  plain/`~S'…'` → left for the meta-test. Vanishingly rare.
 
 ## Out of scope (separate repo)
 
-§B — prompt-only nudge in Tunex (`lib/tunex/implement/seed.ex`): teach the 3-form convention (plain / `~S'…'`
-/ heredoc) in `conventions_block`, and add a phase-conditional `syntax_fix_block` pointing syntax rules at the
-parser's error structure (`Code.string_to_quoted/2` `{:error, {meta, msg, token}}`) instead of line/text
-heuristics. Independent of this change.
+Tunex `seed.ex`: teach the 3-form convention + `confirm_fix(fix(…), expected)` as the fix-test shape, and the
+parser-error-structure guidance for syntax rules. Independent of this change.

@@ -12,9 +12,7 @@ defmodule Credence.Pattern.NoListFoldlEquivalenceTest do
 
   test "List.foldl → Enum.reduce preserves accumulation (left-to-right)" do
     assert_equivalent(
-      """
-      List.foldl(list, 0, fn x, acc -> acc + x end)
-      """,
+      "List.foldl(list, 0, fn x, acc -> acc + x end)",
       rule: NoListFoldl,
       vars: [:list],
       inputs: B.signed_integers()

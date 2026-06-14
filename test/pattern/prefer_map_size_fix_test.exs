@@ -4,26 +4,18 @@ defmodule Credence.Pattern.PreferMapSizeFixTest do
   alias Credence.Pattern.PreferMapSize
 
   test "rewrites Map.keys piped into Enum.count" do
-    input = """
-    Map.keys(m) |> Enum.count()
-    """
+    input = "Map.keys(m) |> Enum.count()"
 
-    expected = """
-    map_size(m)
-    """
+    expected = "map_size(m)"
 
-    assert fix(PreferMapSize, input) == expected
+    confirm_fix(fix(PreferMapSize, input), expected)
   end
 
   test "rewrites Enum.count wrapping Map.keys" do
-    input = """
-    Enum.count(Map.keys(m))
-    """
+    input = "Enum.count(Map.keys(m))"
 
-    expected = """
-    map_size(m)
-    """
+    expected = "map_size(m)"
 
-    assert fix(PreferMapSize, input) == expected
+    confirm_fix(fix(PreferMapSize, input), expected)
   end
 end

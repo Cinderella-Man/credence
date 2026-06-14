@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.NoReservedWordVariableFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.NoReservedWordVariable
 
@@ -19,7 +19,7 @@ defmodule Credence.Syntax.NoReservedWordVariableFixTest do
     before ++ Enum.reverse(after_val)
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output no longer flags" do
@@ -62,7 +62,7 @@ defmodule Credence.Syntax.NoReservedWordVariableFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output with end variable parses correctly" do
@@ -80,19 +80,15 @@ defmodule Credence.Syntax.NoReservedWordVariableFixTest do
   end
 
   test "does not modify false atom in pattern match" do
-    input = """
-    {false, [], seen} = bar()
-    """
+    input = "{false, [], seen} = bar()"
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "does not modify true atom in pattern match" do
-    input = """
-    {true, [], seen} = bar()
-    """
+    input = "{true, [], seen} = bar()"
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "does not modify false atom in if expression" do
@@ -102,15 +98,11 @@ defmodule Credence.Syntax.NoReservedWordVariableFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "false in pattern match produces valid syntax" do
-    assert valid_syntax?(
-             fix("""
-             {false, [], seen} = bar()
-             """)
-           )
+    assert valid_syntax?(fix("{false, [], seen} = bar()"))
   end
 
   test "combined: false atom and end variable — only end is renamed" do
@@ -130,6 +122,6 @@ defmodule Credence.Syntax.NoReservedWordVariableFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 end

@@ -31,7 +31,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(NoDestructureReconstruct, input) == expected
+      confirm_fix(fix(NoDestructureReconstruct, input), expected)
     end
 
     test "fixes two-variable case" do
@@ -57,7 +57,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(NoDestructureReconstruct, input) == expected
+      confirm_fix(fix(NoDestructureReconstruct, input), expected)
     end
   end
 
@@ -79,7 +79,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(NoDestructureReconstruct, input) == expected
+      confirm_fix(fix(NoDestructureReconstruct, input), expected)
     end
 
     test "fixes defp function head" do
@@ -99,7 +99,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(NoDestructureReconstruct, input) == expected
+      confirm_fix(fix(NoDestructureReconstruct, input), expected)
     end
 
     test "fixes guarded function head" do
@@ -119,7 +119,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(NoDestructureReconstruct, input) == expected
+      confirm_fix(fix(NoDestructureReconstruct, input), expected)
     end
   end
 
@@ -153,7 +153,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(NoDestructureReconstruct, input) == expected
+      confirm_fix(fix(NoDestructureReconstruct, input), expected)
     end
 
     test "keeps multiple individually-used variables" do
@@ -183,7 +183,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(NoDestructureReconstruct, input) == expected
+      confirm_fix(fix(NoDestructureReconstruct, input), expected)
     end
   end
 
@@ -197,7 +197,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(NoDestructureReconstruct, code) == code
+      confirm_fix(fix(NoDestructureReconstruct, code), code)
     end
 
     test "does not touch already-idiomatic code" do
@@ -215,7 +215,7 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       end
       """
 
-      assert fix(NoDestructureReconstruct, code) == code
+      confirm_fix(fix(NoDestructureReconstruct, code), code)
     end
 
     test "round-trip: case branch fix produces zero issues" do

@@ -18,7 +18,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, input) == expected
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
     test "single defp with @doc string" do
@@ -35,7 +35,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, input) == expected
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
     test "multiple defps — drops each @doc, keeps the blank line between them" do
@@ -57,7 +57,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, input) == expected
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
     test "guarded defp with @doc false" do
@@ -74,7 +74,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, input) == expected
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
     test "guarded defp with @doc string" do
@@ -91,7 +91,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, input) == expected
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
     test "mix of public @doc and private @doc — only removes private ones" do
@@ -114,7 +114,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, input) == expected
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
   end
 
@@ -127,7 +127,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, code) == code
+      confirm_fix(fix(NoDocFalseOnPrivate, code), code)
     end
 
     test "@doc string on a public function" do
@@ -138,7 +138,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, code) == code
+      confirm_fix(fix(NoDocFalseOnPrivate, code), code)
     end
   end
 end

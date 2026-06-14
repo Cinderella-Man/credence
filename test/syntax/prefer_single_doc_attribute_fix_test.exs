@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.PreferSingleDocAttributeFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.PreferSingleDocAttribute
 
@@ -28,7 +28,7 @@ defmodule Credence.Syntax.PreferSingleDocAttributeFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output no longer flags" do
@@ -81,7 +81,7 @@ defmodule Credence.Syntax.PreferSingleDocAttributeFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed heredoc with closing triple-quotes no longer flags" do

@@ -16,7 +16,7 @@ defmodule Credence.Pattern.NoBareValueInMapNewFixTest do
     end
     """
 
-    assert fix(NoBareValueInMapNew, input) == expected
+    confirm_fix(fix(NoBareValueInMapNew, input), expected)
   end
 
   test "bare underscore param becomes `key`" do
@@ -32,7 +32,7 @@ defmodule Credence.Pattern.NoBareValueInMapNewFixTest do
     end
     """
 
-    assert fix(NoBareValueInMapNew, input) == expected
+    confirm_fix(fix(NoBareValueInMapNew, input), expected)
   end
 
   test "keeps a used parameter name as the key" do
@@ -48,7 +48,7 @@ defmodule Credence.Pattern.NoBareValueInMapNewFixTest do
     end
     """
 
-    assert fix(NoBareValueInMapNew, input) == expected
+    confirm_fix(fix(NoBareValueInMapNew, input), expected)
   end
 
   test "leaves a correct tuple-returning mapper unchanged" do
@@ -58,6 +58,6 @@ defmodule Credence.Pattern.NoBareValueInMapNewFixTest do
     end
     """
 
-    assert fix(NoBareValueInMapNew, input) == input
+    confirm_fix(fix(NoBareValueInMapNew, input), input)
   end
 end

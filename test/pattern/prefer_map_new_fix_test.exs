@@ -4,27 +4,19 @@ defmodule Credence.Pattern.PreferMapNewFixTest do
   alias Credence.Pattern.PreferMapNew
 
   test "rewrites Enum.into(enum, %{}) to Map.new(enum)" do
-    code = """
-    Enum.into(list, %{})
-    """
+    code = "Enum.into(list, %{})"
 
-    expected = """
-    Map.new(list)
-    """
+    expected = "Map.new(list)"
 
-    assert fix(PreferMapNew, code) == expected
+    confirm_fix(fix(PreferMapNew, code), expected)
   end
 
   test "rewrites piped Enum.into(%{}) to Map.new()" do
-    code = """
-    pairs |> Enum.into(%{})
-    """
+    code = "pairs |> Enum.into(%{})"
 
-    expected = """
-    pairs |> Map.new()
-    """
+    expected = "pairs |> Map.new()"
 
-    assert fix(PreferMapNew, code) == expected
+    confirm_fix(fix(PreferMapNew, code), expected)
   end
 
   test "rewrites Enum.into in a longer pipeline" do
@@ -40,7 +32,7 @@ defmodule Credence.Pattern.PreferMapNewFixTest do
     |> Map.new()
     """
 
-    assert fix(PreferMapNew, code) == expected
+    confirm_fix(fix(PreferMapNew, code), expected)
   end
 
   test "preserves surrounding code" do
@@ -62,32 +54,26 @@ defmodule Credence.Pattern.PreferMapNewFixTest do
     end
     """
 
-    assert fix(PreferMapNew, code) == expected
+    confirm_fix(fix(PreferMapNew, code), expected)
   end
 
   # ── No-op cases (check does not fire → fix leaves code unchanged) ──
 
   test "leaves Map.new(enum) untouched" do
-    code = """
-    Map.new(list)
-    """
+    code = "Map.new(list)"
 
-    assert fix(PreferMapNew, code) == code
+    confirm_fix(fix(PreferMapNew, code), code)
   end
 
   test "leaves Enum.into with a variable target untouched" do
-    code = """
-    Enum.into(list, existing_map)
-    """
+    code = "Enum.into(list, existing_map)"
 
-    assert fix(PreferMapNew, code) == code
+    confirm_fix(fix(PreferMapNew, code), code)
   end
 
   test "leaves Enum.into with a non-empty map literal untouched" do
-    code = """
-    Enum.into(list, %{a: 1})
-    """
+    code = "Enum.into(list, %{a: 1})"
 
-    assert fix(PreferMapNew, code) == code
+    confirm_fix(fix(PreferMapNew, code), code)
   end
 end

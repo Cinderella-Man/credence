@@ -29,7 +29,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == expected
+      confirm_fix(fix(PreferCondForNestedIf, input), expected)
     end
 
     test "inside a function" do
@@ -57,7 +57,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == expected
+      confirm_fix(fix(PreferCondForNestedIf, input), expected)
     end
 
     test "inside a module" do
@@ -89,7 +89,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == expected
+      confirm_fix(fix(PreferCondForNestedIf, input), expected)
     end
 
     test "different conditions and atom bodies" do
@@ -113,7 +113,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == expected
+      confirm_fix(fix(PreferCondForNestedIf, input), expected)
     end
   end
 
@@ -149,7 +149,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == expected
+      confirm_fix(fix(PreferCondForNestedIf, input), expected)
     end
 
     test "used as expression assignment" do
@@ -179,7 +179,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == expected
+      confirm_fix(fix(PreferCondForNestedIf, input), expected)
     end
   end
 
@@ -195,7 +195,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == input
+      confirm_fix(fix(PreferCondForNestedIf, input), input)
     end
   end
 
@@ -209,7 +209,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == input
+      confirm_fix(fix(PreferCondForNestedIf, input), input)
     end
   end
 
@@ -225,7 +225,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == input
+      confirm_fix(fix(PreferCondForNestedIf, input), input)
     end
   end
 
@@ -239,15 +239,13 @@ defmodule Credence.Pattern.PreferCondForNestedIfFixTest do
       end
       """
 
-      assert fix(PreferCondForNestedIf, input) == input
+      confirm_fix(fix(PreferCondForNestedIf, input), input)
     end
 
     test "plain function" do
-      input = """
-      def run(x), do: x * 2
-      """
+      input = "def run(x), do: x * 2"
 
-      assert fix(PreferCondForNestedIf, input) == input
+      confirm_fix(fix(PreferCondForNestedIf, input), input)
     end
   end
 end

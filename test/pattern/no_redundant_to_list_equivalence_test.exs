@@ -14,9 +14,7 @@ defmodule Credence.Pattern.NoRedundantToListEquivalenceTest do
 
   test "Enum.to_list(items) |> MapSet.new() → MapSet.new(items) preserves the set" do
     assert_equivalent(
-      """
-      Enum.to_list(items) |> MapSet.new()
-      """,
+      "Enum.to_list(items) |> MapSet.new()",
       rule: NoRedundantToList,
       vars: [:items],
       inputs: [[], [1, 2, 3], 1..5, [1, 1.0, 2], [:a, :a, :b]]

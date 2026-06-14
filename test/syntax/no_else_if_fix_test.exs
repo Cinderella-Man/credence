@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.NoElseIfFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.NoElseIf
 
@@ -27,7 +27,7 @@ defmodule Credence.Syntax.NoElseIfFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output no longer flags" do
@@ -78,7 +78,7 @@ defmodule Credence.Syntax.NoElseIfFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "comment-only else fix is well-formed (parses)" do

@@ -13,9 +13,7 @@ defmodule Credence.Pattern.PreferMapNewEquivalenceTest do
 
   test "Enum.zip(k, v) |> Enum.into(%{}) → Enum.zip(k, v) |> Map.new() preserves the map" do
     assert_equivalent(
-      """
-      Enum.zip(key_list, value_list) |> Enum.into(%{})
-      """,
+      "Enum.zip(key_list, value_list) |> Enum.into(%{})",
       rule: PreferMapNew,
       vars: [:key_list, :value_list],
       inputs: [

@@ -22,7 +22,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
     end
     """
 
-    assert fix(PreferNegateIfTrueFalse, input) == expected
+    confirm_fix(fix(PreferNegateIfTrueFalse, input), expected)
   end
 
   test "flips comparison operator instead of wrapping in !" do
@@ -42,7 +42,7 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
     end
     """
 
-    assert fix(PreferNegateIfTrueFalse, input) == expected
+    confirm_fix(fix(PreferNegateIfTrueFalse, input), expected)
   end
 
   # Comparison operator is flipped directly — no wrapping in `!()`.
@@ -65,6 +65,6 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalseFixTest do
     end
     """
 
-    assert fix(PreferNegateIfTrueFalse, input) == expected
+    confirm_fix(fix(PreferNegateIfTrueFalse, input), expected)
   end
 end

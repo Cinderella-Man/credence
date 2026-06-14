@@ -8,9 +8,7 @@ defmodule Credence.Syntax.PreferListUpdateAtAnalyzeTest do
 
   test "flags List.update_elem/3" do
     assert [%Issue{rule: :prefer_list_update_at}] =
-             analyze("""
-             List.update_elem(my_list, 0, new_value)
-             """)
+             analyze("List.update_elem(my_list, 0, new_value)")
   end
 
   test "flags List.update_elem/3 inside a module" do
@@ -25,14 +23,10 @@ defmodule Credence.Syntax.PreferListUpdateAtAnalyzeTest do
   end
 
   test "leaves List.update_at/3 alone" do
-    assert analyze("""
-           List.update_at(my_list, 0, fn _ -> new_value end)
-           """) == []
+    assert analyze("List.update_at(my_list, 0, fn _ -> new_value end)") == []
   end
 
   test "leaves unrelated code alone" do
-    assert analyze("""
-           Enum.map(list, &(&1 + 1))
-           """) == []
+    assert analyze("Enum.map(list, &(&1 + 1))") == []
   end
 end

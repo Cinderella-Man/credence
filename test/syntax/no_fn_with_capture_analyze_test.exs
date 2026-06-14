@@ -8,9 +8,7 @@ defmodule Credence.Syntax.NoFnWithCaptureAnalyzeTest do
 
   test "flags fn-keyword mixed with capture syntax" do
     assert [%Issue{rule: :no_fn_with_capture, meta: %{line: 1}}] =
-             analyze("""
-             Enum.filter(list, fn(&1 > 0))
-             """)
+             analyze("Enum.filter(list, fn(&1 > 0))")
   end
 
   test "reports the line of the offending fn(" do
@@ -23,20 +21,14 @@ defmodule Credence.Syntax.NoFnWithCaptureAnalyzeTest do
   end
 
   test "does not flag valid parenthesised fn parameters" do
-    assert analyze("""
-           Enum.filter(list, fn(x) -> x > 0 end)
-           """) == []
+    assert analyze("Enum.filter(list, fn(x) -> x > 0 end)") == []
   end
 
   test "does not flag a valid capture" do
-    assert analyze("""
-           Enum.filter(list, &(&1 > 0))
-           """) == []
+    assert analyze("Enum.filter(list, &(&1 > 0))") == []
   end
 
   test "does not flag an identifier that merely ends in fn" do
-    assert analyze("""
-           myfn(&1 > 0)
-           """) == []
+    assert analyze("myfn(&1 > 0)") == []
   end
 end

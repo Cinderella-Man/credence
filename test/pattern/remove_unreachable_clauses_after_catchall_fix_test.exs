@@ -35,7 +35,7 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       end
       """
 
-      assert fix(RemoveUnreachableClausesAfterCatchall, input) == expected
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, input), expected)
     end
 
     test "removes unreachable clause after catch-all with underscore args" do
@@ -57,7 +57,7 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       end
       """
 
-      assert fix(RemoveUnreachableClausesAfterCatchall, input) == expected
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, input), expected)
     end
 
     test "removes multiple unreachable clauses after catch-all" do
@@ -75,7 +75,7 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       end
       """
 
-      assert fix(RemoveUnreachableClausesAfterCatchall, input) == expected
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, input), expected)
     end
 
     test "no-op when no catch-all is present" do
@@ -87,7 +87,7 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       end
       """
 
-      assert fix(RemoveUnreachableClausesAfterCatchall, code) == code
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), code)
     end
 
     test "no-op when catch-all is the last clause" do
@@ -98,7 +98,7 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       end
       """
 
-      assert fix(RemoveUnreachableClausesAfterCatchall, code) == code
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), code)
     end
 
     # Regression (row 111548): removing two trailing unreachable clauses used to
@@ -137,7 +137,7 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       end
       """
 
-      assert fix(RemoveUnreachableClausesAfterCatchall, code) == expected
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), expected)
     end
 
     # over_fire (row 113007): a wildcard catch-all preceding a guarded clause
@@ -173,7 +173,7 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       end
       """
 
-      assert fix(RemoveUnreachableClausesAfterCatchall, input) == expected
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, input), expected)
     end
   end
 end

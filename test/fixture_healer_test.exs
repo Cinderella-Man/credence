@@ -18,6 +18,12 @@ defmodule Credence.FixtureHealerTest do
   defp values(src),
     do: src |> Sourceror.parse_string!() |> Meta.fixtures() |> Enum.map(&value_of/1)
 
+  # Triple-quote delimiter as a 3-quote sigil, so no string literal in this file
+  # (which is all about heredoc source) carries "more than 3 quotes".
+  @tq ~s(""")
+  defp heredoc(body), do: @tq <> "\n" <> body <> @tq
+  defp assign(body), do: "code = " <> heredoc(body) <> "\n"
+
   describe "fixture_ok?/1 — the convention, both directions" do
     test "clean single-line plain is allowed" do
       assert ok?(~S|"Enum.filter(l, fn x -> x end)"|)
@@ -39,12 +45,16 @@ defmodule Credence.FixtureHealerTest do
       refute ok?("~S'a\\nb'")
     end
 
-    test "a heredoc is allowed" do
-      assert ok?("\"\"\"\nfoo\n\"\"\"")
+    test "a multi-content-line heredoc is allowed" do
+      assert ok?(heredoc("foo\nbar\n"))
+    end
+
+    test "a single-content-line heredoc is flagged" do
+      refute ok?(heredoc("foo\n"))
     end
   end
 
-  describe "heal_source/1 — the 3 conversions" do
+  describe "heal_source/1 — fixture form conversions" do
     test "newline value → heredoc" do
       assert H.heal_source("code = \"a\\nb\"\n") == {"code = \"\"\"\na\nb\n\"\"\"\n", 0}
     end
@@ -54,8 +64,7 @@ defmodule Credence.FixtureHealerTest do
     end
 
     test "newline AND quote → heredoc with raw quotes" do
-      assert H.heal_source("code = \"x\\ny \\\"q\\\"\"\n") ==
-               {"code = \"\"\"\nx\ny \"q\"\n\"\"\"\n", 0}
+      assert H.heal_source(~S|code = "x\ny \"q\""| <> "\n") == {assign("x\ny \"q\"\n"), 0}
     end
 
     test "clean single-line plain is left untouched (no-op)" do
@@ -63,9 +72,21 @@ defmodule Credence.FixtureHealerTest do
       assert H.heal_source(src) == {src, 0}
     end
 
-    test "an existing heredoc is left untouched" do
-      src = "code = \"\"\"\nfoo\nbar\n\"\"\"\n"
+    test "a multi-content-line heredoc is left untouched" do
+      src = assign("foo\nbar\n")
       assert H.heal_source(src) == {src, 0}
+    end
+
+    test "a single-content-line heredoc → plain" do
+      assert H.heal_source(assign("foo\n")) == {"code = \"foo\"\n", 0}
+    end
+
+    test "a heredoc with a trailing blank line → plain (trailing newlines dropped)" do
+      assert H.heal_source(assign("foo\n\n")) == {"code = \"foo\"\n", 0}
+    end
+
+    test "a single-content-line heredoc with a quote → ~S'…'" do
+      assert H.heal_source(assign(~S|a "b" c| <> "\n")) == {~S|code = ~S'a "b" c'| <> "\n", 0}
     end
 
     test "is idempotent" do
@@ -91,6 +112,101 @@ defmodule Credence.FixtureHealerTest do
     end
   end
 
+  describe "heal_source/1 — fix comparison → confirm_fix" do
+    defp heal(src), do: src |> H.heal_source() |> elem(0)
+
+    test "assert fix(...) == expected becomes confirm_fix(...)" do
+      src = """
+      defmodule M do
+        use Credence.RuleCase
+
+        test "t" do
+          assert fix(R, "a") == "b"
+        end
+      end
+      """
+
+      assert heal(src) =~ ~s|confirm_fix(fix(R, "a"), "b")|
+      refute heal(src) =~ "=="
+    end
+
+    test "a qualified Mod.fix(...) == expected becomes confirm_fix(...)" do
+      src = """
+      defmodule M do
+        use Credence.RuleCase
+
+        test "t" do
+          assert R.fix(source, diag) == "b"
+        end
+      end
+      """
+
+      assert heal(src) =~ ~s|confirm_fix(R.fix(source, diag), "b")|
+    end
+
+    test "a var bound to fix is recognised (result = fix(...); assert result == expected)" do
+      src = """
+      defmodule M do
+        use Credence.RuleCase
+
+        test "t" do
+          result = fix(R, "a")
+          assert result == "b"
+        end
+      end
+      """
+
+      assert heal(src) =~ ~s|confirm_fix(result, "b")|
+    end
+
+    test "merges confirm_fix into an existing scoped RuleCase import" do
+      src = """
+      defmodule M do
+        use ExUnit.Case
+
+        import Credence.RuleCase, only: [valid_syntax?: 1]
+
+        test "t" do
+          assert R.fix(source, diag) == "b"
+        end
+      end
+      """
+
+      healed = heal(src)
+      assert healed =~ "import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]"
+      # exactly one RuleCase import line (no shadowing second import)
+      assert healed |> String.split("import Credence.RuleCase") |> length() == 2
+    end
+
+    test "leaves a non-fix == assertion alone" do
+      src = """
+      defmodule M do
+        use Credence.RuleCase
+
+        test "t" do
+          assert analyze("a") == []
+        end
+      end
+      """
+
+      assert heal(src) == src
+    end
+
+    test "is idempotent (already confirm_fix)" do
+      src = """
+      defmodule M do
+        use Credence.RuleCase
+
+        test "t" do
+          confirm_fix(fix(R, "a"), "b")
+        end
+      end
+      """
+
+      assert heal(src) == src
+    end
+  end
+
   describe "heal_file/1" do
     test "rewrites a flagged fixture in place" do
       path = Path.join(System.tmp_dir!(), "healer_#{System.unique_integer([:positive])}.exs")
@@ -112,13 +228,6 @@ defmodule Credence.FixtureHealerTest do
 
       H.heal_file(path)
       assert File.read!(path) == src
-    end
-
-    test "skips @allow files" do
-      [{allow_path, _} | _] = Map.to_list(Meta.allow())
-      before = File.read!(allow_path)
-      H.heal_file(allow_path)
-      assert File.read!(allow_path) == before
     end
   end
 

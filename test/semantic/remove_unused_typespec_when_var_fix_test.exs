@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.RemoveUnusedTypespecWhenVarFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.RemoveUnusedTypespecWhenVar
 
@@ -31,7 +31,7 @@ defmodule Credence.Semantic.RemoveUnusedTypespecWhenVarFixTest do
     message =
       "credence_check.ex:19: type variable var_ok is used only once. Type variables in typespecs must be referenced at least twice, otherwise it is equivalent to term()"
 
-    assert fix(input, message) == expected
+    confirm_fix(fix(input, message), expected)
   end
 
   test "fixed output is well-formed (parses)" do

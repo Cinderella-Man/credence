@@ -17,7 +17,7 @@ defmodule Credence.Pattern.PreferPatternMatchEmptyStringFixTest do
       end
       """
 
-      assert fix(PreferPatternMatchEmptyString, input) == expected
+      confirm_fix(fix(PreferPatternMatchEmptyString, input), expected)
     end
 
     test "fixes byte_size(str) == 0 into \"\" pattern (body does not use str)" do
@@ -33,7 +33,7 @@ defmodule Credence.Pattern.PreferPatternMatchEmptyStringFixTest do
       end
       """
 
-      assert fix(PreferPatternMatchEmptyString, input) == expected
+      confirm_fix(fix(PreferPatternMatchEmptyString, input), expected)
     end
 
     test "fixes defp with byte_size guard" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.PreferPatternMatchEmptyStringFixTest do
       end
       """
 
-      assert fix(PreferPatternMatchEmptyString, input) == expected
+      confirm_fix(fix(PreferPatternMatchEmptyString, input), expected)
     end
 
     test "preserves remaining guard in compound expression" do
@@ -69,7 +69,7 @@ defmodule Credence.Pattern.PreferPatternMatchEmptyStringFixTest do
       end
       """
 
-      assert fix(PreferPatternMatchEmptyString, input) == expected
+      confirm_fix(fix(PreferPatternMatchEmptyString, input), expected)
     end
 
     test "does not modify byte_size(var) == N for N != 0" do
@@ -79,7 +79,7 @@ defmodule Credence.Pattern.PreferPatternMatchEmptyStringFixTest do
       end
       """
 
-      assert fix(PreferPatternMatchEmptyString, code) == code
+      confirm_fix(fix(PreferPatternMatchEmptyString, code), code)
     end
 
     test "does not modify byte_size(var) != 0" do
@@ -89,7 +89,7 @@ defmodule Credence.Pattern.PreferPatternMatchEmptyStringFixTest do
       end
       """
 
-      assert fix(PreferPatternMatchEmptyString, code) == code
+      confirm_fix(fix(PreferPatternMatchEmptyString, code), code)
     end
 
     test "fixed code has no remaining issues" do
@@ -123,17 +123,17 @@ defmodule Credence.Pattern.PreferPatternMatchEmptyStringFixTest do
 
       fixed = fix(PreferPatternMatchEmptyString, code)
 
-      assert fixed == """
-             defmodule Example do
-               def reverse_left_words("" = str, _count), do: str
-               def reverse_left_words(str, count) do
-                 len = String.length(str)
-                 actual_count = rem(count, len)
-                 {left, right} = String.split_at(str, actual_count)
-                 right <> left
-               end
-             end
-             """
+      confirm_fix(fixed, """
+      defmodule Example do
+        def reverse_left_words("" = str, _count), do: str
+        def reverse_left_words(str, count) do
+          len = String.length(str)
+          actual_count = rem(count, len)
+          {left, right} = String.split_at(str, actual_count)
+          right <> left
+        end
+      end
+      """)
     end
   end
 end

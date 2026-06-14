@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.NoBareDocAttributeFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoBareDocAttribute
 
@@ -29,7 +29,7 @@ defmodule Credence.Semantic.NoBareDocAttributeFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "does not remove @doc with a string argument" do
@@ -42,7 +42,7 @@ defmodule Credence.Semantic.NoBareDocAttributeFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "does not remove @doc false" do
@@ -55,7 +55,7 @@ defmodule Credence.Semantic.NoBareDocAttributeFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "does not remove @doc with heredoc" do
@@ -70,7 +70,7 @@ defmodule Credence.Semantic.NoBareDocAttributeFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "fixed output is well-formed (parses)" do

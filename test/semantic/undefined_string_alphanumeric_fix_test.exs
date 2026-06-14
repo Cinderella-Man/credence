@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.UndefinedStringAlphanumeric
 
@@ -37,7 +37,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       end
       """
 
-      assert UndefinedStringAlphanumeric.fix(source, diag(6)) == expected
+      confirm_fix(UndefinedStringAlphanumeric.fix(source, diag(6)), expected)
     end
 
     test "replaces exact palindrome pattern from pipeline log" do
@@ -67,7 +67,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       end
       """
 
-      assert UndefinedStringAlphanumeric.fix(source, diag(6)) == expected
+      confirm_fix(UndefinedStringAlphanumeric.fix(source, diag(6)), expected)
     end
 
     test "replaces in Enum.reject" do
@@ -83,7 +83,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       end
       """
 
-      assert UndefinedStringAlphanumeric.fix(source, diag(2)) == expected
+      confirm_fix(UndefinedStringAlphanumeric.fix(source, diag(2)), expected)
     end
   end
 
@@ -101,7 +101,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       end
       """
 
-      assert UndefinedStringAlphanumeric.fix(source, diag(2)) == expected
+      confirm_fix(UndefinedStringAlphanumeric.fix(source, diag(2)), expected)
     end
 
     test "replaces direct call inside if" do
@@ -121,7 +121,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       end
       """
 
-      assert UndefinedStringAlphanumeric.fix(source, diag(3)) == expected
+      confirm_fix(UndefinedStringAlphanumeric.fix(source, diag(3)), expected)
     end
   end
 
@@ -142,15 +142,13 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       end
       """
 
-      assert UndefinedStringAlphanumeric.fix(source, diag(2)) == expected
+      confirm_fix(UndefinedStringAlphanumeric.fix(source, diag(2)), expected)
     end
   end
 
   describe "fix/2 — no-ops" do
     test "returns source unchanged when position is nil" do
-      source = """
-      some code
-      """
+      source = "some code"
 
       bad_diag = %{
         severity: :warning,
@@ -158,7 +156,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
         position: nil
       }
 
-      assert UndefinedStringAlphanumeric.fix(source, bad_diag) == source
+      confirm_fix(UndefinedStringAlphanumeric.fix(source, bad_diag), source)
     end
 
     test "returns source unchanged when line has no match" do
@@ -168,7 +166,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       end
       """
 
-      assert UndefinedStringAlphanumeric.fix(source, diag(2)) == source
+      confirm_fix(UndefinedStringAlphanumeric.fix(source, diag(2)), source)
     end
   end
 
@@ -191,7 +189,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       """
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed == expected
+      confirm_fix(fixed, expected)
     end
 
     test "does not modify code that already uses String.match?" do
@@ -206,7 +204,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumericFixTest do
       """
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed == source
+      confirm_fix(fixed, source)
     end
   end
 

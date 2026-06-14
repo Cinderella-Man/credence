@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.PreferListUpdateAtFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.PreferListUpdateAt
 
@@ -9,15 +9,11 @@ defmodule Credence.Syntax.PreferListUpdateAtFixTest do
   defp fix(code), do: PreferListUpdateAt.fix(code)
 
   test "fixes List.update_elem to List.update_at" do
-    input = """
-    List.update_elem(my_list, 0, new_value)
-    """
+    input = "List.update_elem(my_list, 0, new_value)"
 
-    expected = """
-    List.update_at(my_list, 0, fn _ -> new_value end)
-    """
+    expected = "List.update_at(my_list, 0, fn _ -> new_value end)"
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixes List.update_elem inside a module" do
@@ -37,15 +33,11 @@ defmodule Credence.Syntax.PreferListUpdateAtFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output no longer flags" do
-    assert analyze(
-             fix("""
-             List.update_elem(my_list, 0, new_value)
-             """)
-           ) == []
+    assert analyze(fix("List.update_elem(my_list, 0, new_value)")) == []
   end
 
   test "fixed output is well-formed (parses)" do

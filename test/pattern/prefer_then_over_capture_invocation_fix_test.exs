@@ -25,31 +25,23 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocationFixTest do
       end
       """
 
-      assert fix(PreferThenOverCaptureInvocation, input) == expected
+      confirm_fix(fix(PreferThenOverCaptureInvocation, input), expected)
     end
 
     test "simple capture with &1 + 1" do
-      input = """
-      x |> (&(&1 + 1)).()
-      """
+      input = "x |> (&(&1 + 1)).()"
 
-      expected = """
-      x |> then(&(&1 + 1))
-      """
+      expected = "x |> then(&(&1 + 1))"
 
-      assert fix(PreferThenOverCaptureInvocation, input) == expected
+      confirm_fix(fix(PreferThenOverCaptureInvocation, input), expected)
     end
 
     test "bare &1 capture" do
-      input = """
-      x |> (& &1).()
-      """
+      input = "x |> (& &1).()"
 
-      expected = """
-      x |> then(& &1)
-      """
+      expected = "x |> then(& &1)"
 
-      assert fix(PreferThenOverCaptureInvocation, input) == expected
+      confirm_fix(fix(PreferThenOverCaptureInvocation, input), expected)
     end
   end
 
@@ -65,15 +57,13 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocationFixTest do
       end
       """
 
-      assert fix(PreferThenOverCaptureInvocation, code) == code
+      confirm_fix(fix(PreferThenOverCaptureInvocation, code), code)
     end
 
     test "capture with arity > 1 (uses &2)" do
-      code = """
-      x |> (&(&1 + &2)).()
-      """
+      code = "x |> (&(&1 + &2)).()"
 
-      assert fix(PreferThenOverCaptureInvocation, code) == code
+      confirm_fix(fix(PreferThenOverCaptureInvocation, code), code)
     end
   end
 end

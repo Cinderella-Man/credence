@@ -9,19 +9,14 @@ defmodule Credence.Pattern.PreferFloatRoundFixTest do
 
   describe "rewrites the anti-pattern" do
     test "bare expression" do
-      assert fix(PreferFloatRound, """
-             :erlang.round(x * 100) / 100
-             """) == """
-             Float.round(x, 2)
-             """
+      confirm_fix(fix(PreferFloatRound, ":erlang.round(x * 100) / 100"), "Float.round(x, 2)")
     end
 
     test "with compound inner expression" do
-      assert fix(PreferFloatRound, """
-             :erlang.round(average * 100) / 100
-             """) == """
-             Float.round(average, 2)
-             """
+      confirm_fix(
+        fix(PreferFloatRound, ":erlang.round(average * 100) / 100"),
+        "Float.round(average, 2)"
+      )
     end
 
     test "inside a function body" do
@@ -43,7 +38,7 @@ defmodule Credence.Pattern.PreferFloatRoundFixTest do
       end
       """
 
-      assert fix(PreferFloatRound, input) == expected
+      confirm_fix(fix(PreferFloatRound, input), expected)
     end
   end
 
@@ -73,7 +68,7 @@ defmodule Credence.Pattern.PreferFloatRoundFixTest do
       end
       """
 
-      assert fix(PreferFloatRound, input) == expected
+      confirm_fix(fix(PreferFloatRound, input), expected)
     end
   end
 
@@ -83,35 +78,27 @@ defmodule Credence.Pattern.PreferFloatRoundFixTest do
 
   describe "does not touch already-correct code" do
     test "Float.round(x, 2) unchanged" do
-      code = """
-      Float.round(x, 2)
-      """
+      code = "Float.round(x, 2)"
 
-      assert fix(PreferFloatRound, code) == code
+      confirm_fix(fix(PreferFloatRound, code), code)
     end
 
     test ":erlang.round(x) unchanged" do
-      code = """
-      :erlang.round(x)
-      """
+      code = ":erlang.round(x)"
 
-      assert fix(PreferFloatRound, code) == code
+      confirm_fix(fix(PreferFloatRound, code), code)
     end
 
     test ":erlang.round(x * 100) without / 100 unchanged" do
-      code = """
-      :erlang.round(x * 100)
-      """
+      code = ":erlang.round(x * 100)"
 
-      assert fix(PreferFloatRound, code) == code
+      confirm_fix(fix(PreferFloatRound, code), code)
     end
 
     test "other arithmetic unchanged" do
-      code = """
-      x * 100 / 100
-      """
+      code = "x * 100 / 100"
 
-      assert fix(PreferFloatRound, code) == code
+      confirm_fix(fix(PreferFloatRound, code), code)
     end
   end
 end

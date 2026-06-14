@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, input) == expected
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
     end
 
     test "with a direct expression" do
@@ -45,7 +45,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, input) == expected
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
     end
 
     test "multiple calls, independently" do
@@ -65,7 +65,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, input) == expected
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
     end
 
     test "in an assignment, leaving surrounding code intact" do
@@ -87,7 +87,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, input) == expected
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
     end
   end
 
@@ -101,7 +101,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, code) == code
+      confirm_fix(fix(NoEnumCountForLength, code), code)
     end
 
     test "length/1 (already correct)" do
@@ -111,7 +111,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, code) == code
+      confirm_fix(fix(NoEnumCountForLength, code), code)
     end
 
     test "Enum.count on a bare variable" do
@@ -125,7 +125,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, code) == code
+      confirm_fix(fix(NoEnumCountForLength, code), code)
     end
   end
 end

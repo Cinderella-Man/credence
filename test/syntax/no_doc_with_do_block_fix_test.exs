@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.NoDocWithDoBlockFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.NoDocWithDoBlock
 
@@ -27,27 +27,21 @@ defmodule Credence.Syntax.NoDocWithDoBlockFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "removes the stray do from @moduledoc" do
-    input = """
-    @moduledoc "the module" do
-    """
+    input = ~S'@moduledoc "the module" do'
 
-    expected = """
-    @moduledoc "the module"
-    """
+    expected = ~S'@moduledoc "the module"'
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "leaves a proper @doc untouched" do
-    source = """
-    @doc "top_n_items/2"
-    """
+    source = ~S'@doc "top_n_items/2"'
 
-    assert fix(source) == source
+    confirm_fix(fix(source), source)
   end
 
   test "leaves a real do block on a def untouched" do
@@ -57,15 +51,13 @@ defmodule Credence.Syntax.NoDocWithDoBlockFixTest do
     end
     """
 
-    assert fix(source) == source
+    confirm_fix(fix(source), source)
   end
 
   test "leaves a @doc string ending in the word do untouched" do
-    source = """
-    @doc "explains what to do"
-    """
+    source = ~S'@doc "explains what to do"'
 
-    assert fix(source) == source
+    confirm_fix(fix(source), source)
   end
 
   test "repairs more than one stray-do attribute in the same source" do
@@ -85,7 +77,7 @@ defmodule Credence.Syntax.NoDocWithDoBlockFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fix clears the analyze flag (fixpoint)" do

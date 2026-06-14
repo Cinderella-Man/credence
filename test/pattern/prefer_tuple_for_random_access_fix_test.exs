@@ -34,19 +34,17 @@ defmodule Credence.Pattern.PreferTupleForRandomAccessFixTest do
     end
     """
 
-    assert fix(PreferTupleForRandomAccess, input) == expected
+    confirm_fix(fix(PreferTupleForRandomAccess, input), expected)
   end
 
   test "rewrites standalone for expression" do
-    input = """
-    for i <- 0..3, do: Enum.fetch!(list, i)
-    """
+    input = "for i <- 0..3, do: Enum.fetch!(list, i)"
 
     expected = """
     list_tuple = List.to_tuple(list)
     for i <- 0..3, do: elem(list_tuple, i)
     """
 
-    assert fix(PreferTupleForRandomAccess, input) == expected
+    confirm_fix(fix(PreferTupleForRandomAccess, input), expected)
   end
 end

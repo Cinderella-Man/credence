@@ -19,7 +19,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, input) == expected
+      confirm_fix(fix(NoRedundantNegatedGuard, input), expected)
     end
 
     test "removes !== guard when preceded by === guard" do
@@ -37,7 +37,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, input) == expected
+      confirm_fix(fix(NoRedundantNegatedGuard, input), expected)
     end
 
     test "removes != guard in def (not just defp)" do
@@ -55,7 +55,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, input) == expected
+      confirm_fix(fix(NoRedundantNegatedGuard, input), expected)
     end
 
     test "removes guard in longer function with multiple clauses" do
@@ -75,7 +75,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, input) == expected
+      confirm_fix(fix(NoRedundantNegatedGuard, input), expected)
     end
 
     test "handles multi-line guard clause" do
@@ -102,7 +102,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, input) == expected
+      confirm_fix(fix(NoRedundantNegatedGuard, input), expected)
     end
 
     # ── Fix: preserves code without redundant guards ────────────
@@ -116,7 +116,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, code) == code
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
 
     test "preserves clause without guard following equality guard" do
@@ -127,7 +127,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, code) == code
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
 
     test "preserves negated guard without preceding equality" do
@@ -138,7 +138,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, code) == code
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
 
     test "preserves different variable names in guards" do
@@ -149,7 +149,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, code) == code
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
 
     test "preserves compound guards" do
@@ -160,7 +160,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, code) == code
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
 
     test "preserves pattern matching (correct approach)" do
@@ -171,7 +171,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, code) == code
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
 
     test "preserves single-clause functions" do
@@ -181,7 +181,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, code) == code
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
 
     test "preserves different function names" do
@@ -192,7 +192,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, code) == code
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
 
     test "does not remove guard when variable names differ across clauses" do
@@ -203,7 +203,7 @@ defmodule Credence.Pattern.NoRedundantNegatedGuardFixTest do
       end
       """
 
-      assert fix(NoRedundantNegatedGuard, code) == code
+      confirm_fix(fix(NoRedundantNegatedGuard, code), code)
     end
   end
 end

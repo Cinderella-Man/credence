@@ -62,58 +62,42 @@ defmodule Credence.Syntax.FixStaleAccessModifierAnalyzeTest do
   describe "flags other language modifiers" do
     test "static def" do
       assert [%Issue{}] =
-               analyze("""
-               static def calculate(x), do: x * 2
-               """)
+               analyze("static def calculate(x), do: x * 2")
     end
 
     test "static defp" do
       assert [%Issue{}] =
-               analyze("""
-               static defp calculate(x), do: x * 2
-               """)
+               analyze("static defp calculate(x), do: x * 2")
     end
 
     test "protected defp" do
       assert [%Issue{}] =
-               analyze("""
-               protected defp calculate(x), do: x * 2
-               """)
+               analyze("protected defp calculate(x), do: x * 2")
     end
 
     test "abstract def" do
       assert [%Issue{}] =
-               analyze("""
-               abstract def calculate(x)
-               """)
+               analyze("abstract def calculate(x)")
     end
 
     test "async def" do
       assert [%Issue{}] =
-               analyze("""
-               async def fetch(url), do: url
-               """)
+               analyze("async def fetch(url), do: url")
     end
 
     test "pub def" do
       assert [%Issue{}] =
-               analyze("""
-               pub def calculate(x), do: x * 2
-               """)
+               analyze("pub def calculate(x), do: x * 2")
     end
 
     test "export def" do
       assert [%Issue{}] =
-               analyze("""
-               export def calculate(x), do: x * 2
-               """)
+               analyze("export def calculate(x), do: x * 2")
     end
 
     test "final def" do
       assert [%Issue{}] =
-               analyze("""
-               final def calculate(x), do: x * 2
-               """)
+               analyze("final def calculate(x), do: x * 2")
     end
   end
 
@@ -140,16 +124,12 @@ defmodule Credence.Syntax.FixStaleAccessModifierAnalyzeTest do
   describe "flags with indentation" do
     test "indented pprivate defp" do
       assert [%Issue{}] =
-               analyze("""
-                 pprivate defp calculate(x), do: x * 2
-               """)
+               analyze("  pprivate defp calculate(x), do: x * 2")
     end
 
     test "deeply indented" do
       assert [%Issue{}] =
-               analyze("""
-                     private defp calculate(x), do: x * 2
-               """)
+               analyze("      private defp calculate(x), do: x * 2")
     end
   end
 
@@ -192,21 +172,15 @@ defmodule Credence.Syntax.FixStaleAccessModifierAnalyzeTest do
     end
 
     test "private as variable name" do
-      assert analyze("""
-             private = true
-             """) == []
+      assert analyze("private = true") == []
     end
 
     test "word private not followed by def keyword" do
-      assert analyze("""
-             private_function(x)
-             """) == []
+      assert analyze("private_function(x)") == []
     end
 
     test "no code at all" do
-      assert analyze("""
-             x = 1 + 2
-             """) == []
+      assert analyze("x = 1 + 2") == []
     end
   end
 

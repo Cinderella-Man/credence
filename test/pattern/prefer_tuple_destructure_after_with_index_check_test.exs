@@ -50,8 +50,6 @@ defmodule Credence.Pattern.PreferTupleDestructureAfterWithIndexCheckTest do
   end
 
   test "leaves code without pipes alone" do
-    assert clean?(PreferTupleDestructureAfterWithIndex, """
-           Enum.map(list, fn x -> x end)
-           """)
+    assert clean?(PreferTupleDestructureAfterWithIndex, "Enum.map(list, fn x -> x end)")
   end
 end

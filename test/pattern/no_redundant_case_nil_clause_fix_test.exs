@@ -27,7 +27,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(NoRedundantCaseNilClause, input) == expected
+    confirm_fix(fix(NoRedundantCaseNilClause, input), expected)
   end
 
   test "single-line bodies" do
@@ -46,7 +46,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(NoRedundantCaseNilClause, input) == expected
+    confirm_fix(fix(NoRedundantCaseNilClause, input), expected)
   end
 
   test "preserves multi-line bodies" do
@@ -78,7 +78,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(NoRedundantCaseNilClause, input) == expected
+    confirm_fix(fix(NoRedundantCaseNilClause, input), expected)
   end
 
   test "fixes piped case" do
@@ -101,7 +101,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(NoRedundantCaseNilClause, input) == expected
+    confirm_fix(fix(NoRedundantCaseNilClause, input), expected)
   end
 
   test "wraps the original guard so precedence is preserved" do
@@ -120,7 +120,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(NoRedundantCaseNilClause, input) == expected
+    confirm_fix(fix(NoRedundantCaseNilClause, input), expected)
   end
 
   test "result is valid, compilable code" do
@@ -156,7 +156,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     """
 
     output = fix(NoRedundantCaseNilClause, input)
-    assert output == expected
+    confirm_fix(output, expected)
     assert valid_syntax?(output)
   end
 
@@ -171,7 +171,7 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(NoRedundantCaseNilClause, input) == input
+    confirm_fix(fix(NoRedundantCaseNilClause, input), input)
   end
 
   test "leaves non-bare-variable middle pattern unchanged" do
@@ -185,6 +185,6 @@ defmodule Credence.Pattern.NoRedundantCaseNilClauseFixTest do
     end
     """
 
-    assert fix(NoRedundantCaseNilClause, input) == input
+    confirm_fix(fix(NoRedundantCaseNilClause, input), input)
   end
 end

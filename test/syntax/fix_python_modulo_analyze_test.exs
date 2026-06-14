@@ -13,30 +13,22 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   describe "flags identifier % integer" do
     test "year % 4" do
       assert [%Issue{rule: :python_modulo}] =
-               analyze("""
-               year % 4
-               """)
+               analyze("year % 4")
     end
 
     test "n % 2" do
       assert [%Issue{}] =
-               analyze("""
-               n % 2
-               """)
+               analyze("n % 2")
     end
 
     test "year % 100" do
       assert [%Issue{}] =
-               analyze("""
-               year % 100
-               """)
+               analyze("year % 100")
     end
 
     test "year % 400" do
       assert [%Issue{}] =
-               analyze("""
-               year % 400
-               """)
+               analyze("year % 400")
     end
   end
 
@@ -47,16 +39,12 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   describe "flags identifier % identifier" do
     test "a % b" do
       assert [%Issue{}] =
-               analyze("""
-               a % b
-               """)
+               analyze("a % b")
     end
 
     test "n % divisor" do
       assert [%Issue{}] =
-               analyze("""
-               n % divisor
-               """)
+               analyze("n % divisor")
     end
   end
 
@@ -67,9 +55,7 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   describe "flags integer % integer" do
     test "100 % 7" do
       assert [%Issue{}] =
-               analyze("""
-               100 % 7
-               """)
+               analyze("100 % 7")
     end
   end
 
@@ -80,23 +66,17 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   describe "flags in comparisons" do
     test "n % 2 == 0" do
       assert [%Issue{}] =
-               analyze("""
-               n % 2 == 0
-               """)
+               analyze("n % 2 == 0")
     end
 
     test "year % 4 != 0" do
       assert [%Issue{}] =
-               analyze("""
-               year % 4 != 0
-               """)
+               analyze("year % 4 != 0")
     end
 
     test "n % 2 == 1" do
       assert [%Issue{}] =
-               analyze("""
-               n % 2 == 1
-               """)
+               analyze("n % 2 == 1")
     end
   end
 
@@ -107,16 +87,12 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   describe "flags in guards" do
     test "when year % 4 != 0" do
       assert [%Issue{}] =
-               analyze("""
-               def leap?(year) when year % 4 != 0, do: false
-               """)
+               analyze("def leap?(year) when year % 4 != 0, do: false")
     end
 
     test "when n % 2 == 0" do
       assert [%Issue{}] =
-               analyze("""
-               def even?(n) when n % 2 == 0, do: true
-               """)
+               analyze("def even?(n) when n % 2 == 0, do: true")
     end
   end
 
@@ -127,16 +103,12 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   describe "flags in assignments" do
     test "remainder = n % 2" do
       assert [%Issue{}] =
-               analyze("""
-               remainder = n % 2
-               """)
+               analyze("remainder = n % 2")
     end
 
     test "r = a % b" do
       assert [%Issue{}] =
-               analyze("""
-               r = a % b
-               """)
+               analyze("r = a % b")
     end
   end
 
@@ -147,16 +119,12 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   describe "flags without spaces" do
     test "n%2" do
       assert [%Issue{}] =
-               analyze("""
-               n%2
-               """)
+               analyze("n%2")
     end
 
     test "year%4" do
       assert [%Issue{}] =
-               analyze("""
-               year%4
-               """)
+               analyze("year%4")
     end
   end
 
@@ -167,16 +135,12 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   describe "flags multiple on same line" do
     test "tuple with three modulo ops" do
       assert [%Issue{}] =
-               analyze("""
-               {year % 4, year % 100, year % 400}
-               """)
+               analyze("{year % 4, year % 100, year % 400}")
     end
 
     test "boolean expression with two modulo ops" do
       assert [%Issue{}] =
-               analyze("""
-               year % 4 == 0 and year % 100 != 0
-               """)
+               analyze("year % 4 == 0 and year % 100 != 0")
     end
   end
 
@@ -203,9 +167,7 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
   describe "flags in function body" do
     test "one-liner def" do
       assert [%Issue{}] =
-               analyze("""
-               def even?(n), do: n % 2 == 0
-               """)
+               analyze("def even?(n), do: n % 2 == 0")
     end
 
     test "multi-line body" do
@@ -229,21 +191,15 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
 
   describe "does not flag map literals" do
     test "%{key: value}" do
-      assert analyze("""
-             %{key: value}
-             """) == []
+      assert analyze("%{key: value}") == []
     end
 
     test "x = %{a: 1, b: 2}" do
-      assert analyze("""
-             x = %{a: 1, b: 2}
-             """) == []
+      assert analyze("x = %{a: 1, b: 2}") == []
     end
 
     test "%{map | key: new_value}" do
-      assert analyze("""
-             %{map | key: new_value}
-             """) == []
+      assert analyze("%{map | key: new_value}") == []
     end
   end
 
@@ -253,15 +209,11 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
 
   describe "does not flag struct literals" do
     test "%MyStruct{field: value}" do
-      assert analyze("""
-             %MyStruct{field: value}
-             """) == []
+      assert analyze("%MyStruct{field: value}") == []
     end
 
     test "%__MODULE__{field: value}" do
-      assert analyze("""
-             %__MODULE__{field: value}
-             """) == []
+      assert analyze("%__MODULE__{field: value}") == []
     end
   end
 
@@ -271,21 +223,15 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
 
   describe "does not flag already correct code" do
     test "rem(n, 2)" do
-      assert analyze("""
-             rem(n, 2)
-             """) == []
+      assert analyze("rem(n, 2)") == []
     end
 
     test "rem(year, 4) == 0" do
-      assert analyze("""
-             rem(year, 4) == 0
-             """) == []
+      assert analyze("rem(year, 4) == 0") == []
     end
 
     test "Integer.mod(n, 2)" do
-      assert analyze("""
-             Integer.mod(n, 2)
-             """) == []
+      assert analyze("Integer.mod(n, 2)") == []
     end
   end
 
@@ -295,21 +241,15 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
 
   describe "does not flag other operators" do
     test "n / 2 (division)" do
-      assert analyze("""
-             n / 2
-             """) == []
+      assert analyze("n / 2") == []
     end
 
     test "n * 2 (multiplication)" do
-      assert analyze("""
-             n * 2
-             """) == []
+      assert analyze("n * 2") == []
     end
 
     test "n + 2 (addition)" do
-      assert analyze("""
-             n + 2
-             """) == []
+      assert analyze("n + 2") == []
     end
   end
 
@@ -319,15 +259,11 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
 
   describe "does not flag comments" do
     test "# n % 2" do
-      assert analyze("""
-             # n % 2
-             """) == []
+      assert analyze("# n % 2") == []
     end
 
     test "# remainder = year % 4" do
-      assert analyze("""
-               # remainder = year % 4
-             """) == []
+      assert analyze("  # remainder = year % 4") == []
     end
   end
 
@@ -337,9 +273,7 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
 
   describe "does not flag float operand" do
     test "n % 2.0 (rem only works on integers)" do
-      assert analyze("""
-             n % 2.0
-             """) == []
+      assert analyze("n % 2.0") == []
     end
   end
 
@@ -349,15 +283,11 @@ defmodule Credence.Syntax.FixPythonModuloAnalyzeTest do
 
   describe "does not flag clean code" do
     test "plain arithmetic" do
-      assert analyze("""
-             x = a + b * c
-             """) == []
+      assert analyze("x = a + b * c") == []
     end
 
     test "function call" do
-      assert analyze("""
-             Enum.map(list, &fun/1)
-             """) == []
+      assert analyze("Enum.map(list, &fun/1)") == []
     end
   end
 

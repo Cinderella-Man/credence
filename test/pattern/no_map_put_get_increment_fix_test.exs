@@ -5,39 +5,27 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
 
   describe "rewrites the safe core" do
     test "bare Map.put/Map.get + 1" do
-      code = """
-      Map.put(freqs, char, Map.get(freqs, char, 0) + 1)
-      """
+      code = "Map.put(freqs, char, Map.get(freqs, char, 0) + 1)"
 
-      expected = """
-      Map.update(freqs, char, 1, fn x -> x + 1 end)
-      """
+      expected = "Map.update(freqs, char, 1, fn x -> x + 1 end)"
 
-      assert fix(NoMapPutGetIncrement, code) == expected
+      confirm_fix(fix(NoMapPutGetIncrement, code), expected)
     end
 
     test "piped form keeps the pipe" do
-      code = """
-      freqs |> Map.put(key, Map.get(freqs, key, 0) + 1)
-      """
+      code = "freqs |> Map.put(key, Map.get(freqs, key, 0) + 1)"
 
-      expected = """
-      freqs |> Map.update(key, 1, fn x -> x + 1 end)
-      """
+      expected = "freqs |> Map.update(key, 1, fn x -> x + 1 end)"
 
-      assert fix(NoMapPutGetIncrement, code) == expected
+      confirm_fix(fix(NoMapPutGetIncrement, code), expected)
     end
 
     test "integer increment other than 1 carries through to default and fun" do
-      code = """
-      Map.put(m, k, Map.get(m, k, 0) + 5)
-      """
+      code = "Map.put(m, k, Map.get(m, k, 0) + 5)"
 
-      expected = """
-      Map.update(m, k, 5, fn x -> x + 5 end)
-      """
+      expected = "Map.update(m, k, 5, fn x -> x + 5 end)"
 
-      assert fix(NoMapPutGetIncrement, code) == expected
+      confirm_fix(fix(NoMapPutGetIncrement, code), expected)
     end
 
     test "preserves surrounding code" do
@@ -59,7 +47,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       end
       """
 
-      assert fix(NoMapPutGetIncrement, code) == expected
+      confirm_fix(fix(NoMapPutGetIncrement, code), expected)
     end
 
     test "rewrites multiple instances" do
@@ -83,13 +71,11 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
       end
       """
 
-      assert fix(NoMapPutGetIncrement, code) == expected
+      confirm_fix(fix(NoMapPutGetIncrement, code), expected)
     end
 
     test "round-trip: fixed code is no longer flagged" do
-      code = """
-      Map.put(freqs, char, Map.get(freqs, char, 0) + 1)
-      """
+      code = "Map.put(freqs, char, Map.get(freqs, char, 0) + 1)"
 
       fixed = fix(NoMapPutGetIncrement, code)
       assert clean?(NoMapPutGetIncrement, fixed)
@@ -98,43 +84,33 @@ defmodule Credence.Pattern.NoMapPutGetIncrementFixTest do
 
   describe "leaves unsafe / unrelated code untouched" do
     test "already-idiomatic Map.update" do
-      code = """
-      Map.update(freqs, char, 1, &(&1 + 1))
-      """
+      code = "Map.update(freqs, char, 1, &(&1 + 1))"
 
-      assert fix(NoMapPutGetIncrement, code) == code
+      confirm_fix(fix(NoMapPutGetIncrement, code), code)
     end
 
     test "different literal keys are not rewritten" do
-      code = """
-      Map.put(m, :a, Map.get(m, :b, 0) + 1)
-      """
+      code = "Map.put(m, :a, Map.get(m, :b, 0) + 1)"
 
-      assert fix(NoMapPutGetIncrement, code) == code
+      confirm_fix(fix(NoMapPutGetIncrement, code), code)
     end
 
     test "variable increment is not rewritten" do
-      code = """
-      Map.put(m, k, Map.get(m, k, 0) + n)
-      """
+      code = "Map.put(m, k, Map.get(m, k, 0) + n)"
 
-      assert fix(NoMapPutGetIncrement, code) == code
+      confirm_fix(fix(NoMapPutGetIncrement, code), code)
     end
 
     test "float increment is not rewritten" do
-      code = """
-      Map.put(m, k, Map.get(m, k, 0) + 1.0)
-      """
+      code = "Map.put(m, k, Map.get(m, k, 0) + 1.0)"
 
-      assert fix(NoMapPutGetIncrement, code) == code
+      confirm_fix(fix(NoMapPutGetIncrement, code), code)
     end
 
     test "float default is not rewritten" do
-      code = """
-      Map.put(m, k, Map.get(m, k, 0.0) + 1)
-      """
+      code = "Map.put(m, k, Map.get(m, k, 0.0) + 1)"
 
-      assert fix(NoMapPutGetIncrement, code) == code
+      confirm_fix(fix(NoMapPutGetIncrement, code), code)
     end
   end
 end

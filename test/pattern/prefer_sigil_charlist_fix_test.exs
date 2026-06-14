@@ -16,7 +16,7 @@ defmodule Credence.Pattern.PreferSigilCharlistFixTest do
     end
     """
 
-    assert fix(PreferSigilCharlist, input) == expected
+    confirm_fix(fix(PreferSigilCharlist, input), expected)
   end
 
   test "escapes a double quote in the content" do
@@ -32,7 +32,7 @@ defmodule Credence.Pattern.PreferSigilCharlistFixTest do
     end
     """
 
-    assert fix(PreferSigilCharlist, input) == expected
+    confirm_fix(fix(PreferSigilCharlist, input), expected)
   end
 
   test "leaves an existing sigil and a double-quoted apostrophe untouched" do
@@ -42,6 +42,6 @@ defmodule Credence.Pattern.PreferSigilCharlistFixTest do
     end
     """
 
-    assert fix(PreferSigilCharlist, input) == input
+    confirm_fix(fix(PreferSigilCharlist, input), input)
   end
 end

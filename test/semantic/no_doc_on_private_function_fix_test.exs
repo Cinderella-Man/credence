@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.NoDocOnPrivateFunctionFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoDocOnPrivateFunction
 
@@ -57,7 +57,7 @@ defmodule Credence.Semantic.NoDocOnPrivateFunctionFixTest do
     end
     """
 
-    assert fix(input, 14) == expected
+    confirm_fix(fix(input, 14), expected)
   end
 
   test "removes @doc from private function with single-line doc" do
@@ -76,7 +76,7 @@ defmodule Credence.Semantic.NoDocOnPrivateFunctionFixTest do
     end
     """
 
-    assert fix(input, 4) == expected
+    confirm_fix(fix(input, 4), expected)
   end
 
   test "fixed output is well-formed (parses)" do
@@ -143,7 +143,7 @@ defmodule Credence.Semantic.NoDocOnPrivateFunctionFixTest do
     """
 
     # Position 2 = the @doc line
-    assert fix(input, 2) == expected
+    confirm_fix(fix(input, 2), expected)
   end
 
   # @doc false is intentional — it should NOT be stripped.
@@ -155,7 +155,7 @@ defmodule Credence.Semantic.NoDocOnPrivateFunctionFixTest do
     end
     """
 
-    assert fix(input, 2) == input
-    assert fix(input, 3) == input
+    confirm_fix(fix(input, 2), input)
+    confirm_fix(fix(input, 3), input)
   end
 end

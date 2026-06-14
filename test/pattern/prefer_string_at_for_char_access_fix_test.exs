@@ -35,7 +35,7 @@ defmodule Credence.Pattern.PreferStringAtForCharAccessFixTest do
     end
     """
 
-    assert fix(PreferStringAtForCharAccess, input) == expected
+    confirm_fix(fix(PreferStringAtForCharAccess, input), expected)
   end
 
   test "rewrites a simple List.to_string assignment" do
@@ -56,7 +56,7 @@ defmodule Credence.Pattern.PreferStringAtForCharAccessFixTest do
     end
     """
 
-    assert fix(PreferStringAtForCharAccess, input) == expected
+    confirm_fix(fix(PreferStringAtForCharAccess, input), expected)
   end
 
   test "does not modify code that is already correct" do
@@ -68,6 +68,6 @@ defmodule Credence.Pattern.PreferStringAtForCharAccessFixTest do
     end
     """
 
-    assert fix(PreferStringAtForCharAccess, code) == code
+    confirm_fix(fix(PreferStringAtForCharAccess, code), code)
   end
 end

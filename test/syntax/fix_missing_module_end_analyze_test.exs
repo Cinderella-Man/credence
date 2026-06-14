@@ -24,14 +24,10 @@ defmodule Credence.Syntax.FixMissingModuleEndAnalyzeTest do
 
   test "does not flag a mismatched delimiter (handled by another rule)" do
     # `fn … )` — a mismatched delimiter, not a missing terminator.
-    assert analyze("""
-           Enum.map(list, fn x -> x + 1)
-           """) == []
+    assert analyze("Enum.map(list, fn x -> x + 1)") == []
   end
 
   test "does not flag an unclosed bracket (expects ], not end)" do
-    assert analyze("""
-           value = [1, 2, 3
-           """) == []
+    assert analyze("value = [1, 2, 3") == []
   end
 end

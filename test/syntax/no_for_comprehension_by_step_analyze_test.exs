@@ -18,8 +18,6 @@ defmodule Credence.Syntax.NoForComprehensionByStepAnalyzeTest do
   end
 
   test "leaves good code alone" do
-    assert analyze("""
-           for x <- 1..10, do: x
-           """) == []
+    assert analyze("for x <- 1..10, do: x") == []
   end
 end

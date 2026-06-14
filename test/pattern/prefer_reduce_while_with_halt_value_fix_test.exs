@@ -57,7 +57,7 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValueFixTest do
     end
     """
 
-    assert fix(PreferReduceWhileWithHaltValue, input) == expected
+    confirm_fix(fix(PreferReduceWhileWithHaltValue, input), expected)
   end
 
   test "does not modify code without the anti-pattern" do
@@ -81,7 +81,7 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValueFixTest do
     end
     """
 
-    assert fix(PreferReduceWhileWithHaltValue, code) == code
+    confirm_fix(fix(PreferReduceWhileWithHaltValue, code), code)
   end
 
   test "round-trip: fixed code produces no issues" do

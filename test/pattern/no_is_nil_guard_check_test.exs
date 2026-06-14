@@ -9,30 +9,22 @@ defmodule Credence.Pattern.NoIsNilGuardCheckTest do
   describe "flags sole is_nil guard" do
     test "def one-liner, param unused" do
       assert [%Issue{rule: :no_is_nil_guard}] =
-               check(NoIsNilGuard, """
-               def foo(x) when is_nil(x), do: :bar
-               """)
+               check(NoIsNilGuard, "def foo(x) when is_nil(x), do: :bar")
     end
 
     test "defp one-liner" do
       assert [%Issue{}] =
-               check(NoIsNilGuard, """
-               defp foo(x) when is_nil(x), do: :bar
-               """)
+               check(NoIsNilGuard, "defp foo(x) when is_nil(x), do: :bar")
     end
 
     test "multi-param, is_nil on first" do
       assert [%Issue{}] =
-               check(NoIsNilGuard, """
-               def foo(x, y) when is_nil(x), do: y
-               """)
+               check(NoIsNilGuard, "def foo(x, y) when is_nil(x), do: y")
     end
 
     test "multi-param, is_nil on second" do
       assert [%Issue{}] =
-               check(NoIsNilGuard, """
-               def foo(x, y) when is_nil(y), do: x
-               """)
+               check(NoIsNilGuard, "def foo(x, y) when is_nil(y), do: x")
     end
 
     test "block form" do
@@ -47,9 +39,7 @@ defmodule Credence.Pattern.NoIsNilGuardCheckTest do
 
     test "param used in body" do
       assert [%Issue{}] =
-               check(NoIsNilGuard, """
-               def foo(x) when is_nil(x), do: inspect(x)
-               """)
+               check(NoIsNilGuard, "def foo(x) when is_nil(x), do: inspect(x)")
     end
   end
 
@@ -58,23 +48,17 @@ defmodule Credence.Pattern.NoIsNilGuardCheckTest do
   describe "flags is_nil combined with and" do
     test "is_nil first" do
       assert [%Issue{}] =
-               check(NoIsNilGuard, """
-               def foo(x, y) when is_nil(x) and is_binary(y), do: :ok
-               """)
+               check(NoIsNilGuard, "def foo(x, y) when is_nil(x) and is_binary(y), do: :ok")
     end
 
     test "is_nil second" do
       assert [%Issue{}] =
-               check(NoIsNilGuard, """
-               def foo(x, y) when is_binary(y) and is_nil(x), do: :ok
-               """)
+               check(NoIsNilGuard, "def foo(x, y) when is_binary(y) and is_nil(x), do: :ok")
     end
 
     test "both params nil" do
       assert [%Issue{}] =
-               check(NoIsNilGuard, """
-               def foo(x, y) when is_nil(x) and is_nil(y), do: :ok
-               """)
+               check(NoIsNilGuard, "def foo(x, y) when is_nil(x) and is_nil(y), do: :ok")
     end
   end
 
@@ -97,45 +81,31 @@ defmodule Credence.Pattern.NoIsNilGuardCheckTest do
 
   describe "does NOT flag" do
     test "already pattern matched nil" do
-      assert check(NoIsNilGuard, """
-             def foo(nil), do: :bar
-             """) == []
+      assert check(NoIsNilGuard, "def foo(nil), do: :bar") == []
     end
 
     test "negated with not" do
-      assert check(NoIsNilGuard, """
-             def foo(x) when not is_nil(x), do: :ok
-             """) == []
+      assert check(NoIsNilGuard, "def foo(x) when not is_nil(x), do: :ok") == []
     end
 
     test "negated with !" do
-      assert check(NoIsNilGuard, """
-             def foo(x) when !is_nil(x), do: :ok
-             """) == []
+      assert check(NoIsNilGuard, "def foo(x) when !is_nil(x), do: :ok") == []
     end
 
     test "or condition" do
-      assert check(NoIsNilGuard, """
-             def foo(x) when is_nil(x) or is_atom(x), do: :ok
-             """) == []
+      assert check(NoIsNilGuard, "def foo(x) when is_nil(x) or is_atom(x), do: :ok") == []
     end
 
     test "non-variable argument" do
-      assert check(NoIsNilGuard, """
-             def foo(x) when is_nil(hd(x)), do: :ok
-             """) == []
+      assert check(NoIsNilGuard, "def foo(x) when is_nil(hd(x)), do: :ok") == []
     end
 
     test "no is_nil in guard" do
-      assert check(NoIsNilGuard, """
-             def foo(x) when is_binary(x), do: :ok
-             """) == []
+      assert check(NoIsNilGuard, "def foo(x) when is_binary(x), do: :ok") == []
     end
 
     test "no guard at all" do
-      assert check(NoIsNilGuard, """
-             def foo(x), do: x
-             """) == []
+      assert check(NoIsNilGuard, "def foo(x), do: x") == []
     end
 
     test "is_nil outside of function guard" do
@@ -151,9 +121,7 @@ defmodule Credence.Pattern.NoIsNilGuardCheckTest do
     end
 
     test "destructured binding (not a top-level param)" do
-      assert check(NoIsNilGuard, """
-             def foo(%{key: val}) when is_nil(val), do: :default
-             """) == []
+      assert check(NoIsNilGuard, "def foo(%{key: val}) when is_nil(val), do: :default") == []
     end
   end
 
@@ -162,9 +130,7 @@ defmodule Credence.Pattern.NoIsNilGuardCheckTest do
   describe "metadata" do
     test "meta.line is set" do
       [issue] =
-        check(NoIsNilGuard, """
-        def foo(x) when is_nil(x), do: :bar
-        """)
+        check(NoIsNilGuard, "def foo(x) when is_nil(x), do: :bar")
 
       assert issue.meta.line != nil
     end

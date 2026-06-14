@@ -43,9 +43,10 @@ defmodule Credence.Pattern.NoIfBooleanResultCheckTest do
     end
 
     test "inline form" do
-      assert flagged?(NoIfBooleanResult, """
-             if valid_ipv4?(host), do: true, else: valid_domain?(host)
-             """)
+      assert flagged?(
+               NoIfBooleanResult,
+               "if valid_ipv4?(host), do: true, else: valid_domain?(host)"
+             )
     end
 
     test "true in do with integer in else" do
@@ -111,9 +112,7 @@ defmodule Credence.Pattern.NoIfBooleanResultCheckTest do
     end
 
     test "inline form with false else" do
-      assert flagged?(NoIfBooleanResult, """
-             if x > 0, do: some_check(x), else: false
-             """)
+      assert flagged?(NoIfBooleanResult, "if x > 0, do: some_check(x), else: false")
     end
 
     test "string in do with false in else" do
@@ -227,9 +226,7 @@ defmodule Credence.Pattern.NoIfBooleanResultCheckTest do
     end
 
     test "boolean expression" do
-      assert clean?(NoIfBooleanResult, """
-             valid_ipv4?(host) or valid_domain?(host)
-             """)
+      assert clean?(NoIfBooleanResult, "valid_ipv4?(host) or valid_domain?(host)")
     end
 
     test "case expression" do

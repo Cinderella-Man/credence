@@ -23,7 +23,7 @@ defmodule Credence.Pattern.AvoidDuplicateEnumAtFixTest do
     end
     """
 
-    assert fix(AvoidDuplicateEnumAt, input) == expected
+    confirm_fix(fix(AvoidDuplicateEnumAt, input), expected)
   end
 
   test "rewrites with < comparison" do
@@ -46,7 +46,7 @@ defmodule Credence.Pattern.AvoidDuplicateEnumAtFixTest do
     end
     """
 
-    assert fix(AvoidDuplicateEnumAt, input) == expected
+    confirm_fix(fix(AvoidDuplicateEnumAt, input), expected)
   end
 
   test "no-op on code without the anti-pattern" do
@@ -58,7 +58,7 @@ defmodule Credence.Pattern.AvoidDuplicateEnumAtFixTest do
     end
     """
 
-    assert fix(AvoidDuplicateEnumAt, code) == code
+    confirm_fix(fix(AvoidDuplicateEnumAt, code), code)
   end
 
   test "fixed code produces zero issues (round-trip)" do

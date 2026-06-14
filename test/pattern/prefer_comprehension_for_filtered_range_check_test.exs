@@ -46,9 +46,7 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeCheckTest do
 
   describe "leaves good code alone" do
     test "already a for comprehension" do
-      code = """
-      for num <- 1..n, !MapSet.member?(present, num), do: num
-      """
+      code = "for num <- 1..n, !MapSet.member?(present, num), do: num"
 
       assert clean?(PreferComprehensionForFilteredRange, code)
     end

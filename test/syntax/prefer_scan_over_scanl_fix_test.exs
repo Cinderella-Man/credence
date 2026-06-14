@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.PreferScanOverScanlFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.PreferScanOverScanl
 
@@ -25,7 +25,7 @@ defmodule Credence.Syntax.PreferScanOverScanlFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output no longer flags" do
@@ -61,6 +61,6 @@ defmodule Credence.Syntax.PreferScanOverScanlFixTest do
     end
     """
 
-    assert fix(code) == code
+    confirm_fix(fix(code), code)
   end
 end

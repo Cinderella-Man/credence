@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(NoRepeatedDivRem, code) == expected
+      confirm_fix(fix(NoRepeatedDivRem, code), expected)
     end
 
     test "div recomputed inside a later call" do
@@ -51,7 +51,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(NoRepeatedDivRem, code) == expected
+      confirm_fix(fix(NoRepeatedDivRem, code), expected)
     end
 
     test "anchor recomputed three times" do
@@ -77,7 +77,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(NoRepeatedDivRem, code) == expected
+      confirm_fix(fix(NoRepeatedDivRem, code), expected)
     end
 
     test "variable divisor recomputed" do
@@ -99,7 +99,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(NoRepeatedDivRem, code) == expected
+      confirm_fix(fix(NoRepeatedDivRem, code), expected)
     end
   end
 
@@ -114,7 +114,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(NoRepeatedDivRem, code) == code
+      confirm_fix(fix(NoRepeatedDivRem, code), code)
     end
 
     test "single-expression body" do
@@ -126,7 +126,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(NoRepeatedDivRem, code) == code
+      confirm_fix(fix(NoRepeatedDivRem, code), code)
     end
 
     test "argument variable rebound" do
@@ -140,7 +140,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(NoRepeatedDivRem, code) == code
+      confirm_fix(fix(NoRepeatedDivRem, code), code)
     end
 
     test "argument shadowed inside a closure occurrence" do
@@ -154,7 +154,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(NoRepeatedDivRem, code) == code
+      confirm_fix(fix(NoRepeatedDivRem, code), code)
     end
 
     test "side-effecting argument" do
@@ -167,7 +167,7 @@ defmodule Credence.Pattern.NoRepeatedDivRemFixTest do
       end
       """
 
-      assert fix(NoRepeatedDivRem, code) == code
+      confirm_fix(fix(NoRepeatedDivRem, code), code)
     end
   end
 

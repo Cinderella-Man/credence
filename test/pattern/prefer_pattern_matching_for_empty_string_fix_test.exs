@@ -23,6 +23,6 @@ defmodule Credence.Pattern.PreferPatternMatchingForEmptyStringFixTest do
         |> Enum.map(&String.to_integer/1)
     """
 
-    assert fix(PreferPatternMatchingForEmptyString, input) == expected
+    confirm_fix(fix(PreferPatternMatchingForEmptyString, input), expected)
   end
 end

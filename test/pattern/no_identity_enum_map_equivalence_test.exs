@@ -25,9 +25,7 @@ defmodule Credence.Pattern.NoIdentityEnumMapEquivalenceTest do
     # dimensions gives the suite varied outcomes to discriminate against AND
     # proves the cross-dimension safety that motivated `Enum.to_list/1`.
     assert_equivalent(
-      """
-      Enum.map(enum, & &1)
-      """,
+      "Enum.map(enum, & &1)",
       rule: NoIdentityEnumMap,
       vars: [:enum],
       inputs: B.term_lists() ++ B.signed_integers() ++ B.unicode_strings()
@@ -39,9 +37,7 @@ defmodule Credence.Pattern.NoIdentityEnumMapEquivalenceTest do
     # output is constant by design (that is the contract under test), hence
     # `allow_constant_output`. A `→ enum` rule would return "" instead and fail.
     assert_equivalent(
-      """
-      Enum.map(enum, fn x -> x end)
-      """,
+      "Enum.map(enum, fn x -> x end)",
       rule: NoIdentityEnumMap,
       vars: [:enum],
       inputs: B.unicode_strings(),

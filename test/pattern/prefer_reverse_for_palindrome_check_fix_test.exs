@@ -34,7 +34,7 @@ defmodule Credence.Pattern.PreferReverseForPalindromeCheckFixTest do
       end
       """
 
-      assert fix(PreferReverseForPalindromeCheck, input) == expected
+      confirm_fix(fix(PreferReverseForPalindromeCheck, input), expected)
     end
   end
 

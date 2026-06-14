@@ -15,9 +15,7 @@ defmodule Credence.Pattern.NoTautologicalIfEquivalenceTest do
 
   test "if (total cond), do: v, else: v → v preserves the value" do
     assert_equivalent(
-      """
-      if x > 0, do: :v, else: :v
-      """,
+      "if x > 0, do: :v, else: :v",
       rule: NoTautologicalIf,
       vars: [:x],
       inputs: [1, -1, 0, :atom, "s"],

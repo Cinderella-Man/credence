@@ -22,7 +22,7 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupByFixTest do
       |> Enum.count(fn {_char, count} -> count > 1 end)
       """
 
-      assert fix(PreferFrequenciesOverGroupBy, code) == expected
+      confirm_fix(fix(PreferFrequenciesOverGroupBy, code), expected)
     end
 
     test "capture-form identity group_by" do
@@ -39,7 +39,7 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupByFixTest do
       |> Enum.count(fn {_char, count} -> count > 1 end)
       """
 
-      assert fix(PreferFrequenciesOverGroupBy, code) == expected
+      confirm_fix(fix(PreferFrequenciesOverGroupBy, code), expected)
     end
 
     test "preserves surrounding code" do
@@ -68,7 +68,7 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupByFixTest do
       end
       """
 
-      assert fix(PreferFrequenciesOverGroupBy, code) == expected
+      confirm_fix(fix(PreferFrequenciesOverGroupBy, code), expected)
     end
 
     test "round-trip: fixed code no longer triggers the rule" do
@@ -94,7 +94,7 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupByFixTest do
       |> Enum.count(fn c -> c > 1 end)
       """
 
-      assert fix(PreferFrequenciesOverGroupBy, code) == code
+      confirm_fix(fix(PreferFrequenciesOverGroupBy, code), code)
     end
 
     test "group_by |> map with non-length transform" do
@@ -105,7 +105,7 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupByFixTest do
       |> Enum.count(fn c -> c > 1 end)
       """
 
-      assert fix(PreferFrequenciesOverGroupBy, code) == code
+      confirm_fix(fix(PreferFrequenciesOverGroupBy, code), code)
     end
 
     test "count with predicate other than > 1" do
@@ -116,7 +116,7 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupByFixTest do
       |> Enum.count(fn c -> c > 2 end)
       """
 
-      assert fix(PreferFrequenciesOverGroupBy, code) == code
+      confirm_fix(fix(PreferFrequenciesOverGroupBy, code), code)
     end
   end
 end

@@ -13,9 +13,7 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocationEquivalenceTest do
 
   test "palindrome capture: |> (&(&1 == String.reverse(&1))).() → then(&)" do
     assert_equivalent(
-      """
-      number |> Integer.to_string() |> (&(&1 == String.reverse(&1))).()
-      """,
+      "number |> Integer.to_string() |> (&(&1 == String.reverse(&1))).()",
       rule: PreferThenOverCaptureInvocation,
       vars: [:number],
       inputs: [1, 121, 123, 0, 12_321, 1001, 42, -5, 1000]
@@ -24,9 +22,7 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocationEquivalenceTest do
 
   test "simple arithmetic capture: |> (&(&1 + 1)).() → then(&)" do
     assert_equivalent(
-      """
-      x |> (&(&1 + 1)).()
-      """,
+      "x |> (&(&1 + 1)).()",
       rule: PreferThenOverCaptureInvocation,
       vars: [:x],
       inputs: [0, 1, -1, 42, 100, -999]
@@ -35,9 +31,7 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocationEquivalenceTest do
 
   test "bare identity capture: |> (& &1).() → then(& &1)" do
     assert_equivalent(
-      """
-      x |> (& &1).()
-      """,
+      "x |> (& &1).()",
       rule: PreferThenOverCaptureInvocation,
       vars: [:x],
       inputs: [0, 1, -1, "hello", :ok, [1, 2, 3]]

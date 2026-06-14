@@ -14,7 +14,7 @@ defmodule Credence.RuleCase do
 
       test "flags and rewrites" do
         assert flagged?(NoFoo, "...")
-        assert fix(NoFoo, "...") == "...\\n"
+        confirm_fix(fix(NoFoo, "..."), "...")
       end
 
   ## Why these verbs live in one place
@@ -42,6 +42,8 @@ defmodule Credence.RuleCase do
   """
 
   use ExUnit.CaseTemplate
+
+  import ExUnit.Assertions
 
   alias Credence.RuleHelpers
 
@@ -77,6 +79,21 @@ defmodule Credence.RuleCase do
   """
   def fix(rule, code, opts \\ []) do
     RuleHelpers.apply_rule_fix(rule, code, opts)
+  end
+
+  @doc """
+  Assert `actual` (a fix result) equals `expected`, ignoring **trailing
+  newlines** on both sides. The canonical fix-test assertion:
+
+      confirm_fix(fix(NoFoo, input), expected)
+
+  A single-line fixture may be written as a compact `"…"` (no newline) or a
+  heredoc (which always appends one), and `mix format` normalizes either way — so
+  the trailing newline is incidental and not compared. Internal layout is still
+  compared byte-exact (re-indentation / reflow still fails the assertion).
+  """
+  def confirm_fix(actual, expected) do
+    assert String.trim_trailing(actual, "\n") == String.trim_trailing(expected, "\n")
   end
 
   @doc """

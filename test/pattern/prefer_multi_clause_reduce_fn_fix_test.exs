@@ -26,15 +26,13 @@ defmodule Credence.Pattern.PreferMultiClauseReduceFnFixTest do
     end)
     """
 
-    assert fix(PreferMultiClauseReduceFn, input) == expected
+    confirm_fix(fix(PreferMultiClauseReduceFn, input), expected)
   end
 
   test "does not modify non-reduce code" do
-    code = """
-    Enum.reduce(list, 0, fn x, acc -> x + acc end)
-    """
+    code = "Enum.reduce(list, 0, fn x, acc -> x + acc end)"
 
-    assert fix(PreferMultiClauseReduceFn, code) == code
+    confirm_fix(fix(PreferMultiClauseReduceFn, code), code)
   end
 
   test "does not modify multi-clause reduce" do
@@ -46,7 +44,7 @@ defmodule Credence.Pattern.PreferMultiClauseReduceFnFixTest do
     end)
     """
 
-    assert fix(PreferMultiClauseReduceFn, code) == code
+    confirm_fix(fix(PreferMultiClauseReduceFn, code), code)
   end
 
   test "does not modify single-level if/else" do
@@ -56,7 +54,7 @@ defmodule Credence.Pattern.PreferMultiClauseReduceFnFixTest do
     end)
     """
 
-    assert fix(PreferMultiClauseReduceFn, code) == code
+    confirm_fix(fix(PreferMultiClauseReduceFn, code), code)
   end
 
   test "round-trip: fixed code produces no issues" do

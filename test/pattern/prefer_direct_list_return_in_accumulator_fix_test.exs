@@ -38,6 +38,6 @@ defmodule Credence.Pattern.PreferDirectListReturnInAccumulatorFixTest do
     end
     """
 
-    assert fix(PreferDirectListReturnInAccumulator, input) == expected
+    confirm_fix(fix(PreferDirectListReturnInAccumulator, input), expected)
   end
 end

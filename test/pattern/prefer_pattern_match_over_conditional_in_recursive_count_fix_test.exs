@@ -25,7 +25,7 @@ defmodule Credence.Pattern.PreferPatternMatchOverConditionalInRecursiveCountFixT
     end
     """
 
-    assert fix(PreferPatternMatchOverConditionalInRecursiveCount, input) == expected
+    confirm_fix(fix(PreferPatternMatchOverConditionalInRecursiveCount, input), expected)
   end
 
   test "rewrites without stop parameter" do
@@ -47,7 +47,7 @@ defmodule Credence.Pattern.PreferPatternMatchOverConditionalInRecursiveCountFixT
     end
     """
 
-    assert fix(PreferPatternMatchOverConditionalInRecursiveCount, input) == expected
+    confirm_fix(fix(PreferPatternMatchOverConditionalInRecursiveCount, input), expected)
   end
 
   test "does not modify code without the anti-pattern" do
@@ -60,6 +60,6 @@ defmodule Credence.Pattern.PreferPatternMatchOverConditionalInRecursiveCountFixT
     end
     """
 
-    assert fix(PreferPatternMatchOverConditionalInRecursiveCount, code) == code
+    confirm_fix(fix(PreferPatternMatchOverConditionalInRecursiveCount, code), code)
   end
 end

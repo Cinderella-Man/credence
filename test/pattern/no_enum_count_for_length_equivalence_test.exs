@@ -16,9 +16,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthEquivalenceTest do
 
   test "Enum.count(list-returning call) → length(...) preserves the count" do
     assert_equivalent(
-      """
-      Enum.count(Enum.reverse(list))
-      """,
+      "Enum.count(Enum.reverse(list))",
       rule: NoEnumCountForLength,
       vars: [:list],
       inputs: B.term_lists()
@@ -27,9 +25,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthEquivalenceTest do
 
   test "pipe ending in a list-returning call: ... |> Enum.count() → ... |> length()" do
     assert_equivalent(
-      """
-      list |> Enum.uniq() |> Enum.count()
-      """,
+      "list |> Enum.uniq() |> Enum.count()",
       rule: NoEnumCountForLength,
       vars: [:list],
       inputs: B.term_lists()

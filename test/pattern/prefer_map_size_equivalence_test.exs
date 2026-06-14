@@ -5,9 +5,7 @@ defmodule Credence.Pattern.PreferMapSizeEquivalenceTest do
 
   test "fix preserves behaviour" do
     assert_equivalent(
-      """
-      Map.keys(m) |> Enum.count()
-      """,
+      "Map.keys(m) |> Enum.count()",
       rule: PreferMapSize,
       vars: [:m],
       inputs: [

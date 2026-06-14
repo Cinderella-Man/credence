@@ -40,14 +40,13 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersectionCheckTest do
   end
 
   test "leaves plain MapSet operations alone" do
-    assert clean?(PreferMapIntersectOverMapsetIntersection, """
-           MapSet.new([1, 2, 3])
-           """)
+    assert clean?(PreferMapIntersectOverMapsetIntersection, "MapSet.new([1, 2, 3])")
   end
 
   test "leaves MapSet intersection without Map.keys alone" do
-    assert clean?(PreferMapIntersectOverMapsetIntersection, """
-           MapSet.new(a) |> MapSet.intersection(MapSet.new(b)) |> MapSet.to_list()
-           """)
+    assert clean?(
+             PreferMapIntersectOverMapsetIntersection,
+             "MapSet.new(a) |> MapSet.intersection(MapSet.new(b)) |> MapSet.to_list()"
+           )
   end
 end

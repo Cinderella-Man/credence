@@ -150,25 +150,19 @@ defmodule Credence.Pattern.NoManualStringReverseCheckTest do
   describe "graphemes + IO.iodata_to_binary reassemble (always-safe, no promise)" do
     test "detects graphemes |> reverse |> IO.iodata_to_binary pipeline" do
       code =
-        """
-        def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()
-        """
+        "def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()"
 
       assert [%Issue{rule: :no_manual_string_reverse}] = check(NoManualStringReverse, code)
     end
 
     test "detects nested IO.iodata_to_binary(Enum.reverse(String.graphemes(...)))" do
-      code = """
-      def reverse(str), do: IO.iodata_to_binary(Enum.reverse(String.graphemes(str)))
-      """
+      code = "def reverse(str), do: IO.iodata_to_binary(Enum.reverse(String.graphemes(str)))"
 
       assert [%Issue{rule: :no_manual_string_reverse}] = check(NoManualStringReverse, code)
     end
 
     test "does NOT touch codepoints (handled by NoCodepointStringReverse)" do
-      code = """
-      def reverse(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()
-      """
+      code = "def reverse(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()"
 
       assert check(NoManualStringReverse, code) == []
     end

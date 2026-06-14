@@ -57,6 +57,6 @@ defmodule Credence.Pattern.PreferChunkOverIndexedReduceFixTest do
     first + middle + last
     """
 
-    assert fix(PreferChunkOverIndexedReduce, input) == expected
+    confirm_fix(fix(PreferChunkOverIndexedReduce, input), expected)
   end
 end

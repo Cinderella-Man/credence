@@ -24,7 +24,7 @@ defmodule Credence.Pattern.PreferStringCapitalizeFixTest do
     end
     """
 
-    assert fix(PreferStringCapitalize, input) == expected
+    confirm_fix(fix(PreferStringCapitalize, input), expected)
   end
 
   test "does not modify code already using String.capitalize" do
@@ -35,7 +35,7 @@ defmodule Credence.Pattern.PreferStringCapitalizeFixTest do
     end
     """
 
-    assert fix(PreferStringCapitalize, code) == code
+    confirm_fix(fix(PreferStringCapitalize, code), code)
   end
 
   test "preserves other functions in the module" do
@@ -63,6 +63,6 @@ defmodule Credence.Pattern.PreferStringCapitalizeFixTest do
     end
     """
 
-    assert fix(PreferStringCapitalize, input) == expected
+    confirm_fix(fix(PreferStringCapitalize, input), expected)
   end
 end

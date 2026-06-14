@@ -24,7 +24,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, input) == expected
+      confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
     end
 
     test "length(list) <= 1 with do: block" do
@@ -41,7 +41,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, input) == expected
+      confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
     end
 
     test "2 > length(list) — reversed" do
@@ -58,7 +58,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, input) == expected
+      confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
     end
 
     test "1 >= length(list) — reversed" do
@@ -75,7 +75,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, input) == expected
+      confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
     end
 
     test "defp variant" do
@@ -92,7 +92,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, input) == expected
+      confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
     end
 
     test "multi-line body" do
@@ -116,7 +116,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, input) == expected
+      confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
     end
   end
 
@@ -128,7 +128,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, code) == code
+      confirm_fix(fix(AvoidLengthGuardLessThan2, code), code)
     end
 
     test "no guard passes through" do
@@ -138,7 +138,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, code) == code
+      confirm_fix(fix(AvoidLengthGuardLessThan2, code), code)
     end
 
     test "already pattern-matched passes through" do
@@ -149,7 +149,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, code) == code
+      confirm_fix(fix(AvoidLengthGuardLessThan2, code), code)
     end
   end
 
@@ -207,7 +207,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, input) == expected
+      confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
     end
 
     test "does not add a binding when the body ignores the variable" do
@@ -224,7 +224,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2FixTest do
       end
       """
 
-      assert fix(AvoidLengthGuardLessThan2, input) == expected
+      confirm_fix(fix(AvoidLengthGuardLessThan2, input), expected)
     end
   end
 end

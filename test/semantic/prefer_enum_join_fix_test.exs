@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.PreferEnumJoinFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.PreferEnumJoin
 
@@ -28,7 +28,7 @@ defmodule Credence.Semantic.PreferEnumJoinFixTest do
     end
     """
 
-    assert fix(input, 3) == expected
+    confirm_fix(fix(input, 3), expected)
   end
 
   test "only rewrites the flagged line" do
@@ -46,7 +46,7 @@ defmodule Credence.Semantic.PreferEnumJoinFixTest do
     end
     """
 
-    assert fix(input, 2) == expected
+    confirm_fix(fix(input, 2), expected)
   end
 
   test "fixed output is well-formed (parses)" do
@@ -76,7 +76,7 @@ defmodule Credence.Semantic.PreferEnumJoinFixTest do
       """
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed == expected
+      confirm_fix(fixed, expected)
       assert valid_syntax?(fixed)
     end
 
@@ -87,7 +87,7 @@ defmodule Credence.Semantic.PreferEnumJoinFixTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == source
+      confirm_fix(Credence.Semantic.fix(source), source)
     end
   end
 end

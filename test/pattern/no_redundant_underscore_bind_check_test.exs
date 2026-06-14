@@ -81,9 +81,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindCheckTest do
     end
 
     test "regular assignment (not in pattern)" do
-      assert clean?(NoRedundantUnderscoreBind, """
-             x = 1
-             """)
+      assert clean?(NoRedundantUnderscoreBind, "x = 1")
     end
   end
 end

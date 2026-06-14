@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.NoUnderscoreInExpressionFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.NoUnderscoreInExpression
 
@@ -37,7 +37,7 @@ defmodule Credence.Semantic.NoUnderscoreInExpressionFixTest do
     message =
       "invalid use of _. _ can only be used inside patterns to ignore values and cannot be used in expressions. Make sure you are inside a pattern or change it accordingly"
 
-    assert fix(input, message) == expected
+    confirm_fix(fix(input, message), expected)
   end
 
   test "fixed output is well-formed (parses)" do
@@ -74,6 +74,6 @@ defmodule Credence.Semantic.NoUnderscoreInExpressionFixTest do
     message =
       "invalid use of _. _ can only be used inside patterns to ignore values and cannot be used in expressions. Make sure you are inside a pattern or change it accordingly"
 
-    assert fix(input, message) == input
+    confirm_fix(fix(input, message), input)
   end
 end

@@ -40,9 +40,7 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiterAnalyzeTest do
   end
 
   test "leaves properly closed fn alone" do
-    code = """
-    Enum.map(list, fn x -> x end)
-    """
+    code = "Enum.map(list, fn x -> x end)"
 
     assert analyze(code) == []
   end

@@ -15,6 +15,6 @@ defmodule Credence.Pattern.PreferStringSplitTrimFixTest do
     |> String.split(~r/\s+/, trim: true)
     """
 
-    assert fix(PreferStringSplitTrim, input) == expected
+    confirm_fix(fix(PreferStringSplitTrim, input), expected)
   end
 end

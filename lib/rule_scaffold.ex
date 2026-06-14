@@ -9,14 +9,15 @@ defmodule Credence.RuleScaffold do
   The emitted tests are **intentionally red**: each carries a real positive /
   transform assertion that fails against the inert stub, alongside the negative /
   fixpoint / attribution *shapes* the structural gates require — so the gates pass
-  while the rule is unmistakably unfinished. Fixtures are heredocs and use
-  parseable placeholders (`foo(bar)` / `baz(qux)`), so the parser never crashes on
-  them at runtime.
+  while the rule is unmistakably unfinished. Single-line fixtures are plain `"…"`
+  strings in canonical form (the test healer's convention) and use parseable
+  placeholders (`foo(bar)` / `baz(qux)`), so the parser never crashes on them at
+  runtime; fix tests compare with `confirm_fix/2`.
 
   Templates carry `__TQ__` for a `\"""` heredoc delimiter (so the template strings
-  themselves don't nest heredocs) and `__RULE_MODULE__` / `__TEST_MODULE__` /
-  `__RULE__` / `__SNAKE__` name slots, all filled by `render/3` from
-  `Credence.RuleName`.
+  themselves — e.g. moduledocs — don't nest heredocs) and `__RULE_MODULE__` /
+  `__TEST_MODULE__` / `__RULE__` / `__SNAKE__` name slots, all filled by `render/3`
+  from `Credence.RuleName`.
   """
 
   alias Credence.RuleName
@@ -85,16 +86,12 @@ defmodule Credence.RuleScaffold do
 
       test "flags the anti-pattern" do
         # TODO: replace with real code the rule should flag
-        assert flagged?(__RULE__, __TQ__
-               foo(bar)
-               __TQ__)
+        assert flagged?(__RULE__, "foo(bar)")
       end
 
       test "leaves good code alone" do
         # TODO: replace with real code the rule should ignore
-        assert clean?(__RULE__, __TQ__
-               baz(qux)
-               __TQ__)
+        assert clean?(__RULE__, "baz(qux)")
       end
     end
     """
@@ -109,15 +106,11 @@ defmodule Credence.RuleScaffold do
 
       test "rewrites the anti-pattern" do
         # TODO: replace input/expected with a real before/after pair
-        input = __TQ__
-        foo(bar)
-        __TQ__
+        input = "foo(bar)"
 
-        expected = __TQ__
-        baz(qux)
-        __TQ__
+        expected = "baz(qux)"
 
-        assert fix(__RULE__, input) == expected
+        confirm_fix(fix(__RULE__, input), expected)
       end
     end
     """
@@ -134,9 +127,7 @@ defmodule Credence.RuleScaffold do
         # TODO: replace with a real before-expression the rule fires on, its free
         # variables, and inputs (see Credence.EquivalenceInputs, e.g. B.term_lists()).
         assert_equivalent(
-          __TQ__
-          foo(bar)
-          __TQ__,
+          "foo(bar)",
           rule: __RULE__,
           vars: [:bar],
           inputs: [1, 2, 3]
@@ -192,17 +183,12 @@ defmodule Credence.RuleScaffold do
 
       test "flags the unparseable code" do
         # TODO: replace with real code the rule should flag
-        assert [%Issue{rule: :__SNAKE__}] =
-                 analyze(__TQ__
-                 foo(bar)
-                 __TQ__)
+        assert [%Issue{rule: :__SNAKE__}] = analyze("foo(bar)")
       end
 
       test "leaves good code alone" do
         # TODO: replace with real code the rule should ignore
-        assert analyze(__TQ__
-               baz(qux)
-               __TQ__) == []
+        assert analyze("baz(qux)") == []
       end
     end
     """
@@ -213,7 +199,7 @@ defmodule Credence.RuleScaffold do
     defmodule __TEST_MODULE__ do
       use ExUnit.Case
 
-      import Credence.RuleCase, only: [valid_syntax?: 1]
+      import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
       alias __RULE_MODULE__
 
@@ -222,29 +208,21 @@ defmodule Credence.RuleScaffold do
 
       test "fixes the syntax error" do
         # TODO: replace input/expected with a real before/after pair
-        input = __TQ__
-        foo(bar)
-        __TQ__
+        input = "foo(bar)"
 
-        expected = __TQ__
-        baz(qux)
-        __TQ__
+        expected = "baz(qux)"
 
-        assert fix(input) == expected
+        confirm_fix(fix(input), expected)
       end
 
       test "fixed output no longer flags" do
         # TODO: replace with real code the rule should flag, then fix to clean
-        assert analyze(fix(__TQ__
-               foo(bar)
-               __TQ__)) == []
+        assert analyze(fix("foo(bar)")) == []
       end
 
       test "fixed output is well-formed (parses)" do
         # the repaired source must be valid Elixir
-        assert valid_syntax?(fix(__TQ__
-               foo(bar)
-               __TQ__))
+        assert valid_syntax?(fix("foo(bar)"))
       end
     end
     """
@@ -325,7 +303,7 @@ defmodule Credence.RuleScaffold do
     defmodule __TEST_MODULE__ do
       use ExUnit.Case
 
-      import Credence.RuleCase, only: [valid_syntax?: 1]
+      import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
       alias __RULE_MODULE__
 
@@ -335,25 +313,19 @@ defmodule Credence.RuleScaffold do
 
       test "fixes the source" do
         # TODO: replace input/expected/message with a real case
-        input = __TQ__
-        foo(bar)
-        __TQ__
+        input = "foo(bar)"
 
-        expected = __TQ__
-        baz(qux)
-        __TQ__
+        expected = "baz(qux)"
 
         message = "TODO matching message"
-        assert fix(input, message) == expected
+        confirm_fix(fix(input, message), expected)
       end
 
       test "fixed output is well-formed (parses)" do
         # the repaired source must be valid Elixir
         message = "TODO matching message"
 
-        assert valid_syntax?(fix(__TQ__
-               foo(bar)
-               __TQ__, message))
+        assert valid_syntax?(fix("foo(bar)", message))
       end
     end
     """

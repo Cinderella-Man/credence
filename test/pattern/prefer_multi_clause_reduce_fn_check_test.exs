@@ -30,9 +30,7 @@ defmodule Credence.Pattern.PreferMultiClauseReduceFnCheckTest do
   end
 
   test "leaves reduce without if/else alone" do
-    assert clean?(PreferMultiClauseReduceFn, """
-           Enum.reduce(list, 0, fn x, acc -> x + acc end)
-           """)
+    assert clean?(PreferMultiClauseReduceFn, "Enum.reduce(list, 0, fn x, acc -> x + acc end)")
   end
 
   test "leaves non-reduce code alone" do

@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.PreferMapSizeKernelFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.PreferMapSizeKernel
 
@@ -31,7 +31,7 @@ defmodule Credence.Semantic.PreferMapSizeKernelFixTest do
     """
 
     message = "Map.size/1 is deprecated. Use map_size/1 instead."
-    assert fix(input, message) == expected
+    confirm_fix(fix(input, message), expected)
   end
 
   test "fixed output is well-formed (parses)" do

@@ -21,7 +21,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesFixTest do
       |> Enum.map(&elem(&1, 0))
       """
 
-      assert fix(PreferEnumFrequencies, code) == expected
+      confirm_fix(fix(PreferEnumFrequencies, code), expected)
     end
 
     test "with length/1" do
@@ -37,7 +37,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesFixTest do
       |> Enum.sort(fn {_, freq_a}, {_, freq_b} -> freq_a > freq_b end)
       """
 
-      assert fix(PreferEnumFrequencies, code) == expected
+      confirm_fix(fix(PreferEnumFrequencies, code), expected)
     end
 
     test "with capture identity" do
@@ -53,7 +53,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesFixTest do
       |> Enum.sort(fn {_, freq_a}, {_, freq_b} -> freq_a > freq_b end)
       """
 
-      assert fix(PreferEnumFrequencies, code) == expected
+      confirm_fix(fix(PreferEnumFrequencies, code), expected)
     end
 
     test "inside a module" do
@@ -81,7 +81,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesFixTest do
       end
       """
 
-      assert fix(PreferEnumFrequencies, code) == expected
+      confirm_fix(fix(PreferEnumFrequencies, code), expected)
     end
 
     test "preserves preceding pipeline steps" do
@@ -98,7 +98,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesFixTest do
       |> Enum.sort(fn {_, freq_a}, {_, freq_b} -> freq_a > freq_b end)
       """
 
-      assert fix(PreferEnumFrequencies, code) == expected
+      confirm_fix(fix(PreferEnumFrequencies, code), expected)
     end
   end
 
@@ -110,15 +110,13 @@ defmodule Credence.Pattern.PreferEnumFrequenciesFixTest do
       |> Enum.map(fn {val, vals} -> {val, Enum.count(vals)} end)
       """
 
-      assert fix(PreferEnumFrequencies, code) == code
+      confirm_fix(fix(PreferEnumFrequencies, code), code)
     end
 
     test "Enum.frequencies (already correct)" do
-      code = """
-      Enum.frequencies(nums)
-      """
+      code = "Enum.frequencies(nums)"
 
-      assert fix(PreferEnumFrequencies, code) == code
+      confirm_fix(fix(PreferEnumFrequencies, code), code)
     end
 
     test "group_by with non-identity key function" do
@@ -129,7 +127,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesFixTest do
       |> Enum.sort(fn {_, freq_a}, {_, freq_b} -> freq_a > freq_b end)
       """
 
-      assert fix(PreferEnumFrequencies, code) == code
+      confirm_fix(fix(PreferEnumFrequencies, code), code)
     end
 
     test "group_by with non-identity value function" do
@@ -140,7 +138,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesFixTest do
       |> Enum.sort(fn {_, freq_a}, {_, freq_b} -> freq_a > freq_b end)
       """
 
-      assert fix(PreferEnumFrequencies, code) == code
+      confirm_fix(fix(PreferEnumFrequencies, code), code)
     end
 
     test "non-count map callback" do
@@ -151,7 +149,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesFixTest do
       |> Enum.sort(fn {_, freq_a}, {_, freq_b} -> freq_a > freq_b end)
       """
 
-      assert fix(PreferEnumFrequencies, code) == code
+      confirm_fix(fix(PreferEnumFrequencies, code), code)
     end
   end
 

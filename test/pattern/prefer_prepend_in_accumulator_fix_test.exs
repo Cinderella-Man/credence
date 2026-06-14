@@ -31,21 +31,21 @@ defmodule Credence.Pattern.PreferPrependInAccumulatorFixTest do
       # 2. Remove `last = List.last(acc)` and replace `last` → `head`
       # 3. Change acc ++ [next] → [next | acc]
       # 4. Change Enum.reverse(acc) → acc
-      assert fix(PreferPrependInAccumulator, input) == """
-             defmodule Example do
-               def build_groups(acc, []) do
-                 [acc]
-               end
+      confirm_fix(fix(PreferPrependInAccumulator, input), """
+      defmodule Example do
+        def build_groups(acc, []) do
+          [acc]
+        end
 
-               def build_groups([head | _] = acc, [next | rest]) do
-                 if next == head + 1 do
-                   build_groups([next | acc], rest)
-                 else
-                   [acc | build_groups([next], rest)]
-                 end
-               end
-             end
-             """
+        def build_groups([head | _] = acc, [next | rest]) do
+          if next == head + 1 do
+            build_groups([next | acc], rest)
+          else
+            [acc | build_groups([next], rest)]
+          end
+        end
+      end
+      """)
 
       assert valid_syntax?(result)
     end
@@ -67,7 +67,7 @@ defmodule Credence.Pattern.PreferPrependInAccumulatorFixTest do
       end
       """
 
-      assert fix(PreferPrependInAccumulator, code) == code
+      confirm_fix(fix(PreferPrependInAccumulator, code), code)
     end
 
     test "does not fix List.last without ++ append" do
@@ -80,7 +80,7 @@ defmodule Credence.Pattern.PreferPrependInAccumulatorFixTest do
       end
       """
 
-      assert fix(PreferPrependInAccumulator, code) == code
+      confirm_fix(fix(PreferPrependInAccumulator, code), code)
     end
 
     test "does not fix ++ append without List.last" do
@@ -92,7 +92,7 @@ defmodule Credence.Pattern.PreferPrependInAccumulatorFixTest do
       end
       """
 
-      assert fix(PreferPrependInAccumulator, code) == code
+      confirm_fix(fix(PreferPrependInAccumulator, code), code)
     end
 
     test "does not fix List.last + append without Enum.reverse" do
@@ -114,7 +114,7 @@ defmodule Credence.Pattern.PreferPrependInAccumulatorFixTest do
       end
       """
 
-      assert fix(PreferPrependInAccumulator, code) == code
+      confirm_fix(fix(PreferPrependInAccumulator, code), code)
     end
 
     test "fixed code has no remaining issues" do

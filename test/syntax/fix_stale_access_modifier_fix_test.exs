@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.FixStaleAccessModifier
   defp analyze(code), do: FixStaleAccessModifier.analyze(code)
@@ -11,25 +11,25 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "garbled prefixes" do
     test "pprivate defp → defp" do
-      assert fix("""
-             pprivate defp calculate(x) do
-               x * 2
-             end
-             """) ==
-               """
-               defp calculate(x) do
-                 x * 2
-               end
-               """
+      confirm_fix(
+        fix("""
+        pprivate defp calculate(x) do
+          x * 2
+        end
+        """),
+        """
+        defp calculate(x) do
+          x * 2
+        end
+        """
+      )
     end
 
     test "pprivate defp one-liner" do
-      assert fix("""
-             pprivate defp get_sorted(nums), do: Enum.sort(nums)
-             """) ==
-               """
-               defp get_sorted(nums), do: Enum.sort(nums)
-               """
+      confirm_fix(
+        fix("pprivate defp get_sorted(nums), do: Enum.sort(nums)"),
+        "defp get_sorted(nums), do: Enum.sort(nums)"
+      )
     end
   end
 
@@ -37,29 +37,33 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "redundant prefixes" do
     test "private defp → defp" do
-      assert fix("""
-             private defp calculate(x) do
-               x * 2
-             end
-             """) ==
-               """
-               defp calculate(x) do
-                 x * 2
-               end
-               """
+      confirm_fix(
+        fix("""
+        private defp calculate(x) do
+          x * 2
+        end
+        """),
+        """
+        defp calculate(x) do
+          x * 2
+        end
+        """
+      )
     end
 
     test "public def → def" do
-      assert fix("""
-             public def calculate(x) do
-               x * 2
-             end
-             """) ==
-               """
-               def calculate(x) do
-                 x * 2
-               end
-               """
+      confirm_fix(
+        fix("""
+        public def calculate(x) do
+          x * 2
+        end
+        """),
+        """
+        def calculate(x) do
+          x * 2
+        end
+        """
+      )
     end
   end
 
@@ -67,21 +71,11 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "contradictory prefixes (trusts Elixir keyword)" do
     test "private def → def" do
-      assert fix("""
-             private def calculate(x), do: x * 2
-             """) ==
-               """
-               def calculate(x), do: x * 2
-               """
+      confirm_fix(fix("private def calculate(x), do: x * 2"), "def calculate(x), do: x * 2")
     end
 
     test "public defp → defp" do
-      assert fix("""
-             public defp calculate(x), do: x * 2
-             """) ==
-               """
-               defp calculate(x), do: x * 2
-               """
+      confirm_fix(fix("public defp calculate(x), do: x * 2"), "defp calculate(x), do: x * 2")
     end
   end
 
@@ -89,75 +83,35 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "other language modifiers" do
     test "static def → def" do
-      assert fix("""
-             static def calculate(x), do: x * 2
-             """) ==
-               """
-               def calculate(x), do: x * 2
-               """
+      confirm_fix(fix("static def calculate(x), do: x * 2"), "def calculate(x), do: x * 2")
     end
 
     test "static defp → defp" do
-      assert fix("""
-             static defp calculate(x), do: x * 2
-             """) ==
-               """
-               defp calculate(x), do: x * 2
-               """
+      confirm_fix(fix("static defp calculate(x), do: x * 2"), "defp calculate(x), do: x * 2")
     end
 
     test "protected defp → defp" do
-      assert fix("""
-             protected defp calculate(x), do: x * 2
-             """) ==
-               """
-               defp calculate(x), do: x * 2
-               """
+      confirm_fix(fix("protected defp calculate(x), do: x * 2"), "defp calculate(x), do: x * 2")
     end
 
     test "abstract def → def" do
-      assert fix("""
-             abstract def calculate(x), do: x * 2
-             """) ==
-               """
-               def calculate(x), do: x * 2
-               """
+      confirm_fix(fix("abstract def calculate(x), do: x * 2"), "def calculate(x), do: x * 2")
     end
 
     test "async def → def" do
-      assert fix("""
-             async def fetch(url), do: url
-             """) ==
-               """
-               def fetch(url), do: url
-               """
+      confirm_fix(fix("async def fetch(url), do: url"), "def fetch(url), do: url")
     end
 
     test "pub def → def" do
-      assert fix("""
-             pub def calculate(x), do: x * 2
-             """) ==
-               """
-               def calculate(x), do: x * 2
-               """
+      confirm_fix(fix("pub def calculate(x), do: x * 2"), "def calculate(x), do: x * 2")
     end
 
     test "export def → def" do
-      assert fix("""
-             export def calculate(x), do: x * 2
-             """) ==
-               """
-               def calculate(x), do: x * 2
-               """
+      confirm_fix(fix("export def calculate(x), do: x * 2"), "def calculate(x), do: x * 2")
     end
 
     test "final def → def" do
-      assert fix("""
-             final def calculate(x), do: x * 2
-             """) ==
-               """
-               def calculate(x), do: x * 2
-               """
+      confirm_fix(fix("final def calculate(x), do: x * 2"), "def calculate(x), do: x * 2")
     end
   end
 
@@ -165,29 +119,33 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "macro definitions" do
     test "private defmacro → defmacro" do
-      assert fix("""
-             private defmacro my_macro(x) do
-               x
-             end
-             """) ==
-               """
-               defmacro my_macro(x) do
-                 x
-               end
-               """
+      confirm_fix(
+        fix("""
+        private defmacro my_macro(x) do
+          x
+        end
+        """),
+        """
+        defmacro my_macro(x) do
+          x
+        end
+        """
+      )
     end
 
     test "private defmacrop → defmacrop" do
-      assert fix("""
-             private defmacrop my_macro(x) do
-               x
-             end
-             """) ==
-               """
-               defmacrop my_macro(x) do
-                 x
-               end
-               """
+      confirm_fix(
+        fix("""
+        private defmacrop my_macro(x) do
+          x
+        end
+        """),
+        """
+        defmacrop my_macro(x) do
+          x
+        end
+        """
+      )
     end
   end
 
@@ -195,21 +153,17 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "preserves indentation" do
     test "two-space indent" do
-      assert fix("""
-               pprivate defp calculate(x), do: x * 2
-             """) ==
-               """
-                 defp calculate(x), do: x * 2
-               """
+      confirm_fix(
+        fix("  pprivate defp calculate(x), do: x * 2"),
+        "  defp calculate(x), do: x * 2"
+      )
     end
 
     test "deep indent" do
-      assert fix("""
-                   private defp calculate(x), do: x * 2
-             """) ==
-               """
-                     defp calculate(x), do: x * 2
-               """
+      confirm_fix(
+        fix("      private defp calculate(x), do: x * 2"),
+        "      defp calculate(x), do: x * 2"
+      )
     end
   end
 
@@ -247,7 +201,7 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
       end
       """
 
-      assert fix(code) == expected
+      confirm_fix(fix(code), expected)
     end
 
     test "preserves surrounding code" do
@@ -267,7 +221,7 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
       end
       """
 
-      assert fix(code) == expected
+      confirm_fix(fix(code), expected)
     end
   end
 
@@ -275,27 +229,21 @@ defmodule Credence.Syntax.FixStaleAccessModifierFixTest do
 
   describe "no-ops" do
     test "correct defp unchanged" do
-      code = """
-      defp calculate(x), do: x * 2
-      """
+      code = "defp calculate(x), do: x * 2"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "correct def unchanged" do
-      code = """
-      def calculate(x), do: x * 2
-      """
+      code = "def calculate(x), do: x * 2"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "private as variable unchanged" do
-      code = """
-      private = true
-      """
+      code = "private = true"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
   end
 

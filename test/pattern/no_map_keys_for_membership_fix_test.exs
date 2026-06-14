@@ -20,7 +20,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipFixTest do
     end
     """
 
-    assert fix(NoMapKeysForMembership, code) == expected
+    confirm_fix(fix(NoMapKeysForMembership, code), expected)
   end
 
   test "x in Map.keys(m) → Map.has_key?(m, x) inside an if" do
@@ -40,7 +40,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipFixTest do
     end
     """
 
-    assert fix(NoMapKeysForMembership, code) == expected
+    confirm_fix(fix(NoMapKeysForMembership, code), expected)
   end
 
   test "no-op when left operand is side-effecting (function call)" do
@@ -52,6 +52,6 @@ defmodule Credence.Pattern.NoMapKeysForMembershipFixTest do
     end
     """
 
-    assert fix(NoMapKeysForMembership, code) == code
+    confirm_fix(fix(NoMapKeysForMembership, code), code)
   end
 end

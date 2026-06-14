@@ -90,9 +90,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesCheckTest do
 
   describe "does not flag — out of scope" do
     test "Enum.frequencies/1 (already idiomatic)" do
-      code = """
-      Enum.frequencies(nums)
-      """
+      code = "Enum.frequencies(nums)"
 
       assert clean?(PreferEnumFrequencies, code)
     end

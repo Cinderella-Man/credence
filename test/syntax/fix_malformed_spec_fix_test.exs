@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.FixMalformedSpecFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.FixMalformedSpec
 
@@ -17,39 +17,22 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
 
   describe "simple types" do
     test "single param, simple return" do
-      assert fix("""
-             @spec foo(integer() :: string())
-             """) ==
-               """
-               @spec foo(integer()) :: string()
-               """
+      confirm_fix(fix("@spec foo(integer() :: string())"), "@spec foo(integer()) :: string()")
     end
 
     test "atom return type" do
-      assert fix("""
-             @spec foo(binary() :: atom())
-             """) ==
-               """
-               @spec foo(binary()) :: atom()
-               """
+      confirm_fix(fix("@spec foo(binary() :: atom())"), "@spec foo(binary()) :: atom()")
     end
 
     test "boolean return" do
-      assert fix("""
-             @spec valid?(string() :: boolean())
-             """) ==
-               """
-               @spec valid?(string()) :: boolean()
-               """
+      confirm_fix(
+        fix("@spec valid?(string() :: boolean())"),
+        "@spec valid?(string()) :: boolean()"
+      )
     end
 
     test "bang function" do
-      assert fix("""
-             @spec save!(map() :: :ok)
-             """) ==
-               """
-               @spec save!(map()) :: :ok
-               """
+      confirm_fix(fix("@spec save!(map() :: :ok)"), "@spec save!(map()) :: :ok")
     end
   end
 
@@ -57,30 +40,24 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
 
   describe "parameterized types" do
     test "the actual LLM log case" do
-      assert fix("""
-             @spec max_product(list(integer()) :: integer())
-             """) ==
-               """
-               @spec max_product(list(integer())) :: integer()
-               """
+      confirm_fix(
+        fix("@spec max_product(list(integer()) :: integer())"),
+        "@spec max_product(list(integer())) :: integer()"
+      )
     end
 
     test "nested parameterized types" do
-      assert fix("""
-             @spec process(list(list(integer())) :: list(integer()))
-             """) ==
-               """
-               @spec process(list(list(integer()))) :: list(integer())
-               """
+      confirm_fix(
+        fix("@spec process(list(list(integer())) :: list(integer()))"),
+        "@spec process(list(list(integer()))) :: list(integer())"
+      )
     end
 
     test "map type in params" do
-      assert fix("""
-             @spec foo(map(atom(), string()) :: list())
-             """) ==
-               """
-               @spec foo(map(atom(), string())) :: list()
-               """
+      confirm_fix(
+        fix("@spec foo(map(atom(), string()) :: list())"),
+        "@spec foo(map(atom(), string())) :: list()"
+      )
     end
   end
 
@@ -88,21 +65,17 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
 
   describe "multiple params" do
     test "two simple params" do
-      assert fix("""
-             @spec add(integer(), integer() :: integer())
-             """) ==
-               """
-               @spec add(integer(), integer()) :: integer()
-               """
+      confirm_fix(
+        fix("@spec add(integer(), integer() :: integer())"),
+        "@spec add(integer(), integer()) :: integer()"
+      )
     end
 
     test "mixed simple and parameterized" do
-      assert fix("""
-             @spec find(list(integer()), integer() :: integer())
-             """) ==
-               """
-               @spec find(list(integer()), integer()) :: integer()
-               """
+      confirm_fix(
+        fix("@spec find(list(integer()), integer() :: integer())"),
+        "@spec find(list(integer()), integer()) :: integer()"
+      )
     end
   end
 
@@ -110,39 +83,31 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
 
   describe "complex return types" do
     test "tuple return" do
-      assert fix("""
-             @spec foo(integer() :: {atom(), integer()})
-             """) ==
-               """
-               @spec foo(integer()) :: {atom(), integer()}
-               """
+      confirm_fix(
+        fix("@spec foo(integer() :: {atom(), integer()})"),
+        "@spec foo(integer()) :: {atom(), integer()}"
+      )
     end
 
     test "union return type" do
-      assert fix("""
-             @spec foo(string() :: :ok | :error)
-             """) ==
-               """
-               @spec foo(string()) :: :ok | :error
-               """
+      confirm_fix(
+        fix("@spec foo(string() :: :ok | :error)"),
+        "@spec foo(string()) :: :ok | :error"
+      )
     end
 
     test "tagged tuple union return" do
-      assert fix("""
-             @spec foo(integer() :: {:ok, term()} | {:error, string()})
-             """) ==
-               """
-               @spec foo(integer()) :: {:ok, term()} | {:error, string()}
-               """
+      confirm_fix(
+        fix("@spec foo(integer() :: {:ok, term()} | {:error, string()})"),
+        "@spec foo(integer()) :: {:ok, term()} | {:error, string()}"
+      )
     end
 
     test "list return type" do
-      assert fix("""
-             @spec foo(list() :: list(integer()))
-             """) ==
-               """
-               @spec foo(list()) :: list(integer())
-               """
+      confirm_fix(
+        fix("@spec foo(list() :: list(integer()))"),
+        "@spec foo(list()) :: list(integer())"
+      )
     end
   end
 
@@ -150,21 +115,14 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
 
   describe "with indentation" do
     test "preserves leading whitespace" do
-      assert fix("""
-               @spec foo(integer() :: string())
-             """) ==
-               """
-                 @spec foo(integer()) :: string()
-               """
+      confirm_fix(fix("  @spec foo(integer() :: string())"), "  @spec foo(integer()) :: string()")
     end
 
     test "deep indentation" do
-      assert fix("""
-                   @spec foo(integer() :: atom())
-             """) ==
-               """
-                     @spec foo(integer()) :: atom()
-               """
+      confirm_fix(
+        fix("      @spec foo(integer() :: atom())"),
+        "      @spec foo(integer()) :: atom()"
+      )
     end
   end
 
@@ -190,7 +148,7 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
       end
       """
 
-      assert fix(code) == expected
+      confirm_fix(fix(code), expected)
     end
 
     test "fixes multiple malformed specs in same module" do
@@ -204,7 +162,7 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
       @spec bar(list()) :: map()
       """
 
-      assert fix(code) == expected
+      confirm_fix(fix(code), expected)
     end
   end
 
@@ -212,51 +170,39 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
 
   describe "no-ops" do
     test "correct spec unchanged" do
-      code = """
-      @spec foo(integer()) :: string()
-      """
+      code = "@spec foo(integer()) :: string()"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "correct spec with multiple params" do
-      code = """
-      @spec add(integer(), integer()) :: integer()
-      """
+      code = "@spec add(integer(), integer()) :: integer()"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "named parameter unchanged" do
-      code = """
-      @spec foo(name :: integer()) :: string()
-      """
+      code = "@spec foo(name :: integer()) :: string()"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "multiple named params unchanged" do
-      code = """
-      @spec foo(x :: integer(), y :: string()) :: atom()
-      """
+      code = "@spec foo(x :: integer(), y :: string()) :: atom()"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "no spec at all" do
-      code = """
-      def foo(x), do: x + 1
-      """
+      code = "def foo(x), do: x + 1"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "type definition unchanged" do
-      code = """
-      @type t :: %{name: String.t()}
-      """
+      code = "@type t :: %{name: String.t()}"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
   end
 
@@ -275,11 +221,7 @@ defmodule Credence.Syntax.FixMalformedSpecFixTest do
 
   describe "fix output is well-formed" do
     test "fixed output parses" do
-      assert valid_syntax?(
-               fix("""
-               @spec foo(integer() :: string())
-               """)
-             )
+      assert valid_syntax?(fix("@spec foo(integer() :: string())"))
     end
   end
 end

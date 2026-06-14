@@ -198,10 +198,15 @@ defmodule Mix.Tasks.Credence.FixTests do
     end)
   end
 
-  # The `assert fix(Alias, <input>) == <expected>` assertion → {input_ref, expected_ref}
-  # where each ref is `{:var, atom}` or `{:node, heredoc_node}`.
+  # The fix assertion → {input_ref, expected_ref} where each ref is `{:var, atom}`
+  # or `{:node, heredoc_node}`. Matches both the canonical
+  # `confirm_fix(fix(Alias, <input>), <expected>)` and the legacy
+  # `assert fix(Alias, <input>) == <expected>`.
   defp fix_assertion(body) do
     Enum.find_value(statements(body), fn
+      {:confirm_fix, _, [{:fix, _, [{:__aliases__, _, _}, arg]}, rhs]} ->
+        {ref(arg), ref(rhs)}
+
       {:assert, _, [{:==, _, [{:fix, _, [{:__aliases__, _, _}, arg]}, rhs]}]} ->
         {ref(arg), ref(rhs)}
 

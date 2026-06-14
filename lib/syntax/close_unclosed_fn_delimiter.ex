@@ -132,6 +132,8 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
       line,
       fn _full, end_word, parens ->
         end_word <> extra <> parens
-      end, global: false)
+      end,
+      global: false
+    )
   end
 end

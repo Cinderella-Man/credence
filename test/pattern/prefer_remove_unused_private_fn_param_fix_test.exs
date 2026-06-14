@@ -23,7 +23,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
       end
       """
 
-      assert fix(PreferRemoveUnusedPrivateFnParam, input) == expected
+      confirm_fix(fix(PreferRemoveUnusedPrivateFnParam, input), expected)
     end
 
     test "multi-clause — removes unused param from all clauses and call sites" do
@@ -45,7 +45,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
       end
       """
 
-      assert fix(PreferRemoveUnusedPrivateFnParam, input) == expected
+      confirm_fix(fix(PreferRemoveUnusedPrivateFnParam, input), expected)
     end
   end
 
@@ -61,7 +61,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
       end
       """
 
-      assert fix(PreferRemoveUnusedPrivateFnParam, input) == input
+      confirm_fix(fix(PreferRemoveUnusedPrivateFnParam, input), input)
     end
 
     test "underscore-prefixed unused param is left alone" do
@@ -71,7 +71,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
       end
       """
 
-      assert fix(PreferRemoveUnusedPrivateFnParam, input) == input
+      confirm_fix(fix(PreferRemoveUnusedPrivateFnParam, input), input)
     end
 
     test "param reused in another argument's pattern is left alone" do
@@ -82,7 +82,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
       end
       """
 
-      assert fix(PreferRemoveUnusedPrivateFnParam, input) == input
+      confirm_fix(fix(PreferRemoveUnusedPrivateFnParam, input), input)
     end
 
     test "public function with unused param" do
@@ -92,7 +92,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
       end
       """
 
-      assert fix(PreferRemoveUnusedPrivateFnParam, input) == input
+      confirm_fix(fix(PreferRemoveUnusedPrivateFnParam, input), input)
     end
 
     test "param used in one clause" do
@@ -103,7 +103,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParamFixTest do
       end
       """
 
-      assert fix(PreferRemoveUnusedPrivateFnParam, input) == input
+      confirm_fix(fix(PreferRemoveUnusedPrivateFnParam, input), input)
     end
   end
 end

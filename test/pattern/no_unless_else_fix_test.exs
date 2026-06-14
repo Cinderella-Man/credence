@@ -29,7 +29,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
 
     test "inline form" do
@@ -45,7 +45,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
 
     test "multi-line bodies" do
@@ -73,7 +73,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
   end
 
@@ -103,7 +103,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
 
     test "function call condition" do
@@ -127,7 +127,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
 
     test "negated condition" do
@@ -151,7 +151,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
   end
 
@@ -185,7 +185,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
 
     test "preserves surrounding code" do
@@ -211,7 +211,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
 
     test "used as expression assignment" do
@@ -237,7 +237,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
   end
 
@@ -277,7 +277,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
   end
 
@@ -303,7 +303,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == expected
+      confirm_fix(fix(NoUnlessElse, input), expected)
     end
   end
 
@@ -321,7 +321,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == input
+      confirm_fix(fix(NoUnlessElse, input), input)
     end
 
     test "bare unless inline" do
@@ -331,7 +331,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == input
+      confirm_fix(fix(NoUnlessElse, input), input)
     end
   end
 
@@ -347,7 +347,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == input
+      confirm_fix(fix(NoUnlessElse, input), input)
     end
   end
 
@@ -359,7 +359,7 @@ defmodule Credence.Pattern.NoUnlessElseFixTest do
       end
       """
 
-      assert fix(NoUnlessElse, input) == input
+      confirm_fix(fix(NoUnlessElse, input), input)
     end
   end
 end

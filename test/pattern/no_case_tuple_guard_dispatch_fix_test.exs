@@ -29,7 +29,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == expected
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), expected)
     end
 
     test "two-tuple with two guards and explicit catch-all" do
@@ -53,7 +53,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == expected
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), expected)
     end
 
     test "multi-line bodies" do
@@ -82,7 +82,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == expected
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), expected)
     end
 
     test "three-tuple with guards" do
@@ -106,7 +106,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == expected
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), expected)
     end
   end
 
@@ -125,7 +125,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == input
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), input)
     end
 
     test "tuple destructure patterns" do
@@ -138,7 +138,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == input
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), input)
     end
   end
 
@@ -154,7 +154,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == input
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), input)
     end
   end
 
@@ -169,7 +169,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == input
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), input)
     end
   end
 
@@ -184,7 +184,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == input
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), input)
     end
 
     test "guard can raise (hd)" do
@@ -197,7 +197,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == input
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), input)
     end
 
     test "bare-variable truthiness guard" do
@@ -210,7 +210,7 @@ defmodule Credence.Pattern.NoCaseTupleGuardDispatchFixTest do
       end
       """
 
-      assert fix(NoCaseTupleGuardDispatch, input) == input
+      confirm_fix(fix(NoCaseTupleGuardDispatch, input), input)
     end
   end
 end

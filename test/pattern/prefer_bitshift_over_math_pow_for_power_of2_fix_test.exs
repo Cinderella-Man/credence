@@ -4,15 +4,11 @@ defmodule Credence.Pattern.PreferBitshiftOverMathPowForPowerOf2FixTest do
   alias Credence.Pattern.PreferBitshiftOverMathPowForPowerOf2
 
   test "rewrites trunc(:math.pow(2, x)) to 1 <<< trunc(x)" do
-    input = """
-    trunc(:math.pow(2, x))
-    """
+    input = "trunc(:math.pow(2, x))"
 
-    expected = """
-    1 <<< trunc(x)
-    """
+    expected = "1 <<< trunc(x)"
 
-    assert fix(PreferBitshiftOverMathPowForPowerOf2, input) == expected
+    confirm_fix(fix(PreferBitshiftOverMathPowForPowerOf2, input), expected)
   end
 
   test "preserves surrounding code" do
@@ -34,21 +30,17 @@ defmodule Credence.Pattern.PreferBitshiftOverMathPowForPowerOf2FixTest do
     end
     """
 
-    assert fix(PreferBitshiftOverMathPowForPowerOf2, input) == expected
+    confirm_fix(fix(PreferBitshiftOverMathPowForPowerOf2, input), expected)
   end
 
   test "does not modify non-matching code" do
-    code = """
-    trunc(:math.pow(3, x))
-    """
+    code = "trunc(:math.pow(3, x))"
 
-    assert fix(PreferBitshiftOverMathPowForPowerOf2, code) == code
+    confirm_fix(fix(PreferBitshiftOverMathPowForPowerOf2, code), code)
   end
 
   test "round-trip: fixed code produces no issues" do
-    code = """
-    trunc(:math.pow(2, x))
-    """
+    code = "trunc(:math.pow(2, x))"
 
     assert check(
              PreferBitshiftOverMathPowForPowerOf2,

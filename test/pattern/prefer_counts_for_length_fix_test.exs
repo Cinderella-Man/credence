@@ -16,6 +16,6 @@ defmodule Credence.Pattern.PreferCountsForLengthFixTest do
     n
     """
 
-    assert fix(PreferCountsForLength, input) == expected
+    confirm_fix(fix(PreferCountsForLength, input), expected)
   end
 end

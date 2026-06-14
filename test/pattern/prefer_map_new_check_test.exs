@@ -5,9 +5,7 @@ defmodule Credence.Pattern.PreferMapNewCheckTest do
 
   describe "flags" do
     test "Enum.into(enum, %{})" do
-      code = """
-      Enum.into(list, %{})
-      """
+      code = "Enum.into(list, %{})"
 
       [issue] = check(PreferMapNew, code)
       assert issue.rule == :prefer_map_new
@@ -15,9 +13,7 @@ defmodule Credence.Pattern.PreferMapNewCheckTest do
     end
 
     test "piped Enum.into(%{})" do
-      code = """
-      list |> Enum.into(%{})
-      """
+      code = "list |> Enum.into(%{})"
 
       [issue] = check(PreferMapNew, code)
       assert issue.rule == :prefer_map_new
@@ -53,49 +49,37 @@ defmodule Credence.Pattern.PreferMapNewCheckTest do
 
   describe "does not flag" do
     test "Map.new(enum)" do
-      code = """
-      Map.new(list)
-      """
+      code = "Map.new(list)"
 
       assert clean?(PreferMapNew, code)
     end
 
     test "Enum.into with a variable target" do
-      code = """
-      Enum.into(list, existing_map)
-      """
+      code = "Enum.into(list, existing_map)"
 
       assert clean?(PreferMapNew, code)
     end
 
     test "Enum.into with a non-empty map literal" do
-      code = """
-      Enum.into(list, %{a: 1})
-      """
+      code = "Enum.into(list, %{a: 1})"
 
       assert clean?(PreferMapNew, code)
     end
 
     test "Enum.into(enum, map, fun)" do
-      code = """
-      Enum.into(list, %{}, fn x -> {x, x} end)
-      """
+      code = "Enum.into(list, %{}, fn x -> {x, x} end)"
 
       assert clean?(PreferMapNew, code)
     end
 
     test "Enum.into with a list target" do
-      code = """
-      Enum.into(map, [])
-      """
+      code = "Enum.into(map, [])"
 
       assert clean?(PreferMapNew, code)
     end
 
     test "Map.put" do
-      code = """
-      Map.put(map, :key, value)
-      """
+      code = "Map.put(map, :key, value)"
 
       assert clean?(PreferMapNew, code)
     end

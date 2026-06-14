@@ -26,6 +26,6 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersectionFixTest do
     |> Enum.sort_by(fn {key, _value} -> key end)
     """
 
-    assert fix(PreferMapIntersectOverMapsetIntersection, input) == expected
+    confirm_fix(fix(PreferMapIntersectOverMapsetIntersection, input), expected)
   end
 end

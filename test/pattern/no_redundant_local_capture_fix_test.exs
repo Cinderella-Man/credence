@@ -31,7 +31,7 @@ defmodule Credence.Pattern.NoRedundantLocalCaptureFixTest do
     end
     """
 
-    assert fix(NoRedundantLocalCapture, input) == expected
+    confirm_fix(fix(NoRedundantLocalCapture, input), expected)
   end
 
   test "rewrites capture into differently-named variable" do
@@ -56,7 +56,7 @@ defmodule Credence.Pattern.NoRedundantLocalCaptureFixTest do
     end
     """
 
-    assert fix(NoRedundantLocalCapture, input) == expected
+    confirm_fix(fix(NoRedundantLocalCapture, input), expected)
   end
 
   test "leaves direct function calls unchanged" do
@@ -73,6 +73,6 @@ defmodule Credence.Pattern.NoRedundantLocalCaptureFixTest do
     end
     """
 
-    assert fix(NoRedundantLocalCapture, code) == code
+    confirm_fix(fix(NoRedundantLocalCapture, code), code)
   end
 end

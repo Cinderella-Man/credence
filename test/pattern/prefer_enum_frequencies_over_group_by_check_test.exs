@@ -5,9 +5,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByCheckTest do
 
   describe "flags the anti-pattern" do
     test "head-position pipe: Enum.group_by(enum, & &1) |> Map.new(...)" do
-      code = """
-      Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)
-      """
+      code = "Enum.group_by(list, & &1) |> Map.new(fn {k, v} -> {k, length(v)} end)"
 
       issues = check(PreferEnumFrequenciesOverGroupBy, code)
       assert length(issues) == 1
@@ -25,9 +23,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByCheckTest do
     end
 
     test "direct form: Map.new(Enum.group_by(enum, & &1), fn ...)" do
-      code = """
-      Map.new(Enum.group_by(list, & &1), fn {k, v} -> {k, length(v)} end)
-      """
+      code = "Map.new(Enum.group_by(list, & &1), fn {k, v} -> {k, length(v)} end)"
 
       assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
     end
@@ -85,9 +81,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByCheckTest do
     end
 
     test "direct Enum.into(group_by, %{}, ...) collector" do
-      code = """
-      Enum.into(Enum.group_by(list, & &1), %{}, fn {k, v} -> {k, length(v)} end)
-      """
+      code = "Enum.into(Enum.group_by(list, & &1), %{}, fn {k, v} -> {k, length(v)} end)"
 
       assert flagged?(PreferEnumFrequenciesOverGroupBy, code)
     end
@@ -95,17 +89,13 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByCheckTest do
 
   describe "does not flag — out of scope" do
     test "Enum.frequencies/1 (already idiomatic)" do
-      code = """
-      Enum.frequencies(list)
-      """
+      code = "Enum.frequencies(list)"
 
       assert clean?(PreferEnumFrequenciesOverGroupBy, code)
     end
 
     test "Enum.frequencies_by/2 (non-identity key function)" do
-      code = """
-      Enum.frequencies_by(words, &String.downcase/1)
-      """
+      code = "Enum.frequencies_by(words, &String.downcase/1)"
 
       assert clean?(PreferEnumFrequenciesOverGroupBy, code)
     end
@@ -121,17 +111,13 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupByCheckTest do
     end
 
     test "group_by alone, without Map.new" do
-      code = """
-      Enum.group_by(list, & &1)
-      """
+      code = "Enum.group_by(list, & &1)"
 
       assert clean?(PreferEnumFrequenciesOverGroupBy, code)
     end
 
     test "Map.new alone, without group_by" do
-      code = """
-      Map.new(list, fn x -> {x, x} end)
-      """
+      code = "Map.new(list, fn x -> {x, x} end)"
 
       assert clean?(PreferEnumFrequenciesOverGroupBy, code)
     end

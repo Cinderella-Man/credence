@@ -5,16 +5,14 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableFixTest do
 
   describe "fix/2" do
     test "basic: member? inside map" do
-      input = """
-      Enum.map(list, fn x -> Enum.member?(list, x) end)
-      """
+      input = "Enum.map(list, fn x -> Enum.member?(list, x) end)"
 
       expected = """
       set = MapSet.new(list)
       Enum.map(list, fn x -> MapSet.member?(set, x) end)
       """
 
-      assert fix(NoNestedEnumOnSameEnumerable, input) == expected
+      confirm_fix(fix(NoNestedEnumOnSameEnumerable, input), expected)
     end
 
     test "multi-line def with member? inside map" do
@@ -40,33 +38,29 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableFixTest do
       end
       """
 
-      assert fix(NoNestedEnumOnSameEnumerable, input) == expected
+      confirm_fix(fix(NoNestedEnumOnSameEnumerable, input), expected)
     end
 
     test "different variable name" do
-      input = """
-      Enum.map(items, fn i -> Enum.member?(items, i * 2) end)
-      """
+      input = "Enum.map(items, fn i -> Enum.member?(items, i * 2) end)"
 
       expected = """
       set = MapSet.new(items)
       Enum.map(items, fn i -> MapSet.member?(set, i * 2) end)
       """
 
-      assert fix(NoNestedEnumOnSameEnumerable, input) == expected
+      confirm_fix(fix(NoNestedEnumOnSameEnumerable, input), expected)
     end
 
     test "member? with complex second argument" do
-      input = """
-      Enum.map(list, fn x -> Enum.member?(list, x.key) end)
-      """
+      input = "Enum.map(list, fn x -> Enum.member?(list, x.key) end)"
 
       expected = """
       set = MapSet.new(list)
       Enum.map(list, fn x -> MapSet.member?(set, x.key) end)
       """
 
-      assert fix(NoNestedEnumOnSameEnumerable, input) == expected
+      confirm_fix(fix(NoNestedEnumOnSameEnumerable, input), expected)
     end
 
     test "inside a function definition (single-line lambda preserved)" do
@@ -87,20 +81,18 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableFixTest do
       end
       """
 
-      assert fix(NoNestedEnumOnSameEnumerable, input) == expected
+      confirm_fix(fix(NoNestedEnumOnSameEnumerable, input), expected)
     end
 
     test "member? inside an if block" do
-      input = """
-      Enum.map(list, fn x -> if Enum.member?(list, x), do: x, else: nil end)
-      """
+      input = "Enum.map(list, fn x -> if Enum.member?(list, x), do: x, else: nil end)"
 
       expected = """
       set = MapSet.new(list)
       Enum.map(list, fn x -> if MapSet.member?(set, x), do: x, else: nil end)
       """
 
-      assert fix(NoNestedEnumOnSameEnumerable, input) == expected
+      confirm_fix(fix(NoNestedEnumOnSameEnumerable, input), expected)
     end
 
     test "returns source unchanged when no member? pattern found" do
@@ -112,7 +104,7 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableFixTest do
       end
       """
 
-      assert fix(NoNestedEnumOnSameEnumerable, source) == source
+      confirm_fix(fix(NoNestedEnumOnSameEnumerable, source), source)
     end
 
     test "returns source unchanged for Enum.count pattern (not fixable)" do
@@ -126,7 +118,7 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableFixTest do
       end
       """
 
-      assert fix(NoNestedEnumOnSameEnumerable, source) == source
+      confirm_fix(fix(NoNestedEnumOnSameEnumerable, source), source)
     end
   end
 end

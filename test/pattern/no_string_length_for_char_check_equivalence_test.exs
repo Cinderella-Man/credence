@@ -15,9 +15,7 @@ defmodule Credence.Pattern.NoStringLengthForCharCheckEquivalenceTest do
 
   test "String.length(s) == 1 → match?([_], graphemes) preserves the boolean over Unicode" do
     assert_equivalent(
-      """
-      String.length(s) == 1
-      """,
+      "String.length(s) == 1",
       rule: NoStringLengthForCharCheck,
       vars: [:s],
       inputs: B.unicode_strings()

@@ -20,6 +20,6 @@ defmodule Credence.Pattern.PreferStringFirstLastFixTest do
     end)
     """
 
-    assert fix(PreferStringFirstLast, input) == expected
+    confirm_fix(fix(PreferStringFirstLast, input), expected)
   end
 end

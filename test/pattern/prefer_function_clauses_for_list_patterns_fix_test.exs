@@ -48,7 +48,7 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatternsFixTest do
     end
     """
 
-    assert fix(PreferFunctionClausesForListPatterns, input) == expected
+    confirm_fix(fix(PreferFunctionClausesForListPatterns, input), expected)
   end
 
   test "rewrites case with only empty and cons patterns" do
@@ -71,7 +71,7 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatternsFixTest do
     end
     """
 
-    assert fix(PreferFunctionClausesForListPatterns, input) == expected
+    confirm_fix(fix(PreferFunctionClausesForListPatterns, input), expected)
   end
 
   test "preserves other guards" do
@@ -97,7 +97,7 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatternsFixTest do
     end
     """
 
-    assert fix(PreferFunctionClausesForListPatterns, input) == expected
+    confirm_fix(fix(PreferFunctionClausesForListPatterns, input), expected)
   end
 
   # ═══════════════════════════════════════════════════════════════════
@@ -116,7 +116,7 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatternsFixTest do
     end
     """
 
-    assert fix(PreferFunctionClausesForListPatterns, code) == code
+    confirm_fix(fix(PreferFunctionClausesForListPatterns, code), code)
   end
 
   test "no-op: case on a different variable" do
@@ -131,6 +131,6 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatternsFixTest do
     end
     """
 
-    assert fix(PreferFunctionClausesForListPatterns, code) == code
+    confirm_fix(fix(PreferFunctionClausesForListPatterns, code), code)
   end
 end

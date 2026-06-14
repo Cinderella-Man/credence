@@ -10,9 +10,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateEquivalenceTest d
 
   test ~s[graphemes |> count(== "a") → String.count(str, "a") preserves the count] do
     assert_equivalent(
-      """
-      String.graphemes(str) |> Enum.count(&(&1 == "a"))
-      """,
+      ~S'String.graphemes(str) |> Enum.count(&(&1 == "a"))',
       rule: AvoidGraphemesEnumCountWithPredicate,
       vars: [:str],
       inputs: ["", "a", "aXaXa", "banana", :unicode.characters_to_nfd_binary("café")]

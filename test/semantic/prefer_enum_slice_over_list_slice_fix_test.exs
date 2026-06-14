@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.PreferEnumSliceOverListSliceFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.PreferEnumSliceOverListSlice
 
@@ -31,7 +31,7 @@ defmodule Credence.Semantic.PreferEnumSliceOverListSliceFixTest do
     """
 
     message = "List.slice/3 is undefined or private"
-    assert fix(input, message) == expected
+    confirm_fix(fix(input, message), expected)
   end
 
   test "fixed output is well-formed (parses)" do

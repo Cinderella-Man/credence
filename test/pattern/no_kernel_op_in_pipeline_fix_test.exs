@@ -17,7 +17,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
 
     test "inlines: a |> f() |> Kernel.!=(b) → f(a) != b" do
@@ -33,7 +33,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
 
     test "inlines: score |> calculate() |> Kernel.>=(threshold)" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
 
     test "inlines: n |> abs() |> Kernel.<(10)" do
@@ -65,7 +65,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
 
     test "inlines: val |> process() |> Kernel.===(:ok)" do
@@ -81,7 +81,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
 
     test "inlines: a |> valid?() |> Kernel.and(b)" do
@@ -97,7 +97,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
 
     test "inlines: a |> check() |> Kernel.or(b)" do
@@ -113,7 +113,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
   end
 
@@ -131,7 +131,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
   end
 
@@ -153,7 +153,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
 
     test "multi-line pipeline" do
@@ -178,7 +178,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
   end
 
@@ -206,7 +206,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
 
     test "does not touch arithmetic Kernel ops" do
@@ -216,7 +216,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, code) == code
+      confirm_fix(fix(NoKernelOpInPipeline, code), code)
     end
 
     test "returns source unchanged when nothing to fix" do
@@ -226,7 +226,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, code) == code
+      confirm_fix(fix(NoKernelOpInPipeline, code), code)
     end
 
     test "preserves surrounding functions" do
@@ -254,7 +254,7 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       end
       """
 
-      assert fix(NoKernelOpInPipeline, input) == expected
+      confirm_fix(fix(NoKernelOpInPipeline, input), expected)
     end
   end
 end

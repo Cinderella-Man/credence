@@ -12,9 +12,7 @@ defmodule Credence.Pattern.PreferMapNewWithTransformEquivalenceTest do
 
   test "Enum.map(nums, fn ...) |> Map.new() → Map.new(nums, fn ...) preserves the map" do
     assert_equivalent(
-      """
-      Enum.map(nums, fn i -> {i, i * i} end) |> Map.new()
-      """,
+      "Enum.map(nums, fn i -> {i, i * i} end) |> Map.new()",
       rule: PreferMapNewWithTransform,
       vars: [:nums],
       inputs: [[], [1], [1, 2, 3], [5, 4, 3, 2, 1], [10, 20, 30]]

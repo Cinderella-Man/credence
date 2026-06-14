@@ -63,17 +63,13 @@ defmodule Credence.Pattern.PreferEnumCountCheckTest do
 
   describe "leaves good code alone" do
     test "passes code that already uses Enum.count/2" do
-      code = """
-      Enum.count(values, &(rem(&1, 2) == 1))
-      """
+      code = "Enum.count(values, &(rem(&1, 2) == 1))"
 
       assert clean?(PreferEnumCount, code)
     end
 
     test "does NOT flag sum-reduction pattern" do
-      code = """
-      Enum.reduce(list, 0, fn x, acc -> acc + x end)
-      """
+      code = "Enum.reduce(list, 0, fn x, acc -> acc + x end)"
 
       assert clean?(PreferEnumCount, code)
     end

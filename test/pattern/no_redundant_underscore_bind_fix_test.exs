@@ -17,7 +17,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      assert fix(NoRedundantUnderscoreBind, input) == expected
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), expected)
     end
 
     test "in multi-arg function" do
@@ -33,7 +33,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      assert fix(NoRedundantUnderscoreBind, input) == expected
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), expected)
     end
 
     test "in private function" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      assert fix(NoRedundantUnderscoreBind, input) == expected
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), expected)
     end
 
     test "multiple occurrences" do
@@ -65,7 +65,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      assert fix(NoRedundantUnderscoreBind, input) == expected
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), expected)
     end
 
     test "in case clause" do
@@ -81,7 +81,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      assert fix(NoRedundantUnderscoreBind, input) == expected
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), expected)
     end
   end
 
@@ -93,7 +93,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      assert fix(NoRedundantUnderscoreBind, input) == input
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), input)
     end
 
     test "literal pattern" do
@@ -103,7 +103,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      assert fix(NoRedundantUnderscoreBind, input) == input
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), input)
     end
 
     test "tuple pattern" do
@@ -113,7 +113,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      assert fix(NoRedundantUnderscoreBind, input) == input
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), input)
     end
 
     test "underscore without bind" do
@@ -123,15 +123,13 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      assert fix(NoRedundantUnderscoreBind, input) == input
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), input)
     end
 
     test "regular assignment" do
-      input = """
-      x = 1
-      """
+      input = "x = 1"
 
-      assert fix(NoRedundantUnderscoreBind, input) == input
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), input)
     end
   end
 end

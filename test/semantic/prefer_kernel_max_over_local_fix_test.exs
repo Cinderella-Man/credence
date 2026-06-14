@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.PreferKernelMaxOverLocalFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.PreferKernelMaxOverLocal
 
@@ -34,7 +34,7 @@ defmodule Credence.Semantic.PreferKernelMaxOverLocalFixTest do
     """
 
     message = "imported Kernel.max/2 conflicts with local function"
-    assert fix(input, message) == expected
+    confirm_fix(fix(input, message), expected)
   end
 
   test "removes local defp is_nil/1 that shadows Kernel.is_nil/1 and qualifies calls" do
@@ -70,7 +70,7 @@ defmodule Credence.Semantic.PreferKernelMaxOverLocalFixTest do
     """
 
     message = "imported Kernel.is_nil/1 conflicts with local function"
-    assert fix(input, message) == expected
+    confirm_fix(fix(input, message), expected)
   end
 
   test "fixed output is well-formed (parses)" do

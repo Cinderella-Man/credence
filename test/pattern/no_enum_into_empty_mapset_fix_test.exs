@@ -4,51 +4,35 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetFixTest do
   alias Credence.Pattern.NoEnumIntoEmptyMapset
 
   test "rewrites Enum.into(enum, MapSet.new()) to MapSet.new(enum)" do
-    code = """
-    Enum.into(list, MapSet.new())
-    """
+    code = "Enum.into(list, MapSet.new())"
 
-    expected = """
-    MapSet.new(list)
-    """
+    expected = "MapSet.new(list)"
 
-    assert fix(NoEnumIntoEmptyMapset, code) == expected
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), expected)
   end
 
   test "rewrites Enum.into(enum, MapSet.new(), fun) to MapSet.new(enum, fun)" do
-    code = """
-    Enum.into(list, MapSet.new(), fn x -> x * 2 end)
-    """
+    code = "Enum.into(list, MapSet.new(), fn x -> x * 2 end)"
 
-    expected = """
-    MapSet.new(list, fn x -> x * 2 end)
-    """
+    expected = "MapSet.new(list, fn x -> x * 2 end)"
 
-    assert fix(NoEnumIntoEmptyMapset, code) == expected
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), expected)
   end
 
   test "rewrites piped Enum.into(MapSet.new()) to MapSet.new(enum)" do
-    code = """
-    pairs |> Enum.into(MapSet.new())
-    """
+    code = "pairs |> Enum.into(MapSet.new())"
 
-    expected = """
-    MapSet.new(pairs)
-    """
+    expected = "MapSet.new(pairs)"
 
-    assert fix(NoEnumIntoEmptyMapset, code) == expected
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), expected)
   end
 
   test "rewrites piped Enum.into(MapSet.new(), fun) to piped MapSet.new(fun)" do
-    code = """
-    list |> Enum.into(MapSet.new(), fn x -> x * 2 end)
-    """
+    code = "list |> Enum.into(MapSet.new(), fn x -> x * 2 end)"
 
-    expected = """
-    list |> MapSet.new(fn x -> x * 2 end)
-    """
+    expected = "list |> MapSet.new(fn x -> x * 2 end)"
 
-    assert fix(NoEnumIntoEmptyMapset, code) == expected
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), expected)
   end
 
   test "rewrites Enum.into in a longer pipeline" do
@@ -64,7 +48,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetFixTest do
     |> MapSet.new(fn {r, i} -> {i, r} end)
     """
 
-    assert fix(NoEnumIntoEmptyMapset, code) == expected
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), expected)
   end
 
   test "preserves surrounding code" do
@@ -86,32 +70,26 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetFixTest do
     end
     """
 
-    assert fix(NoEnumIntoEmptyMapset, code) == expected
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), expected)
   end
 
   # ── No-op cases (check does not fire → fix leaves code unchanged) ──
 
   test "leaves Enum.into with a variable target untouched" do
-    code = """
-    Enum.into(list, existing_set)
-    """
+    code = "Enum.into(list, existing_set)"
 
-    assert fix(NoEnumIntoEmptyMapset, code) == code
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), code)
   end
 
   test "leaves MapSet.new/1 untouched" do
-    code = """
-    MapSet.new(list)
-    """
+    code = "MapSet.new(list)"
 
-    assert fix(NoEnumIntoEmptyMapset, code) == code
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), code)
   end
 
   test "leaves Enum.into with an empty map literal untouched" do
-    code = """
-    Enum.into(list, %{})
-    """
+    code = "Enum.into(list, %{})"
 
-    assert fix(NoEnumIntoEmptyMapset, code) == code
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), code)
   end
 end

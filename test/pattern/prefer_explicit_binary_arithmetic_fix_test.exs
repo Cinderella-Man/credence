@@ -4,27 +4,19 @@ defmodule Credence.Pattern.PreferExplicitBinaryArithmeticFixTest do
   alias Credence.Pattern.PreferExplicitBinaryArithmetic
 
   test "rewrites pipe into rem to explicit call" do
-    input = """
-    String.length(input_string) |> rem(3)
-    """
+    input = "String.length(input_string) |> rem(3)"
 
-    expected = """
-    rem(String.length(input_string), 3)
-    """
+    expected = "rem(String.length(input_string), 3)"
 
-    assert fix(PreferExplicitBinaryArithmetic, input) == expected
+    confirm_fix(fix(PreferExplicitBinaryArithmetic, input), expected)
   end
 
   test "rewrites pipe into div to explicit call" do
-    input = """
-    numerator |> div(denominator)
-    """
+    input = "numerator |> div(denominator)"
 
-    expected = """
-    div(numerator, denominator)
-    """
+    expected = "div(numerator, denominator)"
 
-    assert fix(PreferExplicitBinaryArithmetic, input) == expected
+    confirm_fix(fix(PreferExplicitBinaryArithmetic, input), expected)
   end
 
   test "rewrites pipe into rem inside case" do
@@ -42,7 +34,7 @@ defmodule Credence.Pattern.PreferExplicitBinaryArithmeticFixTest do
     end
     """
 
-    assert fix(PreferExplicitBinaryArithmetic, input) == expected
+    confirm_fix(fix(PreferExplicitBinaryArithmetic, input), expected)
   end
 
   test "fixes multiple occurrences" do
@@ -58,47 +50,37 @@ defmodule Credence.Pattern.PreferExplicitBinaryArithmeticFixTest do
     {a, b}
     """
 
-    assert fix(PreferExplicitBinaryArithmetic, input) == expected
+    confirm_fix(fix(PreferExplicitBinaryArithmetic, input), expected)
   end
 
   test "does not modify explicit rem call" do
-    code = """
-    rem(String.length(input_string), 3)
-    """
+    code = "rem(String.length(input_string), 3)"
 
-    assert fix(PreferExplicitBinaryArithmetic, code) == code
+    confirm_fix(fix(PreferExplicitBinaryArithmetic, code), code)
   end
 
   test "does not modify explicit div call" do
-    code = """
-    div(numerator, denominator)
-    """
+    code = "div(numerator, denominator)"
 
-    assert fix(PreferExplicitBinaryArithmetic, code) == code
+    confirm_fix(fix(PreferExplicitBinaryArithmetic, code), code)
   end
 
   test "does not modify pipe into non-arithmetic function" do
-    code = """
-    String.length(input_string) |> to_string()
-    """
+    code = "String.length(input_string) |> to_string()"
 
-    assert fix(PreferExplicitBinaryArithmetic, code) == code
+    confirm_fix(fix(PreferExplicitBinaryArithmetic, code), code)
   end
 
   test "fix is idempotent" do
-    input = """
-    String.length(input_string) |> rem(3)
-    """
+    input = "String.length(input_string) |> rem(3)"
 
     first_pass = fix(PreferExplicitBinaryArithmetic, input)
     second_pass = fix(PreferExplicitBinaryArithmetic, first_pass)
-    assert first_pass == second_pass
+    confirm_fix(first_pass, second_pass)
   end
 
   test "fixed code passes check" do
-    input = """
-    String.length(input_string) |> rem(3)
-    """
+    input = "String.length(input_string) |> rem(3)"
 
     assert check(PreferExplicitBinaryArithmetic, fix(PreferExplicitBinaryArithmetic, input)) == []
   end

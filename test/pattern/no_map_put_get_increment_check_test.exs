@@ -36,17 +36,13 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
     end
 
     test "detects piped form" do
-      code = """
-      freqs |> Map.put(key, Map.get(freqs, key, 0) + 1)
-      """
+      code = "freqs |> Map.put(key, Map.get(freqs, key, 0) + 1)"
 
       assert length(check(NoMapPutGetIncrement, code)) == 1
     end
 
     test "detects an integer increment other than 1" do
-      code = """
-      Map.put(m, k, Map.get(m, k, 0) + 5)
-      """
+      code = "Map.put(m, k, Map.get(m, k, 0) + 5)"
 
       assert length(check(NoMapPutGetIncrement, code)) == 1
     end
@@ -68,41 +64,31 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
 
   describe "does not fire" do
     test "different map variable in get" do
-      code = """
-      Map.put(freqs, char, Map.get(other_map, char, 0) + 1)
-      """
+      code = "Map.put(freqs, char, Map.get(other_map, char, 0) + 1)"
 
       assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "non-zero default" do
-      code = """
-      Map.put(freqs, char, Map.get(freqs, char, 10) + 1)
-      """
+      code = "Map.put(freqs, char, Map.get(freqs, char, 10) + 1)"
 
       assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "non-increment expression" do
-      code = """
-      Map.put(freqs, char, Map.get(freqs, char, 0) * 2)
-      """
+      code = "Map.put(freqs, char, Map.get(freqs, char, 0) * 2)"
 
       assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "no Map.get at all" do
-      code = """
-      Map.put(freqs, char, some_value + 1)
-      """
+      code = "Map.put(freqs, char, some_value + 1)"
 
       assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "already idiomatic Map.update" do
-      code = """
-      Map.update(freqs, char, 1, &(&1 + 1))
-      """
+      code = "Map.update(freqs, char, 1, &(&1 + 1))"
 
       assert check(NoMapPutGetIncrement, code) == []
     end
@@ -111,51 +97,39 @@ defmodule Credence.Pattern.NoMapPutGetIncrementCheckTest do
 
     test "two DIFFERENT literal keys must not falsely match" do
       # Reads :b but writes :a — a naive rewrite to Map.update(m, :a, ...) is wrong.
-      code = """
-      Map.put(m, :a, Map.get(m, :b, 0) + 1)
-      """
+      code = "Map.put(m, :a, Map.get(m, :b, 0) + 1)"
 
       assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "literal keys are out of the safe core (even when equal)" do
-      code = """
-      Map.put(counts, "a", Map.get(counts, "a", 0) + 1)
-      """
+      code = ~S'Map.put(counts, "a", Map.get(counts, "a", 0) + 1)'
 
       assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "non-integer (variable) increment is not safe" do
       # Map.update's 4th arg must be a function; a bare variable would not work.
-      code = """
-      Map.put(m, k, Map.get(m, k, 0) + n)
-      """
+      code = "Map.put(m, k, Map.get(m, k, 0) + n)"
 
       assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "float increment is not safe" do
-      code = """
-      Map.put(m, k, Map.get(m, k, 0) + 1.0)
-      """
+      code = "Map.put(m, k, Map.get(m, k, 0) + 1.0)"
 
       assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "float default 0.0 is not the integer 0 (type-changing)" do
       # `0.0 + 1` is the float 1.0; the fix would emit integer default 1.
-      code = """
-      Map.put(m, k, Map.get(m, k, 0.0) + 1)
-      """
+      code = "Map.put(m, k, Map.get(m, k, 0.0) + 1)"
 
       assert check(NoMapPutGetIncrement, code) == []
     end
 
     test "non-variable (call) map is out of the safe core" do
-      code = """
-      Map.put(build(), k, Map.get(build(), k, 0) + 1)
-      """
+      code = "Map.put(build(), k, Map.get(build(), k, 0) + 1)"
 
       assert check(NoMapPutGetIncrement, code) == []
     end

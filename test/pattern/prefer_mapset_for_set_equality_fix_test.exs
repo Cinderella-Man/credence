@@ -22,6 +22,6 @@ defmodule Credence.Pattern.PreferMapsetForSetEqualityFixTest do
     end
     """
 
-    assert fix(PreferMapsetForSetEquality, input) == expected
+    confirm_fix(fix(PreferMapsetForSetEquality, input), expected)
   end
 end

@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.AvoidRemoteFunctionInGuardFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.AvoidRemoteFunctionInGuard
 
@@ -40,7 +40,7 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuardFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "fixed output is well-formed (parses)" do
@@ -67,7 +67,7 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuardFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "returns source unchanged when no consecutive defp pair" do
@@ -81,7 +81,7 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuardFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 
   test "handles guard with List.first/1 remote call" do
@@ -111,7 +111,7 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuardFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "handles guard with String.length/1 remote call" do
@@ -139,7 +139,7 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuardFixTest do
     end
     """
 
-    assert fix(input) == expected
+    confirm_fix(fix(input), expected)
   end
 
   test "does not modify source without remote function calls in guard" do
@@ -150,6 +150,6 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuardFixTest do
     end
     """
 
-    assert fix(input) == input
+    confirm_fix(fix(input), input)
   end
 end

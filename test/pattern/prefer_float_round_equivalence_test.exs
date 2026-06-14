@@ -22,9 +22,7 @@ defmodule Credence.Pattern.PreferFloatRoundEquivalenceTest do
 
   test ":erlang.round(x * 100) / 100 → Float.round(x, 2) preserves value+type over floats" do
     assert_equivalent(
-      """
-      :erlang.round(x * 100) / 100
-      """,
+      ":erlang.round(x * 100) / 100",
       rule: PreferFloatRound,
       vars: [:x],
       inputs: @floats

@@ -22,6 +22,6 @@ defmodule Credence.Pattern.PreferGraphemesForCharacterUniquenessFixTest do
     end
     """
 
-    assert fix(PreferGraphemesForCharacterUniqueness, input) == expected
+    confirm_fix(fix(PreferGraphemesForCharacterUniqueness, input), expected)
   end
 end

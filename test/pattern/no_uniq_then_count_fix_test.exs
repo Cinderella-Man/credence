@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(NoUniqThenCount, code) == expected
+      confirm_fix(fix(NoUniqThenCount, code), expected)
     end
 
     test "piped uniq into Enum.count()" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(NoUniqThenCount, code) == expected
+      confirm_fix(fix(NoUniqThenCount, code), expected)
     end
 
     test "uniq following a transform step leaves the prefix untouched" do
@@ -75,7 +75,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(NoUniqThenCount, code) == expected
+      confirm_fix(fix(NoUniqThenCount, code), expected)
     end
 
     test "head-form uniq carries its source into MapSet.new" do
@@ -95,7 +95,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(NoUniqThenCount, code) == expected
+      confirm_fix(fix(NoUniqThenCount, code), expected)
     end
 
     test "trailing steps after the count are preserved" do
@@ -121,7 +121,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(NoUniqThenCount, code) == expected
+      confirm_fix(fix(NoUniqThenCount, code), expected)
     end
   end
 
@@ -136,7 +136,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(NoUniqThenCount, code) == code
+      confirm_fix(fix(NoUniqThenCount, code), code)
     end
 
     test "Enum.uniq piped into Enum.map" do
@@ -150,7 +150,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(NoUniqThenCount, code) == code
+      confirm_fix(fix(NoUniqThenCount, code), code)
     end
 
     test "Enum.uniq piped into Enum.count(predicate)" do
@@ -164,7 +164,7 @@ defmodule Credence.Pattern.NoUniqThenCountFixTest do
       end
       """
 
-      assert fix(NoUniqThenCount, code) == code
+      confirm_fix(fix(NoUniqThenCount, code), code)
     end
   end
 

@@ -33,7 +33,7 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
     end
     """
 
-    assert fix(NoUnusedComputation, input) == expected
+    confirm_fix(fix(NoUnusedComputation, input), expected)
   end
 
   test "removes _count = String.length(s)" do
@@ -54,7 +54,7 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
     end
     """
 
-    assert fix(NoUnusedComputation, input) == expected
+    confirm_fix(fix(NoUnusedComputation, input), expected)
   end
 
   test "removes bare _ = length(list)" do
@@ -75,7 +75,7 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
     end
     """
 
-    assert fix(NoUnusedComputation, input) == expected
+    confirm_fix(fix(NoUnusedComputation, input), expected)
   end
 
   test "removes multiple dead assignments" do
@@ -97,7 +97,7 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
     end
     """
 
-    assert fix(NoUnusedComputation, input) == expected
+    confirm_fix(fix(NoUnusedComputation, input), expected)
   end
 
   test "preserves dead assignment that is the last expression" do
@@ -109,7 +109,7 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
     end
     """
 
-    assert fix(NoUnusedComputation, code) == code
+    confirm_fix(fix(NoUnusedComputation, code), code)
   end
 
   # ── negative fix cases (unchanged) ─────────────────────────────────
@@ -124,7 +124,7 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
     end
     """
 
-    assert fix(NoUnusedComputation, code) == code
+    confirm_fix(fix(NoUnusedComputation, code), code)
   end
 
   test "does not change impure call (IO.puts)" do
@@ -137,7 +137,7 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
     end
     """
 
-    assert fix(NoUnusedComputation, code) == code
+    confirm_fix(fix(NoUnusedComputation, code), code)
   end
 
   test "does not change unknown function call" do
@@ -150,7 +150,7 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
     end
     """
 
-    assert fix(NoUnusedComputation, code) == code
+    confirm_fix(fix(NoUnusedComputation, code), code)
   end
 
   test "idempotent: running fix twice produces same result" do
@@ -169,6 +169,6 @@ defmodule Credence.Pattern.NoUnusedComputationFixTest do
 
     once = fix(NoUnusedComputation, input)
     twice = fix(NoUnusedComputation, once)
-    assert once == twice
+    confirm_fix(once, twice)
   end
 end

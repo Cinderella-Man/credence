@@ -38,6 +38,6 @@ defmodule Credence.Pattern.PreferDirectStringCheckOverComplexEnumFixTest do
     end
     """
 
-    assert fix(PreferDirectStringCheckOverComplexEnum, input) == expected
+    confirm_fix(fix(PreferDirectStringCheckOverComplexEnum, input), expected)
   end
 end

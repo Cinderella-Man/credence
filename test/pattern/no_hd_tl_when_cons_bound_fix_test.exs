@@ -17,7 +17,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == expected
+      confirm_fix(fix(NoHdTlWhenConsBound, code), expected)
     end
 
     test "tl only collapses the binding" do
@@ -33,7 +33,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == expected
+      confirm_fix(fix(NoHdTlWhenConsBound, code), expected)
     end
 
     test "both hd and tl" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == expected
+      confirm_fix(fix(NoHdTlWhenConsBound, code), expected)
     end
 
     test "reversed cons binding [_ | _] = var" do
@@ -65,7 +65,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == expected
+      confirm_fix(fix(NoHdTlWhenConsBound, code), expected)
     end
 
     test "keeps the binding when the var is used elsewhere in the body" do
@@ -81,7 +81,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == expected
+      confirm_fix(fix(NoHdTlWhenConsBound, code), expected)
     end
 
     test "keeps the binding when the var is used in a guard" do
@@ -97,7 +97,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == expected
+      confirm_fix(fix(NoHdTlWhenConsBound, code), expected)
     end
 
     test "merge: rewrites the flagged param, keeps the other, keeps guard binding" do
@@ -117,7 +117,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == expected
+      confirm_fix(fix(NoHdTlWhenConsBound, code), expected)
     end
 
     test "picks a fresh name when the natural one collides with another param" do
@@ -133,7 +133,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == expected
+      confirm_fix(fix(NoHdTlWhenConsBound, code), expected)
     end
   end
 
@@ -145,7 +145,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == code
+      confirm_fix(fix(NoHdTlWhenConsBound, code), code)
     end
 
     test "no-op when not cons-bound" do
@@ -155,7 +155,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == code
+      confirm_fix(fix(NoHdTlWhenConsBound, code), code)
     end
 
     test "no-op when the body rebinds the var" do
@@ -168,7 +168,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == code
+      confirm_fix(fix(NoHdTlWhenConsBound, code), code)
     end
 
     test "no-op when the body contains an anonymous fn" do
@@ -178,7 +178,7 @@ defmodule Credence.Pattern.NoHdTlWhenConsBoundFixTest do
       end
       """
 
-      assert fix(NoHdTlWhenConsBound, code) == code
+      confirm_fix(fix(NoHdTlWhenConsBound, code), code)
     end
   end
 end

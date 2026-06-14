@@ -8,9 +8,7 @@ defmodule Credence.Syntax.NoReservedWordVariableAnalyzeTest do
 
   test "flags reserved word used as variable in tuple pattern" do
     assert [%Issue{rule: :no_reserved_word_variable}] =
-             analyze("""
-             {before, after} = Enum.split(list, index)
-             """)
+             analyze("{before, after} = Enum.split(list, index)")
   end
 
   test "flags multiple reserved words" do
@@ -36,15 +34,11 @@ defmodule Credence.Syntax.NoReservedWordVariableAnalyzeTest do
   end
 
   test "does not flag false atom in pattern match" do
-    assert analyze("""
-           {false, [], seen} = bar()
-           """) == []
+    assert analyze("{false, [], seen} = bar()") == []
   end
 
   test "does not flag true atom in pattern match" do
-    assert analyze("""
-           {true, [], seen} = bar()
-           """) == []
+    assert analyze("{true, [], seen} = bar()") == []
   end
 
   test "does not flag false atom in if expression" do
@@ -56,8 +50,6 @@ defmodule Credence.Syntax.NoReservedWordVariableAnalyzeTest do
   end
 
   test "does not flag nil atom in pattern match" do
-    assert analyze("""
-           {nil, value} = bar()
-           """) == []
+    assert analyze("{nil, value} = bar()") == []
   end
 end

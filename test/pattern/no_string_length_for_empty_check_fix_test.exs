@@ -16,7 +16,7 @@ defmodule Credence.Pattern.NoStringLengthForEmptyCheckFixTest do
     end
     """
 
-    assert fix(NoStringLengthForEmptyCheck, input) == expected
+    confirm_fix(fix(NoStringLengthForEmptyCheck, input), expected)
   end
 
   test "flipped order and != become s != \"\"" do
@@ -32,7 +32,7 @@ defmodule Credence.Pattern.NoStringLengthForEmptyCheckFixTest do
     end
     """
 
-    assert fix(NoStringLengthForEmptyCheck, input) == expected
+    confirm_fix(fix(NoStringLengthForEmptyCheck, input), expected)
   end
 
   test "leaves a bare-variable argument unchanged" do
@@ -42,6 +42,6 @@ defmodule Credence.Pattern.NoStringLengthForEmptyCheckFixTest do
     end
     """
 
-    assert fix(NoStringLengthForEmptyCheck, input) == input
+    confirm_fix(fix(NoStringLengthForEmptyCheck, input), input)
   end
 end

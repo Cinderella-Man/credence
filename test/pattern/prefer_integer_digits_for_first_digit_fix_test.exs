@@ -19,7 +19,7 @@ defmodule Credence.Pattern.PreferIntegerDigitsForFirstDigitFixTest do
     |> hd()
     """
 
-    assert fix(PreferIntegerDigitsForFirstDigit, input) == expected
+    confirm_fix(fix(PreferIntegerDigitsForFirstDigit, input), expected)
   end
 
   test "rewrites the anti-pattern in a function" do
@@ -46,7 +46,7 @@ defmodule Credence.Pattern.PreferIntegerDigitsForFirstDigitFixTest do
     end
     """
 
-    assert fix(PreferIntegerDigitsForFirstDigit, input) == expected
+    confirm_fix(fix(PreferIntegerDigitsForFirstDigit, input), expected)
   end
 
   test "does not modify code that is already correct" do
@@ -57,6 +57,6 @@ defmodule Credence.Pattern.PreferIntegerDigitsForFirstDigitFixTest do
     |> hd()
     """
 
-    assert fix(PreferIntegerDigitsForFirstDigit, code) == code
+    confirm_fix(fix(PreferIntegerDigitsForFirstDigit, code), code)
   end
 end

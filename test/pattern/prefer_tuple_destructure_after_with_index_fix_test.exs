@@ -20,7 +20,7 @@ defmodule Credence.Pattern.PreferTupleDestructureAfterWithIndexFixTest do
     end)
     """
 
-    assert fix(PreferTupleDestructureAfterWithIndex, input) == expected
+    confirm_fix(fix(PreferTupleDestructureAfterWithIndex, input), expected)
   end
 
   test "rewrites with longer pipe chain" do
@@ -42,7 +42,7 @@ defmodule Credence.Pattern.PreferTupleDestructureAfterWithIndexFixTest do
     end)
     """
 
-    assert fix(PreferTupleDestructureAfterWithIndex, input) == expected
+    confirm_fix(fix(PreferTupleDestructureAfterWithIndex, input), expected)
   end
 
   test "does not rewrite single-arity fn with tuple destructure" do
@@ -54,7 +54,7 @@ defmodule Credence.Pattern.PreferTupleDestructureAfterWithIndexFixTest do
     end)
     """
 
-    assert fix(PreferTupleDestructureAfterWithIndex, input) == input
+    confirm_fix(fix(PreferTupleDestructureAfterWithIndex, input), input)
   end
 
   test "does not rewrite Enum.map without preceding with_index" do
@@ -63,6 +63,6 @@ defmodule Credence.Pattern.PreferTupleDestructureAfterWithIndexFixTest do
     |> Enum.map(fn x, y -> x + y end)
     """
 
-    assert fix(PreferTupleDestructureAfterWithIndex, input) == input
+    confirm_fix(fix(PreferTupleDestructureAfterWithIndex, input), input)
   end
 end
