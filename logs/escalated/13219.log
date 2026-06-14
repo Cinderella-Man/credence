@@ -1,0 +1,1956 @@
+[22m22:06:26.730 [info] [idx=13219] entry_point=count_valid_brackets[0m
+[36m22:06:26.730 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to count the number of valid pairs of brackets in a given string.
+
+## Python Solution
+```python
+def count_valid_brackets(s):
+    count = 0
+    stack = []
+    for c in s:
+        if c in ['(', '[', '{']:
+            stack.append(c)
+        elif c in [')', ']', '}']:
+            if len(stack) == 0:
+                continue
+            if (c == ')' and stack[-1] == '(') or (c == ']' and stack[-1] == '[') or (c == '}' and stack[-1] == '{'):
+                stack.pop()
+                count += 1
+    return count
+```
+
+## Python Tests
+assert count_valid_brackets("()[]{}") == 3
+assert count_valid_brackets("()") == 1
+assert count_valid_brackets("({})[]") == 3
+assert count_valid_brackets(")(") == 0
+assert count_valid_brackets("{[]}") == 2
+assert count_valid_brackets("(]") == 0
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `count_valid_brackets`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m22:07:06.203 [debug] [LLM.call] finish=stop len=1892 usage=%{"completion_tokens" => 2227, "completion_tokens_details" => %{"reasoning_tokens" => 1739}, "prompt_tokens" => 579, "prompt_tokens_details" => %{}, "total_tokens" => 2806}
+[LLM.call] response:
+---INSTRUCTION---
+Write an Elixir function `count_valid_brackets/1` that takes a string and returns the number of valid pairs of brackets in the string.
+
+The string may contain the following bracket characters: parentheses `()`, square brackets `[]`, and curly braces `{}`. A valid pair is defined as a matching open and close bracket of the same type that are correctly nested.
+
+The function should return an integer count of such valid pairs.
+
+The solution should have linear time complexity, O(n), where n is the length of the string.
+
+Edge cases:
+- Empty string returns 0.
+- Unmatched closing brackets are ignored (they do not form a valid pair).
+- The string may contain non-bracket characters, which are to be ignored.
+
+Example: "({})[]" returns 3.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "counts valid bracket pairs" do
+    assert Solution.count_valid_brackets("()[]{}") == 3
+    assert Solution.count_valid_brackets("()") == 1
+    assert Solution.count_valid_brackets("({})[]") == 3
+    assert Solution.count_valid_brackets(")(") == 0
+    assert Solution.count_valid_brackets("{[]}") == 2
+    assert Solution.count_valid_brackets("(]") == 0
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  @doc """
+  Counts the number of valid pairs of brackets in the given string.
+  """
+  def count_valid_brackets(s) do
+    s
+    |> String.to_charlist()
+    |> Enum.reduce({[], 0}, fn char, {stack, count} ->
+      cond do
+        char in [?(, ?[, ?{] ->
+          {[char | stack], count}
+
+        stack != [] and char == ?) and hd(stack) == ?( ->
+          {tl(stack), count + 1}
+
+        stack != [] and char == ?] and hd(stack) == ?[ ->
+          {tl(stack), count + 1}
+
+        stack != [] and char == ?} and hd(stack) == ?{ ->
+          {tl(stack), count + 1}
+
+        true ->
+          {stack, count}
+      end
+    end)
+    |> elem(1)
+  end
+end
+---END---[0m
+[22m22:07:06.203 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 39473ms — ok[0m
+[36m22:07:06.204 [debug] [Budget] spent so far (est.): $1.7476[0m
+[22m22:07:07.254 [info] [RoundTrip] reference PASSED tests[0m
+[22m22:07:07.254 [info] [idx=13219] translation fresh — solving[0m
+[22m22:07:07.254 [info] ===SOLVE_BOUNDARY===[0m
+[22m22:07:07.254 [info] [Solve attempt 1] generating (fn=count_valid_brackets)[0m
+[36m22:07:07.254 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write an Elixir function `count_valid_brackets/1` that takes a string and returns the number of valid pairs of brackets in the string.
+
+The string may contain the following bracket characters: parentheses `()`, square brackets `[]`, and curly braces `{}`. A valid pair is defined as a matching open and close bracket of the same type that are correctly nested.
+
+The function should return an integer count of such valid pairs.
+
+The solution should have linear time complexity, O(n), where n is the length of the string.
+
+Edge cases:
+- Empty string returns 0.
+- Unmatched closing brackets are ignored (they do not form a valid pair).
+- The string may contain non-bracket characters, which are to be ignored.
+
+Example: "({})[]" returns 3.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "counts valid bracket pairs" do
+    assert Solution.count_valid_brackets("()[]{}") == 3
+    assert Solution.count_valid_brackets("()") == 1
+    assert Solution.count_valid_brackets("({})[]") == 3
+    assert Solution.count_valid_brackets(")(") == 0
+    assert Solution.count_valid_brackets("{[]}") == 2
+    assert Solution.count_valid_brackets("(]") == 0
+  end
+end
+```
+
+Module: `Solution`. Function: `count_valid_brackets`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m22:07:11.488 [debug] [LLM.call] finish=stop len=1609 usage=%{"completion_tokens" => 454, "prompt_tokens" => 557, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1011}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts the number of valid bracket pairs in a string.
+  """
+  @spec count_valid_brackets(String.t()) :: non_neg_integer()
+  def count_valid_brackets("") do
+    0
+  end
+
+  def count_valid_brackets(str) do
+    {valid_pairs, stack} =
+      String.codepoints(str)
+      |> Enum.reduce_while({0, []}, fn char, {count, stack} ->
+        case char do
+          "(" ->
+            {:cont, {count, ["("] ++ stack}}
+          "[" ->
+            {:cont, {count, ["["] ++ stack}}
+          "{" ->
+            {:cont, {count, ["{"] ++ stack}}
+          ")" ->
+            case stack do
+              ["("] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "]" ->
+            case stack do
+              ["["] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "}" ->
+            case stack do
+              ["{"] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          _ ->
+            {:cont, {count, stack}}
+        end
+      end)
+
+    valid_pairs
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "counts valid bracket pairs" do
+    assert Solution.count_valid_brackets("()[]{}") == 3
+    assert Solution.count_valid_brackets("()") == 1
+    assert Solution.count_valid_brackets("({})[]") == 3
+    assert Solution.count_valid_brackets(")(") == 0
+    assert Solution.count_valid_brackets("{[]}") == 2
+    assert Solution.count_valid_brackets("(]") == 0
+  end
+end
+---END---[0m
+[22m22:07:11.488 [info] [LLM.call] local_qwen_thinking completed in 4233ms — ok[0m
+[22m22:07:11.488 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m22:07:11.488 [debug] [Validator.run] module code (1145 chars):
+defmodule Solution do
+  @doc """
+  Counts the number of valid bracket pairs in a string.
+  """
+  @spec count_valid_brackets(String.t()) :: non_neg_integer()
+  def count_valid_brackets("") do
+    0
+  end
+
+  def count_valid_brackets(str) do
+    {valid_pairs, stack} =
+      String.codepoints(str)
+      |> Enum.reduce_while({0, []}, fn char, {count, stack} ->
+        case char do
+          "(" ->
+            {:cont, {count, ["("] ++ stack}}
+          "[" ->
+            {:cont, {count, ["["] ++ stack}}
+          "{" ->
+            {:cont, {count, ["{"] ++ stack}}
+          ")" ->
+            case stack do
+              ["("] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "]" ->
+            case stack do
+              ["["] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "}" ->
+            case stack do
+              ["{"] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          _ ->
+            {:cont, {count, stack}}
+        end
+      end)
+
+    valid_pairs
+  end
+end[0m
+[36m22:07:11.488 [debug] [Validator.run] test code (429 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "counts valid bracket pairs" do
+    assert Solution.count_valid_brackets("()[]{}") == 3
+    assert Solution.count_valid_brackets("()") == 1
+    assert Solution.count_valid_brackets("({})[]") == 3
+    assert Solution.count_valid_brackets(")(") == 0
+    assert Solution.count_valid_brackets("{[]}") == 2
+    assert Solution.count_valid_brackets("(]") == 0
+  end
+end[0m
+[36m22:07:11.488 [debug] [Budget] spent so far (est.): $1.7482[0m
+[22m22:07:11.488 [info] [Validator.run] step 1/6: credence fix[0m
+[36m22:07:11.489 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m22:07:12.291 [debug] [run_credence_fix] exit=0 output:
+
+22:07:12.073 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+22:07:12.075 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 21 rules)
+
+22:07:12.090 [debug] [credence_fix] semantic pass 1: compilation OK, 2 warning(s)
+
+22:07:12.090 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+22:07:12.093 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L11 -     {valid_pairs, stack} =
+  L11 +     {valid_pairs, _stack} =
+
+22:07:12.099 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+22:07:12.099 [debug] [credence_fix] semantic done. Applied: [UnusedVariable(1)]
+
+22:07:12.100 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+22:07:12.265 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UnusedVariable, 1}]
+[0m
+[22m22:07:12.291 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m22:07:12.888 [info] [run_credence_fix] fix compiles OK[0m
+[36m22:07:12.888 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Counts the number of valid bracket pairs in a string.
+  """
+  @spec count_valid_brackets(String.t()) :: non_neg_integer()
+  def count_valid_brackets("") do
+    0
+  end
+
+  def count_valid_brackets(str) do
+    {valid_pairs, stack} =
+      String.codepoints(str)
+      |> Enum.reduce_while({0, []}, fn char, {count, stack} ->
+        case char do
+          "(" ->
+            {:cont, {count, ["("] ++ stack}}
+          "[" ->
+            {:cont, {count, ["["] ++ stack}}
+          "{" ->
+            {:cont, {count, ["{"] ++ stack}}
+          ")" ->
+            case stack do
+              ["("] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "]" ->
+            case stack do
+              ["["] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "}" ->
+            case stack do
+              ["{"] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          _ ->
+            {:cont, {count, stack}}
+        end
+      end)
+
+    valid_pairs
+  end
+end[0m
+[36m22:07:12.888 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Counts the number of valid bracket pairs in a string.
+  """
+  @spec count_valid_brackets(String.t()) :: non_neg_integer()
+  def count_valid_brackets("") do
+    0
+  end
+
+  def count_valid_brackets(str) do
+    {valid_pairs, _stack} =
+      String.codepoints(str)
+      |> Enum.reduce_while({0, []}, fn char, {count, stack} ->
+        case char do
+          "(" ->
+            {:cont, {count, ["("] ++ stack}}
+          "[" ->
+            {:cont, {count, ["["] ++ stack}}
+          "{" ->
+            {:cont, {count, ["{"] ++ stack}}
+          ")" ->
+            case stack do
+              ["("] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "]" ->
+            case stack do
+              ["["] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "}" ->
+            case stack do
+              ["{"] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          _ ->
+            {:cont, {count, stack}}
+        end
+      end)
+
+    valid_pairs
+  end
+end[0m
+[22m22:07:12.888 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m22:07:12.888 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Counts the number of valid bracket pairs in a string.
+  """
+  @spec count_valid_brackets(String.t()) :: non_neg_integer()
+  def count_valid_brackets("") do
+    0
+  end
+
+  def count_valid_brackets(str) do
+    {valid_pairs, stack} =
+      String.codepoints(str)
+      |> Enum.reduce_while({0, []}, fn char, {count, stack} ->
+        case char do
+          "(" ->
+            {:cont, {count, ["("] ++ stack}}
+          "[" ->
+            {:cont, {count, ["["] ++ stack}}
+          "{" ->
+            {:cont, {count, ["{"] ++ stack}}
+          ")" ->
+            case stack do
+              ["("] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "]" ->
+            case stack do
+              ["["] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "}" ->
+            case stack do
+              ["{"] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          _ ->
+            {:cont, {count, stack}}
+        end
+      end)
+
+    valid_pairs
+  end
+end[0m
+[36m22:07:12.888 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Counts the number of valid bracket pairs in a string.
+  """
+  @spec count_valid_brackets(String.t()) :: non_neg_integer()
+  def count_valid_brackets("") do
+    0
+  end
+
+  def count_valid_brackets(str) do
+    {valid_pairs, _stack} =
+      String.codepoints(str)
+      |> Enum.reduce_while({0, []}, fn char, {count, stack} ->
+        case char do
+          "(" ->
+            {:cont, {count, ["("] ++ stack}}
+          "[" ->
+            {:cont, {count, ["["] ++ stack}}
+          "{" ->
+            {:cont, {count, ["{"] ++ stack}}
+          ")" ->
+            case stack do
+              ["("] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "]" ->
+            case stack do
+              ["["] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          "}" ->
+            case stack do
+              ["{"] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+          _ ->
+            {:cont, {count, stack}}
+        end
+      end)
+
+    valid_pairs
+  end
+end[0m
+[36m22:07:12.888 [debug] [propagate_is_renames] old functions: ["count_valid_brackets"][0m
+[36m22:07:12.888 [debug] [propagate_is_renames] new functions: ["count_valid_brackets"][0m
+[36m22:07:12.888 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m22:07:12.888 [info] [Validator.run] step 2/6: compile[0m
+[22m22:07:13.468 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m22:07:13.468 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m22:07:13.468 [info] [Validator.run] step 3/6: format[0m
+[22m22:07:13.787 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m22:07:14.090 [debug] [Validator.run] format fix output: [0m
+[22m22:07:14.090 [info] [Validator.run] step 4/6: credo[0m
+[36m22:07:14.569 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m22:07:14.569 [info] [Validator.run] credo: no issues[0m
+[22m22:07:14.569 [info] [Validator.run] step 5/6: credence check[0m
+[22m22:07:15.314 [info] [Validator.run] credence check exit=0[0m
+[36m22:07:15.314 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m22:07:15.314 [info] [Validator.run] credence check: passed[0m
+[22m22:07:15.314 [info] [Validator.run] step 6/6: tests[0m
+[22m22:07:15.809 [info] [Validator.run] test exit=0[0m
+[36m22:07:15.810 [debug] [Validator.run] test output:
+Running ExUnit with seed: 766320, max_cases: 48
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+1 test, 0 failures
+[0m
+[22m22:07:15.810 [info] [Validator.run] tests: PASSED[0m
+[22m22:07:15.810 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m22:07:15.810 [debug] [Validator.run] final module (1153 chars):
+defmodule Solution do
+  @doc """
+  Counts the number of valid bracket pairs in a string.
+  """
+  @spec count_valid_brackets(String.t()) :: non_neg_integer()
+  def count_valid_brackets("") do
+    0
+  end
+
+  def count_valid_brackets(str) do
+    {valid_pairs, _stack} =
+      String.codepoints(str)
+      |> Enum.reduce_while({0, []}, fn char, {count, stack} ->
+        case char do
+          "(" ->
+            {:cont, {count, ["("] ++ stack}}
+
+          "[" ->
+            {:cont, {count, ["["] ++ stack}}
+
+          "{" ->
+            {:cont, {count, ["{"] ++ stack}}
+
+          ")" ->
+            case stack do
+              ["("] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+
+          "]" ->
+            case stack do
+              ["["] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+
+          "}" ->
+            case stack do
+              ["{"] ++ rest -> {:cont, {count + 1, rest}}
+              _ -> {:cont, {count, stack}}
+            end
+
+          _ ->
+            {:cont, {count, stack}}
+        end
+      end)
+
+    valid_pairs
+  end
+end
+[0m
+[36m22:07:15.810 [debug] [Validator.run] final test (430 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "counts valid bracket pairs" do
+    assert Solution.count_valid_brackets("()[]{}") == 3
+    assert Solution.count_valid_brackets("()") == 1
+    assert Solution.count_valid_brackets("({})[]") == 3
+    assert Solution.count_valid_brackets(")(") == 0
+    assert Solution.count_valid_brackets("{[]}") == 2
+    assert Solution.count_valid_brackets("(]") == 0
+  end
+end
+[0m
+[22m22:07:15.810 [info] [Solve attempt 1] validation PASSED[0m
+[36m22:07:15.820 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.UnusedVariable
+These rules ALREADY engaged on this row — Credence handled what they target.
+Do NOT propose a POTENTIAL_NEW_RULE for an idiom one of them already fixes;
+that is already covered. (If such a rule MIS-fired or under-fired, that's a
+BUGFIX_RULE, not a new rule.)
+
+## Dead-ends already tried (do NOT re-propose)
+## row 80597 â gate_reject (:full_suite_red)
+attempted: new(semantic): prefer_div_for_integer_division
+
+## row 12105 â gate_reject (:full_suite_red)
+attempted: new(semantic): prefer_explicit_range_step
+
+## row 40698 â gave_up
+implementer gave_up: {:cc_tests_red, "  1) test rewrites the anti- (truncated)[0m
+[22m22:07:45.282 [info] [Budget] HEARTBEAT — 201 paid calls, est $1.7482 over 414.7min → ~$0.253/hr, ~$6.07/day (tok in=2049350 cache_rd=23881600 out=885986)[0m
+[36m22:08:24.856 [debug] [LLM.call] finish=stop len=916 usage=%{"completion_tokens" => 3641, "completion_tokens_details" => %{"reasoning_tokens" => 3392}, "prompt_tokens" => 7494, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 11135}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_cons_over_singleton_append
+===PHASE===
+pattern
+===BEFORE===
+```elixir
+defmodule Before do
+  def process(char, stack) do
+    case char do
+      "(" ->
+        ["("] ++ stack
+      ")" ->
+        case stack do
+          ["("] ++ rest -> rest
+          _ -> stack
+        end
+      _ ->
+        stack
+    end
+  end
+end
+```
+===AFTER===
+```elixir
+defmodule After do
+  def process(char, stack) do
+    case char do
+      "(" ->
+        ["(" | stack]
+      ")" ->
+        case stack do
+          ["(" | rest] -> rest
+          _ -> stack
+        end
+      _ ->
+        stack
+    end
+  end
+end
+```
+===RATIONALE===
+Using `[elem] ++ list` instead of `[elem | list]` to prepend a single element is non-idiomatic Elixir; the cons operator is the canonical form for both value construction and head/tail pattern matching, appearing 6 times in this row's code.
+===END===[0m
+[22m22:08:24.856 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 69035ms — ok[0m
+[36m22:08:24.856 [debug] [Budget] spent so far (est.): $1.7547[0m
+[22m22:08:26.899 [info] [ClaudeCode] running agent (cwd=/home/kly/projects/credence, max_turns=80, timeout=3600s)[0m
+[22m22:08:27.192 [info] [ClaudeCode] agent session started[0m
+[22m22:08:34.350 [info] [ClaudeCode] step 2: Agent
+    description: Explore Credence rule patterns
+    prompt: Explore the Credence project structure to understand how pattern rules are implemented. I need to understand:
+
+1. How existing pattern rules use `Credence.Pattern.Rule` - look at a few examples in lib/pattern/
+2. How `Credence.RuleHelpers` works (especially `patches_from_postwalk/2` or similar)
+3. How `Credence.RuleCase` works for tests (flagged?, clean?, fix, confirm_fix, assert_equivalent)
+4. How `Credence.EquivalenceInputs` works
+5. How issues are created (the Issue struct)
+6. How patches work
+
+Be very thorough - read at least 2-3 existing pattern rule implementations fully, and their corresponding tests. Focus on rules that detect AST patterns and rewrite them (especially any that deal with list operations or the ++ operator).
+
+Search breadth: very thorough
+    subagent_type: Explore[0m
+[22m22:08:37.107 [info] [ClaudeCode] step 4: Glob
+    pattern: lib/pattern/*.ex[0m
+[22m22:08:37.413 [info] [ClaudeCode] step 5: Glob
+    pattern: test/pattern/*_test.exs[0m
+[22m22:08:40.167 [info] [ClaudeCode] step 7: Read
+    file_path: /home/kly/projects/credence/lib/pattern/rule.ex[0m
+[22m22:08:40.612 [info] [ClaudeCode] step 8: Read
+    file_path: /home/kly/projects/credence/lib/pattern/prefer_prepend_in_accumulator.ex[0m
+[22m22:08:41.050 [info] [ClaudeCode] step 9: Read
+    file_path: /home/kly/projects/credence/lib/pattern/no_list_append_in_reduce.ex[0m
+[22m22:08:44.759 [info] [ClaudeCode] step 11: Read
+    file_path: /home/kly/projects/credence/lib/pattern/no_list_append_in_recursion.ex[0m
+[22m22:08:45.833 [info] [ClaudeCode] step 12: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_list_append_in_recursion_check_test.exs[0m
+[22m22:08:48.552 [info] [ClaudeCode] step 14: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_list_append_in_recursion_equivalence_test.exs[0m
+[22m22:08:48.919 [info] [ClaudeCode] step 15: Read
+    file_path: /home/kly/projects/credence/lib/rule_case.ex[0m
+[22m22:08:50.805 [info] [ClaudeCode] step 17: Glob
+    pattern: **/*rule_case*[0m
+[22m22:08:51.091 [info] [ClaudeCode] step 18: Glob
+    pattern: **/*equivalence*[0m
+[22m22:08:53.427 [info] [ClaudeCode] step 20: Read
+    file_path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m22:08:53.865 [info] [ClaudeCode] step 21: Read
+    file_path: /home/kly/projects/credence/test/support/equivalence_inputs.ex[0m
+[22m22:08:57.436 [info] [ClaudeCode] step 23: Glob
+    pattern: **/*behaviour_equivalence*[0m
+[22m22:08:59.960 [info] [ClaudeCode] step 25: Read
+    file_path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m22:09:03.431 [info] [ClaudeCode] step 27: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_if_true_false_equivalence_test.exs[0m
+[22m22:09:03.678 [info] [ClaudeCode] step 28: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_if_true_false_check_test.exs[0m
+[22m22:09:07.087 [info] [ClaudeCode] step 30: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_if_true_false_fix_test.exs[0m
+[22m22:09:07.334 [info] [ClaudeCode] step 31: Grep
+    glob: lib/**/*.ex
+    pattern: def patches_from_postwalk[0m
+[22m22:09:10.504 [info] [ClaudeCode] step 33: Read
+    file_path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m22:09:36.148 [info] [ClaudeCode] step 35: Read
+    file_path: /home/kly/projects/credence/lib/pattern/no_list_concat_with_recursive_result.ex[0m
+[22m22:09:36.564 [info] [ClaudeCode] step 36: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_list_concat_with_recursive_result_check_test.exs[0m
+[22m22:09:40.462 [info] [ClaudeCode] step 38: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_list_concat_with_recursive_result_fix_test.exs[0m
+[22m22:09:40.943 [info] [ClaudeCode] step 39: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_list_concat_with_recursive_result_equivalence_test.exs[0m
+[22m22:10:48.270 [info] [ClaudeCode] step 41 says:
+Let me verify how Sourceror renders cons cells to pick the right AST shape for the fix:[0m
+[22m22:10:52.373 [info] [ClaudeCode] step 42: Bash
+    command: mix run -e '
+# Test how Sourceror renders cons in different AST shapes
+IO.puts("=== Bare cons tuple ===")
+IO.inspect(Sourceror.to_string({:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]}))
+
+IO.puts("\n=== Cons in list ===")
+IO.inspect(Sourceror.to_string([{:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]}]))
+
+IO.puts("\n=== __block__ wrapping list with cons ===")
+IO.inspect(Sourceror.to_string({:__block__, [], [[{:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]}]]}))
+
+IO.puts("\n=== Parse [elem | list] ===")
+ast = Sourceror.parse_string!("[\"(\" | stack]")
+IO.inspect(ast, label: "parsed")
+
+IO.puts("\n=== Parse [elem | list] in pattern context ===")
+code = "case x do [\"(\" | rest] -> rest end"
+ast2 = Sourceror.parse_string!(code)
+IO.inspect(ast2, label: "pattern_parsed")
+' 2>&1 | head -80
+    description: Test Sourceror cons cell rendering
+    timeout: 30000[0m
+[22m22:10:59.606 [info] [ClaudeCode] step 44: Bash
+    command: cat > /tmp/test_cons.exs << 'EOF'
+# Test how Sourceror renders cons in different AST shapes
+IO.puts("=== Bare cons tuple ===")
+r1 = Sourceror.to_string({:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]})
+IO.puts(r1)
+
+IO.puts("\n=== Cons in list ===")
+r2 = Sourceror.to_string([{:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]}])
+IO.puts(r2)
+
+IO.puts("\n=== __block__ wrapping list with cons ===")
+r3 = Sourceror.to_string({:__block__, [], [[{:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]}]]})
+IO.puts(r3)
+
+IO.puts("\n=== Parse [elem | list] as expression ===")
+ast = Sourceror.parse_string!("[\"(\" | stack]")
+IO.inspect(ast, label: "parsed", limit: :infinity)
+
+IO.puts("\n=== Parse case with [elem | list] in pattern ===")
+code = """
+case x do
+  ["(" | rest] -> rest
+end
+"""
+ast2 = Sourceror.parse_string!(code)
+IO.inspect(ast2, label: "pattern_parsed", limit: :infinity)
+EOF
+mix run /tmp/test_cons.exs 2>&1 | head -100
+    description: Test Sourceror cons rendering
+    timeout: 30000[0m
+[22m22:11:07.954 [info] [ClaudeCode] step 46: Write
+    content: # Test how Sourceror renders cons in different AST shapes
+
+IO.puts("=== Bare cons tuple ===")
+r1 = Sourceror.to_string({:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]})
+IO.puts(r1)
+
+IO.puts("\n=== Cons in list ===")
+r2 = Sourceror.to_string([{:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]}])
+IO.puts(r2)
+
+IO.puts("\n=== __block__ wrapping list with cons ===")
+r3 = Sourceror.to_string({:__block__, [], [[{:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]}]]})
+IO.puts(r3)
+
+IO.puts("\n=== Parse [elem | list] as expression ===")
+ast = Sourceror.parse_string!("["(" | stack]")
+IO.inspect(ast, label: "parsed", limit: :infinity)
+
+    file_path: /tmp/test_cons.exs[0m
+[22m22:11:13.220 [info] [ClaudeCode] step 48: Write
+    content: # Test how Sourceror renders cons in different AST shapes
+
+IO.puts("=== Bare cons tuple ===")
+r1 = Sourceror.to_string({:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]})
+IO.puts(r1)
+
+IO.puts("\n=== Cons in list ===")
+r2 = Sourceror.to_string([{:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]}])
+IO.puts(r2)
+
+IO.puts("\n=== __block__ wrapping list with cons ===")
+r3 = Sourceror.to_string({:__block__, [], [[{:|, [], [{:__block__, [delimiter: "\""], ["("]}, {:stack, [], nil}]}]]})
+IO.puts(r3)
+
+    file_path: /tmp/test_cons.exs[0m
+[22m22:11:18.496 [info] [ClaudeCode] step 50: Write
+    content: # Test how Sourceror renders cons in different AST shapes
+# Parse the actual code and look at what shapes Sourceror produces
+
+code = ~S(case x do
+  ["(" | rest] -> rest
+end)
+
+IO.puts("=== Parse case with cons in pattern ===")
+ast = Sourceror.parse_string!(code)
+IO.inspect(ast, label: "parsed", limit: :infinity)
+
+IO.puts("\n=== Parse [elem | list] as expression ===")
+ast2 = Sourceror.parse_string!("[elem | list]")
+IO.inspect(ast2, label: "parsed_expr", limit: :infinity)
+
+    file_path: /tmp/test_cons.exs[0m
+[22m22:11:25.248 [info] [ClaudeCode] step 52: Bash
+    command: mix run -e '
+# Test how Sourceror renders cons in different AST shapes
+before = ~S"""
+defmodule Before do
+  def process(char, stack) do
+    case char do
+      "(" ->
+        ["("] ++ stack
+      ")" ->
+        case stack do
+          ["("] ++ rest -> rest
+          _ -> stack
+        end
+      _ ->
+        stack
+    end
+  end
+end
+"""
+
+after = ~S"""
+defmodule After do
+  def process(char, stack) do
+    case char do
+      "(" ->
+        ["(" | stack]
+      ")" ->
+        case stack do
+          ["(" | rest] -> rest
+          _ -> stack
+        end
+      _ ->
+        stack
+    end
+  end
+end
+"""
+
+# Parse and show AST
+before_ast = Sourceror.parse_string!(before)
+after_ast = Sourceror.parse_string!(after)
+
+IO.puts("=== BEFORE AST (relevant parts) ===")
+IO.inspect(before_ast, limit: :infinity)
+
+IO.puts("\n=== AFTER AST (relevant parts) ===")
+IO.inspect(after_ast, limit: :infinity)
+'
+    description: Parse before/after ASTs
+    timeout: 30000[0m
+[22m22:11:31.579 [info] [ClaudeCode] step 54: Write
+    content: before = """
+defmodule Before do
+  def process(char, stack) do
+    case char do
+      "(" ->
+        ["("] ++ stack
+      ")" ->
+        case stack do
+          ["("] ++ rest -> rest
+          _ -> stack
+        end
+      _ ->
+        stack
+    end
+  end
+end
+"""
+
+after = """
+defmodule After do
+  def process(char, stack) do
+    case char do
+      "(" ->
+        ["(" | stack]
+      ")" ->
+        case stack do
+          ["(" | rest] -> rest
+          _ -> stack
+        end
+      _ ->
+        stack
+    end
+  end
+end
+"""
+
+# Parse and show the cons AST shape
+before_ast = Sourceror.parse_string!(before)
+after_ast = Sourceror.parse_string!(after)
+
+IO.puts("=== BEFORE ===")
+Sourceror.to_string(before_ast) |> IO.puts()
+
+IO.puts("\n=== AFTER ===")
+Sourceror.to_string(after_ast) |> IO.puts()
+
+# Test: apply the rule and check
+IO.puts("\n=== Apply rule ===")
+result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferConsOverSingletonAppend, before)
+IO.puts(result)
+
+    file_path: /tmp/test_cons.exs[0m
+[22m22:12:45.282 [info] [Budget] HEARTBEAT — 202 paid calls, est $1.7547 over 419.7min → ~$0.2509/hr, ~$6.02/day (tok in=2056844 cache_rd=23881600 out=889627)[0m
+[22m22:15:10.607 [info] [ClaudeCode] step 56 says:
+Now I have a solid understanding of the codebase. Let me now carefully examine the AST shapes for the before/after to understand exactly what the rule needs to detect and how to transform it.[0m
+[22m22:15:11.234 [info] [ClaudeCode] step 57: Read
+    file_path: /home/kly/projects/credence/lib/pattern/no_list_concat_with_recursive_result.ex
+    limit: 50
+    offset: 120[0m
+[22m22:15:17.702 [info] [ClaudeCode] step 59 says:
+Now I have a clear picture. The rule needs to detect `{:++, meta, [lhs, rhs]}` where `lhs` is a singleton list literal, and rewrite it using `RuleHelpers.unwrap_list/1` + `RuleHelpers.rewrap_list/2` to produce `[elem | rhs]`. This works in both value and pattern contexts.
+
+Let me implement the rule and all four test files:[0m
+[22m22:15:25.600 [info] [ClaudeCode] step 60: Write
+    content: defmodule Credence.Pattern.PreferConsOverSingletonAppend do
+  @moduledoc """
+  Detects `[elem] ++ list` and rewrites it to the idiomatic cons form
+  `[elem | list]`.
+
+  The cons operator `|` is the canonical Elixir idiom for prepending a single
+  element to a list. Using `[elem] ++ list` allocates an intermediate
+  single-element list and traverses it, which is both non-idiomatic and
+  slightly less efficient.
+
+  The rule fires in both value and pattern contexts — e.g. both
+  `["("] ++ stack` (construction) and `["("] ++ rest` (case-match pattern).
+
+  ## Bad
+
+      ["("] ++ stack
+
+      case stack do
+        ["("] ++ rest -> rest
+      end
+
+  ## Good
+
+      ["(" | stack]
+
+      case stack do
+        ["(" | rest] -> rest
+      end
+  """
+  use Credence.Pattern.Rule
+  alias Credence.RuleHelpers
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        {:++, meta, [lhs, _rhs]} = node, issues ->
+          case singleton_list_literal?(lhs) do
+            {:ok, _elem, _wrapper} ->
+              line = Keyword.get(meta, :line)
+              {node, [build_issue(line) | issues]}
+
+            :error ->
+              {node, issues}
+          end
+
+        node, issues ->
+          {node, issues}
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, fn
+      {:++, _meta, [lhs, rhs]} = node ->
+        case singleton_list_literal?(lhs) do
+          {:ok, elem, wrapper} ->
+            RuleHelpers.rewrap_list(wrapper, [{:|, [], [elem, rhs]}])
+
+          :error ->
+            node
+        end
+
+      node ->
+        node
+    end)
+  end
+
+  # Returns `{:ok, single_element, wrapper}` when `lhs` is a list literal
+  # containing exactly one element that is not itself a cons cell.
+  # Returns `:error` otherwise.
+  defp singleton_list_literal?(lhs) do
+    case RuleHelpers.unwrap_list(lhs) do
+      {:ok, [single], wrapper} ->
+        if cons_cell?(single), do: :error, else: {:ok, single, wrapper}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp cons_cell?({:|, _, _}), do: true
+  defp cons_cell?(_), do: false
+
+  defp build_issue(line) do
+    %Issue{
+      rule: :prefer_cons_over_singleton_append,
+      message:
+        "Using `[elem] ++ list` instead of `[elem | list]` to prepend a single element " <>
+          "is non-idiomatic. Use the cons operator `[elem | list]` instead.",
+      meta: %{line: line}
+    }
+  end
+end
+
+    file_path: /home/kly/projects/credence/lib/pattern/prefer_cons_over_singleton_append.ex[0m
+[22m22:15:28.302 [info] [ClaudeCode] step 62: Read
+    file_path: /home/kly/projects/credence/lib/pattern/prefer_cons_over_singleton_append.ex[0m
+[22m22:15:28.698 [info] [ClaudeCode] step 63: Read
+    file_path: /home/kly/projects/credence/test/pattern/prefer_cons_over_singleton_append_check_test.exs[0m
+[22m22:15:29.180 [info] [ClaudeCode] step 64: Read
+    file_path: /home/kly/projects/credence/test/pattern/prefer_cons_over_singleton_append_equivalence_test.exs[0m
+[22m22:15:29.565 [info] [ClaudeCode] step 65: Read
+    file_path: /home/kly/projects/credence/test/pattern/prefer_cons_over_singleton_append_fix_test.exs[0m
+[22m22:15:31.894 [info] [ClaudeCode] step 67 says:
+Now let me write all four files:[0m
+[22m22:15:39.311 [info] [ClaudeCode] step 68: Write
+    content: defmodule Credence.Pattern.PreferConsOverSingletonAppend do
+  @moduledoc """
+  Detects `[elem] ++ list` and rewrites it to the idiomatic cons form
+  `[elem | list]`.
+
+  The cons operator `|` is the canonical Elixir idiom for prepending a single
+  element to a list. Using `[elem] ++ list` allocates an intermediate
+  single-element list and traverses it, which is both non-idiomatic and
+  slightly less efficient.
+
+  The rule fires in both value and pattern contexts — e.g. both
+  `["("] ++ stack` (construction) and `["("] ++ rest` (case-match pattern).
+
+  ## Bad
+
+      ["("] ++ stack
+
+      case stack do
+        ["("] ++ rest -> rest
+      end
+
+  ## Good
+
+      ["(" | stack]
+
+      case stack do
+        ["(" | rest] -> rest
+      end
+  """
+  use Credence.Pattern.Rule
+  alias Credence.RuleHelpers
+
+  @impl true
+  def check(ast, _opts) do
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        {:++, meta, [lhs, _rhs]} = node, issues ->
+          case singleton_list_literal?(lhs) do
+            {:ok, _elem, _wrapper} ->
+              line = Keyword.get(meta, :line)
+              {node, [build_issue(line) | issues]}
+
+            :error ->
+              {node, issues}
+          end
+
+        node, issues ->
+          {node, issues}
+      end)
+
+    Enum.reverse(issues)
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    RuleHelpers.patches_from_postwalk(ast, fn
+      {:++, _meta, [lhs, rhs]} = node ->
+        case singleton_list_literal?(lhs) do
+          {:ok, elem, wrapper} ->
+            RuleHelpers.rewrap_list(wrapper, [{:|, [], [elem, rhs]}])
+
+          :error ->
+            node
+        end
+
+      node ->
+        node
+    end)
+  end
+
+  # Returns `{:ok, single_element, wrapper}` when `lhs` is a list literal
+  # containing exactly one element that is not itself a cons cell.
+  # Returns `:error` otherwise.
+  defp singleton_list_literal?(lhs) do
+    case RuleHelpers.unwrap_list(lhs) do
+      {:ok, [single], wrapper} ->
+        if cons_cell?(single), do: :error, else: {:ok, single, wrapper}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp cons_cell?({:|, _, _}), do: true
+  defp cons_cell?(_), do: false
+
+  defp build_issue(line) do
+    %Issue{
+      rule: :prefer_cons_over_singleton_append,
+      message:
+        "Using `[elem] ++ list` instead of `[elem | list]` to prepend a single element " <>
+          "is non-idiomatic. Use the cons operator `[elem | list]` instead.",
+      meta: %{line: line}
+    }
+  end
+end
+
+    file_path: /home/kly/projects/credence/lib/pattern/prefer_cons_over_singleton_append.ex[0m
+[22m22:16:00.386 [info] [ClaudeCode] step 70: Write
+    content: defmodule Credence.Pattern.PreferConsOverSingletonAppendCheckTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferConsOverSingletonAppend
+
+  # ═══════════════════════════════════════════════════════════════════
+  # POSITIVE — should flag
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "flags [elem] ++ list in value context" do
+    test "singleton string element prepended to variable" do
+      code = """
+      defmodule Bad do
+        def process(stack) do
+          ["("] ++ stack
+        end
+      end
+      """
+
+      assert flagged?(PreferConsOverSingletonAppend, code)
+    end
+
+    test "singleton integer element prepended to variable" do
+      code = """
+      defmodule Bad do
+        def prepend(x, xs) do
+          [x] ++ xs
+        end
+      end
+      """
+
+      assert flagged?(PreferConsOverSingletonAppend, code)
+    end
+
+    test "singleton element prepended to function call result" do
+      code = """
+      defmodule Bad do
+        def wrap(x, list) do
+          [x] ++ tl(list)
+        end
+      end
+      """
+
+      assert flagged?(PreferConsOverSingletonAppend, code)
+    end
+  end
+
+  describe "flags [elem] ++ list in pattern context" do
+    test "singleton element in case match pattern" do
+      code = """
+      defmodule Bad do
+        def process(stack) do
+          case stack do
+            ["("] ++ rest -> rest
+            _ -> stack
+          end
+        end
+      end
+      """
+
+      assert flagged?(PreferConsOverSingletonAppend, code)
+    end
+  end
+
+  describe "flags multiple occurrences" do
+    test "flags both value and pattern context in same module" do
+      code = """
+      defmodule Bad do
+        def process(char, stack) do
+          case char do
+            "(" ->
+              ["("] ++ stack
+            ")" ->
+              case stack do
+                ["("] ++ rest -> rest
+                _ -> stack
+              end
+            _ ->
+              stack
+          end
+        end
+      end
+      """
+
+      issues = check(PreferConsOverSingletonAppend, code)
+      assert length(issues) == 2
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # NEGATIVE — must NOT flag
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "does not flag non-singleton left operand" do
+    test "empty list ++ list" do
+      code = """
+      defmodule Safe do
+        def prepend(list) do
+          [] ++ list
+        end
+      end
+      """
+
+      assert clean?(PreferConsOverSingletonAppend, code)
+    end
+
+    test "multi-element list ++ list" do
+      code = """
+      defmodule Safe do
+        def prepend(a, b, list) do
+          [a, b] ++ list
+        end
+      end
+      """
+
+      assert clean?(PreferConsOverSingletonAppend, code)
+    end
+  end
+
+  describe "does not flag non-list left operand" do
+    test "variable ++ list" do
+      code = """
+      defmodule Safe do
+        def concat(a, b) do
+          a ++ b
+        end
+      end
+      """
+
+      assert clean?(PreferConsOverSingletonAppend, code)
+    end
+
+    test "function call ++ list" do
+      code = """
+      defmodule Safe do
+        def concat(list) do
+          Enum.to_list(1..3) ++ list
+        end
+      end
+      """
+
+      assert clean?(PreferConsOverSingletonAppend, code)
+    end
+  end
+
+  describe "does not flag append (list on right)" do
+    test "list ++ [singleton]" do
+      code = """
+      defmodule Safe do
+        def append(list, x) do
+          list ++ [x]
+        end
+      end
+      """
+
+      assert clean?(PreferConsOverSingletonAppend, code)
+    end
+  end
+
+  describe "does not flag idiomatic cons" do
+    test "[elem | list] is already correct" do
+      code = """
+      defmodule Safe do
+        def prepend(x, list) do
+          [x | list]
+        end
+      end
+      """
+
+      assert clean?(PreferConsOverSingletonAppend, code)
+    end
+  end
+
+  describe "does not flag code without ++" do
+    test "plain function" do
+      code = """
+      defmodule Safe do
+        def identity(x), do: x
+      end
+      """
+
+      assert clean?(PreferConsOverSingletonAppend, code)
+    end
+  end
+end
+
+    file_path: /home/kly/projects/credence/test/pattern/prefer_cons_over_singleton_append_check_test.exs[0m
+[22m22:16:17.507 [info] [ClaudeCode] step 72: Write
+    content: defmodule Credence.Pattern.PreferConsOverSingletonAppendFixTest do
+  use Credence.RuleCase, async: true
+
+  alias Credence.Pattern.PreferConsOverSingletonAppend
+
+  # ═══════════════════════════════════════════════════════════════════
+  # BASIC FIXES — [elem] ++ list → [elem | list]
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "rewrites singleton list append to cons" do
+    test "value context in a module" do
+      input = """
+      defmodule Bad do
+        def process(stack) do
+          ["("] ++ stack
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def process(stack) do
+          ["(" | stack]
+        end
+      end
+      """
+
+      confirm_fix(fix(PreferConsOverSingletonAppend, input), expected)
+    end
+
+    test "pattern context in a case match" do
+      input = """
+      defmodule Bad do
+        def process(stack) do
+          case stack do
+            ["("] ++ rest -> rest
+            _ -> stack
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def process(stack) do
+          case stack do
+            ["(" | rest] -> rest
+            _ -> stack
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(PreferConsOverSingletonAppend, input), expected)
+    end
+
+    test "both value and pattern context in same module" do
+      input = """
+      defmodule Bad do
+        def process(char, stack) do
+          case char do
+            "(" ->
+              ["("] ++ stack
+            ")" ->
+              case stack do
+                ["("] ++ rest -> rest
+                _ -> stack
+              end
+            _ ->
+              stack
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def process(char, stack) do
+          case char do
+            "(" ->
+              ["(" | stack]
+            ")" ->
+              case stack do
+                ["(" | rest] -> rest
+                _ -> stack
+              end
+            _ ->
+              stack
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(PreferConsOverSingletonAppend, input), expected)
+    end
+
+    test "integer element" do
+      input = """
+      defmodule Bad do
+        def prepend(x, xs) do
+          [x] ++ xs
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def prepend(x, xs) do
+          [x | xs]
+        end
+      end
+      """
+
+      confirm_fix(fix(PreferConsOverSingletonAppend, input), expected)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # NO-OPS — must NOT modify
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "does not modify non-singleton patterns" do
+    test "empty list ++ list unchanged" do
+      input = """
+      defmodule Safe do
+        def prepend(list) do
+          [] ++ list
+        end
+      end
+      """
+
+      confirm_fix(fix(PreferConsOverSingletonAppend, input), input)
+    end
+
+    test "multi-element list ++ list unchanged" do
+      input = """
+      defmodule Safe do
+        def prepend(a, b, list) do
+          [a, b] ++ list
+        end
+      end
+      """
+
+      confirm_fix(fix(PreferConsOverSingletonAppend, input), input)
+    end
+
+    test "variable ++ list unchanged" do
+      input = """
+      defmodule Safe do
+        def concat(a, b) do
+          a ++ b
+        end
+      end
+      """
+
+      confirm_fix(fix(PreferConsOverSingletonAppend, input), input)
+    end
+
+    test "list ++ [elem] unchanged" do
+      input = """
+      defmodule Safe do
+        def append(list, x) do
+          list ++ [x]
+        end
+      end
+      """
+
+      confirm_fix(fix(PreferConsOverSingletonAppend, input), input)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # ROUND-TRIP — fixed code produces zero issues
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "round-trip" do
+    test "fixed code produces zero issues" do
+      code = """
+      defmodule Bad do
+        def process(char, stack) do
+          case char do
+            "(" ->
+              ["("] ++ stack
+            ")" ->
+              case stack do
+                ["("] ++ rest -> rest
+                _ -> stack
+              end
+            _ ->
+              stack
+          end
+        end
+      end
+      """
+
+      assert check(PreferConsOverSingletonAppend, fix(PreferConsOverSingletonAppend, code)) == []
+    end
+
+    test "fixed code is valid Elixir" do
+      code = """
+      defmodule Bad do
+        def process(stack) do
+          ["("] ++ stack
+        end
+      end
+      """
+
+      assert valid_syntax?(fix(PreferConsOverSingletonAppend, code))
+    end
+  end
+end
+
+    file_path: /home/kly/projects/credence/test/pattern/prefer_cons_over_singleton_append_fix_test.exs[0m
+[22m22:16:23.912 [info] [ClaudeCode] step 74: Write
+    content: defmodule Credence.Pattern.PreferConsOverSingletonAppendEquivalenceTest do
+  @moduledoc """
+  Tier 1 (expression). `[elem] ++ list` → `[elem | list]` — the cons operator
+  is the canonical way to prepend a single element. `[x] ++ xs` and `[x | xs]`
+  produce the same list for every proper-list input (and both raise for
+  non-list tails, since `++` requires a proper list on the right and cons
+  does not constrain the tail).
+  """
+  use Credence.RuleCase, async: true
+
+  import Credence.BehaviourEquivalence
+  alias Credence.Pattern.PreferConsOverSingletonAppend
+
+  test "[elem] ++ list → [elem | list] preserves the list" do
+    assert_equivalent(
+      "[1] ++ stack",
+      rule: PreferConsOverSingletonAppend,
+      vars: [:stack],
+      inputs: [[], [2], [2, 3, 4], [:a, :b, :c], Enum.to_list(1..20)]
+    )
+  end
+end
+
+    file_path: /home/kly/projects/credence/test/pattern/prefer_cons_over_singleton_append_equivalence_test.exs[0m
+[22m22:16:26.756 [info] [ClaudeCode] step 76 says:
+Now let me run the focused tests:[0m
+[22m22:16:26.831 [info] [ClaudeCode] step 77: Bash
+    command: mix test test/pattern/prefer_cons_over_singleton_append*_test.exs 2>&1
+    description: Run focused tests for the new rule
+    timeout: 60000[0m
+[22m22:16:33.548 [info] [ClaudeCode] step 79 says:
+All 23 tests pass. Let me verify the fix output is correct by running a quick spot-check:[0m
+[22m22:16:35.003 [info] [ClaudeCode] step 80: Bash
+    command: mix run -e '
+input = """
+defmodule Bad do
+  def process(char, stack) do
+    case char do
+      "(" ->
+        ["("] ++ stack
+      ")" ->
+        case stack do
+          ["("] ++ rest -> rest
+          _ -> stack
+        end
+      _ ->
+        stack
+    end
+  end
+end
+"""
+result = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferConsOverSingletonAppend, input)
+IO.puts(result)
+'
+    description: Verify fix output
+    timeout: 30000[0m
+[22m22:16:42.108 [info] [ClaudeCode] step 82 says:
+All 23 tests pass on the first run. Here's a summary of what was implemented:
+
+## Implementation Summary
+
+**Rule** (`lib/pattern/prefer_cons_over_singleton_append.ex`):
+- **Detection**: Walks the AST with `Macro.prewalk` looking for `{:++, meta, [lhs, rhs]}` where `lhs` is a singleton list literal (verified via `RuleHelpers.unwrap_list/1`)
+- **Fix**: Uses `RuleHelpers.patches_from_postwalk/2` to replace `{:++, _, [lhs, rhs]}` with `{:__block__, _, [[{:|, [], [elem, rhs]}]]}` via `RuleHelpers.rewrap_list/2`
+- **Safety**: Excludes cons cells on the left (`[a | b] ++ list`) to avoid producing invalid `[a | b | list]`
+
+**Tests** (23 total):
+
+| File | Count | What it tests |
+|------|-------|---------------|
+| `_check_test.exs` | 12 | Flags `[elem] ++ list` in value and pattern contexts; leaves empty, multi-element, variable, append, and idiomatic cons alone |
+| `_fix_test.exs` | 10 | Rewrites to `[elem | list]` in value and pattern contexts; no-ops on non-singleton patterns; round-trip produces zero issues |
+| `_equivalence_test.exs` | 1 | `[1] ++ stack` → `[1 | stack]` preserves behaviour across 5 discriminating list inputs |[0m
+[22m22:16:42.265 [info] [ClaudeCode] USAGE RECON — num_turns=45 roundtrips_with_usage=82
+  result-event total tokens (what Budget records) = 2312227
+  summed per-round-trip total tokens (token-bucket basis) = 0
+  summed/result ratio = 0.0x   (compare BOTH to your console delta)[0m
+[22m22:16:42.265 [info] [ClaudeCode] agent done — subtype=success turns=45[0m
+[36m22:16:42.265 [debug] [Budget] spent so far (est.): $1.832[0m
+[22m22:16:44.426 [info] [Gate] staged entries: [{"A", ["lib/pattern/prefer_cons_over_singleton_append.ex"]}, {"A", ["test/pattern/prefer_cons_over_singleton_append_check_test.exs"]}, {"A", ["test/pattern/prefer_cons_over_singleton_append_equivalence_test.exs"]}, {"A", ["test/pattern/prefer_cons_over_singleton_append_fix_test.exs"]}][0m
+[36m22:16:45.884 [debug] [Gate] mix test ["test/pattern/prefer_cons_over_singleton_append_check_test.exs", "test/pattern/prefer_cons_over_singleton_append_equivalence_test.exs", "test/pattern/prefer_cons_over_singleton_append_fix_test.exs"] exit=2
+Generated credence app
+  1) test [elem] ++ list → [elem | list] preserves the list (Credence.Pattern.PreferConsOverSingletonAppendEquivalenceTest)
+     test/pattern/prefer_cons_over_singleton_append_equivalence_test.exs:14
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferConsOverSingletonAppend.check/2 is undefined (module Credence.Pattern.PreferConsOverSingletonAppend is not available)
+     code: assert_equivalent(
+     stacktrace:
+       Credence.Pattern.PreferConsOverSingletonAppend.check({:++, [trailing_comments: [], line: 1, column: 5], [{:__block__, [trailing_comments: [], leading_comments: [], closing: [line: 1, column: 3], line: 1, column: 1], [[{:__block__, [trailing_comments: [], leading_comments: [], token: "1", line: 1, column: 2], [1]}]]}, {:stack, [trailing_comments: [], leading_comments: [], line: 1, column: 8], nil}]}, [source: "[1] ++ stack"])
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:291: Credence.BehaviourEquivalence.rule_fires?/2
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:238: Credence.BehaviourEquivalence.precheck!/4
+       (credence 0.7.1) test/support/behaviour_equivalence.ex:75: Credence.BehaviourEquivalence.assert_equivalent/2
+       test/pattern/prefer_cons_over_singleton_append_equivalence_test.exs:15: (test)
+
+  2) test round-trip fixed code is valid Elixir (Credence.Pattern.PreferConsOverSingletonAppendFixTest)
+     test/pattern/prefer_cons_over_singleton_append_fix_test.exs:199
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferConsOverSingletonAppend.fix_patches/2 is undefined (module Credence.Pattern.PreferConsOverSingletonAppend is not available)
+     code: assert valid_syntax?(fix(PreferConsOverSingletonAppend, code))
+     stacktrace:
+       Credence.Pattern.PreferConsOverSingletonAppend.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 5, column: 4], do: [line: 1, column: 15], end: [line: 5, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Bad]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 15], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 6], do: [line: 2, column: 22], end: [line: 4, column: 3], line: 2, column: 3], [{:process, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 20], line: 2, column: 7], [{:stack, [trailing_comments: [], leading_comments: [], line: 2, column: 15], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 22], [:do]}, {:++, [trailing_comments: [], end_of_expression: [newlines: 1, line: 3, column: 19], line: 3, column: 11], [{...}, ...]}}]]}}]]}, [source: "defmodule Bad do\n  def process(stack) do\n    [\"(\"] ++ stack\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_cons_over_singleton_append_fix_test.exs:208: (test)
+
+  3) test does not modify non-singleton patterns list ++ [elem] unchanged (Credence.Pattern.PreferConsOverSingletonAppendFixTest)
+     test/pattern/prefer_cons_over_singleton_append_fix_test.exs:159
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferConsOverSingletonAppend.fix_patches/2 is undefined (module Credence.Pattern.PreferConsOverSingletonAppend is not available)
+     code: confirm_fix(fix(PreferConsOverSingletonAppend, input), input)
+     stacktrace:
+       Credence.Pattern.PreferConsOverSingletonAppend.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 5, column: 4], do: [line: 1, column: 16], end: [line: 5, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Safe]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 16], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 6], do: [line: 2, column: 23], end: [line: 4, column: 3], line: 2, column: 3], [{:append, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 21], line: 2, column: 7], [{:list, [trailing_comments: [], leading_comments: [], line: 2, column: 14], nil}, {:x, [trailing_comments: [], leading_comments: [], line: 2, column: 20], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 23], [:do]}, {:++, [trailing_comments: [], ...], ...}}]]}}]]}, [source: "defmodule Safe do\n  def append(list, x) do\n    list ++ [x]\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_cons_over_singleton_append_fix_test.exs:168: (test)
+
+  4) test does not modify non-singleton patterns variable ++ list unchanged (Credence.Pattern.PreferConsOverSingletonAppendFixTest)
+     test/pattern/prefer_cons_over_singleton_append_fix_test.exs:147
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferConsOverSingletonAppend.fix_patches/2 is undefined (module Credence.Pattern.PreferConsOverSingletonAppend is not available)
+     code: confirm_fix(fix(PreferConsOverSingletonAppend, input), input)
+     stacktrace:
+       Credence.Pattern.PreferConsOverSingletonAppend.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 5, column: 4], do: [line: 1, column: 16], end: [line: 5, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Safe]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 16], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 6], do: [line: 2, column: 20], end: [line: 4, column: 3], line: 2, column: 3], [{:concat, [trailing_comments: [], leading_comments: [], closing: [line: 2, column: 18], line: 2, column: 7], [{:a, [trailing_comments: [], leading_comments: [], line: 2, column: 14], nil}, {:b, [trailing_comments: [], leading_comments: [], line: 2, column: 17], nil}]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 2, column: 20], [:do]}, {:++, [trailing_comments: [], ...], ...}}]]}}]]}, [source: "defmodule Safe do\n  def concat(a, b) do\n    a ++ b\n  end\nend\n"])
+       (credence 0.7.1) lib/rule_helpers.ex:258: Credence.RuleHelpers.apply_rule_fix/3
+       test/pattern/prefer_cons_over_singleton_append_fix_test.exs:156: (test)
+
+  5) test rewrites singleton list append to cons integer element (Credence.Pattern.PreferConsOverSingletonAppendFixTest)
+     test/pattern/prefer_cons_over_singleton_append_fix_test.exs:97
+     ** (UndefinedFunctionError) function Credence.Pattern.PreferConsOverSingletonAppend.fix_patches/2 is undefined (module Credence.Pattern.PreferConsOverSingletonAppend is not available)
+     code: confirm_fix(fix(PreferConsOverSingletonAppend, input), expected)
+     stacktrace:
+       Credence.Pattern.PreferConsOverSingletonAppend.fix_patches({:defmodule, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 5, column: 4], do: [line: 1, column: 15], end: [line: 5, column: 1], line: 1, column: 1], [{:__aliases__, [trailing_comments: [], leading_comments: [], last: [line: 1, column: 11], line: 1, column: 11], [:Bad]}, [{{:__block__, [trailing_comments: [], leading_comments: [], line: 1, column: 15], [:do]}, {:def, [trailing_comments: [], leading_comments: [], end_of_expression: [newlines: 1, line: 4, column: 6], do: [line: 2, column: 22], end: [line: 4, column: 3], line: 2, column: 3], [{:prepend, [trailing_comments: [], leading_comments: [], closing: [line:  (truncated)[0m
+[22m22:16:45.889 [info] [Gate] mutation OK — changed test(s) RED without the rule (exit 2)[0m
+[36m22:17:01.764 [debug] [Gate] mix test [] exit=2
+Compiling 1 file (.ex)
+Generated credence app
+  1) test corpus findings on phoenix v1.8.8 match the accepted snapshot (Credence.Corpus.OverFiringTest)
+     test/corpus/over_firing_test.exs:44
+     Corpus findings for phoenix v1.8.8 drifted from the accepted snapshot
+     (test/corpus/accepted_findings.txt).
+
+     NEW — not previously accepted (a candidate OVER-FIRE — investigate!):
+       phoenix/lib/phoenix/endpoint/supervisor.ex:142  prefer_cons_over_singleton_append
+       phoenix/lib/phoenix/socket/transport.ex:287  prefer_cons_over_singleton_append
+       phoenix/lib/phoenix/test/channel_test.ex:451  prefer_cons_over_singleton_append
+
+     GONE — pinned but no longer firing (a rule narrowed / was removed — fine to re-pin):
+       (none)
+
+     If these changes are expected, re-pin with:
+         mix credence.corpus --update-snapshot
+
+     code: assert actual == expected, drift_message(pkg, version, actual, expected)
+     stacktrace:
+       test/corpus/over_firing_test.exs:58: (test)
+
+  2) test corpus findings on tesla v1.20.0 match the accepted snapshot (Credence.Corpus.OverFiringTest)
+     test/corpus/over_firing_test.exs:44
+     Corpus findings for tesla v1.20.0 drifted from the accepted snapshot
+     (test/corpus/accepted_findings.txt).
+
+     NEW — not previously accepted (a candidate OVER-FIRE — investigate!):
+       tesla/lib/tesla/multipart.ex:148  prefer_cons_over_singleton_append
+       tesla/lib/tesla/multipart.ex:96  prefer_cons_over_singleton_append
+
+     GONE — pinned but no longer firing (a rule narrowed / was removed — fine to re-pin):
+       (none)
+
+     If these changes are expected, re-pin with:
+         mix credence.corpus --update-snapshot
+
+     code: assert actual == expected, drift_message(pkg, version, actual, expected)
+     stacktrace:
+       test/corpus/over_firing_test.exs:58: (test)
+
+  3) test corpus findings on ecto v3.14.0 match the accepted snapshot (Credence.Corpus.OverFiringTest)
+     test/corpus/over_firing_test.exs:44
+     Corpus findings for ecto v3.14.0 drifted from the accepted snapshot
+     (test/corpus/accepted_findings.txt).
+
+     NEW — not previously accepted (a candidate OVER-FIRE — investigate!):
+       ecto/lib/ecto/changeset.ex:1407  prefer_cons_over_singleton_append
+       ecto/lib/ecto/changeset.ex:3933  prefer_cons_over_singleton_append
+       ecto/lib/ecto/query/inspect.ex:154  prefer_cons_over_singleton_append
+       ecto/lib/ecto/query/inspect.ex:186  prefer_cons_over_singleton_append
+       ecto/lib/ecto/query/inspect.ex:191  prefer_cons_over_singleton_append
+       ecto/lib/ecto/query/inspect.ex:232  prefer_cons_over_singleton_append
+       ecto/lib/ecto/query/inspect.ex:299  prefer_cons_over_singleton_append
+       ecto/lib/ecto/query/planner.ex:1082  prefer_cons_over_singleton_append
+       ecto/lib/ecto/repo/queryable.ex:232  prefer_cons_over_singleton_append
+       ecto/lib/ecto/repo/queryable.ex:47  prefer_cons_over_singleton_append
+       ecto/lib/ecto/repo/supervisor.ex:155  prefer_cons_over_singleton_append
+       ecto/lib/ecto/repo/supervisor.ex:158  prefer_cons_over_singleton_append
+       ecto/lib/ecto/repo/supervisor.ex:161  prefer_cons_over_singleton_append
+       ecto/lib/ecto/repo/supervisor.ex:164  prefer_cons_over_singleton_append
+       ecto/lib/ecto/repo/supervisor.ex:204  prefer_cons_over_singleton_append
+       ecto/lib/ecto/repo/supervisor.ex:29  prefer_cons_over_singleton_append
+       ecto/lib/ecto/schema.ex:1965  prefer_cons_over_singleton_append
+       ecto/lib/ecto/schema.ex:2129  prefer_cons_over_singleton_append
+       ecto/lib/ecto/schema.ex:2151  prefer_cons_over_singleton_append
+       ecto/lib/ecto/schema.ex:2190  prefer_cons_over_singleton_append
+       ecto/lib/ecto/schema.ex:2214  prefer_cons_over_singleton_append
+       ecto/lib/ecto/schema.ex:2345  prefer_cons_over_singleton_append
+       ecto/lib/ecto/schema/metadata.ex:63  prefer_cons_over_singleton_append
+
+     GONE — pinned but no longer firing (a rule narrowed / was removed — fine to re-pin):
+       (none)
+
+     If these changes are expected, re-pin with:
+         mix credence.corpus --update-snapshot
+
+     code: assert actual == expected, drift_message(pkg, version, actual, expected)
+     stacktrace:
+       test/corpus/over_firing_test.exs:58: (test)
+
+  4) test corpus findings on credo v1.7.19 match the accepted snapshot (Credence.Corpus.OverFiringTest)
+     test/corpus/over_firing_test.exs:44
+     Corpus findings for credo v1.7.19 drifted from the accepted snapshot
+     (test/corpus/accepted_findings.txt).
+
+     NEW — not previously accepted (a candidate OVER-FIRE — investigate!):
+       credo/lib/credo/check/readability/large_numbers.ex:195  prefer_cons_over_singleton_append
+       credo/lib/credo/cli/options.ex:148  prefer_cons_over_singleton_append
+       credo/lib/credo/execution.ex:743  prefer_cons_over_singleton_append
+       credo/lib/mix/tasks/credo.gen.check.ex:9  prefer_cons_over_singleton_append
+       credo/lib/mix/tasks/credo.gen.config.ex:9  prefer_cons_over_singleton_append
+
+     GONE — pinned but no longer firing (a rule narrowed / was removed — fine to re-pin):
+       (none)
+
+     If these changes are expected, re-pin with:
+         mix credence.corpus --update-snapshot
+
+     code: assert actual == expected, drift_message(pkg, version, actual, expected)
+     stacktrace:
+       test/corpus/over_firing_test.exs:58: (test)
+
+  5) test edge cases that should NOT trigger rules list ++ outside of any loop (CredenceTest)
+     test/credence_test.exs:551
+     Expected no issues but got 1: [:prefer_cons_over_singleton_append]
+       [prefer_cons_over_singleton_append: Using `[elem] ++ list` instead of `[elem | list]` to prepend a single element is non-idiomatic. Use the cons operator `[elem | list]` instead. (line 3)
+     code: assert_clean("""
+     stacktrace:
+       test/credence_test.exs:552: (test)
+
+
+7 properties, 5450 tests, 5 failures
+Randomized with seed 108630
+[0m
+[33m22:17:16.754 [warning] [Gate] REJECT: :full_suite_red — discarding[0m

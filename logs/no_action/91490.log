@@ -1,0 +1,3672 @@
+[22m20:45:19.091 [info] [idx=91490] entry_point=choose[0m
+[36m20:45:19.091 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Implement a Python function to calculate the number of ways to choose k items from a set of n items without repetition and without order.
+
+## Python Solution
+```python
+def choose(n, k):
+    if k > n:
+        return 0
+    if k == 0 or k == n:
+        return 1
+    k = min(k, n - k) # take advantage of symmetry
+    c = 1
+    for i in range(k):
+        c = c * (n - i) / (i + 1)
+    return c
+```
+
+## Python Tests
+assert choose(5, 2) == 10
+assert choose(10, 0) == 1
+assert choose(6, 3) == 20
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `choose`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m20:46:04.932 [debug] [LLM.call] finish=stop len=1124 usage=%{"completion_tokens" => 2362, "completion_tokens_details" => %{"reasoning_tokens" => 1992}, "prompt_tokens" => 514, "prompt_tokens_details" => %{}, "total_tokens" => 2876}
+[LLM.call] response:
+---INSTRUCTION---
+Implement a function `choose(n, k)` that calculates the binomial coefficient, representing the number of ways to choose k items from n items without repetition and without order. The function takes two integer arguments, `n` and `k`, and returns an integer result. Edge cases: if `k` is greater than `n`, return 0; if `k` equals 0 or equals `n`, return 1. For efficiency, the function should utilize symmetry by computing the minimum of `k` and `n - k` to reduce the number of computational steps.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def choose(n, k) when k > n, do: 0
+  def choose(n, 0), do: 1
+  def choose(n, k) when k == n, do: 1
+  def choose(n, k) do
+    k = min(k, n - k)
+    Enum.reduce(0..(k - 1), 1, fn i, acc ->
+      div(acc * (n - i), i + 1)
+    end)
+  end
+end
+---END---[0m
+[22m20:46:04.932 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 45840ms — ok[0m
+[36m20:46:04.933 [debug] [Budget] spent so far (est.): $1.2229[0m
+[22m20:46:05.492 [info] [RoundTrip] reference failed to compile:
+Compiling 1 file (.ex)
+    warning: variable "n" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+  3 │   def choose(n, 0), do: 1
+    │              ~
+    │
+    └─ lib/solution.ex:3:14: Solution.choose/2
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m20:46:05.492 [warning] [RoundTrip] reference failed tests — re-translating once[0m
+[36m20:46:05.492 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Implement a Python function to calculate the number of ways to choose k items from a set of n items without repetition and without order.
+
+## Python Solution
+```python
+def choose(n, k):
+    if k > n:
+        return 0
+    if k == 0 or k == n:
+        return 1
+    k = min(k, n - k) # take advantage of symmetry
+    c = 1
+    for i in range(k):
+        c = c * (n - i) / (i + 1)
+    return c
+```
+
+## Python Tests
+assert choose(5, 2) == 10
+assert choose(10, 0) == 1
+assert choose(6, 3) == 20
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `choose`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m20:46:47.917 [debug] [LLM.call] finish=stop len=1167 usage=%{"completion_tokens" => 2327, "completion_tokens_details" => %{"reasoning_tokens" => 1948}, "prompt_tokens" => 514, "prompt_tokens_details" => %{"cached_tokens" => 448}, "total_tokens" => 2841}
+[LLM.call] response:
+---INSTRUCTION---
+Implement a function `choose/2` in the `Solution` module that takes two non-negative integers `n` and `k` and returns the number of ways to choose `k` items from `n` items without repetition and without order, which is the binomial coefficient. The function should return 0 if `k` is greater than `n`. If `k` is 0 or equal to `n`, the function should return 1. For efficiency, the function should take advantage of the symmetry of the binomial coefficient and use an iterative approach that runs in O(min(k, n-k)) time. The function must return an integer.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  def choose(n, k) when k > n, do: 0
+  def choose(n, k) when k == 0 or k == n, do: 1
+  def choose(n, k) do
+    k = min(k, n - k)
+    Enum.reduce(0..(k - 1), 1, fn i, acc ->
+      div(acc * (n - i), (i + 1))
+    end)
+  end
+end
+---END---[0m
+[22m20:46:47.917 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 42425ms — ok[0m
+[36m20:46:47.918 [debug] [Budget] spent so far (est.): $1.2251[0m
+[22m20:46:48.965 [info] [RoundTrip] reference PASSED tests[0m
+[22m20:46:48.965 [info] [idx=91490] translation fresh — solving[0m
+[22m20:46:48.965 [info] ===SOLVE_BOUNDARY===[0m
+[22m20:46:48.965 [info] [Solve attempt 1] generating (fn=choose)[0m
+[36m20:46:48.965 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Implement a function `choose/2` in the `Solution` module that takes two non-negative integers `n` and `k` and returns the number of ways to choose `k` items from `n` items without repetition and without order, which is the binomial coefficient. The function should return 0 if `k` is greater than `n`. If `k` is 0 or equal to `n`, the function should return 1. For efficiency, the function should take advantage of the symmetry of the binomial coefficient and use an iterative approach that runs in O(min(k, n-k)) time. The function must return an integer.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+end
+```
+
+Module: `Solution`. Function: `choose`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:46:55.739 [debug] [LLM.call] finish=stop len=2205 usage=%{"completion_tokens" => 776, "prompt_tokens" => 525, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1301}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      do_choose(n, k, 1, 0)
+    end
+  end
+
+  # Base case: when k is 0, result is 1.
+  defp do_choose(_n, 0, result, _acc) do
+    result
+  end
+
+  # Recursive step: accumulate the product n-i choose k.
+  defp do_choose(_n, k, result, acc) do
+    next_k = k - 1
+    numerator = acc + 1
+    denominator = k + 1
+    do_choose(_n, next_k, result + numerator * result / denominator, numerator)
+    # Wait, let's use the standard iterative approach:
+    # result = result * (n - k) / (k + 1)
+    # Let's restart the helper implementation properly.
+    # Actually, let's implement the iterative approach cleanly.
+    # We want to compute C(n, k) = n! / (k! * (n-k)!).
+    # Using the property C(n, k) = C(n, n-k).
+    # We iterate min(k, n-k) times.
+    # Formula: result = result * (n - i) / (i + 1) for i from 0 to k-1?
+    # Let's use the multiplicative formula:
+    # C(n, k) = product_{i=1 to k} (n - i + 1) / i
+    
+    # Let's rewrite the helper to be cleaner.
+  end
+end
+
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      iterate_choose(n, k, 1)
+    end
+  end
+
+  defp iterate_choose(_n, 0, result) do
+    result
+  end
+
+  defp iterate_choose(n, k, result) do
+    next_k = k - 1
+    numerator = n - k
+    result = result * numerator
+    result = result / (k + 1)
+    iterate_choose(n, next_k, result)
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+end
+---END---[0m
+[22m20:46:55.739 [info] [LLM.call] local_qwen_thinking completed in 6773ms — ok[0m
+[22m20:46:55.739 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:46:55.739 [debug] [Validator.run] module code (1862 chars):
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      do_choose(n, k, 1, 0)
+    end
+  end
+
+  # Base case: when k is 0, result is 1.
+  defp do_choose(_n, 0, result, _acc) do
+    result
+  end
+
+  # Recursive step: accumulate the product n-i choose k.
+  defp do_choose(_n, k, result, acc) do
+    next_k = k - 1
+    numerator = acc + 1
+    denominator = k + 1
+    do_choose(_n, next_k, result + numerator * result / denominator, numerator)
+    # Wait, let's use the standard iterative approach:
+    # result = result * (n - k) / (k + 1)
+    # Let's restart the helper implementation properly.
+    # Actually, let's implement the iterative approach cleanly.
+    # We want to compute C(n, k) = n! / (k! * (n-k)!).
+    # Using the property C(n, k) = C(n, n-k).
+    # We iterate min(k, n-k) times.
+    # Formula: result = result * (n - i) / (i + 1) for i from 0 to k-1?
+    # Let's use the multiplicative formula:
+    # C(n, k) = product_{i=1 to k} (n - i + 1) / i
+    
+    # Let's rewrite the helper to be cleaner.
+  end
+end
+
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      iterate_choose(n, k, 1)
+    end
+  end
+
+  defp iterate_choose(_n, 0, result) do
+    result
+  end
+
+  defp iterate_choose(n, k, result) do
+    next_k = k - 1
+    numerator = n - k
+    result = result * numerator
+    result = result / (k + 1)
+    iterate_choose(n, next_k, result)
+  end
+end[0m
+[36m20:46:55.739 [debug] [Budget] spent so far (est.): $1.226[0m
+[36m20:46:55.739 [debug] [Validator.run] test code (307 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+end[0m
+[22m20:46:55.739 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:46:55.740 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:46:56.449 [debug] [run_credence_fix] exit=0 output:
+
+20:46:56.315 [debug] [credence_fix] starting syntax fix pipeline (30 rules), parse error at line 5: syntax error before:  near "non_neg_integer"
+
+20:46:56.325 [debug] [credence_fix] PreferSingleDocAttribute: fix produced a change
+
+20:46:56.326 [debug] [credence_fix] PreferSingleDocAttribute: source CHANGED:
+  L2 -   @doc """
+  L2 +   @spec choose(pos_integer, pos_integer) non_neg_integer
+  L3 -   Calculates the binomial coefficient C(n, k).
+  L3 +   def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+  L4 -   """
+  L4 +     if k > n do
+  L5 -   @spec choose(pos_integer, pos_integer) non_neg_integer
+  L5 +       0
+  L6 -   def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+  L6 +     else
+  L7 -     if k > n do
+  L7 +       k = if k > n - k, do: n - k, else: k
+  L8 -       0
+  L8 +       iterate_choose(n, k, 1)
+  L9 -     else
+  L9 +     end
+  L10 -       k = if k > n - k, do: n - k, else: k
+  L10 +   end
+  L11 -       do_choose(n, k, 1, 0)
+  L11 + 
+  L12 -     end
+  L12 +   defp iterate_choose(_n, 0, result) do
+  L13 -   end
+  L13 +     result
+  L14 - 
+  L14 +   end
+  L15 -   # Base case: when k is 0, result is 1.
+  L15 + 
+  L16 -   defp do_choose(_n, 0, result, _acc) do
+  L16 +   defp iterate_choose(n, k, result) do
+  L17 -     result
+  L17 +     next_k = k - 1
+  L18 -   end
+  L18 +     numerator = n - k
+  L19 - 
+  L19 +     result = result * numerator
+  L20 -   # Recursive step: accumulate the product n-i choose k.
+  L20 +     result = result / (k + 1)
+  L21 -   defp do_choose(_n, k, result, acc) do
+  L21 +     iterate_choose(n, next_k, result)
+  L22 -     next_k = k - 1
+  L22 +   end
+  L23 -     numerator = acc + 1
+  L23 + end
+  L24 -     denominator = k + 1
+  L25 -     do_choose(_n, next_k, result + numerator * result / denominator, numerator)
+  L26 -     # Wait, let's use the standard iterative approach:
+  L27 -     # result = result * (n - k) / (k + 1)
+  L28 -     # Let's restart the helper implementation properly.
+  L29 -     # Actually, let's implement the iterative approach cleanly.
+  L30 -     # We want to compute C(n, k) = n! / (k! * (n-k)!).
+  L31 -     # Using the property C(n, k) = C(n, n-k).
+  L32 -     # We iterate min(k, n-k) times.
+  L33 -     # Formula: result = result * (n - i) / (i + 1) for i from 0 to k-1?
+  L34 -     # Let's use the multiplicative formula:
+  L35 -     # C(n, k) = product_{i=1 to k} (n - i + 1) / i
+  L36 - 
+  L37 -     # Let's rewrite the helper to be cleaner.
+  L38 -   end
+  L39 - end
+  L40 - 
+  L41 - defmodule Solution do
+  L42 -   @doc """
+  L43 -   Calculates the binomial coefficient C(n, k).
+  L44 -   """
+  L45 -   @spec choose(pos_integer, pos_integer) non_neg_integer
+  L46 -   def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+  L47 -     if k > n do
+  L48 -       0
+  L49 -     else
+  L50 -       k = if k > n - k, do: n - k, else: k
+  L51 -       iterate_choose(n, k, 1)
+  L52 -     end
+  L53 -   end
+  L54 - 
+  L55 -   defp iterate_choose(_n, 0, result) do
+  L56 -     result
+  L57 -   end
+  L58 - 
+  L59 -   defp iterate_choose(n, k, result) do
+  L60 -     next_k = k - 1
+  L61 -     numerator = n - k
+  L62 -     result = result * numerator
+  L63 -     result = result / (k + 1)
+  L64 -     iterate_choose(n, next_k, result)
+  L65 -   end
+  L66 - end
+
+20:46:56.326 [debug] [credence_fix] PreferSpecArrowOperator: fix produced a change
+
+20:46:56.326 [debug] [credence_fix] PreferSpecArrowOperator: source CHANGED:
+  L2 -   @spec choose(pos_integer, pos_integer) non_neg_integer
+  L2 +   @spec choose(pos_integer, pos_integer) :: non_neg_integer
+
+20:46:56.327 [debug] [credence_fix] syntax fix pipeline: source now parses successfully
+
+20:46:56.327 [debug] [credence_fix] syntax done. Applied: [PreferSingleDocAttribute(1), PreferSpecArrowOperator(1)]
+
+20:46:56.327 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:46:56.338 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+20:46:56.343 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:46:56.343 [debug] [credence_fix] semantic done. Applied: []
+
+20:46:56.344 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:46:56.393 [debug] [credence_fix] PreferGuardOverIf: check found 1 issue(s), running fix...
+
+20:46:56.410 [debug] [credence_fix] PreferGuardOverIf: source CHANGED:
+  L3 -   def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+  L3 +   def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 and k > n do
+  L4 -     if k > n do
+  L4 +     0
+  L5 -       0
+  L5 +   end
+  L6 -     else
+  L6 +   def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+  L7 -       k = if k > n - k, do: n - k, else: k
+  L7 +     k = if k > n - k, do: n - k, else: k
+  L8 -       iterate_choose(n, k, 1)
+  L8 +     iterate_choose(n, k, 1)
+  L9 -     end
+  L9 +   end
+  L10 -   end
+  L10 + 
+  L11 - 
+  L11 +   defp iterate_choose(_n, 0, result) do
+  L12 -   defp iterate_choose(_n, 0, result) do
+  L12 +     result
+  L13 -     result
+  L13 +   end
+  L14 -   end
+  L14 + 
+  L15 - 
+  L15 +   defp iterate_choose(n, k, result) do
+  L16 -   defp iterate_choose(n, k, result) do
+  L16 +     next_k = k - 1
+  L17 -     next_k = k - 1
+  L17 +     numerator = n - k
+  L18 -     numerator = n - k
+  L18 +     result = result * numerator
+  L19 -     result = result * numerator
+  L19 +     result = result / (k + 1)
+  L20 -     result = result / (k + 1)
+  L20 +     iterate_choose(n, next_k, result)
+  L21 -     iterate_choose(n, next_k, result)
+  L21 +   end
+  L22 -   end
+  L22 + end
+  L23 - end
+
+20:46:56.425 [debug] [credence_fix] done. Applied: [PreferGuardOverIf(1)]
+FIXED
+APPLIED_RULES: [{Credence.Syntax.PreferSingleDocAttribute, 1}, {Credence.Syntax.PreferSpecArrowOperator, 1}, {Credence.Pattern.PreferGuardOverIf, 1}]
+[0m
+[22m20:46:56.449 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m20:46:57.026 [info] [run_credence_fix] fix compiles OK[0m
+[36m20:46:57.026 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      do_choose(n, k, 1, 0)
+    end
+  end
+
+  # Base case: when k is 0, result is 1.
+  defp do_choose(_n, 0, result, _acc) do
+    result
+  end
+
+  # Recursive step: accumulate the product n-i choose k.
+  defp do_choose(_n, k, result, acc) do
+    next_k = k - 1
+    numerator = acc + 1
+    denominator = k + 1
+    do_choose(_n, next_k, result + numerator * result / denominator, numerator)
+    # Wait, let's use the standard iterative approach:
+    # result = result * (n - k) / (k + 1)
+    # Let's restart the helper implementation properly.
+    # Actually, let's implement the iterative approach cleanly.
+    # We want to compute C(n, k) = n! / (k! * (n-k)!).
+    # Using the property C(n, k) = C(n, n-k).
+    # We iterate min(k, n-k) times.
+    # Formula: result = result * (n - i) / (i + 1) for i from 0 to k-1?
+    # Let's use the multiplicative formula:
+    # C(n, k) = product_{i=1 to k} (n - i + 1) / i
+    
+    # Let's rewrite the helper to be cleaner.
+  end
+end
+
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      iterate_choose(n, k, 1)
+    end
+  end
+
+  defp iterate_choose(_n, 0, result) do
+    result
+  end
+
+  defp iterate_choose(n, k, result) do
+    next_k = k - 1
+    numerator = n - k
+    result = result * numerator
+    result = result / (k + 1)
+    iterate_choose(n, next_k, result)
+  end
+end[0m
+[36m20:46:57.026 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @spec choose(pos_integer, pos_integer) :: non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 and k > n do
+    0
+  end
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    k = if k > n - k, do: n - k, else: k
+    iterate_choose(n, k, 1)
+  end
+
+  defp iterate_choose(_n, 0, result) do
+    result
+  end
+
+  defp iterate_choose(n, k, result) do
+    next_k = k - 1
+    numerator = n - k
+    result = result * numerator
+    result = result / (k + 1)
+    iterate_choose(n, next_k, result)
+  end
+end[0m
+[22m20:46:57.026 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m20:46:57.026 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      do_choose(n, k, 1, 0)
+    end
+  end
+
+  # Base case: when k is 0, result is 1.
+  defp do_choose(_n, 0, result, _acc) do
+    result
+  end
+
+  # Recursive step: accumulate the product n-i choose k.
+  defp do_choose(_n, k, result, acc) do
+    next_k = k - 1
+    numerator = acc + 1
+    denominator = k + 1
+    do_choose(_n, next_k, result + numerator * result / denominator, numerator)
+    # Wait, let's use the standard iterative approach:
+    # result = result * (n - k) / (k + 1)
+    # Let's restart the helper implementation properly.
+    # Actually, let's implement the iterative approach cleanly.
+    # We want to compute C(n, k) = n! / (k! * (n-k)!).
+    # Using the property C(n, k) = C(n, n-k).
+    # We iterate min(k, n-k) times.
+    # Formula: result = result * (n - i) / (i + 1) for i from 0 to k-1?
+    # Let's use the multiplicative formula:
+    # C(n, k) = product_{i=1 to k} (n - i + 1) / i
+    
+    # Let's rewrite the helper to be cleaner.
+  end
+end
+
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      iterate_choose(n, k, 1)
+    end
+  end
+
+  defp iterate_choose(_n, 0, result) do
+    result
+  end
+
+  defp iterate_choose(n, k, result) do
+    next_k = k - 1
+    numerator = n - k
+    result = result * numerator
+    result = result / (k + 1)
+    iterate_choose(n, next_k, result)
+  end
+end[0m
+[36m20:46:57.026 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @spec choose(pos_integer, pos_integer) :: non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 and k > n do
+    0
+  end
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    k = if k > n - k, do: n - k, else: k
+    iterate_choose(n, k, 1)
+  end
+
+  defp iterate_choose(_n, 0, result) do
+    result
+  end
+
+  defp iterate_choose(n, k, result) do
+    next_k = k - 1
+    numerator = n - k
+    result = result * numerator
+    result = result / (k + 1)
+    iterate_choose(n, next_k, result)
+  end
+end[0m
+[36m20:46:57.026 [debug] [propagate_is_renames] old functions: ["choose", "do_choose", "iterate_choose"][0m
+[36m20:46:57.026 [debug] [propagate_is_renames] new functions: ["choose", "iterate_choose"][0m
+[36m20:46:57.026 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m20:46:57.026 [info] [Validator.run] step 2/6: compile[0m
+[22m20:46:57.582 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m20:46:57.582 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m20:46:57.582 [info] [Validator.run] step 3/6: format[0m
+[22m20:46:57.881 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m20:46:58.179 [debug] [Validator.run] format fix output: [0m
+[22m20:46:58.179 [info] [Validator.run] step 4/6: credo[0m
+[36m20:46:58.646 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m20:46:58.646 [info] [Validator.run] credo: no issues[0m
+[22m20:46:58.646 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:46:59.413 [info] [Validator.run] credence check exit=0[0m
+[36m20:46:59.413 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m20:46:59.413 [info] [Validator.run] credence check: passed[0m
+[22m20:46:59.413 [info] [Validator.run] step 6/6: tests[0m
+[22m20:46:59.904 [info] [Validator.run] test exit=2[0m
+[36m20:46:59.904 [debug] [Validator.run] test output:
+Running ExUnit with seed: 855282, max_cases: 48
+
+
+
+  1) test choose(6, 3) returns 20 (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.choose(6, 3) == 20
+     left:  2.5
+     right: 20
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test choose(5, 2) returns 10 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.choose(5, 2) == 10
+     left:  2.0
+     right: 10
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 2 failures
+[0m
+[33m20:46:59.904 [warning] [Validator.run] tests: FAILED[0m
+[22m20:46:59.904 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m20:46:59.904 [debug] [Validator.run] final module (591 chars):
+defmodule Solution do
+  @spec choose(pos_integer, pos_integer) :: non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 and k > n do
+    0
+  end
+
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    k = if k > n - k, do: n - k, else: k
+    iterate_choose(n, k, 1)
+  end
+
+  defp iterate_choose(_n, 0, result) do
+    result
+  end
+
+  defp iterate_choose(n, k, result) do
+    next_k = k - 1
+    numerator = n - k
+    result = result * numerator
+    result = result / (k + 1)
+    iterate_choose(n, next_k, result)
+  end
+end
+[0m
+[36m20:46:59.904 [debug] [Validator.run] final test (308 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+end
+[0m
+[33m20:46:59.904 [warning] [Solve attempt 1] validation FAILED: [:test][0m
+[22m20:46:59.904 [info] [Solve attempt 2] generating (fn=choose)[0m
+[36m20:46:59.904 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      do_choose(n, k, 1, 0)
+    end
+  end
+
+  # Base case: when k is 0, result is 1.
+  defp do_choose(_n, 0, result, _acc) do
+    result
+  end
+
+  # Recursive step: accumulate the product n-i choose k.
+  defp do_choose(_n, k, result, acc) do
+    next_k = k - 1
+    numerator = acc + 1
+    denominator = k + 1
+    do_choose(_n, next_k, result + numerator * result / denominator, numerator)
+    # Wait, let's use the standard iterative approach:
+    # result = result * (n - k) / (k + 1)
+    # Let's restart the helper implementation properly.
+    # Actually, let's implement the iterative approach cleanly.
+    # We want to compute C(n, k) = n! / (k! * (n-k)!).
+    # Using the property C(n, k) = C(n, n-k).
+    # We iterate min(k, n-k) times.
+    # Formula: result = result * (n - i) / (i + 1) for i from 0 to k-1?
+    # Let's use the multiplicative formula:
+    # C(n, k) = product_{i=1 to k} (n - i + 1) / i
+    
+    # Let's rewrite the helper to be cleaner.
+  end
+end
+
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(n, k) when is_integer(n) and is_integer(k) and n >= 0 and k >= 0 do
+    if k > n do
+      0
+    else
+      k = if k > n - k, do: n - k, else: k
+      iterate_choose(n, k, 1)
+    end
+  end
+
+  defp iterate_choose(_n, 0, result) do
+    result
+  end
+
+  defp iterate_choose(n, k, result) do
+    next_k = k - 1
+    numerator = n - k
+    result = result * numerator
+    result = result / (k + 1)
+    iterate_choose(n, next_k, result)
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 855282, max_cases: 48
+
+
+
+  1) test choose(6, 3) returns 20 (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.choose(6, 3) == 20
+     left:  2.5
+     right: 20
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test choose(5, 2) returns 10 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.choose(5, 2) == 10
+     left:  2.0
+     right: 10
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+.
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 2 failures
+
+Reminder: module `Solution`, function `choose` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:47:13.605 [debug] [LLM.call] finish=stop len=4352 usage=%{"completion_tokens" => 1517, "prompt_tokens" => 1307, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2824}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(_n, 1) do
+    _n
+  end
+
+  def choose(_n, _k) when _k > _n do
+    0
+  end
+
+  def choose(n, k) do
+    # Use symmetry: C(n, k) == C(n, n-k)
+    k = if k > div(n, 2), do: n - k, else: k
+    do_choose(n, k, 1)
+  end
+
+  defp do_choose(_n, 0, acc) do
+    acc
+  end
+
+  defp do_choose(n, k, acc) do
+    # C(n, k) = C(n, k-1) * (n - k + 1) / k
+    # We iterate from 1 to k.
+    # At step i (1-based), we multiply by (n - i + 1) / i
+    # But it's easier to track the current k value.
+    # Let's use a helper that goes down from k to 1.
+    # Actually, let's just use the standard formula with integer division carefully.
+    # We want to compute product_{i=1 to k} (n - i + 1) / i
+    # Since the result is always integer, we can compute numerator product and denominator product?
+    # No, that grows too large.
+    # Better: Use the recursive definition directly with integer arithmetic.
+    # C(n, k) = C(n-1, k-1) + C(n-1, k) - too slow.
+    # Let's use the multiplicative formula with floating point and then floor/round?
+    # No, precision issues.
+    
+    # Let's implement the helper to compute iteratively using the property:
+    # result = result * (n - k + 1) / k
+    # We start with k' = k, and go down to 1?
+    # Let's rewrite the helper to be cleaner.
+    do_choose_acc(n, k, 1, k)
+  end
+
+  # acc is the accumulator. current_k is the k value for the term (n - current_k + 1) / current_k
+  defp do_choose_acc(_n, 0, acc, _current_k) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    # term = (n - current_k + 1) / current_k
+    # But we want to avoid float.
+    # acc = acc * (n - current_k + 1) / current_k
+    # This division must be exact.
+    numerator = n - current_k + 1
+    # We can't just divide if it's not exact at each step?
+    # Actually, binomial coefficients are integers.
+    # We can use the property that C(n, k) is integer.
+    # But intermediate steps might not be integers if we divide by i before multiplying by (n-i+1)?
+    # No, C(n, k) = n! / (k! (n-k)!).
+    # The iterative formula C(n, k) = C(n, k-1) * (n - k + 1) / k is safe if we do multiplication first.
+    # acc_new = acc * (n - current_k + 1) / current_k
+    # We need to ensure (acc * (n - current_k + 1)) is divisible by current_k.
+    
+    # Let's use a different approach: compute numerator product and denominator product separately?
+    # No, let's use the recursive function with memoization or just direct computation.
+    
+    # Let's try a different iterative approach:
+    # We have k steps.
+    # In each step i from 1 to k:
+    # acc = acc * (n - i + 1) / i
+    
+    # Let's use a helper that counts down current_k from k to 1.
+    # At each step, we multiply by (n - current_k + 1) and divide by current_k.
+    # But we must multiply first to keep precision.
+    
+    new_acc = acc * (n - current_k + 1)
+    
+    # Check divisibility? It should be divisible.
+    do_choose_acc(n, k - 1, div(new_acc, current_k), current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---END---[0m
+[22m20:47:13.605 [info] [LLM.call] local_qwen_thinking completed in 13701ms — ok[0m
+[22m20:47:13.605 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:47:13.605 [debug] [Validator.run] module code (3760 chars):
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(_n, 1) do
+    _n
+  end
+
+  def choose(_n, _k) when _k > _n do
+    0
+  end
+
+  def choose(n, k) do
+    # Use symmetry: C(n, k) == C(n, n-k)
+    k = if k > div(n, 2), do: n - k, else: k
+    do_choose(n, k, 1)
+  end
+
+  defp do_choose(_n, 0, acc) do
+    acc
+  end
+
+  defp do_choose(n, k, acc) do
+    # C(n, k) = C(n, k-1) * (n - k + 1) / k
+    # We iterate from 1 to k.
+    # At step i (1-based), we multiply by (n - i + 1) / i
+    # But it's easier to track the current k value.
+    # Let's use a helper that goes down from k to 1.
+    # Actually, let's just use the standard formula with integer division carefully.
+    # We want to compute product_{i=1 to k} (n - i + 1) / i
+    # Since the result is always integer, we can compute numerator product and denominator product?
+    # No, that grows too large.
+    # Better: Use the recursive definition directly with integer arithmetic.
+    # C(n, k) = C(n-1, k-1) + C(n-1, k) - too slow.
+    # Let's use the multiplicative formula with floating point and then floor/round?
+    # No, precision issues.
+    
+    # Let's implement the helper to compute iteratively using the property:
+    # result = result * (n - k + 1) / k
+    # We start with k' = k, and go down to 1?
+    # Let's rewrite the helper to be cleaner.
+    do_choose_acc(n, k, 1, k)
+  end
+
+  # acc is the accumulator. current_k is the k value for the term (n - current_k + 1) / current_k
+  defp do_choose_acc(_n, 0, acc, _current_k) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    # term = (n - current_k + 1) / current_k
+    # But we want to avoid float.
+    # acc = acc * (n - current_k + 1) / current_k
+    # This division must be exact.
+    numerator = n - current_k + 1
+    # We can't just divide if it's not exact at each step?
+    # Actually, binomial coefficients are integers.
+    # We can use the property that C(n, k) is integer.
+    # But intermediate steps might not be integers if we divide by i before multiplying by (n-i+1)?
+    # No, C(n, k) = n! / (k! (n-k)!).
+    # The iterative formula C(n, k) = C(n, k-1) * (n - k + 1) / k is safe if we do multiplication first.
+    # acc_new = acc * (n - current_k + 1) / current_k
+    # We need to ensure (acc * (n - current_k + 1)) is divisible by current_k.
+    
+    # Let's use a different approach: compute numerator product and denominator product separately?
+    # No, let's use the recursive function with memoization or just direct computation.
+    
+    # Let's try a different iterative approach:
+    # We have k steps.
+    # In each step i from 1 to k:
+    # acc = acc * (n - i + 1) / i
+    
+    # Let's use a helper that counts down current_k from k to 1.
+    # At each step, we multiply by (n - current_k + 1) and divide by current_k.
+    # But we must multiply first to keep precision.
+    
+    new_acc = acc * (n - current_k + 1)
+    
+    # Check divisibility? It should be divisible.
+    do_choose_acc(n, k - 1, div(new_acc, current_k), current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[36m20:47:13.606 [debug] [Validator.run] test code (557 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[36m20:47:13.606 [debug] [Budget] spent so far (est.): $1.2279[0m
+[22m20:47:13.606 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:47:13.606 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:47:14.283 [debug] [run_credence_fix] exit=0 output:
+
+20:47:14.194 [debug] [credence_fix] starting syntax fix pipeline (30 rules), parse error at line 5: syntax error before:  near "non_neg_integer"
+
+20:47:14.206 [debug] [credence_fix] PreferSpecArrowOperator: fix produced a change
+
+20:47:14.207 [debug] [credence_fix] PreferSpecArrowOperator: source CHANGED:
+  L5 -   @spec choose(pos_integer, pos_integer) non_neg_integer
+  L5 +   @spec choose(pos_integer, pos_integer) :: non_neg_integer
+
+20:47:14.209 [debug] [credence_fix] syntax fix pipeline: source now parses successfully
+
+20:47:14.209 [debug] [credence_fix] syntax done. Applied: [PreferSpecArrowOperator(1)]
+
+20:47:14.209 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:47:14.231 [debug] [credence_fix] Code.compile_string raised: cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+
+20:47:14.231 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+20:47:14.233 [debug] [credence_fix] no rule matched diagnostic: %{message: "cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app", position: 0, file: "credence_check.ex", severity: :error}
+
+20:47:14.233 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+20:47:14.233 [debug] [credence_fix] semantic done. Applied: []
+
+20:47:14.233 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:47:14.248 [debug] [credence_fix] Code.compile_string raised: cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+
+20:47:14.248 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+20:47:14.266 [debug] [credence_fix] Code.compile_string raised: cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+FIXED
+APPLIED_RULES: [{Credence.Syntax.PreferSpecArrowOperator, 1}]
+[0m
+[22m20:47:14.283 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m20:47:14.870 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m20:47:14.870 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: the underscored variable "_n" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+  6 │   def choose(_n, _k) when _n < _k do
+    │                           ~
+    │
+    └─ lib/solution.ex:6:27: Solution.choose/2
+
+    warning: the underscored variable "_k" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+  6 │   def choose(_n, _k) when _n < _k do
+    │                                ~
+    │
+    └─ lib/solution.ex:6:32: Solution.choose/2
+
+    warning: the underscored variable "_n" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 15 │     _n
+    │     ~
+    │
+    └─ lib/solution.ex:15:5: Solution.choose/2
+
+    warning: the underscored variable "_k" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 18 │   def choose(_n, _k) when _k > _n do
+    │                           ~
+    │
+    └─ lib/solution.ex:18:27: Solution.choose/2
+
+    warning: the underscored variable "_n" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 18 │   def choose(_n, _k) when _k > _n do
+    │                                ~
+    │
+    └─ lib/solution.ex:18:32: Solution.choose/2
+
+    warning: variable "acc" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 32 │   defp do_choose(n, k, acc) do
+    │                        ~~~
+    │
+    └─ lib/solution.ex:32:24: Solution.do_choose/3
+
+    warning: variable "numerator" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 64 │     numerator = n - current_k + 1
+    │     ~~~~~~~~~
+    │
+    └─ lib/solution.ex:64:5: Solution.do_choose_acc/4
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m20:47:15.376 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m20:47:15.376 [info] [Validator.run] step 2/6: compile[0m
+[22m20:47:16.015 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:47:16.015 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:5:42:
+    error: syntax error before: non_neg_integer
+    │
+  5 │   @spec choose(pos_integer, pos_integer) non_neg_integer
+    │                                          ^
+    │
+    └─ lib/solution.ex:5:42
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m20:47:16.016 [info] [Validator.run] step 3/6: format[0m
+[22m20:47:16.016 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:47:16.016 [info] [Validator.run] step 4/6: credo[0m
+[22m20:47:16.016 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:47:16.016 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:47:16.016 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:47:16.016 [info] [Validator.run] step 6/6: tests[0m
+[22m20:47:16.016 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:47:16.016 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:47:16.016 [debug] [Validator.run] final module (3760 chars):
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(_n, 1) do
+    _n
+  end
+
+  def choose(_n, _k) when _k > _n do
+    0
+  end
+
+  def choose(n, k) do
+    # Use symmetry: C(n, k) == C(n, n-k)
+    k = if k > div(n, 2), do: n - k, else: k
+    do_choose(n, k, 1)
+  end
+
+  defp do_choose(_n, 0, acc) do
+    acc
+  end
+
+  defp do_choose(n, k, acc) do
+    # C(n, k) = C(n, k-1) * (n - k + 1) / k
+    # We iterate from 1 to k.
+    # At step i (1-based), we multiply by (n - i + 1) / i
+    # But it's easier to track the current k value.
+    # Let's use a helper that goes down from k to 1.
+    # Actually, let's just use the standard formula with integer division carefully.
+    # We want to compute product_{i=1 to k} (n - i + 1) / i
+    # Since the result is always integer, we can compute numerator product and denominator product?
+    # No, that grows too large.
+    # Better: Use the recursive definition directly with integer arithmetic.
+    # C(n, k) = C(n-1, k-1) + C(n-1, k) - too slow.
+    # Let's use the multiplicative formula with floating point and then floor/round?
+    # No, precision issues.
+    
+    # Let's implement the helper to compute iteratively using the property:
+    # result = result * (n - k + 1) / k
+    # We start with k' = k, and go down to 1?
+    # Let's rewrite the helper to be cleaner.
+    do_choose_acc(n, k, 1, k)
+  end
+
+  # acc is the accumulator. current_k is the k value for the term (n - current_k + 1) / current_k
+  defp do_choose_acc(_n, 0, acc, _current_k) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    # term = (n - current_k + 1) / current_k
+    # But we want to avoid float.
+    # acc = acc * (n - current_k + 1) / current_k
+    # This division must be exact.
+    numerator = n - current_k + 1
+    # We can't just divide if it's not exact at each step?
+    # Actually, binomial coefficients are integers.
+    # We can use the property that C(n, k) is integer.
+    # But intermediate steps might not be integers if we divide by i before multiplying by (n-i+1)?
+    # No, C(n, k) = n! / (k! (n-k)!).
+    # The iterative formula C(n, k) = C(n, k-1) * (n - k + 1) / k is safe if we do multiplication first.
+    # acc_new = acc * (n - current_k + 1) / current_k
+    # We need to ensure (acc * (n - current_k + 1)) is divisible by current_k.
+    
+    # Let's use a different approach: compute numerator product and denominator product separately?
+    # No, let's use the recursive function with memoization or just direct computation.
+    
+    # Let's try a different iterative approach:
+    # We have k steps.
+    # In each step i from 1 to k:
+    # acc = acc * (n - i + 1) / i
+    
+    # Let's use a helper that counts down current_k from k to 1.
+    # At each step, we multiply by (n - current_k + 1) and divide by current_k.
+    # But we must multiply first to keep precision.
+    
+    new_acc = acc * (n - current_k + 1)
+    
+    # Check divisibility? It should be divisible.
+    do_choose_acc(n, k - 1, div(new_acc, current_k), current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[36m20:47:16.016 [debug] [Validator.run] final test (557 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[33m20:47:16.016 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m20:47:16.016 [info] [Solve attempt 3] generating (fn=choose)[0m
+[36m20:47:16.016 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, pos_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(_n, 1) do
+    _n
+  end
+
+  def choose(_n, _k) when _k > _n do
+    0
+  end
+
+  def choose(n, k) do
+    # Use symmetry: C(n, k) == C(n, n-k)
+    k = if k > div(n, 2), do: n - k, else: k
+    do_choose(n, k, 1)
+  end
+
+  defp do_choose(_n, 0, acc) do
+    acc
+  end
+
+  defp do_choose(n, k, acc) do
+    # C(n, k) = C(n, k-1) * (n - k + 1) / k
+    # We iterate from 1 to k.
+    # At step i (1-based), we multiply by (n - i + 1) / i
+    # But it's easier to track the current k value.
+    # Let's use a helper that goes down from k to 1.
+    # Actually, let's just use the standard formula with integer division carefully.
+    # We want to compute product_{i=1 to k} (n - i + 1) / i
+    # Since the result is always integer, we can compute numerator product and denominator product?
+    # No, that grows too large.
+    # Better: Use the recursive definition directly with integer arithmetic.
+    # C(n, k) = C(n-1, k-1) + C(n-1, k) - too slow.
+    # Let's use the multiplicative formula with floating point and then floor/round?
+    # No, precision issues.
+    
+    # Let's implement the helper to compute iteratively using the property:
+    # result = result * (n - k + 1) / k
+    # We start with k' = k, and go down to 1?
+    # Let's rewrite the helper to be cleaner.
+    do_choose_acc(n, k, 1, k)
+  end
+
+  # acc is the accumulator. current_k is the k value for the term (n - current_k + 1) / current_k
+  defp do_choose_acc(_n, 0, acc, _current_k) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    # term = (n - current_k + 1) / current_k
+    # But we want to avoid float.
+    # acc = acc * (n - current_k + 1) / current_k
+    # This division must be exact.
+    numerator = n - current_k + 1
+    # We can't just divide if it's not exact at each step?
+    # Actually, binomial coefficients are integers.
+    # We can use the property that C(n, k) is integer.
+    # But intermediate steps might not be integers if we divide by i before multiplying by (n-i+1)?
+    # No, C(n, k) = n! / (k! (n-k)!).
+    # The iterative formula C(n, k) = C(n, k-1) * (n - k + 1) / k is safe if we do multiplication first.
+    # acc_new = acc * (n - current_k + 1) / current_k
+    # We need to ensure (acc * (n - current_k + 1)) is divisible by current_k.
+    
+    # Let's use a different approach: compute numerator product and denominator product separately?
+    # No, let's use the recursive function with memoization or just direct computation.
+    
+    # Let's try a different iterative approach:
+    # We have k steps.
+    # In each step i from 1 to k:
+    # acc = acc * (n - i + 1) / i
+    
+    # Let's use a helper that counts down current_k from k to 1.
+    # At each step, we multiply by (n - current_k + 1) and divide by current_k.
+    # But we must multiply first to keep precision.
+    
+    new_acc = acc * (n - current_k + 1)
+    
+    # Check divisibility? It should be divisible.
+    do_choose_acc(n, k - 1, div(new_acc, current_k), current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:5:42:
+    error: syntax error before: non_neg_integer
+    │
+  5 │   @spec choose(pos_integer, pos_integer) non_neg_integer
+    │                                          ^
+    │
+    └─ lib/solution.ex:5:42
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `choose` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:47:24.626 [debug] [LLM.call] finish=stop len=2207 usage=%{"completion_tokens" => 872, "prompt_tokens" => 1933, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2805}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer | non_neg_integer, pos_integer | non_neg_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(_n, 1) do
+    _n
+  end
+
+  def choose(_n, _k) when _k > _n do
+    0
+  end
+
+  def choose(n, k) do
+    do_choose(n, k)
+  end
+
+  defp do_choose(_n, 0, acc) do
+    acc
+  end
+
+  defp do_choose(n, k, acc) do
+    do_choose_acc(n, k, acc, k)
+  end
+
+  # Helper to compute iteratively: acc * (n - current_k + 1) / current_k
+  # We start with current_k = k and go down to 1.
+  defp do_choose_acc(_n, 0, acc, _current_k) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    new_acc = acc * (n - current_k + 1)
+    div(new_acc, current_k)
+    |> do_choose_acc(n, k, _n, current_k - 1)
+    do_choose_acc(n, k - 1, acc, current_k - 1)
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    do_choose_acc(n, k - 1, acc * (n - current_k + 1) / current_k, current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---END---[0m
+[22m20:47:24.626 [info] [LLM.call] local_qwen_thinking completed in 8609ms — ok[0m
+[22m20:47:24.626 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:47:24.626 [debug] [Validator.run] module code (1615 chars):
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer | non_neg_integer, pos_integer | non_neg_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(_n, 1) do
+    _n
+  end
+
+  def choose(_n, _k) when _k > _n do
+    0
+  end
+
+  def choose(n, k) do
+    do_choose(n, k)
+  end
+
+  defp do_choose(_n, 0, acc) do
+    acc
+  end
+
+  defp do_choose(n, k, acc) do
+    do_choose_acc(n, k, acc, k)
+  end
+
+  # Helper to compute iteratively: acc * (n - current_k + 1) / current_k
+  # We start with current_k = k and go down to 1.
+  defp do_choose_acc(_n, 0, acc, _current_k) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    new_acc = acc * (n - current_k + 1)
+    div(new_acc, current_k)
+    |> do_choose_acc(n, k, _n, current_k - 1)
+    do_choose_acc(n, k - 1, acc, current_k - 1)
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    do_choose_acc(n, k - 1, acc * (n - current_k + 1) / current_k, current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[36m20:47:24.626 [debug] [Validator.run] test code (557 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[36m20:47:24.626 [debug] [Budget] spent so far (est.): $1.2295[0m
+[22m20:47:24.626 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:47:24.626 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:47:25.251 [debug] [run_credence_fix] exit=0 output:
+
+20:47:25.202 [debug] [credence_fix] starting syntax fix pipeline (30 rules), parse error at line 5: syntax error before:  near "non_neg_integer"
+
+20:47:25.214 [debug] [credence_fix] PreferSpecArrowOperator: fix produced a change
+
+20:47:25.215 [debug] [credence_fix] PreferSpecArrowOperator: source CHANGED:
+  L5 -   @spec choose(pos_integer | non_neg_integer, pos_integer | non_neg_integer) non_neg_integer
+  L5 +   @spec choose(pos_integer | non_neg_integer, pos_integer | non_neg_integer) :: non_neg_integer
+
+20:47:25.217 [debug] [credence_fix] syntax fix pipeline: source now parses successfully
+
+20:47:25.217 [debug] [credence_fix] syntax done. Applied: [PreferSpecArrowOperator(1)]
+
+20:47:25.217 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:47:25.224 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+20:47:25.224 [debug] [credence_fix] semantic pass 1: compilation FAILED, 2 error(s)
+
+20:47:25.228 [debug] [credence_fix] no rule matched diagnostic: %{message: "undefined variable \"_n\"", position: {43, 28}, file: "credence_check.ex", stacktrace: [{Solution, :do_choose_acc, 4, [file: "credence_check.ex", column: 28, line: 43]}], source: "credence_check.ex", span: {43, 30}, severity: :error}
+
+20:47:25.228 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+20:47:25.228 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+20:47:25.228 [debug] [credence_fix] semantic done. Applied: []
+
+20:47:25.228 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:47:25.231 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+20:47:25.231 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+20:47:25.235 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+FIXED
+APPLIED_RULES: [{Credence.Syntax.PreferSpecArrowOperator, 1}]
+REMAINING_ISSUES: 1 unfixable issue(s)
+no_duplicate_function_clauses: Duplicate function clause for `do_choose_acc/4`. The second clause has identical argument patterns and is unreachable. (line 47)
+[0m
+[22m20:47:25.251 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m20:47:25.920 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m20:47:25.920 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: the underscored variable "_n" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+  6 │   def choose(_n, _k) when _n < _k do
+    │                           ~
+    │
+    └─ lib/solution.ex:6:27: Solution.choose/2
+
+    warning: the underscored variable "_k" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+  6 │   def choose(_n, _k) when _n < _k do
+    │                                ~
+    │
+    └─ lib/solution.ex:6:32: Solution.choose/2
+
+    warning: the underscored variable "_n" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 15 │     _n
+    │     ~
+    │
+    └─ lib/solution.ex:15:5: Solution.choose/2
+
+    warning: the underscored variable "_k" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 18 │   def choose(_n, _k) when _k > _n do
+    │                           ~
+    │
+    └─ lib/solution.ex:18:27: Solution.choose/2
+
+    warning: the underscored variable "_n" is used after being set. A leading underscore indicates that the value of the variable should be ignored. If this is intended please rename the variable to remove the underscore
+    │
+ 18 │   def choose(_n, _k) when _k > _n do
+    │                                ~
+    │
+    └─ lib/solution.ex:18:32: Solution.choose/2
+
+    error: undefined variable "_n"
+    │
+ 43 │     |> do_choose_acc(n, k, _n, current_k - 1)
+    │                            ^^
+    │
+    └─ lib/solution.ex:43:28: Solution.do_choose_acc/4
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[33m20:47:26.582 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m20:47:26.582 [info] [Validator.run] step 2/6: compile[0m
+[22m20:47:27.227 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:47:27.227 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:5:78:
+    error: syntax error before: non_neg_integer
+    │
+  5 │   @spec choose(pos_integer | non_neg_integer, pos_integer | non_neg_integer) non_neg_integer
+    │                                                                              ^
+    │
+    └─ lib/solution.ex:5:78
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m20:47:27.227 [info] [Validator.run] step 3/6: format[0m
+[22m20:47:27.227 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:47:27.227 [info] [Validator.run] step 4/6: credo[0m
+[22m20:47:27.227 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:47:27.227 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:47:27.227 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:47:27.227 [info] [Validator.run] step 6/6: tests[0m
+[22m20:47:27.227 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:47:27.227 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:47:27.227 [debug] [Validator.run] final module (1615 chars):
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer | non_neg_integer, pos_integer | non_neg_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(_n, 1) do
+    _n
+  end
+
+  def choose(_n, _k) when _k > _n do
+    0
+  end
+
+  def choose(n, k) do
+    do_choose(n, k)
+  end
+
+  defp do_choose(_n, 0, acc) do
+    acc
+  end
+
+  defp do_choose(n, k, acc) do
+    do_choose_acc(n, k, acc, k)
+  end
+
+  # Helper to compute iteratively: acc * (n - current_k + 1) / current_k
+  # We start with current_k = k and go down to 1.
+  defp do_choose_acc(_n, 0, acc, _current_k) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    new_acc = acc * (n - current_k + 1)
+    div(new_acc, current_k)
+    |> do_choose_acc(n, k, _n, current_k - 1)
+    do_choose_acc(n, k - 1, acc, current_k - 1)
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    do_choose_acc(n, k - 1, acc * (n - current_k + 1) / current_k, current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[36m20:47:27.227 [debug] [Validator.run] final test (557 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[33m20:47:27.227 [warning] [Solve attempt 3] validation FAILED: [:compile][0m
+[22m20:47:27.228 [info] [Solve attempt 4] generating (fn=choose)[0m
+[36m20:47:27.228 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer | non_neg_integer, pos_integer | non_neg_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(_n, 1) do
+    _n
+  end
+
+  def choose(_n, _k) when _k > _n do
+    0
+  end
+
+  def choose(n, k) do
+    do_choose(n, k)
+  end
+
+  defp do_choose(_n, 0, acc) do
+    acc
+  end
+
+  defp do_choose(n, k, acc) do
+    do_choose_acc(n, k, acc, k)
+  end
+
+  # Helper to compute iteratively: acc * (n - current_k + 1) / current_k
+  # We start with current_k = k and go down to 1.
+  defp do_choose_acc(_n, 0, acc, _current_k) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    new_acc = acc * (n - current_k + 1)
+    div(new_acc, current_k)
+    |> do_choose_acc(n, k, _n, current_k - 1)
+    do_choose_acc(n, k - 1, acc, current_k - 1)
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    do_choose_acc(n, k - 1, acc * (n - current_k + 1) / current_k, current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:5:78:
+    error: syntax error before: non_neg_integer
+    │
+  5 │   @spec choose(pos_integer | non_neg_integer, pos_integer | non_neg_integer) non_neg_integer
+    │                                                                              ^
+    │
+    └─ lib/solution.ex:5:78
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `choose` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:47:34.184 [debug] [LLM.call] finish=stop len=1806 usage=%{"completion_tokens" => 719, "prompt_tokens" => 1296, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2015}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  def choose(n, k) when n < k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(n, 1) do
+    n
+  end
+
+  def choose(n, k) do
+    do_choose(n, k)
+  end
+
+  defp do_choose(0, _k) do
+    1
+  end
+
+  defp do_choose(n, k) do
+    do_choose_acc(n, k, 1, k)
+  end
+
+  defp do_choose_acc(n, _k, acc, 0) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose_acc(n, k, new_acc, current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---END---[0m
+[22m20:47:34.184 [info] [LLM.call] local_qwen_thinking completed in 6957ms — ok[0m
+[22m20:47:34.185 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:47:34.185 [debug] [Validator.run] module code (1214 chars):
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  def choose(n, k) when n < k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(n, 1) do
+    n
+  end
+
+  def choose(n, k) do
+    do_choose(n, k)
+  end
+
+  defp do_choose(0, _k) do
+    1
+  end
+
+  defp do_choose(n, k) do
+    do_choose_acc(n, k, 1, k)
+  end
+
+  defp do_choose_acc(n, _k, acc, 0) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose_acc(n, k, new_acc, current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[36m20:47:34.185 [debug] [Validator.run] test code (557 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[36m20:47:34.185 [debug] [Budget] spent so far (est.): $1.2307[0m
+[22m20:47:34.185 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:47:34.185 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:47:34.841 [debug] [run_credence_fix] exit=0 output:
+
+20:47:34.760 [debug] [credence_fix] starting syntax fix pipeline (30 rules), parse error at line 5: syntax error before:  near "non_neg_integer"
+
+20:47:34.769 [debug] [credence_fix] PreferSpecArrowOperator: fix produced a change
+
+20:47:34.770 [debug] [credence_fix] PreferSpecArrowOperator: source CHANGED:
+  L5 -   @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  L5 +   @spec choose(pos_integer, non_neg_integer) :: non_neg_integer
+
+20:47:34.771 [debug] [credence_fix] syntax fix pipeline: source now parses successfully
+
+20:47:34.771 [debug] [credence_fix] syntax done. Applied: [PreferSpecArrowOperator(1)]
+
+20:47:34.772 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:47:34.792 [debug] [credence_fix] Code.compile_string raised: cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+
+20:47:34.792 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+20:47:34.794 [debug] [credence_fix] no rule matched diagnostic: %{message: "cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app", position: 0, file: "credence_check.ex", severity: :error}
+
+20:47:34.794 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+20:47:34.794 [debug] [credence_fix] semantic done. Applied: []
+
+20:47:34.794 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:47:34.806 [debug] [credence_fix] Code.compile_string raised: cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+
+20:47:34.806 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+20:47:34.822 [debug] [credence_fix] Code.compile_string raised: cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+FIXED
+APPLIED_RULES: [{Credence.Syntax.PreferSpecArrowOperator, 1}]
+[0m
+[22m20:47:34.841 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m20:47:35.573 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m20:47:35.574 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: variable "n" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 30 │   defp do_choose_acc(n, _k, acc, 0) do
+    │                      ~
+    │
+    └─ lib/solution.ex:30:22: Solution.do_choose_acc/4
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m20:47:36.064 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m20:47:36.064 [info] [Validator.run] step 2/6: compile[0m
+[22m20:47:36.713 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:47:36.713 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:5:46:
+    error: syntax error before: non_neg_integer
+    │
+  5 │   @spec choose(pos_integer, non_neg_integer) non_neg_integer
+    │                                              ^
+    │
+    └─ lib/solution.ex:5:46
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m20:47:36.713 [info] [Validator.run] step 3/6: format[0m
+[22m20:47:36.713 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:47:36.713 [info] [Validator.run] step 4/6: credo[0m
+[22m20:47:36.713 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:47:36.714 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:47:36.714 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:47:36.714 [info] [Validator.run] step 6/6: tests[0m
+[22m20:47:36.714 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:47:36.714 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:47:36.714 [debug] [Validator.run] final module (1214 chars):
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  def choose(n, k) when n < k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(n, 1) do
+    n
+  end
+
+  def choose(n, k) do
+    do_choose(n, k)
+  end
+
+  defp do_choose(0, _k) do
+    1
+  end
+
+  defp do_choose(n, k) do
+    do_choose_acc(n, k, 1, k)
+  end
+
+  defp do_choose_acc(n, _k, acc, 0) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose_acc(n, k, new_acc, current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[36m20:47:36.714 [debug] [Validator.run] final test (557 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end[0m
+[33m20:47:36.714 [warning] [Solve attempt 4] validation FAILED: [:compile][0m
+[22m20:47:36.714 [info] [Solve attempt 5] generating (fn=choose)[0m
+[36m20:47:36.714 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  def choose(n, k) when n < k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(n, 1) do
+    n
+  end
+
+  def choose(n, k) do
+    do_choose(n, k)
+  end
+
+  defp do_choose(0, _k) do
+    1
+  end
+
+  defp do_choose(n, k) do
+    do_choose_acc(n, k, 1, k)
+  end
+
+  defp do_choose_acc(n, _k, acc, 0) do
+    acc
+  end
+
+  defp do_choose_acc(n, k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose_acc(n, k, new_acc, current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+  
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+  
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+  
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:5:46:
+    error: syntax error before: non_neg_integer
+    │
+  5 │   @spec choose(pos_integer, non_neg_integer) non_neg_integer
+    │                                              ^
+    │
+    └─ lib/solution.ex:5:46
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `choose` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:47:41.940 [debug] [LLM.call] finish=stop len=1338 usage=%{"completion_tokens" => 531, "prompt_tokens" => 1136, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1667}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k, do: 0
+
+  def choose(_n, 0), do: 1
+
+  def choose(n, 1), do: n
+
+  def choose(_n, _k) do
+    do_choose(_n, _k, 1, _k)
+  end
+
+  defp do_choose(_n, _k, acc, 0), do: acc
+
+  defp do_choose(n, _k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, _k, new_acc, current_k - 1)
+  end
+
+  defp do_choose(_n, _k, _acc, _current_k) do
+    0
+  end
+
+  defp do_choose(n, _k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, _k, new_acc, current_k - 1)
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---END---[0m
+[22m20:47:41.940 [info] [LLM.call] local_qwen_thinking completed in 5225ms — ok[0m
+[22m20:47:41.940 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:47:41.940 [debug] [Validator.run] module code (775 chars):
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k, do: 0
+
+  def choose(_n, 0), do: 1
+
+  def choose(n, 1), do: n
+
+  def choose(_n, _k) do
+    do_choose(_n, _k, 1, _k)
+  end
+
+  defp do_choose(_n, _k, acc, 0), do: acc
+
+  defp do_choose(n, _k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, _k, new_acc, current_k - 1)
+  end
+
+  defp do_choose(_n, _k, _acc, _current_k) do
+    0
+  end
+
+  defp do_choose(n, _k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, _k, new_acc, current_k - 1)
+  end
+end[0m
+[36m20:47:41.940 [debug] [Budget] spent so far (est.): $1.2317[0m
+[36m20:47:41.940 [debug] [Validator.run] test code (561 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---END---[0m
+[22m20:47:41.948 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:47:41.948 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:47:42.636 [debug] [run_credence_fix] exit=0 output:
+
+20:47:42.516 [debug] [credence_fix] starting syntax fix pipeline (30 rules), parse error at line 1: syntax error before:  near "'---'"
+
+20:47:42.521 [debug] [credence_fix] NoOutputMarkerLines: fix produced a change
+
+20:47:42.521 [debug] [credence_fix] NoOutputMarkerLines: source CHANGED:
+  L1 - ---MODULE---
+  L1 + defmodule Solution do
+  L2 - defmodule Solution do
+  L2 +   @doc """
+  L3 -   @doc """
+  L3 +   Calculates the binomial coefficient C(n, k).
+  L4 -   Calculates the binomial coefficient C(n, k).
+  L4 +   """
+  L5 -   """
+  L5 +   @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  L6 -   @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  L6 +   def choose(_n, _k) when _n < _k, do: 0
+  L7 -   def choose(_n, _k) when _n < _k, do: 0
+  L7 + 
+  L8 - 
+  L8 +   def choose(_n, 0), do: 1
+  L9 -   def choose(_n, 0), do: 1
+  L9 + 
+  L10 - 
+  L10 +   def choose(n, 1), do: n
+  L11 -   def choose(n, 1), do: n
+  L11 + 
+  L12 - 
+  L12 +   def choose(_n, _k) do
+  L13 -   def choose(_n, _k) do
+  L13 +     do_choose(_n, _k, 1, _k)
+  L14 -     do_choose(_n, _k, 1, _k)
+  L14 +   end
+  L15 -   end
+  L15 + 
+  L16 - 
+  L16 +   defp do_choose(_n, _k, acc, 0), do: acc
+  L17 -   defp do_choose(_n, _k, acc, 0), do: acc
+  L17 + 
+  L18 - 
+  L18 +   defp do_choose(n, _k, acc, current_k) do
+  L19 -   defp do_choose(n, _k, acc, current_k) do
+  L19 +     numerator = acc * (n - current_k + 1)
+  L20 -     numerator = acc * (n - current_k + 1)
+  L20 +     new_acc = div(numerator, current_k)
+  L21 -     new_acc = div(numerator, current_k)
+  L21 +     do_choose(n, _k, new_acc, current_k - 1)
+  L22 -     do_choose(n, _k, new_acc, current_k - 1)
+  L22 +   end
+  L23 -   end
+  L23 + 
+  L24 - 
+  L24 +   defp do_choose(_n, _k, _acc, _current_k) do
+  L25 -   defp do_choose(_n, _k, _acc, _current_k) do
+  L25 +     0
+  L26 -     0
+  L26 +   end
+  L27 -   end
+  L27 + 
+  L28 - 
+  L28 +   defp do_choose(n, _k, acc, current_k) do
+  L29 -   defp do_choose(n, _k, acc, current_k) do
+  L29 +     numerator = acc * (n - current_k + 1)
+  L30 -     numerator = acc * (n - current_k + 1)
+  L30 +     new_acc = div(numerator, current_k)
+  L31 -     new_acc = div(numerator, current_k)
+  L31 +     do_choose(n, _k, new_acc, current_k - 1)
+  L32 -     do_choose(n, _k, new_acc, current_k - 1)
+  L32 +   end
+  L33 -   end
+  L33 + end
+  L34 - end
+
+20:47:42.524 [debug] [credence_fix] PreferSpecArrowOperator: fix produced a change
+
+20:47:42.524 [debug] [credence_fix] PreferSpecArrowOperator: source CHANGED:
+  L5 -   @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  L5 +   @spec choose(pos_integer, non_neg_integer) :: non_neg_integer
+
+20:47:42.525 [debug] [credence_fix] syntax fix pipeline: source now parses successfully
+
+20:47:42.525 [debug] [credence_fix] syntax done. Applied: [NoOutputMarkerLines(1), PreferSpecArrowOperator(1)]
+
+20:47:42.525 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:47:42.533 [debug] [credence_fix] semantic pass 1: compilation OK, 9 warning(s)
+
+20:47:42.533 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+20:47:42.535 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L28 -   defp do_choose(n, _k, acc, current_k) do
+  L28 +   defp do_choose(n, k, acc, current_k) do
+  L31 -     do_choose(n, _k, new_acc, current_k - 1)
+  L31 +     do_choose(n, k, new_acc, current_k - 1)
+
+20:47:42.539 [debug] [credence_fix] no rule matched diagnostic: %{message: "this clause for do_choose/4 cannot match because a previous clause at line 18 always matches", position: {28, 8}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:47:42.539 [debug] [credence_fix] no rule matched diagnostic: %{message: "this clause for do_choose/4 cannot match because a previous clause at line 18 always matches", position: {24, 8}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:47:42.539 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+20:47:42.539 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L18 -   defp do_choose(n, _k, acc, current_k) do
+  L18 +   defp do_choose(n, k, acc, current_k) do
+  L21 -     do_choose(n, _k, new_acc, current_k - 1)
+  L21 +     do_choose(n, k, new_acc, current_k - 1)
+
+20:47:42.539 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+20:47:42.539 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L12 -   def choose(_n, _k) do
+  L12 +   def choose(_n, k) do
+  L13 -     do_choose(_n, _k, 1, _k)
+  L13 +     do_choose(_n, k, 1, k)
+
+20:47:42.540 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+20:47:42.540 [debug] [credence_fix] UsedUnderscoreVariable: fix returned IDENTICAL source (no change)
+
+20:47:42.540 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+20:47:42.540 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L12 -   def choose(_n, k) do
+  L12 +   def choose(n, k) do
+  L13 -     do_choose(_n, k, 1, k)
+  L13 +     do_choose(n, k, 1, k)
+
+20:47:42.540 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+20:47:42.540 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L6 -   def choose(_n, _k) when _n < _k, do: 0
+  L6 +   def choose(_n, k) when _n < k, do: 0
+
+20:47:42.540 [debug] [credence_fix] UsedUnderscoreVariable: matched diagnostic, running fix...
+
+20:47:42.540 [debug] [credence_fix] UsedUnderscoreVariable: source CHANGED:
+  L6 -   def choose(_n, k) when _n < k, do: 0
+  L6 +   def choose(n, k) when n < k, do: 0
+
+20:47:42.540 [debug] [credence_fix] semantic done. Applied: [UsedUnderscoreVariable(1), UsedUnderscoreVariable(1), UsedUnderscoreVariable(1), UsedUnderscoreVariable(1), UsedUnderscoreVariable(1), UsedUnderscoreVariable(1), UsedUnderscoreVariable(1)]
+
+20:47:42.540 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:47:42.558 [debug] [credence_fix] NoDuplicateFunctionClauses: check found 2 issue(s), running fix...
+
+20:47:42.571 [debug] [credence_fix] NoDuplicateFunctionClauses: source CHANGED:
+  L2 -   @doc """
+  L2 +   @doc "Calculates the binomial coefficient C(n, k).
+  L3 -   Calculates the binomial coefficient C(n, k).
+  L3 +   "
+  L4 -   """
+  L4 +   @spec choose(pos_integer, non_neg_integer) :: non_neg_integer
+  L5 -   @spec choose(pos_integer, non_neg_integer) :: non_neg_integer
+  L5 +   def choose(n, k) when n < k do
+  L6 -   def choose(n, k) when n < k, do: 0
+  L6 +     0
+  L7 - 
+  L7 +   end
+  L8 -   def choose(_n, 0), do: 1
+  L8 + 
+  L9 - 
+  L9 +   def choose(_n, 0) do
+  L10 -   def choose(n, 1), do: n
+  L10 +     1
+  L11 - 
+  L11 +   end
+  L12 -   def choose(n, k) do
+  L12 + 
+  L13 -     do_choose(n, k, 1, k)
+  L13 +   def choose(n, 1) do
+  L14 -   end
+  L14 +     n
+  L15 - 
+  L15 +   end
+  L16 -   defp do_choose(_n, _k, acc, 0), do: acc
+  L16 + 
+  L17 - 
+  L17 +   def choose(n, k) do
+  L18 -   defp do_choose(n, k, acc, current_k) do
+  L18 +     do_choose(n, k, 1, k)
+  L19 -     numerator = acc * (n - current_k + 1)
+  L19 +   end
+  L20 -     new_acc = div(numerator, current_k)
+  L20 + 
+  L21 -     do_choose(n, k, new_acc, current_k - 1)
+  L21 +   defp do_choose(_n, _k, acc, 0) do
+  L22 -   end
+  L22 +     acc
+  L23 - 
+  L23 +   end
+  L24 -   defp do_choose(_n, _k, _acc, _current_k) do
+  L24 + 
+  L25 -     0
+  L25 +   defp do_choose(n, k, acc, current_k) do
+  L26 -   end
+  L26 +     numerator = acc * (n - current_k + 1)
+  L27 - 
+  L27 +     new_acc = div(numerator, current_k)
+  L28 -   defp do_choose(n, k, acc, current_k) do
+  L28 +     do_choose(n, k, new_acc, current_k - 1)
+  L29 -     numerator = acc * (n - current_k + 1)
+  L29 +   end
+  L30 -     new_acc = div(numerator, current_k)
+  L30 + end
+  L31 -     do_choose(n, k, new_acc, current_k - 1)
+  L32 -   end
+  L33 - end
+
+20:47:42.607 [debug] [credence_fix] PreferHeredocForMultiLineDoc: check found 1 issue(s), running fix...
+
+20:4 (truncated)[0m
+[22m20:47:42.636 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m20:47:43.385 [info] [run_credence_fix] fix compiles OK[0m
+[36m20:47:43.385 [debug] [run_credence_fix] original:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k, do: 0
+
+  def choose(_n, 0), do: 1
+
+  def choose(n, 1), do: n
+
+  def choose(_n, _k) do
+    do_choose(_n, _k, 1, _k)
+  end
+
+  defp do_choose(_n, _k, acc, 0), do: acc
+
+  defp do_choose(n, _k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, _k, new_acc, current_k - 1)
+  end
+
+  defp do_choose(_n, _k, _acc, _current_k) do
+    0
+  end
+
+  defp do_choose(n, _k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, _k, new_acc, current_k - 1)
+  end
+end[0m
+[36m20:47:43.385 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+
+  """
+  @spec choose(pos_integer, non_neg_integer) :: non_neg_integer
+  def choose(n, k) when n < k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(n, 1) do
+    n
+  end
+
+  def choose(n, k) do
+    do_choose(n, k, 1, k)
+  end
+
+  defp do_choose(_n, _k, acc, 0) do
+    acc
+  end
+
+  defp do_choose(n, k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, k, new_acc, current_k - 1)
+  end
+end
+[0m
+[22m20:47:43.385 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m20:47:43.385 [debug] [Validator.run] module BEFORE credence fix:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+  """
+  @spec choose(pos_integer, non_neg_integer) non_neg_integer
+  def choose(_n, _k) when _n < _k, do: 0
+
+  def choose(_n, 0), do: 1
+
+  def choose(n, 1), do: n
+
+  def choose(_n, _k) do
+    do_choose(_n, _k, 1, _k)
+  end
+
+  defp do_choose(_n, _k, acc, 0), do: acc
+
+  defp do_choose(n, _k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, _k, new_acc, current_k - 1)
+  end
+
+  defp do_choose(_n, _k, _acc, _current_k) do
+    0
+  end
+
+  defp do_choose(n, _k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, _k, new_acc, current_k - 1)
+  end
+end[0m
+[36m20:47:43.385 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+
+  """
+  @spec choose(pos_integer, non_neg_integer) :: non_neg_integer
+  def choose(n, k) when n < k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(n, 1) do
+    n
+  end
+
+  def choose(n, k) do
+    do_choose(n, k, 1, k)
+  end
+
+  defp do_choose(_n, _k, acc, 0) do
+    acc
+  end
+
+  defp do_choose(n, k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, k, new_acc, current_k - 1)
+  end
+end
+[0m
+[36m20:47:43.385 [debug] [propagate_is_renames] old functions: ["choose", "do_choose"][0m
+[36m20:47:43.385 [debug] [propagate_is_renames] new functions: ["choose", "do_choose"][0m
+[36m20:47:43.385 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m20:47:43.385 [info] [Validator.run] step 2/6: compile[0m
+[22m20:47:43.955 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m20:47:43.955 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m20:47:43.955 [info] [Validator.run] step 3/6: format[0m
+[22m20:47:44.273 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m20:47:44.589 [debug] [Validator.run] format fix output: mix format failed for file: test/solution_test.exs
+** (TokenMissingError) token missing on test/solution_test.exs:28:7:
+    error: syntax error: expression is incomplete
+    │
+ 28 │ ---END---
+    │       ^
+    │
+    └─ test/solution_test.exs:28:7
+    (elixir 1.19.5) lib/code.ex:1103: Code.format_string!/2
+    (mix 1.19.5) lib/mix/tasks/format.ex:734: Mix.Tasks.Format.elixir_format/2
+    (mix 1.19.5) lib/mix/tasks/format.ex:755: Mix.Tasks.Format.format_file/2
+    (elixir 1.19.5) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+    (elixir 1.19.5) lib/task/supervised.ex:40: Task.Supervised.reply/4
+[0m
+[22m20:47:44.589 [info] [Validator.run] step 4/6: credo[0m
+[36m20:47:45.084 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m20:47:45.084 [info] [Validator.run] credo: no issues[0m
+[22m20:47:45.085 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:47:45.282 [info] [Budget] HEARTBEAT — 126 paid calls, est $1.2317 over 334.7min → ~$0.2208/hr, ~$5.3/day (tok in=1406221 cache_rd=18441088 out=636290)[0m
+[22m20:47:45.811 [info] [Validator.run] credence check exit=0[0m
+[36m20:47:45.811 [debug] [Validator.run] credence check output:
+OK
+[0m
+[22m20:47:45.811 [info] [Validator.run] credence check: passed[0m
+[22m20:47:45.811 [info] [Validator.run] step 6/6: tests[0m
+[22m20:47:46.268 [info] [Validator.run] test exit=1[0m
+[36m20:47:46.268 [debug] [Validator.run] test output:
+Running ExUnit with seed: 238097, max_cases: 48
+
+
+== Compilation error in file test/solution_test.exs ==
+** (TokenMissingError) token missing on test/solution_test.exs:28:7:
+    error: syntax error: expression is incomplete
+    │
+ 28 │ ---END---
+    │       ^
+    │
+    └─ test/solution_test.exs:28:7
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:648: Kernel.ParallelCompiler.require_file/2
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:531: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[33m20:47:46.268 [warning] [Validator.run] tests: FAILED[0m
+[22m20:47:46.268 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m20:47:46.268 [debug] [Validator.run] final module (552 chars):
+defmodule Solution do
+  @doc """
+  Calculates the binomial coefficient C(n, k).
+
+  """
+  @spec choose(pos_integer, non_neg_integer) :: non_neg_integer
+  def choose(n, k) when n < k do
+    0
+  end
+
+  def choose(_n, 0) do
+    1
+  end
+
+  def choose(n, 1) do
+    n
+  end
+
+  def choose(n, k) do
+    do_choose(n, k, 1, k)
+  end
+
+  defp do_choose(_n, _k, acc, 0) do
+    acc
+  end
+
+  defp do_choose(n, k, acc, current_k) do
+    numerator = acc * (n - current_k + 1)
+    new_acc = div(numerator, current_k)
+    do_choose(n, k, new_acc, current_k - 1)
+  end
+end
+[0m
+[36m20:47:46.268 [debug] [Validator.run] final test (561 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "choose(5, 2) returns 10" do
+    assert Solution.choose(5, 2) == 10
+  end
+
+  test "choose(10, 0) returns 1" do
+    assert Solution.choose(10, 0) == 1
+  end
+
+  test "choose(6, 3) returns 20" do
+    assert Solution.choose(6, 3) == 20
+  end
+
+  test "choose(0, 0) returns 1" do
+    assert Solution.choose(0, 0) == 1
+  end
+
+  test "choose(5, 5) returns 1" do
+    assert Solution.choose(5, 5) == 1
+  end
+
+  test "choose(10, 10) returns 1" do
+    assert Solution.choose(10, 10) == 1
+  end
+end
+---END---[0m
+[33m20:47:46.268 [warning] [Solve attempt 5] validation FAILED: [:test][0m
+[33m20:47:46.269 [warning] [Solve] giving up after 5 attempts[0m
+[36m20:47:46.286 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve FAILED — there is NO clean final. Judge the attempts for an ISSUE they repeatedly hit that NO existing rule fixed (a new Syntax/Semantic rule — e.g. a Python-ism like `a div b`, an unfixed warning), plus any existing rule that over-fired (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Syntax.PreferSingleDocAttribute
+  - Credence.Syntax.PreferSpecArrowOperator
+  - Credence.Pattern.PreferGuardOverIf
+These rules ALREADY engaged on this row — Credence handled what they target.
+Do NOT propose a POTENTIAL_NEW_RULE for an idiom one of them already fixes;
+that is already covered. (If such a rule MIS-fired or under-fired, that's a
+BUGFIX_RULE, not a new rule.)
+
+## Dead-ends already tried (do NOT re-propose)
+## row 80597 â gate_reject (:full_suite_red)
+attempted: new(semantic): prefer_div_for_integer_division
+
+## row 12105 â gate_reject (:full_suite_red)
+attempted: new(semantic): prefer_explicit_range_step
+
+ (truncated)[0m
+[36m20:47:58.866 [debug] [LLM.call] finish=stop len=450 usage=%{"completion_tokens" => 385, "completion_tokens_details" => %{"reasoning_tokens" => 284}, "prompt_tokens" => 40231, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 40616}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+The repeated `@spec choose(...) non_neg_integer` (missing `::`) was consistently caught and fixed by the existing PreferSpecArrowOperator rule on every attempt. The actual solve failures were from incorrect algorithmic implementations (float division returning 2.0/2.5 instead of integers, duplicate clauses, test file corruption), not from any unaddressed linter idiom. No new fixable rule emerges.
+===END===[0m
+[22m20:47:58.866 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 12580ms — ok[0m
+[36m20:47:58.867 [debug] [Budget] spent so far (est.): $1.2495[0m

@@ -1,0 +1,3785 @@
+[22m20:47:58.914 [info] [idx=114412] entry_point=surface_area[0m
+[36m20:47:58.915 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to calculate the total surface area of a 3D shape represented by a grid. The grid is a 2D list of non-negative integers, where each cell represents the height of a column of unit cubes. The surface area of the 3D shape is the total area of the exposed surfaces of the cubes, including the bottom and top surfaces.
+
+The function should take the grid as an input and return the total surface area as an integer.
+
+## Python Solution
+```python
+def surface_area(grid):
+    """
+    Calculate the total surface area of a 3D shape represented by the given grid.
+    
+    :param grid: 2D list of non-negative integers representing the height of columns.
+    :return: Total surface area of the 3D shape as an integer.
+    """
+    N = len(grid)
+    total_area = 0
+    for x in range(N):
+        for y in range(N):
+            if grid[x][y] > 0:
+                total_area += 4 * grid[x][y] + 2  # Top, bottom, and 4 sides
+            if x > 0:
+                total_area -= min(grid[x][y], grid[x-1][y]) * 2  # Adjacent columns
+            if y > 0:
+                total_area -= min(grid[x][y], grid[x][y-1]) * 2  # Adjacent columns
+    return total_area
+```
+
+## Python Tests
+assert surface_area([[1,2],[3,4]]) == 34
+assert surface_area([[2]]) == 10
+assert surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `surface_area`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m20:49:14.039 [debug] [LLM.call] finish=stop len=1877 usage=%{"completion_tokens" => 4224, "completion_tokens_details" => %{"reasoning_tokens" => 3656}, "prompt_tokens" => 714, "prompt_tokens_details" => %{}, "total_tokens" => 4938}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `surface_area/1` that takes a grid, represented as a list of lists of non-negative integers, where each integer is the height of a column of unit cubes in that cell. The function returns the total surface area of the 3D shape formed by the cubes, including the bottom and top surfaces. The grid is placed on the ground, so each column with a positive height has a bottom face on the ground. Adjacent columns (sharing a side in the grid) hide the area of contact, which is the minimum of their heights. The function should handle empty grids (return 0) and grids with zeros appropriately.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "surface_area of [[1,2],[3,4]]" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "surface_area of [[2]]" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "surface_area of [[1,1,1],[1,0,1],[1,1,1]]" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+
+  test "surface_area of empty grid" do
+    assert Solution.surface_area([]) == 0
+  end
+
+  test "surface_area of grid with zeros" do
+    assert Solution.surface_area([[0,0],[0,0]]) == 0
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def surface_area(grid) do
+    rows = length(grid)
+    cols = if rows > 0, do: length(hd(grid)), else: 0
+
+    for i <- 0..rows-1, j <- 0..cols-1, reduce: 0 do
+      acc ->
+        h = grid |> Enum.at(i) |> Enum.at(j)
+        area = if h > 0, do: 4 * h + 2, else: 0
+
+        area = if i > 0 do
+          h_above = grid |> Enum.at(i-1) |> Enum.at(j)
+          area - 2 * min(h, h_above)
+        else
+          area
+        end
+
+        area = if j > 0 do
+          h_left = grid |> Enum.at(i) |> Enum.at(j-1)
+          area - 2 * min(h, h_left)
+        else
+          area
+        end
+
+        acc + area
+    end
+  end
+end
+
+---END---[0m
+[22m20:49:14.039 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 75124ms — ok[0m
+[36m20:49:14.039 [debug] [Budget] spent so far (est.): $1.2535[0m
+[22m20:49:15.083 [info] [RoundTrip] reference FAILED tests:
+Running ExUnit with seed: 31117, max_cases: 48
+
+...warning: Range.new/2 and first..last default to a step of -1 when last < first. Use Range.new(first, last, -1) or first..last//-1, or pass 1 if that was your intention
+  (workspace 0.1.0) lib/solution.ex:6: Solution.surface_area/1
+  test/solution_test.exs:17: SolutionTest."test surface_area of empty grid"/1
+  (ex_unit 1.19.5) lib/ex_unit/runner.ex:528: ExUnit.Runner.exec_test/2
+  (stdlib 7.3) timer.erl:599: :timer.tc/2
+  (ex_unit 1.19.5) lib/ex_unit/runner.ex:450: anonymous fn/6 in ExUnit.Runner.spawn_test_monitor/4
+
+warning: Range.new/2 and first..last default to a step of -1 when last < first. Use Range.new(first, last, -1) or first..last//-1, or pass 1 if that was your intention
+  (workspace 0.1.0) lib/solution.ex:6: anonymous fn/4 in Solution.surface_area/1
+  (elixir 1.19.5) lib/enum.ex:4562: Enum.reduce/3
+  test/solution_test.exs:17: SolutionTest."test surface_area of empty grid"/1
+  (ex_unit 1.19.5) lib/ex_unit/runner.ex:528: ExUnit.Runner.exec_test/2
+  (stdlib 7.3) timer.erl:599: :timer.tc/2
+  (ex_unit 1.19.5) lib/ex_unit/runner.ex:450: anonymous fn/6 in ExUnit.Runner.spawn_test_monitor/4
+
+
+
+  1) test surface_area of empty grid (SolutionTest)
+     test/solution_test.exs:16
+     ** (Protocol.UndefinedError) protocol Enumerable not implemented for Atom. This protocol is implemented for: Date.Range, File.Stream, Function, GenEvent.Stream, HashDict, HashSet, IO.Stream, Jason.OrderedObject, List, Map, MapSet, Range, Stream
+
+     Got value:
+
+         nil
+
+     code: assert Solution.surface_area([]) == 0
+     stacktrace:
+       (elixir 1.19.5) lib/enum.ex:5: Enumerable.impl_for!/1
+       (elixir 1.19.5) lib/enum.ex:234: Enumerable.slice/1
+       (elixir 1.19.5) lib/enum.ex:4634: Enum.slice_forward/4
+       (elixir 1.19.5) lib/enum.ex:483: Enum.at/3
+       (workspace 0.1.0) lib/solution.ex:8: anonymous fn/4 in Solution.surface_area/1
+       (elixir 1.19.5) lib/enum.ex:4562: Enum.reduce/3
+       test/solution_test.exs:17: (test)
+
+.
+Finished in 0.02 seconds (0.00s async, 0.02s sync)
+5 tests, 1 failure
+[0m
+[33m20:49:15.083 [warning] [RoundTrip] reference failed tests — re-translating once[0m
+[36m20:49:15.083 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to calculate the total surface area of a 3D shape represented by a grid. The grid is a 2D list of non-negative integers, where each cell represents the height of a column of unit cubes. The surface area of the 3D shape is the total area of the exposed surfaces of the cubes, including the bottom and top surfaces.
+
+The function should take the grid as an input and return the total surface area as an integer.
+
+## Python Solution
+```python
+def surface_area(grid):
+    """
+    Calculate the total surface area of a 3D shape represented by the given grid.
+    
+    :param grid: 2D list of non-negative integers representing the height of columns.
+    :return: Total surface area of the 3D shape as an integer.
+    """
+    N = len(grid)
+    total_area = 0
+    for x in range(N):
+        for y in range(N):
+            if grid[x][y] > 0:
+                total_area += 4 * grid[x][y] + 2  # Top, bottom, and 4 sides
+            if x > 0:
+                total_area -= min(grid[x][y], grid[x-1][y]) * 2  # Adjacent columns
+            if y > 0:
+                total_area -= min(grid[x][y], grid[x][y-1]) * 2  # Adjacent columns
+    return total_area
+```
+
+## Python Tests
+assert surface_area([[1,2],[3,4]]) == 34
+assert surface_area([[2]]) == 10
+assert surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `surface_area`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m20:50:25.539 [debug] [LLM.call] finish=stop len=1645 usage=%{"completion_tokens" => 4006, "completion_tokens_details" => %{"reasoning_tokens" => 3543}, "prompt_tokens" => 714, "prompt_tokens_details" => %{"cached_tokens" => 704}, "total_tokens" => 4720}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `surface_area/1` that computes the total exposed surface area of a 3D shape made of unit cubes. The shape is defined by a square grid of non-negative integers, where each integer represents the height of a column of cubes at that grid position. The surface area includes the top, bottom, and all four sides of each cube that are not covered by adjacent cubes. The grid is represented as a list of lists (rows of integers). The function should return the total surface area as an integer. If the grid is empty, return 0. The algorithm should run in O(n^2) time for an n-by-n grid.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def surface_area(grid) do
+    n = length(grid)
+    for i <- 0..(n-1), j <- 0..(n-1), reduce: 0 do
+      acc ->
+        height = grid |> Enum.at(i) |> Enum.at(j)
+        if height > 0 do
+          area = 4 * height + 2
+          area = if i > 0 do
+            neighbor = grid |> Enum.at(i-1) |> Enum.at(j)
+            area - 2 * min(height, neighbor)
+          else
+            area
+          end
+          area = if j > 0 do
+            neighbor = grid |> Enum.at(i) |> Enum.at(j-1)
+            area - 2 * min(height, neighbor)
+          else
+            area
+          end
+          acc + area
+        else
+          acc
+        end
+    end
+  end
+end
+
+---END---[0m
+[22m20:50:25.539 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 70455ms — ok[0m
+[36m20:50:25.539 [debug] [Budget] spent so far (est.): $1.2573[0m
+[22m20:50:26.617 [info] [RoundTrip] reference PASSED tests[0m
+[22m20:50:26.618 [info] [idx=114412] translation fresh — solving[0m
+[22m20:50:26.618 [info] ===SOLVE_BOUNDARY===[0m
+[22m20:50:26.618 [info] [Solve attempt 1] generating (fn=surface_area)[0m
+[36m20:50:26.618 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `surface_area/1` that computes the total exposed surface area of a 3D shape made of unit cubes. The shape is defined by a square grid of non-negative integers, where each integer represents the height of a column of cubes at that grid position. The surface area includes the top, bottom, and all four sides of each cube that are not covered by adjacent cubes. The grid is represented as a list of lists (rows of integers). The function should return the total surface area as an integer. If the grid is empty, return 0. The algorithm should run in O(n^2) time for an n-by-n grid.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end
+```
+
+Module: `Solution`. Function: `surface_area`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:51:15.851 [debug] [LLM.call] finish=stop len=13281 usage=%{"completion_tokens" => 5444, "prompt_tokens" => 519, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 5963}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  The grid is represented as a list of lists (rows of integers), where each
+  integer represents the height of a column of cubes at that grid position.
+  """
+  def surface_area(grid) when is_list(grid) do
+    if grid == [] do
+      0
+    else
+      area(grid)
+    end
+  end
+
+  defp area(grid) do
+    rows = length(grid)
+    cols = if rows > 0 do
+      hd(grid) |> length()
+    else
+      0
+    end
+
+    if rows == 0 or cols == 0 do
+      0
+    else
+      grid
+      |> Enum.with_index(fn row, i ->
+        row
+        |> Enum.with_index(fn height, j ->
+          calculate_surface(height, grid, i, j, rows, cols)
+        end)
+      end)
+      |> Enum.map(&Enum.sum/1)
+      |> Enum.sum()
+    end
+  end
+
+  defp calculate_surface(height, grid, i, j, rows, cols) do
+    # Top surface area is 2 if there is at least one cube, else 0
+    # But actually, the formula is:
+    # For each cell, the surface area contribution is:
+    # 2 * (height > 0 ? 1 : 0) +
+    # (height - neighbor_down)^2 +
+    # (height - neighbor_up)^2 +
+    # (height - neighbor_right)^2 +
+    # (height - neighbor_left)^2
+    # Wait, let me re-derive.
+    # The surface area of the whole shape can be calculated by summing
+    # the exposed faces of each unit cube.
+    # Alternatively, a common approach is:
+    # Total area = sum over all cells of (max(0, height - neighbor) * 2 for each direction)
+    # No, that's not quite right.
+    
+    # Let's use the standard algorithm:
+    # For each cell (i, j) with height h:
+    # - Top area: 2 if h > 0 (the top and bottom faces of the column)
+    #   Wait, the bottom is also exposed if h > 0. But the bottom is always exposed?
+    #   No, the problem says "total exposed surface area". The bottom of the shape is exposed.
+    #   So for each column of height h > 0, we add 2 (top and bottom).
+    # - For each of the 4 directions, we add max(0, h - neighbor_height)
+    
+    # Let's verify with example 1: [[1,2],[3,4]]
+    # (0,0): h=1. Top+Bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: max(0, 1-0)=1 (boundary). Up: max(0, 1-0)=1 (boundary).
+    # (0,1): h=2. Top+Bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0.
+    # (1,0): h=3. Top+Bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2.
+    # (1,1): h=4. Top+Bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2.
+    # Sum: (2+1+1) + (2+1) + (2+2) + (2+1+2) = 4 + 3 + 4 + 5 = 16?
+    # But the expected answer is 34.
+    
+    # Let me re-read the problem.
+    # "The surface area includes the top, bottom, and all four sides of each cube that are not covered by adjacent cubes."
+    
+    # The standard LeetCode problem "Surface Area of 3D Shapes" uses:
+    # For each cell with height h:
+    #   If h > 0, add 2 for top and bottom.
+    #   For each of 4 directions, add max(0, h - neighbor)
+    
+    # Let me re-calculate example 1: [[1,2],[3,4]]
+    # (0,0) h=1: top/bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: 1 (boundary, so max(0, 1-0)=1). Up: 1. Sum=2+1+1=4.
+    # (0,1) h=2: top/bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0. Sum=2+1=3.
+    # (1,0) h=3: top/bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2. Sum=2+2=4.
+    # (1,1) h=4: top/bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2. Sum=2+1+2=5.
+    # Total = 4+3+4+5 = 16. Still not 34.
+    
+    # Wait, maybe the formula is different.
+    # Let's think of it as sum of all faces.
+    # Each cube has 6 faces. Total cubes = 1+2+3+4 = 10. Total faces = 60.
+    # Subtract 2 for each adjacent pair of cubes (including vertical adjacency).
+    # Horizontal adjacencies:
+    # (0,0)-(0,1): min(1,2)=1 pair.
+    # (1,0)-(1,1): min(3,4)=3 pairs.
+    # (0,0)-(1,0): min(1,3)=1 pair.
+    # (0,1)-(1,1): min(2,4)=2 pairs.
+    # Vertical pairs:
+    # (0,0): 0
+    # (0,1): 1
+    # (1,0): 2
+    # (1,1): 3
+    # Total horizontal pairs: 1+3 = 4.
+    # Total vertical pairs: 1+1+2+3 = 7.
+    # Total pairs = 11.
+    # Total exposed faces = 60 - 2*11 = 60 - 22 = 38. Not 34.
+    
+    # Let me try another approach.
+    # The formula max(0, h - neighbor) for each direction plus 2*1 if h>0.
+    # Maybe I made a mistake in the example calculation.
+    # Let's look at example 2: [[2]] -> 10.
+    # h=2. Top+Bot=2. Right: 0. Down: 0. Left: 2. Up: 2. Sum=2+2+2=6. Not 10.
+    
+    # Let me check LeetCode 887 "Surface Area of 3D Shapes".
+    # The formula is:
+    # area = 0
+    # for i in range(len(grid)):
+    #   for j in range(len(grid[i])):
+    #     if grid[i][j] > 0:
+    #       area += 2
+    #       area += max(0, grid[i][j] - grid[i-1][j]) if i>0 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i+1][j]) if i<rows-1 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i][j-1]) if j>0 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i][j+1]) if j<cols-1 else max(0, grid[i][j])
+    
+    # Let's re-calculate example 2: [[2]]
+    # h=2. Top+Bot=2.
+    # Up (boundary): max(0, 2-0)=2.
+    # Down (boundary): max(0, 2-0)=2.
+    # Left (boundary): max(0, 2-0)=2.
+    # Right (boundary): max(0, 2-0)=2.
+    # Sum = 2+2+2+2+2 = 10. Correct!
+    
+    # So the formula for boundary is max(0, h - 0) = h.
+    # Let me re-calculate example 1: [[1,2],[3,4]]
+    # (0,0) h=1: Top+Bot=2.
+    # Up (boundary): 1. Down (neighbor 3): max(0, 1-3)=0.
+    # Left (boundary): 1. Right (neighbor 2): max(0, 1-2)=0.
+    # Sum = 2+1+0+1+0 = 4.
+    # (0,1) h=2: Top+Bot=2.
+    # Up (boundary): 2. Down (neighbor 4): max(0, 2-4)=0.
+    # Left (neighbor 1): max(0, 2-1)=1. Right (boundary): 2.
+    # Sum = 2+2+0+1+2 = 7.
+    # (1,0) h=3: Top+Bot=2.
+    # Up (neighbor 1): max(0, 3-1)=2. Down (boundary): 3.
+    # Left (boundary): 3. Right (neighbor 4): max(0, 3-4)=0.
+    # Sum = 2+2+3+3+0 = 10.
+    # (1,1) h=4: Top+Bot=2.
+    # Up (neighbor 2): max(0, 4-2)=2. Down (boundary): 4.
+    # Left (neighbor 3): max(0, 4-3)=1. Right (boundary): 4.
+    # Sum = 2+2+4+1+4 = 11.
+    # Total = 4+7+10+11 = 32. But expected is 34.
+    
+    # Wait, let me re-check. Example 1 answer is 34.
+    # Let me re-calculate (0,0):
+    # Top/Bottom: 2.
+    # Up: boundary -> h = 1.
+    # Down: neighbor (1,0) h=3. max(0, 1-3) = 0.
+    # Left: boundary -> h = 1.
+    # Right: neighbor (0,1) h=2. max(0, 1-2) = 0.
+    # Sum = 2+1+0+1+0 = 4.
+    
+    # (0,1):
+    # Top/Bottom: 2.
+    # Up: boundary -> h = 2.
+    # Down: neighbor (1,1) h=4. max(0, 2-4) = 0.
+    # Left: neighbor (0,0) h=1. max(0, 2-1) = 1.
+    # Right: boundary -> h = 2.
+    # Sum = 2+2+0+1+2 = 7.
+    
+    # (1,0):
+    # Top/Bottom: 2.
+    # Up: neighbor (0,0) h=1. max(0, 3-1) = 2.
+    # Down: boundary -> h = 3.
+    # Left: boundary -> h = 3.
+    # Right: neighbor (1,1) h=4. max(0, 3-4) = 0.
+    # Sum = 2+2+3+3+0 = 10.
+    
+    # (1,1):
+    # Top/Bottom: 2.
+    # Up: neighbor (0,1) h=2. max(0, 4-2) = 2.
+    # Down: boundary -> h = 4.
+    # Left: neighbor (1,0) h=3. max(0, 4-3) = 1.
+    # Right: boundary -> h = 4.
+    # Sum = 2+2+4+1+4 = 11.
+    
+    # Total = 4+7+10+11 = 32. But expected is 34.
+    
+    # Let me check if I have the grid correct. [[1,2],[3,4]]
+    # Row 0: [1, 2], Row 1: [3, 4].
+    # (0,0)=1, (0,1)=2, (1,0)=3, (1,1)=4.
+    
+    # Maybe the formula is slightly different.
+    # Let's think about it as sum of all faces minus hidden faces.
+    # Total cubes: 1+2+3+4 = 10. Total faces = 60.
+    # Hidden faces:
+    # Vertical adjacency (within a column):
+    # (0,0): 0 pairs (height 1).
+    # (0,1): 1 pair (height 2).
+    # (1,0): 2 pairs (height 3).
+    # (1,1): 3 pairs (height 4).
+    # Total vertical hidden faces: 0+1+2+3 = 6. But each pair hides 2 faces, so 12 faces.
+    
+    # Horizontal adjacency (between adjacent cells):
+    # (0,0)-(0,1): min(1,2) = 1 pair. Hides 2 faces.
+    # (1,0)-(1,1): min(3,4) = 3 pairs. Hide (truncated)[0m
+[22m20:51:15.851 [info] [LLM.call] local_qwen_thinking completed in 49233ms — ok[0m
+[22m20:51:15.851 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:51:15.852 [debug] [Validator.run] module code (12930 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  The grid is represented as a list of lists (rows of integers), where each
+  integer represents the height of a column of cubes at that grid position.
+  """
+  def surface_area(grid) when is_list(grid) do
+    if grid == [] do
+      0
+    else
+      area(grid)
+    end
+  end
+
+  defp area(grid) do
+    rows = length(grid)
+    cols = if rows > 0 do
+      hd(grid) |> length()
+    else
+      0
+    end
+
+    if rows == 0 or cols == 0 do
+      0
+    else
+      grid
+      |> Enum.with_index(fn row, i ->
+        row
+        |> Enum.with_index(fn height, j ->
+          calculate_surface(height, grid, i, j, rows, cols)
+        end)
+      end)
+      |> Enum.map(&Enum.sum/1)
+      |> Enum.sum()
+    end
+  end
+
+  defp calculate_surface(height, grid, i, j, rows, cols) do
+    # Top surface area is 2 if there is at least one cube, else 0
+    # But actually, the formula is:
+    # For each cell, the surface area contribution is:
+    # 2 * (height > 0 ? 1 : 0) +
+    # (height - neighbor_down)^2 +
+    # (height - neighbor_up)^2 +
+    # (height - neighbor_right)^2 +
+    # (height - neighbor_left)^2
+    # Wait, let me re-derive.
+    # The surface area of the whole shape can be calculated by summing
+    # the exposed faces of each unit cube.
+    # Alternatively, a common approach is:
+    # Total area = sum over all cells of (max(0, height - neighbor) * 2 for each direction)
+    # No, that's not quite right.
+    
+    # Let's use the standard algorithm:
+    # For each cell (i, j) with height h:
+    # - Top area: 2 if h > 0 (the top and bottom faces of the column)
+    #   Wait, the bottom is also exposed if h > 0. But the bottom is always exposed?
+    #   No, the problem says "total exposed surface area". The bottom of the shape is exposed.
+    #   So for each column of height h > 0, we add 2 (top and bottom).
+    # - For each of the 4 directions, we add max(0, h - neighbor_height)
+    
+    # Let's verify with example 1: [[1,2],[3,4]]
+    # (0,0): h=1. Top+Bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: max(0, 1-0)=1 (boundary). Up: max(0, 1-0)=1 (boundary).
+    # (0,1): h=2. Top+Bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0.
+    # (1,0): h=3. Top+Bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2.
+    # (1,1): h=4. Top+Bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2.
+    # Sum: (2+1+1) + (2+1) + (2+2) + (2+1+2) = 4 + 3 + 4 + 5 = 16?
+    # But the expected answer is 34.
+    
+    # Let me re-read the problem.
+    # "The surface area includes the top, bottom, and all four sides of each cube that are not covered by adjacent cubes."
+    
+    # The standard LeetCode problem "Surface Area of 3D Shapes" uses:
+    # For each cell with height h:
+    #   If h > 0, add 2 for top and bottom.
+    #   For each of 4 directions, add max(0, h - neighbor)
+    
+    # Let me re-calculate example 1: [[1,2],[3,4]]
+    # (0,0) h=1: top/bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: 1 (boundary, so max(0, 1-0)=1). Up: 1. Sum=2+1+1=4.
+    # (0,1) h=2: top/bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0. Sum=2+1=3.
+    # (1,0) h=3: top/bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2. Sum=2+2=4.
+    # (1,1) h=4: top/bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2. Sum=2+1+2=5.
+    # Total = 4+3+4+5 = 16. Still not 34.
+    
+    # Wait, maybe the formula is different.
+    # Let's think of it as sum of all faces.
+    # Each cube has 6 faces. Total cubes = 1+2+3+4 = 10. Total faces = 60.
+    # Subtract 2 for each adjacent pair of cubes (including vertical adjacency).
+    # Horizontal adjacencies:
+    # (0,0)-(0,1): min(1,2)=1 pair.
+    # (1,0)-(1,1): min(3,4)=3 pairs.
+    # (0,0)-(1,0): min(1,3)=1 pair.
+    # (0,1)-(1,1): min(2,4)=2 pairs.
+    # Vertical pairs:
+    # (0,0): 0
+    # (0,1): 1
+    # (1,0): 2
+    # (1,1): 3
+    # Total horizontal pairs: 1+3 = 4.
+    # Total vertical pairs: 1+1+2+3 = 7.
+    # Total pairs = 11.
+    # Total exposed faces = 60 - 2*11 = 60 - 22 = 38. Not 34.
+    
+    # Let me try another approach.
+    # The formula max(0, h - neighbor) for each direction plus 2*1 if h>0.
+    # Maybe I made a mistake in the example calculation.
+    # Let's look at example 2: [[2]] -> 10.
+    # h=2. Top+Bot=2. Right: 0. Down: 0. Left: 2. Up: 2. Sum=2+2+2=6. Not 10.
+    
+    # Let me check LeetCode 887 "Surface Area of 3D Shapes".
+    # The formula is:
+    # area = 0
+    # for i in range(len(grid)):
+    #   for j in range(len(grid[i])):
+    #     if grid[i][j] > 0:
+    #       area += 2
+    #       area += max(0, grid[i][j] - grid[i-1][j]) if i>0 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i+1][j]) if i<rows-1 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i][j-1]) if j>0 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i][j+1]) if j<cols-1 else max(0, grid[i][j])
+    
+    # Let's re-calculate example 2: [[2]]
+    # h=2. Top+Bot=2.
+    # Up (boundary): max(0, 2-0)=2.
+    # Down (boundary): max(0, 2-0)=2.
+    # Left (boundary): max(0, 2-0)=2.
+    # Right (boundary): max(0, 2-0)=2.
+    # Sum = 2+2+2+2+2 = 10. Correct!
+    
+    # So the formula for boundary is max(0, h - 0) = h.
+    # Let me re-calculate example 1: [[1,2],[3,4]]
+    # (0,0) h=1: Top+Bot=2.
+    # Up (boundary): 1. Down (neighbor 3): max(0, 1-3)=0.
+    # Left (boundary): 1. Right (neighbor 2): max(0, 1-2)=0.
+    # Sum = 2+1+0+1+0 = 4.
+    # (0,1) h=2: Top+Bot=2.
+    # Up (boundary): 2. Down (neighbor 4): max(0, 2-4)=0.
+    # Left (neighbor 1): max(0, 2-1)=1. Right (boundary): 2.
+    # Sum = 2+2+0+1+2 = 7.
+    # (1,0) h=3: Top+Bot=2.
+    # Up (neighbor 1): max(0, 3-1)=2. Down (boundary): 3.
+    # Left (boundary): 3. Right (neighbor 4): max(0, 3-4)=0.
+    # Sum = 2+2+3+3+0 = 10.
+    # (1,1) h=4: Top+Bot=2.
+    # Up (neighbor 2): max(0, 4-2)=2. Down (boundary): 4.
+    # Left (neighbor 3): max(0, 4-3)=1. Right (boundary): 4.
+    # Sum = 2+2+4+1+4 = 11.
+    # Total = 4+7+10+11 = 32. But expected is 34.
+    
+    # Wait, let me re-check. Example 1 answer is 34.
+    # Let me re-calculate (0,0):
+    # Top/Bottom: 2.
+    # Up: boundary -> h = 1.
+    # Down: neighbor (1,0) h=3. max(0, 1-3) = 0.
+    # Left: boundary -> h = 1.
+    # Right: neighbor (0,1) h=2. max(0, 1-2) = 0.
+    # Sum = 2+1+0+1+0 = 4.
+    
+    # (0,1):
+    # Top/Bottom: 2.
+    # Up: boundary -> h = 2.
+    # Down: neighbor (1,1) h=4. max(0, 2-4) = 0.
+    # Left: neighbor (0,0) h=1. max(0, 2-1) = 1.
+    # Right: boundary -> h = 2.
+    # Sum = 2+2+0+1+2 = 7.
+    
+    # (1,0):
+    # Top/Bottom: 2.
+    # Up: neighbor (0,0) h=1. max(0, 3-1) = 2.
+    # Down: boundary -> h = 3.
+    # Left: boundary -> h = 3.
+    # Right: neighbor (1,1) h=4. max(0, 3-4) = 0.
+    # Sum = 2+2+3+3+0 = 10.
+    
+    # (1,1):
+    # Top/Bottom: 2.
+    # Up: neighbor (0,1) h=2. max(0, 4-2) = 2.
+    # Down: boundary -> h = 4.
+    # Left: neighbor (1,0) h=3. max(0, 4-3) = 1.
+    # Right: boundary -> h = 4.
+    # Sum = 2+2+4+1+4 = 11.
+    
+    # Total = 4+7+10+11 = 32. But expected is 34.
+    
+    # Let me check if I have the grid correct. [[1,2],[3,4]]
+    # Row 0: [1, 2], Row 1: [3, 4].
+    # (0,0)=1, (0,1)=2, (1,0)=3, (1,1)=4.
+    
+    # Maybe the formula is slightly different.
+    # Let's think about it as sum of all faces minus hidden faces.
+    # Total cubes: 1+2+3+4 = 10. Total faces = 60.
+    # Hidden faces:
+    # Vertical adjacency (within a column):
+    # (0,0): 0 pairs (height 1).
+    # (0,1): 1 pair (height 2).
+    # (1,0): 2 pairs (height 3).
+    # (1,1): 3 pairs (height 4).
+    # Total vertical hidden faces: 0+1+2+3 = 6. But each pair hides 2 faces, so 12 faces.
+    
+    # Horizontal adjacency (between adjacent cells):
+    # (0,0)-(0,1): min(1,2) = 1 pair. Hides 2 faces.
+    # (1,0)-(1,1): min(3,4) = 3 pairs. Hides 2 faces per pair -> 6 faces.
+    # (0,0)-(1,0): min(1,3) = 1 pair. Hides 2 faces.
+    # (0,1)-(1,1): min(2,4) = 2 pairs. Hides 4 faces.
+    # Total horizontal hi (truncated)[0m
+[36m20:51:15.852 [debug] [Budget] spent so far (est.): $1.2622[0m
+[36m20:51:15.852 [debug] [Validator.run] test code (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[22m20:51:15.852 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:51:15.852 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:51:17.155 [debug] [run_credence_fix] exit=0 output:
+
+20:51:16.427 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:51:16.429 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:51:16.448 [debug] [credence_fix] semantic pass 1: compilation OK, 7 warning(s)
+
+20:51:16.448 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:51:16.451 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L303 -         |> Enum.with_index(fn h, j ->
+  L303 +         |> Enum.with_index(fn _h, j ->
+
+20:51:16.451 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:51:16.451 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L299 -     vertical_neighbor_pairs = if rows > 0 do
+  L299 +     _vertical_neighbor_pairs = if rows > 0 do
+
+20:51:16.451 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:51:16.452 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L287 -     horizontal_pairs = grid
+  L287 +     _horizontal_pairs = grid
+
+20:51:16.452 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:51:16.452 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L38 -   defp calculate_surface(height, grid, i, j, rows, cols) do
+  L38 +   defp calculate_surface(height, grid, i, _j, rows, cols) do
+
+20:51:16.452 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:51:16.453 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L38 -   defp calculate_surface(height, grid, i, _j, rows, cols) do
+  L38 +   defp calculate_surface(height, grid, _i, _j, rows, cols) do
+
+20:51:16.453 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:51:16.453 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L38 -   defp calculate_surface(height, grid, _i, _j, rows, cols) do
+  L38 +   defp calculate_surface(_height, grid, _i, _j, rows, cols) do
+
+20:51:16.457 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:51:16.457 [debug] [credence_fix] semantic done. Applied: [UnusedVariable(1), UnusedVariable(1), UnusedVariable(1), UnusedVariable(1), UnusedVariable(1), UnusedVariable(1)]
+
+20:51:16.458 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:51:16.720 [debug] [credence_fix] NoMapThenAggregate: check found 8 issue(s), running fix...
+
+20:51:16.749 [debug] [credence_fix] NoMapThenAggregate: source CHANGED:
+  L30 -           calculate_surface(height, grid, i, j, rows, cols)
+  L30 +           calculate_surface(
+  L31 -         end)
+  L31 +             height,
+  L32 -       end)
+  L32 +             grid,
+  L33 -       |> Enum.map(&Enum.sum/1)
+  L33 +             i,
+  L34 -       |> Enum.sum()
+  L34 +             j,
+  L35 -     end
+  L35 +             rows,
+  L36 -   end
+  L36 +             cols
+  L37 - 
+  L37 +           )
+  L38 -   defp calculate_surface(_height, grid, _i, _j, rows, cols) do
+  L38 +         end)
+  L39 -     # Top surface area is 2 if there is at least one cube, else 0
+  L39 +       end)
+  L40 -     # But actually, the formula is:
+  L40 +       |> Enum.reduce(0, fn el, acc ->
+  L41 -     # For each cell, the surface area contribution is:
+  L41 +         acc + Enum.sum(el)
+  L42 -     # 2 * (height > 0 ? 1 : 0) +
+  L42 +       end)
+  L43 -     # (height - neighbor_down)^2 +
+  L43 +     end
+  L44 -     # (height - neighbor_up)^2 +
+  L44 +   end
+  L45 -     # (height - neighbor_right)^2 +
+  L45 + 
+  L46 -     # (height - neighbor_left)^2
+  L46 +   defp calculate_surface(_height, grid, _i, _j, rows, cols) do
+  L47 -     # Wait, let me re-derive.
+  L47 +     # Top surface area is 2 if there is at least one cube, else 0
+  L48 -     # The surface area of the whole shape can be calculated by summing
+  L48 +     # But actually, the formula is:
+  L49 -     # the exposed faces of each unit cube.
+  L49 +     # For each cell, the surface area contribution is:
+  L50 -     # Alternatively, a common approach is:
+  L50 +     # 2 * (height > 0 ? 1 : 0) +
+  L51 -     # Total area = sum over all cells of (max(0, height - neighbor) * 2 for each direction)
+  L51 +     # (height - neighbor_down)^2 +
+  L52 -     # No, that's not quite right.
+  L52 +     # (height - neighbor_up)^2 +
+  L53 - 
+  L53 +     # (height - neighbor_right)^2 +
+  L54 -     # Let's use the standard algorithm:
+  L54 +     # (height - neighbor_left)^2
+  L55 -     # For each cell (i, j) with height h:
+  L55 +     # Wait, let me re-derive.
+  L56 -     # - Top area: 2 if h > 0 (the top and bottom faces of the column)
+  L56 +     # The surface area of the whole shape can be calculated by summing
+  L57 -     #   Wait, the bottom is also exposed if h > 0. But the bottom is always exposed?
+  L57 +     # the exposed faces of each unit cube.
+  L58 -     #   No, the problem says "total exposed surface area". The bottom of the shape is exposed.
+  L58 +     # Alternatively, a common approach is:
+  L59 -     #   So for each column of height h > 0, we add 2 (top and bottom).
+  L59 +     # Total area = sum over all cells of (max(0, height - neighbor) * 2 for each direction)
+  L60 -     # - For each of the 4 directions, we add max(0, h - neighbor_height)
+  L60 +     # No, that's not quite right.
+  L61 - 
+  L61 + 
+  L62 -     # Let's verify with example 1: [[1,2],[3,4]]
+  L62 +     # Let's use the standard algorithm:
+  L63 -     # (0,0): h=1. Top+Bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: max(0, 1-0)=1 (boundary). Up: max(0, 1-0)=1 (boundary).
+  L63 +     # For each cell (i, j) with height h:
+  L64 -     # (0,1): h=2. Top+Bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0.
+  L64 +     # - Top area: 2 if h > 0 (the top and bottom faces of the column)
+  L65 -     # (1,0): h=3. Top+Bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2.
+  L65 +     #   Wait, the bottom is also exposed if h > 0. But the bottom is always exposed?
+  L66 -     # (1,1): h=4. Top+Bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2.
+  L66 +     #   No, the problem says "total exposed surface area". The bottom of the shape is exposed.
+  L67 -     # Sum: (2+1+1) + (2+1) + (2+2) + (2+1+2) = 4 + 3 + 4 + 5 = 16?
+  L67 +     #   So for each column of height h > 0, we add 2 (top and bottom).
+  L68 -     # But the expected answer is 34.
+  L68 +     # - For each of the 4 directions, we add max(0, h - neighbor_height)
+  L69 - 
+  L69 + 
+  L70 -     # Let me re-read the problem.
+  L70 +     # Let's verify with example 1: [[1,2],[3,4]]
+  L71 -     # "The surface area includes the top, bottom, and all four sides of each cube that are not covered by adjacent cubes."
+  L71 +     # (0,0): h=1. Top+Bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: max(0, 1-0)=1 (boundary). Up: max(0, 1-0)=1 (boundary).
+  L72 - 
+  L72 +     # (0,1): h=2. Top+Bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0.
+  L73 -     # The standard LeetCode problem "Surface Area of 3D Shapes" uses:
+  L73 +     # (1,0): h=3. Top+Bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2.
+  L74 -     # For each cell with height h:
+  L74 +     # (1,1): h=4. Top+Bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2.
+  L75 -     #   If h > 0, add 2 for top and bottom.
+  L75 +     # Sum: (2+1+1) + (2+1) + (2+2) + (2+1+2) = 4 + 3 + 4 + 5 = 16?
+  L76 -     #   For each of 4 directions, add max(0, h - neighbor)
+  L76 +     # But the expected answer is 34.
+  L77 - 
+  L77 + 
+  L78 -     # Let me re-calculate example 1: [[1,2],[3,4]]
+  L78 +     # Let me re-read the problem.
+  L79 -     # (0,0) h=1: top/bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: 1 (boundary, so max(0, 1-0)=1). Up: 1. Sum=2+1+1=4.
+  L79 +     # "The surface area includes the top, bottom, and all four sides of each cube that are not covered by adja (truncated)[0m
+[22m20:51:17.155 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m20:51:17.739 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m20:51:17.739 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+     warning: variable "j" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 314 │         |> Enum.with_index(fn _h, j ->
+     │                                   ~
+     │
+     └─ lib/solution.ex:314:35: Solution.calculate_surface/6
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m20:51:18.314 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m20:51:18.314 [info] [Validator.run] step 2/6: compile[0m
+[22m20:51:18.879 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:51:18.879 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+     warning: variable "h" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 303 │         |> Enum.with_index(fn h, j ->
+     │                               ~
+     │
+     └─ lib/solution.ex:303:31: Solution.calculate_surface/6
+
+    warning: variable "height" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 38 │   defp calculate_surface(height, grid, i, j, rows, cols) do
+    │                          ~~~~~~
+    │
+    └─ lib/solution.ex:38:26: Solution.calculate_surface/6
+
+     warning: variable "horizontal_pairs" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 287 │     horizontal_pairs = grid
+     │     ~~~~~~~~~~~~~~~~
+     │
+     └─ lib/solution.ex:287:5: Solution.calculate_surface/6
+
+    warning: variable "i" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 38 │   defp calculate_surface(height, grid, i, j, rows, cols) do
+    │                                        ~
+    │
+    └─ lib/solution.ex:38:40: Solution.calculate_surface/6
+
+    warning: variable "j" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 38 │   defp calculate_surface(height, grid, i, j, rows, cols) do
+    │                                           ~
+    │
+    └─ lib/solution.ex:38:43: Solution.calculate_surface/6
+
+     warning: variable "vertical_neighbor_pairs" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 299 │     vertical_neighbor_pairs = if rows > 0 do
+     │     ~~~~~~~~~~~~~~~~~~~~~~~
+     │
+     └─ lib/solution.ex:299:5: Solution.calculate_surface/6
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m20:51:18.879 [info] [Validator.run] step 3/6: format[0m
+[22m20:51:18.879 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:51:18.879 [info] [Validator.run] step 4/6: credo[0m
+[22m20:51:18.879 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:51:18.879 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:51:18.880 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:51:18.880 [info] [Validator.run] step 6/6: tests[0m
+[22m20:51:18.880 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:51:18.880 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:51:18.880 [debug] [Validator.run] final module (12930 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  The grid is represented as a list of lists (rows of integers), where each
+  integer represents the height of a column of cubes at that grid position.
+  """
+  def surface_area(grid) when is_list(grid) do
+    if grid == [] do
+      0
+    else
+      area(grid)
+    end
+  end
+
+  defp area(grid) do
+    rows = length(grid)
+    cols = if rows > 0 do
+      hd(grid) |> length()
+    else
+      0
+    end
+
+    if rows == 0 or cols == 0 do
+      0
+    else
+      grid
+      |> Enum.with_index(fn row, i ->
+        row
+        |> Enum.with_index(fn height, j ->
+          calculate_surface(height, grid, i, j, rows, cols)
+        end)
+      end)
+      |> Enum.map(&Enum.sum/1)
+      |> Enum.sum()
+    end
+  end
+
+  defp calculate_surface(height, grid, i, j, rows, cols) do
+    # Top surface area is 2 if there is at least one cube, else 0
+    # But actually, the formula is:
+    # For each cell, the surface area contribution is:
+    # 2 * (height > 0 ? 1 : 0) +
+    # (height - neighbor_down)^2 +
+    # (height - neighbor_up)^2 +
+    # (height - neighbor_right)^2 +
+    # (height - neighbor_left)^2
+    # Wait, let me re-derive.
+    # The surface area of the whole shape can be calculated by summing
+    # the exposed faces of each unit cube.
+    # Alternatively, a common approach is:
+    # Total area = sum over all cells of (max(0, height - neighbor) * 2 for each direction)
+    # No, that's not quite right.
+    
+    # Let's use the standard algorithm:
+    # For each cell (i, j) with height h:
+    # - Top area: 2 if h > 0 (the top and bottom faces of the column)
+    #   Wait, the bottom is also exposed if h > 0. But the bottom is always exposed?
+    #   No, the problem says "total exposed surface area". The bottom of the shape is exposed.
+    #   So for each column of height h > 0, we add 2 (top and bottom).
+    # - For each of the 4 directions, we add max(0, h - neighbor_height)
+    
+    # Let's verify with example 1: [[1,2],[3,4]]
+    # (0,0): h=1. Top+Bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: max(0, 1-0)=1 (boundary). Up: max(0, 1-0)=1 (boundary).
+    # (0,1): h=2. Top+Bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0.
+    # (1,0): h=3. Top+Bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2.
+    # (1,1): h=4. Top+Bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2.
+    # Sum: (2+1+1) + (2+1) + (2+2) + (2+1+2) = 4 + 3 + 4 + 5 = 16?
+    # But the expected answer is 34.
+    
+    # Let me re-read the problem.
+    # "The surface area includes the top, bottom, and all four sides of each cube that are not covered by adjacent cubes."
+    
+    # The standard LeetCode problem "Surface Area of 3D Shapes" uses:
+    # For each cell with height h:
+    #   If h > 0, add 2 for top and bottom.
+    #   For each of 4 directions, add max(0, h - neighbor)
+    
+    # Let me re-calculate example 1: [[1,2],[3,4]]
+    # (0,0) h=1: top/bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: 1 (boundary, so max(0, 1-0)=1). Up: 1. Sum=2+1+1=4.
+    # (0,1) h=2: top/bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0. Sum=2+1=3.
+    # (1,0) h=3: top/bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2. Sum=2+2=4.
+    # (1,1) h=4: top/bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2. Sum=2+1+2=5.
+    # Total = 4+3+4+5 = 16. Still not 34.
+    
+    # Wait, maybe the formula is different.
+    # Let's think of it as sum of all faces.
+    # Each cube has 6 faces. Total cubes = 1+2+3+4 = 10. Total faces = 60.
+    # Subtract 2 for each adjacent pair of cubes (including vertical adjacency).
+    # Horizontal adjacencies:
+    # (0,0)-(0,1): min(1,2)=1 pair.
+    # (1,0)-(1,1): min(3,4)=3 pairs.
+    # (0,0)-(1,0): min(1,3)=1 pair.
+    # (0,1)-(1,1): min(2,4)=2 pairs.
+    # Vertical pairs:
+    # (0,0): 0
+    # (0,1): 1
+    # (1,0): 2
+    # (1,1): 3
+    # Total horizontal pairs: 1+3 = 4.
+    # Total vertical pairs: 1+1+2+3 = 7.
+    # Total pairs = 11.
+    # Total exposed faces = 60 - 2*11 = 60 - 22 = 38. Not 34.
+    
+    # Let me try another approach.
+    # The formula max(0, h - neighbor) for each direction plus 2*1 if h>0.
+    # Maybe I made a mistake in the example calculation.
+    # Let's look at example 2: [[2]] -> 10.
+    # h=2. Top+Bot=2. Right: 0. Down: 0. Left: 2. Up: 2. Sum=2+2+2=6. Not 10.
+    
+    # Let me check LeetCode 887 "Surface Area of 3D Shapes".
+    # The formula is:
+    # area = 0
+    # for i in range(len(grid)):
+    #   for j in range(len(grid[i])):
+    #     if grid[i][j] > 0:
+    #       area += 2
+    #       area += max(0, grid[i][j] - grid[i-1][j]) if i>0 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i+1][j]) if i<rows-1 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i][j-1]) if j>0 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i][j+1]) if j<cols-1 else max(0, grid[i][j])
+    
+    # Let's re-calculate example 2: [[2]]
+    # h=2. Top+Bot=2.
+    # Up (boundary): max(0, 2-0)=2.
+    # Down (boundary): max(0, 2-0)=2.
+    # Left (boundary): max(0, 2-0)=2.
+    # Right (boundary): max(0, 2-0)=2.
+    # Sum = 2+2+2+2+2 = 10. Correct!
+    
+    # So the formula for boundary is max(0, h - 0) = h.
+    # Let me re-calculate example 1: [[1,2],[3,4]]
+    # (0,0) h=1: Top+Bot=2.
+    # Up (boundary): 1. Down (neighbor 3): max(0, 1-3)=0.
+    # Left (boundary): 1. Right (neighbor 2): max(0, 1-2)=0.
+    # Sum = 2+1+0+1+0 = 4.
+    # (0,1) h=2: Top+Bot=2.
+    # Up (boundary): 2. Down (neighbor 4): max(0, 2-4)=0.
+    # Left (neighbor 1): max(0, 2-1)=1. Right (boundary): 2.
+    # Sum = 2+2+0+1+2 = 7.
+    # (1,0) h=3: Top+Bot=2.
+    # Up (neighbor 1): max(0, 3-1)=2. Down (boundary): 3.
+    # Left (boundary): 3. Right (neighbor 4): max(0, 3-4)=0.
+    # Sum = 2+2+3+3+0 = 10.
+    # (1,1) h=4: Top+Bot=2.
+    # Up (neighbor 2): max(0, 4-2)=2. Down (boundary): 4.
+    # Left (neighbor 3): max(0, 4-3)=1. Right (boundary): 4.
+    # Sum = 2+2+4+1+4 = 11.
+    # Total = 4+7+10+11 = 32. But expected is 34.
+    
+    # Wait, let me re-check. Example 1 answer is 34.
+    # Let me re-calculate (0,0):
+    # Top/Bottom: 2.
+    # Up: boundary -> h = 1.
+    # Down: neighbor (1,0) h=3. max(0, 1-3) = 0.
+    # Left: boundary -> h = 1.
+    # Right: neighbor (0,1) h=2. max(0, 1-2) = 0.
+    # Sum = 2+1+0+1+0 = 4.
+    
+    # (0,1):
+    # Top/Bottom: 2.
+    # Up: boundary -> h = 2.
+    # Down: neighbor (1,1) h=4. max(0, 2-4) = 0.
+    # Left: neighbor (0,0) h=1. max(0, 2-1) = 1.
+    # Right: boundary -> h = 2.
+    # Sum = 2+2+0+1+2 = 7.
+    
+    # (1,0):
+    # Top/Bottom: 2.
+    # Up: neighbor (0,0) h=1. max(0, 3-1) = 2.
+    # Down: boundary -> h = 3.
+    # Left: boundary -> h = 3.
+    # Right: neighbor (1,1) h=4. max(0, 3-4) = 0.
+    # Sum = 2+2+3+3+0 = 10.
+    
+    # (1,1):
+    # Top/Bottom: 2.
+    # Up: neighbor (0,1) h=2. max(0, 4-2) = 2.
+    # Down: boundary -> h = 4.
+    # Left: neighbor (1,0) h=3. max(0, 4-3) = 1.
+    # Right: boundary -> h = 4.
+    # Sum = 2+2+4+1+4 = 11.
+    
+    # Total = 4+7+10+11 = 32. But expected is 34.
+    
+    # Let me check if I have the grid correct. [[1,2],[3,4]]
+    # Row 0: [1, 2], Row 1: [3, 4].
+    # (0,0)=1, (0,1)=2, (1,0)=3, (1,1)=4.
+    
+    # Maybe the formula is slightly different.
+    # Let's think about it as sum of all faces minus hidden faces.
+    # Total cubes: 1+2+3+4 = 10. Total faces = 60.
+    # Hidden faces:
+    # Vertical adjacency (within a column):
+    # (0,0): 0 pairs (height 1).
+    # (0,1): 1 pair (height 2).
+    # (1,0): 2 pairs (height 3).
+    # (1,1): 3 pairs (height 4).
+    # Total vertical hidden faces: 0+1+2+3 = 6. But each pair hides 2 faces, so 12 faces.
+    
+    # Horizontal adjacency (between adjacent cells):
+    # (0,0)-(0,1): min(1,2) = 1 pair. Hides 2 faces.
+    # (1,0)-(1,1): min(3,4) = 3 pairs. Hides 2 faces per pair -> 6 faces.
+    # (0,0)-(1,0): min(1,3) = 1 pair. Hides 2 faces.
+    # (0,1)-(1,1): min(2,4) = 2 pairs. Hides 4 faces.
+    # Total horizontal h (truncated)[0m
+[36m20:51:18.880 [debug] [Validator.run] final test (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[33m20:51:18.880 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m20:51:18.880 [info] [Solve attempt 2] generating (fn=surface_area)[0m
+[36m20:51:18.880 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  The grid is represented as a list of lists (rows of integers), where each
+  integer represents the height of a column of cubes at that grid position.
+  """
+  def surface_area(grid) when is_list(grid) do
+    if grid == [] do
+      0
+    else
+      area(grid)
+    end
+  end
+
+  defp area(grid) do
+    rows = length(grid)
+    cols = if rows > 0 do
+      hd(grid) |> length()
+    else
+      0
+    end
+
+    if rows == 0 or cols == 0 do
+      0
+    else
+      grid
+      |> Enum.with_index(fn row, i ->
+        row
+        |> Enum.with_index(fn height, j ->
+          calculate_surface(height, grid, i, j, rows, cols)
+        end)
+      end)
+      |> Enum.map(&Enum.sum/1)
+      |> Enum.sum()
+    end
+  end
+
+  defp calculate_surface(height, grid, i, j, rows, cols) do
+    # Top surface area is 2 if there is at least one cube, else 0
+    # But actually, the formula is:
+    # For each cell, the surface area contribution is:
+    # 2 * (height > 0 ? 1 : 0) +
+    # (height - neighbor_down)^2 +
+    # (height - neighbor_up)^2 +
+    # (height - neighbor_right)^2 +
+    # (height - neighbor_left)^2
+    # Wait, let me re-derive.
+    # The surface area of the whole shape can be calculated by summing
+    # the exposed faces of each unit cube.
+    # Alternatively, a common approach is:
+    # Total area = sum over all cells of (max(0, height - neighbor) * 2 for each direction)
+    # No, that's not quite right.
+    
+    # Let's use the standard algorithm:
+    # For each cell (i, j) with height h:
+    # - Top area: 2 if h > 0 (the top and bottom faces of the column)
+    #   Wait, the bottom is also exposed if h > 0. But the bottom is always exposed?
+    #   No, the problem says "total exposed surface area". The bottom of the shape is exposed.
+    #   So for each column of height h > 0, we add 2 (top and bottom).
+    # - For each of the 4 directions, we add max(0, h - neighbor_height)
+    
+    # Let's verify with example 1: [[1,2],[3,4]]
+    # (0,0): h=1. Top+Bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: max(0, 1-0)=1 (boundary). Up: max(0, 1-0)=1 (boundary).
+    # (0,1): h=2. Top+Bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0.
+    # (1,0): h=3. Top+Bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2.
+    # (1,1): h=4. Top+Bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2.
+    # Sum: (2+1+1) + (2+1) + (2+2) + (2+1+2) = 4 + 3 + 4 + 5 = 16?
+    # But the expected answer is 34.
+    
+    # Let me re-read the problem.
+    # "The surface area includes the top, bottom, and all four sides of each cube that are not covered by adjacent cubes."
+    
+    # The standard LeetCode problem "Surface Area of 3D Shapes" uses:
+    # For each cell with height h:
+    #   If h > 0, add 2 for top and bottom.
+    #   For each of 4 directions, add max(0, h - neighbor)
+    
+    # Let me re-calculate example 1: [[1,2],[3,4]]
+    # (0,0) h=1: top/bot=2. Right: max(0, 1-2)=0. Down: max(0, 1-3)=0. Left: 1 (boundary, so max(0, 1-0)=1). Up: 1. Sum=2+1+1=4.
+    # (0,1) h=2: top/bot=2. Right: 0. Down: max(0, 2-4)=0. Left: max(0, 2-1)=1. Up: 0. Sum=2+1=3.
+    # (1,0) h=3: top/bot=2. Right: max(0, 3-4)=0. Down: 0. Left: 0. Up: max(0, 3-1)=2. Sum=2+2=4.
+    # (1,1) h=4: top/bot=2. Right: 0. Down: 0. Left: max(0, 4-3)=1. Up: max(0, 4-2)=2. Sum=2+1+2=5.
+    # Total = 4+3+4+5 = 16. Still not 34.
+    
+    # Wait, maybe the formula is different.
+    # Let's think of it as sum of all faces.
+    # Each cube has 6 faces. Total cubes = 1+2+3+4 = 10. Total faces = 60.
+    # Subtract 2 for each adjacent pair of cubes (including vertical adjacency).
+    # Horizontal adjacencies:
+    # (0,0)-(0,1): min(1,2)=1 pair.
+    # (1,0)-(1,1): min(3,4)=3 pairs.
+    # (0,0)-(1,0): min(1,3)=1 pair.
+    # (0,1)-(1,1): min(2,4)=2 pairs.
+    # Vertical pairs:
+    # (0,0): 0
+    # (0,1): 1
+    # (1,0): 2
+    # (1,1): 3
+    # Total horizontal pairs: 1+3 = 4.
+    # Total vertical pairs: 1+1+2+3 = 7.
+    # Total pairs = 11.
+    # Total exposed faces = 60 - 2*11 = 60 - 22 = 38. Not 34.
+    
+    # Let me try another approach.
+    # The formula max(0, h - neighbor) for each direction plus 2*1 if h>0.
+    # Maybe I made a mistake in the example calculation.
+    # Let's look at example 2: [[2]] -> 10.
+    # h=2. Top+Bot=2. Right: 0. Down: 0. Left: 2. Up: 2. Sum=2+2+2=6. Not 10.
+    
+    # Let me check LeetCode 887 "Surface Area of 3D Shapes".
+    # The formula is:
+    # area = 0
+    # for i in range(len(grid)):
+    #   for j in range(len(grid[i])):
+    #     if grid[i][j] > 0:
+    #       area += 2
+    #       area += max(0, grid[i][j] - grid[i-1][j]) if i>0 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i+1][j]) if i<rows-1 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i][j-1]) if j>0 else max(0, grid[i][j])
+    #       area += max(0, grid[i][j] - grid[i][j+1]) if j<cols-1 else max(0, grid[i][j])
+    
+    # Let's re-calculate example 2: [[2]]
+    # h=2. Top+Bot=2.
+    # Up (boundary): max(0, 2-0)=2.
+    # Down (boundary): max(0, 2-0)=2.
+    # Left (boundary): max(0, 2-0)=2.
+    # Right (boundary): max(0, 2-0)=2.
+    # Sum = 2+2+2+2+2 = 10. Correct!
+    
+    # So the formula for boundary is max(0, h - 0) = h.
+    # Let me re-calculate example 1: [[1,2],[3,4]]
+    # (0,0) h=1: Top+Bot=2.
+    # Up (boundary): 1. Down (neighbor 3): max(0, 1-3)=0.
+    # Left (boundary): 1. Right (neighbor 2): max(0, 1-2)=0.
+    # Sum = 2+1+0+1+0 = 4.
+    # (0,1) h=2: Top+Bot=2.
+    # Up (boundary): 2. Down (neighbor 4): max(0, 2-4)=0.
+    # Left (neighbor 1): max(0, 2-1)=1. Right (boundary): 2.
+    # Sum = 2+2+0+1+2 = 7.
+    # (1,0) h=3: Top+Bot=2.
+    # Up (neighbor 1): max(0, 3-1)=2. Down (boundary): 3.
+    # Left (boundary): 3. Right (neighbor 4): max(0, 3-4)=0.
+    # Sum = 2+2+3+3+0 = 10.
+    # (1,1) h=4: Top+Bot=2.
+    # Up (neighbor 2): max(0, 4-2)=2. Down (boundary): 4.
+    # Left (neighbor 3): max(0, 4-3)=1. Right (boundary): 4.
+    # Sum = 2+2+4+1+4 = 11.
+    # Total = 4+7+10+11 = 32. But expected is 34.
+    
+    # Wait, let me re-check. Example 1 answer is 34.
+    # Let me re-calculate (0,0):
+    # Top/Bottom: 2.
+    # Up: boundary -> h = 1.
+    # Down: neighbor (1,0) h=3. max(0, 1-3) = 0.
+    # Left: boundary -> h = 1.
+    # Right: neighbor (0,1) h=2. max(0, 1-2) = 0.
+    # Sum = 2+1+0+1+0 = 4.
+    
+    # (0,1):
+    # Top/Bottom: 2.
+    # Up: boundary -> h = 2.
+    # Down: neighbor (1,1) h=4. max(0, 2-4) = 0.
+    # Left: neighbor (0,0) h=1. max(0, 2-1) = 1.
+    # Right: boundary -> h = 2.
+    # Sum = 2+2+0+1+2 = 7.
+    
+    # (1,0):
+    # Top/Bottom: 2.
+    # Up: neighbor (0,0) h=1. max(0, 3-1) = 2.
+    # Down: boundary -> h = 3.
+    # Left: boundary -> h = 3.
+    # Right: neighbor (1,1) h=4. max(0, 3-4) = 0.
+    # Sum = 2+2+3+3+0 = 10.
+    
+    # (1,1):
+    # Top/Bottom: 2.
+    # Up: neighbor (0,1) h=2. max(0, 4-2) = 2.
+    # Down: boundary -> h = 4.
+    # Left: neighbor (1,0) h=3. max(0, 4-3) = 1.
+    # Right: boundary -> h = 4.
+    # Sum = 2+2+4+1+4 = 11. (truncated)[0m
+[36m20:51:28.597 [debug] [LLM.call] finish=stop len=2148 usage=%{"completion_tokens" => 640, "prompt_tokens" => 6232, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 6872}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_int))) :: non_neg_int
+  def surface_area(grid) when is_list(grid) do
+    if grid == [] do
+      0
+    else
+      rows = length(grid)
+      cols = if rows > 0, do: hd(grid) |> length(), else: 0
+
+      if rows == 0 or cols == 0 do
+        0
+      else
+        total_cubes = Enum.sum(List.flatten(grid))
+        total_faces = total_cubes * 6
+
+        # Count vertical pairs (within each column)
+        vertical_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(row) |> fn(h) -> if h > 0, do: h - 1, else: 0 end.()
+            # Actually simpler: sum of max(0, h-1) for each cell
+          end)
+        )
+        # Let's recalculate vertical pairs properly
+        vertical_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(Enum.map(row, fn h -> if h > 0, do: h - 1, else: 0 end))
+          end)
+        )
+
+        # Count horizontal neighbor pairs (within each row)
+        horizontal_neighbor_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(Enum.chunk_every(row, 2, 1, [:discard]) |> Enum.map(fn [h1, h2] -> min(h1, h2) end))
+          end)
+        )
+
+        # Count vertical neighbor pairs (between rows)
+        vertical_neighbor_pairs = Enum.sum(
+          Enum.map(Enum.chunk_every(grid, 2, 1, [:discard]), fn [row1, row2] ->
+            Enum.zip(row1, row2)
+            |> Enum.map(fn {h1, h2} -> min(h1, h2) end)
+            |> Enum.sum()
+          end)
+        )
+
+        hidden_faces = 2 * vertical_pairs + 2 * (horizontal_neighbor_pairs + vertical_neighbor_pairs)
+        total_faces - hidden_faces
+      end
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end
+---END---[0m
+[22m20:51:28.597 [info] [LLM.call] local_qwen_thinking completed in 9717ms — ok[0m
+[22m20:51:28.597 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:51:28.598 [debug] [Validator.run] module code (1799 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_int))) :: non_neg_int
+  def surface_area(grid) when is_list(grid) do
+    if grid == [] do
+      0
+    else
+      rows = length(grid)
+      cols = if rows > 0, do: hd(grid) |> length(), else: 0
+
+      if rows == 0 or cols == 0 do
+        0
+      else
+        total_cubes = Enum.sum(List.flatten(grid))
+        total_faces = total_cubes * 6
+
+        # Count vertical pairs (within each column)
+        vertical_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(row) |> fn(h) -> if h > 0, do: h - 1, else: 0 end.()
+            # Actually simpler: sum of max(0, h-1) for each cell
+          end)
+        )
+        # Let's recalculate vertical pairs properly
+        vertical_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(Enum.map(row, fn h -> if h > 0, do: h - 1, else: 0 end))
+          end)
+        )
+
+        # Count horizontal neighbor pairs (within each row)
+        horizontal_neighbor_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(Enum.chunk_every(row, 2, 1, [:discard]) |> Enum.map(fn [h1, h2] -> min(h1, h2) end))
+          end)
+        )
+
+        # Count vertical neighbor pairs (between rows)
+        vertical_neighbor_pairs = Enum.sum(
+          Enum.map(Enum.chunk_every(grid, 2, 1, [:discard]), fn [row1, row2] ->
+            Enum.zip(row1, row2)
+            |> Enum.map(fn {h1, h2} -> min(h1, h2) end)
+            |> Enum.sum()
+          end)
+        )
+
+        hidden_faces = 2 * vertical_pairs + 2 * (horizontal_neighbor_pairs + vertical_neighbor_pairs)
+        total_faces - hidden_faces
+      end
+    end
+  end
+end[0m
+[36m20:51:28.598 [debug] [Validator.run] test code (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[36m20:51:28.598 [debug] [Budget] spent so far (est.): $1.2655[0m
+[22m20:51:28.598 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:51:28.598 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:51:29.228 [debug] [run_credence_fix] exit=0 output:
+
+20:51:29.177 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:51:29.179 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:51:29.189 [debug] [credence_fix] Code.compile_string raised: credence_check.ex:5: type non_neg_int/0 undefined (no such type in Solution)
+
+20:51:29.189 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+20:51:29.189 [debug] [credence_fix] NoBareNamesInSpec: matched diagnostic, running fix...
+
+20:51:29.197 [debug] [credence_fix] NoBareNamesInSpec: source CHANGED:
+  L20 -         vertical_pairs = Enum.sum(
+  L20 +         vertical_pairs =
+  L21 -           grid
+  L21 +           Enum.sum(
+  L22 -           |> Enum.map(fn row ->
+  L22 +             grid
+  L23 -             Enum.sum(row) |> fn(h) -> if h > 0, do: h - 1, else: 0 end.()
+  L23 +             |> Enum.map(fn row ->
+  L24 -             # Actually simpler: sum of max(0, h-1) for each cell
+  L24 +               Enum.sum(row) |> (fn h -> if h > 0, do: h - 1, else: 0 end).()
+  L25 -           end)
+  L25 +               # Actually simpler: sum of max(0, h-1) for each cell
+  L26 -         )
+  L26 +             end)
+  L27 -         # Let's recalculate vertical pairs properly
+  L27 +           )
+  L28 -         vertical_pairs = Enum.sum(
+  L28 + 
+  L29 -           grid
+  L29 +         # Let's recalculate vertical pairs properly
+  L30 -           |> Enum.map(fn row ->
+  L30 +         vertical_pairs =
+  L31 -             Enum.sum(Enum.map(row, fn h -> if h > 0, do: h - 1, else: 0 end))
+  L31 +           Enum.sum(
+  L32 -           end)
+  L32 +             grid
+  L33 -         )
+  L33 +             |> Enum.map(fn row ->
+  L34 - 
+  L34 +               Enum.sum(Enum.map(row, fn h -> if h > 0, do: h - 1, else: 0 end))
+  L35 -         # Count horizontal neighbor pairs (within each row)
+  L35 +             end)
+  L36 -         horizontal_neighbor_pairs = Enum.sum(
+  L36 +           )
+  L37 -           grid
+  L37 + 
+  L38 -           |> Enum.map(fn row ->
+  L38 +         # Count horizontal neighbor pairs (within each row)
+  L39 -             Enum.sum(Enum.chunk_every(row, 2, 1, [:discard]) |> Enum.map(fn [h1, h2] -> min(h1, h2) end))
+  L39 +         horizontal_neighbor_pairs =
+  L40 -           end)
+  L40 +           Enum.sum(
+  L41 -         )
+  L41 +             grid
+  L42 - 
+  L42 +             |> Enum.map(fn row ->
+  L43 -         # Count vertical neighbor pairs (between rows)
+  L43 +               Enum.sum(
+  L44 -         vertical_neighbor_pairs = Enum.sum(
+  L44 +                 Enum.chunk_every(row, 2, 1, [:discard])
+  L45 -           Enum.map(Enum.chunk_every(grid, 2, 1, [:discard]), fn [row1, row2] ->
+  L45 +                 |> Enum.map(fn [h1, h2] -> min(h1, h2) end)
+  L46 -             Enum.zip(row1, row2)
+  L46 +               )
+  L47 -             |> Enum.map(fn {h1, h2} -> min(h1, h2) end)
+  L47 +             end)
+  L48 -             |> Enum.sum()
+  L48 +           )
+  L49 -           end)
+  L49 + 
+  L50 -         )
+  L50 +         # Count vertical neighbor pairs (between rows)
+  L51 - 
+  L51 +         vertical_neighbor_pairs =
+  L52 -         hidden_faces = 2 * vertical_pairs + 2 * (horizontal_neighbor_pairs + vertical_neighbor_pairs)
+  L52 +           Enum.sum(
+  L53 -         total_faces - hidden_faces
+  L53 +             Enum.map(Enum.chunk_every(grid, 2, 1, [:discard]), fn [row1, row2] ->
+  L54 -       end
+  L54 +               Enum.zip(row1, row2)
+  L55 -     end
+  L55 +               |> Enum.map(fn {h1, h2} -> min(h1, h2) end)
+  L56 -   end
+  L56 +               |> Enum.sum()
+  L57 - end
+  L57 +             end)
+  L58 +           )
+  L59 + 
+  L60 +         hidden_faces =
+  L61 +           2 * vertical_pairs + 2 * (horizontal_neighbor_pairs + vertical_neighbor_pairs)
+  L62 + 
+  L63 +         total_faces - hidden_faces
+  L64 +       end
+  L65 +     end
+  L66 +   end
+  L67 + end
+
+20:51:29.197 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+20:51:29.200 [debug] [credence_fix] Code.compile_string raised: credence_check.ex:5: type non_neg_int/0 undefined (no such type in Solution)
+
+20:51:29.200 [debug] [credence_fix] semantic pass 2: compilation FAILED, 1 error(s)
+
+20:51:29.200 [debug] [credence_fix] NoBareNamesInSpec: matched diagnostic, running fix...
+
+20:51:29.204 [debug] [credence_fix] NoBareNamesInSpec: fix returned IDENTICAL source (no change)
+
+20:51:29.204 [debug] [credence_fix] semantic pass 2: no rule could fix the error(s), stopping
+
+20:51:29.204 [debug] [credence_fix] semantic done. Applied: [NoBareNamesInSpec(1), NoBareNamesInSpec(1)]
+
+20:51:29.205 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:51:29.207 [debug] [credence_fix] Code.compile_string raised: credence_check.ex:5: type non_neg_int/0 undefined (no such type in Solution)
+
+20:51:29.207 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+20:51:29.211 [debug] [credence_fix] Code.compile_string raised: credence_check.ex:5: type non_neg_int/0 undefined (no such type in Solution)
+FIXED
+APPLIED_RULES: [{Credence.Semantic.NoBareNamesInSpec, 1}, {Credence.Semantic.NoBareNamesInSpec, 1}]
+REMAINING_ISSUES: 6 unfixable issue(s)
+no_bare_names_in_spec: credence_check.ex:5: type non_neg_int/0 undefined (no such type in Solution) (line 5)
+no_anon_fn_application_in_pipe: Avoid applying anonymous functions with `.()` inside a pipeline. Use `then/2` instead: `|> then(fn x -> ... end)`. (line 24)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 34)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 52)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 56)
+no_zip_then_map: `Enum.zip/2` followed by `Enum.map/2` with tuple destructuring allocates an intermediate list. Use `Enum.zip_with/3` instead. (line 55)
+[0m
+[22m20:51:29.228 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m20:51:29.715 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m20:51:29.715 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: variable "vertical_pairs" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 20 │         vertical_pairs =
+    │         ~
+    │
+    └─ lib/solution.ex:20:9: Solution.surface_area/1
+
+
+== Compilation error in file lib/solution.ex ==
+** (Kernel.TypespecError) lib/solution.ex:5: type non_neg_int/0 undefined (no such type in Solution)
+    (elixir 1.19.5) lib/kernel/typespec.ex:992: Kernel.Typespec.compile_error/2
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+    (elixir 1.19.5) lib/kernel/typespec.ex:900: Kernel.Typespec.typespec/4
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+    (elixir 1.19.5) lib/kernel/typespec.ex:900: Kernel.Typespec.typespec/4
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+    (elixir 1.19.5) lib/kernel/typespec.ex:396: Kernel.Typespec.translate_spec/8
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+[0m
+[33m20:51:30.372 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m20:51:30.372 [info] [Validator.run] step 2/6: compile[0m
+[22m20:51:31.018 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:51:31.018 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: variable "vertical_pairs" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 20 │         vertical_pairs = Enum.sum(
+    │         ~
+    │
+    └─ lib/solution.ex:20:9: Solution.surface_area/1
+
+
+== Compilation error in file lib/solution.ex ==
+** (Kernel.TypespecError) lib/solution.ex:5: type non_neg_int/0 undefined (no such type in Solution)
+    (elixir 1.19.5) lib/kernel/typespec.ex:992: Kernel.Typespec.compile_error/2
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+    (elixir 1.19.5) lib/kernel/typespec.ex:900: Kernel.Typespec.typespec/4
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+    (elixir 1.19.5) lib/kernel/typespec.ex:900: Kernel.Typespec.typespec/4
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+    (elixir 1.19.5) lib/kernel/typespec.ex:396: Kernel.Typespec.translate_spec/8
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+[0m
+[22m20:51:31.018 [info] [Validator.run] step 3/6: format[0m
+[22m20:51:31.018 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:51:31.018 [info] [Validator.run] step 4/6: credo[0m
+[22m20:51:31.018 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:51:31.018 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:51:31.018 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:51:31.018 [info] [Validator.run] step 6/6: tests[0m
+[22m20:51:31.018 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:51:31.018 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:51:31.018 [debug] [Validator.run] final module (1799 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_int))) :: non_neg_int
+  def surface_area(grid) when is_list(grid) do
+    if grid == [] do
+      0
+    else
+      rows = length(grid)
+      cols = if rows > 0, do: hd(grid) |> length(), else: 0
+
+      if rows == 0 or cols == 0 do
+        0
+      else
+        total_cubes = Enum.sum(List.flatten(grid))
+        total_faces = total_cubes * 6
+
+        # Count vertical pairs (within each column)
+        vertical_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(row) |> fn(h) -> if h > 0, do: h - 1, else: 0 end.()
+            # Actually simpler: sum of max(0, h-1) for each cell
+          end)
+        )
+        # Let's recalculate vertical pairs properly
+        vertical_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(Enum.map(row, fn h -> if h > 0, do: h - 1, else: 0 end))
+          end)
+        )
+
+        # Count horizontal neighbor pairs (within each row)
+        horizontal_neighbor_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(Enum.chunk_every(row, 2, 1, [:discard]) |> Enum.map(fn [h1, h2] -> min(h1, h2) end))
+          end)
+        )
+
+        # Count vertical neighbor pairs (between rows)
+        vertical_neighbor_pairs = Enum.sum(
+          Enum.map(Enum.chunk_every(grid, 2, 1, [:discard]), fn [row1, row2] ->
+            Enum.zip(row1, row2)
+            |> Enum.map(fn {h1, h2} -> min(h1, h2) end)
+            |> Enum.sum()
+          end)
+        )
+
+        hidden_faces = 2 * vertical_pairs + 2 * (horizontal_neighbor_pairs + vertical_neighbor_pairs)
+        total_faces - hidden_faces
+      end
+    end
+  end
+end[0m
+[36m20:51:31.018 [debug] [Validator.run] final test (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[33m20:51:31.018 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m20:51:31.019 [info] [Solve attempt 3] generating (fn=surface_area)[0m
+[36m20:51:31.019 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_int))) :: non_neg_int
+  def surface_area(grid) when is_list(grid) do
+    if grid == [] do
+      0
+    else
+      rows = length(grid)
+      cols = if rows > 0, do: hd(grid) |> length(), else: 0
+
+      if rows == 0 or cols == 0 do
+        0
+      else
+        total_cubes = Enum.sum(List.flatten(grid))
+        total_faces = total_cubes * 6
+
+        # Count vertical pairs (within each column)
+        vertical_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(row) |> fn(h) -> if h > 0, do: h - 1, else: 0 end.()
+            # Actually simpler: sum of max(0, h-1) for each cell
+          end)
+        )
+        # Let's recalculate vertical pairs properly
+        vertical_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(Enum.map(row, fn h -> if h > 0, do: h - 1, else: 0 end))
+          end)
+        )
+
+        # Count horizontal neighbor pairs (within each row)
+        horizontal_neighbor_pairs = Enum.sum(
+          grid
+          |> Enum.map(fn row ->
+            Enum.sum(Enum.chunk_every(row, 2, 1, [:discard]) |> Enum.map(fn [h1, h2] -> min(h1, h2) end))
+          end)
+        )
+
+        # Count vertical neighbor pairs (between rows)
+        vertical_neighbor_pairs = Enum.sum(
+          Enum.map(Enum.chunk_every(grid, 2, 1, [:discard]), fn [row1, row2] ->
+            Enum.zip(row1, row2)
+            |> Enum.map(fn {h1, h2} -> min(h1, h2) end)
+            |> Enum.sum()
+          end)
+        )
+
+        hidden_faces = 2 * vertical_pairs + 2 * (horizontal_neighbor_pairs + vertical_neighbor_pairs)
+        total_faces - hidden_faces
+      end
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: variable "vertical_pairs" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 20 │         vertical_pairs = Enum.sum(
+    │         ~
+    │
+    └─ lib/solution.ex:20:9: Solution.surface_area/1
+
+
+== Compilation error in file lib/solution.ex ==
+** (Kernel.TypespecError) lib/solution.ex:5: type non_neg_int/0 undefined (no such type in Solution)
+    (elixir 1.19.5) lib/kernel/typespec.ex:992: Kernel.Typespec.compile_error/2
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+    (elixir 1.19.5) lib/kernel/typespec.ex:900: Kernel.Typespec.typespec/4
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+    (elixir 1.19.5) lib/kernel/typespec.ex:900: Kernel.Typespec.typespec/4
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+    (elixir 1.19.5) lib/kernel/typespec.ex:396: Kernel.Typespec.translate_spec/8
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+
+Reminder: module `Solution`, function `surface_area` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:51:39.210 [debug] [LLM.call] finish=stop len=3233 usage=%{"completion_tokens" => 847, "prompt_tokens" => 1273, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2120}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_integer))) :: non_integer
+  def surface_area(grid) when is_list(grid) do
+    case grid do
+      [] ->
+        0
+      _ ->
+        rows = length(grid)
+        cols = if rows > 0, do: length(hd(grid)), else: 0
+
+        if rows == 0 or cols == 0 do
+          0
+        else
+          total_cubes = Enum.sum(List.flatten(grid))
+          total_faces = total_cubes * 6
+
+          # Count hidden faces due to vertical stacking (within same column)
+          # For each cell, if h > 0, there are (h-1) vertical internal faces.
+          # Each internal face hides 2 faces (top of bottom, bottom of top).
+          vertical_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              Enum.sum(Enum.map(row, fn h ->
+                if h > 0, do: h - 1, else: 0
+              end))
+            end)
+          )
+
+          # Count hidden faces due to horizontal neighbors (within same row)
+          horizontal_neighbor_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              Enum.reduce(
+                Enum.chunk_every(row, 2, 1, []),
+                0,
+                fn [h1, h2], acc ->
+                  acc + min(h1, h2)
+                end
+              )
+            end)
+            |> elem(0, 0) # This approach is flawed with reduce on list of lists
+          )
+          
+          # Let's redo horizontal neighbor pairs properly
+          horizontal_neighbor_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              case row do
+                [] -> 0
+                [h] -> 0
+                _ ->
+                  Enum.reduce(
+                    Enum.chunk_every(row, 2, 1),
+                    0,
+                    fn [h1, h2], acc ->
+                      acc + min(h1, h2)
+                    end
+                  )
+              end
+            end)
+          )
+
+          # Count hidden faces due to vertical neighbors (between rows, same column)
+          # We transpose the grid to get columns, then look at adjacent rows in each column
+          # Actually, it's easier to iterate row by row and compare with previous row
+          # For each column j, and row i, compare grid[i][j] with grid[i+1][j]
+          # This is "vertical neighbors" between rows.
+          
+          vertical_neighbor_pairs = Enum.sum(
+            Enum.chunk_every(grid, 2, 1)
+            |> Enum.map(fn [row1, row2] ->
+              Enum.zip(row1, row2)
+              |> Enum.reduce(0, fn {h1, h2}, acc ->
+                acc + min(h1, h2)
+              end)
+            end)
+          )
+
+          hidden_faces = 2 * vertical_pairs + 2 * horizontal_neighbor_pairs + 2 * vertical_neighbor_pairs
+          total_faces - hidden_faces
+        end
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end
+---END---[0m
+[22m20:51:39.210 [info] [LLM.call] local_qwen_thinking completed in 8191ms — ok[0m
+[22m20:51:39.210 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:51:39.210 [debug] [Validator.run] module code (2884 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_integer))) :: non_integer
+  def surface_area(grid) when is_list(grid) do
+    case grid do
+      [] ->
+        0
+      _ ->
+        rows = length(grid)
+        cols = if rows > 0, do: length(hd(grid)), else: 0
+
+        if rows == 0 or cols == 0 do
+          0
+        else
+          total_cubes = Enum.sum(List.flatten(grid))
+          total_faces = total_cubes * 6
+
+          # Count hidden faces due to vertical stacking (within same column)
+          # For each cell, if h > 0, there are (h-1) vertical internal faces.
+          # Each internal face hides 2 faces (top of bottom, bottom of top).
+          vertical_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              Enum.sum(Enum.map(row, fn h ->
+                if h > 0, do: h - 1, else: 0
+              end))
+            end)
+          )
+
+          # Count hidden faces due to horizontal neighbors (within same row)
+          horizontal_neighbor_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              Enum.reduce(
+                Enum.chunk_every(row, 2, 1, []),
+                0,
+                fn [h1, h2], acc ->
+                  acc + min(h1, h2)
+                end
+              )
+            end)
+            |> elem(0, 0) # This approach is flawed with reduce on list of lists
+          )
+          
+          # Let's redo horizontal neighbor pairs properly
+          horizontal_neighbor_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              case row do
+                [] -> 0
+                [h] -> 0
+                _ ->
+                  Enum.reduce(
+                    Enum.chunk_every(row, 2, 1),
+                    0,
+                    fn [h1, h2], acc ->
+                      acc + min(h1, h2)
+                    end
+                  )
+              end
+            end)
+          )
+
+          # Count hidden faces due to vertical neighbors (between rows, same column)
+          # We transpose the grid to get columns, then look at adjacent rows in each column
+          # Actually, it's easier to iterate row by row and compare with previous row
+          # For each column j, and row i, compare grid[i][j] with grid[i+1][j]
+          # This is "vertical neighbors" between rows.
+          
+          vertical_neighbor_pairs = Enum.sum(
+            Enum.chunk_every(grid, 2, 1)
+            |> Enum.map(fn [row1, row2] ->
+              Enum.zip(row1, row2)
+              |> Enum.reduce(0, fn {h1, h2}, acc ->
+                acc + min(h1, h2)
+              end)
+            end)
+          )
+
+          hidden_faces = 2 * vertical_pairs + 2 * horizontal_neighbor_pairs + 2 * vertical_neighbor_pairs
+          total_faces - hidden_faces
+        end
+    end
+  end
+end[0m
+[36m20:51:39.210 [debug] [Validator.run] test code (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[36m20:51:39.210 [debug] [Budget] spent so far (est.): $1.2668[0m
+[22m20:51:39.210 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:51:39.210 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:51:39.822 [debug] [run_credence_fix] exit=0 output:
+
+20:51:39.783 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:51:39.785 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:51:39.794 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+20:51:39.794 [debug] [credence_fix] semantic pass 1: compilation FAILED, 2 error(s)
+
+20:51:39.794 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+20:51:39.794 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+20:51:39.796 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+20:51:39.796 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+20:51:39.796 [debug] [credence_fix] semantic done. Applied: [UndefinedFunction(1)]
+
+20:51:39.797 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:51:39.799 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+20:51:39.799 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+20:51:39.804 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+NO_CHANGES
+APPLIED_RULES: [{Credence.Semantic.UndefinedFunction, 1}]
+REMAINING_ISSUES: 2 unfixable issue(s)
+undefined_function: undefined function elem/3 (expected Solution to define such a function or for it to be imported, but none are available) (line 44)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 26)
+[0m
+[36m20:51:39.822 [debug] [run_credence_fix] no changes needed[0m
+[22m20:51:39.823 [info] [Validator.run] credence: no changes needed[0m
+[22m20:51:39.823 [info] [Validator.run] step 2/6: compile[0m
+[22m20:51:40.505 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:51:40.505 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: variable "h" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 53 │                 [h] -> 0
+    │                  ~
+    │
+    └─ lib/solution.ex:53:18: Solution.surface_area/1
+
+    warning: variable "horizontal_neighbor_pairs" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 33 │           horizontal_neighbor_pairs = Enum.sum(
+    │           ~
+    │
+    └─ lib/solution.ex:33:11: Solution.surface_area/1
+
+    error: undefined function elem/3 (expected Solution to define such a function or for it to be imported, but none are available)
+    │
+ 44 │             |> elem(0, 0) # This approach is flawed with reduce on list of lists
+    │                ^^^^
+    │
+    └─ lib/solution.ex:44:16: Solution.surface_area/1
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[22m20:51:40.505 [info] [Validator.run] step 3/6: format[0m
+[22m20:51:40.505 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:51:40.505 [info] [Validator.run] step 4/6: credo[0m
+[22m20:51:40.505 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:51:40.505 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:51:40.505 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:51:40.505 [info] [Validator.run] step 6/6: tests[0m
+[22m20:51:40.505 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:51:40.505 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:51:40.505 [debug] [Validator.run] final module (2884 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_integer))) :: non_integer
+  def surface_area(grid) when is_list(grid) do
+    case grid do
+      [] ->
+        0
+      _ ->
+        rows = length(grid)
+        cols = if rows > 0, do: length(hd(grid)), else: 0
+
+        if rows == 0 or cols == 0 do
+          0
+        else
+          total_cubes = Enum.sum(List.flatten(grid))
+          total_faces = total_cubes * 6
+
+          # Count hidden faces due to vertical stacking (within same column)
+          # For each cell, if h > 0, there are (h-1) vertical internal faces.
+          # Each internal face hides 2 faces (top of bottom, bottom of top).
+          vertical_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              Enum.sum(Enum.map(row, fn h ->
+                if h > 0, do: h - 1, else: 0
+              end))
+            end)
+          )
+
+          # Count hidden faces due to horizontal neighbors (within same row)
+          horizontal_neighbor_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              Enum.reduce(
+                Enum.chunk_every(row, 2, 1, []),
+                0,
+                fn [h1, h2], acc ->
+                  acc + min(h1, h2)
+                end
+              )
+            end)
+            |> elem(0, 0) # This approach is flawed with reduce on list of lists
+          )
+          
+          # Let's redo horizontal neighbor pairs properly
+          horizontal_neighbor_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              case row do
+                [] -> 0
+                [h] -> 0
+                _ ->
+                  Enum.reduce(
+                    Enum.chunk_every(row, 2, 1),
+                    0,
+                    fn [h1, h2], acc ->
+                      acc + min(h1, h2)
+                    end
+                  )
+              end
+            end)
+          )
+
+          # Count hidden faces due to vertical neighbors (between rows, same column)
+          # We transpose the grid to get columns, then look at adjacent rows in each column
+          # Actually, it's easier to iterate row by row and compare with previous row
+          # For each column j, and row i, compare grid[i][j] with grid[i+1][j]
+          # This is "vertical neighbors" between rows.
+          
+          vertical_neighbor_pairs = Enum.sum(
+            Enum.chunk_every(grid, 2, 1)
+            |> Enum.map(fn [row1, row2] ->
+              Enum.zip(row1, row2)
+              |> Enum.reduce(0, fn {h1, h2}, acc ->
+                acc + min(h1, h2)
+              end)
+            end)
+          )
+
+          hidden_faces = 2 * vertical_pairs + 2 * horizontal_neighbor_pairs + 2 * vertical_neighbor_pairs
+          total_faces - hidden_faces
+        end
+    end
+  end
+end[0m
+[36m20:51:40.505 [debug] [Validator.run] final test (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[33m20:51:40.505 [warning] [Solve attempt 3] validation FAILED: [:compile][0m
+[22m20:51:40.505 [info] [Solve attempt 4] generating (fn=surface_area)[0m
+[36m20:51:40.505 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_integer))) :: non_integer
+  def surface_area(grid) when is_list(grid) do
+    case grid do
+      [] ->
+        0
+      _ ->
+        rows = length(grid)
+        cols = if rows > 0, do: length(hd(grid)), else: 0
+
+        if rows == 0 or cols == 0 do
+          0
+        else
+          total_cubes = Enum.sum(List.flatten(grid))
+          total_faces = total_cubes * 6
+
+          # Count hidden faces due to vertical stacking (within same column)
+          # For each cell, if h > 0, there are (h-1) vertical internal faces.
+          # Each internal face hides 2 faces (top of bottom, bottom of top).
+          vertical_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              Enum.sum(Enum.map(row, fn h ->
+                if h > 0, do: h - 1, else: 0
+              end))
+            end)
+          )
+
+          # Count hidden faces due to horizontal neighbors (within same row)
+          horizontal_neighbor_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              Enum.reduce(
+                Enum.chunk_every(row, 2, 1, []),
+                0,
+                fn [h1, h2], acc ->
+                  acc + min(h1, h2)
+                end
+              )
+            end)
+            |> elem(0, 0) # This approach is flawed with reduce on list of lists
+          )
+          
+          # Let's redo horizontal neighbor pairs properly
+          horizontal_neighbor_pairs = Enum.sum(
+            grid
+            |> Enum.map(fn row ->
+              case row do
+                [] -> 0
+                [h] -> 0
+                _ ->
+                  Enum.reduce(
+                    Enum.chunk_every(row, 2, 1),
+                    0,
+                    fn [h1, h2], acc ->
+                      acc + min(h1, h2)
+                    end
+                  )
+              end
+            end)
+          )
+
+          # Count hidden faces due to vertical neighbors (between rows, same column)
+          # We transpose the grid to get columns, then look at adjacent rows in each column
+          # Actually, it's easier to iterate row by row and compare with previous row
+          # For each column j, and row i, compare grid[i][j] with grid[i+1][j]
+          # This is "vertical neighbors" between rows.
+          
+          vertical_neighbor_pairs = Enum.sum(
+            Enum.chunk_every(grid, 2, 1)
+            |> Enum.map(fn [row1, row2] ->
+              Enum.zip(row1, row2)
+              |> Enum.reduce(0, fn {h1, h2}, acc ->
+                acc + min(h1, h2)
+              end)
+            end)
+          )
+
+          hidden_faces = 2 * vertical_pairs + 2 * horizontal_neighbor_pairs + 2 * vertical_neighbor_pairs
+          total_faces - hidden_faces
+        end
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: variable "h" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 53 │                 [h] -> 0
+    │                  ~
+    │
+    └─ lib/solution.ex:53:18: Solution.surface_area/1
+
+    warning: variable "horizontal_neighbor_pairs" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 33 │           horizontal_neighbor_pairs = Enum.sum(
+    │           ~
+    │
+    └─ lib/solution.ex:33:11: Solution.surface_area/1
+
+    error: undefined function elem/3 (expected Solution to define such a function or for it to be imported, but none are available)
+    │
+ 44 │             |> elem(0, 0) # This approach is flawed with reduce on list of lists
+    │                ^^^^
+    │
+    └─ lib/solution.ex:44:16: Solution.surface_area/1
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+Reminder: module `Solution`, function `surface_area` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:51:47.354 [debug] [LLM.call] finish=stop len=2451 usage=%{"completion_tokens" => 685, "prompt_tokens" => 1406, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2091}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area(grid) when is_list(grid) do
+    if Enum.empty?(grid) do
+      0
+    else
+      # Calculate total cubes and total faces (assuming isolated cubes)
+      total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+      total_faces = total_cubes * 6
+
+      # Calculate hidden faces due to vertical stacking in the same column
+      # Each cube on top of another hides 2 faces (the bottom of the top cube and the top of the bottom cube).
+      # If height is h, there are h-1 such interfaces.
+      vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+        Enum.sum(Enum.map(row, fn h ->
+          if h > 0, do: h - 1, else: 0
+        end))
+      end))
+
+      # Calculate hidden faces due to horizontal neighbors in the same row
+      # If two adjacent cells have heights h1 and h2, the shared face is min(h1, h2).
+      # Each shared face hides 2 faces (one from each cube).
+      horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, fn row ->
+        case row do
+          [] -> 0
+          [h] -> 0
+          _ ->
+            Enum.zip(row, Enum.tail(row))
+            |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+        end
+      end))
+
+      # Calculate hidden faces due to vertical neighbors (rows) in the same column
+      # We transpose the grid to get columns, then apply the same horizontal neighbor logic.
+      # Or, simpler: iterate through columns, then adjacent rows.
+      # Let's use the transpose approach.
+      transposed = Enum.zip(grid)
+      
+      vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, fn col ->
+        case col do
+          [] -> 0
+          [h] -> 0
+          _ ->
+            Enum.zip(col, Enum.tail(col))
+            |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+        end
+      end))
+
+      total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+      total_faces - total_hidden
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end
+---END---[0m
+[22m20:51:47.354 [info] [LLM.call] local_qwen_thinking completed in 6848ms — ok[0m
+[22m20:51:47.354 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:51:47.354 [debug] [Validator.run] module code (2102 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area(grid) when is_list(grid) do
+    if Enum.empty?(grid) do
+      0
+    else
+      # Calculate total cubes and total faces (assuming isolated cubes)
+      total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+      total_faces = total_cubes * 6
+
+      # Calculate hidden faces due to vertical stacking in the same column
+      # Each cube on top of another hides 2 faces (the bottom of the top cube and the top of the bottom cube).
+      # If height is h, there are h-1 such interfaces.
+      vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+        Enum.sum(Enum.map(row, fn h ->
+          if h > 0, do: h - 1, else: 0
+        end))
+      end))
+
+      # Calculate hidden faces due to horizontal neighbors in the same row
+      # If two adjacent cells have heights h1 and h2, the shared face is min(h1, h2).
+      # Each shared face hides 2 faces (one from each cube).
+      horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, fn row ->
+        case row do
+          [] -> 0
+          [h] -> 0
+          _ ->
+            Enum.zip(row, Enum.tail(row))
+            |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+        end
+      end))
+
+      # Calculate hidden faces due to vertical neighbors (rows) in the same column
+      # We transpose the grid to get columns, then apply the same horizontal neighbor logic.
+      # Or, simpler: iterate through columns, then adjacent rows.
+      # Let's use the transpose approach.
+      transposed = Enum.zip(grid)
+      
+      vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, fn col ->
+        case col do
+          [] -> 0
+          [h] -> 0
+          _ ->
+            Enum.zip(col, Enum.tail(col))
+            |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+        end
+      end))
+
+      total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+      total_faces - total_hidden
+    end
+  end
+end[0m
+[36m20:51:47.354 [debug] [Validator.run] test code (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[36m20:51:47.354 [debug] [Budget] spent so far (est.): $1.268[0m
+[22m20:51:47.354 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:51:47.354 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:51:48.210 [debug] [run_credence_fix] exit=0 output:
+
+20:51:47.941 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:51:47.943 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:51:47.961 [debug] [credence_fix] semantic pass 1: compilation OK, 6 warning(s)
+
+20:51:47.961 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+20:51:47.963 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+20:51:47.963 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+20:51:47.965 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+20:51:47.965 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:51:47.967 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L45 -           [h] -> 0
+  L45 +           [_h] -> 0
+
+20:51:47.967 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+20:51:47.968 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+20:51:47.968 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+20:51:47.969 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+20:51:47.970 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+20:51:47.970 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L29 -           [h] -> 0
+  L29 +           [_h] -> 0
+
+20:51:47.970 [debug] [credence_fix] semantic done. Applied: [UndefinedFunction(1), UndefinedFunction(1), UnusedVariable(1), UndefinedFunction(1), UndefinedFunction(1), UnusedVariable(1)]
+
+20:51:47.970 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:51:48.055 [debug] [credence_fix] NoMapThenAggregate: check found 5 issue(s), running fix...
+
+20:51:48.075 [debug] [credence_fix] NoMapThenAggregate: source CHANGED:
+  L11 -       total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+  L11 +       total_cubes = Enum.reduce(grid, 0, fn el, acc -> acc + Enum.sum(el) end)
+  L17 -       vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+  L17 +       vertical_stack_hidden = Enum.reduce(grid, 0, fn el, acc ->
+  L18 -         Enum.sum(Enum.map(row, fn h ->
+  L18 +         acc +
+  L19 -           if h > 0, do: h - 1, else: 0
+  L19 +           Enum.sum(
+  L20 -         end))
+  L20 +             Enum.map(el, fn h ->
+  L21 -       end))
+  L21 +               if h > 0, do: h - 1, else: 0
+  L22 - 
+  L22 +             end)
+  L23 -       # Calculate hidden faces due to horizontal neighbors in the same row
+  L23 +           )
+  L24 -       # If two adjacent cells have heights h1 and h2, the shared face is min(h1, h2).
+  L24 +       end)
+  L25 -       # Each shared face hides 2 faces (one from each cube).
+  L25 + 
+  L26 -       horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, fn row ->
+  L26 +       # Calculate hidden faces due to horizontal neighbors in the same row
+  L27 -         case row do
+  L27 +       # If two adjacent cells have heights h1 and h2, the shared face is min(h1, h2).
+  L28 -           [] -> 0
+  L28 +       # Each shared face hides 2 faces (one from each cube).
+  L29 -           [_h] -> 0
+  L29 +       horizontal_neighbor_hidden = Enum.reduce(grid, 0, fn el, acc ->
+  L30 -           _ ->
+  L30 +         acc +
+  L31 -             Enum.zip(row, Enum.tail(row))
+  L31 +           case el do
+  L32 -             |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+  L32 +             [] ->
+  L33 -         end
+  L33 +               0
+  L34 -       end))
+  L34 + 
+  L35 - 
+  L35 +             [_h] ->
+  L36 -       # Calculate hidden faces due to vertical neighbors (rows) in the same column
+  L36 +               0
+  L37 -       # We transpose the grid to get columns, then apply the same horizontal neighbor logic.
+  L37 + 
+  L38 -       # Or, simpler: iterate through columns, then adjacent rows.
+  L38 +             _ ->
+  L39 -       # Let's use the transpose approach.
+  L39 +               Enum.zip(el, Enum.tail(el))
+  L40 -       transposed = Enum.zip(grid)
+  L40 +               |> Enum.sum(fn {h1, h2} ->
+  L41 - 
+  L41 +                 min(h1, h2)
+  L42 -       vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, fn col ->
+  L42 +               end)
+  L43 -         case col do
+  L43 +           end
+  L44 -           [] -> 0
+  L44 +       end)
+  L45 -           [_h] -> 0
+  L45 + 
+  L46 -           _ ->
+  L46 +       # Calculate hidden faces due to vertical neighbors (rows) in the same column
+  L47 -             Enum.zip(col, Enum.tail(col))
+  L47 +       # We transpose the grid to get columns, then apply the same horizontal neighbor logic.
+  L48 -             |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+  L48 +       # Or, simpler: iterate through columns, then adjacent rows.
+  L49 -         end
+  L49 +       # Let's use the transpose approach.
+  L50 -       end))
+  L50 +       transposed = Enum.zip(grid)
+  L52 -       total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+  L52 +       vertical_row_neighbor_hidden = Enum.reduce(transposed, 0, fn el, acc ->
+  L53 - 
+  L53 +         acc +
+  L54 -       total_faces - total_hidden
+  L54 +           case el do
+  L55 -     end
+  L55 +             [] ->
+  L56 -   end
+  L56 +               0
+  L57 - end
+  L57 + 
+  L58 +             [_h] ->
+  L59 +               0
+  L60 + 
+  L61 +             _ ->
+  L62 +               Enum.zip(el, Enum.tail(el))
+  L63 +               |> Enum.sum(fn {h1, h2} ->
+  L64 +                 min(h1, h2)
+  L65 +               end)
+  L66 +           end
+  L67 +       end)
+  L68 + 
+  L69 +       total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+  L70 + 
+  L71 +       total_faces - total_hidden
+  L72 +     end
+  L73 +   end
+  L74 + end
+
+20:51:48.181 [debug] [credence_fix] done. Applied: [NoMapThenAggregate(5)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UndefinedFunction, 1}, {Credence.Semantic.UndefinedFunction, 1}, {Credence.Semantic.UnusedVariable, 1}, {Credence.Semantic.UndefinedFunction, 1}, {Credence.Semantic.UndefinedFunction, 1}, {Credence.Semantic.UnusedVariable, 1}, {Credence.Pattern.NoMapThenAggregate, 5}]
+REMAINING_ISSUES: 5 unfixable issue(s)
+undefined_function: Enum.sum/2 is undefined or private. Did you mean:
+
+    * sum/1
+ (line 63)
+undefined_function: Enum.sum/2 is undefined or private. Did you mean:
+
+    * sum/1
+ (line 40)
+undefined_function: Enum.tail/1 is undefined or private (line 62)
+undefined_function: Enum.tail/1 is undefined or private (line 39)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 19)
+[0m
+[22m20:51:48.210 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m20:51:48.953 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m20:51:48.953 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: Enum.tail/1 is undefined or private
+    │
+ 39 │               Enum.zip(el, Enum.tail(el))
+    │                                 ~
+    │
+    └─ lib/solution.ex:39:33: Solution.surface_area/1
+    └─ lib/solution.ex:62:33: Solution.surface_area/1
+
+    warning: Enum.sum/2 is undefined or private. Did you mean:
+
+        * sum/1
+
+    │
+ 40 │               |> Enum.sum(fn {h1, h2} ->
+    │                       ~
+    │
+    └─ lib/solution.ex:40:23: Solution.surface_area/1
+    └─ lib/solution.ex:63:23: Solution.surface_area/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m20:51:49.559 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m20:51:49.560 [info] [Validator.run] step 2/6: compile[0m
+[22m20:51:50.118 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:51:50.118 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: variable "h" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 29 │           [h] -> 0
+    │            ~
+    │
+    └─ lib/solution.ex:29:12: Solution.surface_area/1
+
+    warning: variable "h" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 45 │           [h] -> 0
+    │            ~
+    │
+    └─ lib/solution.ex:45:12: Solution.surface_area/1
+
+    warning: Enum.tail/1 is undefined or private
+    │
+ 31 │             Enum.zip(row, Enum.tail(row))
+    │                                ~
+    │
+    └─ lib/solution.ex:31:32: Solution.surface_area/1
+    └─ lib/solution.ex:47:32: Solution.surface_area/1
+
+    warning: Enum.sum/2 is undefined or private. Did you mean:
+
+        * sum/1
+
+    │
+ 32 │             |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+    │                     ~
+    │
+    └─ lib/solution.ex:32:21: Solution.surface_area/1
+    └─ lib/solution.ex:48:21: Solution.surface_area/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m20:51:50.119 [info] [Validator.run] step 3/6: format[0m
+[22m20:51:50.119 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:51:50.119 [info] [Validator.run] step 4/6: credo[0m
+[22m20:51:50.119 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:51:50.119 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:51:50.119 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:51:50.119 [info] [Validator.run] step 6/6: tests[0m
+[22m20:51:50.119 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:51:50.119 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:51:50.119 [debug] [Validator.run] final module (2102 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area(grid) when is_list(grid) do
+    if Enum.empty?(grid) do
+      0
+    else
+      # Calculate total cubes and total faces (assuming isolated cubes)
+      total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+      total_faces = total_cubes * 6
+
+      # Calculate hidden faces due to vertical stacking in the same column
+      # Each cube on top of another hides 2 faces (the bottom of the top cube and the top of the bottom cube).
+      # If height is h, there are h-1 such interfaces.
+      vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+        Enum.sum(Enum.map(row, fn h ->
+          if h > 0, do: h - 1, else: 0
+        end))
+      end))
+
+      # Calculate hidden faces due to horizontal neighbors in the same row
+      # If two adjacent cells have heights h1 and h2, the shared face is min(h1, h2).
+      # Each shared face hides 2 faces (one from each cube).
+      horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, fn row ->
+        case row do
+          [] -> 0
+          [h] -> 0
+          _ ->
+            Enum.zip(row, Enum.tail(row))
+            |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+        end
+      end))
+
+      # Calculate hidden faces due to vertical neighbors (rows) in the same column
+      # We transpose the grid to get columns, then apply the same horizontal neighbor logic.
+      # Or, simpler: iterate through columns, then adjacent rows.
+      # Let's use the transpose approach.
+      transposed = Enum.zip(grid)
+      
+      vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, fn col ->
+        case col do
+          [] -> 0
+          [h] -> 0
+          _ ->
+            Enum.zip(col, Enum.tail(col))
+            |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+        end
+      end))
+
+      total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+      total_faces - total_hidden
+    end
+  end
+end[0m
+[36m20:51:50.119 [debug] [Validator.run] final test (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[33m20:51:50.119 [warning] [Solve attempt 4] validation FAILED: [:compile][0m
+[22m20:51:50.119 [info] [Solve attempt 5] generating (fn=surface_area)[0m
+[36m20:51:50.119 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area(grid) when is_list(grid) do
+    if Enum.empty?(grid) do
+      0
+    else
+      # Calculate total cubes and total faces (assuming isolated cubes)
+      total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+      total_faces = total_cubes * 6
+
+      # Calculate hidden faces due to vertical stacking in the same column
+      # Each cube on top of another hides 2 faces (the bottom of the top cube and the top of the bottom cube).
+      # If height is h, there are h-1 such interfaces.
+      vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+        Enum.sum(Enum.map(row, fn h ->
+          if h > 0, do: h - 1, else: 0
+        end))
+      end))
+
+      # Calculate hidden faces due to horizontal neighbors in the same row
+      # If two adjacent cells have heights h1 and h2, the shared face is min(h1, h2).
+      # Each shared face hides 2 faces (one from each cube).
+      horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, fn row ->
+        case row do
+          [] -> 0
+          [h] -> 0
+          _ ->
+            Enum.zip(row, Enum.tail(row))
+            |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+        end
+      end))
+
+      # Calculate hidden faces due to vertical neighbors (rows) in the same column
+      # We transpose the grid to get columns, then apply the same horizontal neighbor logic.
+      # Or, simpler: iterate through columns, then adjacent rows.
+      # Let's use the transpose approach.
+      transposed = Enum.zip(grid)
+      
+      vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, fn col ->
+        case col do
+          [] -> 0
+          [h] -> 0
+          _ ->
+            Enum.zip(col, Enum.tail(col))
+            |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+        end
+      end))
+
+      total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+      total_faces - total_hidden
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: variable "h" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 29 │           [h] -> 0
+    │            ~
+    │
+    └─ lib/solution.ex:29:12: Solution.surface_area/1
+
+    warning: variable "h" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 45 │           [h] -> 0
+    │            ~
+    │
+    └─ lib/solution.ex:45:12: Solution.surface_area/1
+
+    warning: Enum.tail/1 is undefined or private
+    │
+ 31 │             Enum.zip(row, Enum.tail(row))
+    │                                ~
+    │
+    └─ lib/solution.ex:31:32: Solution.surface_area/1
+    └─ lib/solution.ex:47:32: Solution.surface_area/1
+
+    warning: Enum.sum/2 is undefined or private. Did you mean:
+
+        * sum/1
+
+    │
+ 32 │             |> Enum.sum(fn {h1, h2} -> min(h1, h2) end)
+    │                     ~
+    │
+    └─ lib/solution.ex:32:21: Solution.surface_area/1
+    └─ lib/solution.ex:48:21: Solution.surface_area/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+
+Reminder: module `Solution`, function `surface_area` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:52:00.371 [debug] [LLM.call] finish=stop len=3774 usage=%{"completion_tokens" => 1072, "prompt_tokens" => 1317, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2389}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area([]) do
+    0
+  end
+
+  def surface_area(grid) do
+    # Calculate total cubes and total faces (assuming isolated cubes)
+    total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+    total_faces = total_cubes * 6
+
+    # Calculate hidden faces due to vertical stacking in the same column
+    # If height is h, there are h-1 such interfaces.
+    vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+      Enum.sum(Enum.map(row, fn h ->
+        if h > 0, do: h - 1, else: 0
+      end))
+    end))
+
+    # Calculate hidden faces due to horizontal neighbors in the same row
+    horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, fn row ->
+      hidden_in_row(row)
+    end))
+
+    # Calculate hidden faces due to vertical neighbors (rows) in the same column
+    # We transpose the grid to get columns, then apply the same horizontal neighbor logic.
+    transposed = Enum.zip(grid)
+
+    vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, fn col ->
+      hidden_in_row(col)
+    end))
+
+    total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+    total_faces - total_hidden
+  end
+
+  defp hidden_in_row([]), do: 0
+
+  defp hidden_in_row([_]), do: 0
+
+  defp hidden_in_row([h1, h2 | _]) do
+    min(h1, h2) + hidden_in_row_tail([h1, h2 | []])
+    # This approach is tricky with pattern matching. Let's use a simpler recursive def.
+    # Actually, let's rewrite helper to be simple.
+    0
+  end
+
+  # Better helper for adjacent pairs sum
+  defp hidden_in_row_simple([]), do: 0
+
+  defp hidden_in_row_simple([_]), do: 0
+
+  defp hidden_in_row_simple([h1, h2 | tail]) do
+    min(h1, h2) + hidden_in_row_simple(tail)
+  end
+
+  # But wait, the previous logic used Enum.zip and Enum.tail which was broken.
+  # Let's replace the whole helper with a proper recursive one or use Enum.reduce.
+  # Let's re-implement surface_area cleanly.
+end
+
+# Let's rewrite the whole thing properly.
+
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area([]) do
+    0
+  end
+
+  def surface_area(grid) do
+    total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+    total_faces = total_cubes * 6
+
+    # Hidden faces from vertical stacking (within a cell)
+    vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+      Enum.sum(Enum.map(row, fn h ->
+        if h > 0, do: h - 1, else: 0
+      end))
+    end))
+
+    # Hidden faces from horizontal neighbors (within a row)
+    horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, &count_horizontal_hidden/1))
+
+    # Hidden faces from vertical neighbors (between rows)
+    # Transpose to get columns, then count vertical neighbors
+    transposed = Enum.zip(grid)
+    vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, &count_horizontal_hidden/1))
+
+    total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+    total_faces - total_hidden
+  end
+
+  defp count_horizontal_hidden([]), do: 0
+  defp count_horizontal_hidden([_]), do: 0
+  defp count_horizontal_hidden([h1, h2 | tail]) do
+    min(h1, h2) + count_horizontal_hidden(tail)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end
+---END---[0m
+[22m20:52:00.371 [info] [LLM.call] local_qwen_thinking completed in 10252ms — ok[0m
+[22m20:52:00.371 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:52:00.372 [debug] [Validator.run] module code (3425 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area([]) do
+    0
+  end
+
+  def surface_area(grid) do
+    # Calculate total cubes and total faces (assuming isolated cubes)
+    total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+    total_faces = total_cubes * 6
+
+    # Calculate hidden faces due to vertical stacking in the same column
+    # If height is h, there are h-1 such interfaces.
+    vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+      Enum.sum(Enum.map(row, fn h ->
+        if h > 0, do: h - 1, else: 0
+      end))
+    end))
+
+    # Calculate hidden faces due to horizontal neighbors in the same row
+    horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, fn row ->
+      hidden_in_row(row)
+    end))
+
+    # Calculate hidden faces due to vertical neighbors (rows) in the same column
+    # We transpose the grid to get columns, then apply the same horizontal neighbor logic.
+    transposed = Enum.zip(grid)
+
+    vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, fn col ->
+      hidden_in_row(col)
+    end))
+
+    total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+    total_faces - total_hidden
+  end
+
+  defp hidden_in_row([]), do: 0
+
+  defp hidden_in_row([_]), do: 0
+
+  defp hidden_in_row([h1, h2 | _]) do
+    min(h1, h2) + hidden_in_row_tail([h1, h2 | []])
+    # This approach is tricky with pattern matching. Let's use a simpler recursive def.
+    # Actually, let's rewrite helper to be simple.
+    0
+  end
+
+  # Better helper for adjacent pairs sum
+  defp hidden_in_row_simple([]), do: 0
+
+  defp hidden_in_row_simple([_]), do: 0
+
+  defp hidden_in_row_simple([h1, h2 | tail]) do
+    min(h1, h2) + hidden_in_row_simple(tail)
+  end
+
+  # But wait, the previous logic used Enum.zip and Enum.tail which was broken.
+  # Let's replace the whole helper with a proper recursive one or use Enum.reduce.
+  # Let's re-implement surface_area cleanly.
+end
+
+# Let's rewrite the whole thing properly.
+
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area([]) do
+    0
+  end
+
+  def surface_area(grid) do
+    total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+    total_faces = total_cubes * 6
+
+    # Hidden faces from vertical stacking (within a cell)
+    vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+      Enum.sum(Enum.map(row, fn h ->
+        if h > 0, do: h - 1, else: 0
+      end))
+    end))
+
+    # Hidden faces from horizontal neighbors (within a row)
+    horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, &count_horizontal_hidden/1))
+
+    # Hidden faces from vertical neighbors (between rows)
+    # Transpose to get columns, then count vertical neighbors
+    transposed = Enum.zip(grid)
+    vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, &count_horizontal_hidden/1))
+
+    total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+    total_faces - total_hidden
+  end
+
+  defp count_horizontal_hidden([]), do: 0
+  defp count_horizontal_hidden([_]), do: 0
+  defp count_horizontal_hidden([h1, h2 | tail]) do
+    min(h1, h2) + count_horizontal_hidden(tail)
+  end
+end[0m
+[36m20:52:00.372 [debug] [Validator.run] test code (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[36m20:52:00.372 [debug] [Budget] spent so far (est.): $1.2695[0m
+[22m20:52:00.372 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:52:00.372 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:52:00.996 [debug] [run_credence_fix] exit=0 output:
+
+20:52:00.951 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:52:00.953 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:52:00.964 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+20:52:00.964 [debug] [credence_fix] semantic pass 1: compilation FAILED, 2 error(s)
+
+20:52:00.964 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+20:52:00.964 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+20:52:00.966 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+20:52:00.966 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+20:52:00.966 [debug] [credence_fix] semantic done. Applied: [UndefinedFunction(1)]
+
+20:52:00.966 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:52:00.969 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+20:52:00.969 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+20:52:00.974 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+NO_CHANGES
+APPLIED_RULES: [{Credence.Semantic.UndefinedFunction, 1}]
+REMAINING_ISSUES: 13 unfixable issue(s)
+undefined_function: undefined function hidden_in_row_tail/1 (expected Solution to define such a function or for it to be imported, but none are available) (line 46)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 12)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 17)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 18)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 24)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 32)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 78)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 82)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 83)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 89)
+no_map_then_aggregate: `Enum.map/2` piped into `Enum.sum/1` creates an intermediate list. Fuse into `Enum.reduce(enum, 0, fn el, acc -> acc + f(el) end)`. (line 94)
+prefer_function_capture: Single-argument anonymous function delegates to a function call.
+Use function capture syntax instead: &Module.function/1 or &function/1 (line 24)
+prefer_function_capture: Single-argument anonymous function delegates to a function call.
+Use function capture syntax instead: &Module.function/1 or &function/1 (line 32)
+[0m
+[36m20:52:00.996 [debug] [run_credence_fix] no changes needed[0m
+[22m20:52:00.996 [info] [Validator.run] credence: no changes needed[0m
+[22m20:52:00.996 [info] [Validator.run] step 2/6: compile[0m
+[22m20:52:01.498 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:52:01.498 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: function hidden_in_row_simple/1 is unused
+    │
+ 53 │   defp hidden_in_row_simple([]), do: 0
+    │        ~
+    │
+    └─ lib/solution.ex:53:8: Solution (module)
+
+    error: undefined function hidden_in_row_tail/1 (expected Solution to define such a function or for it to be imported, but none are available)
+    │
+ 46 │     min(h1, h2) + hidden_in_row_tail([h1, h2 | []])
+    │                   ^^^^^^^^^^^^^^^^^^
+    │
+    └─ lib/solution.ex:46:19: Solution.hidden_in_row/1
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[22m20:52:01.498 [info] [Validator.run] step 3/6: format[0m
+[22m20:52:01.498 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:52:01.498 [info] [Validator.run] step 4/6: credo[0m
+[22m20:52:01.498 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:52:01.498 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:52:01.498 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:52:01.498 [info] [Validator.run] step 6/6: tests[0m
+[22m20:52:01.498 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:52:01.498 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:52:01.499 [debug] [Validator.run] final module (3425 chars):
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area([]) do
+    0
+  end
+
+  def surface_area(grid) do
+    # Calculate total cubes and total faces (assuming isolated cubes)
+    total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+    total_faces = total_cubes * 6
+
+    # Calculate hidden faces due to vertical stacking in the same column
+    # If height is h, there are h-1 such interfaces.
+    vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+      Enum.sum(Enum.map(row, fn h ->
+        if h > 0, do: h - 1, else: 0
+      end))
+    end))
+
+    # Calculate hidden faces due to horizontal neighbors in the same row
+    horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, fn row ->
+      hidden_in_row(row)
+    end))
+
+    # Calculate hidden faces due to vertical neighbors (rows) in the same column
+    # We transpose the grid to get columns, then apply the same horizontal neighbor logic.
+    transposed = Enum.zip(grid)
+
+    vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, fn col ->
+      hidden_in_row(col)
+    end))
+
+    total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+    total_faces - total_hidden
+  end
+
+  defp hidden_in_row([]), do: 0
+
+  defp hidden_in_row([_]), do: 0
+
+  defp hidden_in_row([h1, h2 | _]) do
+    min(h1, h2) + hidden_in_row_tail([h1, h2 | []])
+    # This approach is tricky with pattern matching. Let's use a simpler recursive def.
+    # Actually, let's rewrite helper to be simple.
+    0
+  end
+
+  # Better helper for adjacent pairs sum
+  defp hidden_in_row_simple([]), do: 0
+
+  defp hidden_in_row_simple([_]), do: 0
+
+  defp hidden_in_row_simple([h1, h2 | tail]) do
+    min(h1, h2) + hidden_in_row_simple(tail)
+  end
+
+  # But wait, the previous logic used Enum.zip and Enum.tail which was broken.
+  # Let's replace the whole helper with a proper recursive one or use Enum.reduce.
+  # Let's re-implement surface_area cleanly.
+end
+
+# Let's rewrite the whole thing properly.
+
+defmodule Solution do
+  @doc """
+  Computes the total exposed surface area of a 3D shape made of unit cubes.
+  """
+  @spec surface_area(list(list(non_neg_integer))) :: non_neg_integer
+  def surface_area([]) do
+    0
+  end
+
+  def surface_area(grid) do
+    total_cubes = Enum.sum(Enum.map(grid, &Enum.sum/1))
+    total_faces = total_cubes * 6
+
+    # Hidden faces from vertical stacking (within a cell)
+    vertical_stack_hidden = Enum.sum(Enum.map(grid, fn row ->
+      Enum.sum(Enum.map(row, fn h ->
+        if h > 0, do: h - 1, else: 0
+      end))
+    end))
+
+    # Hidden faces from horizontal neighbors (within a row)
+    horizontal_neighbor_hidden = Enum.sum(Enum.map(grid, &count_horizontal_hidden/1))
+
+    # Hidden faces from vertical neighbors (between rows)
+    # Transpose to get columns, then count vertical neighbors
+    transposed = Enum.zip(grid)
+    vertical_row_neighbor_hidden = Enum.sum(Enum.map(transposed, &count_horizontal_hidden/1))
+
+    total_hidden = 2 * vertical_stack_hidden + 2 * horizontal_neighbor_hidden + 2 * vertical_row_neighbor_hidden
+
+    total_faces - total_hidden
+  end
+
+  defp count_horizontal_hidden([]), do: 0
+  defp count_horizontal_hidden([_]), do: 0
+  defp count_horizontal_hidden([h1, h2 | tail]) do
+    min(h1, h2) + count_horizontal_hidden(tail)
+  end
+end[0m
+[36m20:52:01.499 [debug] [Validator.run] final test (314 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.surface_area([[1,2],[3,4]]) == 34
+  end
+
+  test "example 2" do
+    assert Solution.surface_area([[2]]) == 10
+  end
+
+  test "example 3" do
+    assert Solution.surface_area([[1,1,1],[1,0,1],[1,1,1]]) == 32
+  end
+end[0m
+[33m20:52:01.499 [warning] [Solve attempt 5] validation FAILED: [:compile][0m
+[33m20:52:01.499 [warning] [Solve] giving up after 5 attempts[0m
+[36m20:52:01.516 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve FAILED — there is NO clean final. Judge the attempts for an ISSUE they repeatedly hit that NO existing rule fixed (a new Syntax/Semantic rule — e.g. a Python-ism like `a div b`, an unfixed warning), plus any existing rule that over-fired (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.NoBareNamesInSpec
+  - Credence.Semantic.UndefinedFunction
+  - Credence.Semantic.UnusedVariable
+  - Credence.Pattern.NoMapThenAggregate
+These rules ALREADY engaged on this row — Credence handled what they target.
+Do NOT propose a POTENTIAL_NEW_RULE for an idiom one of them already fixes;
+that is already covered. (If such a rule MIS-fired or under-fired, that's a
+BUGFIX_RULE, not a new rule.)
+
+## Dead-ends already tried (do NOT re-propose)
+## row 80597 â gate_reject (:full_suite_red)
+attempted: new(semantic): prefer_div_for_integer_division
+
+## row 12105 â gate_reject (:full_suite_red)
+attempted: new(semantic): (truncated)[0m
+[36m20:52:26.798 [debug] [LLM.call] finish=stop len=1002 usage=%{"completion_tokens" => 854, "completion_tokens_details" => %{"reasoning_tokens" => 604}, "prompt_tokens" => 46211, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 47065}
+[LLM.call] response:
+Looking at the repeated failures across attempts 1–5, the core issue is the LLM hallucinating non-existent Elixir functions:
+
+- `elem/3` (attempt 3) — Elixir has `elem/2`
+- `Enum.sum/2` (attempt 4) — Elixir has `Enum.sum/1`, and `Enum.sum(fn ...)` is not valid
+- `Enum.tail/1` (attempt 4) — Elixir has `tl/1`, not `Enum.tail/1`
+
+All of these are **UndefinedFunction** compiler errors. The existing `Credence.Semantic.UndefinedFunction` rule already fired on this row and correctly identified them — it just couldn't fix them because each hallucination requires a different rewrite (no generic fix exists). This is expected behavior: when the LLM invents a function that doesn't exist, there's no deterministic way to guess the intended replacement.
+
+No new rule is warranted; the existing rule covered the diagnostic. No existing rule over-fired on this row either — NoMapThenAggregate and NoBareNamesInSpec fired correctly on code that genuinely had those patterns.
+
+===DECISION===
+NO_ACTION
+===END===[0m
+[22m20:52:26.798 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 25281ms — ok[0m
+[36m20:52:26.798 [debug] [Budget] spent so far (est.): $1.2904[0m

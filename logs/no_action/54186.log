@@ -1,0 +1,3302 @@
+[22m22:17:16.806 [info] [idx=54186] entry_point=longest_subarray_length[0m
+[36m22:17:16.806 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a python function to find the length of the longest subarray with the sum of elements equal to a given number.
+
+## Python Solution
+```python
+def longest_subarray_length(nums, k):
+    sum_indices = {0: -1}  # Initialize a dictionary to keep track of the sum and its index
+    max_length = 0  # Initialize the maximum length of the subarray
+    current_sum = 0  # Initialize the current sum of the subarray
+    for i in range(len(nums)):
+        current_sum += nums[i]  # Update the current sum
+        if current_sum not in sum_indices:
+            sum_indices[current_sum] = i  # Store the index of the current sum
+        if current_sum - k in sum_indices:
+            max_length = max(max_length, i - sum_indices[current_sum - k])  # Update the maximum length if needed
+    return max_length
+```
+
+## Python Tests
+assert longest_subarray_length([-2, -1, 2, 1], 1) == 2
+assert longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+assert longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `longest_subarray_length`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[22m22:17:45.282 [info] [Budget] HEARTBEAT — 203 paid calls, est $1.832 over 424.7min → ~$0.2588/hr, ~$6.21/day (tok in=2162728 cache_rd=26060992 out=916578)[0m
+[36m22:17:58.349 [debug] [LLM.call] finish=stop len=1296 usage=%{"completion_tokens" => 2499, "completion_tokens_details" => %{"reasoning_tokens" => 2077}, "prompt_tokens" => 646, "prompt_tokens_details" => %{}, "total_tokens" => 3145}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `longest_subarray_length/2` that takes a list of integers `nums` and an integer `k` and returns the length of the longest contiguous subarray (contiguous segment of `nums`) whose elements sum to `k`. If no such subarray exists, return 0. The function should work with negative numbers as well. The expected time complexity is O(n).
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  def longest_subarray_length(nums, k) do
+    nums
+    |> Enum.with_index()
+    |> Enum.reduce(%{sum: 0, map: %{0 => -1}, max_len: 0}, fn {num, i}, acc ->
+      sum = acc.sum + num
+      map = if Map.has_key?(acc.map, sum), do: acc.map, else: Map.put(acc.map, sum, i)
+      max_len = case Map.get(map, sum - k) do
+        nil -> acc.max_len
+        start_index -> max(acc.max_len, i - start_index)
+      end
+      %{sum: sum, map: map, max_len: max_len}
+    end)
+    |> Map.get(:max_len)
+  end
+end
+---END---[0m
+[22m22:17:58.349 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 41542ms — ok[0m
+[36m22:17:58.349 [debug] [Budget] spent so far (est.): $1.8345[0m
+[22m22:17:59.390 [info] [RoundTrip] reference PASSED tests[0m
+[22m22:17:59.391 [info] [idx=54186] translation fresh — solving[0m
+[22m22:17:59.391 [info] ===SOLVE_BOUNDARY===[0m
+[22m22:17:59.391 [info] [Solve attempt 1] generating (fn=longest_subarray_length)[0m
+[36m22:17:59.391 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `longest_subarray_length/2` that takes a list of integers `nums` and an integer `k` and returns the length of the longest contiguous subarray (contiguous segment of `nums`) whose elements sum to `k`. If no such subarray exists, return 0. The function should work with negative numbers as well. The expected time complexity is O(n).
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+```
+
+Module: `Solution`. Function: `longest_subarray_length`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m22:18:05.602 [debug] [LLM.call] finish=stop len=2443 usage=%{"completion_tokens" => 712, "prompt_tokens" => 511, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1223}
+[LLM.call] response:
+---MODULE---
+@doc """
+Solution module for finding the longest contiguous subarray with sum equal to k.
+"""
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  Time complexity: O(n) using prefix sums and a map.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # We use a map to store the earliest index where a prefix sum occurs.
+    # We iterate through the list, maintaining a running prefix sum.
+    # For each element, we check if (current_sum - k) exists in the map.
+    # If it does, we have found a subarray with sum k, and we calculate its length.
+    # We track the maximum length found.
+
+    # Initialize:
+    # - prefix_sum = 0 (before processing any elements)
+    # - map = %{0 => -1} (prefix sum 0 occurs at index -1, i.e., before the start)
+    # - max_len = 0
+    # - current_index = 0
+
+    {_, max_len} = Enum.reduce(nums, {0, 0, 0, %{0 => -1}}, fn
+      num, {current_sum, max_len, current_index, prefix_map} ->
+        new_sum = current_sum + num
+        # Check if there exists a prefix sum such that new_sum - target = prefix_sum
+        # i.e., new_sum - k is in the map
+        cond
+          # Check if we found a valid subarray
+          Map.has_key?(prefix_map, new_sum - k) ->
+            previous_index = Map.get!(prefix_map, new_sum - k)
+            subarray_length = current_index - previous_index
+            new_max = max(max_len, subarray_length)
+            # Update the map: we want the earliest occurrence of new_sum for maximum length
+            # But only if new_sum is not already in the map (to keep the earliest index)
+            updated_map = Map.put_new(prefix_map, new_sum, current_index)
+            {new_sum, new_max, current_index + 1, updated_map}
+
+          # If not, just continue
+          true ->
+            {new_sum, max_len, current_index + 1, Map.put_new(prefix_map, new_sum, current_index)}
+    end)
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+
+---END---[0m
+[22m22:18:05.602 [info] [LLM.call] local_qwen_thinking completed in 6212ms — ok[0m
+[22m22:18:05.602 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m22:18:05.602 [debug] [Validator.run] module code (2034 chars):
+@doc """
+Solution module for finding the longest contiguous subarray with sum equal to k.
+"""
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  Time complexity: O(n) using prefix sums and a map.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # We use a map to store the earliest index where a prefix sum occurs.
+    # We iterate through the list, maintaining a running prefix sum.
+    # For each element, we check if (current_sum - k) exists in the map.
+    # If it does, we have found a subarray with sum k, and we calculate its length.
+    # We track the maximum length found.
+
+    # Initialize:
+    # - prefix_sum = 0 (before processing any elements)
+    # - map = %{0 => -1} (prefix sum 0 occurs at index -1, i.e., before the start)
+    # - max_len = 0
+    # - current_index = 0
+
+    {_, max_len} = Enum.reduce(nums, {0, 0, 0, %{0 => -1}}, fn
+      num, {current_sum, max_len, current_index, prefix_map} ->
+        new_sum = current_sum + num
+        # Check if there exists a prefix sum such that new_sum - target = prefix_sum
+        # i.e., new_sum - k is in the map
+        cond
+          # Check if we found a valid subarray
+          Map.has_key?(prefix_map, new_sum - k) ->
+            previous_index = Map.get!(prefix_map, new_sum - k)
+            subarray_length = current_index - previous_index
+            new_max = max(max_len, subarray_length)
+            # Update the map: we want the earliest occurrence of new_sum for maximum length
+            # But only if new_sum is not already in the map (to keep the earliest index)
+            updated_map = Map.put_new(prefix_map, new_sum, current_index)
+            {new_sum, new_max, current_index + 1, updated_map}
+
+          # If not, just continue
+          true ->
+            {new_sum, max_len, current_index + 1, Map.put_new(prefix_map, new_sum, current_index)}
+    end)
+  end
+end[0m
+[36m22:18:05.602 [debug] [Validator.run] test code (372 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[36m22:18:05.603 [debug] [Budget] spent so far (est.): $1.8353[0m
+[22m22:18:05.603 [info] [Validator.run] step 1/6: credence fix[0m
+[36m22:18:05.603 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m22:18:06.219 [debug] [run_credence_fix] exit=0 output:
+
+22:18:06.171 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+22:18:06.173 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 21 rules)
+
+22:18:06.177 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+22:18:06.177 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+22:18:06.177 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+22:18:06.190 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + # Initialize:
+  L2 - Solution module for finding the longest contiguous subarray with sum equal to k.
+  L2 + # - prefix_sum = 0 (before processing any elements)
+  L3 - """
+  L3 + # - map = %{0 => -1} (prefix sum 0 occurs at index -1, i.e., before the start)
+  L4 - defmodule Solution do
+  L4 + # - max_len = 0
+  L5 -   @doc """
+  L5 + # - current_index = 0
+  L6 -   Returns the length of the longest contiguous subarray whose elements sum to k.
+  L6 + defmodule Solution do
+  L7 -   If no such subarray exists, returns 0.
+  L7 +   @doc """
+  L8 -   Time complexity: O(n) using prefix sums and a map.
+  L8 +   Returns the length of the longest contiguous subarray whose elements sum to k.
+  L9 -   """
+  L9 +   If no such subarray exists, returns 0.
+  L10 -   @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  L10 +   Time complexity: O(n) using prefix sums and a map.
+  L11 -   def longest_subarray_length(nums, k) do
+  L11 +   """
+  L12 -     # We use a map to store the earliest index where a prefix sum occurs.
+  L12 +   @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  L13 -     # We iterate through the list, maintaining a running prefix sum.
+  L13 +   def longest_subarray_length(nums, k) do
+  L14 -     # For each element, we check if (current_sum - k) exists in the map.
+  L14 +     {_, max_len} =
+  L15 -     # If it does, we have found a subarray with sum k, and we calculate its length.
+  L15 +       Enum.reduce(nums, {0, 0, 0, %{0 => -1}}, fn
+  L16 -     # We track the maximum length found.
+  L16 +         num, {current_sum, max_len, current_index, prefix_map} ->
+  L17 - 
+  L17 +           new_sum = current_sum + num
+  L18 -     # Initialize:
+  L18 +           # Check if there exists a prefix sum such that new_sum - target = prefix_sum
+  L19 -     # - prefix_sum = 0 (before processing any elements)
+  L19 +           # i.e., new_sum - k is in the map
+  L20 -     # - map = %{0 => -1} (prefix sum 0 occurs at index -1, i.e., before the start)
+  L20 +           cond
+  L21 -     # - max_len = 0
+  L21 + 
+  L22 -     # - current_index = 0
+  L22 +         # Check if we found a valid subarray
+  L23 - 
+  L23 +         Map.has_key?(prefix_map, new_sum - k) ->
+  L24 -     {_, max_len} = Enum.reduce(nums, {0, 0, 0, %{0 => -1}}, fn
+  L24 +           previous_index = Map.get!(prefix_map, new_sum - k)
+  L25 -       num, {current_sum, max_len, current_index, prefix_map} ->
+  L25 +           # Update the map: we want the earliest occurrence of new_sum for maximum length
+  L26 -         new_sum = current_sum + num
+  L26 +           # But only if new_sum is not already in the map (to keep the earliest index)
+  L27 -         # Check if there exists a prefix sum such that new_sum - target = prefix_sum
+  L27 +           subarray_length = current_index - previous_index
+  L28 -         # i.e., new_sum - k is in the map
+  L28 +           new_max = max(max_len, subarray_length)
+  L29 -         cond
+  L29 +           updated_map = Map.put_new(prefix_map, new_sum, current_index)
+  L30 -           # Check if we found a valid subarray
+  L30 +           # If not, just continue
+  L31 -           Map.has_key?(prefix_map, new_sum - k) ->
+  L31 +           {new_sum, new_max, current_index + 1, updated_map}
+  L32 -             previous_index = Map.get!(prefix_map, new_sum - k)
+  L32 + 
+  L33 -             subarray_length = current_index - previous_index
+  L33 +         true ->
+  L34 -             new_max = max(max_len, subarray_length)
+  L34 +           {new_sum, max_len, current_index + 1, Map.put_new(prefix_map, new_sum, current_index)}
+  L35 -             # Update the map: we want the earliest occurrence of new_sum for maximum length
+  L35 +       end)
+  L36 -             # But only if new_sum is not already in the map (to keep the earliest index)
+  L36 +   end
+  L37 -             updated_map = Map.put_new(prefix_map, new_sum, current_index)
+  L37 + end
+  L38 -             {new_sum, new_max, current_index + 1, updated_map}
+  L39 - 
+  L40 -           # If not, just continue
+  L41 -           true ->
+  L42 -             {new_sum, max_len, current_index + 1, Map.put_new(prefix_map, new_sum, current_index)}
+  L43 -     end)
+  L44 -   end
+  L45 - end
+
+22:18:06.190 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+22:18:06.196 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+22:18:06.196 [debug] [credence_fix] semantic pass 2: compilation FAILED, 3 error(s)
+
+22:18:06.199 [debug] [credence_fix] no rule matched diagnostic: %{message: "cannot invoke remote function :erlang.-/2 inside a match", position: {23, 42}, file: "credence_check.ex", stacktrace: [{Solution, :longest_subarray_length, 2, [file: "credence_check.ex", column: 42, line: 23]}], source: "credence_check.ex", span: nil, severity: :error}
+
+22:18:06.199 [debug] [credence_fix] no rule matched diagnostic: %{message: "undefined variable \"cond\"", position: {20, 11}, file: "credence_check.ex", stacktrace: [{Solution, :longest_subarray_length, 2, [file: "credence_check.ex", column: 11, line: 20]}], source: "credence_check.ex", span: {20, 15}, severity: :error}
+
+22:18:06.200 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+22:18:06.200 [debug] [credence_fix] semantic pass 2: no rule could fix the error(s), stopping
+
+22:18:06.200 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1)]
+
+22:18:06.200 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+22:18:06.202 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+22:18:06.202 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+22:18:06.204 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+FIXED
+APPLIED_RULES: [{Credence.Semantic.RequireDefmoduleWrapper, 1}]
+[0m
+[22m22:18:06.219 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m22:18:06.704 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m22:18:06.704 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: variable "current_index" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 16 │         num, {current_sum, max_len, current_index, prefix_map} ->
+    │                                     ~
+    │
+    └─ lib/solution.ex:16:37: Solution.longest_subarray_length/2
+
+    warning: variable "max_len" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 16 │         num, {current_sum, max_len, current_index, prefix_map} ->
+    │                            ~
+    │
+    └─ lib/solution.ex:16:28: Solution.longest_subarray_length/2
+
+    warning: variable "new_sum" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 17 │           new_sum = current_sum + num
+    │           ~
+    │
+    └─ lib/solution.ex:17:11: Solution.longest_subarray_length/2
+
+    warning: variable "prefix_map" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 16 │         num, {current_sum, max_len, current_index, prefix_map} ->
+    │                                                    ~
+    │
+    └─ lib/solution.ex:16:52: Solution.longest_subarray_length/2
+
+    error: cannot invoke remote function :erlang.-/2 inside a match
+    │
+ 23 │         Map.has_key?(prefix_map, new_sum - k) ->
+    │                                          ^
+    │
+    └─ lib/solution.ex:23:42: Solution.longest_subarray_length/2
+
+    error: undefined variable "cond"
+    │
+ 20 │           cond
+    │           ^^^^
+    │
+    └─ lib/solution.ex:20:11: Solution.longest_subarray_length/2
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+    (elixir 1.19.5) src/elixir_fn.erl:21: anonymous fn/4 in :elixir_fn.expand/4
+    (stdlib 7.3) lists.erl:2673: :lists.mapfoldl_1/3
+[0m
+[33m22:18:07.347 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m22:18:07.347 [info] [Validator.run] step 2/6: compile[0m
+[22m22:18:07.986 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m22:18:07.986 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+[0m
+[22m22:18:07.986 [info] [Validator.run] step 3/6: format[0m
+[22m22:18:07.986 [info] [Validator.run] skipping format (compile failed)[0m
+[22m22:18:07.986 [info] [Validator.run] step 4/6: credo[0m
+[22m22:18:07.986 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m22:18:07.986 [info] [Validator.run] step 5/6: credence check[0m
+[22m22:18:07.986 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m22:18:07.986 [info] [Validator.run] step 6/6: tests[0m
+[22m22:18:07.987 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m22:18:07.987 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m22:18:07.987 [debug] [Validator.run] final module (2034 chars):
+@doc """
+Solution module for finding the longest contiguous subarray with sum equal to k.
+"""
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  Time complexity: O(n) using prefix sums and a map.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # We use a map to store the earliest index where a prefix sum occurs.
+    # We iterate through the list, maintaining a running prefix sum.
+    # For each element, we check if (current_sum - k) exists in the map.
+    # If it does, we have found a subarray with sum k, and we calculate its length.
+    # We track the maximum length found.
+
+    # Initialize:
+    # - prefix_sum = 0 (before processing any elements)
+    # - map = %{0 => -1} (prefix sum 0 occurs at index -1, i.e., before the start)
+    # - max_len = 0
+    # - current_index = 0
+
+    {_, max_len} = Enum.reduce(nums, {0, 0, 0, %{0 => -1}}, fn
+      num, {current_sum, max_len, current_index, prefix_map} ->
+        new_sum = current_sum + num
+        # Check if there exists a prefix sum such that new_sum - target = prefix_sum
+        # i.e., new_sum - k is in the map
+        cond
+          # Check if we found a valid subarray
+          Map.has_key?(prefix_map, new_sum - k) ->
+            previous_index = Map.get!(prefix_map, new_sum - k)
+            subarray_length = current_index - previous_index
+            new_max = max(max_len, subarray_length)
+            # Update the map: we want the earliest occurrence of new_sum for maximum length
+            # But only if new_sum is not already in the map (to keep the earliest index)
+            updated_map = Map.put_new(prefix_map, new_sum, current_index)
+            {new_sum, new_max, current_index + 1, updated_map}
+
+          # If not, just continue
+          true ->
+            {new_sum, max_len, current_index + 1, Map.put_new(prefix_map, new_sum, current_index)}
+    end)
+  end
+end[0m
+[36m22:18:07.987 [debug] [Validator.run] final test (372 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[33m22:18:07.987 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m22:18:07.987 [info] [Solve attempt 2] generating (fn=longest_subarray_length)[0m
+[36m22:18:07.987 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+Solution module for finding the longest contiguous subarray with sum equal to k.
+"""
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  Time complexity: O(n) using prefix sums and a map.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # We use a map to store the earliest index where a prefix sum occurs.
+    # We iterate through the list, maintaining a running prefix sum.
+    # For each element, we check if (current_sum - k) exists in the map.
+    # If it does, we have found a subarray with sum k, and we calculate its length.
+    # We track the maximum length found.
+
+    # Initialize:
+    # - prefix_sum = 0 (before processing any elements)
+    # - map = %{0 => -1} (prefix sum 0 occurs at index -1, i.e., before the start)
+    # - max_len = 0
+    # - current_index = 0
+
+    {_, max_len} = Enum.reduce(nums, {0, 0, 0, %{0 => -1}}, fn
+      num, {current_sum, max_len, current_index, prefix_map} ->
+        new_sum = current_sum + num
+        # Check if there exists a prefix sum such that new_sum - target = prefix_sum
+        # i.e., new_sum - k is in the map
+        cond
+          # Check if we found a valid subarray
+          Map.has_key?(prefix_map, new_sum - k) ->
+            previous_index = Map.get!(prefix_map, new_sum - k)
+            subarray_length = current_index - previous_index
+            new_max = max(max_len, subarray_length)
+            # Update the map: we want the earliest occurrence of new_sum for maximum length
+            # But only if new_sum is not already in the map (to keep the earliest index)
+            updated_map = Map.put_new(prefix_map, new_sum, current_index)
+            {new_sum, new_max, current_index + 1, updated_map}
+
+          # If not, just continue
+          true ->
+            {new_sum, max_len, current_index + 1, Map.put_new(prefix_map, new_sum, current_index)}
+    end)
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+
+Reminder: module `Solution`, function `longest_subarray_length` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m22:18:23.318 [debug] [LLM.call] finish=stop len=6014 usage=%{"completion_tokens" => 1725, "prompt_tokens" => 1094, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2819}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # Initialize prefix sum map with 0 at index -1 (before the start)
+    # We use Enum.reduce with an accumulator of {prefix_sum, max_length, current_index, prefix_map}
+    # However, since Enum.reduce doesn't support 4-element tuple accumulation directly with pattern
+    # matching in the clause easily without separate state, we will use a simpler approach:
+    # Store the map and max_len in the accumulator.
+
+    initial_state = %{0 => -1}
+    
+    {_, max_len} = 
+      Enum.reduce(nums, {0, 0, initial_state}, fn
+        num, {current_sum, max_len, prefix_map} ->
+          new_sum = current_sum + num
+          
+          # Calculate the target prefix sum we need to find
+          target = new_sum - k
+          
+          # Check if the target exists in the map
+          case Map.fetch(prefix_map, target) do
+            {:ok, previous_index} ->
+              subarray_length = current_sum + 1 - previous_index
+              new_max = max(max_len, subarray_length)
+              # Only add the new_sum to the map if it's not already there, to keep the earliest index
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, current_sum)
+              # Wait, the index logic: 
+              # The prefix_map stores index. 
+              # Let's restructure the accumulator to store index explicitly.
+              # Accumulator: {current_sum, max_len, prefix_map, current_index}
+              # But Enum.reduce only gives the accumulator and the element.
+              # So I need to put the index into the accumulator.
+              {new_sum, new_max, updated_map, current_sum} # This is wrong, current_sum is not index.
+              
+              # Let's restart the reduce logic to be cleaner.
+              # We can maintain the index by tracking it via Enum.with_index, or just store it in the tuple.
+              {current_sum, max_len, prefix_map, current_index}
+          end
+      end)
+      
+      # The above approach is flawed because I'm trying to mix state.
+      # Let's use a standard reduce where the accumulator is {max_len, current_sum, prefix_map, current_index}
+      
+      {_, max_len, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+        num, {max_len, current_sum, prefix_map, current_index} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, previous_index} ->
+              length = current_index - previous_index
+              new_max = max(max_len, length)
+              {new_max, new_sum, prefix_map, current_index}
+            
+            :error ->
+              {max_len, new_sum, Map.put_new(prefix_map, new_sum, current_index), current_index}
+          end
+      end)
+      
+      # Wait, the index calculation is off.
+      # If prefix_map stores index, then:
+      # When we are at current_index (0-based), and we find target, the subarray is from (previous_index + 1) to current_index.
+      # Length = current_index - previous_index.
+      # But in my tuple, I stored current_index as the index of the *current* element being processed.
+      # Let's trace:
+      # Init: {0, 0, %{0 => -1}, 0} -> current_index is 0? No, init should have index tracking.
+      # Let's fix the accumulator structure: {max_len, current_sum, prefix_map, next_index}
+      
+      {max_len, _, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+        num, {max_len, current_sum, prefix_map, idx} ->
+          new_sum = current_sum + num
+          target = new_sum - num - 1 # No, target is new_sum - k.
+          target = new_sum - k
+          
+          # The index of the current element is idx.
+          # We haven't incremented idx yet in the tuple, so idx is the index of the current element.
+          # Actually, let's make idx the index of the *next* element to be processed?
+          # Or just use idx as the current index.
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              len = idx - prev_idx
+              new_max = max(max_len, len)
+              # Don't update the map for new_sum if it already exists (keep earliest index)
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, updated_map, idx + 1}
+            
+            :error ->
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {max_len, new_sum, updated_map, idx + 1}
+          end
+      end)
+      
+      # This looks correct.
+      # Example 1: [-2, -1, 2, 1], k=1
+      # Init: {0, 0, %{0 => -1}, 0}
+      # Num -2, idx 0: new_sum = -2. Target = -3. Not in map.
+      # Map: %{0 => -1, -2 => 0}. Acc: {0, -2, map, 1}
+      # Num -1, idx 1: new_sum = -3. Target = -4. Not in map.
+      # Map: %{0 => -1, -2 => 0, -3 => 1}. Acc: {0, -3, map, 2}
+      # Num 2, idx 2: new_sum = -1. Target = -2. Map has -2 at 0.
+      # Len = 2 - 0 = 2. Max = 2.
+      # Map: %{..., -1 => 2}. Acc: {2, -1, map, 3}
+      # Num 1, idx 3: new_sum = 0. Target = -1. Map has -1 at 2.
+      # Len = 3 - 2 = 1. Max = 2.
+      # Map: %{0 => -1} (already exists). Acc: {2, 0, map, 4}
+      # Result 2. Correct.
+      
+      max_len
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+
+---END---[0m
+[22m22:18:23.318 [info] [LLM.call] local_qwen_thinking completed in 15331ms — ok[0m
+[22m22:18:23.318 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m22:18:23.318 [debug] [Validator.run] module code (5605 chars):
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # Initialize prefix sum map with 0 at index -1 (before the start)
+    # We use Enum.reduce with an accumulator of {prefix_sum, max_length, current_index, prefix_map}
+    # However, since Enum.reduce doesn't support 4-element tuple accumulation directly with pattern
+    # matching in the clause easily without separate state, we will use a simpler approach:
+    # Store the map and max_len in the accumulator.
+
+    initial_state = %{0 => -1}
+    
+    {_, max_len} = 
+      Enum.reduce(nums, {0, 0, initial_state}, fn
+        num, {current_sum, max_len, prefix_map} ->
+          new_sum = current_sum + num
+          
+          # Calculate the target prefix sum we need to find
+          target = new_sum - k
+          
+          # Check if the target exists in the map
+          case Map.fetch(prefix_map, target) do
+            {:ok, previous_index} ->
+              subarray_length = current_sum + 1 - previous_index
+              new_max = max(max_len, subarray_length)
+              # Only add the new_sum to the map if it's not already there, to keep the earliest index
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, current_sum)
+              # Wait, the index logic: 
+              # The prefix_map stores index. 
+              # Let's restructure the accumulator to store index explicitly.
+              # Accumulator: {current_sum, max_len, prefix_map, current_index}
+              # But Enum.reduce only gives the accumulator and the element.
+              # So I need to put the index into the accumulator.
+              {new_sum, new_max, updated_map, current_sum} # This is wrong, current_sum is not index.
+              
+              # Let's restart the reduce logic to be cleaner.
+              # We can maintain the index by tracking it via Enum.with_index, or just store it in the tuple.
+              {current_sum, max_len, prefix_map, current_index}
+          end
+      end)
+      
+      # The above approach is flawed because I'm trying to mix state.
+      # Let's use a standard reduce where the accumulator is {max_len, current_sum, prefix_map, current_index}
+      
+      {_, max_len, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+        num, {max_len, current_sum, prefix_map, current_index} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, previous_index} ->
+              length = current_index - previous_index
+              new_max = max(max_len, length)
+              {new_max, new_sum, prefix_map, current_index}
+            
+            :error ->
+              {max_len, new_sum, Map.put_new(prefix_map, new_sum, current_index), current_index}
+          end
+      end)
+      
+      # Wait, the index calculation is off.
+      # If prefix_map stores index, then:
+      # When we are at current_index (0-based), and we find target, the subarray is from (previous_index + 1) to current_index.
+      # Length = current_index - previous_index.
+      # But in my tuple, I stored current_index as the index of the *current* element being processed.
+      # Let's trace:
+      # Init: {0, 0, %{0 => -1}, 0} -> current_index is 0? No, init should have index tracking.
+      # Let's fix the accumulator structure: {max_len, current_sum, prefix_map, next_index}
+      
+      {max_len, _, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+        num, {max_len, current_sum, prefix_map, idx} ->
+          new_sum = current_sum + num
+          target = new_sum - num - 1 # No, target is new_sum - k.
+          target = new_sum - k
+          
+          # The index of the current element is idx.
+          # We haven't incremented idx yet in the tuple, so idx is the index of the current element.
+          # Actually, let's make idx the index of the *next* element to be processed?
+          # Or just use idx as the current index.
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              len = idx - prev_idx
+              new_max = max(max_len, len)
+              # Don't update the map for new_sum if it already exists (keep earliest index)
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, updated_map, idx + 1}
+            
+            :error ->
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {max_len, new_sum, updated_map, idx + 1}
+          end
+      end)
+      
+      # This looks correct.
+      # Example 1: [-2, -1, 2, 1], k=1
+      # Init: {0, 0, %{0 => -1}, 0}
+      # Num -2, idx 0: new_sum = -2. Target = -3. Not in map.
+      # Map: %{0 => -1, -2 => 0}. Acc: {0, -2, map, 1}
+      # Num -1, idx 1: new_sum = -3. Target = -4. Not in map.
+      # Map: %{0 => -1, -2 => 0, -3 => 1}. Acc: {0, -3, map, 2}
+      # Num 2, idx 2: new_sum = -1. Target = -2. Map has -2 at 0.
+      # Len = 2 - 0 = 2. Max = 2.
+      # Map: %{..., -1 => 2}. Acc: {2, -1, map, 3}
+      # Num 1, idx 3: new_sum = 0. Target = -1. Map has -1 at 2.
+      # Len = 3 - 2 = 1. Max = 2.
+      # Map: %{0 => -1} (already exists). Acc: {2, 0, map, 4}
+      # Result 2. Correct.
+      
+      max_len
+  end
+end[0m
+[36m22:18:23.318 [debug] [Validator.run] test code (372 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[36m22:18:23.318 [debug] [Budget] spent so far (est.): $1.8373[0m
+[22m22:18:23.319 [info] [Validator.run] step 1/6: credence fix[0m
+[36m22:18:23.319 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m22:18:23.934 [debug] [run_credence_fix] exit=0 output:
+
+22:18:23.895 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+22:18:23.897 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 21 rules)
+
+22:18:23.904 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+22:18:23.904 [debug] [credence_fix] semantic pass 1: compilation FAILED, 2 error(s)
+
+22:18:23.908 [debug] [credence_fix] no rule matched diagnostic: %{message: "undefined variable \"current_index\"", position: {41, 50}, file: "credence_check.ex", stacktrace: [{Solution, :longest_subarray_length, 2, [file: "credence_check.ex", column: 50, line: 41]}], source: "credence_check.ex", span: {41, 63}, severity: :error}
+
+22:18:23.908 [debug] [credence_fix] no rule matched diagnostic: %{message: "credence_check.ex: cannot compile module Solution (errors have been logged)", position: 0, file: "credence_check.ex", severity: :error}
+
+22:18:23.908 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+22:18:23.908 [debug] [credence_fix] semantic done. Applied: []
+
+22:18:23.908 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+22:18:23.911 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+
+22:18:23.911 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+22:18:23.916 [debug] [credence_fix] Code.compile_string raised: credence_check.ex: cannot compile module Solution (errors have been logged)
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 3 unfixable issue(s)
+prefer_map_put_new: `if Map.has_key?(map, key) do map else Map.put(map, key, val) end` can be replaced with `Map.put_new(map, key, val)` — it's more idiomatic and implemented natively. (line 30)
+prefer_map_put_new: `if Map.has_key?(map, key) do map else Map.put(map, key, val) end` can be replaced with `Map.put_new(map, key, val)` — it's more idiomatic and implemented natively. (line 89)
+prefer_map_put_new: `if Map.has_key?(map, key) do map else Map.put(map, key, val) end` can be replaced with `Map.put_new(map, key, val)` — it's more idiomatic and implemented natively. (line 93)
+[0m
+[36m22:18:23.934 [debug] [run_credence_fix] no changes needed[0m
+[22m22:18:23.934 [info] [Validator.run] credence: no changes needed[0m
+[22m22:18:23.934 [info] [Validator.run] step 2/6: compile[0m
+[22m22:18:24.581 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m22:18:24.581 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: variable "target" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 76 │           target = new_sum - num - 1 # No, target is new_sum - k.
+    │           ~
+    │
+    └─ lib/solution.ex:76:11: Solution.longest_subarray_length/2
+
+    warning: variable "max_len" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 16 │     {_, max_len} = 
+    │         ~~~~~~~
+    │
+    └─ lib/solution.ex:16:9: Solution.longest_subarray_length/2
+
+    warning: variable "max_len" is unused (there is a variable with the same name in the context, use the pin operator (^) to match on it or prefix this variable with underscore if it is not meant to be used)
+    │
+ 48 │       {_, max_len, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+    │           ~~~~~~~
+    │
+    └─ lib/solution.ex:48:11: Solution.longest_subarray_length/2
+
+    error: undefined variable "current_index"
+    │
+ 41 │               {current_sum, max_len, prefix_map, current_index}
+    │                                                  ^^^^^^^^^^^^^
+    │
+    └─ lib/solution.ex:41:50: Solution.longest_subarray_length/2
+
+
+== Compilation error in file lib/solution.ex ==
+** (CompileError) lib/solution.ex: cannot compile module Solution (errors have been logged)
+
+[0m
+[22m22:18:24.581 [info] [Validator.run] step 3/6: format[0m
+[22m22:18:24.581 [info] [Validator.run] skipping format (compile failed)[0m
+[22m22:18:24.581 [info] [Validator.run] step 4/6: credo[0m
+[22m22:18:24.581 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m22:18:24.581 [info] [Validator.run] step 5/6: credence check[0m
+[22m22:18:24.581 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m22:18:24.581 [info] [Validator.run] step 6/6: tests[0m
+[22m22:18:24.581 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m22:18:24.581 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m22:18:24.581 [debug] [Validator.run] final module (5605 chars):
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # Initialize prefix sum map with 0 at index -1 (before the start)
+    # We use Enum.reduce with an accumulator of {prefix_sum, max_length, current_index, prefix_map}
+    # However, since Enum.reduce doesn't support 4-element tuple accumulation directly with pattern
+    # matching in the clause easily without separate state, we will use a simpler approach:
+    # Store the map and max_len in the accumulator.
+
+    initial_state = %{0 => -1}
+    
+    {_, max_len} = 
+      Enum.reduce(nums, {0, 0, initial_state}, fn
+        num, {current_sum, max_len, prefix_map} ->
+          new_sum = current_sum + num
+          
+          # Calculate the target prefix sum we need to find
+          target = new_sum - k
+          
+          # Check if the target exists in the map
+          case Map.fetch(prefix_map, target) do
+            {:ok, previous_index} ->
+              subarray_length = current_sum + 1 - previous_index
+              new_max = max(max_len, subarray_length)
+              # Only add the new_sum to the map if it's not already there, to keep the earliest index
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, current_sum)
+              # Wait, the index logic: 
+              # The prefix_map stores index. 
+              # Let's restructure the accumulator to store index explicitly.
+              # Accumulator: {current_sum, max_len, prefix_map, current_index}
+              # But Enum.reduce only gives the accumulator and the element.
+              # So I need to put the index into the accumulator.
+              {new_sum, new_max, updated_map, current_sum} # This is wrong, current_sum is not index.
+              
+              # Let's restart the reduce logic to be cleaner.
+              # We can maintain the index by tracking it via Enum.with_index, or just store it in the tuple.
+              {current_sum, max_len, prefix_map, current_index}
+          end
+      end)
+      
+      # The above approach is flawed because I'm trying to mix state.
+      # Let's use a standard reduce where the accumulator is {max_len, current_sum, prefix_map, current_index}
+      
+      {_, max_len, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+        num, {max_len, current_sum, prefix_map, current_index} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, previous_index} ->
+              length = current_index - previous_index
+              new_max = max(max_len, length)
+              {new_max, new_sum, prefix_map, current_index}
+            
+            :error ->
+              {max_len, new_sum, Map.put_new(prefix_map, new_sum, current_index), current_index}
+          end
+      end)
+      
+      # Wait, the index calculation is off.
+      # If prefix_map stores index, then:
+      # When we are at current_index (0-based), and we find target, the subarray is from (previous_index + 1) to current_index.
+      # Length = current_index - previous_index.
+      # But in my tuple, I stored current_index as the index of the *current* element being processed.
+      # Let's trace:
+      # Init: {0, 0, %{0 => -1}, 0} -> current_index is 0? No, init should have index tracking.
+      # Let's fix the accumulator structure: {max_len, current_sum, prefix_map, next_index}
+      
+      {max_len, _, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+        num, {max_len, current_sum, prefix_map, idx} ->
+          new_sum = current_sum + num
+          target = new_sum - num - 1 # No, target is new_sum - k.
+          target = new_sum - k
+          
+          # The index of the current element is idx.
+          # We haven't incremented idx yet in the tuple, so idx is the index of the current element.
+          # Actually, let's make idx the index of the *next* element to be processed?
+          # Or just use idx as the current index.
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              len = idx - prev_idx
+              new_max = max(max_len, len)
+              # Don't update the map for new_sum if it already exists (keep earliest index)
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, updated_map, idx + 1}
+            
+            :error ->
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {max_len, new_sum, updated_map, idx + 1}
+          end
+      end)
+      
+      # This looks correct.
+      # Example 1: [-2, -1, 2, 1], k=1
+      # Init: {0, 0, %{0 => -1}, 0}
+      # Num -2, idx 0: new_sum = -2. Target = -3. Not in map.
+      # Map: %{0 => -1, -2 => 0}. Acc: {0, -2, map, 1}
+      # Num -1, idx 1: new_sum = -3. Target = -4. Not in map.
+      # Map: %{0 => -1, -2 => 0, -3 => 1}. Acc: {0, -3, map, 2}
+      # Num 2, idx 2: new_sum = -1. Target = -2. Map has -2 at 0.
+      # Len = 2 - 0 = 2. Max = 2.
+      # Map: %{..., -1 => 2}. Acc: {2, -1, map, 3}
+      # Num 1, idx 3: new_sum = 0. Target = -1. Map has -1 at 2.
+      # Len = 3 - 2 = 1. Max = 2.
+      # Map: %{0 => -1} (already exists). Acc: {2, 0, map, 4}
+      # Result 2. Correct.
+      
+      max_len
+  end
+end[0m
+[36m22:18:24.582 [debug] [Validator.run] final test (372 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[33m22:18:24.582 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m22:18:24.582 [info] [Solve attempt 3] generating (fn=longest_subarray_length)[0m
+[36m22:18:24.582 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # Initialize prefix sum map with 0 at index -1 (before the start)
+    # We use Enum.reduce with an accumulator of {prefix_sum, max_length, current_index, prefix_map}
+    # However, since Enum.reduce doesn't support 4-element tuple accumulation directly with pattern
+    # matching in the clause easily without separate state, we will use a simpler approach:
+    # Store the map and max_len in the accumulator.
+
+    initial_state = %{0 => -1}
+    
+    {_, max_len} = 
+      Enum.reduce(nums, {0, 0, initial_state}, fn
+        num, {current_sum, max_len, prefix_map} ->
+          new_sum = current_sum + num
+          
+          # Calculate the target prefix sum we need to find
+          target = new_sum - k
+          
+          # Check if the target exists in the map
+          case Map.fetch(prefix_map, target) do
+            {:ok, previous_index} ->
+              subarray_length = current_sum + 1 - previous_index
+              new_max = max(max_len, subarray_length)
+              # Only add the new_sum to the map if it's not already there, to keep the earliest index
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, current_sum)
+              # Wait, the index logic: 
+              # The prefix_map stores index. 
+              # Let's restructure the accumulator to store index explicitly.
+              # Accumulator: {current_sum, max_len, prefix_map, current_index}
+              # But Enum.reduce only gives the accumulator and the element.
+              # So I need to put the index into the accumulator.
+              {new_sum, new_max, updated_map, current_sum} # This is wrong, current_sum is not index.
+              
+              # Let's restart the reduce logic to be cleaner.
+              # We can maintain the index by tracking it via Enum.with_index, or just store it in the tuple.
+              {current_sum, max_len, prefix_map, current_index}
+          end
+      end)
+      
+      # The above approach is flawed because I'm trying to mix state.
+      # Let's use a standard reduce where the accumulator is {max_len, current_sum, prefix_map, current_index}
+      
+      {_, max_len, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+        num, {max_len, current_sum, prefix_map, current_index} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, previous_index} ->
+              length = current_index - previous_index
+              new_max = max(max_len, length)
+              {new_max, new_sum, prefix_map, current_index}
+            
+            :error ->
+              {max_len, new_sum, Map.put_new(prefix_map, new_sum, current_index), current_index}
+          end
+      end)
+      
+      # Wait, the index calculation is off.
+      # If prefix_map stores index, then:
+      # When we are at current_index (0-based), and we find target, the subarray is from (previous_index + 1) to current_index.
+      # Length = current_index - previous_index.
+      # But in my tuple, I stored current_index as the index of the *current* element being processed.
+      # Let's trace:
+      # Init: {0, 0, %{0 => -1}, 0} -> current_index is 0? No, init should have index tracking.
+      # Let's fix the accumulator structure: {max_len, current_sum, prefix_map, next_index}
+      
+      {max_len, _, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+        num, {max_len, current_sum, prefix_map, idx} ->
+          new_sum = current_sum + num
+          target = new_sum - num - 1 # No, target is new_sum - k.
+          target = new_sum - k
+          
+          # The index of the current element is idx.
+          # We haven't incremented idx yet in the tuple, so idx is the index of the current element.
+          # Actually, let's make idx the index of the *next* element to be processed?
+          # Or just use idx as the current index.
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              len = idx - prev_idx
+              new_max = max(max_len, len)
+              # Don't update the map for new_sum if it already exists (keep earliest index)
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, updated_map, idx + 1}
+            
+            :error ->
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {max_len, new_sum, updated_map, idx + 1}
+          end
+      end)
+      
+      # This looks correct.
+      # Example 1: [-2, -1, 2, 1], k=1
+      # Init: {0, 0, %{0 => -1}, 0}
+      # Num -2, idx 0: new_sum = -2. Target = -3. Not in map.
+      # Map: %{0 => -1, -2 => 0}. Acc: {0, -2, map, 1}
+      # Num -1, idx 1: new_sum = -3. Target = -4. Not in map.
+      # Map: %{0 => -1, -2 => 0, -3 => 1}. Acc: {0, -3, map, 2}
+      # Num 2, idx 2: new_sum = -1. Target = -2. Map has -2 at 0.
+      # Len = 2 - 0 = 2. Max = 2.
+      # Map: %{..., -1 => 2}. Acc: {2, -1, map, 3}
+      # Num 1, idx 3: new_sum = 0. Target = -1. Map has -1 at 2.
+      # Len = 3 - 2 = 1. Max = 2.
+      # Map: %{0 => -1} (already exists). Acc: {2, 0, map, 4}
+      # Result 2. Correct.
+      
+      max_len
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+
+---END---
+
+## Errors
+### compile error:
+warning: variable "target" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 76 │           target = new_sum - num - 1 # No, target is new_sum - k.
+    │           ~
+    │
+    └─ lib/solution.ex:76:11: Solution.longest_subarray_length/2
+
+    warning: variable "max_len" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 16 │     {_, max_len} = 
+    │         ~~~~~~~
+    │
+    └─ lib/solution.ex:16:9: Solution.longest_subarray_length/2
+
+    warning: variable "max_len" is unused (there is a variable with the same name in the context, use the pin operator (^) to match on it or prefix this variable with underscore if it is not meant to be used)
+    │
+ 48 │       {_, max_len, _, _} = Enum.reduce(nums, {0, 0, %{0 => -1}, 0}, fn
+    │           ~~~~~~~
+    │
+    └─ lib/solution.ex:48:11: Solution.longest_subarray_length/2
+
+    error: undefined variable "current_index"
+    │
+ 41 │               {current_sum, max_len, prefix_map (truncated)[0m
+[36m22:18:40.040 [debug] [LLM.call] finish=stop len=5547 usage=%{"completion_tokens" => 1568, "prompt_tokens" => 2405, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 3973}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # We use Enum.reduce with an accumulator containing:
+    # {max_length, current_prefix_sum, prefix_map, current_index}
+    # prefix_map maps prefix_sum -> index (the index BEFORE this element was added, i.e., the end of the prefix)
+    # Actually, let's map prefix_sum -> index such that the subarray is from index+1 to current_index
+    # Standard approach: map[prefix_sum] = index (where the prefix sum was last seen)
+    # Initialize with 0 at index -1 (meaning prefix sum 0 before any element)
+    
+    initial_state = {0, 0, %{0 => -1}, -1}
+    
+    # We process each number and its index
+    {max_length, _, _, _} = 
+      Enum.reduce(nums, initial_state, fn
+        num, {max_length, current_sum, prefix_map, idx} ->
+          new_sum = current_sum + num
+          # The index of the current element being processed is idx + 1
+          # Wait, let's simplify. 
+          # Let the accumulator track: {max_length, current_sum, prefix_map}
+          # But we need the index to calculate length.
+          # Let's use Enum.with_index to get the index explicitly.
+          # However, we can just track the index in the accumulator.
+          
+          # Let's restart the accumulator logic to be cleaner.
+          # Acc: {max_length, current_sum, prefix_map, next_index}
+          # In each step:
+          # 1. Calculate new_sum
+          # 2. Check if (new_sum - k) exists in prefix_map
+          # 3. If so, length = next_index - existing_index
+          # 4. Update max_length
+          # 5. Add new_sum to prefix_map if not present (store next_index)
+          # 6. Return new state
+          
+          target = new_sum - k
+          new_max = max_length
+          updated_map = prefix_map
+          new_idx = idx + 1
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_index} ->
+              length = new_idx - prev_index
+              new_max = max(max_length, length)
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, new_idx)
+              {new_max, new_sum, updated_map, new_idx + 1}
+            
+            :error ->
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, new_idx)
+              {new_max, new_sum, updated_map, new_idx + 1}
+          end
+      end)
+      
+    # Wait, the above loop logic is slightly flawed in state transition.
+    # Let's write it cleanly with a proper reduce that maintains index.
+    
+    # Reset and rewrite cleanly.
+    max_length = 0
+    current_sum = 0
+    prefix_map = %{0 => -1}
+    
+    # We can't easily do this in a single Enum.reduce without tuple state.
+    # Let's use a tuple state: {max_length, current_sum, prefix_map}
+    # But we need index. We can use Enum.with_index.
+    
+    {max_length, _, _} = 
+      Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_length, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          # We want subarray sum k.
+          # sum(i..j) = prefix[j] - prefix[i-1] = k
+          # prefix[j] - k = prefix[i-1]
+          # We are at index idx (0-based). The prefix sum is new_sum.
+          # The previous prefix sum index we stored was the index BEFORE the element.
+          # If we store index i for prefix_sum, it means the prefix sum ends at index i-1?
+          # No, standard: map[prefix_sum] = index (the index of the element that caused this prefix sum).
+          # If map has 0 at -1, it means prefix sum 0 exists before index 0.
+          # So if current prefix sum is new_sum, and we find target in map at index prev_idx,
+          # the subarray is from prev_idx + 1 to idx.
+          # Length = idx - prev_idx.
+          
+          target = new_sum - k
+          new_max = max_length
+          new_map = prefix_map
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_length, length)
+              # Store new_sum if not already present
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, new_map}
+            
+            :error ->
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, new_map}
+          end
+      end)
+      
+    max_length
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+---END---[0m
+[22m22:18:40.040 [info] [LLM.call] local_qwen_thinking completed in 15458ms — ok[0m
+[22m22:18:40.040 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m22:18:40.040 [debug] [Validator.run] module code (5139 chars):
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # We use Enum.reduce with an accumulator containing:
+    # {max_length, current_prefix_sum, prefix_map, current_index}
+    # prefix_map maps prefix_sum -> index (the index BEFORE this element was added, i.e., the end of the prefix)
+    # Actually, let's map prefix_sum -> index such that the subarray is from index+1 to current_index
+    # Standard approach: map[prefix_sum] = index (where the prefix sum was last seen)
+    # Initialize with 0 at index -1 (meaning prefix sum 0 before any element)
+    
+    initial_state = {0, 0, %{0 => -1}, -1}
+    
+    # We process each number and its index
+    {max_length, _, _, _} = 
+      Enum.reduce(nums, initial_state, fn
+        num, {max_length, current_sum, prefix_map, idx} ->
+          new_sum = current_sum + num
+          # The index of the current element being processed is idx + 1
+          # Wait, let's simplify. 
+          # Let the accumulator track: {max_length, current_sum, prefix_map}
+          # But we need the index to calculate length.
+          # Let's use Enum.with_index to get the index explicitly.
+          # However, we can just track the index in the accumulator.
+          
+          # Let's restart the accumulator logic to be cleaner.
+          # Acc: {max_length, current_sum, prefix_map, next_index}
+          # In each step:
+          # 1. Calculate new_sum
+          # 2. Check if (new_sum - k) exists in prefix_map
+          # 3. If so, length = next_index - existing_index
+          # 4. Update max_length
+          # 5. Add new_sum to prefix_map if not present (store next_index)
+          # 6. Return new state
+          
+          target = new_sum - k
+          new_max = max_length
+          updated_map = prefix_map
+          new_idx = idx + 1
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_index} ->
+              length = new_idx - prev_index
+              new_max = max(max_length, length)
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, new_idx)
+              {new_max, new_sum, updated_map, new_idx + 1}
+            
+            :error ->
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, new_idx)
+              {new_max, new_sum, updated_map, new_idx + 1}
+          end
+      end)
+      
+    # Wait, the above loop logic is slightly flawed in state transition.
+    # Let's write it cleanly with a proper reduce that maintains index.
+    
+    # Reset and rewrite cleanly.
+    max_length = 0
+    current_sum = 0
+    prefix_map = %{0 => -1}
+    
+    # We can't easily do this in a single Enum.reduce without tuple state.
+    # Let's use a tuple state: {max_length, current_sum, prefix_map}
+    # But we need index. We can use Enum.with_index.
+    
+    {max_length, _, _} = 
+      Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_length, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          # We want subarray sum k.
+          # sum(i..j) = prefix[j] - prefix[i-1] = k
+          # prefix[j] - k = prefix[i-1]
+          # We are at index idx (0-based). The prefix sum is new_sum.
+          # The previous prefix sum index we stored was the index BEFORE the element.
+          # If we store index i for prefix_sum, it means the prefix sum ends at index i-1?
+          # No, standard: map[prefix_sum] = index (the index of the element that caused this prefix sum).
+          # If map has 0 at -1, it means prefix sum 0 exists before index 0.
+          # So if current prefix sum is new_sum, and we find target in map at index prev_idx,
+          # the subarray is from prev_idx + 1 to idx.
+          # Length = idx - prev_idx.
+          
+          target = new_sum - k
+          new_max = max_length
+          new_map = prefix_map
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_length, length)
+              # Store new_sum if not already present
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, new_map}
+            
+            :error ->
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, new_map}
+          end
+      end)
+      
+    max_length
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[36m22:18:40.040 [debug] [Validator.run] test code (372 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[36m22:18:40.040 [debug] [Budget] spent so far (est.): $1.8397[0m
+[22m22:18:40.040 [info] [Validator.run] step 1/6: credence fix[0m
+[36m22:18:40.040 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m22:18:40.706 [debug] [run_credence_fix] exit=0 output:
+
+22:18:40.618 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+22:18:40.620 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 21 rules)
+
+22:18:40.646 [debug] [credence_fix] Code.compile_string raised: cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+
+22:18:40.646 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+22:18:40.650 [debug] [credence_fix] no rule matched diagnostic: %{message: "cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app", position: 0, file: "credence_check.ex", severity: :error}
+
+22:18:40.650 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+22:18:40.650 [debug] [credence_fix] semantic done. Applied: []
+
+22:18:40.650 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+22:18:40.665 [debug] [credence_fix] Code.compile_string raised: cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+
+22:18:40.665 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+22:18:40.685 [debug] [credence_fix] Code.compile_string raised: cannot use ExUnit.Case without starting the ExUnit application, please call ExUnit.start() or explicitly start the :ex_unit app
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 5 unfixable issue(s)
+no_eager_with_index_in_reduce: `Enum.with_index/1` eagerly allocates a new list of tuples before `Enum.reduce/3` begins. Use `Stream.with_index/1` for lazy evaluation, or track the index in the accumulator. (line 70)
+prefer_map_put_new: `if Map.has_key?(map, key) do map else Map.put(map, key, val) end` can be replaced with `Map.put_new(map, key, val)` — it's more idiomatic and implemented natively. (line 48)
+prefer_map_put_new: `if Map.has_key?(map, key) do map else Map.put(map, key, val) end` can be replaced with `Map.put_new(map, key, val)` — it's more idiomatic and implemented natively. (line 52)
+prefer_map_put_new: `if Map.has_key?(map, key) do map else Map.put(map, key, val) end` can be replaced with `Map.put_new(map, key, val)` — it's more idiomatic and implemented natively. (line 94)
+prefer_map_put_new: `if Map.has_key?(map, key) do map else Map.put(map, key, val) end` can be replaced with `Map.put_new(map, key, val)` — it's more idiomatic and implemented natively. (line 98)
+[0m
+[36m22:18:40.706 [debug] [run_credence_fix] no changes needed[0m
+[22m22:18:40.706 [info] [Validator.run] credence: no changes needed[0m
+[22m22:18:40.706 [info] [Validator.run] step 2/6: compile[0m
+[22m22:18:41.467 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m22:18:41.467 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: variable "updated_map" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 41 │           updated_map = prefix_map
+    │           ~
+    │
+    └─ lib/solution.ex:41:11: Solution.longest_subarray_length/2
+
+    warning: variable "new_map" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 87 │           new_map = prefix_map
+    │           ~
+    │
+    └─ lib/solution.ex:87:11: Solution.longest_subarray_length/2
+
+    warning: variable "current_sum" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 62 │     current_sum = 0
+    │     ~~~~~~~~~~~
+    │
+    └─ lib/solution.ex:62:5: Solution.longest_subarray_length/2
+
+    warning: variable "max_length" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 18 │     {max_length, _, _, _} = 
+    │      ~~~~~~~~~~
+    │
+    └─ lib/solution.ex:18:6: Solution.longest_subarray_length/2
+
+    warning: variable "max_length" is unused (there is a variable with the same name in the context, use the pin operator (^) to match on it or prefix this variable with underscore if it is not meant to be used)
+    │
+ 61 │     max_length = 0
+    │     ~~~~~~~~~~
+    │
+    └─ lib/solution.ex:61:5: Solution.longest_subarray_length/2
+
+    warning: variable "prefix_map" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 63 │     prefix_map = %{0 => -1}
+    │     ~~~~~~~~~~
+    │
+    └─ lib/solution.ex:63:5: Solution.longest_subarray_length/2
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m22:18:41.467 [info] [Validator.run] step 3/6: format[0m
+[22m22:18:41.467 [info] [Validator.run] skipping format (compile failed)[0m
+[22m22:18:41.467 [info] [Validator.run] step 4/6: credo[0m
+[22m22:18:41.467 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m22:18:41.467 [info] [Validator.run] step 5/6: credence check[0m
+[22m22:18:41.467 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m22:18:41.467 [info] [Validator.run] step 6/6: tests[0m
+[22m22:18:41.467 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m22:18:41.467 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m22:18:41.467 [debug] [Validator.run] final module (5139 chars):
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # We use Enum.reduce with an accumulator containing:
+    # {max_length, current_prefix_sum, prefix_map, current_index}
+    # prefix_map maps prefix_sum -> index (the index BEFORE this element was added, i.e., the end of the prefix)
+    # Actually, let's map prefix_sum -> index such that the subarray is from index+1 to current_index
+    # Standard approach: map[prefix_sum] = index (where the prefix sum was last seen)
+    # Initialize with 0 at index -1 (meaning prefix sum 0 before any element)
+    
+    initial_state = {0, 0, %{0 => -1}, -1}
+    
+    # We process each number and its index
+    {max_length, _, _, _} = 
+      Enum.reduce(nums, initial_state, fn
+        num, {max_length, current_sum, prefix_map, idx} ->
+          new_sum = current_sum + num
+          # The index of the current element being processed is idx + 1
+          # Wait, let's simplify. 
+          # Let the accumulator track: {max_length, current_sum, prefix_map}
+          # But we need the index to calculate length.
+          # Let's use Enum.with_index to get the index explicitly.
+          # However, we can just track the index in the accumulator.
+          
+          # Let's restart the accumulator logic to be cleaner.
+          # Acc: {max_length, current_sum, prefix_map, next_index}
+          # In each step:
+          # 1. Calculate new_sum
+          # 2. Check if (new_sum - k) exists in prefix_map
+          # 3. If so, length = next_index - existing_index
+          # 4. Update max_length
+          # 5. Add new_sum to prefix_map if not present (store next_index)
+          # 6. Return new state
+          
+          target = new_sum - k
+          new_max = max_length
+          updated_map = prefix_map
+          new_idx = idx + 1
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_index} ->
+              length = new_idx - prev_index
+              new_max = max(max_length, length)
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, new_idx)
+              {new_max, new_sum, updated_map, new_idx + 1}
+            
+            :error ->
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, new_idx)
+              {new_max, new_sum, updated_map, new_idx + 1}
+          end
+      end)
+      
+    # Wait, the above loop logic is slightly flawed in state transition.
+    # Let's write it cleanly with a proper reduce that maintains index.
+    
+    # Reset and rewrite cleanly.
+    max_length = 0
+    current_sum = 0
+    prefix_map = %{0 => -1}
+    
+    # We can't easily do this in a single Enum.reduce without tuple state.
+    # Let's use a tuple state: {max_length, current_sum, prefix_map}
+    # But we need index. We can use Enum.with_index.
+    
+    {max_length, _, _} = 
+      Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_length, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          # We want subarray sum k.
+          # sum(i..j) = prefix[j] - prefix[i-1] = k
+          # prefix[j] - k = prefix[i-1]
+          # We are at index idx (0-based). The prefix sum is new_sum.
+          # The previous prefix sum index we stored was the index BEFORE the element.
+          # If we store index i for prefix_sum, it means the prefix sum ends at index i-1?
+          # No, standard: map[prefix_sum] = index (the index of the element that caused this prefix sum).
+          # If map has 0 at -1, it means prefix sum 0 exists before index 0.
+          # So if current prefix sum is new_sum, and we find target in map at index prev_idx,
+          # the subarray is from prev_idx + 1 to idx.
+          # Length = idx - prev_idx.
+          
+          target = new_sum - k
+          new_max = max_length
+          new_map = prefix_map
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_length, length)
+              # Store new_sum if not already present
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, new_map}
+            
+            :error ->
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, new_map}
+          end
+      end)
+      
+    max_length
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[36m22:18:41.467 [debug] [Validator.run] final test (372 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[33m22:18:41.467 [warning] [Solve attempt 3] validation FAILED: [:compile][0m
+[22m22:18:41.467 [info] [Solve attempt 4] generating (fn=longest_subarray_length)[0m
+[36m22:18:41.467 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    # We use Enum.reduce with an accumulator containing:
+    # {max_length, current_prefix_sum, prefix_map, current_index}
+    # prefix_map maps prefix_sum -> index (the index BEFORE this element was added, i.e., the end of the prefix)
+    # Actually, let's map prefix_sum -> index such that the subarray is from index+1 to current_index
+    # Standard approach: map[prefix_sum] = index (where the prefix sum was last seen)
+    # Initialize with 0 at index -1 (meaning prefix sum 0 before any element)
+    
+    initial_state = {0, 0, %{0 => -1}, -1}
+    
+    # We process each number and its index
+    {max_length, _, _, _} = 
+      Enum.reduce(nums, initial_state, fn
+        num, {max_length, current_sum, prefix_map, idx} ->
+          new_sum = current_sum + num
+          # The index of the current element being processed is idx + 1
+          # Wait, let's simplify. 
+          # Let the accumulator track: {max_length, current_sum, prefix_map}
+          # But we need the index to calculate length.
+          # Let's use Enum.with_index to get the index explicitly.
+          # However, we can just track the index in the accumulator.
+          
+          # Let's restart the accumulator logic to be cleaner.
+          # Acc: {max_length, current_sum, prefix_map, next_index}
+          # In each step:
+          # 1. Calculate new_sum
+          # 2. Check if (new_sum - k) exists in prefix_map
+          # 3. If so, length = next_index - existing_index
+          # 4. Update max_length
+          # 5. Add new_sum to prefix_map if not present (store next_index)
+          # 6. Return new state
+          
+          target = new_sum - k
+          new_max = max_length
+          updated_map = prefix_map
+          new_idx = idx + 1
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_index} ->
+              length = new_idx - prev_index
+              new_max = max(max_length, length)
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, new_idx)
+              {new_max, new_sum, updated_map, new_idx + 1}
+            
+            :error ->
+              updated_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, new_idx)
+              {new_max, new_sum, updated_map, new_idx + 1}
+          end
+      end)
+      
+    # Wait, the above loop logic is slightly flawed in state transition.
+    # Let's write it cleanly with a proper reduce that maintains index.
+    
+    # Reset and rewrite cleanly.
+    max_length = 0
+    current_sum = 0
+    prefix_map = %{0 => -1}
+    
+    # We can't easily do this in a single Enum.reduce without tuple state.
+    # Let's use a tuple state: {max_length, current_sum, prefix_map}
+    # But we need index. We can use Enum.with_index.
+    
+    {max_length, _, _} = 
+      Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_length, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          # We want subarray sum k.
+          # sum(i..j) = prefix[j] - prefix[i-1] = k
+          # prefix[j] - k = prefix[i-1]
+          # We are at index idx (0-based). The prefix sum is new_sum.
+          # The previous prefix sum index we stored was the index BEFORE the element.
+          # If we store index i for prefix_sum, it means the prefix sum ends at index i-1?
+          # No, standard: map[prefix_sum] = index (the index of the element that caused this prefix sum).
+          # If map has 0 at -1, it means prefix sum 0 exists before index 0.
+          # So if current prefix sum is new_sum, and we find target in map at index prev_idx,
+          # the subarray is from prev_idx + 1 to idx.
+          # Length = idx - prev_idx.
+          
+          target = new_sum - k
+          new_max = max_length
+          new_map = prefix_map
+          
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_length, length)
+              # Store new_sum if not already present
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, new_map}
+            
+            :error ->
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_sum, new_map}
+          end
+      end)
+      
+    max_length
+  end
+end
+
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: variable "updated_map" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 41 │           updated_map = prefix_map
+    │           ~
+    │
+    └─ lib/solution.ex:41:11: Solution.longest_subarray_length/2
+
+    warning: variable "new_map" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 87 │           new_map = prefix_map
+    │           ~
+    │
+    └─ lib/solution.ex:87:11: Solution.longest_subarray_length/2
+
+    warning: variable "current_sum" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 62 │     current_sum = 0
+    │     ~~~~~~~~~~~
+    │
+    └─ lib/solution.ex:62:5: Solution.longest_subarray_length/2
+
+    warning: variable "max_length" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 18 │     {max_length, _, _, _} = 
+    │      ~~~~~~~~~~
+    │
+    └─ lib/solution.ex:18:6: Solution.longest_subarray_length/2
+
+    warning: variable "max_length" is unused (there is a variable with the same name in the context, use the pin operator (^) to match on it or prefix this variable with underscore if it is not meant to be used)
+    │
+ 61 │     max_length = 0
+    │     ~~~~~~~~~~
+    │
+    └─ lib/solution.ex:61:5: Solution.longest_subarray_length/2
+
+    warning: variable "prefix_map" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 63  (truncated)[0m
+[36m22:18:46.913 [debug] [LLM.call] finish=stop len=1502 usage=%{"completion_tokens" => 466, "prompt_tokens" => 2356, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2822}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+      {num, idx}, {max_len, current_sum, prefix_map} ->
+        new_sum = current_sum + num
+        target = new_sum - k
+        
+        {new_max_len, new_prefix_map} =
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_len, length)
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_map}
+            
+            :error ->
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {max_len, new_map}
+          end
+          
+      {new_max_len, new_sum, new_prefix_map}
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+---END---[0m
+[22m22:18:46.914 [info] [LLM.call] local_qwen_thinking completed in 5446ms — ok[0m
+[22m22:18:46.914 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m22:18:46.914 [debug] [Validator.run] module code (1095 chars):
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+      {num, idx}, {max_len, current_sum, prefix_map} ->
+        new_sum = current_sum + num
+        target = new_sum - k
+        
+        {new_max_len, new_prefix_map} =
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_len, length)
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_map}
+            
+            :error ->
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {max_len, new_map}
+          end
+          
+      {new_max_len, new_sum, new_prefix_map}
+    end)
+  end
+end[0m
+[36m22:18:46.914 [debug] [Validator.run] test code (372 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[36m22:18:46.914 [debug] [Budget] spent so far (est.): $1.8411[0m
+[22m22:18:46.922 [info] [Validator.run] step 1/6: credence fix[0m
+[36m22:18:46.922 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m22:18:47.681 [debug] [run_credence_fix] exit=0 output:
+
+22:18:47.493 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+22:18:47.495 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 21 rules)
+
+22:18:47.510 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+22:18:47.516 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+22:18:47.516 [debug] [credence_fix] semantic done. Applied: []
+
+22:18:47.517 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+22:18:47.544 [debug] [credence_fix] NoEagerWithIndexInReduce: check found 1 issue(s), running fix...
+
+22:18:47.564 [debug] [credence_fix] NoEagerWithIndexInReduce: source CHANGED:
+  L8 -     Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+  L8 +     Enum.reduce(Stream.with_index(nums), {0, 0, %{0 => -1}}, fn
+  L12 - 
+  L12 + 
+  L18 -               new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+  L18 + 
+  L19 -               {new_max, new_map}
+  L19 +               new_map =
+  L20 - 
+  L20 +                 if Map.has_key?(prefix_map, new_sum),
+  L21 -             :error ->
+  L21 +                   do: prefix_map,
+  L22 -               new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+  L22 +                   else: Map.put(prefix_map, new_sum, idx)
+  L23 -               {max_len, new_map}
+  L23 + 
+  L24 -           end
+  L24 +               {new_max, new_map}
+  L25 - 
+  L25 + 
+  L26 -       {new_max_len, new_sum, new_prefix_map}
+  L26 +             :error ->
+  L27 -     end)
+  L27 +               new_map =
+  L28 -   end
+  L28 +                 if Map.has_key?(prefix_map, new_sum),
+  L29 - end
+  L29 +                   do: prefix_map,
+  L30 +                   else: Map.put(prefix_map, new_sum, idx)
+  L31 + 
+  L32 +               {max_len, new_map}
+  L33 +           end
+  L34 + 
+  L35 +         {new_max_len, new_sum, new_prefix_map}
+  L36 +     end)
+  L37 +   end
+  L38 + end
+
+22:18:47.629 [debug] [credence_fix] PreferMapPutNew: check found 2 issue(s), running fix...
+
+22:18:47.640 [debug] [credence_fix] PreferMapPutNew: source CHANGED:
+  L20 -                 if Map.has_key?(prefix_map, new_sum),
+  L20 +                 Map.put_new(prefix_map, new_sum, idx)
+  L21 -                   do: prefix_map,
+  L21 + 
+  L22 -                   else: Map.put(prefix_map, new_sum, idx)
+  L22 +               {new_max, new_map}
+  L24 -               {new_max, new_map}
+  L24 +             :error ->
+  L25 - 
+  L25 +               new_map =
+  L26 -             :error ->
+  L26 +                 Map.put_new(prefix_map, new_sum, idx)
+  L27 -               new_map =
+  L27 + 
+  L28 -                 if Map.has_key?(prefix_map, new_sum),
+  L28 +               {max_len, new_map}
+  L29 -                   do: prefix_map,
+  L29 +           end
+  L30 -                   else: Map.put(prefix_map, new_sum, idx)
+  L30 + 
+  L31 - 
+  L31 +         {new_max_len, new_sum, new_prefix_map}
+  L32 -               {max_len, new_map}
+  L32 +     end)
+  L33 -           end
+  L33 +   end
+  L34 - 
+  L34 + end
+  L35 -         {new_max_len, new_sum, new_prefix_map}
+  L36 -     end)
+  L37 -   end
+  L38 - end
+
+22:18:47.657 [debug] [credence_fix] done. Applied: [NoEagerWithIndexInReduce(1), PreferMapPutNew(2)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.NoEagerWithIndexInReduce, 1}, {Credence.Pattern.PreferMapPutNew, 2}]
+[0m
+[22m22:18:47.681 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m22:18:48.279 [info] [run_credence_fix] fix compiles OK[0m
+[36m22:18:48.279 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+      {num, idx}, {max_len, current_sum, prefix_map} ->
+        new_sum = current_sum + num
+        target = new_sum - k
+        
+        {new_max_len, new_prefix_map} =
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_len, length)
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_map}
+            
+            :error ->
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {max_len, new_map}
+          end
+          
+      {new_max_len, new_sum, new_prefix_map}
+    end)
+  end
+end[0m
+[36m22:18:48.279 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    Enum.reduce(Stream.with_index(nums), {0, 0, %{0 => -1}}, fn
+      {num, idx}, {max_len, current_sum, prefix_map} ->
+        new_sum = current_sum + num
+        target = new_sum - k
+
+        {new_max_len, new_prefix_map} =
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_len, length)
+
+              new_map =
+                Map.put_new(prefix_map, new_sum, idx)
+
+              {new_max, new_map}
+
+            :error ->
+              new_map =
+                Map.put_new(prefix_map, new_sum, idx)
+
+              {max_len, new_map}
+          end
+
+        {new_max_len, new_sum, new_prefix_map}
+    end)
+  end
+end[0m
+[22m22:18:48.279 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m22:18:48.279 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+      {num, idx}, {max_len, current_sum, prefix_map} ->
+        new_sum = current_sum + num
+        target = new_sum - k
+        
+        {new_max_len, new_prefix_map} =
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_len, length)
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_map}
+            
+            :error ->
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {max_len, new_map}
+          end
+          
+      {new_max_len, new_sum, new_prefix_map}
+    end)
+  end
+end[0m
+[36m22:18:48.279 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    Enum.reduce(Stream.with_index(nums), {0, 0, %{0 => -1}}, fn
+      {num, idx}, {max_len, current_sum, prefix_map} ->
+        new_sum = current_sum + num
+        target = new_sum - k
+
+        {new_max_len, new_prefix_map} =
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_len, length)
+
+              new_map =
+                Map.put_new(prefix_map, new_sum, idx)
+
+              {new_max, new_map}
+
+            :error ->
+              new_map =
+                Map.put_new(prefix_map, new_sum, idx)
+
+              {max_len, new_map}
+          end
+
+        {new_max_len, new_sum, new_prefix_map}
+    end)
+  end
+end[0m
+[36m22:18:48.279 [debug] [propagate_is_renames] old functions: ["longest_subarray_length"][0m
+[36m22:18:48.279 [debug] [propagate_is_renames] new functions: ["longest_subarray_length"][0m
+[36m22:18:48.279 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m22:18:48.279 [info] [Validator.run] step 2/6: compile[0m
+[22m22:18:48.859 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m22:18:48.860 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m22:18:48.860 [info] [Validator.run] step 3/6: format[0m
+[22m22:18:49.165 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m22:18:49.479 [debug] [Validator.run] format fix output: [0m
+[22m22:18:49.479 [info] [Validator.run] step 4/6: credo[0m
+[36m22:18:49.947 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m22:18:49.948 [info] [Validator.run] credo: no issues[0m
+[22m22:18:49.948 [info] [Validator.run] step 5/6: credence check[0m
+[22m22:18:50.725 [info] [Validator.run] credence check exit=0[0m
+[36m22:18:50.725 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m22:18:50.725 [info] [Validator.run] credence check: passed[0m
+[22m22:18:50.726 [info] [Validator.run] step 6/6: tests[0m
+[22m22:18:51.198 [info] [Validator.run] test exit=2[0m
+[36m22:18:51.198 [debug] [Validator.run] test output:
+Running ExUnit with seed: 149565, max_cases: 48
+
+
+
+  1) test example 1 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+     left:  {2, 0, %{-3 => 1, -2 => 0, -1 => 2, 0 => -1}}
+     right: 2
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+
+  2) test example 3 (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+     left:  {4, 6, %{0 => -1, 1 => 0, 3 => 3, 5 => 2, 6 => 4}}
+     right: 4
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  3) test example 2 (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+     left:  {10, 0, %{0 => -1}}
+     right: 10
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+[0m
+[33m22:18:51.198 [warning] [Validator.run] tests: FAILED[0m
+[22m22:18:51.198 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m22:18:51.199 [debug] [Validator.run] final module (993 chars):
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    Enum.reduce(Stream.with_index(nums), {0, 0, %{0 => -1}}, fn
+      {num, idx}, {max_len, current_sum, prefix_map} ->
+        new_sum = current_sum + num
+        target = new_sum - k
+
+        {new_max_len, new_prefix_map} =
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_len, length)
+
+              new_map =
+                Map.put_new(prefix_map, new_sum, idx)
+
+              {new_max, new_map}
+
+            :error ->
+              new_map =
+                Map.put_new(prefix_map, new_sum, idx)
+
+              {max_len, new_map}
+          end
+
+        {new_max_len, new_sum, new_prefix_map}
+    end)
+  end
+end
+[0m
+[36m22:18:51.199 [debug] [Validator.run] final test (373 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+[0m
+[33m22:18:51.199 [warning] [Solve attempt 4] validation FAILED: [:test][0m
+[22m22:18:51.199 [info] [Solve attempt 5] generating (fn=longest_subarray_length)[0m
+[36m22:18:51.199 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+      {num, idx}, {max_len, current_sum, prefix_map} ->
+        new_sum = current_sum + num
+        target = new_sum - k
+        
+        {new_max_len, new_prefix_map} =
+          case Map.fetch(prefix_map, target) do
+            {:ok, prev_idx} ->
+              length = idx - prev_idx
+              new_max = max(max_len, length)
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {new_max, new_map}
+            
+            :error ->
+              new_map = if Map.has_key?(prefix_map, new_sum), do: prefix_map, else: Map.put(prefix_map, new_sum, idx)
+              {max_len, new_map}
+          end
+          
+      {new_max_len, new_sum, new_prefix_map}
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 149565, max_cases: 48
+
+
+
+  1) test example 1 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+     left:  {2, 0, %{-3 => 1, -2 => 0, -1 => 2, 0 => -1}}
+     right: 2
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+
+  2) test example 3 (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+     left:  {4, 6, %{0 => -1, 1 => 0, 3 => 3, 5 => 2, 6 => 4}}
+     right: 4
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  3) test example 2 (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+     left:  {10, 0, %{0 => -1}}
+     right: 10
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+
+Reminder: module `Solution`, function `longest_subarray_length` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m22:18:55.817 [debug] [LLM.call] finish=stop len=1506 usage=%{"completion_tokens" => 454, "prompt_tokens" => 1189, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1643}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    {max_len, _current_sum, _prefix_map} =
+      Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_len, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+
+          {new_max_len, new_prefix_map} =
+            case Map.fetch(prefix_map, target) do
+              {:ok, prev_idx} ->
+                length = idx - prev_idx
+                new_max = max(max_len, length)
+                {new_max, prefix_map}
+
+              :error ->
+                new_prefix_map =
+                  if Map.has_key?(prefix_map, new_sum),
+                    do: prefix_map,
+                    else: Map.put(prefix_map, new_sum, idx)
+                {max_len, new_prefix_map}
+            end
+
+          {new_max_len, new_sum, new_prefix_map}
+      end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+---END---[0m
+[22m22:18:55.817 [info] [LLM.call] local_qwen_thinking completed in 4619ms — ok[0m
+[22m22:18:55.817 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m22:18:55.817 [debug] [Validator.run] module code (1099 chars):
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    {max_len, _current_sum, _prefix_map} =
+      Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_len, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+
+          {new_max_len, new_prefix_map} =
+            case Map.fetch(prefix_map, target) do
+              {:ok, prev_idx} ->
+                length = idx - prev_idx
+                new_max = max(max_len, length)
+                {new_max, prefix_map}
+
+              :error ->
+                new_prefix_map =
+                  if Map.has_key?(prefix_map, new_sum),
+                    do: prefix_map,
+                    else: Map.put(prefix_map, new_sum, idx)
+                {max_len, new_prefix_map}
+            end
+
+          {new_max_len, new_sum, new_prefix_map}
+      end)
+  end
+end[0m
+[36m22:18:55.818 [debug] [Validator.run] test code (372 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end[0m
+[36m22:18:55.818 [debug] [Budget] spent so far (est.): $1.8421[0m
+[22m22:18:55.818 [info] [Validator.run] step 1/6: credence fix[0m
+[36m22:18:55.818 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m22:18:56.577 [debug] [run_credence_fix] exit=0 output:
+
+22:18:56.396 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+22:18:56.399 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 21 rules)
+
+22:18:56.414 [debug] [credence_fix] semantic pass 1: compilation OK, 2 warning(s)
+
+22:18:56.414 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+22:18:56.417 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L8 -     {max_len, _current_sum, _prefix_map} =
+  L8 +     {_max_len, _current_sum, _prefix_map} =
+
+22:18:56.421 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+22:18:56.421 [debug] [credence_fix] semantic done. Applied: [UnusedVariable(1)]
+
+22:18:56.421 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+22:18:56.450 [debug] [credence_fix] NoEagerWithIndexInReduce: check found 1 issue(s), running fix...
+
+22:18:56.465 [debug] [credence_fix] NoEagerWithIndexInReduce: source CHANGED:
+  L9 -       Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+  L9 +       Enum.reduce(Stream.with_index(nums), {0, 0, %{0 => -1}}, fn
+  L26 -                 {max_len, new_prefix_map}
+  L26 + 
+  L27 -             end
+  L27 +                 {max_len, new_prefix_map}
+  L28 - 
+  L28 +             end
+  L29 -           {new_max_len, new_sum, new_prefix_map}
+  L29 + 
+  L30 -       end)
+  L30 +           {new_max_len, new_sum, new_prefix_map}
+  L31 -   end
+  L31 +       end)
+  L32 - end
+  L32 +   end
+  L33 + end
+
+22:18:56.525 [debug] [credence_fix] PreferMapPutNew: check found 1 issue(s), running fix...
+
+22:18:56.536 [debug] [credence_fix] PreferMapPutNew: source CHANGED:
+  L23 -                   if Map.has_key?(prefix_map, new_sum),
+  L23 +                   Map.put_new(prefix_map, new_sum, idx)
+  L24 -                     do: prefix_map,
+  L24 + 
+  L25 -                     else: Map.put(prefix_map, new_sum, idx)
+  L25 +                 {max_len, new_prefix_map}
+  L26 - 
+  L26 +             end
+  L27 -                 {max_len, new_prefix_map}
+  L27 + 
+  L28 -             end
+  L28 +           {new_max_len, new_sum, new_prefix_map}
+  L29 - 
+  L29 +       end)
+  L30 -           {new_max_len, new_sum, new_prefix_map}
+  L30 +   end
+  L31 -       end)
+  L31 + end
+  L32 -   end
+  L33 - end
+
+22:18:56.551 [debug] [credence_fix] done. Applied: [NoEagerWithIndexInReduce(1), PreferMapPutNew(1)]
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UnusedVariable, 1}, {Credence.Pattern.NoEagerWithIndexInReduce, 1}, {Credence.Pattern.PreferMapPutNew, 1}]
+[0m
+[22m22:18:56.578 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m22:18:57.156 [info] [run_credence_fix] fix compiles OK[0m
+[36m22:18:57.156 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    {max_len, _current_sum, _prefix_map} =
+      Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_len, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+
+          {new_max_len, new_prefix_map} =
+            case Map.fetch(prefix_map, target) do
+              {:ok, prev_idx} ->
+                length = idx - prev_idx
+                new_max = max(max_len, length)
+                {new_max, prefix_map}
+
+              :error ->
+                new_prefix_map =
+                  if Map.has_key?(prefix_map, new_sum),
+                    do: prefix_map,
+                    else: Map.put(prefix_map, new_sum, idx)
+                {max_len, new_prefix_map}
+            end
+
+          {new_max_len, new_sum, new_prefix_map}
+      end)
+  end
+end[0m
+[36m22:18:57.156 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    {_max_len, _current_sum, _prefix_map} =
+      Enum.reduce(Stream.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_len, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+
+          {new_max_len, new_prefix_map} =
+            case Map.fetch(prefix_map, target) do
+              {:ok, prev_idx} ->
+                length = idx - prev_idx
+                new_max = max(max_len, length)
+                {new_max, prefix_map}
+
+              :error ->
+                new_prefix_map =
+                  Map.put_new(prefix_map, new_sum, idx)
+
+                {max_len, new_prefix_map}
+            end
+
+          {new_max_len, new_sum, new_prefix_map}
+      end)
+  end
+end[0m
+[22m22:18:57.156 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m22:18:57.156 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    {max_len, _current_sum, _prefix_map} =
+      Enum.reduce(Enum.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_len, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+
+          {new_max_len, new_prefix_map} =
+            case Map.fetch(prefix_map, target) do
+              {:ok, prev_idx} ->
+                length = idx - prev_idx
+                new_max = max(max_len, length)
+                {new_max, prefix_map}
+
+              :error ->
+                new_prefix_map =
+                  if Map.has_key?(prefix_map, new_sum),
+                    do: prefix_map,
+                    else: Map.put(prefix_map, new_sum, idx)
+                {max_len, new_prefix_map}
+            end
+
+          {new_max_len, new_sum, new_prefix_map}
+      end)
+  end
+end[0m
+[36m22:18:57.156 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    {_max_len, _current_sum, _prefix_map} =
+      Enum.reduce(Stream.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_len, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+
+          {new_max_len, new_prefix_map} =
+            case Map.fetch(prefix_map, target) do
+              {:ok, prev_idx} ->
+                length = idx - prev_idx
+                new_max = max(max_len, length)
+                {new_max, prefix_map}
+
+              :error ->
+                new_prefix_map =
+                  Map.put_new(prefix_map, new_sum, idx)
+
+                {max_len, new_prefix_map}
+            end
+
+          {new_max_len, new_sum, new_prefix_map}
+      end)
+  end
+end[0m
+[36m22:18:57.156 [debug] [propagate_is_renames] old functions: ["longest_subarray_length"][0m
+[36m22:18:57.156 [debug] [propagate_is_renames] new functions: ["longest_subarray_length"][0m
+[36m22:18:57.156 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m22:18:57.156 [info] [Validator.run] step 2/6: compile[0m
+[22m22:18:57.734 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m22:18:57.734 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m22:18:57.734 [info] [Validator.run] step 3/6: format[0m
+[22m22:18:58.046 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m22:18:58.345 [debug] [Validator.run] format fix output: [0m
+[22m22:18:58.345 [info] [Validator.run] step 4/6: credo[0m
+[36m22:18:58.824 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m22:18:58.824 [info] [Validator.run] credo: no issues[0m
+[22m22:18:58.824 [info] [Validator.run] step 5/6: credence check[0m
+[22m22:18:59.588 [info] [Validator.run] credence check exit=0[0m
+[36m22:18:59.588 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m22:18:59.589 [info] [Validator.run] credence check: passed[0m
+[22m22:18:59.589 [info] [Validator.run] step 6/6: tests[0m
+[22m22:19:00.066 [info] [Validator.run] test exit=2[0m
+[36m22:19:00.066 [debug] [Validator.run] test output:
+Running ExUnit with seed: 7794, max_cases: 48
+
+    warning: comparison between distinct types found:
+
+        left == right
+
+    given types:
+
+        dynamic({term(), term(), term()}) == integer()
+
+    where "left" (context ExUnit.Assertions) was given the type:
+
+        # type: dynamic({term(), term(), term()})
+        # from: test/solution_test.exs:5
+        left = Solution.longest_subarray_length([-2, -1, 2, 1], 1)
+
+    where "right" (context ExUnit.Assertions) was given the type:
+
+        # type: integer()
+        # from: test/solution_test.exs:5
+        right = 2
+
+    While Elixir can compare across all types, you are comparing across types which are always disjoint, and the result is either always true or always false
+
+    typing violation found at:
+    │
+  5 │     assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+    │                                                                ~
+    │
+    └─ test/solution_test.exs:5:64: SolutionTest."test example 1"/1
+
+    warning: comparison between distinct types found:
+
+        left == right
+
+    given types:
+
+        dynamic({term(), term(), term()}) == integer()
+
+    where "left" (context ExUnit.Assertions) was given the type:
+
+        # type: dynamic({term(), term(), term()})
+        # from: test/solution_test.exs:9
+        left = Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0)
+
+    where "right" (context ExUnit.Assertions) was given the type:
+
+        # type: integer()
+        # from: test/solution_test.exs:9
+        right = 10
+
+    While Elixir can compare across all types, you are comparing across types which are always disjoint, and the result is either always true or always false
+
+    typing violation found at:
+    │
+  9 │     assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+    │                                                                                ~
+    │
+    └─ test/solution_test.exs:9:80: SolutionTest."test example 2"/1
+
+    warning: comparison between distinct types found:
+
+        left == right
+
+    given types:
+
+        dynamic({term(), term(), term()}) == integer()
+
+    where "left" (context ExUnit.Assertions) was given the type:
+
+        # type: dynamic({term(), term(), term()})
+        # from: test/solution_test.exs:13
+        left = Solution.longest_subarray_length([1, -1, 5, -2, 3], 3)
+
+    where "right" (context ExUnit.Assertions) was given the type:
+
+        # type: integer()
+        # from: test/solution_test.exs:13
+        right = 4
+
+    While Elixir can compare across all types, you are comparing across types which are always disjoint, and the result is either always true or always false
+
+    typing violation found at:
+    │
+ 13 │     assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+    │                                                                   ~
+    │
+    └─ test/solution_test.exs:13:67: SolutionTest."test example 3"/1
+
+
+
+  1) test example 2 (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+     left:  {10, 0, %{0 => -1}}
+     right: 10
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test example 1 (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+     left:  {2, 0, %{-3 => 1, -2 => 0, 0 => -1}}
+     right: 2
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+
+  3) test example 3 (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+     left:  {4, 6, %{0 => -1, 1 => 0, 5 => 2, 6 => 4}}
+     right: 4
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+Finished in 0.02 seconds (0.00s async, 0.02s sync)
+3 tests, 3 failures
+[0m
+[33m22:19:00.066 [warning] [Validator.run] tests: FAILED[0m
+[22m22:19:00.066 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m22:19:00.066 [debug] [Validator.run] final module (1008 chars):
+defmodule Solution do
+  @doc """
+  Returns the length of the longest contiguous subarray whose elements sum to k.
+  If no such subarray exists, returns 0.
+  """
+  @spec longest_subarray_length(list(integer()), integer()) :: integer()
+  def longest_subarray_length(nums, k) do
+    {_max_len, _current_sum, _prefix_map} =
+      Enum.reduce(Stream.with_index(nums), {0, 0, %{0 => -1}}, fn
+        {num, idx}, {max_len, current_sum, prefix_map} ->
+          new_sum = current_sum + num
+          target = new_sum - k
+
+          {new_max_len, new_prefix_map} =
+            case Map.fetch(prefix_map, target) do
+              {:ok, prev_idx} ->
+                length = idx - prev_idx
+                new_max = max(max_len, length)
+                {new_max, prefix_map}
+
+              :error ->
+                new_prefix_map =
+                  Map.put_new(prefix_map, new_sum, idx)
+
+                {max_len, new_prefix_map}
+            end
+
+          {new_max_len, new_sum, new_prefix_map}
+      end)
+  end
+end
+[0m
+[36m22:19:00.066 [debug] [Validator.run] final test (373 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.longest_subarray_length([-2, -1, 2, 1], 1) == 2
+  end
+
+  test "example 2" do
+    assert Solution.longest_subarray_length([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0) == 10
+  end
+
+  test "example 3" do
+    assert Solution.longest_subarray_length([1, -1, 5, -2, 3], 3) == 4
+  end
+end
+[0m
+[33m22:19:00.066 [warning] [Solve attempt 5] validation FAILED: [:test][0m
+[33m22:19:00.066 [warning] [Solve] giving up after 5 attempts[0m
+[36m22:19:00.081 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve FAILED — there is NO clean final. Judge the attempts for an ISSUE they repeatedly hit that NO existing rule fixed (a new Syntax/Semantic rule — e.g. a Python-ism like `a div b`, an unfixed warning), plus any existing rule that over-fired (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.RequireDefmoduleWrapper
+  - Credence.Pattern.NoEagerWithIndexInReduce
+  - Credence.Pattern.PreferMapPutNew
+  - Credence.Semantic.UnusedVariable
+These rules ALREADY engaged on this row — Credence handled what they target.
+Do NOT propose a POTENTIAL_NEW_RULE for an idiom one of them already fixes;
+that is already covered. (If such a rule MIS-fired or under-fired, that's a
+BUGFIX_RULE, not a new rule.)
+
+## Dead-ends already tried (do NOT re-propose)
+## row 80597 â gate_reject (:full_suite_red)
+attempted: new(semantic): prefer_div_for_integer_division
+
+## row 12105 â gate_reject (:full_suite_red)
+attempted: new(s (truncated)[0m
+[36m22:22:16.058 [debug] [LLM.call] finish=stop len=1441 usage=%{"completion_tokens" => 7860, "completion_tokens_details" => %{"reasoning_tokens" => 7525}, "prompt_tokens" => 41218, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 49078}
+[LLM.call] response:
+Looking at this failed row, the LLM consistently generates `@doc`/`@spec` attributes **before** `defmodule`. The existing `RequireDefmoduleWrapper` rule fires correctly on that error, but its fix **destroys code structure** — it moves the `defmodule` line up but strips indentation of the entire function body, leaving `cond` and its branches misaligned relative to the `fn` block inside `Enum.reduce/3`. This produces two new compiler errors (`cannot invoke remote function :erlang.-/2 inside a match`, `undefined variable "cond"`) that no rule matches, and subsequent LLM attempts spiral into further breakage.
+
+This is a **bug in an existing rule's implementation**, not a missing rule. However, the rule module source and its internal fix logic are not available to me, so I cannot craft or verify a targeted patch (e.g. "re-add indentation after defmodule re-insertion").
+
+I also checked for any **other recurring unfixable pattern** across the 5 attempts:
+- Attempt 1: `@doc` outside `defmodule` → RequireDefmoduleWrapper fires → mangled structure → new unfixable errors.
+- Attempts 2–3: Different LLM code with same structural fragility (unused vars, missing blocks); no single novel syntax/semantic idiom.
+- Attempts 4–5: Code compiles but returns 3-tuple instead of integer (LLM logic bug, no deterministic rule can fix that).
+
+No single new rule addresses a repeated, deterministic pattern here.
+
+===DECISION===
+NO_ACTION
+===END===[0m
+[22m22:22:16.058 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 195977ms — ok[0m
+[36m22:22:16.066 [debug] [Budget] spent so far (est.): $1.8668[0m

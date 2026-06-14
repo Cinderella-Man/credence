@@ -1,0 +1,2251 @@
+[22m17:46:06.400 [info] [idx=34323] entry_point=findPairs[0m
+[36m17:46:06.400 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that takes a list of integers and a target number as input. The function should return the number of unique pairs of integers in the list whose difference is exactly equal to the target number.
+
+## Python Solution
+```python
+def findPairs(nums,k):
+	pairs = 0
+	dict = {}
+	for elem in nums:
+		if(elem in dict):
+			dict[elem] += 1
+		else:
+			dict[elem] = 1
+
+	if(k == 0):
+		for elem in dict:
+			if(dict[elem] > 1):
+				pairs += 1
+	else:
+		for elem in dict:
+			elem2 = k + elem
+			if(elem2 in dict):
+				pairs += 1
+
+	return pairs
+```
+
+## Python Tests
+assert findPairs([3,1,4,1,5], 2) == 2
+assert findPairs([1,2,3,4,5], 1) == 4
+assert findPairs([1], 1) == 0
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `findpairs`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m17:47:06.751 [debug] [LLM.call] finish=stop len=1353 usage=%{"completion_tokens" => 1604, "completion_tokens_details" => %{"reasoning_tokens" => 1194}, "prompt_tokens" => 574, "prompt_tokens_details" => %{}, "total_tokens" => 2178}
+[LLM.call] response:
+---INSTRUCTION---
+Write an Elixir function that takes a list of integers and a target integer `k`. The function should return the count of unique pairs of integers in the list where the difference between the two integers is exactly equal to `k`. Each pair `(a, b)` is counted only once, regardless of order, and duplicates in the input list should be considered only as distinct elements for forming pairs. If `k` is zero, count only elements that appear at least twice in the list, as each such element forms one valid pair with itself.
+
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  def findpairs(list, k) do
+    freq = Enum.reduce(list, %{}, fn x, acc ->
+      Map.update(acc, x, 1, &(&1 + 1))
+    end)
+
+    if k == 0 do
+      Enum.count(freq, fn {_key, count} -> count > 1 end)
+    else
+      Enum.count(Map.keys(freq), fn x ->
+        Map.has_key?(freq, x + k)
+      end)
+    end
+  end
+end
+---END---[0m
+[22m17:47:06.751 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 60351ms — ok[0m
+[36m17:47:06.752 [debug] [Budget] spent so far (est.): $0.6609[0m
+[22m17:47:07.778 [info] [RoundTrip] reference PASSED tests[0m
+[22m17:47:07.778 [info] [idx=34323] translation fresh — solving[0m
+[22m17:47:07.778 [info] ===SOLVE_BOUNDARY===[0m
+[22m17:47:07.778 [info] [Solve attempt 1] generating (fn=findpairs)[0m
+[36m17:47:07.779 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write an Elixir function that takes a list of integers and a target integer `k`. The function should return the count of unique pairs of integers in the list where the difference between the two integers is exactly equal to `k`. Each pair `(a, b)` is counted only once, regardless of order, and duplicates in the input list should be considered only as distinct elements for forming pairs. If `k` is zero, count only elements that appear at least twice in the list, as each such element forms one valid pair with itself.
+
+## Tests (your module must pass these)
+```elixir
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end
+```
+
+Module: `Solution`. Function: `findpairs`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m17:47:14.895 [debug] [LLM.call] finish=stop len=2720 usage=%{"completion_tokens" => 812, "prompt_tokens" => 553, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1365}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    {positive_k, pairs} =
+      cond
+      k > 0 ->
+        set = MapSet.new(nums)
+        count =
+          Enum.reduce(nums, 0, fn
+            num, acc ->
+              if MapSet.member?(set, num + k) do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {k, count}
+      k == 0 ->
+        counts = Enum.group_by(nums, & &1)
+        count =
+          Enum.reduce(counts, 0, fn
+            {_key, values}, acc ->
+              if length(values) >= 2 do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {0, count}
+      true ->
+        abs_k = abs(k)
+        set = MapSet.new(nums)
+        count =
+          Enum.reduce(nums, 0, fn
+            num, acc ->
+              if MapSet.member?(set, num + abs_k) do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {abs_k, count}
+    end
+
+    # To handle duplicates in nums correctly for k > 0:
+    # We need to count unique pairs (a, b) where a - b = k (or b - a = k).
+    # The above logic counts how many nums have a partner.
+    # But we need unique pairs.
+    # Let's reconsider. For k > 0, we want unique pairs (a, b) with a - b = k.
+    # This is equivalent to finding unique elements b such that b and b+k exist.
+    # So the count is the number of unique elements b such that b+k also exists in the set.
+    # We can do this by iterating over unique elements.
+    unique_nums = Enum.uniq(nums)
+    set = MapSet.new(unique_nums)
+
+    case k do
+      0 ->
+        # Count unique elements that appear at least twice
+        counts = Enum.group_by(nums, & &1)
+        Enum.count(counts, fn {_k, v} -> length(v) >= 2 end)
+      k > 0 ->
+        Enum.count(unique_nums, fn
+          num ->
+            MapSet.member?(set, num + k)
+        end)
+      _ ->
+        # k < 0, absolute difference
+        abs_k = abs(k)
+        Enum.count(unique_nums, fn
+          num ->
+            MapSet.member?(set, num + abs_k)
+        end)
+    end
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end
+---END---[0m
+[22m17:47:14.895 [info] [LLM.call] local_qwen_thinking completed in 7117ms — ok[0m
+[22m17:47:14.895 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m17:47:14.895 [debug] [Validator.run] module code (2243 chars):
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    {positive_k, pairs} =
+      cond
+      k > 0 ->
+        set = MapSet.new(nums)
+        count =
+          Enum.reduce(nums, 0, fn
+            num, acc ->
+              if MapSet.member?(set, num + k) do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {k, count}
+      k == 0 ->
+        counts = Enum.group_by(nums, & &1)
+        count =
+          Enum.reduce(counts, 0, fn
+            {_key, values}, acc ->
+              if length(values) >= 2 do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {0, count}
+      true ->
+        abs_k = abs(k)
+        set = MapSet.new(nums)
+        count =
+          Enum.reduce(nums, 0, fn
+            num, acc ->
+              if MapSet.member?(set, num + abs_k) do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {abs_k, count}
+    end
+
+    # To handle duplicates in nums correctly for k > 0:
+    # We need to count unique pairs (a, b) where a - b = k (or b - a = k).
+    # The above logic counts how many nums have a partner.
+    # But we need unique pairs.
+    # Let's reconsider. For k > 0, we want unique pairs (a, b) with a - b = k.
+    # This is equivalent to finding unique elements b such that b and b+k exist.
+    # So the count is the number of unique elements b such that b+k also exists in the set.
+    # We can do this by iterating over unique elements.
+    unique_nums = Enum.uniq(nums)
+    set = MapSet.new(unique_nums)
+
+    case k do
+      0 ->
+        # Count unique elements that appear at least twice
+        counts = Enum.group_by(nums, & &1)
+        Enum.count(counts, fn {_k, v} -> length(v) >= 2 end)
+      k > 0 ->
+        Enum.count(unique_nums, fn
+          num ->
+            MapSet.member?(set, num + k)
+        end)
+      _ ->
+        # k < 0, absolute difference
+        abs_k = abs(k)
+        Enum.count(unique_nums, fn
+          num ->
+            MapSet.member?(set, num + abs_k)
+        end)
+    end
+  end
+end[0m
+[36m17:47:14.896 [debug] [Validator.run] test code (442 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end[0m
+[36m17:47:14.896 [debug] [Budget] spent so far (est.): $0.6618[0m
+[22m17:47:14.896 [info] [Validator.run] step 1/6: credence fix[0m
+[36m17:47:14.896 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m17:47:15.502 [debug] [run_credence_fix] exit=0 output:
+
+17:47:15.461 [debug] [credence_fix] starting syntax fix pipeline (30 rules), parse error at line 81: unexpected reserved word: ...
+hint: the "end" on line 80 may not have a matching "do" defined before it (based on indentation) near "end"
+
+17:47:15.472 [debug] [credence_fix] PreferFnEndSyntax: fix produced a change
+
+17:47:15.473 [debug] [credence_fix] PreferFnEndSyntax: source CHANGED:
+  L13 -             num, acc ->
+  L13 +             fn num, acc ->  end
+  L26 -             {_key, values}, acc ->
+  L26 +             {_key, values}, fn acc ->  end
+  L40 -             num, acc ->
+  L40 +             fn num, acc ->  end
+
+17:47:15.473 [debug] [credence_fix] syntax fix pipeline: source still does not parse (line 81: unexpected reserved word: ...
+hint: the "end" on line 80 may not have a matching "do" defined before it (based on indentation) near "end")
+
+17:47:15.473 [debug] [credence_fix] syntax done. Applied: [PreferFnEndSyntax(1)]
+
+17:47:15.474 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+17:47:15.478 [debug] [credence_fix] Code.compile_string raised: invalid syntax found on credence_check.ex:81:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 80 may not have a matching "do" defined before it (based on indentation)
+    │
+ 81 │ end
+    │ ^
+    │
+    └─ credence_check.ex:81:1
+
+17:47:15.478 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+17:47:15.481 [debug] [credence_fix] no rule matched diagnostic: %{message: "invalid syntax found on credence_check.ex:81:1:\n    error: unexpected reserved word: end\n    hint: the \"end\" on line 80 may not have a matching \"do\" defined before it (based on indentation)\n    │\n 81 │ end\n    │ ^\n    │\n    └─ credence_check.ex:81:1", position: 81, file: "credence_check.ex", severity: :error}
+
+17:47:15.481 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+17:47:15.481 [debug] [credence_fix] semantic done. Applied: []
+
+17:47:15.481 [debug] [credence_fix] starting pattern fix pipeline (166 rules)
+
+17:47:15.481 [debug] [credence_fix] Code.compile_string raised: invalid syntax found on credence_check.ex:81:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 80 may not have a matching "do" defined before it (based on indentation)
+    │
+ 81 │ end
+    │ ^
+    │
+    └─ credence_check.ex:81:1
+
+17:47:15.481 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+17:47:15.491 [debug] [credence_fix] Code.compile_string raised: invalid syntax found on credence_check.ex:81:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 80 may not have a matching "do" defined before it (based on indentation)
+    │
+ 81 │ end
+    │ ^
+    │
+    └─ credence_check.ex:81:1
+FIXED
+APPLIED_RULES: [{Credence.Syntax.PreferFnEndSyntax, 1}]
+REMAINING_ISSUES: 1 unfixable issue(s)
+parse_error: Syntax error: unexpected reserved word: ...
+hint: the "end" on line 80 may not have a matching "do" defined before it (based on indentation) at token "end" (line 81)
+[0m
+[22m17:47:15.502 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m17:47:15.988 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m17:47:15.989 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:81:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 80 may not have a matching "do" defined before it (based on indentation)
+    │
+ 81 │ end
+    │ ^
+    │
+    └─ lib/solution.ex:81:1
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[33m17:47:16.628 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m17:47:16.628 [info] [Validator.run] step 2/6: compile[0m
+[22m17:47:17.276 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m17:47:17.276 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:81:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 80 may not have a matching "do" defined before it (based on indentation)
+    │
+ 81 │ end
+    │ ^
+    │
+    └─ lib/solution.ex:81:1
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m17:47:17.276 [info] [Validator.run] step 3/6: format[0m
+[22m17:47:17.276 [info] [Validator.run] skipping format (compile failed)[0m
+[22m17:47:17.276 [info] [Validator.run] step 4/6: credo[0m
+[22m17:47:17.276 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m17:47:17.276 [info] [Validator.run] step 5/6: credence check[0m
+[22m17:47:17.276 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m17:47:17.276 [info] [Validator.run] step 6/6: tests[0m
+[22m17:47:17.276 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m17:47:17.276 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m17:47:17.276 [debug] [Validator.run] final module (2243 chars):
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    {positive_k, pairs} =
+      cond
+      k > 0 ->
+        set = MapSet.new(nums)
+        count =
+          Enum.reduce(nums, 0, fn
+            num, acc ->
+              if MapSet.member?(set, num + k) do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {k, count}
+      k == 0 ->
+        counts = Enum.group_by(nums, & &1)
+        count =
+          Enum.reduce(counts, 0, fn
+            {_key, values}, acc ->
+              if length(values) >= 2 do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {0, count}
+      true ->
+        abs_k = abs(k)
+        set = MapSet.new(nums)
+        count =
+          Enum.reduce(nums, 0, fn
+            num, acc ->
+              if MapSet.member?(set, num + abs_k) do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {abs_k, count}
+    end
+
+    # To handle duplicates in nums correctly for k > 0:
+    # We need to count unique pairs (a, b) where a - b = k (or b - a = k).
+    # The above logic counts how many nums have a partner.
+    # But we need unique pairs.
+    # Let's reconsider. For k > 0, we want unique pairs (a, b) with a - b = k.
+    # This is equivalent to finding unique elements b such that b and b+k exist.
+    # So the count is the number of unique elements b such that b+k also exists in the set.
+    # We can do this by iterating over unique elements.
+    unique_nums = Enum.uniq(nums)
+    set = MapSet.new(unique_nums)
+
+    case k do
+      0 ->
+        # Count unique elements that appear at least twice
+        counts = Enum.group_by(nums, & &1)
+        Enum.count(counts, fn {_k, v} -> length(v) >= 2 end)
+      k > 0 ->
+        Enum.count(unique_nums, fn
+          num ->
+            MapSet.member?(set, num + k)
+        end)
+      _ ->
+        # k < 0, absolute difference
+        abs_k = abs(k)
+        Enum.count(unique_nums, fn
+          num ->
+            MapSet.member?(set, num + abs_k)
+        end)
+    end
+  end
+end[0m
+[36m17:47:17.276 [debug] [Validator.run] final test (442 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end[0m
+[33m17:47:17.276 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m17:47:17.277 [info] [Solve attempt 2] generating (fn=findpairs)[0m
+[36m17:47:17.277 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    {positive_k, pairs} =
+      cond
+      k > 0 ->
+        set = MapSet.new(nums)
+        count =
+          Enum.reduce(nums, 0, fn
+            num, acc ->
+              if MapSet.member?(set, num + k) do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {k, count}
+      k == 0 ->
+        counts = Enum.group_by(nums, & &1)
+        count =
+          Enum.reduce(counts, 0, fn
+            {_key, values}, acc ->
+              if length(values) >= 2 do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {0, count}
+      true ->
+        abs_k = abs(k)
+        set = MapSet.new(nums)
+        count =
+          Enum.reduce(nums, 0, fn
+            num, acc ->
+              if MapSet.member?(set, num + abs_k) do
+                acc + 1
+              else
+                acc
+              end
+          end)
+
+        {abs_k, count}
+    end
+
+    # To handle duplicates in nums correctly for k > 0:
+    # We need to count unique pairs (a, b) where a - b = k (or b - a = k).
+    # The above logic counts how many nums have a partner.
+    # But we need unique pairs.
+    # Let's reconsider. For k > 0, we want unique pairs (a, b) with a - b = k.
+    # This is equivalent to finding unique elements b such that b and b+k exist.
+    # So the count is the number of unique elements b such that b+k also exists in the set.
+    # We can do this by iterating over unique elements.
+    unique_nums = Enum.uniq(nums)
+    set = MapSet.new(unique_nums)
+
+    case k do
+      0 ->
+        # Count unique elements that appear at least twice
+        counts = Enum.group_by(nums, & &1)
+        Enum.count(counts, fn {_k, v} -> length(v) >= 2 end)
+      k > 0 ->
+        Enum.count(unique_nums, fn
+          num ->
+            MapSet.member?(set, num + k)
+        end)
+      _ ->
+        # k < 0, absolute difference
+        abs_k = abs(k)
+        Enum.count(unique_nums, fn
+          num ->
+            MapSet.member?(set, num + abs_k)
+        end)
+    end
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:81:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 80 may not have a matching "do" defined before it (based on indentation)
+    │
+ 81 │ end
+    │ ^
+    │
+    └─ lib/solution.ex:81:1
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `findpairs` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m17:47:21.340 [debug] [LLM.call] finish=stop len=1184 usage=%{"completion_tokens" => 398, "prompt_tokens" => 1243, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1641}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+    set = MapSet.new(unique_nums)
+
+    cond
+    k > 0 ->
+      unique_nums
+      |> Enum.count(fn
+        num ->
+          MapSet.member?(set, num + k)
+      end)
+
+    k == 0 ->
+      counts = Enum.group_by(nums, &(&1))
+      counts
+      |> Enum.count(fn
+        {_key, values} ->
+          length(values) >= 2
+      end)
+
+    true ->
+      abs_k = abs(k)
+      unique_nums
+      |> Enum.count(fn
+        num ->
+          MapSet.member?(set, num + abs_k)
+      end)
+    end
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end
+---END---[0m
+[22m17:47:21.340 [info] [LLM.call] local_qwen_thinking completed in 4063ms — ok[0m
+[22m17:47:21.340 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m17:47:21.340 [debug] [Validator.run] module code (707 chars):
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+    set = MapSet.new(unique_nums)
+
+    cond
+    k > 0 ->
+      unique_nums
+      |> Enum.count(fn
+        num ->
+          MapSet.member?(set, num + k)
+      end)
+
+    k == 0 ->
+      counts = Enum.group_by(nums, &(&1))
+      counts
+      |> Enum.count(fn
+        {_key, values} ->
+          length(values) >= 2
+      end)
+
+    true ->
+      abs_k = abs(k)
+      unique_nums
+      |> Enum.count(fn
+        num ->
+          MapSet.member?(set, num + abs_k)
+      end)
+    end
+  end
+end[0m
+[36m17:47:21.340 [debug] [Validator.run] test code (442 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end[0m
+[36m17:47:21.340 [debug] [Budget] spent so far (est.): $0.6627[0m
+[22m17:47:21.341 [info] [Validator.run] step 1/6: credence fix[0m
+[36m17:47:21.341 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m17:47:21.930 [debug] [run_credence_fix] exit=0 output:
+
+17:47:21.901 [debug] [credence_fix] starting syntax fix pipeline (30 rules), parse error at line 35: unexpected reserved word: ...
+hint: the "end" on line 34 may not have a matching "do" defined before it (based on indentation) near "end"
+
+17:47:21.908 [debug] [credence_fix] syntax fix pipeline: source still does not parse (line 35: unexpected reserved word: ...
+hint: the "end" on line 34 may not have a matching "do" defined before it (based on indentation) near "end")
+
+17:47:21.908 [debug] [credence_fix] syntax done. Applied: []
+
+17:47:21.908 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+17:47:21.912 [debug] [credence_fix] Code.compile_string raised: invalid syntax found on credence_check.ex:35:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 34 may not have a matching "do" defined before it (based on indentation)
+    │
+ 35 │ end
+    │ ^
+    │
+    └─ credence_check.ex:35:1
+
+17:47:21.912 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+17:47:21.915 [debug] [credence_fix] no rule matched diagnostic: %{message: "invalid syntax found on credence_check.ex:35:1:\n    error: unexpected reserved word: end\n    hint: the \"end\" on line 34 may not have a matching \"do\" defined before it (based on indentation)\n    │\n 35 │ end\n    │ ^\n    │\n    └─ credence_check.ex:35:1", position: 35, file: "credence_check.ex", severity: :error}
+
+17:47:21.915 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+17:47:21.915 [debug] [credence_fix] semantic done. Applied: []
+
+17:47:21.915 [debug] [credence_fix] starting pattern fix pipeline (166 rules)
+
+17:47:21.915 [debug] [credence_fix] Code.compile_string raised: invalid syntax found on credence_check.ex:35:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 34 may not have a matching "do" defined before it (based on indentation)
+    │
+ 35 │ end
+    │ ^
+    │
+    └─ credence_check.ex:35:1
+
+17:47:21.915 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+17:47:21.920 [debug] [credence_fix] Code.compile_string raised: invalid syntax found on credence_check.ex:35:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 34 may not have a matching "do" defined before it (based on indentation)
+    │
+ 35 │ end
+    │ ^
+    │
+    └─ credence_check.ex:35:1
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 1 unfixable issue(s)
+parse_error: Syntax error: unexpected reserved word: ...
+hint: the "end" on line 34 may not have a matching "do" defined before it (based on indentation) at token "end" (line 35)
+[0m
+[36m17:47:21.930 [debug] [run_credence_fix] no changes needed[0m
+[22m17:47:21.930 [info] [Validator.run] credence: no changes needed[0m
+[22m17:47:21.930 [info] [Validator.run] step 2/6: compile[0m
+[22m17:47:22.576 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m17:47:22.576 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:35:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 34 may not have a matching "do" defined before it (based on indentation)
+    │
+ 35 │ end
+    │ ^
+    │
+    └─ lib/solution.ex:35:1
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+[0m
+[22m17:47:22.576 [info] [Validator.run] step 3/6: format[0m
+[22m17:47:22.576 [info] [Validator.run] skipping format (compile failed)[0m
+[22m17:47:22.576 [info] [Validator.run] step 4/6: credo[0m
+[22m17:47:22.576 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m17:47:22.576 [info] [Validator.run] step 5/6: credence check[0m
+[22m17:47:22.576 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m17:47:22.576 [info] [Validator.run] step 6/6: tests[0m
+[22m17:47:22.576 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m17:47:22.576 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m17:47:22.576 [debug] [Validator.run] final module (707 chars):
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+    set = MapSet.new(unique_nums)
+
+    cond
+    k > 0 ->
+      unique_nums
+      |> Enum.count(fn
+        num ->
+          MapSet.member?(set, num + k)
+      end)
+
+    k == 0 ->
+      counts = Enum.group_by(nums, &(&1))
+      counts
+      |> Enum.count(fn
+        {_key, values} ->
+          length(values) >= 2
+      end)
+
+    true ->
+      abs_k = abs(k)
+      unique_nums
+      |> Enum.count(fn
+        num ->
+          MapSet.member?(set, num + abs_k)
+      end)
+    end
+  end
+end[0m
+[36m17:47:22.576 [debug] [Validator.run] final test (442 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end[0m
+[33m17:47:22.576 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m17:47:22.576 [info] [Solve attempt 3] generating (fn=findpairs)[0m
+[36m17:47:22.577 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+    set = MapSet.new(unique_nums)
+
+    cond
+    k > 0 ->
+      unique_nums
+      |> Enum.count(fn
+        num ->
+          MapSet.member?(set, num + k)
+      end)
+
+    k == 0 ->
+      counts = Enum.group_by(nums, &(&1))
+      counts
+      |> Enum.count(fn
+        {_key, values} ->
+          length(values) >= 2
+      end)
+
+    true ->
+      abs_k = abs(k)
+      unique_nums
+      |> Enum.count(fn
+        num ->
+          MapSet.member?(set, num + abs_k)
+      end)
+    end
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (SyntaxError) invalid syntax found on lib/solution.ex:35:1:
+    error: unexpected reserved word: end
+    hint: the "end" on line 34 may not have a matching "do" defined before it (based on indentation)
+    │
+ 35 │ end
+    │ ^
+    │
+    └─ lib/solution.ex:35:1
+    (elixir 1.19.5) lib/kernel/parallel_compiler.ex:529: anonymous fn/5 in Kernel.ParallelCompiler.spawn_workers/8
+
+Reminder: module `Solution`, function `findpairs` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m17:47:26.502 [debug] [LLM.call] finish=stop len=1270 usage=%{"completion_tokens" => 405, "prompt_tokens" => 829, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1234}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    cond do
+      k > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      k == 0 ->
+        counts =
+          nums
+          |> Enum.count_by(& &1)
+          |> Enum.count(fn {_, count} ->
+              count >= 2
+          end)
+
+      true ->
+        set = MapSet.new(unique_nums)
+        abs_k = abs(k)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end
+---END---[0m
+[22m17:47:26.502 [info] [LLM.call] local_qwen_thinking completed in 3925ms — ok[0m
+[22m17:47:26.502 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m17:47:26.502 [debug] [Validator.run] module code (793 chars):
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    cond do
+      k > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      k == 0 ->
+        counts =
+          nums
+          |> Enum.count_by(& &1)
+          |> Enum.count(fn {_, count} ->
+              count >= 2
+          end)
+
+      true ->
+        set = MapSet.new(unique_nums)
+        abs_k = abs(k)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end[0m
+[36m17:47:26.502 [debug] [Validator.run] test code (442 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end[0m
+[22m17:47:26.502 [info] [Validator.run] step 1/6: credence fix[0m
+[36m17:47:26.502 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m17:47:26.502 [debug] [Budget] spent so far (est.): $0.6634[0m
+[36m17:47:27.206 [debug] [run_credence_fix] exit=0 output:
+
+17:47:27.070 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+17:47:27.072 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+17:47:27.089 [debug] [credence_fix] semantic pass 1: compilation OK, 2 warning(s)
+
+17:47:27.089 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+17:47:27.090 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+17:47:27.090 [debug] [credence_fix] UnusedVariable: matched diagnostic, running fix...
+
+17:47:27.092 [debug] [credence_fix] UnusedVariable: source CHANGED:
+  L19 -         counts =
+  L19 +         _counts =
+
+17:47:27.092 [debug] [credence_fix] semantic done. Applied: [UndefinedFunction(1), UnusedVariable(1)]
+
+17:47:27.092 [debug] [credence_fix] starting pattern fix pipeline (166 rules)
+
+17:47:27.183 [debug] [credence_fix] done. Applied: []
+FIXED
+APPLIED_RULES: [{Credence.Semantic.UndefinedFunction, 1}, {Credence.Semantic.UnusedVariable, 1}]
+REMAINING_ISSUES: 1 unfixable issue(s)
+undefined_function: Enum.count_by/2 is undefined or private. Did you mean:
+
+    * chunk_by/2
+    * count/1
+    * count/2
+    * product_by/2
+    * sort_by/2
+ (line 21)
+[0m
+[22m17:47:27.206 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m17:47:27.957 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m17:47:27.957 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+    warning: Enum.count_by/2 is undefined or private. Did you mean:
+
+        * chunk_by/2
+        * count/1
+        * count/2
+        * product_by/2
+        * sort_by/2
+
+    │
+ 21 │           |> Enum.count_by(& &1)
+    │                   ~
+    │
+    └─ lib/solution.ex:21:19: Solution.findpairs/2
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m17:47:28.531 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m17:47:28.531 [info] [Validator.run] step 2/6: compile[0m
+[22m17:47:29.097 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m17:47:29.097 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: variable "counts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 19 │         counts =
+    │         ~
+    │
+    └─ lib/solution.ex:19:9: Solution.findpairs/2
+
+    warning: Enum.count_by/2 is undefined or private. Did you mean:
+
+        * chunk_by/2
+        * count/1
+        * count/2
+        * product_by/2
+        * sort_by/2
+
+    │
+ 21 │           |> Enum.count_by(& &1)
+    │                   ~
+    │
+    └─ lib/solution.ex:21:19: Solution.findpairs/2
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m17:47:29.098 [info] [Validator.run] step 3/6: format[0m
+[22m17:47:29.098 [info] [Validator.run] skipping format (compile failed)[0m
+[22m17:47:29.098 [info] [Validator.run] step 4/6: credo[0m
+[22m17:47:29.098 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m17:47:29.098 [info] [Validator.run] step 5/6: credence check[0m
+[22m17:47:29.098 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m17:47:29.098 [info] [Validator.run] step 6/6: tests[0m
+[22m17:47:29.098 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m17:47:29.098 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m17:47:29.098 [debug] [Validator.run] final module (793 chars):
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    cond do
+      k > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      k == 0 ->
+        counts =
+          nums
+          |> Enum.count_by(& &1)
+          |> Enum.count(fn {_, count} ->
+              count >= 2
+          end)
+
+      true ->
+        set = MapSet.new(unique_nums)
+        abs_k = abs(k)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end[0m
+[36m17:47:29.098 [debug] [Validator.run] final test (442 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end[0m
+[33m17:47:29.098 [warning] [Solve attempt 3] validation FAILED: [:compile][0m
+[22m17:47:29.098 [info] [Solve attempt 4] generating (fn=findpairs)[0m
+[36m17:47:29.098 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    cond do
+      k > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      k == 0 ->
+        counts =
+          nums
+          |> Enum.count_by(& &1)
+          |> Enum.count(fn {_, count} ->
+              count >= 2
+          end)
+
+      true ->
+        set = MapSet.new(unique_nums)
+        abs_k = abs(k)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: variable "counts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 19 │         counts =
+    │         ~
+    │
+    └─ lib/solution.ex:19:9: Solution.findpairs/2
+
+    warning: Enum.count_by/2 is undefined or private. Did you mean:
+
+        * chunk_by/2
+        * count/1
+        * count/2
+        * product_by/2
+        * sort_by/2
+
+    │
+ 21 │           |> Enum.count_by(& &1)
+    │                   ~
+    │
+    └─ lib/solution.ex:21:19: Solution.findpairs/2
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+
+Reminder: module `Solution`, function `findpairs` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m17:47:33.097 [debug] [LLM.call] finish=stop len=1275 usage=%{"completion_tokens" => 410, "prompt_tokens" => 876, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1286}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    case k do
+      0 ->
+        counts =
+          Enum.group_by(nums, & &1)
+          |> Enum.count(fn {_k, v} ->
+              length(v) >= 2
+          end)
+        counts
+
+      x when x > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      _ ->
+        abs_k = abs(k)
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end
+---TEST---
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end
+---END---[0m
+[22m17:47:33.097 [info] [LLM.call] local_qwen_thinking completed in 3999ms — ok[0m
+[22m17:47:33.097 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m17:47:33.097 [debug] [Validator.run] module code (798 chars):
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    case k do
+      0 ->
+        counts =
+          Enum.group_by(nums, & &1)
+          |> Enum.count(fn {_k, v} ->
+              length(v) >= 2
+          end)
+        counts
+
+      x when x > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      _ ->
+        abs_k = abs(k)
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end[0m
+[36m17:47:33.097 [debug] [Validator.run] test code (442 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3,1,4,1,5], 2) == 2
+    assert Solution.findpairs([1,2,3,4,5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1,1,2,2,3], 0) == 2
+    assert Solution.findpairs([1,2,3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1,3,5,7], -2) == 3
+  end
+end[0m
+[36m17:47:33.098 [debug] [Budget] spent so far (est.): $0.6642[0m
+[22m17:47:33.098 [info] [Validator.run] step 1/6: credence fix[0m
+[36m17:47:33.098 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m17:47:33.834 [debug] [run_credence_fix] exit=0 output:
+
+17:47:33.667 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+17:47:33.669 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+17:47:33.684 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+17:47:33.689 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+17:47:33.689 [debug] [credence_fix] semantic done. Applied: []
+
+17:47:33.690 [debug] [credence_fix] starting pattern fix pipeline (166 rules)
+
+17:47:33.723 [debug] [credence_fix] NoLengthComparisonForEmpty: check found 1 issue(s), running fix...
+
+17:47:33.737 [debug] [credence_fix] NoLengthComparisonForEmpty: source CHANGED:
+  L14 -               length(v) >= 2
+  L14 +               match?([_, _ | _], v)
+
+17:47:33.755 [debug] [credence_fix] NoRedundantAssignment: check found 1 issue(s), running fix...
+
+17:47:33.769 [debug] [credence_fix] NoRedundantAssignment: source CHANGED:
+  L11 -         counts =
+  L11 +         Enum.group_by(nums, & &1)
+  L12 -           Enum.group_by(nums, & &1)
+  L12 +         |> Enum.count(fn {_k, v} ->
+  L13 -           |> Enum.count(fn {_k, v} ->
+  L13 +           match?([_, _ | _], v)
+  L14 -               match?([_, _ | _], v)
+  L14 +         end)
+  L15 -           end)
+  L15 + 
+  L16 -         counts
+  L16 +       x when x > 0 ->
+  L17 - 
+  L17 +         set = MapSet.new(unique_nums)
+  L18 -       x when x > 0 ->
+  L18 +         unique_nums
+  L19 -         set = MapSet.new(unique_nums)
+  L19 +         |> Enum.count(fn
+  L20 -         unique_nums
+  L20 +             num ->
+  L21 -         |> Enum.count(fn
+  L21 +               MapSet.member?(set, num + k)
+  L22 -             num ->
+  L22 +           end)
+  L23 -               MapSet.member?(set, num + k)
+  L23 + 
+  L24 -           end)
+  L24 +       _ ->
+  L25 - 
+  L25 +         abs_k = abs(k)
+  L26 -       _ ->
+  L26 +         set = MapSet.new(unique_nums)
+  L27 -         abs_k = abs(k)
+  L27 +         unique_nums
+  L28 -         set = MapSet.new(unique_nums)
+  L28 +         |> Enum.count(fn
+  L29 -         unique_nums
+  L29 +             num ->
+  L30 -         |> Enum.count(fn
+  L30 +               MapSet.member?(set, num + abs_k)
+  L31 -             num ->
+  L31 +           end)
+  L32 -               MapSet.member?(set, num + abs_k)
+  L32 +     end
+  L33 -           end)
+  L33 +   end
+  L34 -     end
+  L34 + end
+  L35 -   end
+  L36 - end
+
+17:47:33.810 [debug] [credence_fix] done. Applied: [NoLengthComparisonForEmpty(1), NoRedundantAssignment(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.NoLengthComparisonForEmpty, 1}, {Credence.Pattern.NoRedundantAssignment, 1}]
+[0m
+[22m17:47:33.834 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m17:47:34.420 [info] [run_credence_fix] fix compiles OK[0m
+[36m17:47:34.420 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    case k do
+      0 ->
+        counts =
+          Enum.group_by(nums, & &1)
+          |> Enum.count(fn {_k, v} ->
+              length(v) >= 2
+          end)
+        counts
+
+      x when x > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      _ ->
+        abs_k = abs(k)
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end[0m
+[36m17:47:34.420 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    case k do
+      0 ->
+        Enum.group_by(nums, & &1)
+        |> Enum.count(fn {_k, v} ->
+          match?([_, _ | _], v)
+        end)
+
+      x when x > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      _ ->
+        abs_k = abs(k)
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end[0m
+[22m17:47:34.420 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m17:47:34.420 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    case k do
+      0 ->
+        counts =
+          Enum.group_by(nums, & &1)
+          |> Enum.count(fn {_k, v} ->
+              length(v) >= 2
+          end)
+        counts
+
+      x when x > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      _ ->
+        abs_k = abs(k)
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end[0m
+[36m17:47:34.420 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    case k do
+      0 ->
+        Enum.group_by(nums, & &1)
+        |> Enum.count(fn {_k, v} ->
+          match?([_, _ | _], v)
+        end)
+
+      x when x > 0 ->
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + k)
+          end)
+
+      _ ->
+        abs_k = abs(k)
+        set = MapSet.new(unique_nums)
+        unique_nums
+        |> Enum.count(fn
+            num ->
+              MapSet.member?(set, num + abs_k)
+          end)
+    end
+  end
+end[0m
+[36m17:47:34.420 [debug] [propagate_is_renames] old functions: ["findpairs"][0m
+[36m17:47:34.420 [debug] [propagate_is_renames] new functions: ["findpairs"][0m
+[36m17:47:34.420 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m17:47:34.420 [info] [Validator.run] step 2/6: compile[0m
+[22m17:47:35.008 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m17:47:35.008 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m17:47:35.008 [info] [Validator.run] step 3/6: format[0m
+[22m17:47:35.317 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m17:47:35.621 [debug] [Validator.run] format fix output: [0m
+[22m17:47:35.621 [info] [Validator.run] step 4/6: credo[0m
+[36m17:47:36.093 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m17:47:36.094 [info] [Validator.run] credo: no issues[0m
+[22m17:47:36.094 [info] [Validator.run] step 5/6: credence check[0m
+[22m17:47:36.855 [info] [Validator.run] credence check exit=0[0m
+[36m17:47:36.855 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m17:47:36.856 [info] [Validator.run] credence check: passed[0m
+[22m17:47:36.856 [info] [Validator.run] step 6/6: tests[0m
+[22m17:47:37.327 [info] [Validator.run] test exit=0[0m
+[36m17:47:37.327 [debug] [Validator.run] test output:
+Running ExUnit with seed: 286922, max_cases: 48
+
+...
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 0 failures
+[0m
+[22m17:47:37.327 [info] [Validator.run] tests: PASSED[0m
+[22m17:47:37.327 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m17:47:37.328 [debug] [Validator.run] final module (754 chars):
+defmodule Solution do
+  @doc """
+  Counts unique pairs with absolute difference equal to k.
+  """
+  @spec findpairs(list(integer), integer) :: non_neg_integer()
+  def findpairs(nums, k) do
+    unique_nums = Enum.uniq(nums)
+
+    case k do
+      0 ->
+        Enum.group_by(nums, & &1)
+        |> Enum.count(fn {_k, v} ->
+          match?([_, _ | _], v)
+        end)
+
+      x when x > 0 ->
+        set = MapSet.new(unique_nums)
+
+        unique_nums
+        |> Enum.count(fn
+          num ->
+            MapSet.member?(set, num + k)
+        end)
+
+      _ ->
+        abs_k = abs(k)
+        set = MapSet.new(unique_nums)
+
+        unique_nums
+        |> Enum.count(fn
+          num ->
+            MapSet.member?(set, num + abs_k)
+        end)
+    end
+  end
+end
+[0m
+[36m17:47:37.328 [debug] [Validator.run] final test (460 chars):
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "basic cases" do
+    assert Solution.findpairs([3, 1, 4, 1, 5], 2) == 2
+    assert Solution.findpairs([1, 2, 3, 4, 5], 1) == 4
+    assert Solution.findpairs([1], 1) == 0
+  end
+
+  test "zero difference" do
+    assert Solution.findpairs([1, 1, 2, 2, 3], 0) == 2
+    assert Solution.findpairs([1, 2, 3], 0) == 0
+  end
+
+  test "negative k" do
+    assert Solution.findpairs([1, 3, 5, 7], -2) == 3
+  end
+end
+[0m
+[22m17:47:37.328 [info] [Solve attempt 4] validation PASSED[0m
+[36m17:47:37.343 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Syntax.PreferFnEndSyntax
+  - Credence.Semantic.UndefinedFunction
+  - Credence.Semantic.UnusedVariable
+  - Credence.Pattern.NoLengthComparisonForEmpty
+  - Credence.Pattern.NoRedundantAssignment
+These rules ALREADY engaged on this row — Credence handled what they target.
+Do NOT propose a POTENTIAL_NEW_RULE for an idiom one of them already fixes;
+that is already covered. (If such a rule MIS-fired or under-fired, that's a
+BUGFIX_RULE, not a new rule.)
+
+## Dead-ends already tried (do NOT re-propose)
+## row 80597 â gate_reject (:full_suite_red)
+attempted: new(semantic): prefer_div_for_integer_division
+
+## row 12105 â gate_reje (truncated)[0m
+[22m17:47:45.282 [info] [Budget] HEARTBEAT — 60 paid calls, est $0.6642 over 154.7min → ~$0.2576/hr, ~$6.18/day (tok in=773269 cache_rd=9626048 out=336934)[0m
+[36m17:50:24.784 [debug] [LLM.call] finish=stop len=617 usage=%{"completion_tokens" => 5350, "completion_tokens_details" => %{"reasoning_tokens" => 5171}, "prompt_tokens" => 21288, "prompt_tokens_details" => %{"cached_tokens" => 1024}, "total_tokens" => 26638}
+[LLM.call] response:
+===DECISION===
+POTENTIAL_NEW_RULE
+===PROPOSED_NAME===
+prefer_case_over_cond_with_literal_comparison
+===PHASE===
+pattern
+===BEFORE===
+```elixir
+defmodule Example do
+  def classify(value) do
+    cond do
+      value > 0 -> :positive
+      value == 0 -> :zero
+      true -> :negative
+    end
+  end
+end
+```
+===AFTER===
+```elixir
+defmodule Example do
+  def classify(value) do
+    case value do
+      0 -> :zero
+      v when v > 0 -> :positive
+      _ -> :negative
+    end
+  end
+end
+```
+===ASSUMPTIONS===
+===
+===RATIONALE===
+cond with literal value comparison should be replaced by case for clarity and performance
+===END===[0m
+[22m17:50:24.784 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 167440ms — ok[0m
+[36m17:50:24.784 [debug] [Budget] spent so far (est.): $0.6781[0m
+[22m17:50:24.784 [info] [Classify] re-ask after invalid spec: {:unknown_assumptions, [:===]}[0m
+[36m17:50:24.784 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve SUCCEEDED — the final code is clean, compiles, passes, trips no Credence issue. Judge it for NON-IDIOMATIC residual a human expert would deterministically rewrite (a new Pattern rule), plus any existing rule that over-fired in the trace (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Syntax.PreferFnEndSyntax
+  - Credence.Semantic.UndefinedFunction
+  - Credence.Semantic.UnusedVariable
+  - Credence.Pattern.NoLengthComparisonForEmpty
+  - Credence.Pattern.NoRedundantAssignment
+These rules ALREADY engaged on this row — Credence handled what they target.
+Do NOT propose a POTENTIAL_NEW_RULE for an idiom one of them already fixes;
+that is already covered. (If such a rule MIS-fired or under-fired, that's a
+BUGFIX_RULE, not a new rule.)
+
+## Dead-ends already tried (do NOT re-propose)
+## row 80597 â gate_reject (:full_suite_red)
+attempted: new(semantic): prefer_div_for_integer_division
+
+## row 12105 â gate_reje (truncated)[0m
+[36m17:51:00.259 [debug] [LLM.call] finish=stop len=303 usage=%{"completion_tokens" => 630, "completion_tokens_details" => %{"reasoning_tokens" => 568}, "prompt_tokens" => 21315, "prompt_tokens_details" => %{"cached_tokens" => 21248}, "total_tokens" => 21945}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+Final code is clean and idiomatic; all residual issues (length comparison, redundant assignment) were already caught by existing closed-set rules. The negative-k branch duplication is structural but not a deterministic rewrite pattern safe to auto-fix.
+===END===[0m
+[22m17:51:00.259 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 35475ms — ok[0m
+[36m17:51:00.260 [debug] [Budget] spent so far (est.): $0.6879[0m

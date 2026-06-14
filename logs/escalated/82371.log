@@ -1,0 +1,1686 @@
+[22m20:53:44.820 [info] [idx=82371] entry_point=is_rearranged_power_of_two[0m
+[36m20:53:44.821 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that checks if a given number can be rearranged to form a power of 2.
+
+## Python Solution
+```python
+def is_rearranged_power_of_two(N):
+    set2 = [1]
+    for i in range(10**9):
+        t = set2[-1] * 2
+        if t > 10 ** 9:
+            break
+        set2.append(t)
+    d_t = []
+    for p2 in set2:
+        s = str(p2)
+        d = {}
+        for k in range(10):
+            k = str(k)
+            t = s.count(k)
+            if t:
+                d[k]=t
+        d_t.append(d)
+    d = {}
+    for k in range(10):
+        k = str(k)
+        N = str(N)
+        t = N.count(k)
+        if t:
+            d[k] = t
+    return d in d_t
+```
+
+## Python Tests
+assert is_rearranged_power_of_two(1) == True
+assert is_rearranged_power_of_two(16) == True
+assert is_rearranged_power_of_two(46) == True
+assert is_rearranged_power_of_two(24) == False
+assert is_rearranged_power_of_two(10) == False
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `rearranged_power_of_two?`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m20:54:40.366 [debug] [LLM.call] finish=stop len=1789 usage=%{"completion_tokens" => 3133, "completion_tokens_details" => %{"reasoning_tokens" => 2665}, "prompt_tokens" => 639, "prompt_tokens_details" => %{}, "total_tokens" => 3772}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `Solution.rearranged_power_of_two?/1` that takes a positive integer `n` and returns `true` if the digits of `n` can be rearranged (without leading zeros) to form a power of two, and `false` otherwise. The function should handle numbers up to 10^9. The algorithm should run in constant time since the number of powers of two within the bound is fixed.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  @limit 1_000_000_000
+
+  @powers_of_two_frequencies 1
+                              |> Stream.iterate(&(&1 * 2))
+                              |> Enum.take_while(&(&1 <= @limit))
+                              |> Enum.map(fn n ->
+                                n
+                                |> Integer.to_string()
+                                |> String.graphemes()
+                                |> Enum.frequencies()
+                              end)
+
+  def rearranged_power_of_two?(n) when is_integer(n) and n > 0 do
+    n_freq =
+      n
+      |> Integer.to_string()
+      |> String.graphemes()
+      |> Enum.frequencies()
+
+    Enum.member?(@powers_of_two_frequencies, n_freq)
+  end
+
+  def rearranged_power_of_two?(_), do: false
+end
+---END---[0m
+[22m20:54:40.366 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 55545ms — ok[0m
+[36m20:54:40.366 [debug] [Budget] spent so far (est.): $1.3011[0m
+[22m20:54:41.420 [info] [RoundTrip] reference PASSED tests[0m
+[22m20:54:41.420 [info] [idx=82371] translation fresh — solving[0m
+[22m20:54:41.420 [info] ===SOLVE_BOUNDARY===[0m
+[22m20:54:41.420 [info] [Solve attempt 1] generating (fn=rearranged_power_of_two?)[0m
+[36m20:54:41.420 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `Solution.rearranged_power_of_two?/1` that takes a positive integer `n` and returns `true` if the digits of `n` can be rearranged (without leading zeros) to form a power of two, and `false` otherwise. The function should handle numbers up to 10^9. The algorithm should run in constant time since the number of powers of two within the bound is fixed.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+```
+
+Module: `Solution`. Function: `rearranged_power_of_two?`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:54:45.435 [debug] [LLM.call] finish=stop len=1413 usage=%{"completion_tokens" => 439, "prompt_tokens" => 558, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 997}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    digits = extract_digits(n)
+    sorted_digits = digits |> Enum.sort() |> Integer.to_list()
+    power_of_two_sorted = @powers_of_two |> Enum.filter(fn p ->
+      extract_digits(p) |> Enum.sort() |> Integer.to_list() == sorted_digits
+    end) |> Enum.any?
+
+    power_of_two_sorted
+  end
+
+  defp extract_digits(n) do
+    n
+    |> Integer.digits()
+  end
+
+  @powers_of_two = Enum.map(0..29, fn k ->
+    :math.pow(2, k) |> round()
+  end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+---END---[0m
+[22m20:54:45.435 [info] [LLM.call] local_qwen_thinking completed in 4014ms — ok[0m
+[22m20:54:45.435 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:54:45.435 [debug] [Validator.run] module code (779 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    digits = extract_digits(n)
+    sorted_digits = digits |> Enum.sort() |> Integer.to_list()
+    power_of_two_sorted = @powers_of_two |> Enum.filter(fn p ->
+      extract_digits(p) |> Enum.sort() |> Integer.to_list() == sorted_digits
+    end) |> Enum.any?
+
+    power_of_two_sorted
+  end
+
+  defp extract_digits(n) do
+    n
+    |> Integer.digits()
+  end
+
+  @powers_of_two = Enum.map(0..29, fn k ->
+    :math.pow(2, k) |> round()
+  end)
+end[0m
+[36m20:54:45.435 [debug] [Validator.run] test code (599 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end[0m
+[36m20:54:45.435 [debug] [Budget] spent so far (est.): $1.3017[0m
+[22m20:54:45.435 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:54:45.435 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:54:46.035 [debug] [run_credence_fix] exit=0 output:
+
+20:54:46.006 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:54:46.008 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:54:46.015 [debug] [credence_fix] Code.compile_string raised: invalid usage of module attributes. Module attributes cannot be used inside pattern matching (and guards) outside of a function. If you are trying to define an attribute, do not do this:
+
+    @foo = :value
+
+Instead, do this:
+
+    @foo :value
+
+
+20:54:46.015 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+20:54:46.019 [debug] [credence_fix] no rule matched diagnostic: %{message: "invalid usage of module attributes. Module attributes cannot be used inside pattern matching (and guards) outside of a function. If you are trying to define an attribute, do not do this:\n\n    @foo = :value\n\nInstead, do this:\n\n    @foo :value\n", position: 0, file: "credence_check.ex", severity: :error}
+
+20:54:46.019 [debug] [credence_fix] semantic pass 1: no rule could fix the error(s), stopping
+
+20:54:46.019 [debug] [credence_fix] semantic done. Applied: []
+
+20:54:46.020 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:54:46.020 [debug] [credence_fix] Code.compile_string raised: invalid usage of module attributes. Module attributes cannot be used inside pattern matching (and guards) outside of a function. If you are trying to define an attribute, do not do this:
+
+    @foo = :value
+
+Instead, do this:
+
+    @foo :value
+
+
+20:54:46.020 [debug] [credence_fix] source does not compile, skipping pattern fix pipeline
+
+20:54:46.021 [debug] [credence_fix] Code.compile_string raised: invalid usage of module attributes. Module attributes cannot be used inside pattern matching (and guards) outside of a function. If you are trying to define an attribute, do not do this:
+
+    @foo = :value
+
+Instead, do this:
+
+    @foo :value
+
+NO_CHANGES
+APPLIED_RULES: []
+REMAINING_ISSUES: 1 unfixable issue(s)
+no_redundant_assignment: Variable is assigned and immediately returned. The assignment is redundant — return the expression directly. (line 13)
+[0m
+[36m20:54:46.035 [debug] [run_credence_fix] no changes needed[0m
+[22m20:54:46.035 [info] [Validator.run] credence: no changes needed[0m
+[22m20:54:46.035 [info] [Validator.run] step 2/6: compile[0m
+[22m20:54:46.530 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:54:46.530 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) invalid usage of module attributes. Module attributes cannot be used inside pattern matching (and guards) outside of a function. If you are trying to define an attribute, do not do this:
+
+    @foo = :value
+
+Instead, do this:
+
+    @foo :value
+
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:25: Solution (module)
+[0m
+[22m20:54:46.530 [info] [Validator.run] step 3/6: format[0m
+[22m20:54:46.530 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:54:46.530 [info] [Validator.run] step 4/6: credo[0m
+[22m20:54:46.530 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:54:46.530 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:54:46.530 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:54:46.530 [info] [Validator.run] step 6/6: tests[0m
+[22m20:54:46.530 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:54:46.530 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:54:46.530 [debug] [Validator.run] final module (779 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    digits = extract_digits(n)
+    sorted_digits = digits |> Enum.sort() |> Integer.to_list()
+    power_of_two_sorted = @powers_of_two |> Enum.filter(fn p ->
+      extract_digits(p) |> Enum.sort() |> Integer.to_list() == sorted_digits
+    end) |> Enum.any?
+
+    power_of_two_sorted
+  end
+
+  defp extract_digits(n) do
+    n
+    |> Integer.digits()
+  end
+
+  @powers_of_two = Enum.map(0..29, fn k ->
+    :math.pow(2, k) |> round()
+  end)
+end[0m
+[36m20:54:46.530 [debug] [Validator.run] final test (599 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end[0m
+[33m20:54:46.530 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m20:54:46.530 [info] [Solve attempt 2] generating (fn=rearranged_power_of_two?)[0m
+[36m20:54:46.530 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    digits = extract_digits(n)
+    sorted_digits = digits |> Enum.sort() |> Integer.to_list()
+    power_of_two_sorted = @powers_of_two |> Enum.filter(fn p ->
+      extract_digits(p) |> Enum.sort() |> Integer.to_list() == sorted_digits
+    end) |> Enum.any?
+
+    power_of_two_sorted
+  end
+
+  defp extract_digits(n) do
+    n
+    |> Integer.digits()
+  end
+
+  @powers_of_two = Enum.map(0..29, fn k ->
+    :math.pow(2, k) |> round()
+  end)
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) invalid usage of module attributes. Module attributes cannot be used inside pattern matching (and guards) outside of a function. If you are trying to define an attribute, do not do this:
+
+    @foo = :value
+
+Instead, do this:
+
+    @foo :value
+
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:25: Solution (module)
+
+Reminder: module `Solution`, function `rearranged_power_of_two?` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:54:54.969 [debug] [LLM.call] finish=stop len=1749 usage=%{"completion_tokens" => 936, "prompt_tokens" => 846, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1782}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+    
+    @powers_of_two |> Enum.any?(fn p ->
+      p |> Integer.digits() |> Enum.sort() == target_digits
+    end)
+  end
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+---END---[0m
+[22m20:54:54.969 [info] [LLM.call] local_qwen_thinking completed in 8439ms — ok[0m
+[22m20:54:54.969 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:54:54.969 [debug] [Validator.run] module code (1115 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+    
+    @powers_of_two |> Enum.any?(fn p ->
+      p |> Integer.digits() |> Enum.sort() == target_digits
+    end)
+  end
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+end[0m
+[36m20:54:54.969 [debug] [Validator.run] test code (599 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end[0m
+[36m20:54:54.970 [debug] [Budget] spent so far (est.): $1.3029[0m
+[22m20:54:54.970 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:54:54.970 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:54:55.644 [debug] [run_credence_fix] exit=0 output:
+
+20:54:55.533 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:54:55.535 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:54:55.545 [debug] [credence_fix] semantic pass 1: compilation OK, 2 warning(s)
+
+20:54:55.551 [debug] [credence_fix] no rule matched diagnostic: %{message: "module attribute @powers_of_two was set but never used", position: 18, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 18]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:54:55.552 [debug] [credence_fix] no rule matched diagnostic: %{message: "undefined module attribute @powers_of_two, please remove access to @powers_of_two or explicitly set it before access", position: 13, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: ~c"credence_check.ex", line: 13]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:54:55.552 [debug] [credence_fix] semantic done. Applied: []
+
+20:54:55.552 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:54:55.624 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m20:54:55.644 [debug] [run_credence_fix] no changes needed[0m
+[22m20:54:55.644 [info] [Validator.run] credence: no changes needed[0m
+[22m20:54:55.644 [info] [Validator.run] step 2/6: compile[0m
+[22m20:54:56.364 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:54:56.364 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: undefined module attribute @powers_of_two, please remove access to @powers_of_two or explicitly set it before access
+    │
+ 13 │     @powers_of_two |> Enum.any?(fn p ->
+    │     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │
+    └─ lib/solution.ex:13: Solution (module)
+
+    warning: module attribute @powers_of_two was set but never used
+    │
+ 18 │   @powers_of_two [
+    │   ~~~~~~~~~~~~~~~~
+    │
+    └─ lib/solution.ex:18: Solution (module)
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m20:54:56.364 [info] [Validator.run] step 3/6: format[0m
+[22m20:54:56.364 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:54:56.364 [info] [Validator.run] step 4/6: credo[0m
+[22m20:54:56.364 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:54:56.364 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:54:56.364 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:54:56.364 [info] [Validator.run] step 6/6: tests[0m
+[22m20:54:56.364 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:54:56.364 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:54:56.364 [debug] [Validator.run] final module (1115 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+    
+    @powers_of_two |> Enum.any?(fn p ->
+      p |> Integer.digits() |> Enum.sort() == target_digits
+    end)
+  end
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+end[0m
+[36m20:54:56.364 [debug] [Validator.run] final test (599 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end[0m
+[33m20:54:56.364 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m20:54:56.364 [info] [Solve attempt 3] generating (fn=rearranged_power_of_two?)[0m
+[36m20:54:56.364 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+    
+    @powers_of_two |> Enum.any?(fn p ->
+      p |> Integer.digits() |> Enum.sort() == target_digits
+    end)
+  end
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: undefined module attribute @powers_of_two, please remove access to @powers_of_two or explicitly set it before access
+    │
+ 13 │     @powers_of_two |> Enum.any?(fn p ->
+    │     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    │
+    └─ lib/solution.ex:13: Solution (module)
+
+    warning: module attribute @powers_of_two was set but never used
+    │
+ 18 │   @powers_of_two [
+    │   ~~~~~~~~~~~~~~~~
+    │
+    └─ lib/solution.ex:18: Solution (module)
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+
+Reminder: module `Solution`, function `rearranged_power_of_two?` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:55:05.330 [debug] [LLM.call] finish=stop len=1801 usage=%{"completion_tokens" => 952, "prompt_tokens" => 1380, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2332}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort()
+      |> Kernel.== (target_digits)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+---END---[0m
+[22m20:55:05.330 [info] [LLM.call] local_qwen_thinking completed in 8966ms — ok[0m
+[22m20:55:05.330 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:55:05.330 [debug] [Validator.run] module code (1167 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort()
+      |> Kernel.== (target_digits)
+    end)
+  end
+end[0m
+[36m20:55:05.330 [debug] [Validator.run] test code (599 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end[0m
+[36m20:55:05.330 [debug] [Budget] spent so far (est.): $1.3043[0m
+[22m20:55:05.331 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:55:05.331 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:55:06.026 [debug] [run_credence_fix] exit=0 output:
+
+20:55:05.901 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:55:05.903 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:55:05.915 [debug] [credence_fix] semantic pass 1: compilation OK, 2 warning(s)
+
+20:55:05.920 [debug] [credence_fix] no rule matched diagnostic: %{message: "parentheses are required when piping into a function call. For example:\n\n    foo 1 |> bar 2 |> baz 3\n\nis ambiguous and should be written as\n\n    foo(1) |> bar(2) |> baz(3)\n\nAmbiguous pipe found at:", position: {22, 7}, file: "credence_check.ex", stacktrace: [], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:55:05.921 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:55:05.921 [debug] [credence_fix] semantic done. Applied: []
+
+20:55:05.921 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:55:05.948 [debug] [credence_fix] NoKernelOpInPipeline: check found 1 issue(s), running fix...
+
+20:55:05.957 [debug] [credence_fix] Code.compile_string raised: mismatched delimiter found on credence_check.ex:21:38:
+    error: unexpected token: )
+    │
+ 18 │     |> Enum.any?(fn power_of_two ->
+    │                  └ unclosed delimiter
+ 19 │       power_of_two
+ 20 │       |> Integer.digits()
+ 21 │       |> Enum.sort() == target_digits)
+    │                                      └ mismatched closing delimiter (expected "end")
+    │
+    └─ credence_check.ex:21:38
+
+20:55:05.957 [warning] [credence_fix] NoKernelOpInPipeline: fix produced non-compiling output, reverting
+
+20:55:05.957 [debug] [credence_fix] NoKernelOpInPipeline: source CHANGED:
+  L21 -       |> Enum.sort()
+  L21 +       |> Enum.sort() == target_digits)
+  L22 -       |> Kernel.== (target_digits)
+  L22 +     end)
+  L23 -     end)
+  L23 +   end
+  L24 -   end
+  L24 + end
+  L25 - end
+
+20:55:06.004 [debug] [credence_fix] done. Applied: [NoKernelOpInPipeline(reverted)]
+NO_CHANGES
+APPLIED_RULES: [{Credence.Pattern.NoKernelOpInPipeline, :reverted}]
+REMAINING_ISSUES: 1 unfixable issue(s)
+no_kernel_op_in_pipeline: Piping into `Kernel.==/2` is non-idiomatic Elixir. Operators should be used in infix position.
+
+Extract the comparison from the pipeline:
+
+    result = pipeline
+    result == value
+ (line 22)
+[0m
+[36m20:55:06.027 [debug] [run_credence_fix] no changes needed[0m
+[22m20:55:06.027 [info] [Validator.run] credence: no changes needed[0m
+[22m20:55:06.027 [info] [Validator.run] step 2/6: compile[0m
+[22m20:55:06.601 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m20:55:06.601 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: parentheses are required when piping into a function call. For example:
+
+        foo 1 |> bar 2 |> baz 3
+
+    is ambiguous and should be written as
+
+        foo(1) |> bar(2) |> baz(3)
+
+    Ambiguous pipe found at:
+    │
+ 22 │       |> Kernel.== (target_digits)
+    │       ~
+    │
+    └─ lib/solution.ex:22:7
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m20:55:06.601 [info] [Validator.run] step 3/6: format[0m
+[22m20:55:06.601 [info] [Validator.run] skipping format (compile failed)[0m
+[22m20:55:06.601 [info] [Validator.run] step 4/6: credo[0m
+[22m20:55:06.601 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m20:55:06.601 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:55:06.601 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m20:55:06.601 [info] [Validator.run] step 6/6: tests[0m
+[22m20:55:06.601 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m20:55:06.601 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m20:55:06.601 [debug] [Validator.run] final module (1167 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort()
+      |> Kernel.== (target_digits)
+    end)
+  end
+end[0m
+[36m20:55:06.601 [debug] [Validator.run] final test (599 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end[0m
+[33m20:55:06.601 [warning] [Solve attempt 3] validation FAILED: [:compile][0m
+[22m20:55:06.601 [info] [Solve attempt 4] generating (fn=rearranged_power_of_two?)[0m
+[36m20:55:06.601 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort()
+      |> Kernel.== (target_digits)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: parentheses are required when piping into a function call. For example:
+
+        foo 1 |> bar 2 |> baz 3
+
+    is ambiguous and should be written as
+
+        foo(1) |> bar(2) |> baz(3)
+
+    Ambiguous pipe found at:
+    │
+ 22 │       |> Kernel.== (target_digits)
+    │       ~
+    │
+    └─ lib/solution.ex:22:7
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+
+Reminder: module `Solution`, function `rearranged_power_of_two?` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m20:55:15.609 [debug] [LLM.call] finish=stop len=1800 usage=%{"completion_tokens" => 951, "prompt_tokens" => 1367, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 2318}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort()
+      |> Kernel.==(target_digits)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+---END---[0m
+[22m20:55:15.609 [info] [LLM.call] local_qwen_thinking completed in 9007ms — ok[0m
+[22m20:55:15.609 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m20:55:15.609 [debug] [Validator.run] module code (1166 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort()
+      |> Kernel.==(target_digits)
+    end)
+  end
+end[0m
+[36m20:55:15.609 [debug] [Validator.run] test code (599 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end[0m
+[36m20:55:15.609 [debug] [Budget] spent so far (est.): $1.3058[0m
+[22m20:55:15.610 [info] [Validator.run] step 1/6: credence fix[0m
+[36m20:55:15.610 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m20:55:16.313 [debug] [run_credence_fix] exit=0 output:
+
+20:55:16.183 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+20:55:16.185 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+20:55:16.197 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+20:55:16.203 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+20:55:16.203 [debug] [credence_fix] semantic done. Applied: []
+
+20:55:16.203 [debug] [credence_fix] starting pattern fix pipeline (167 rules)
+
+20:55:16.230 [debug] [credence_fix] NoKernelOpInPipeline: check found 1 issue(s), running fix...
+
+20:55:16.245 [debug] [credence_fix] NoKernelOpInPipeline: source CHANGED:
+  L21 -       |> Enum.sort()
+  L21 +       |> Enum.sort() == target_digits
+  L22 -       |> Kernel.==(target_digits)
+  L22 +     end)
+  L23 -     end)
+  L23 +   end
+  L24 -   end
+  L24 + end
+  L25 - end
+
+20:55:16.290 [debug] [credence_fix] done. Applied: [NoKernelOpInPipeline(1)]
+FIXED
+APPLIED_RULES: [{Credence.Pattern.NoKernelOpInPipeline, 1}]
+[0m
+[22m20:55:16.313 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[22m20:55:16.890 [info] [run_credence_fix] fix compiles OK[0m
+[36m20:55:16.890 [debug] [run_credence_fix] original:
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort()
+      |> Kernel.==(target_digits)
+    end)
+  end
+end[0m
+[36m20:55:16.890 [debug] [run_credence_fix] fixed:
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort() == target_digits
+    end)
+  end
+end[0m
+[22m20:55:16.891 [info] [Validator.run] credence fixed code — propagating renames[0m
+[36m20:55:16.891 [debug] [Validator.run] module BEFORE credence fix:
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort()
+      |> Kernel.==(target_digits)
+    end)
+  end
+end[0m
+[36m20:55:16.891 [debug] [Validator.run] module AFTER credence fix:
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592, 17179869184, 34359738368, 68719476736, 137438953472, 274877936956, 549755813896, 1099511627808, 2199023255616, 4398046511232, 8796093022208, 17592186044416, 35184372088832, 70368744177664, 140737488355328, 281474976710656, 562949953421312, 1125899906842624, 2251799813685248, 4503599627370496, 9007199254740992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort() == target_digits
+    end)
+  end
+end[0m
+[36m20:55:16.891 [debug] [propagate_is_renames] old functions: ["rearranged_power_of_two?"][0m
+[36m20:55:16.891 [debug] [propagate_is_renames] new functions: ["rearranged_power_of_two?"][0m
+[36m20:55:16.891 [debug] [propagate_is_renames] no is_ → ? renames detected[0m
+[22m20:55:16.891 [info] [Validator.run] step 2/6: compile[0m
+[22m20:55:17.483 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m20:55:17.483 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m20:55:17.483 [info] [Validator.run] step 3/6: format[0m
+[22m20:55:17.789 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m20:55:18.104 [debug] [Validator.run] format fix output: [0m
+[22m20:55:18.104 [info] [Validator.run] step 4/6: credo[0m
+[36m20:55:18.585 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m20:55:18.585 [info] [Validator.run] credo: no issues[0m
+[22m20:55:18.585 [info] [Validator.run] step 5/6: credence check[0m
+[22m20:55:19.371 [info] [Validator.run] credence check exit=0[0m
+[36m20:55:19.371 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m20:55:19.371 [info] [Validator.run] credence check: passed[0m
+[22m20:55:19.371 [info] [Validator.run] step 6/6: tests[0m
+[22m20:55:19.838 [info] [Validator.run] test exit=0[0m
+[36m20:55:19.839 [debug] [Validator.run] test output:
+Running ExUnit with seed: 797100, max_cases: 48
+
+.....
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+5 tests, 0 failures
+[0m
+[22m20:55:19.839 [info] [Validator.run] tests: PASSED[0m
+[22m20:55:19.839 [info] [Validator.run] ── DONE — 0 failure(s): [] ──[0m
+[36m20:55:19.839 [debug] [Validator.run] final module (1475 chars):
+defmodule Solution do
+  @moduledoc """
+  Determines if the digits of a positive integer can be rearranged to form a power of two.
+  """
+
+  @powers_of_two [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    256,
+    512,
+    1024,
+    2048,
+    4096,
+    8192,
+    16384,
+    32768,
+    65536,
+    131_072,
+    262_144,
+    524_288,
+    1_048_576,
+    2_097_152,
+    4_194_304,
+    8_388_608,
+    16_777_216,
+    33_554_432,
+    67_108_864,
+    134_217_728,
+    268_435_456,
+    536_870_912,
+    1_073_741_824,
+    2_147_483_648,
+    4_294_967_296,
+    8_589_934_592,
+    17_179_869_184,
+    34_359_738_368,
+    68_719_476_736,
+    137_438_953_472,
+    274_877_936_956,
+    549_755_813_896,
+    1_099_511_627_808,
+    2_199_023_255_616,
+    4_398_046_511_232,
+    8_796_093_022_208,
+    17_592_186_044_416,
+    35_184_372_088_832,
+    70_368_744_177_664,
+    140_737_488_355_328,
+    281_474_976_710_656,
+    562_949_953_421_312,
+    1_125_899_906_842_624,
+    2_251_799_813_685_248,
+    4_503_599_627_370_496,
+    9_007_199_254_740_992
+  ]
+
+  @doc """
+  Returns true if the digits of `n` can be rearranged to form a power of two.
+  """
+  @spec rearranged_power_of_two?(pos_integer()) :: boolean()
+  def rearranged_power_of_two?(n) when n > 0 do
+    target_digits = n |> Integer.digits() |> Enum.sort()
+
+    @powers_of_two
+    |> Enum.any?(fn power_of_two ->
+      power_of_two
+      |> Integer.digits()
+      |> Enum.sort() == target_digits
+    end)
+  end
+end
+[0m
+[36m20:55:19.839 [debug] [Validator.run] final test (600 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "1 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(1) == true
+  end
+
+  test "16 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(16) == true
+  end
+
+  test "46 is a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(46) == true
+  end
+
+  test "24 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(24) == false
+  end
+
+  test "10 is not a rearranged power of 2" do
+    assert Solution.rearranged_power_of_two?(10) == false
+  end
+end
+[0m
+[22m20:55:19.839 [info] [Solve attempt 4] validation PASSED[0m
+[22m20:55:19.860 [info] [Router] :reverted culprit Credence.Pattern.NoKernelOpInPipeline — deterministic bugfix, no classifier[0m
+[22m20:55:19.864 [info] [ClaudeCode] running agent (cwd=/home/kly/projects/credence, max_turns=80, timeout=3600s)[0m
+[22m20:55:20.150 [info] [ClaudeCode] agent session started[0m
+[22m20:55:25.108 [info] [ClaudeCode] step 2: Read
+    file_path: /home/kly/projects/credence/lib/credence/pattern/no_kernel_op_in_pipeline.ex[0m
+[22m20:55:25.561 [info] [ClaudeCode] step 3: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_kernel_op_in_pipeline_check_test.exs[0m
+[22m20:55:26.065 [info] [ClaudeCode] step 4: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_kernel_op_in_pipeline_fix_test.exs[0m
+[22m20:55:26.467 [info] [ClaudeCode] step 5: Read
+    file_path: /home/kly/projects/credence/test/pattern/no_kernel_op_in_pipeline_equivalence_test.exs[0m
+[22m20:55:29.327 [info] [ClaudeCode] step 7 says:
+The rule file doesn't exist at the expected path. Let me find where it actually lives and look at the existing patterns for guidance.[0m
+[22m20:55:29.780 [info] [ClaudeCode] step 8: Glob
+    pattern: **/*no_kernel*[0m
+[22m20:55:29.901 [info] [ClaudeCode] step 9: Glob
+    pattern: lib/credence/pattern/*.ex[0m
+[22m20:55:30.273 [info] [ClaudeCode] step 10: Glob
+    pattern: lib/credence/rule_helpers.ex[0m
+[22m20:55:32.773 [info] [ClaudeCode] step 12: Read
+    file_path: /home/kly/projects/credence/lib/pattern/no_kernel_op_in_pipeline.ex[0m
+[22m20:55:33.152 [info] [ClaudeCode] step 13: Glob
+    pattern: lib/pattern/*.ex[0m
+[22m20:55:33.525 [info] [ClaudeCode] step 14: Grep
+    pattern: defmodule Credence.RuleHelpers[0m
+[22m20:55:37.293 [info] [ClaudeCode] step 16 says:
+Let me understand the existing infrastructure and run the tests to see what's broken.[0m
+[22m20:55:37.586 [info] [ClaudeCode] step 17: Read
+    file_path: /home/kly/projects/credence/lib/rule_helpers.ex[0m
+[22m20:55:38.092 [info] [ClaudeCode] step 18: Read
+    file_path: /home/kly/projects/credence/lib/pattern/rule.ex[0m
+[22m20:55:39.218 [info] [ClaudeCode] step 19: Bash
+    command: mix test test/pattern/no_kernel_op_in_pipeline_check_test.exs test/pattern/no_kernel_op_in_pipeline_equivalence_test.exs test/pattern/no_kernel_op_in_pipeline_fix_test.exs 2>&1 | head -100
+    timeout: 60000[0m
+[22m20:55:49.776 [info] [ClaudeCode] step 21 says:
+All 29 tests pass already. Let me check if there's something deeper going on — perhaps the rule is broken in the broader compilation context or has a `Kernel.and`/`Kernel.or` issue (those aren't real Elixir Kernel functions).[0m
+[22m20:55:50.240 [info] [ClaudeCode] step 22: Bash
+    command: mix compile 2>&1 | tail -30
+    timeout: 60000[0m
+[22m20:55:51.143 [info] [ClaudeCode] step 23: Bash
+    command: mix test test/pattern/no_kernel_op_in_pipeline_check_test.exs test/pattern/no_kernel_op_in_pipeline_equivalence_test.exs test/pattern/no_kernel_op_in_pipeline_fix_test.exs 2>&1
+    timeout: 60000[0m
+[22m20:56:34.908 [info] [ClaudeCode] step 25: Bash
+    command: mix compile 2>&1 | tail -30
+    timeout: 120000[0m
+[22m20:56:37.587 [info] [ClaudeCode] step 27: Bash
+    command: mix compile 2>&1
+    timeout: 120000[0m
+[22m20:57:45.282 [info] [Budget] HEARTBEAT — 143 paid calls, est $1.3058 over 344.7min → ~$0.2273/hr, ~$5.46/day (tok in=1519778 cache_rd=18441088 out=664676)[0m
+[22m20:58:07.369 [info] [ClaudeCode] step 29: Bash
+    command: mix compile 2>&1
+    description: Compile the project
+    timeout: 120000[0m
+[22m20:58:10.312 [info] [ClaudeCode] step 31: Grep
+    output_mode: files_with_matches
+    pattern: defmodule Credence.Issue[0m
+[22m20:58:10.773 [info] [ClaudeCode] step 32: Grep
+    output_mode: files_with_matches
+    pattern: defmodule Credence.RuleCase[0m
+[22m20:58:11.231 [info] [ClaudeCode] step 33: Grep
+    output_mode: files_with_matches
+    pattern: defmodule Credence.BehaviourEquivalence[0m
+[22m20:58:34.966 [info] [ClaudeCode] step 35 says:
+All tests pass. Let me look at the git history to understand what was reverted and what needs fixing.[0m
+[22m20:58:36.073 [info] [ClaudeCode] step 36: Bash
+    command: git log --oneline -20 -- lib/pattern/no_kernel_op_in_pipeline.ex test/pattern/no_kernel_op_in_pipeline_check_test.exs test/pattern/no_kernel_op_in_pipeline_fix_test.exs test/pattern/no_kernel_op_in_pipeline_equivalence_test.exs 2>&1
+    description: Check git history for this rule[0m
+[22m21:01:31.346 [info] [ClaudeCode] step 38 says:
+Let me look at the test support infrastructure to understand how the tests work.[0m
+[22m21:01:31.660 [info] [ClaudeCode] step 39: Read
+    file_path: /home/kly/projects/credence/test/support/rule_case.ex[0m
+[22m21:01:32.149 [info] [ClaudeCode] step 40: Read
+    file_path: /home/kly/projects/credence/test/support/behaviour_equivalence.ex[0m
+[22m21:02:45.282 [info] [Budget] HEARTBEAT — 143 paid calls, est $1.3058 over 349.7min → ~$0.2241/hr, ~$5.38/day (tok in=1519778 cache_rd=18441088 out=664676)[0m
+[22m21:04:45.399 [info] [ClaudeCode] step 42 says:
+The tests all pass already (29 tests, 0 failures). Let me verify the rule compiles cleanly and check if there's any issue with the broader build.[0m
+[22m21:04:45.940 [info] [ClaudeCode] step 43: Bash
+    command: mix compile --warnings-as-errors 2>&1
+    description: Compile project with warnings as errors
+    timeout: 120000[0m
+[22m21:04:49.105 [info] [ClaudeCode] step 45: Bash
+    command: mix compile 2>&1
+    description: Compile project
+    timeout: 120000[0m
+[22m21:04:52.500 [info] [ClaudeCode] step 47: Bash
+    command: mix test test/pattern/no_kernel_op_in_pipeline_check_test.exs test/pattern/no_kernel_op_in_pipeline_equivalence_test.exs test/pattern/no_kernel_op_in_pipeline_fix_test.exs 2>&1
+    description: Run focused tests for the rule
+    timeout: 120000[0m
+[22m21:05:15.410 [info] [ClaudeCode] step 49 says:
+All 29 tests pass with 0 failures. The rule source, check tests, fix tests, and equivalence tests are all consistent and working correctly. The rule:
+
+1. **check/2** correctly identifies `Kernel.op/2` calls in pipeline position for the flagged operators (`==`, `!=`, `===`, `!==`, `<`, `>`, `<=`, `>=`, `and`, `or`)
+2. **fix_patches/2** correctly rewrites them — inlining single-step pipes, wrapping 2+ step pipes, and preserving operator semantics
+3. **Equivalence** is verified — `score |> Kernel.>=(threshold)` → `score >= threshold` produces identical boolean results across all inputs
+
+The rule is already in a working state — no edits are needed. The tests are green.[0m
+[22m21:05:15.568 [info] [ClaudeCode] USAGE RECON — num_turns=28 roundtrips_with_usage=49
+  result-event total tokens (what Budget records) = 766923
+  summed per-round-trip total tokens (token-bucket basis) = 0
+  summed/result ratio = 0.0x   (compare BOTH to your console delta)[0m
+[36m21:05:15.569 [debug] [Budget] spent so far (est.): $1.3665[0m
+[22m21:05:15.569 [info] [ClaudeCode] agent done — subtype=success turns=28[0m
+[22m21:05:17.702 [info] [Gate] staged entries: [][0m
+[33m21:05:17.702 [warning] [Gate] REJECT: :no_lib_change — discarding[0m

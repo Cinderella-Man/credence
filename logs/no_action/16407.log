@@ -1,0 +1,2365 @@
+[22m15:13:29.357 [info] [idx=16407] entry_point=camel_to_snake[0m
+[36m15:13:29.582 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function to convert camel case strings to snake case.
+
+## Python Solution
+```python
+def camel_to_snake(str):
+    res = ""
+    for char in str:
+        if char.isupper():
+            res += "_" + char.lower()
+        else:
+            res += char
+    return res.lstrip('_')
+```
+
+## Python Tests
+assert camel_to_snake('CamelCase') == 'camel_case'
+assert camel_to_snake('camelCaseTest') == 'camel_case_test'
+assert camel_to_snake('ThisIsATestString') == 'this_is_a_test_string'
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `camel_to_snake`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m15:14:18.692 [debug] [LLM.call] finish=stop len=1442 usage=%{"completion_tokens" => 2498, "completion_tokens_details" => %{"reasoning_tokens" => 2127}, "prompt_tokens" => 478, "prompt_tokens_details" => %{}, "total_tokens" => 2976}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function `camel_to_snake/1` that takes a string in camelCase format and returns the corresponding snake_case string. For every uppercase letter in the input string, insert an underscore before it and convert the letter to lowercase, except that if the input string starts with an uppercase letter, the resulting leading underscore must be removed. The function should handle empty strings by returning an empty string. The conversion should be applied to all characters in the string.
+
+Complexity: The function should run in O(n) time where n is the length of the string.
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---REFERENCE---
+defmodule Solution do
+  def camel_to_snake(str) do
+    str
+    |> String.graphemes()
+    |> Enum.flat_map(fn
+      <<c>> when c >= ?A and c <= ?Z -> ["_", <<c + 32>>]
+      other -> [other]
+    end)
+    |> Enum.join()
+    |> remove_leading_underscore()
+  end
+
+  defp remove_leading_underscore("_" <> rest), do: rest
+  defp remove_leading_underscore(str), do: str
+end
+---END---[0m
+[22m15:14:18.692 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 49109ms — ok[0m
+[36m15:14:18.692 [debug] [Budget] spent so far (est.): $0.0115[0m
+[22m15:14:19.920 [info] [RoundTrip] reference PASSED tests[0m
+[22m15:14:19.921 [info] [idx=16407] translation fresh — solving[0m
+[22m15:14:19.921 [info] ===SOLVE_BOUNDARY===[0m
+[22m15:14:19.999 [info] [Solve attempt 1] generating (fn=camel_to_snake)[0m
+[36m15:14:19.999 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function `camel_to_snake/1` that takes a string in camelCase format and returns the corresponding snake_case string. For every uppercase letter in the input string, insert an underscore before it and convert the letter to lowercase, except that if the input string starts with an uppercase letter, the resulting leading underscore must be removed. The function should handle empty strings by returning an empty string. The conversion should be applied to all characters in the string.
+
+Complexity: The function should run in O(n) time where n is the length of the string.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+```
+
+Module: `Solution`. Function: `camel_to_snake`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m15:14:26.896 [debug] [LLM.call] finish=stop len=2106 usage=%{"completion_tokens" => 791, "prompt_tokens" => 516, "prompt_tokens_details" => %{"cached_tokens" => 0}, "total_tokens" => 1307}
+[LLM.call] response:
+---MODULE---
+@doc """
+Solution module for converting camelCase to snake_case.
+"""
+defmodule Solution do
+  @moduledoc "Converts camelCase strings to snake_case."
+
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+  def camel_to_snake(str) do
+    str
+    |> String.codepoints()
+    |> Enum.map(fn
+      ?A -> "_a"
+      ?B -> "_b"
+      ?C -> "_c"
+      ?D -> "_d"
+      ?E -> "_e"
+      ?F -> "_f"
+      ?G -> "_g"
+      ?H -> "_h"
+      ?I -> "_i"
+      ?J -> "_j"
+      ?K -> "_k"
+      ?L -> "_l"
+      ?M -> "_m"
+      ?N -> "_n"
+      ?O -> "_o"
+      ?P -> "_p"
+      ?Q -> "_q"
+      ?R -> "_r"
+      ?S -> "_s"
+      ?T -> "_t"
+      ?U -> "_u"
+      ?V -> "_v"
+      ?W -> "_w"
+      ?X -> "_x"
+      ?Y -> "_y"
+      ?Z -> "_z"
+      ?a -> "a"
+      ?b -> "b"
+      ?c -> "c"
+      ?d -> "d"
+      ?e -> "e"
+      ?f -> "f"
+      ?g -> "g"
+      ?h -> "h"
+      ?i -> "i"
+      ?j -> "j"
+      ?k -> "k"
+      ?l -> "l"
+      ?m -> "m"
+      ?n -> "n"
+      ?o -> "o"
+      ?p -> "p"
+      ?q -> "q"
+      ?r -> "r"
+      ?s -> "s"
+      ?t -> "t"
+      ?u -> "u"
+      ?v -> "v"
+      ?w -> "w"
+      ?x -> "x"
+      ?y -> "y"
+      ?z -> "z"
+      char -> if char == ?_ do "_#{char}" else "_#{char}" end
+    end)
+    |> List.flatten()
+    |> to_string()
+    |> String.trim_leven("_")
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---END---[0m
+[22m15:14:26.896 [info] [LLM.call] local_qwen_thinking completed in 6896ms — ok[0m
+[36m15:14:26.897 [debug] [Budget] spent so far (est.): $0.0124[0m
+[22m15:14:26.977 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m15:14:26.977 [debug] [Validator.run] module code (1631 chars):
+@doc """
+Solution module for converting camelCase to snake_case.
+"""
+defmodule Solution do
+  @moduledoc "Converts camelCase strings to snake_case."
+
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+  def camel_to_snake(str) do
+    str
+    |> String.codepoints()
+    |> Enum.map(fn
+      ?A -> "_a"
+      ?B -> "_b"
+      ?C -> "_c"
+      ?D -> "_d"
+      ?E -> "_e"
+      ?F -> "_f"
+      ?G -> "_g"
+      ?H -> "_h"
+      ?I -> "_i"
+      ?J -> "_j"
+      ?K -> "_k"
+      ?L -> "_l"
+      ?M -> "_m"
+      ?N -> "_n"
+      ?O -> "_o"
+      ?P -> "_p"
+      ?Q -> "_q"
+      ?R -> "_r"
+      ?S -> "_s"
+      ?T -> "_t"
+      ?U -> "_u"
+      ?V -> "_v"
+      ?W -> "_w"
+      ?X -> "_x"
+      ?Y -> "_y"
+      ?Z -> "_z"
+      ?a -> "a"
+      ?b -> "b"
+      ?c -> "c"
+      ?d -> "d"
+      ?e -> "e"
+      ?f -> "f"
+      ?g -> "g"
+      ?h -> "h"
+      ?i -> "i"
+      ?j -> "j"
+      ?k -> "k"
+      ?l -> "l"
+      ?m -> "m"
+      ?n -> "n"
+      ?o -> "o"
+      ?p -> "p"
+      ?q -> "q"
+      ?r -> "r"
+      ?s -> "s"
+      ?t -> "t"
+      ?u -> "u"
+      ?v -> "v"
+      ?w -> "w"
+      ?x -> "x"
+      ?y -> "y"
+      ?z -> "z"
+      char -> if char == ?_ do "_#{char}" else "_#{char}" end
+    end)
+    |> List.flatten()
+    |> to_string()
+    |> String.trim_leven("_")
+  end
+end[0m
+[36m15:14:26.977 [debug] [Validator.run] test code (440 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end[0m
+[22m15:14:26.978 [info] [Validator.run] step 1/6: credence fix[0m
+[36m15:14:26.978 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m15:14:27.836 [debug] [run_credence_fix] exit=0 output:
+
+15:14:27.559 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+15:14:27.561 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+15:14:27.564 [debug] [credence_fix] Code.compile_string raised: cannot invoke @/1 outside module
+
+15:14:27.564 [debug] [credence_fix] semantic pass 1: compilation FAILED, 1 error(s)
+
+15:14:27.564 [debug] [credence_fix] RequireDefmoduleWrapper: matched diagnostic, running fix...
+
+15:14:27.582 [debug] [credence_fix] RequireDefmoduleWrapper: source CHANGED:
+  L1 - @doc """
+  L1 + defmodule Solution do
+  L2 - Solution module for converting camelCase to snake_case.
+  L2 +   @moduledoc "Converts camelCase strings to snake_case."
+  L3 - """
+  L3 + 
+  L4 - defmodule Solution do
+  L4 +   @doc """
+  L5 -   @moduledoc "Converts camelCase strings to snake_case."
+  L5 +   Converts a camelCase string to snake_case.
+  L7 -   @doc """
+  L7 +   ## Examples
+  L8 -   Converts a camelCase string to snake_case.
+  L8 +       iex> Solution.camel_to_snake("CamelCase")
+  L9 - 
+  L9 +       "camel_case"
+  L10 -   ## Examples
+  L10 + 
+  L11 -       iex> Solution.camel_to_snake("CamelCase")
+  L11 +       iex> Solution.camel_to_snake("camelCaseTest")
+  L12 -       "camel_case"
+  L12 +       "camel_case_test"
+  L14 -       iex> Solution.camel_to_snake("camelCaseTest")
+  L14 +       iex> Solution.camel_to_snake("ThisIsATestString")
+  L15 -       "camel_case_test"
+  L15 +       "this_is_a_test_string"
+  L16 - 
+  L16 +   """
+  L17 -       iex> Solution.camel_to_snake("ThisIsATestString")
+  L17 +   @spec camel_to_snake(String.t()) :: String.t()
+  L18 -       "this_is_a_test_string"
+  L18 +   def camel_to_snake(""), do: ""
+  L19 -   """
+  L19 + 
+  L20 -   @spec camel_to_snake(String.t()) :: String.t()
+  L20 +   def camel_to_snake(str) do
+  L21 -   def camel_to_snake(""), do: ""
+  L21 +     str
+  L22 -   def camel_to_snake(str) do
+  L22 +     |> String.codepoints()
+  L23 -     str
+  L23 +     |> Enum.map(fn
+  L24 -     |> String.codepoints()
+  L24 +       ?A ->
+  L25 -     |> Enum.map(fn
+  L25 +         "_a"
+  L26 -       ?A -> "_a"
+  L26 + 
+  L27 -       ?B -> "_b"
+  L27 +       ?B ->
+  L28 -       ?C -> "_c"
+  L28 +         "_b"
+  L29 -       ?D -> "_d"
+  L29 + 
+  L30 -       ?E -> "_e"
+  L30 +       ?C ->
+  L31 -       ?F -> "_f"
+  L31 +         "_c"
+  L32 -       ?G -> "_g"
+  L32 + 
+  L33 -       ?H -> "_h"
+  L33 +       ?D ->
+  L34 -       ?I -> "_i"
+  L34 +         "_d"
+  L35 -       ?J -> "_j"
+  L35 + 
+  L36 -       ?K -> "_k"
+  L36 +       ?E ->
+  L37 -       ?L -> "_l"
+  L37 +         "_e"
+  L38 -       ?M -> "_m"
+  L38 + 
+  L39 -       ?N -> "_n"
+  L39 +       ?F ->
+  L40 -       ?O -> "_o"
+  L40 +         "_f"
+  L41 -       ?P -> "_p"
+  L41 + 
+  L42 -       ?Q -> "_q"
+  L42 +       ?G ->
+  L43 -       ?R -> "_r"
+  L43 +         "_g"
+  L44 -       ?S -> "_s"
+  L44 + 
+  L45 -       ?T -> "_t"
+  L45 +       ?H ->
+  L46 -       ?U -> "_u"
+  L46 +         "_h"
+  L47 -       ?V -> "_v"
+  L47 + 
+  L48 -       ?W -> "_w"
+  L48 +       ?I ->
+  L49 -       ?X -> "_x"
+  L49 +         "_i"
+  L50 -       ?Y -> "_y"
+  L50 + 
+  L51 -       ?Z -> "_z"
+  L51 +       ?J ->
+  L52 -       ?a -> "a"
+  L52 +         "_j"
+  L53 -       ?b -> "b"
+  L53 + 
+  L54 -       ?c -> "c"
+  L54 +       ?K ->
+  L55 -       ?d -> "d"
+  L55 +         "_k"
+  L56 -       ?e -> "e"
+  L56 + 
+  L57 -       ?f -> "f"
+  L57 +       ?L ->
+  L58 -       ?g -> "g"
+  L58 +         "_l"
+  L59 -       ?h -> "h"
+  L59 + 
+  L60 -       ?i -> "i"
+  L60 +       ?M ->
+  L61 -       ?j -> "j"
+  L61 +         "_m"
+  L62 -       ?k -> "k"
+  L62 + 
+  L63 -       ?l -> "l"
+  L63 +       ?N ->
+  L64 -       ?m -> "m"
+  L64 +         "_n"
+  L65 -       ?n -> "n"
+  L65 + 
+  L66 -       ?o -> "o"
+  L66 +       ?O ->
+  L67 -       ?p -> "p"
+  L67 +         "_o"
+  L68 -       ?q -> "q"
+  L68 + 
+  L69 -       ?r -> "r"
+  L69 +       ?P ->
+  L70 -       ?s -> "s"
+  L70 +         "_p"
+  L71 -       ?t -> "t"
+  L71 + 
+  L72 -       ?u -> "u"
+  L72 +       ?Q ->
+  L73 -       ?v -> "v"
+  L73 +         "_q"
+  L74 -       ?w -> "w"
+  L74 + 
+  L75 -       ?x -> "x"
+  L75 +       ?R ->
+  L76 -       ?y -> "y"
+  L76 +         "_r"
+  L77 -       ?z -> "z"
+  L77 + 
+  L78 -       char -> if char == ?_ do "_#{char}" else "_#{char}" end
+  L78 +       ?S ->
+  L79 -     end)
+  L79 +         "_s"
+  L80 -     |> List.flatten()
+  L80 + 
+  L81 -     |> to_string()
+  L81 +       ?T ->
+  L82 -     |> String.trim_leven("_")
+  L82 +         "_t"
+  L83 -   end
+  L83 + 
+  L84 - end
+  L84 +       ?U ->
+  L85 +         "_u"
+  L86 + 
+  L87 +       ?V ->
+  L88 +         "_v"
+  L89 + 
+  L90 +       ?W ->
+  L91 +         "_w"
+  L92 + 
+  L93 +       ?X ->
+  L94 +         "_x"
+  L95 + 
+  L96 +       ?Y ->
+  L97 +         "_y"
+  L98 + 
+  L99 +       ?Z ->
+  L100 +         "_z"
+  L101 + 
+  L102 +       ?a ->
+  L103 +         "a"
+  L104 + 
+  L105 +       ?b ->
+  L106 +         "b"
+  L107 + 
+  L108 +       ?c ->
+  L109 +         "c"
+  L110 + 
+  L111 +       ?d ->
+  L112 +         "d"
+  L113 + 
+  L114 +       ?e ->
+  L115 +         "e"
+  L116 + 
+  L117 +       ?f ->
+  L118 +         "f"
+  L119 + 
+  L120 +       ?g ->
+  L121 +         "g"
+  L122 + 
+  L123 +       ?h ->
+  L124 +         "h"
+  L125 + 
+  L126 +       ?i ->
+  L127 +         "i"
+  L128 + 
+  L129 +       ?j ->
+  L130 +         "j"
+  L131 + 
+  L132 +       ?k ->
+  L133 +         "k"
+  L134 + 
+  L135 +       ?l ->
+  L136 +         "l"
+  L137 + 
+  L138 +       ?m ->
+  L139 +         "m"
+  L140 + 
+  L141 +       ?n ->
+  L142 +         "n"
+  L143 + 
+  L144 +       ?o ->
+  L145 +         "o"
+  L146 + 
+  L147 +       ?p ->
+  L148 +         "p"
+  L149 + 
+  L150 +       ?q ->
+  L151 +         "q"
+  L152 + 
+  L153 +       ?r ->
+  L154 +         "r"
+  L155 + 
+  L156 +       ?s ->
+  L157 +         "s"
+  L158 + 
+  L159 +       ?t ->
+  L160 +         "t"
+  L161 + 
+  L162 +       ?u ->
+  L163 +         "u"
+  L164 + 
+  L165 +       ?v ->
+  L166 +         "v"
+  L167 + 
+  L168 +       ?w ->
+  L169 +         "w"
+  L170 + 
+  L171 +       ?x ->
+  L172 +         "x"
+  L173 + 
+  L174 +       ?y ->
+  L175 +         "y"
+  L176 + 
+  L177 +       ?z ->
+  L178 +         "z"
+  L179 + 
+  L180 +       char ->
+  L181 +         if char == ?_ do
+  L182 +           "_#{char}"
+  L183 +         else
+  L184 +           "_#{char}"
+  L185 +         end
+  L186 +     end)
+  L187 +     |> List.flatten()
+  L188 +     |> to_string()
+  L189 +     |> String.trim_leven("_")
+  L190 +   end
+  L191 + end
+
+15:14:27.582 [debug] [credence_fix] semantic pass 1: source changed, retrying...
+
+15:14:27.599 [debug] [credence_fix] semantic pass 2: compilation OK, 2 warning(s)
+
+15:14:27.600 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+15:14:27.601 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+15:14:27.604 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+15:14:27.604 [debug] [credence_fix] semantic done. Applied: [RequireDefmoduleWrapper(1), UndefinedFunction(1)]
+
+15:14:27.604 [debug] [credence_fix] starting pattern fix pipeline (166 rules)
+
+15:14:27.721 [debug] [credence_fix] NoTautologicalIf: check found 1 issue(s), running fix...
+
+15:14:27.734 [debug] [credence_fix] NoTautologicalIf: source CHANGED:
+  L181 -         if char == ?_ do
+  L181 +         "_#{char}"
+  L182 -           "_#{char}"
+  L182 +     end)
+  L183 -         else
+  L183 +     |> List.flatten()
+  L184 -           "_#{char}"
+  L184 +     |> to_string()
+  L185 -         end
+  L185 +     |> String.trim_leven("_")
+  L186 -     end)
+  L186 +   end
+  L187 -     |> List.flatten()
+  L187 + end
+  L188 -     |> to_string()
+  L189 -     |> String.trim_leven("_")
+  L190 -   end
+  L191 - end
+
+15:14:27.807 [debug] [credence_fix] done. (truncated)[0m
+[22m15:14:27.836 [info] [run_credence_fix] credence reported FIXED — verifying compilation[0m
+[33m15:14:28.421 [warning] [run_credence_fix] fix broke compilation — reverting[0m
+[36m15:14:28.421 [debug] [run_credence_fix] recompile output:
+Compiling 1 file (.ex)
+     warning: String.trim_leven/2 is undefined or private. Did you mean:
+
+         * trim/1
+         * trim/2
+         * trim_leading/1
+         * trim_leading/2
+
+     │
+ 185 │     |> String.trim_leven("_")
+     │               ~
+     │
+     └─ lib/solution.ex:185:15: Solution.camel_to_snake/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[33m15:14:28.896 [warning] [Validator.run] credence fix produced invalid code — reverted[0m
+[22m15:14:28.896 [info] [Validator.run] step 2/6: compile[0m
+[22m15:14:29.539 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m15:14:29.539 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+[0m
+[22m15:14:29.539 [info] [Validator.run] step 3/6: format[0m
+[22m15:14:29.539 [info] [Validator.run] skipping format (compile failed)[0m
+[22m15:14:29.539 [info] [Validator.run] step 4/6: credo[0m
+[22m15:14:29.539 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m15:14:29.539 [info] [Validator.run] step 5/6: credence check[0m
+[22m15:14:29.539 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m15:14:29.539 [info] [Validator.run] step 6/6: tests[0m
+[22m15:14:29.539 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m15:14:29.625 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m15:14:29.625 [debug] [Validator.run] final module (1631 chars):
+@doc """
+Solution module for converting camelCase to snake_case.
+"""
+defmodule Solution do
+  @moduledoc "Converts camelCase strings to snake_case."
+
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+  def camel_to_snake(str) do
+    str
+    |> String.codepoints()
+    |> Enum.map(fn
+      ?A -> "_a"
+      ?B -> "_b"
+      ?C -> "_c"
+      ?D -> "_d"
+      ?E -> "_e"
+      ?F -> "_f"
+      ?G -> "_g"
+      ?H -> "_h"
+      ?I -> "_i"
+      ?J -> "_j"
+      ?K -> "_k"
+      ?L -> "_l"
+      ?M -> "_m"
+      ?N -> "_n"
+      ?O -> "_o"
+      ?P -> "_p"
+      ?Q -> "_q"
+      ?R -> "_r"
+      ?S -> "_s"
+      ?T -> "_t"
+      ?U -> "_u"
+      ?V -> "_v"
+      ?W -> "_w"
+      ?X -> "_x"
+      ?Y -> "_y"
+      ?Z -> "_z"
+      ?a -> "a"
+      ?b -> "b"
+      ?c -> "c"
+      ?d -> "d"
+      ?e -> "e"
+      ?f -> "f"
+      ?g -> "g"
+      ?h -> "h"
+      ?i -> "i"
+      ?j -> "j"
+      ?k -> "k"
+      ?l -> "l"
+      ?m -> "m"
+      ?n -> "n"
+      ?o -> "o"
+      ?p -> "p"
+      ?q -> "q"
+      ?r -> "r"
+      ?s -> "s"
+      ?t -> "t"
+      ?u -> "u"
+      ?v -> "v"
+      ?w -> "w"
+      ?x -> "x"
+      ?y -> "y"
+      ?z -> "z"
+      char -> if char == ?_ do "_#{char}" else "_#{char}" end
+    end)
+    |> List.flatten()
+    |> to_string()
+    |> String.trim_leven("_")
+  end
+end[0m
+[36m15:14:29.625 [debug] [Validator.run] final test (440 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end[0m
+[33m15:14:29.625 [warning] [Solve attempt 1] validation FAILED: [:compile][0m
+[22m15:14:29.688 [info] [Solve attempt 2] generating (fn=camel_to_snake)[0m
+[36m15:14:29.688 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+@doc """
+Solution module for converting camelCase to snake_case.
+"""
+defmodule Solution do
+  @moduledoc "Converts camelCase strings to snake_case."
+
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+  def camel_to_snake(str) do
+    str
+    |> String.codepoints()
+    |> Enum.map(fn
+      ?A -> "_a"
+      ?B -> "_b"
+      ?C -> "_c"
+      ?D -> "_d"
+      ?E -> "_e"
+      ?F -> "_f"
+      ?G -> "_g"
+      ?H -> "_h"
+      ?I -> "_i"
+      ?J -> "_j"
+      ?K -> "_k"
+      ?L -> "_l"
+      ?M -> "_m"
+      ?N -> "_n"
+      ?O -> "_o"
+      ?P -> "_p"
+      ?Q -> "_q"
+      ?R -> "_r"
+      ?S -> "_s"
+      ?T -> "_t"
+      ?U -> "_u"
+      ?V -> "_v"
+      ?W -> "_w"
+      ?X -> "_x"
+      ?Y -> "_y"
+      ?Z -> "_z"
+      ?a -> "a"
+      ?b -> "b"
+      ?c -> "c"
+      ?d -> "d"
+      ?e -> "e"
+      ?f -> "f"
+      ?g -> "g"
+      ?h -> "h"
+      ?i -> "i"
+      ?j -> "j"
+      ?k -> "k"
+      ?l -> "l"
+      ?m -> "m"
+      ?n -> "n"
+      ?o -> "o"
+      ?p -> "p"
+      ?q -> "q"
+      ?r -> "r"
+      ?s -> "s"
+      ?t -> "t"
+      ?u -> "u"
+      ?v -> "v"
+      ?w -> "w"
+      ?x -> "x"
+      ?y -> "y"
+      ?z -> "z"
+      char -> if char == ?_ do "_#{char}" else "_#{char}" end
+    end)
+    |> List.flatten()
+    |> to_string()
+    |> String.trim_leven("_")
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---END---
+
+## Errors
+### compile error:
+== Compilation error in file lib/solution.ex ==
+** (ArgumentError) cannot invoke @/1 outside module
+    (elixir 1.19.5) lib/kernel.ex:7008: Kernel.assert_module_scope/3
+    (elixir 1.19.5) expanding macro: Kernel.@/1
+    lib/solution.ex:1: (file)
+
+Reminder: module `Solution`, function `camel_to_snake` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m15:14:33.280 [debug] [LLM.call] finish=stop len=1137 usage=%{"completion_tokens" => 341, "prompt_tokens" => 1172, "prompt_tokens_details" => %{"cached_tokens" => 0}, "total_tokens" => 1513}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphyll()
+    |> Enum.reduce("", fn
+      char, acc when char in ?A..?Z -> acc <> "_" <> String.downcase(char)
+      char, acc -> acc <> String.downcase(char)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---END---[0m
+[22m15:14:33.280 [info] [LLM.call] local_qwen_thinking completed in 3592ms — ok[0m
+[22m15:14:33.280 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m15:14:33.280 [debug] [Validator.run] module code (662 chars):
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphyll()
+    |> Enum.reduce("", fn
+      char, acc when char in ?A..?Z -> acc <> "_" <> String.downcase(char)
+      char, acc -> acc <> String.downcase(char)
+    end)
+  end
+end[0m
+[36m15:14:33.280 [debug] [Validator.run] test code (440 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end[0m
+[36m15:14:33.280 [debug] [Budget] spent so far (est.): $0.0132[0m
+[22m15:14:33.281 [info] [Validator.run] step 1/6: credence fix[0m
+[36m15:14:33.281 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m15:14:33.964 [debug] [run_credence_fix] exit=0 output:
+
+15:14:33.875 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+15:14:33.877 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+15:14:33.891 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+15:14:33.891 [debug] [credence_fix] UndefinedFunction: matched diagnostic, running fix...
+
+15:14:33.891 [debug] [credence_fix] UndefinedFunction: fix returned IDENTICAL source (no change)
+
+15:14:33.892 [debug] [credence_fix] semantic done. Applied: [UndefinedFunction(1)]
+
+15:14:33.892 [debug] [credence_fix] starting pattern fix pipeline (166 rules)
+
+15:14:33.941 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: [{Credence.Semantic.UndefinedFunction, 1}]
+REMAINING_ISSUES: 1 unfixable issue(s)
+undefined_function: String.graphyll/1 is undefined or private (line 20)
+[0m
+[36m15:14:33.964 [debug] [run_credence_fix] no changes needed[0m
+[22m15:14:33.964 [info] [Validator.run] credence: no changes needed[0m
+[22m15:14:33.965 [info] [Validator.run] step 2/6: compile[0m
+[22m15:14:34.701 [info] [Validator.run] compile exit=1 compiled=false[0m
+[36m15:14:34.701 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+    warning: String.graphyll/1 is undefined or private
+    │
+ 20 │     |> String.graphyll()
+    │               ~
+    │
+    └─ lib/solution.ex:20:15: Solution.camel_to_snake/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+[0m
+[22m15:14:34.701 [info] [Validator.run] step 3/6: format[0m
+[22m15:14:34.701 [info] [Validator.run] skipping format (compile failed)[0m
+[22m15:14:34.701 [info] [Validator.run] step 4/6: credo[0m
+[22m15:14:34.701 [info] [Validator.run] skipping credo (compile failed)[0m
+[22m15:14:34.701 [info] [Validator.run] step 5/6: credence check[0m
+[22m15:14:34.701 [info] [Validator.run] skipping credence check (compile failed)[0m
+[22m15:14:34.701 [info] [Validator.run] step 6/6: tests[0m
+[22m15:14:34.702 [info] [Validator.run] skipping tests (compile failed)[0m
+[22m15:14:34.702 [info] [Validator.run] ── DONE — 1 failure(s): [:compile] ──[0m
+[36m15:14:34.702 [debug] [Validator.run] final module (662 chars):
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphyll()
+    |> Enum.reduce("", fn
+      char, acc when char in ?A..?Z -> acc <> "_" <> String.downcase(char)
+      char, acc -> acc <> String.downcase(char)
+    end)
+  end
+end[0m
+[36m15:14:34.702 [debug] [Validator.run] final test (440 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end[0m
+[33m15:14:34.702 [warning] [Solve attempt 2] validation FAILED: [:compile][0m
+[22m15:14:34.702 [info] [Solve attempt 3] generating (fn=camel_to_snake)[0m
+[36m15:14:34.702 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphyll()
+    |> Enum.reduce("", fn
+      char, acc when char in ?A..?Z -> acc <> "_" <> String.downcase(char)
+      char, acc -> acc <> String.downcase(char)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---END---
+
+## Errors
+### compile error:
+warning: String.graphyll/1 is undefined or private
+    │
+ 20 │     |> String.graphyll()
+    │               ~
+    │
+    └─ lib/solution.ex:20:15: Solution.camel_to_snake/1
+
+Compilation failed due to warnings while using the --warnings-as-errors option
+
+Reminder: module `Solution`, function `camel_to_snake` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m15:14:38.072 [debug] [LLM.call] finish=stop len=1138 usage=%{"completion_tokens" => 341, "prompt_tokens" => 709, "prompt_tokens_details" => %{"cached_tokens" => 0}, "total_tokens" => 1050}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.reduce("", fn
+      char, acc when char in ?A..?Z -> acc <> "_" <> String.downcase(char)
+      char, acc -> acc <> String.downcase(char)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---END---[0m
+[22m15:14:38.072 [info] [LLM.call] local_qwen_thinking completed in 3369ms — ok[0m
+[22m15:14:38.072 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m15:14:38.072 [debug] [Validator.run] module code (663 chars):
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.reduce("", fn
+      char, acc when char in ?A..?Z -> acc <> "_" <> String.downcase(char)
+      char, acc -> acc <> String.downcase(char)
+    end)
+  end
+end[0m
+[36m15:14:38.072 [debug] [Validator.run] test code (440 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end[0m
+[36m15:14:38.073 [debug] [Budget] spent so far (est.): $0.0138[0m
+[22m15:14:38.073 [info] [Validator.run] step 1/6: credence fix[0m
+[36m15:14:38.073 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m15:14:38.750 [debug] [run_credence_fix] exit=0 output:
+
+15:14:38.657 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+15:14:38.659 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+15:14:38.674 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+15:14:38.680 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+15:14:38.680 [debug] [credence_fix] semantic done. Applied: []
+
+15:14:38.680 [debug] [credence_fix] starting pattern fix pipeline (166 rules)
+
+15:14:38.728 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m15:14:38.750 [debug] [run_credence_fix] no changes needed[0m
+[22m15:14:38.750 [info] [Validator.run] credence: no changes needed[0m
+[22m15:14:38.750 [info] [Validator.run] step 2/6: compile[0m
+[22m15:14:39.344 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m15:14:39.344 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m15:14:39.344 [info] [Validator.run] step 3/6: format[0m
+[22m15:14:39.654 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m15:14:39.957 [debug] [Validator.run] format fix output: [0m
+[22m15:14:39.957 [info] [Validator.run] step 4/6: credo[0m
+[36m15:14:40.436 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m15:14:40.436 [info] [Validator.run] credo: no issues[0m
+[22m15:14:40.436 [info] [Validator.run] step 5/6: credence check[0m
+[22m15:14:41.203 [info] [Validator.run] credence check exit=0[0m
+[36m15:14:41.203 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m15:14:41.203 [info] [Validator.run] credence check: passed[0m
+[22m15:14:41.203 [info] [Validator.run] step 6/6: tests[0m
+[22m15:14:41.688 [info] [Validator.run] test exit=2[0m
+[36m15:14:41.688 [debug] [Validator.run] test output:
+Running ExUnit with seed: 637260, max_cases: 48
+
+
+
+  1) test camel_to_snake with CamelCase (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.camel_to_snake("CamelCase") == "camel_case"
+     left:  "camelcase"
+     right: "camel_case"
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+
+  2) test camel_to_snake with camelCaseTest (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+     left:  "camelcasetest"
+     right: "camel_case_test"
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  3) test camel_to_snake with ThisIsATestString (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+     left:  "thisisateststring"
+     right: "this_is_a_test_string"
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+[0m
+[33m15:14:41.688 [warning] [Validator.run] tests: FAILED[0m
+[22m15:14:41.688 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m15:14:41.688 [debug] [Validator.run] final module (664 chars):
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.reduce("", fn
+      char, acc when char in ?A..?Z -> acc <> "_" <> String.downcase(char)
+      char, acc -> acc <> String.downcase(char)
+    end)
+  end
+end
+[0m
+[36m15:14:41.688 [debug] [Validator.run] final test (441 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+[0m
+[33m15:14:41.688 [warning] [Solve attempt 3] validation FAILED: [:test][0m
+[22m15:14:41.688 [info] [Solve attempt 4] generating (fn=camel_to_snake)[0m
+[36m15:14:41.688 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.reduce("", fn
+      char, acc when char in ?A..?Z -> acc <> "_" <> String.downcase(char)
+      char, acc -> acc <> String.downcase(char)
+    end)
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 637260, max_cases: 48
+
+
+
+  1) test camel_to_snake with CamelCase (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.camel_to_snake("CamelCase") == "camel_case"
+     left:  "camelcase"
+     right: "camel_case"
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+
+  2) test camel_to_snake with camelCaseTest (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+     left:  "camelcasetest"
+     right: "camel_case_test"
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  3) test camel_to_snake with ThisIsATestString (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+     left:  "thisisateststring"
+     right: "this_is_a_test_string"
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+
+Reminder: module `Solution`, function `camel_to_snake` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m15:14:45.366 [debug] [LLM.call] finish=stop len=1217 usage=%{"completion_tokens" => 370, "prompt_tokens" => 981, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1351}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.map_reduce("", &convert_char/2)
+    |> elem(0)
+  end
+
+  defp convert_char(char, acc) do
+    case char do
+      ?A..?Z -> {acc <> "_" <> String.downcase(char), true}
+      char -> {acc <> String.downcase(char), false}
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---END---[0m
+[22m15:14:45.366 [info] [LLM.call] local_qwen_thinking completed in 3677ms — ok[0m
+[22m15:14:45.366 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m15:14:45.366 [debug] [Validator.run] module code (742 chars):
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.map_reduce("", &convert_char/2)
+    |> elem(0)
+  end
+
+  defp convert_char(char, acc) do
+    case char do
+      ?A..?Z -> {acc <> "_" <> String.downcase(char), true}
+      char -> {acc <> String.downcase(char), false}
+    end
+  end
+end[0m
+[36m15:14:45.366 [debug] [Validator.run] test code (440 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end[0m
+[36m15:14:45.366 [debug] [Budget] spent so far (est.): $0.0146[0m
+[22m15:14:45.367 [info] [Validator.run] step 1/6: credence fix[0m
+[36m15:14:45.367 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m15:14:46.053 [debug] [run_credence_fix] exit=0 output:
+
+15:14:45.951 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+15:14:45.953 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+15:14:45.967 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+15:14:45.973 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+15:14:45.973 [debug] [credence_fix] semantic done. Applied: []
+
+15:14:45.974 [debug] [credence_fix] starting pattern fix pipeline (166 rules)
+
+15:14:46.029 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m15:14:46.053 [debug] [run_credence_fix] no changes needed[0m
+[22m15:14:46.053 [info] [Validator.run] credence: no changes needed[0m
+[22m15:14:46.053 [info] [Validator.run] step 2/6: compile[0m
+[22m15:14:46.627 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m15:14:46.627 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m15:14:46.627 [info] [Validator.run] step 3/6: format[0m
+[22m15:14:46.921 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m15:14:47.219 [debug] [Validator.run] format fix output: [0m
+[22m15:14:47.219 [info] [Validator.run] step 4/6: credo[0m
+[36m15:14:47.702 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m15:14:47.702 [info] [Validator.run] credo: no issues[0m
+[22m15:14:47.702 [info] [Validator.run] step 5/6: credence check[0m
+[22m15:14:48.440 [info] [Validator.run] credence check exit=0[0m
+[36m15:14:48.440 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m15:14:48.440 [info] [Validator.run] credence check: passed[0m
+[22m15:14:48.440 [info] [Validator.run] step 6/6: tests[0m
+[22m15:14:48.928 [info] [Validator.run] test exit=2[0m
+[36m15:14:48.928 [debug] [Validator.run] test output:
+Running ExUnit with seed: 872863, max_cases: 48
+
+
+
+  1) test camel_to_snake with ThisIsATestString (SolutionTest)
+     test/solution_test.exs:12
+     ** (ArgumentError) construction of binary failed: segment 1 of type 'binary': expected a binary but got: false
+     code: assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:28: Solution.convert_char/2
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (workspace 0.1.0) lib/solution.ex:21: Solution.camel_to_snake/1
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test camel_to_snake with CamelCase (SolutionTest)
+     test/solution_test.exs:4
+     ** (ArgumentError) construction of binary failed: segment 1 of type 'binary': expected a binary but got: false
+     code: assert Solution.camel_to_snake("CamelCase") == "camel_case"
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:28: Solution.convert_char/2
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (workspace 0.1.0) lib/solution.ex:21: Solution.camel_to_snake/1
+       test/solution_test.exs:5: (test)
+
+
+
+  3) test camel_to_snake with camelCaseTest (SolutionTest)
+     test/solution_test.exs:8
+     ** (ArgumentError) construction of binary failed: segment 1 of type 'binary': expected a binary but got: false
+     code: assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:28: Solution.convert_char/2
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (workspace 0.1.0) lib/solution.ex:21: Solution.camel_to_snake/1
+       test/solution_test.exs:9: (test)
+
+
+Finished in 0.02 seconds (0.00s async, 0.02s sync)
+3 tests, 3 failures
+[0m
+[33m15:14:48.928 [warning] [Validator.run] tests: FAILED[0m
+[22m15:14:48.928 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m15:14:48.928 [debug] [Validator.run] final module (743 chars):
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.map_reduce("", &convert_char/2)
+    |> elem(0)
+  end
+
+  defp convert_char(char, acc) do
+    case char do
+      ?A..?Z -> {acc <> "_" <> String.downcase(char), true}
+      char -> {acc <> String.downcase(char), false}
+    end
+  end
+end
+[0m
+[36m15:14:48.928 [debug] [Validator.run] final test (441 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+[0m
+[33m15:14:48.928 [warning] [Solve attempt 4] validation FAILED: [:test][0m
+[22m15:14:48.929 [info] [Solve attempt 5] generating (fn=camel_to_snake)[0m
+[36m15:14:48.929 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Your previous Elixir solution failed validation. Fix it.
+
+## Previous Output (ERRORS)
+---MODULE---
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.map_reduce("", &convert_char/2)
+    |> elem(0)
+  end
+
+  defp convert_char(char, acc) do
+    case char do
+      ?A..?Z -> {acc <> "_" <> String.downcase(char), true}
+      char -> {acc <> String.downcase(char), false}
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---END---
+
+## Errors
+### test error:
+Running ExUnit with seed: 872863, max_cases: 48
+
+
+
+  1) test camel_to_snake with ThisIsATestString (SolutionTest)
+     test/solution_test.exs:12
+     ** (ArgumentError) construction of binary failed: segment 1 of type 'binary': expected a binary but got: false
+     code: assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:28: Solution.convert_char/2
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (workspace 0.1.0) lib/solution.ex:21: Solution.camel_to_snake/1
+       test/solution_test.exs:13: (test)
+
+
+
+  2) test camel_to_snake with CamelCase (SolutionTest)
+     test/solution_test.exs:4
+     ** (ArgumentError) construction of binary failed: segment 1 of type 'binary': expected a binary but got: false
+     code: assert Solution.camel_to_snake("CamelCase") == "camel_case"
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:28: Solution.convert_char/2
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (workspace 0.1.0) lib/solution.ex:21: Solution.camel_to_snake/1
+       test/solution_test.exs:5: (test)
+
+
+
+  3) test camel_to_snake with camelCaseTest (SolutionTest)
+     test/solution_test.exs:8
+     ** (ArgumentError) construction of binary failed: segment 1 of type 'binary': expected a binary but got: false
+     code: assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+     stacktrace:
+       (workspace 0.1.0) lib/solution.ex:28: Solution.convert_char/2
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (elixir 1.19.5) lib/enum.ex:1814: Enum."-map_reduce/3-lists^mapfoldl/2-0-"/3
+       (workspace 0.1.0) lib/solution.ex:21: Solution.camel_to_snake/1
+       test/solution_test.exs:9: (test)
+
+
+Finished in 0.02 seconds (0.00s async, 0.02s sync)
+3 tests, 3 failures
+
+Reminder: module `Solution`, function `camel_to_snake` (boolean predicates use the
+`?` suffix, never the `is_` prefix). Idiomatic Elixir, descriptive names,
+prefix unused params with `_` per clause.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[36m15:14:52.895 [debug] [LLM.call] finish=stop len=1216 usage=%{"completion_tokens" => 364, "prompt_tokens" => 1419, "prompt_tokens_details" => %{"cached_tokens" => 193}, "total_tokens" => 1783}
+[LLM.call] response:
+---MODULE---
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.reduce("", &convert_char/2)
+  end
+
+  defp convert_char(char, acc) do
+    case char do
+      char when char in ?A..?Z ->
+        acc <> "_" <> String.downcase(char)
+
+      char ->
+        acc <> String.downcase(char)
+    end
+  end
+end
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+---END---[0m
+[22m15:14:52.896 [info] [LLM.call] local_qwen_thinking completed in 3967ms — ok[0m
+[22m15:14:52.896 [info] [Validator.run] ── START in var/run/workspace ──[0m
+[36m15:14:52.896 [debug] [Validator.run] module code (741 chars):
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.reduce("", &convert_char/2)
+  end
+
+  defp convert_char(char, acc) do
+    case char do
+      char when char in ?A..?Z ->
+        acc <> "_" <> String.downcase(char)
+
+      char ->
+        acc <> String.downcase(char)
+    end
+  end
+end[0m
+[36m15:14:52.896 [debug] [Budget] spent so far (est.): $0.0155[0m
+[36m15:14:52.896 [debug] [Validator.run] test code (440 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end[0m
+[22m15:14:52.896 [info] [Validator.run] step 1/6: credence fix[0m
+[36m15:14:52.896 [debug] [run_credence_fix] running fix script in var/run/workspace[0m
+[36m15:14:53.553 [debug] [run_credence_fix] exit=0 output:
+
+15:14:53.459 [debug] [credence_fix] syntax fix pipeline: source already parses, skipping
+
+15:14:53.461 [debug] [credence_fix] starting semantic fix pipeline (max 3 passes, 20 rules)
+
+15:14:53.474 [debug] [credence_fix] semantic pass 1: compilation OK, 1 warning(s)
+
+15:14:53.480 [debug] [credence_fix] no rule matched diagnostic: %{message: "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)", position: 1, file: "credence_check.ex", stacktrace: [{Solution, :__MODULE__, 0, [file: "credence_check.ex", line: 1]}], source: "credence_check.ex", span: nil, severity: :warning}
+
+15:14:53.480 [debug] [credence_fix] semantic done. Applied: []
+
+15:14:53.481 [debug] [credence_fix] starting pattern fix pipeline (166 rules)
+
+15:14:53.532 [debug] [credence_fix] done. Applied: []
+NO_CHANGES
+APPLIED_RULES: []
+[0m
+[36m15:14:53.553 [debug] [run_credence_fix] no changes needed[0m
+[22m15:14:53.553 [info] [Validator.run] credence: no changes needed[0m
+[22m15:14:53.553 [info] [Validator.run] step 2/6: compile[0m
+[22m15:14:54.135 [info] [Validator.run] compile exit=0 compiled=true[0m
+[36m15:14:54.135 [debug] [Validator.run] compile output:
+Compiling 1 file (.ex)
+Generated workspace app
+[0m
+[22m15:14:54.135 [info] [Validator.run] step 3/6: format[0m
+[22m15:14:54.457 [info] [Validator.run] code not formatted — auto-formatting[0m
+[36m15:14:54.758 [debug] [Validator.run] format fix output: [0m
+[22m15:14:54.758 [info] [Validator.run] step 4/6: credo[0m
+[36m15:14:55.258 [debug] [Validator.run] credo exit=0 output:
+[0m
+[22m15:14:55.258 [info] [Validator.run] credo: no issues[0m
+[22m15:14:55.258 [info] [Validator.run] step 5/6: credence check[0m
+[22m15:14:56.024 [info] [Validator.run] credence check exit=0[0m
+[36m15:14:56.024 [debug] [Validator.run] credence check output:
+Compiling 1 file (.ex)
+Generated workspace app
+OK
+[0m
+[22m15:14:56.024 [info] [Validator.run] credence check: passed[0m
+[22m15:14:56.024 [info] [Validator.run] step 6/6: tests[0m
+[22m15:14:56.505 [info] [Validator.run] test exit=2[0m
+[36m15:14:56.505 [debug] [Validator.run] test output:
+Running ExUnit with seed: 456399, max_cases: 48
+
+
+
+  1) test camel_to_snake with camelCaseTest (SolutionTest)
+     test/solution_test.exs:8
+     Assertion with == failed
+     code:  assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+     left:  "camelcasetest"
+     right: "camel_case_test"
+     stacktrace:
+       test/solution_test.exs:9: (test)
+
+
+
+  2) test camel_to_snake with ThisIsATestString (SolutionTest)
+     test/solution_test.exs:12
+     Assertion with == failed
+     code:  assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+     left:  "thisisateststring"
+     right: "this_is_a_test_string"
+     stacktrace:
+       test/solution_test.exs:13: (test)
+
+
+
+  3) test camel_to_snake with CamelCase (SolutionTest)
+     test/solution_test.exs:4
+     Assertion with == failed
+     code:  assert Solution.camel_to_snake("CamelCase") == "camel_case"
+     left:  "camelcase"
+     right: "camel_case"
+     stacktrace:
+       test/solution_test.exs:5: (test)
+
+
+Finished in 0.01 seconds (0.00s async, 0.01s sync)
+3 tests, 3 failures
+[0m
+[33m15:14:56.505 [warning] [Validator.run] tests: FAILED[0m
+[22m15:14:56.505 [info] [Validator.run] ── DONE — 1 failure(s): [:test] ──[0m
+[36m15:14:56.505 [debug] [Validator.run] final module (742 chars):
+defmodule Solution do
+  @doc """
+  Converts a camelCase string to snake_case.
+
+  ## Examples
+      iex> Solution.camel_to_snake("CamelCase")
+      "camel_case"
+
+      iex> Solution.camel_to_snake("camelCaseTest")
+      "camel_case_test"
+
+      iex> Solution.camel_to_snake("ThisIsATestString")
+      "this_is_a_test_string"
+  """
+  @spec camel_to_snake(String.t()) :: String.t()
+  def camel_to_snake(""), do: ""
+
+  def camel_to_snake(str) when is_binary(str) do
+    str
+    |> String.graphemes()
+    |> Enum.reduce("", &convert_char/2)
+  end
+
+  defp convert_char(char, acc) do
+    case char do
+      char when char in ?A..?Z ->
+        acc <> "_" <> String.downcase(char)
+
+      char ->
+        acc <> String.downcase(char)
+    end
+  end
+end
+[0m
+[36m15:14:56.506 [debug] [Validator.run] final test (441 chars):
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "camel_to_snake with CamelCase" do
+    assert Solution.camel_to_snake("CamelCase") == "camel_case"
+  end
+
+  test "camel_to_snake with camelCaseTest" do
+    assert Solution.camel_to_snake("camelCaseTest") == "camel_case_test"
+  end
+
+  test "camel_to_snake with ThisIsATestString" do
+    assert Solution.camel_to_snake("ThisIsATestString") == "this_is_a_test_string"
+  end
+end
+[0m
+[33m15:14:56.506 [warning] [Solve attempt 5] validation FAILED: [:test][0m
+[33m15:14:56.506 [warning] [Solve] giving up after 5 attempts[0m
+[36m15:14:57.426 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You classify one solved/failed dataset row for the Credence Elixir AST linter. Decide the SINGLE most valuable deterministic action — a new fixable rule, a fix to an over-firing existing rule, a switch proposal, or nothing. You are the QUALITY BAR: a wrong landing rule pollutes all future code, a missed one is lost forever. Tiny-but-real is welcome; uncertain is NO_ACTION. Never speculate. Output ONLY the marker-fenced spec — no prose around it.
+[LLM.call] user:
+This row's solve FAILED — there is NO clean final. Judge the attempts for an ISSUE they repeatedly hit that NO existing rule fixed (a new Syntax/Semantic rule — e.g. a Python-ism like `a div b`, an unfixed warning), plus any existing rule that over-fired (BUGFIX).
+
+## Decisions you may emit (pick exactly one)
+  - BUGFIX_RULE
+  - POTENTIAL_NEW_RULE
+  - SWITCH_PROPOSAL
+  - NO_ACTION
+
+## Rule naming convention (for a new rule's proposed_name)
+Names are snake_case and almost always prefixed: no_ (forbid), prefer_ (steer),
+avoid_ (discourage). Propose a SEMANTIC name; the orchestrator owns the final
+name + any numeric suffix.
+
+## Choosing PHASE — Credence runs 3 ordered rounds; pick by the INPUT's parse/compile status
+- syntax   — `before` WON'T PARSE (Sourceror fails); fixes raw text. e.g. `n*(n+1) div 2` → `div(n*(n+1), 2)`.
+- semantic — `before` PARSES but the COMPILER rejects/warns (error- or warning-level diagnostics).
+             e.g. `@attr` ABOVE `defmodule` ("cannot invoke @/1 outside module"), unused var,
+             undefined function. A semantic rule matches a COMPILER DIAGNOSTIC, not an AST shape.
+- pattern  — `before` COMPILES and runs but is non-idiomatic; deeper AST rewrites.
+HARD: a Pattern rule's fix ONLY runs on code that COMPILES. If `before` does not compile you MUST
+choose syntax or semantic — NEVER pattern (a Pattern rule there detects but its fix is skipped forever).
+
+
+## Hard rule — FIXABLE ONLY, no check-only
+Every proposed rule MUST carry a real `after` (a `fix`). There is NO check-only
+path. If a pattern has no safe auto-fix even on a narrowed core, or the only fix
+changes a value's TYPE, emit NO_ACTION — never a do-nothing stub.
+
+## Hard rule — BEFORE must be SELF-CONTAINED
+`before` must stand alone: inline or define EVERY helper/function it calls. Do
+NOT leave a dangling call to something you didn't include. An incomplete snippet
+fails to compile for a reason UNRELATED to your idiom (an `undefined function`
+error), an unrelated rule fires on that breakage, and the novelty check then
+drops your whole proposal as a FALSE DUPLICATE. Keep only the ONE issue you are
+isolating; everything else must be valid: a Pattern `before` must fully COMPILE;
+a Semantic `before` may carry only its ONE targeted compiler diagnostic; a Syntax
+`before` is the lone parse failure.
+
+## Behaviour preservation (HARD — §3.10)
+`after` must be output-identical to `before` for EVERY admitted input (Tunex
+runs Credence's default helpful mode). A behaviour-changing rewrite is NO_ACTION
+— UNLESS a declared assumption admits it (see the switch registry below), or it
+is a REPAIR (before crashes on every input).
+
+### Type-change ban (read it)
+NEVER generate a rule whose fix changes the TYPE of the value the code produces.
+A rewrite must return the same kind of value (integer, string, list, etc.) for
+every input. If the "before" and "after" can ever be different types, the rule is
+wrong even if it looks tidier — discard it, do not emit it.
+
+The most common trap is codepoint↔grapheme on strings. These are NOT
+interchangeable:
+
+  - String.to_charlist/1, String.codepoints/1, ?c literals  -> work on CODEPOINTS
+    (small pieces; produce INTEGERS / lists of integers)
+  - String.at/1, String.length/1, String.reverse/1, String.graphemes/1,
+    String.count/2                                            -> work on GRAPHEMES
+    (whole characters; produce STRINGS)
+
+Specifically BANNED — never generate these or any variant of them:
+
+  - Enum.at(String.to_charlist(s), i)  ->  String.at(s, i)
+      WRONG: left returns a codepoint INTEGER, right returns a one-character
+      STRING. This is a type change, true for every input including plain ASCII.
+      There is no safe fix for indexed character access off a charlist — leave
+      it alone. (Do not work around the exact wording with hd(tl(...)),
+      |> Enum.fetch(i), |> Enum.at(i), list comprehensions, etc. — same trap.)
+
+Rule of thumb: if a rewrite swaps a codepoint operation for a grapheme operation
+(or the reverse), and the result types differ, NEVER emit it. (A same-type
+codepoint↔grapheme rewrite — e.g. a count or a reverse where both sides are
+strings — is a separate, switch-gated case and is handled elsewhere; that is not
+your call to make here.)
+
+
+### Adversarial-input checklist (screen `after` against ALL of these)
+A green test suite proves a rule DOES something, not that it is SAFE. Before you
+propose an `after`, run `before` and `after` against every input below. If the
+rewrite gives a different answer on ANY of them, the rule is NOT fixable as-is:
+narrow the match so it no-ops on that input, or emit NO_ACTION.
+
+  - Unicode:
+      * plain ASCII
+      * a PRECOMPOSED accent  "é" (1 codepoint)
+      * a COMBINING accent    "é" = "e" + U+0301 (2 codepoints, 1 grapheme)
+      * a multi-codepoint emoji "👨‍👩‍👧" (5 codepoints, 1 grapheme)
+      * a flag "🇵🇱" (2 codepoints, 1 grapheme)
+  - Edge cases: empty, single element, nil, a negative index.
+  - Value-KIND traps: number 7 vs char "7"; codepoints vs graphemes vs bytes.
+    The result must be the SAME KIND of value — integer stays integer, string
+    stays string, list stays list. A kind change is wrong even on plain ASCII.
+  - A variable the moved/removed code also uses elsewhere; side effects in moved
+    code (IO, send, raise) that re-ordering would observably change.
+
+EXCEPTION — REPAIR: if `before` CRASHES on EVERY one of these inputs (it is
+broken on all input — e.g. an arg-order bug, a hallucinated guard), it is a
+REPAIR candidate, not a divergence to suppress. Propose the corrected `after`
+anyway; the deterministic gate confirms it.
+
+Same-answer on every one of these (or all-crash for a repair), or it is not a
+fixable rule.
+
+
+## Assumption switches you MAY lean on (existing only — §3.12 Tier 1)
+  - proper_lists (default true): Every list your running data builds or receives is a proper list — its tail is always a list, never an improper cons like `[1 | 2]`. About running data, not source.
+  - single_codepoint_graphemes (default true): Every character in your running data is a single codepoint (no decomposed accents, ZWJ emoji, or flag sequences). About running data, not source.
+Tag a rule with `assumptions: [<existing switch name>]` ONLY to rescue a
+rare-text-divergent (same-type) rewrite. You MUST NOT invent a switch in the
+assumptions field — if a clean rare-text class needs a switch that does not
+exist, emit a SWITCH_PROPOSAL instead.
+
+## Self-check (state this in your reasoning BEFORE proposing)
+Enumerate the adversarial inputs and write {input, before, after, before==after}
+for each. Any divergence ⇒ NO_ACTION (except all-crash ⇒ REPAIR candidate).
+
+## Rules that already fired on this row (the BUGFIX closed set)
+  - Credence.Semantic.UndefinedFunction
+These rules ALREADY engaged on this row — Credence handled what they target.
+Do NOT propose a POTENTIAL_NEW_RULE for an idiom one of them already fixes;
+that is already covered. (If such a rule MIS-fired or under-fired, that's a
+BUGFIX_RULE, not a new rule.)
+
+## Dead-ends already tried (do NOT re-propose)
+(none)
+
+## Output contract — marker-fenced, EXACTLY these blocks, nothing else
+===DECISION===
+one of the offered decisions
+===RULE_NAME===          (BUGFIX_RULE only — a module name from the closed set)
+===PROPOSED_NAME===      (POTENTIAL_NEW_RULE only — snake_case)
+===PHASE===              (wh (truncated)[0m
+[36m15:15:54.760 [debug] [LLM.call] finish=stop len=639 usage=%{"completion_tokens" => 2654, "completion_tokens_details" => %{"reasoning_tokens" => 2514}, "prompt_tokens" => 25189, "prompt_tokens_details" => %{}, "total_tokens" => 27843}
+[LLM.call] response:
+===DECISION===
+NO_ACTION
+===RATIONALE===
+The repeated failure is LLM type confusion: using `String.graphemes/1` (returns strings) then comparing against `?A..?Z` (integer range) in guards — the guard never matches, producing wrong output. Detecting this requires data-flow/type inference (tracking that a variable came from a string-returning function, then was compared to an integer literal in a guard), which is beyond what a safe AST pattern rule can do. No existing rule over-fired in a fixable way, and no narrow syntactic/semantic pattern reliably identifies this without risking false positives on valid codepoints usage.
+===END===[0m
+[22m15:15:54.760 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 57333ms — ok[0m
+[36m15:15:54.760 [debug] [Budget] spent so far (est.): $0.0288[0m
