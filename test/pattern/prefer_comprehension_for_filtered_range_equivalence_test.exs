@@ -14,7 +14,7 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeEquivalenceTest do
       n = length(numbers)
       present = MapSet.new(numbers)
 
-      Enum.reduce(1..n, [], fn num, missing ->
+      Enum.reduce(1..n//1, [], fn num, missing ->
         if MapSet.member?(present, num), do: missing, else: [num | missing]
       end)
       |> Enum.reverse()
@@ -27,7 +27,7 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeEquivalenceTest do
       rule: PreferComprehensionForFilteredRange,
       call: {:findmissingnumbers, 1},
       inputs: [
-        # empty list
+        # empty list — n = 0, so 1..0//1 is an empty range (no missing numbers)
         [],
         # single element, no missing
         [1],
@@ -41,8 +41,6 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeEquivalenceTest do
         [1, 3, 5],
         # some missing, unsorted with dupes
         [3, 1, 3, 5, 1],
-        # all missing (empty present)
-        [],
         # larger input
         Enum.to_list(1..50) |> Enum.reject(&(rem(&1, 3) == 0))
       ]

@@ -73,18 +73,25 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRange do
   defp detect_pattern(_), do: :error
 
   # Validates the reduce arguments:
-  #   - First arg is a range (e.g. 1..n)
+  #   - First arg is a range (`first..last` or the explicit-step `first..last//step`)
   #   - Second arg is an empty list accumulator
   #   - Third arg is an fn with the if-prepend-in-else body
   defp detect_reduce_args([
-         {:.., _, [_, _]},
+         range,
          {:__block__, _, [[]]},
          {:fn, _, [{:->, _, [_params, body]}]}
        ]) do
-    filter_body?(body)
+    range?(range) and filter_body?(body)
   end
 
   defp detect_reduce_args(_), do: false
+
+  # A range literal — `first..last` or the explicit-step `first..last//step`. The
+  # rewrite embeds the range AST verbatim, so a stepped range carries through
+  # unchanged (and `1..n//1` is the warning-free form when `last` may be `< first`).
+  defp range?({:.., _, [_, _]}), do: true
+  defp range?({:..//, _, [_, _, _]}), do: true
+  defp range?(_), do: false
 
   defp detect_reduce_pattern(reduce_args, meta) do
     if detect_reduce_args(reduce_args) do

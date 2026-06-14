@@ -53,6 +53,24 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeFixTest do
       )
     end
 
+    test "explicit-step range carries through to the comprehension" do
+      input = """
+      Enum.reduce(1..n//1, [], fn num, acc ->
+        if MapSet.member?(set, num), do: acc, else: [num | acc]
+      end)
+      |> Enum.reverse()
+      """
+
+      result = fix(PreferComprehensionForFilteredRange, input)
+
+      assert valid_syntax?(result)
+
+      confirm_fix(
+        fix(PreferComprehensionForFilteredRange, input),
+        "for num <- 1..n//1, !MapSet.member?(set, num), do: num"
+      )
+    end
+
     test "non-matching code is left unchanged" do
       code = "for num <- 1..n, !MapSet.member?(present, num), do: num"
 

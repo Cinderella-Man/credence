@@ -42,6 +42,17 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeCheckTest do
 
       assert flagged?(PreferComprehensionForFilteredRange, code)
     end
+
+    test "explicit-step range (1..n//1)" do
+      code = """
+      Enum.reduce(1..n//1, [], fn num, acc ->
+        if MapSet.member?(s, num), do: acc, else: [num | acc]
+      end)
+      |> Enum.reverse()
+      """
+
+      assert flagged?(PreferComprehensionForFilteredRange, code)
+    end
   end
 
   describe "leaves good code alone" do
