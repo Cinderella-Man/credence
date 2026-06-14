@@ -37,8 +37,11 @@ defmodule Credence.Pattern.PreferMapSize do
   def fix_patches(ast, _opts) do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Pipeline: Map.keys(arg) |> Enum.count() → map_size(arg)
-      {:|>, _, [{{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, [arg]},
-                {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, []}]} ->
+      {:|>, _,
+       [
+         {{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, [arg]},
+         {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, []}
+       ]} ->
         {:map_size, [], [arg]}
 
       # Direct: Enum.count(Map.keys(arg)) → map_size(arg)
@@ -56,8 +59,10 @@ defmodule Credence.Pattern.PreferMapSize do
   # Pipeline: Map.keys(arg) |> Enum.count()
   defp check_node(
          {:|>, _,
-          [{{:., _, [{:__aliases__, _, [:Map]}, :keys]}, meta, _args},
-           {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, []}]}
+          [
+            {{:., _, [{:__aliases__, _, [:Map]}, :keys]}, meta, _args},
+            {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, []}
+          ]}
        ) do
     {:ok, build_issue(meta)}
   end

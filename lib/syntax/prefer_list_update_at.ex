@@ -43,13 +43,16 @@ defmodule Credence.Syntax.PreferListUpdateAt do
 
   # Recursively find and replace all occurrences of List.update_elem(...)
   defp find_and_replace_update_elem(source, start_pos) do
-    case :binary.match(source, @update_elem_prefix, scope: {start_pos, byte_size(source) - start_pos}) do
+    case :binary.match(source, @update_elem_prefix,
+           scope: {start_pos, byte_size(source) - start_pos}
+         ) do
       :nomatch ->
         :not_found
 
       {prefix_pos, _len} ->
         # Found an occurrence. Parse the arguments starting after "List.update_elem("
         args_start = prefix_pos + byte_size(@update_elem_prefix)
+
         case parse_three_args(source, args_start, byte_size(source)) do
           {:ok, arg1, arg2, arg3, args_end} ->
             # Build replacement: List.update_at(arg1, arg2, fn _ -> arg3 end)
@@ -63,6 +66,7 @@ defmodule Credence.Syntax.PreferListUpdateAt do
             # Continue searching after the replacement (recursively)
             # We advance by the length of replacement from prefix_pos
             new_start = prefix_pos + byte_size(replacement)
+
             case find_and_replace_update_elem(new_source, new_start) do
               {:ok, result} -> {:ok, result}
               :not_found -> {:ok, new_source}
@@ -98,7 +102,9 @@ defmodule Credence.Syntax.PreferListUpdateAt do
                               ?) -> {:ok, arg1, arg2, arg3, pos + 1}
                               _ -> :not_found
                             end
-                          _ -> :not_found
+
+                          _ ->
+                            :not_found
                         end
 
                       :not_found ->
@@ -135,9 +141,14 @@ defmodule Credence.Syntax.PreferListUpdateAt do
     char = :binary.at(source, pos)
 
     case char do
-      ?( -> collect_arg(source, pos + 1, source_len, start, depth + 1)
-      ?[ -> collect_arg(source, pos + 1, source_len, start, depth + 1)
-      ?{ -> collect_arg(source, pos + 1, source_len, start, depth + 1)
+      ?( ->
+        collect_arg(source, pos + 1, source_len, start, depth + 1)
+
+      ?[ ->
+        collect_arg(source, pos + 1, source_len, start, depth + 1)
+
+      ?{ ->
+        collect_arg(source, pos + 1, source_len, start, depth + 1)
 
       ?) when depth == 0 ->
         # End of the outer call — arg ends here

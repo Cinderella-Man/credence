@@ -87,7 +87,10 @@ defmodule Credence.Syntax.NoReservedWordVariable do
     # 4. (arg1, after) - after comma in function args
 
     # Build pattern: word boundary before and after the reserved word
-    pattern = Regex.compile!("(?<=^|[\\{\\[\\(,]\\s{0,10})" <> Regex.escape(word) <> "(?=\\s*[=,\\}\\]\\)\\|]|\\s+$)")
+    pattern =
+      Regex.compile!(
+        "(?<=^|[\\{\\[\\(,]\\s{0,10})" <> Regex.escape(word) <> "(?=\\s*[=,\\}\\]\\)\\|]|\\s+$)"
+      )
 
     Regex.match?(pattern, line)
   end
@@ -111,7 +114,9 @@ defmodule Credence.Syntax.NoReservedWordVariable do
     # This avoids replacing:
     # - :end (atom)
     # - end (keyword closing blocks)
-    pattern = Regex.compile!("(?<=[\{\(,]\s{0,10})" <> Regex.escape(old_name) <> "(?=\s*[,})\]\|]|\s+$)")
+    pattern =
+      Regex.compile!("(?<=[\{\(,]\s{0,10})" <> Regex.escape(old_name) <> "(?=\s*[,})\]\|]|\s+$)")
+
     Regex.replace(pattern, source, new_name)
   end
 

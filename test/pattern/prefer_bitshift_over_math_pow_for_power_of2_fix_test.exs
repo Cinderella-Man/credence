@@ -50,6 +50,9 @@ defmodule Credence.Pattern.PreferBitshiftOverMathPowForPowerOf2FixTest do
     trunc(:math.pow(2, x))
     """
 
-    assert check(PreferBitshiftOverMathPowForPowerOf2, fix(PreferBitshiftOverMathPowForPowerOf2, code)) == []
+    assert check(
+             PreferBitshiftOverMathPowForPowerOf2,
+             fix(PreferBitshiftOverMathPowForPowerOf2, code)
+           ) == []
   end
 end

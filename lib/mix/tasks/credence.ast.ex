@@ -34,7 +34,10 @@ defmodule Mix.Tasks.Credence.Ast do
     Mix.shell().info("=== RAW (the shape check/2 matches — incl. __block__ literal wrappers) ===")
     Mix.shell().info(inspect(ast, pretty: true, limit: :infinity))
 
-    Mix.shell().info("\n=== LAYOUT-STRIPPED (readability — :line/:column/:closing/... removed) ===")
+    Mix.shell().info(
+      "\n=== LAYOUT-STRIPPED (readability — :line/:column/:closing/... removed) ==="
+    )
+
     Mix.shell().info(inspect(strip_layout(ast), pretty: true, limit: :infinity))
   end
 

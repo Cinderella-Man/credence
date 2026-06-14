@@ -74,13 +74,15 @@ defmodule Credence.Semantic.NoBareDocAttributeFixTest do
   end
 
   test "fixed output is well-formed (parses)" do
-    assert valid_syntax?(fix("""
-    defmodule Solution do
-      @doc
-      def calculate_total_cost(price) do
-        price * 1.1
-      end
-    end
-    """))
+    assert valid_syntax?(
+             fix("""
+             defmodule Solution do
+               @doc
+               def calculate_total_cost(price) do
+                 price * 1.1
+               end
+             end
+             """)
+           )
   end
 end

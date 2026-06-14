@@ -28,8 +28,7 @@ defmodule Credence.Semantic.AvoidBinaryMidPatternCheckTest do
   test "attributes the issue to this rule" do
     diag = %{
       severity: :error,
-      message:
-        "a binary field without size is only allowed at the end of a binary pattern",
+      message: "a binary field without size is only allowed at the end of a binary pattern",
       position: {3, 18}
     }
 
@@ -39,8 +38,7 @@ defmodule Credence.Semantic.AvoidBinaryMidPatternCheckTest do
   test "to_issue includes the line number from the diagnostic" do
     diag = %{
       severity: :error,
-      message:
-        "a binary field without size is only allowed at the end of a binary pattern",
+      message: "a binary field without size is only allowed at the end of a binary pattern",
       position: {5, 10}
     }
 

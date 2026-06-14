@@ -159,7 +159,9 @@ defmodule Credence.Pattern.PreferChunkOverIndexedReduce do
   # Extract the list variable being piped
   defp extract_pipe_source({:|>, _, [left, _]}), do: extract_pipe_source(left)
   defp extract_pipe_source({{:., _, _}, _, _} = node), do: node
-  defp extract_pipe_source({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: {name, [], ctx}
+
+  defp extract_pipe_source({name, _, ctx}) when is_atom(name) and is_atom(ctx),
+    do: {name, [], ctx}
 
   # Extract peak comparison from reduce function
   defp extract_peak_fn(
@@ -296,7 +298,7 @@ defmodule Credence.Pattern.PreferChunkOverIndexedReduce do
                {:__block__, [], [:discard]}
              ]}
           ]},
-        {{:., [], [{:__aliases__, [], [:Enum]}, :count]}, [], [chunk_fn]}
+         {{:., [], [{:__aliases__, [], [:Enum]}, :count]}, [], [chunk_fn]}
        ]}
 
     {:=, [], [{:middle, [], nil}, chunk_pipe]}
@@ -318,8 +320,8 @@ defmodule Credence.Pattern.PreferChunkOverIndexedReduce do
                       {:|, [], [{:second, [], nil}, {:_, [], nil}]}
                     ]
                   ]},
-                {:>, [], [{:first, [], nil}, {:second, [], nil}]}
-              ]}
+                 {:>, [], [{:first, [], nil}, {:second, [], nil}]}
+               ]}
             ],
             {:__block__, [token: "1"], [1]}
           ]},
@@ -348,8 +350,8 @@ defmodule Credence.Pattern.PreferChunkOverIndexedReduce do
                       {:|, [], [{:second_last, [], nil}, {:_, [], nil}]}
                     ]
                   ]},
-                {:>, [], [{:last, [], nil}, {:second_last, [], nil}]}
-              ]}
+                 {:>, [], [{:last, [], nil}, {:second_last, [], nil}]}
+               ]}
             ],
             {:__block__, [token: "1"], [1]}
           ]},

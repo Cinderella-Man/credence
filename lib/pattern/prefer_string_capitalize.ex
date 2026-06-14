@@ -47,7 +47,11 @@ defmodule Credence.Pattern.PreferStringCapitalize do
             {:ok, _} ->
               case Sourceror.get_range(node) do
                 %Sourceror.Range{} = range ->
-                  patch = %{range: range, change: "defp capitalize_string(string), do: String.capitalize(string)"}
+                  patch = %{
+                    range: range,
+                    change: "defp capitalize_string(string), do: String.capitalize(string)"
+                  }
+
                   {node, [patch | acc]}
 
                 _ ->
@@ -142,13 +146,12 @@ defmodule Credence.Pattern.PreferStringCapitalize do
             {:-, _,
              [
                {:byte_size, _, [{var3, _, nil}]},
-               {{:., _, [{:__aliases__, _, [:String]}, :length]}, _,
-                [{first_char2, _, nil}]}
+               {{:., _, [{:__aliases__, _, [:String]}, :length]}, _, [{first_char2, _, nil}]}
              ]}
           ]},
          {{:., _, [{:__aliases__, _, [:String]}, :downcase]}, _, []}
        ]}
-       when is_atom(var2) and is_atom(var3) and is_atom(first_char2) ->
+      when is_atom(var2) and is_atom(var3) and is_atom(first_char2) ->
         if var2 == var3 and var2 == string_var do
           {:ok, rest, first_char2}
         else

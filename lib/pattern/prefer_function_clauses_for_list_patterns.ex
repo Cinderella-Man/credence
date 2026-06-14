@@ -81,19 +81,35 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
         {:defmodule, mod_meta, [aliases, [{{:__block__, do_meta, [:do]}, body}]]} = node ->
           case body do
             {:__block__, block_meta, stmts} when is_list(stmts) ->
-              {:defmodule, mod_meta, [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, transform_stmts(stmts)}}]]}
+              {:defmodule, mod_meta,
+               [
+                 aliases,
+                 [
+                   {{:__block__, do_meta, [:do]},
+                    {:__block__, block_meta, transform_stmts(stmts)}}
+                 ]
+               ]}
+
             single_stmt ->
               case transform_single_stmt(single_stmt) do
                 {:ok, new_stmts} ->
-                  {:defmodule, mod_meta, [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, [], new_stmts}}]]}
+                  {:defmodule, mod_meta,
+                   [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, [], new_stmts}}]]}
+
                 :no ->
                   node
               end
           end
 
         # Module with __block__ wrapper
-        {:defmodule, mod_meta, [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, stmts}}]]} when is_list(stmts) ->
-          {:defmodule, mod_meta, [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, transform_stmts(stmts)}}]]}
+        {:defmodule, mod_meta,
+         [aliases, [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, stmts}}]]}
+        when is_list(stmts) ->
+          {:defmodule, mod_meta,
+           [
+             aliases,
+             [{{:__block__, do_meta, [:do]}, {:__block__, block_meta, transform_stmts(stmts)}}]
+           ]}
 
         # Regular __block__
         {:__block__, meta, stmts} when is_list(stmts) ->
@@ -106,7 +122,9 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
   end
 
   # Transform a single statement (not wrapped in __block__)
-  defp transform_single_stmt({def_type, _meta, [{:when, _when_meta, [_fun_head, _guard]}, _body_kw]} = node)
+  defp transform_single_stmt(
+         {def_type, _meta, [{:when, _when_meta, [_fun_head, _guard]}, _body_kw]} = node
+       )
        when def_type in [:def, :defp] do
     case convertible(node) do
       {:ok, info} -> {:ok, build_replacement([node], info)}
@@ -387,6 +405,7 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
   defp param_match?({name, _, ctx1}, {name, _, ctx2})
        when is_atom(name) and is_atom(ctx1) and is_atom(ctx2),
        do: true
+
   # Default: no match
   defp param_match?(_, _), do: false
 
@@ -402,7 +421,9 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
   defp combine_guards(nil, nil), do: nil
   defp combine_guards(clause_guard, nil), do: clause_guard
   defp combine_guards(nil, remaining_guard), do: remaining_guard
-  defp combine_guards(clause_guard, remaining_guard), do: {:and, [], [clause_guard, remaining_guard]}
+
+  defp combine_guards(clause_guard, remaining_guard),
+    do: {:and, [], [clause_guard, remaining_guard]}
 
   # ── issue ─────────────────────────────────────────────────────────
 

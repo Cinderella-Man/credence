@@ -62,7 +62,8 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentity do
 
         # Piped: list |> Enum.flat_map(identity_fn). Patch only the RHS call,
         # leaving the `|>` and the LHS source byte-identical.
-        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :flat_map]}, _meta, [callback]} = rhs]} =
+        {:|>, _,
+         [_lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :flat_map]}, _meta, [callback]} = rhs]} =
             node,
         acc ->
           if identity_fn?(callback) do

@@ -32,20 +32,21 @@ defmodule Credence.Pattern.PreferPrependInAccumulatorFixTest do
       # 3. Change acc ++ [next] → [next | acc]
       # 4. Change Enum.reverse(acc) → acc
       assert fix(PreferPrependInAccumulator, input) == """
-      defmodule Example do
-        def build_groups(acc, []) do
-          [acc]
-        end
-      
-        def build_groups([head | _] = acc, [next | rest]) do
-          if next == head + 1 do
-            build_groups([next | acc], rest)
-          else
-            [acc | build_groups([next], rest)]
-          end
-        end
-      end
-      """
+             defmodule Example do
+               def build_groups(acc, []) do
+                 [acc]
+               end
+
+               def build_groups([head | _] = acc, [next | rest]) do
+                 if next == head + 1 do
+                   build_groups([next | acc], rest)
+                 else
+                   [acc | build_groups([next], rest)]
+                 end
+               end
+             end
+             """
+
       assert valid_syntax?(result)
     end
 

@@ -123,6 +123,7 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
             coll != nil ->
               # 2-arg Enum.map: Enum.map(coll, fn ...) — coll is explicit
               map_new_call = build_map_new_call(coll, fn_arg)
+
               if before == [] and after_ == [] do
                 map_new_call
               else
@@ -135,6 +136,7 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
               coll_from_pipe = List.last(before)
               remaining_before = Enum.drop(before, -1)
               map_new_call = build_map_new_call(coll_from_pipe, fn_arg)
+
               if remaining_before == [] and after_ == [] do
                 map_new_call
               else
@@ -219,7 +221,8 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
   defp build_issue(node_or_meta) do
     %Issue{
       rule: :prefer_map_new_with_transform,
-      message: "`Enum.map/2` followed by `Map.new/0` allocates an intermediate list. Use `Map.new/2` instead for a single-pass conversion.",
+      message:
+        "`Enum.map/2` followed by `Map.new/0` allocates an intermediate list. Use `Map.new/2` instead for a single-pass conversion.",
       meta: %{line: get_line(node_or_meta)}
     }
   end

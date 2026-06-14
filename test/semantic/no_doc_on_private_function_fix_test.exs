@@ -8,7 +8,8 @@ defmodule Credence.Semantic.NoDocOnPrivateFunctionFixTest do
   defp fix(source, line) do
     NoDocOnPrivateFunction.fix(source, %{
       severity: :warning,
-      message: "defp helper/1 is private, @doc attribute is always discarded for private functions/macros/types",
+      message:
+        "defp helper/1 is private, @doc attribute is always discarded for private functions/macros/types",
       position: line
     })
   end
@@ -16,7 +17,8 @@ defmodule Credence.Semantic.NoDocOnPrivateFunctionFixTest do
   defp fix_count(source, line) do
     NoDocOnPrivateFunction.fix(source, %{
       severity: :warning,
-      message: "defp count/2 is private, @doc attribute is always discarded for private functions/macros/types",
+      message:
+        "defp count/2 is private, @doc attribute is always discarded for private functions/macros/types",
       position: line
     })
   end

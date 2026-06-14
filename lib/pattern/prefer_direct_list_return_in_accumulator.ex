@@ -166,7 +166,9 @@ defmodule Credence.Pattern.PreferDirectListReturnInAccumulator do
 
   defp find_destructure_caller(_, _), do: :error
 
-  defp get_line_from_caller(_var_name, var_ctx) when is_list(var_ctx), do: Keyword.get(var_ctx, :line)
+  defp get_line_from_caller(_var_name, var_ctx) when is_list(var_ctx),
+    do: Keyword.get(var_ctx, :line)
+
   defp get_line_from_caller(_, _), do: nil
 
   # Rewrite nodes: change {acc, []} base cases to acc, and {var, _} = fn() to var = fn()
@@ -207,17 +209,14 @@ defmodule Credence.Pattern.PreferDirectListReturnInAccumulator do
             {:ok, first, _second} ->
               new_body_kw = RuleHelpers.replace_do_body(body_kw, first)
 
-              {:defp, meta,
-               [{:when, when_meta, [{name, name_meta, params}, guard]}, new_body_kw]}
+              {:defp, meta, [{:when, when_meta, [{name, name_meta, params}, guard]}, new_body_kw]}
 
             :error ->
-              {:defp, meta,
-               [{:when, when_meta, [{name, name_meta, params}, guard]}, body_kw]}
+              {:defp, meta, [{:when, when_meta, [{name, name_meta, params}, guard]}, body_kw]}
           end
 
         :error ->
-          {:defp, meta,
-           [{:when, when_meta, [{name, name_meta, params}, guard]}, body_kw]}
+          {:defp, meta, [{:when, when_meta, [{name, name_meta, params}, guard]}, body_kw]}
       end
     else
       {:defp, meta, [{:when, when_meta, [{name, name_meta, params}, guard]}, body_kw]}
@@ -227,7 +226,7 @@ defmodule Credence.Pattern.PreferDirectListReturnInAccumulator do
   defp rewrite_node(
          {:=, assign_meta,
           [
-            {:__block__, _block_meta, [{{var_name, var_meta, var_ctx}, {:_ , _, _}}]},
+            {:__block__, _block_meta, [{{var_name, var_meta, var_ctx}, {:_, _, _}}]},
             {fn_name, _call_meta, _args} = call
           ]},
          base_case_fns

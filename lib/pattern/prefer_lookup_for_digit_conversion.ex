@@ -132,9 +132,11 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
       case extract_hex_mapping(clauses) do
         {:ok, mapping} ->
           if complete_hex_mapping?(mapping) do
-            indices = Enum.map(clauses, fn {_, _, _} = clause ->
-              Enum.find_index(stmts, &(&1 == clause))
-            end)
+            indices =
+              Enum.map(clauses, fn {_, _, _} = clause ->
+                Enum.find_index(stmts, &(&1 == clause))
+              end)
+
             name = get_function_name(hd(clauses))
             {:ok, name, indices}
           end
@@ -199,8 +201,9 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
     end
   end
 
-  defp extract_integer({:__block__, _meta, [val]}) when is_integer(val) and val >= 0 and val <= 15,
-    do: {:ok, val}
+  defp extract_integer({:__block__, _meta, [val]})
+       when is_integer(val) and val >= 0 and val <= 15,
+       do: {:ok, val}
 
   defp extract_integer({:__block__, meta, _val}) do
     case Keyword.get(meta, :token) do

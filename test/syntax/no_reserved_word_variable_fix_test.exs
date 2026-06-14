@@ -106,9 +106,11 @@ defmodule Credence.Syntax.NoReservedWordVariableFixTest do
   end
 
   test "false in pattern match produces valid syntax" do
-    assert valid_syntax?(fix("""
-           {false, [], seen} = bar()
-           """))
+    assert valid_syntax?(
+             fix("""
+             {false, [], seen} = bar()
+             """)
+           )
   end
 
   test "combined: false atom and end variable — only end is renamed" do

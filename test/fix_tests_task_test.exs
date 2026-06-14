@@ -29,10 +29,13 @@ defmodule Credence.FixTestsTaskTest do
   '''
 
   defp in_temp(content, fun) do
-    dir = Path.join(System.tmp_dir!(), "fixtests_#{System.unique_integer([:positive])}/test/pattern")
+    dir =
+      Path.join(System.tmp_dir!(), "fixtests_#{System.unique_integer([:positive])}/test/pattern")
+
     File.mkdir_p!(dir)
     path = Path.join(dir, "use_map_join_fix_test.exs")
     File.write!(path, content)
+
     try do
       fun.(path)
     after

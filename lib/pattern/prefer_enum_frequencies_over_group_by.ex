@@ -94,10 +94,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
   end
 
   # Direct: Map.new(Enum.group_by(enum, & &1), fn {k, v} -> {k, length(v)} end)
-  defp check_node(
-         {{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _,
-          [group_by_call, callback]}
-       ) do
+  defp check_node({{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _, [group_by_call, callback]}) do
     if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
       {:ok, build_issue(meta)}
     else
@@ -156,10 +153,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
   end
 
   # Direct: Map.new(Enum.group_by(enum, & &1), fn ...)
-  defp fix_node(
-         {{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _,
-          [group_by_call, callback]}
-       ) do
+  defp fix_node({{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _, [group_by_call, callback]}) do
     if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
       {{:., _, _}, _, [enum, _key_fn]} = group_by_call
       {:ok, enum_frequencies(meta, enum)}
@@ -233,9 +227,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
   defp identity_group_by_direct?(_), do: false
 
   # Enum.group_by(& &1) — one explicit arg (piped form)
-  defp identity_group_by_piped?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [key_fn]}
-       ) do
+  defp identity_group_by_piped?({{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [key_fn]}) do
     identity_function?(key_fn)
   end
 

@@ -233,8 +233,7 @@ defmodule Credence.Pattern.PreferTupleForRandomAccess do
     {:=, [],
      [
        {tuple_var, [], nil},
-       {{:., [], [{:__aliases__, [], [:List]}, :to_tuple]}, [],
-        [{list_var, [], nil}]}
+       {{:., [], [{:__aliases__, [], [:List]}, :to_tuple]}, [], [{list_var, [], nil}]}
      ]}
   end
 

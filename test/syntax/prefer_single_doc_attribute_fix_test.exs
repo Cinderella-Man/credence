@@ -11,7 +11,7 @@ defmodule Credence.Syntax.PreferSingleDocAttributeFixTest do
   test "fixes the syntax error" do
     input = """
     defmodule Solution do
-      @doc """
+      @doc \"""
       @doc "Returns the length of the longest contiguous subarray."
       def longest_equal_zero_one(list) do
         :ok
@@ -35,7 +35,7 @@ defmodule Credence.Syntax.PreferSingleDocAttributeFixTest do
     assert analyze(
              fix("""
              defmodule Solution do
-               @doc """
+               @doc \"""
                @doc "Returns the length of the longest contiguous subarray."
                def longest_equal_zero_one(list) do
                  :ok
@@ -49,7 +49,7 @@ defmodule Credence.Syntax.PreferSingleDocAttributeFixTest do
     assert valid_syntax?(
              fix("""
              defmodule Solution do
-               @doc """
+               @doc \"""
                @doc "Returns the length of the longest contiguous subarray."
                def longest_equal_zero_one(list) do
                  :ok

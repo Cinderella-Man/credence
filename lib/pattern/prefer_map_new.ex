@@ -74,17 +74,13 @@ defmodule Credence.Pattern.PreferMapNew do
          {:|>, _,
           [
             _enum,
-            {{:., meta, [{:__aliases__, _, [:Enum]}, :into]}, _,
-             [{:%{}, _, []}]}
+            {{:., meta, [{:__aliases__, _, [:Enum]}, :into]}, _, [{:%{}, _, []}]}
           ]}
        ) do
     {:ok, build_issue(meta)}
   end
 
-  defp check_node(
-         {{:., meta, [{:__aliases__, _, [:Enum]}, :into]}, _,
-          [_enum, {:%{}, _, []}]}
-       ) do
+  defp check_node({{:., meta, [{:__aliases__, _, [:Enum]}, :into]}, _, [_enum, {:%{}, _, []}]}) do
     {:ok, build_issue(meta)}
   end
 

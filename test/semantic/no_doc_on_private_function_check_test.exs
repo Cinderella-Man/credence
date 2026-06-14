@@ -5,7 +5,8 @@ defmodule Credence.Semantic.NoDocOnPrivateFunctionCheckTest do
 
   @doc_diag %{
     severity: :warning,
-    message: "defp build_order_map/1 is private, @doc attribute is always discarded for private functions/macros/types",
+    message:
+      "defp build_order_map/1 is private, @doc attribute is always discarded for private functions/macros/types",
     position: 18,
     file: "credence_check.ex",
     source: "credence_check.ex"

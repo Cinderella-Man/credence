@@ -1,17 +1,17 @@
 defmodule Credence.Syntax.PreferSingleDocAttribute do
   @moduledoc """
-  Detects and fixes orphaned `@doc """` lines that are immediately followed
+  Detects and fixes orphaned `@doc \"""` lines that are immediately followed
   by another `@doc` attribute.
 
-  LLMs repeatedly emit `@doc """` immediately followed by `@doc "..."`
+  LLMs repeatedly emit `@doc \"""` immediately followed by `@doc "..."`
   without closing the heredoc, causing a `TokenMissingError`. Removing the
-  orphaned incomplete `@doc """` line is safe because the second `@doc`
+  orphaned incomplete `@doc \"""` line is safe because the second `@doc`
   already carries the actual documentation value.
 
   ## Bad (won't parse — TokenMissingError)
 
       defmodule Solution do
-        @doc """
+        @doc \"""
         @doc "Returns the length of the longest contiguous subarray."
         def longest_equal_zero_one(list) do
           :ok
@@ -44,8 +44,7 @@ defmodule Credence.Syntax.PreferSingleDocAttribute do
         [
           %Issue{
             rule: :prefer_single_doc_attribute,
-            message:
-              "Orphaned `@doc \"\"\"` heredoc opening followed by another @doc attribute.",
+            message: "Orphaned `@doc \"\"\"` heredoc opening followed by another @doc attribute.",
             meta: %{line: line_no}
           }
         ]

@@ -188,9 +188,7 @@ defmodule Credence.Pattern.PreferEnumFrequencies do
   end
 
   # Enum.group_by(key_fn, val_fn) — 2 explicit args (piped form)
-  defp identity_group_by?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [key_fn, val_fn]}
-       ) do
+  defp identity_group_by?({{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [key_fn, val_fn]}) do
     identity_function?(key_fn) and identity_function?(val_fn)
   end
 

@@ -47,7 +47,7 @@ defmodule Credence.Pattern.PreferReverseForPalindromeCheck do
             %Issue{
               rule: :prefer_reverse_for_palindrome_check,
               message:
-                "Index-based recursive palindrome check detected. " <> 
+                "Index-based recursive palindrome check detected. " <>
                   "Replace with `list == Enum.reverse(list)` for clarity and performance.",
               meta: %{line: line}
             }

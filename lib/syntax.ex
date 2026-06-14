@@ -52,9 +52,14 @@ defmodule Credence.Syntax do
         # (e.g. "unexpected reserved word" guidance) - interpolating the tuple raised
         error_str =
           case error_msg do
-            msg when is_binary(msg) -> msg
-            {opening, hint} when is_binary(opening) and is_binary(hint) -> opening <> "..." <> hint
-            other -> inspect(other)
+            msg when is_binary(msg) ->
+              msg
+
+            {opening, hint} when is_binary(opening) and is_binary(hint) ->
+              opening <> "..." <> hint
+
+            other ->
+              inspect(other)
           end
 
         Logger.debug(
@@ -89,9 +94,14 @@ defmodule Credence.Syntax do
 
             error_str =
               case error_msg do
-                msg when is_binary(msg) -> msg
-                {opening, hint} when is_binary(opening) and is_binary(hint) -> opening <> "..." <> hint
-                other -> inspect(other)
+                msg when is_binary(msg) ->
+                  msg
+
+                {opening, hint} when is_binary(opening) and is_binary(hint) ->
+                  opening <> "..." <> hint
+
+                other ->
+                  inspect(other)
               end
 
             Logger.debug(

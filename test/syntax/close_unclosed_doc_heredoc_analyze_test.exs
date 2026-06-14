@@ -10,7 +10,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocAnalyzeTest do
     assert [%Issue{rule: :close_unclosed_doc_heredoc, meta: %{line: 2}}] =
              analyze("""
              defmodule Solution do
-               @doc """
+               @doc \"""
                def find_min_max(list) do
                  Enum.min_max(list)
                end
@@ -22,7 +22,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocAnalyzeTest do
     assert [%Issue{rule: :close_unclosed_doc_heredoc, meta: %{line: 2}}] =
              analyze("""
              defmodule Solution do
-               @doc """
+               @doc \"""
 
                def find_min_max(list) do
                  Enum.min_max(list)
@@ -67,7 +67,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocAnalyzeTest do
 
   test "ignores @doc heredoc not followed by def" do
     assert analyze("""
-           @doc """
+           @doc \"""
            Some module attribute
            @other_attr :value
            """) == []

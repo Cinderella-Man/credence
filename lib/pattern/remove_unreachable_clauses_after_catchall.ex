@@ -125,8 +125,10 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
       # Delete the catch-all clause and trailing blank lines up to the first unreachable
       %{range: %{start: catchall_range.start, end: first_unreachable_range.start}, change: ""},
       # Insert the catch-all after the last unreachable clause
-      %{range: %{start: last_unreachable_range.end, end: last_unreachable_range.end},
-        change: "\n\n" <> catchall_source}
+      %{
+        range: %{start: last_unreachable_range.end, end: last_unreachable_range.end},
+        change: "\n\n" <> catchall_source
+      }
     ]
   end
 

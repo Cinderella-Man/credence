@@ -41,8 +41,7 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
             [
               %Issue{
                 rule: :close_unclosed_fn_delimiter,
-                message:
-                  "Unclosed `fn` delimiter — the `fn` body is not closed before `)`.",
+                message: "Unclosed `fn` delimiter — the `fn` body is not closed before `)`.",
                 meta: %{line: line_no}
               }
             ]
@@ -128,8 +127,11 @@ defmodule Credence.Syntax.CloseUnclosedFnDelimiter do
   defp insert_ends(line, num_ends) do
     extra = String.duplicate(" end", num_ends)
 
-    Regex.replace(~r/(\bend)(\))+/, line, fn _full, end_word, parens ->
-      end_word <> extra <> parens
-    end, global: false)
+    Regex.replace(
+      ~r/(\bend)(\))+/,
+      line,
+      fn _full, end_word, parens ->
+        end_word <> extra <> parens
+      end, global: false)
   end
 end

@@ -7,8 +7,10 @@ defmodule Credence.Syntax.NoMarkdownCodeFencesAnalyzeTest do
   defp analyze(code), do: NoMarkdownCodeFences.analyze(code)
 
   test "flags a code-fence line with language tag" do
-    assert [%Issue{rule: :no_markdown_code_fences, meta: %{line: 1}},
-            %Issue{rule: :no_markdown_code_fences, meta: %{line: 5}}] =
+    assert [
+             %Issue{rule: :no_markdown_code_fences, meta: %{line: 1}},
+             %Issue{rule: :no_markdown_code_fences, meta: %{line: 5}}
+           ] =
              analyze("""
              ```elixir
              defmodule Solution do

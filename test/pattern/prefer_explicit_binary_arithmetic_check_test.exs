@@ -29,8 +29,8 @@ defmodule Credence.Pattern.PreferExplicitBinaryArithmeticCheckTest do
     test "returns correct rule name and message" do
       issues =
         check(PreferExplicitBinaryArithmetic, """
-              String.length(s) |> rem(3)
-              """)
+        String.length(s) |> rem(3)
+        """)
 
       assert length(issues) == 1
       issue = hd(issues)

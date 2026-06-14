@@ -54,7 +54,9 @@ defmodule Credence.Pattern.PreferIntegerDigitsForFirstDigit do
   # <base> |> abs() |> to_string() |> String.first() |> String.to_integer()
   #
   # The outermost pipe ends with String.to_integer(String.first(...))
-  defp detect_pattern({:|>, meta, [inner, {{:., _, [{:__aliases__, _, [:String]}, :to_integer]}, _, []}]}) do
+  defp detect_pattern(
+         {:|>, meta, [inner, {{:., _, [{:__aliases__, _, [:String]}, :to_integer]}, _, []}]}
+       ) do
     case inner do
       {:|>, _, [_, {{:., _, [{:__aliases__, _, [:String]}, :first]}, _, []}]} ->
         # Check that the inner pipeline has to_string and abs
@@ -96,7 +98,10 @@ defmodule Credence.Pattern.PreferIntegerDigitsForFirstDigit do
   defp operation_name({:abs, _, []}), do: :abs
   defp operation_name({:to_string, _, []}), do: :to_string
   defp operation_name({{:., _, [{:__aliases__, _, [:String]}, :first]}, _, []}), do: :string_first
-  defp operation_name({{:., _, [{:__aliases__, _, [:String]}, :to_integer]}, _, []}), do: :string_to_integer
+
+  defp operation_name({{:., _, [{:__aliases__, _, [:String]}, :to_integer]}, _, []}),
+    do: :string_to_integer
+
   defp operation_name(_), do: :other
 
   # Extract the base expression (first element) from a pipe chain
@@ -110,7 +115,9 @@ defmodule Credence.Pattern.PreferIntegerDigitsForFirstDigit do
   defp extract_base(_), do: :error
 
   # Rewrite the pipe chain to use Integer.digits() |> hd()
-  defp rewrite_pipe({:|>, _, [inner, {{:., _, [{:__aliases__, _, [:String]}, :to_integer]}, _, []}]}) do
+  defp rewrite_pipe(
+         {:|>, _, [inner, {{:., _, [{:__aliases__, _, [:String]}, :to_integer]}, _, []}]}
+       ) do
     case extract_base(inner) do
       {:ok, base} ->
         build_rewrite(base)

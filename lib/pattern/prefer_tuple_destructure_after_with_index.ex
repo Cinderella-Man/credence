@@ -62,7 +62,13 @@ defmodule Credence.Pattern.PreferTupleDestructureAfterWithIndex do
     with {:ok, fn_meta} <- match_enum_map_with_multi_arity_fn(map_call),
          true <- pipe_contains_with_index?(left) do
       line = Keyword.get(fn_meta, :line)
-      {:ok, %Issue{rule: :prefer_tuple_destructure_after_with_index, message: build_message(), meta: %{line: line}}}
+
+      {:ok,
+       %Issue{
+         rule: :prefer_tuple_destructure_after_with_index,
+         message: build_message(),
+         meta: %{line: line}
+       }}
     else
       _ -> :error
     end
@@ -100,9 +106,7 @@ defmodule Credence.Pattern.PreferTupleDestructureAfterWithIndex do
 
   defp pipe_contains_with_index?(node), do: is_with_index?(node)
 
-  defp is_with_index?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :with_index]}, _, args}
-       )
+  defp is_with_index?({{:., _, [{:__aliases__, _, [:Enum]}, :with_index]}, _, args})
        when is_list(args), do: true
 
   defp is_with_index?(_), do: false

@@ -137,8 +137,7 @@ defmodule Credence.Pattern.PreferEnumCount do
             {:ok, elem_name, _acc_name, condition} ->
               capture = build_capture(condition, elem_name)
 
-              {:ok,
-               {{:., [], [{:__aliases__, [], [:Enum]}, :count]}, [], [enum, capture]}}
+              {:ok, {{:., [], [{:__aliases__, [], [:Enum]}, :count]}, [], [enum, capture]}}
 
             :error ->
               :error
@@ -154,8 +153,7 @@ defmodule Credence.Pattern.PreferEnumCount do
             {:ok, elem_name, _acc_name, condition} ->
               capture = build_capture(condition, elem_name)
 
-              {:ok,
-               {{:., [], [{:__aliases__, [], [:Enum]}, :count]}, [], [capture]}}
+              {:ok, {{:., [], [{:__aliases__, [], [:Enum]}, :count]}, [], [capture]}}
 
             :error ->
               :error

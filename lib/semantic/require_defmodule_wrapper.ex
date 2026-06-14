@@ -135,6 +135,7 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
     filtered_attrs =
       Enum.filter(attrs, fn attr ->
         name = attr_name(attr)
+
         cond do
           is_nil(name) ->
             true

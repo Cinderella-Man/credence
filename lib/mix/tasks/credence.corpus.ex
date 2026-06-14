@@ -117,6 +117,7 @@ defmodule Mix.Tasks.Credence.Corpus do
     shell.info("TOTAL FINDINGS: #{length(findings)}   CRASHED FILES: #{length(crashes)}\n")
 
     shell.info("By rule:")
+
     findings
     |> Enum.frequencies_by(fn {_pkg, _path, rule, _line} -> rule end)
     |> Enum.sort_by(fn {_rule, count} -> -count end)
@@ -125,6 +126,7 @@ defmodule Mix.Tasks.Credence.Corpus do
     end)
 
     shell.info("\nBy package:")
+
     findings
     |> Enum.frequencies_by(fn {pkg, _path, _rule, _line} -> pkg end)
     |> Enum.sort_by(fn {_pkg, count} -> -count end)

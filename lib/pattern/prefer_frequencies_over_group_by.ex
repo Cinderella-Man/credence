@@ -112,10 +112,8 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupBy do
   end
 
   # Enum.group_by(fn x -> x end) — piped, single arg (the key_fn)
-  defp identity_group_by?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [fn_ast]}
-       ),
-       do: identity_fn?(fn_ast)
+  defp identity_group_by?({{:., _, [{:__aliases__, _, [:Enum]}, :group_by]}, _, [fn_ast]}),
+    do: identity_fn?(fn_ast)
 
   defp identity_group_by?(_), do: false
 
@@ -131,10 +129,8 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupBy do
   defp identity_fn?(_), do: false
 
   # Enum.map(fn {_key, values} -> length(values) end) — piped, single arg
-  defp map_to_length?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [fn_ast]}
-       ),
-       do: length_group_fn?(fn_ast)
+  defp map_to_length?({{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [fn_ast]}),
+    do: length_group_fn?(fn_ast)
 
   defp map_to_length?(_), do: false
 
@@ -169,10 +165,8 @@ defmodule Credence.Pattern.PreferFrequenciesOverGroupBy do
   defp length_group_fn?(_), do: false
 
   # Enum.count(fn count -> count > 1 end) — piped, single arg
-  defp count_gt_one?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [fn_ast]}
-       ),
-       do: gt_one_fn?(fn_ast)
+  defp count_gt_one?({{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [fn_ast]}),
+    do: gt_one_fn?(fn_ast)
 
   defp count_gt_one?(_), do: false
 

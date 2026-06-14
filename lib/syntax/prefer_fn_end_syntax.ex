@@ -63,7 +63,7 @@ defmodule Credence.Syntax.PreferFnEndSyntax do
     # These typically look like:  pattern -> body
     # where the line starts with whitespace and just a pattern before ->
     is_case_clause = case_clause_line?(line)
-    
+
     has_arrow and not has_fn and not is_comment and not is_case_clause
   end
 
@@ -85,7 +85,7 @@ defmodule Credence.Syntax.PreferFnEndSyntax do
     # This catches clause expressions like: value > 3 ->, {x, y} ->, is_atom(x) ->
     # Lambda params always end with an identifier char (letter/underscore).
     non_identifier_before_arrow? = non_identifier_before_arrow?(line)
-    
+
     (starts_with_pattern and not has_comma) or has_case_context or non_identifier_before_arrow?
   end
 
@@ -105,13 +105,19 @@ defmodule Credence.Syntax.PreferFnEndSyntax do
       [{match_start, match_length}, {param_start, param_length}] ->
         params = binary_part(line, param_start, param_length)
         before = binary_part(line, 0, match_start)
-        after_match = binary_part(line, match_start + match_length, byte_size(line) - match_start - match_length)
-        
+
+        after_match =
+          binary_part(
+            line,
+            match_start + match_length,
+            byte_size(line) - match_start - match_length
+          )
+
         # Find the body and any trailing content (like closing paren)
         {body, suffix} = split_body_and_suffix(after_match)
-        
+
         before <> "fn " <> String.trim(params) <> " -> " <> String.trim(body) <> " end" <> suffix
-      
+
       _ ->
         line
     end
@@ -119,11 +125,12 @@ defmodule Credence.Syntax.PreferFnEndSyntax do
 
   defp split_body_and_suffix(after_match) do
     trimmed = String.trim(after_match)
-    
+
     # If it ends with ), we want to put end before the )
     if String.ends_with?(trimmed, ")") do
       # Find the position of the last )
       last_paren_idx = find_last_paren(trimmed)
+
       if last_paren_idx >= 0 do
         {body, suffix} = String.split_at(trimmed, last_paren_idx)
         {body, suffix}

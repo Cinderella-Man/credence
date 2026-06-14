@@ -21,7 +21,12 @@ defmodule Credence.Semantic.NoNonNegatedIntegerCheckTest do
   end
 
   test "ignores warnings" do
-    diag = %{severity: :warning, message: "type non_negated_integer/0 undefined", position: {1, 1}}
+    diag = %{
+      severity: :warning,
+      message: "type non_negated_integer/0 undefined",
+      position: {1, 1}
+    }
+
     refute NoNonNegatedInteger.match?(diag)
   end
 

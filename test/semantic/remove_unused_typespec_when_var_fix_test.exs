@@ -28,12 +28,15 @@ defmodule Credence.Semantic.RemoveUnusedTypespecWhenVarFixTest do
     end
     """
 
-    message = "credence_check.ex:19: type variable var_ok is used only once. Type variables in typespecs must be referenced at least twice, otherwise it is equivalent to term()"
+    message =
+      "credence_check.ex:19: type variable var_ok is used only once. Type variables in typespecs must be referenced at least twice, otherwise it is equivalent to term()"
+
     assert fix(input, message) == expected
   end
 
   test "fixed output is well-formed (parses)" do
-    message = "credence_check.ex:19: type variable var_ok is used only once. Type variables in typespecs must be referenced at least twice, otherwise it is equivalent to term()"
+    message =
+      "credence_check.ex:19: type variable var_ok is used only once. Type variables in typespecs must be referenced at least twice, otherwise it is equivalent to term()"
 
     assert valid_syntax?(
              fix(

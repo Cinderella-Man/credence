@@ -28,8 +28,7 @@ defmodule Credence.Pattern.PreferIntegerUndigits do
           if reduce_call?(node) and undigits_reduce_body?(args) do
             issue = %Issue{
               rule: :prefer_integer_undigits,
-              message:
-                "Manual digit-to-integer conversion detected. Prefer Integer.undigits/1.",
+              message: "Manual digit-to-integer conversion detected. Prefer Integer.undigits/1.",
               meta: %{line: Keyword.get(meta, :line)}
             }
 

@@ -16,19 +16,20 @@ defmodule Credence.Syntax.PreferRecursionOverWhileAnalyzeTest do
   end
 
   test "flags while loop inside a function" do
-    issues = analyze("""
-    defmodule Solution do
-      def example(list) do
-        result = []
-        idx = 0
-        while idx < length(list) do
-          result = result ++ [Enum.at(list, idx)]
-          idx = idx + 1
+    issues =
+      analyze("""
+      defmodule Solution do
+        def example(list) do
+          result = []
+          idx = 0
+          while idx < length(list) do
+            result = result ++ [Enum.at(list, idx)]
+            idx = idx + 1
+          end
+          result
         end
-        result
       end
-    end
-    """)
+      """)
 
     assert [%Issue{rule: :prefer_recursion_over_while, meta: %{line: 5}}] = issues
   end

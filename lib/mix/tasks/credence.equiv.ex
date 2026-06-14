@@ -250,6 +250,7 @@ defmodule Mix.Tasks.Credence.Equiv do
   end
 
   defp to_args(_input, []), do: []
+
   defp to_args(input, vars) do
     cond do
       length(vars) == 1 -> [input]
@@ -261,6 +262,7 @@ defmodule Mix.Tasks.Credence.Equiv do
 
   defp silence(fun) do
     ExUnit.CaptureIO.capture_io(:stderr, fn -> send(self(), {:silenced, fun.()}) end)
+
     receive do
       {:silenced, result} -> result
     end
@@ -270,8 +272,10 @@ defmodule Mix.Tasks.Credence.Equiv do
 
   defp format(:equivalent), do: "EQUIVALENT"
   defp format({:repair, exc, n, total}), do: "REPAIR #{inspect(exc)} #{n}/#{total}"
+
   defp format({:diverges, input, ob, oa}),
     do: "DIVERGES input=#{inspect(input)} before=#{inspect(ob)} after=#{inspect(oa)}"
+
   defp format({:diverges_compile, reason}), do: "DIVERGES after-#{reason}"
 
   # ── Helpers ─────────────────────────────────────────────────────────────

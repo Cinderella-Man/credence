@@ -23,8 +23,20 @@ defmodule Credence.Pattern.PreferStringSplitTrim do
       Macro.prewalk(ast, [], fn
         {:|>, _, _} = node, acc ->
           case find_pattern(node) do
-            {:ok, line} -> {node, [%Issue{rule: :prefer_string_split_trim, message: "`String.split` followed by `Enum.filter` to remove empty strings can be replaced with the `:trim` option.", meta: %{line: line}} | acc]}
-            :no -> {node, acc}
+            {:ok, line} ->
+              {node,
+               [
+                 %Issue{
+                   rule: :prefer_string_split_trim,
+                   message:
+                     "`String.split` followed by `Enum.filter` to remove empty strings can be replaced with the `:trim` option.",
+                   meta: %{line: line}
+                 }
+                 | acc
+               ]}
+
+            :no ->
+              {node, acc}
           end
 
         node, acc ->
@@ -69,7 +81,9 @@ defmodule Credence.Pattern.PreferStringSplitTrim do
          true <- string_split_call_no_options?(split_call) do
       {{:., d_meta, [{:__aliases__, a_meta, [:String]}, :split]}, c_meta, [regex]} = split_call
 
-      new_split = {{:., d_meta, [{:__aliases__, a_meta, [:String]}, :split]}, c_meta, [regex, [trim: true]]}
+      new_split =
+        {{:., d_meta, [{:__aliases__, a_meta, [:String]}, :split]}, c_meta, [regex, [trim: true]]}
+
       {:ok, {:|>, [], [prev, new_split]}}
     else
       _ -> :no
@@ -80,8 +94,7 @@ defmodule Credence.Pattern.PreferStringSplitTrim do
 
   # Matches Enum.filter(&(&1 != "")) or Enum.filter(&("" != &1))
   defp empty_filter_call?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :filter]}, _,
-          [{:&, _, [{:!=, _, [a, b]}]}]}
+         {{:., _, [{:__aliases__, _, [:Enum]}, :filter]}, _, [{:&, _, [{:!=, _, [a, b]}]}]}
        ) do
     capture1? = match?({:&, _, [1]}, a) or match?({:&, _, [{:__block__, _, [1]}]}, a)
     capture2? = match?({:&, _, [1]}, b) or match?({:&, _, [{:__block__, _, [1]}]}, b)
@@ -94,10 +107,8 @@ defmodule Credence.Pattern.PreferStringSplitTrim do
   defp empty_filter_call?(_), do: false
 
   # String.split with exactly one arg (no options)
-  defp string_split_call_no_options?(
-         {{:., _, [{:__aliases__, _, [:String]}, :split]}, _, [_]}
-       ),
-       do: true
+  defp string_split_call_no_options?({{:., _, [{:__aliases__, _, [:String]}, :split]}, _, [_]}),
+    do: true
 
   defp string_split_call_no_options?(_), do: false
 end

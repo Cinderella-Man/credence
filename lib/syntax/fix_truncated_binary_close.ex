@@ -51,8 +51,7 @@ defmodule Credence.Syntax.FixTruncatedBinaryClose do
   defp build_issue(line_no) do
     %Issue{
       rule: :fix_truncated_binary_close,
-      message:
-        "Truncated binary close delimiter (`::binary>)`) should be `::binary>>)`.",
+      message: "Truncated binary close delimiter (`::binary>)`) should be `::binary>>)`.",
       meta: %{line: line_no}
     }
   end

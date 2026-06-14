@@ -36,6 +36,7 @@ defmodule Credence.NormalizeTestsTaskTest do
   defp in_temp(content, fun) do
     path = Path.join(System.tmp_dir!(), "norm_#{System.unique_integer([:positive])}_test.exs")
     File.write!(path, content)
+
     try do
       fun.(path)
     after

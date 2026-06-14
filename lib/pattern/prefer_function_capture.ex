@@ -103,8 +103,7 @@ defmodule Credence.Pattern.PreferFunctionCapture do
      [
        {:/, [],
         [
-          {{:., [], [{:__aliases__, [], module_parts}, fun_name]},
-           [no_parens: true], []},
+          {{:., [], [{:__aliases__, [], module_parts}, fun_name]}, [no_parens: true], []},
           {:__block__, [], [arity]}
         ]}
      ]}

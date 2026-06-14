@@ -108,16 +108,17 @@ defmodule Credence.Pattern.PreferGraphemesForCharacterUniqueness do
   # Strip parens and closing metadata from AST nodes to avoid rendering issues
   defp strip_parens_meta(ast) do
     Macro.prewalk(ast, fn
-      {form, meta, args} -> {form, Keyword.drop(meta, [:parens, :closing, :line, :column, :last, :end]), args}
-      other -> other
+      {form, meta, args} ->
+        {form, Keyword.drop(meta, [:parens, :closing, :line, :column, :last, :end]), args}
+
+      other ->
+        other
     end)
   end
 
   # Check if a node is an immediate invocation of a capture: (&expr).()
-  defp immediate_capture_invocation?(
-         {{:., _, [{:&, _, [{:==, _, _}]}]}, _, []}
-       ),
-       do: true
+  defp immediate_capture_invocation?({{:., _, [{:&, _, [{:==, _, _}]}]}, _, []}),
+    do: true
 
   defp immediate_capture_invocation?(_), do: false
 
@@ -157,11 +158,9 @@ defmodule Credence.Pattern.PreferGraphemesForCharacterUniqueness do
   end
 
   defp find_and_replace_charlist(
-         {{:., call_meta, [{:__aliases__, alias_meta, [:String]}, :to_charlist]}, fun_meta,
-          args}
+         {{:., call_meta, [{:__aliases__, alias_meta, [:String]}, :to_charlist]}, fun_meta, args}
        ) do
-    {:ok,
-     {{:., call_meta, [{:__aliases__, alias_meta, [:String]}, :graphemes]}, fun_meta, args}}
+    {:ok, {{:., call_meta, [{:__aliases__, alias_meta, [:String]}, :graphemes]}, fun_meta, args}}
   end
 
   defp find_and_replace_charlist(_), do: :error

@@ -48,8 +48,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBind do
   defp build_issue(meta) do
     %Issue{
       rule: :no_redundant_underscore_bind,
-      message:
-        "Redundant `_ = var` binding. Use just the variable name instead.",
+      message: "Redundant `_ = var` binding. Use just the variable name instead.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

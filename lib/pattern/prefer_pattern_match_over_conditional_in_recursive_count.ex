@@ -213,7 +213,10 @@ defmodule Credence.Pattern.PreferPatternMatchOverConditionalInRecursiveCount do
     guard_call = {name, [], [guard_head | remaining]}
     guard = {:==, [], [{head_var, [], nil}, {cond_var, [], nil}]}
     when_clause = {:when, [], [guard_call, guard]}
-    guard_body = {:+, [], [{:__block__, [token: "1"], [1]}, {name, [], [{tail_var, [], nil} | remaining]}]}
+
+    guard_body =
+      {:+, [], [{:__block__, [token: "1"], [1]}, {name, [], [{tail_var, [], nil} | remaining]}]}
+
     guard_clause = {:def, [], [when_clause, [{{:__block__, [], [:do]}, guard_body}]]}
 
     # Clause 2: catch-all — [_ | tail], just recurse

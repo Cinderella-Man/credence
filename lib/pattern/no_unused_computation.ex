@@ -389,7 +389,9 @@ defmodule Credence.Pattern.NoUnusedComputation do
 
     func_name =
       case rhs do
-        {func, _, _} when is_atom(func) -> "#{func}/#{length(elem(rhs, 2))}"
+        {func, _, _} when is_atom(func) ->
+          "#{func}/#{length(elem(rhs, 2))}"
+
         {{:., _, [{:__aliases__, _, [mod]}, func]}, _, args} ->
           "#{mod}.#{func}/#{length(args)}"
       end

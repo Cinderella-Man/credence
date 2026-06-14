@@ -43,8 +43,7 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
 
           issue = %Issue{
             rule: :prefer_map_intersect_over_mapset_intersection,
-            message:
-              "Use `Map.intersect/3` instead of MapSet intersection pipeline on map keys.",
+            message: "Use `Map.intersect/3` instead of MapSet intersection pipeline on map keys.",
             meta: %{line: Keyword.get(meta, :line)}
           }
 
@@ -264,13 +263,8 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
 
     # freq1 |> Map.intersect(freq2, intersect_fn) |> Enum.sort_by(sort_by_fn)
     freq1_ast
-    |> pipe(
-      {{:., [], [{:__aliases__, [], [:Map]}, :intersect]}, [],
-       [freq2_ast, intersect_fn]}
-    )
-    |> pipe(
-      {{:., [], [{:__aliases__, [], [:Enum]}, :sort_by]}, [], [sort_by_fn]}
-    )
+    |> pipe({{:., [], [{:__aliases__, [], [:Map]}, :intersect]}, [], [freq2_ast, intersect_fn]})
+    |> pipe({{:., [], [{:__aliases__, [], [:Enum]}, :sort_by]}, [], [sort_by_fn]})
   end
 
   defp pipe(left, right), do: {:|>, [], [left, right]}

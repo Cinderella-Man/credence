@@ -131,7 +131,8 @@ defmodule Credence.Semantic.AvoidBinaryMidPattern do
   defp extract_binary_pattern(
          {:=, _,
           [
-            {:<<>>, _, [{first, _, nil}, {:"::", _, [{middle, _, nil}, {:binary, _, nil}]}, {last, _, nil}]},
+            {:<<>>, _,
+             [{first, _, nil}, {:"::", _, [{middle, _, nil}, {:binary, _, nil}]}, {last, _, nil}]},
             rhs
           ]}
        )

@@ -11,7 +11,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
   test "fixes unclosed @doc heredoc by inserting closing quotes" do
     input = """
     defmodule Solution do
-      @doc """
+      @doc \"""
       def find_min_max(list) do
         Enum.min_max(list)
       end
@@ -22,7 +22,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
 
     expected = """
     defmodule Solution do
-      @doc """
+      @doc \"""
     #{close}
       def find_min_max(list) do
         Enum.min_max(list)
@@ -36,7 +36,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
   test "fixes unclosed @doc heredoc with blank lines before def" do
     input = """
     defmodule Solution do
-      @doc """
+      @doc \"""
 
       def find_min_max(list) do
         Enum.min_max(list)
@@ -48,7 +48,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
 
     expected = """
     defmodule Solution do
-      @doc """
+      @doc \"""
 
     #{close}
       def find_min_max(list) do
@@ -79,7 +79,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     assert analyze(
              fix("""
              defmodule Solution do
-               @doc """
+               @doc \"""
                def find_min_max(list) do
                  Enum.min_max(list)
                end
@@ -92,7 +92,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredocFixTest do
     assert valid_syntax?(
              fix("""
              defmodule Solution do
-               @doc """
+               @doc \"""
                def find_min_max(list) do
                  Enum.min_max(list)
                end

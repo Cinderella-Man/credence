@@ -61,7 +61,11 @@ defmodule Credence.QuietFormatter do
         state
       ) do
     counter = state.failures + 1
-    IO.puts(format_test_all_failure(module, failures, counter, state.width, &formatter(&1, &2, state)))
+
+    IO.puts(
+      format_test_all_failure(module, failures, counter, state.width, &formatter(&1, &2, state))
+    )
+
     {:noreply, %{state | failures: counter}}
   end
 
@@ -69,7 +73,9 @@ defmodule Credence.QuietFormatter do
     type_counts =
       state.counter
       |> Enum.sort()
-      |> Enum.map(fn {type, n} -> "#{n} #{pluralize(n, type, ExUnit.plural_rule(to_string(type)))}" end)
+      |> Enum.map(fn {type, n} ->
+        "#{n} #{pluralize(n, type, ExUnit.plural_rule(to_string(type)))}"
+      end)
 
     failures = "#{state.failures} #{pluralize(state.failures, "failure", "failures")}"
 
@@ -114,9 +120,15 @@ defmodule Credence.QuietFormatter do
   defp formatter(:extra_info, msg, config), do: colorize(:cyan, msg, config)
   defp formatter(:location_info, msg, config), do: colorize([:bright, :black], msg, config)
   defp formatter(:diff_delete, msg, config), do: colorize(:red, msg, config)
-  defp formatter(:diff_delete_whitespace, msg, config), do: colorize(IO.ANSI.color_background(2, 0, 0), msg, config)
+
+  defp formatter(:diff_delete_whitespace, msg, config),
+    do: colorize(IO.ANSI.color_background(2, 0, 0), msg, config)
+
   defp formatter(:diff_insert, msg, config), do: colorize(:green, msg, config)
-  defp formatter(:diff_insert_whitespace, msg, config), do: colorize(IO.ANSI.color_background(0, 2, 0), msg, config)
+
+  defp formatter(:diff_insert_whitespace, msg, config),
+    do: colorize(IO.ANSI.color_background(0, 2, 0), msg, config)
+
   defp formatter(_, msg, _config), do: msg
 
   defp colorize(escape, string, %{colors: colors}) do

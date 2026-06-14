@@ -122,17 +122,18 @@ defmodule Credence.Pattern.PreferPatternMatchEmptyStringFixTest do
       """
 
       fixed = fix(PreferPatternMatchEmptyString, code)
+
       assert fixed == """
-      defmodule Example do
-        def reverse_left_words("" = str, _count), do: str
-        def reverse_left_words(str, count) do
-          len = String.length(str)
-          actual_count = rem(count, len)
-          {left, right} = String.split_at(str, actual_count)
-          right <> left
-        end
-      end
-      """
+             defmodule Example do
+               def reverse_left_words("" = str, _count), do: str
+               def reverse_left_words(str, count) do
+                 len = String.length(str)
+                 actual_count = rem(count, len)
+                 {left, right} = String.split_at(str, actual_count)
+                 right <> left
+               end
+             end
+             """
     end
   end
 end

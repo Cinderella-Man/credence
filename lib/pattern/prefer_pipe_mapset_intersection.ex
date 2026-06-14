@@ -171,7 +171,8 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersection do
     case node do
       # Base case: MapSet.intersection(set_b, set_c)
       {{:., _dot_meta, [{:__aliases__, _alias_meta, [:MapSet]}, :intersection]}, _call_meta,
-       [{var_a, _, nil}, {var_b, _, nil}]} when is_atom(var_a) and is_atom(var_b) ->
+       [{var_a, _, nil}, {var_b, _, nil}]}
+      when is_atom(var_a) and is_atom(var_b) ->
         if var_a in all_vars and var_b in all_vars do
           {:ok, [var_a, var_b]}
         else
@@ -180,7 +181,8 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersection do
 
       # Recursive case: MapSet.intersection(var, nested_intersection)
       {{:., _dot_meta, [{:__aliases__, _alias_meta, [:MapSet]}, :intersection]}, _call_meta,
-       [{var_a, _, nil}, inner]} when is_atom(var_a) ->
+       [{var_a, _, nil}, inner]}
+      when is_atom(var_a) ->
         if var_a in all_vars do
           case extract_intersection_vars(inner, all_vars) do
             {:ok, rest_vars} -> {:ok, [var_a | rest_vars]}
@@ -240,10 +242,8 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersection do
   end
 
   # Extract the argument from a MapSet.new/1 call
-  defp extract_mapset_new_arg(
-         {{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, [arg]}
-       ),
-       do: {:ok, arg}
+  defp extract_mapset_new_arg({{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, [arg]}),
+    do: {:ok, arg}
 
   # Find where the pattern starts in the expression list
   defp find_match_start(exprs, sets) do

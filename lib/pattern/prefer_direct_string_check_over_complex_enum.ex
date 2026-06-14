@@ -155,14 +155,12 @@ defmodule Credence.Pattern.PreferDirectStringCheckOverComplexEnum do
     end
   end
 
-  defp match_do_block?(
-         [
-           {:=, _, [{:pattern, _, nil}, slice_call]},
-           enum_all_call,
-           {:=, _, [{:full_pattern, _, nil}, dup_call]},
-           {:==, _, [string_var, {:full_pattern, _, nil}]}
-         ]
-       ) do
+  defp match_do_block?([
+         {:=, _, [{:pattern, _, nil}, slice_call]},
+         enum_all_call,
+         {:=, _, [{:full_pattern, _, nil}, dup_call]},
+         {:==, _, [string_var, {:full_pattern, _, nil}]}
+       ]) do
     string_slice?(slice_call) and
       dead_enum_all?(enum_all_call) and
       string_duplicate?(dup_call) and

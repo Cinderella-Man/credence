@@ -86,8 +86,7 @@ defmodule Credence.Pattern.PreferSigilCharlist do
   defp build_issue({:__block__, meta, _}) do
     %Issue{
       rule: :prefer_sigil_charlist,
-      message:
-        "Single-quoted charlists are deprecated. Use the `~c\"...\"` sigil instead.",
+      message: "Single-quoted charlists are deprecated. Use the `~c\"...\"` sigil instead.",
       meta: %{line: Keyword.get(meta, :line)}
     }
   end

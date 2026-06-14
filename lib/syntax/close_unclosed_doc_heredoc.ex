@@ -87,7 +87,7 @@ defmodule Credence.Syntax.CloseUnclosedDocHeredoc do
 
     Enum.reduce(sorted, lines, fn {insert_at, indent}, acc ->
       {before, after_} = Enum.split(acc, insert_at)
-      before ++ [indent <> ~s(""") ] ++ after_
+      before ++ [indent <> ~s(""")] ++ after_
     end)
     |> Enum.join("\n")
   end

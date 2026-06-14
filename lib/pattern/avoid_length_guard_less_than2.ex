@@ -87,6 +87,7 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2 do
     do: {:ok, value, format_of(marker_meta)}
 
   defp do_body([[{:do, value}]]), do: {:ok, value, :block}
+
   defp do_body([{{:__block__, marker_meta, [:do]}, value}]),
     do: {:ok, value, format_of(marker_meta)}
 

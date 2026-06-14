@@ -34,7 +34,13 @@ defmodule Credence.Syntax.PreferCondDoKeyword do
     |> Enum.with_index(1)
     |> Enum.flat_map(fn {line, line_no} ->
       if Regex.match?(@bad_pattern, line) do
-        [%Issue{rule: :prefer_cond_do_keyword, message: "cond -> should be cond do", meta: %{line: line_no}}]
+        [
+          %Issue{
+            rule: :prefer_cond_do_keyword,
+            message: "cond -> should be cond do",
+            meta: %{line: line_no}
+          }
+        ]
       else
         []
       end

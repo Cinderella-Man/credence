@@ -159,10 +159,13 @@ defmodule Mix.Tasks.Credence.FixTests do
       |> Enum.map(&elem(&1, 1))
 
     case idxs do
-      [] -> []
-      _ -> if List.last(idxs) - List.first(idxs) + 1 == length(idxs),
-             do: Enum.map(idxs, &Enum.at(stmts, &1)),
-             else: []
+      [] ->
+        []
+
+      _ ->
+        if List.last(idxs) - List.first(idxs) + 1 == length(idxs),
+          do: Enum.map(idxs, &Enum.at(stmts, &1)),
+          else: []
     end
   end
 
@@ -211,6 +214,7 @@ defmodule Mix.Tasks.Credence.FixTests do
   defp ref(node), do: {:node, node}
 
   defp resolve({:var, var}, binds), do: Map.fetch(binds, var)
+
   defp resolve({:node, node}, _binds) do
     case heredoc_value(node) do
       {:ok, v} -> {:ok, {v, node}}

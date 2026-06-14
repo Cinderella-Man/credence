@@ -368,6 +368,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
               else
                 {node, acc}
               end
+
             _ ->
               {node, acc}
           end
@@ -386,9 +387,11 @@ defmodule Credence.Pattern.PreferGuardOverIf do
         {name, _, ctx} = node, acc
         when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) and name != :_ ->
           {node, MapSet.put(acc, name)}
+
         node, acc ->
           {node, acc}
       end)
+
     names
   end
 

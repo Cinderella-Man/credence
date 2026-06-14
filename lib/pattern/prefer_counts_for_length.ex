@@ -55,8 +55,7 @@ defmodule Credence.Pattern.PreferCountsForLength do
         Macro.prewalk(ast, [], fn
           {:length, meta,
            [
-             {{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _,
-              [{string_var, _, nil}]}
+             {{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, [{string_var, _, nil}]}
            ]} = node,
           acc
           when is_atom(string_var) ->
@@ -169,8 +168,7 @@ defmodule Credence.Pattern.PreferCountsForLength do
             {assign_var, _, nil},
             {:length, _,
              [
-               {{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _,
-                [{string_var, _, nil}]}
+               {{:., _, [{:__aliases__, _, [:String]}, :codepoints]}, _, [{string_var, _, nil}]}
              ]}
           ]},
          string_var
@@ -196,8 +194,7 @@ defmodule Credence.Pattern.PreferCountsForLength do
   defp enum_sum_map_values_call(counts_var) do
     {{:., [], [{:__aliases__, [], [:Enum]}, :sum]}, [],
      [
-       {{:., [], [{:__aliases__, [], [:Map]}, :values]}, [],
-        [{counts_var, [], nil}]}
+       {{:., [], [{:__aliases__, [], [:Map]}, :values]}, [], [{counts_var, [], nil}]}
      ]}
   end
 

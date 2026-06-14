@@ -76,13 +76,11 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRange do
   #   - First arg is a range (e.g. 1..n)
   #   - Second arg is an empty list accumulator
   #   - Third arg is an fn with the if-prepend-in-else body
-  defp detect_reduce_args(
-         [
-           {:.., _, [_, _]},
-           {:__block__, _, [[]]},
-           {:fn, _, [{:->, _, [_params, body]}]}
-         ]
-       ) do
+  defp detect_reduce_args([
+         {:.., _, [_, _]},
+         {:__block__, _, [[]]},
+         {:fn, _, [{:->, _, [_params, body]}]}
+       ]) do
     filter_body?(body)
   end
 
@@ -106,7 +104,8 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRange do
             _condition,
             [
               {{:__block__, _, [:do]}, {do_name, _, nil}},
-              {{:__block__, _, [:else]}, {:__block__, _, [[{:|, _, [{elem_name, _, nil}, {acc_name, _, nil}]}]]}}
+              {{:__block__, _, [:else]},
+               {:__block__, _, [[{:|, _, [{elem_name, _, nil}, {acc_name, _, nil}]}]]}}
             ]
           ]}
        )

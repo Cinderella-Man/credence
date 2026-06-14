@@ -132,9 +132,7 @@ defmodule Credence.Semantic do
           # §3.3/§3.6, `08` T1.3b): the implementer needs the position +
           # severity to build a *real* test `diag` + `match?`, so a fabricated
           # diagnostic can't ship a rule that's dead in production.
-          Logger.debug(
-            "[credence_fix] no rule matched diagnostic: #{inspect(diagnostic)}"
-          )
+          Logger.debug("[credence_fix] no rule matched diagnostic: #{inspect(diagnostic)}")
 
           {src, applied}
 

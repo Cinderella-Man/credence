@@ -138,6 +138,7 @@ defmodule Credence.Pattern.NoDuplicateSpec do
   defp build_issue(node) do
     {name, arity} = spec_name_arity(node)
     meta = elem(node, 1)
+
     %Issue{
       rule: :no_duplicate_spec,
       message:

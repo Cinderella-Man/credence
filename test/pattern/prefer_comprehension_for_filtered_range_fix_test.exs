@@ -23,16 +23,17 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeFixTest do
 
       # Verify the fix compiles and produces a for comprehension
       assert valid_syntax?(result)
+
       assert fix(PreferComprehensionForFilteredRange, input) == """
-      defmodule Solution do
-        def findmissingnumbers(numbers) do
-          n = length(numbers)
-          present = MapSet.new(numbers)
-      
-          for num <- 1..n, !MapSet.member?(present, num), do: num
-        end
-      end
-      """
+             defmodule Solution do
+               def findmissingnumbers(numbers) do
+                 n = length(numbers)
+                 present = MapSet.new(numbers)
+
+                 for num <- 1..n, !MapSet.member?(present, num), do: num
+               end
+             end
+             """
     end
 
     test "direct Enum.reverse(Enum.reduce(...)) form is rewritten" do
@@ -45,9 +46,10 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeFixTest do
       result = fix(PreferComprehensionForFilteredRange, input)
 
       assert valid_syntax?(result)
+
       assert fix(PreferComprehensionForFilteredRange, input) == """
-      for num <- 1..n, !MapSet.member?(set, num), do: num
-      """
+             for num <- 1..n, !MapSet.member?(set, num), do: num
+             """
     end
 
     test "non-matching code is left unchanged" do
@@ -75,7 +77,10 @@ defmodule Credence.Pattern.PreferComprehensionForFilteredRangeFixTest do
       end
       """
 
-      assert check(PreferComprehensionForFilteredRange, fix(PreferComprehensionForFilteredRange, code)) == []
+      assert check(
+               PreferComprehensionForFilteredRange,
+               fix(PreferComprehensionForFilteredRange, code)
+             ) == []
     end
   end
 end

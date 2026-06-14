@@ -32,11 +32,13 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
     |> Enum.with_index(1)
     |> Enum.flat_map(fn {line, line_no} ->
       if Regex.match?(@while_re, line) do
-        [%Issue{
-          rule: :prefer_recursion_over_while,
-          message: "Elixir has no `while` loop. Use tail recursion instead.",
-          meta: %{line: line_no}
-        }]
+        [
+          %Issue{
+            rule: :prefer_recursion_over_while,
+            message: "Elixir has no `while` loop. Use tail recursion instead.",
+            meta: %{line: line_no}
+          }
+        ]
       else
         []
       end
@@ -66,14 +68,15 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
         {body_lines, end_offset} = collect_end(rest, 1)
         fun_name = find_enclosing_fun(src, i)
 
-        {:ok, %{
-          idx: i,
-          end_idx: i + end_offset,
-          indent: indent,
-          cond: cond,
-          body_lines: body_lines,
-          fun_name: fun_name
-        }}
+        {:ok,
+         %{
+           idx: i,
+           end_idx: i + end_offset,
+           indent: indent,
+           cond: cond,
+           body_lines: body_lines,
+           fun_name: fun_name
+         }}
 
       nil ->
         search_lines(rest, i + 1, src)
@@ -86,6 +89,7 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
 
   defp collect_end([line | rest], d, n) do
     nd = d + kw_count(line, "do") - kw_count(line, "end")
+
     if nd <= 0 do
       {[], n + 1}
     else
@@ -140,9 +144,10 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
 
     # Merge: prefix assigns come first, then body assigns not already covered
     prefix_vars = for {v, _} <- prefix_assigns, do: v
+
     all_vars =
       prefix_assigns ++
-      Enum.filter(body_assigns, fn {v, _} -> v not in prefix_vars end)
+        Enum.filter(body_assigns, fn {v, _} -> v not in prefix_vars end)
 
     # Build helper
     helper = build_helper(ctx, all_vars)
@@ -152,10 +157,12 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
 
     # Insert helper right after the enclosing function's closing `end`.
     # Find the first `end` in rest at the function's indent level.
-    fun_indent = case ctx.fun_name do
-      {_, indent, _} -> indent <> "end"
-      nil -> "end"
-    end
+    fun_indent =
+      case ctx.fun_name do
+        {_, indent, _} -> indent <> "end"
+        nil -> "end"
+      end
+
     {before_end, after_end} = split_at_fun_end(rest, fun_indent)
 
     (remaining_prefix ++ [call] ++ before_end ++ [helper] ++ after_end)
@@ -179,6 +186,7 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
       trailing
       |> Enum.flat_map(fn line ->
         trimmed = String.trim(line)
+
         case Regex.run(@assign_re, trimmed) do
           [_, var] ->
             if Regex.match?(~r/\b#{Regex.escape(var)}\s*=\s/, body_text) do
@@ -187,7 +195,9 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
             else
               []
             end
-          nil -> []
+
+          nil ->
+            []
         end
       end)
 
@@ -206,13 +216,16 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
           assigns = Regex.scan(~r/#{esc}\s*=/, body_text)
           # Check if var appears on the RHS of its own assignment (self-referencing)
           self_ref = Regex.match?(~r/#{esc}\s*=.*\b#{esc}\b/, line)
+
           if length(assigns) > 1 or self_ref do
             # Use nil as initial value — the real init comes from prefix if present
             [{var, "nil"}]
           else
             []
           end
-        nil -> []
+
+        nil ->
+          []
       end
     end)
     |> Enum.uniq_by(fn {v, _} -> v end)
@@ -227,27 +240,35 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
 
   defp build_call(ctx, assigns) do
     init_vals = for {_, init} <- assigns, do: init
-    enc_params = case ctx.fun_name do
-      {_, _, params} -> params
-      nil -> []
-    end
+
+    enc_params =
+      case ctx.fun_name do
+        {_, _, params} -> params
+        nil -> []
+      end
+
     vars = for {v, _} <- assigns, do: v
     free_vars = Enum.reject(enc_params, &(&1 in vars))
     all_args = free_vars ++ init_vals
-    name = case ctx.fun_name do
-      {n, _, _} -> "do_#{n}"
-      nil -> "do_loop"
-    end
+
+    name =
+      case ctx.fun_name do
+        {n, _, _} -> "do_#{n}"
+        nil -> "do_loop"
+      end
+
     call_indent = ctx.indent
     "#{call_indent}#{name}(#{Enum.join(all_args, ", ")})"
   end
 
   defp build_helper(ctx, assigns) do
     # Use enclosing function's indent for the defp, not the while's indent
-    {fun_name, def_indent, enc_params} = case ctx.fun_name do
-      {name, indent, params} -> {"do_#{name}", indent, params}
-      nil -> {"do_loop", ctx.indent, []}
-    end
+    {fun_name, def_indent, enc_params} =
+      case ctx.fun_name do
+        {name, indent, params} -> {"do_#{name}", indent, params}
+        nil -> {"do_loop", ctx.indent, []}
+      end
+
     body_i = def_indent <> "  "
 
     vars = for {v, _} <- assigns, do: v
@@ -265,6 +286,7 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
     # Body lines are at while_indent + 2. defp body should be at def_indent + 2 = body_i.
     # Strip while_indent + 2, add body_i.
     body_src_indent = ctx.indent <> "  "
+
     reindented =
       ctx.body_lines
       |> Enum.map(fn line ->
@@ -278,17 +300,17 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
     first_val = if inits == [], do: "nil", else: hd(inits)
 
     "#{def_indent}defp #{name}(#{params}) when #{neg}, do: #{first_val}\n" <>
-    "#{def_indent}defp #{name}(#{params}) do\n" <>
-    "#{reindented}\n" <>
-    "#{body_i}#{name}(#{args})\n" <>
-    "#{def_indent}end"
+      "#{def_indent}defp #{name}(#{params}) do\n" <>
+      "#{reindented}\n" <>
+      "#{body_i}#{name}(#{args})\n" <>
+      "#{def_indent}end"
   end
-
 
   defp negate(cond), do: "!(#{cond})"
 
   defp split_at_fun_end(lines, end_pattern) do
     idx = Enum.find_index(lines, &(String.trim(&1) == String.trim(end_pattern)))
+
     case idx do
       nil -> {lines, []}
       i -> {Enum.take(lines, i + 1), Enum.drop(lines, i + 1)}

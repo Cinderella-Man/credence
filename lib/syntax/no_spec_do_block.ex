@@ -104,11 +104,13 @@ defmodule Credence.Syntax.NoSpecDoBlock do
     spec_remove = MapSet.new(Enum.flat_map(spec_blocks, fn {s, e, _} -> Enum.to_list(s..e) end))
 
     spec_replace =
-      Map.new(Enum.map(spec_blocks, fn {s, e, indent} ->
-        content = extract_spec_content(lines, s, e)
-        new_line = String.duplicate(" ", indent) <> "@spec " <> content
-        {s, new_line}
-      end))
+      Map.new(
+        Enum.map(spec_blocks, fn {s, e, indent} ->
+          content = extract_spec_content(lines, s, e)
+          new_line = String.duplicate(" ", indent) <> "@spec " <> content
+          {s, new_line}
+        end)
+      )
 
     # Combined remove set
     remove_set = MapSet.union(body_remove, spec_remove)

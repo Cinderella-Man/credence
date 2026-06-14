@@ -80,8 +80,7 @@ defmodule Credence.Pattern.AvoidDuplicateEnumAt do
   defp collect_enum_at_calls(ast) do
     {_ast, calls} =
       Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{name, _, nil}, idx]} = node,
-        acc
+        {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, [{name, _, nil}, idx]} = node, acc
         when is_atom(name) ->
           {node, [{name, idx} | acc]}
 
@@ -132,7 +131,8 @@ defmodule Credence.Pattern.AvoidDuplicateEnumAt do
   end
 
   # Generate a variable name for an extracted Enum.at index.
-  defp var_name_for_idx({name, _, ctx}, _i) when is_atom(name) and (is_nil(ctx) or is_atom(ctx)) do
+  defp var_name_for_idx({name, _, ctx}, _i)
+       when is_atom(name) and (is_nil(ctx) or is_atom(ctx)) do
     :"#{name}_elem"
   end
 
@@ -149,8 +149,7 @@ defmodule Credence.Pattern.AvoidDuplicateEnumAt do
     {:=, [],
      [
        {var_name, [], nil},
-       {{:., [], [{:__aliases__, [], [:Enum]}, :at]}, [],
-        [{list_var, [], nil}, clean_idx(idx)]}
+       {{:., [], [{:__aliases__, [], [:Enum]}, :at]}, [], [{list_var, [], nil}, clean_idx(idx)]}
      ]}
   end
 

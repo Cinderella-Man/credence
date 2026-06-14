@@ -28,7 +28,13 @@ defmodule Credence.Syntax.NoOutputMarkerLines do
     |> Enum.with_index(1)
     |> Enum.flat_map(fn {line, line_no} ->
       if String.match?(line, @marker_pattern) do
-        [%Issue{rule: :no_output_marker_lines, message: "Output marker line `#{String.trim(line)}` will cause a syntax error.", meta: %{line: line_no}}]
+        [
+          %Issue{
+            rule: :no_output_marker_lines,
+            message: "Output marker line `#{String.trim(line)}` will cause a syntax error.",
+            meta: %{line: line_no}
+          }
+        ]
       else
         []
       end

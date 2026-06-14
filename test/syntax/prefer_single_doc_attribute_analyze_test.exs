@@ -10,7 +10,7 @@ defmodule Credence.Syntax.PreferSingleDocAttributeAnalyzeTest do
     assert [%Issue{rule: :prefer_single_doc_attribute, meta: %{line: 2}}] =
              analyze("""
              defmodule Solution do
-               @doc """
+               @doc \"""
                @doc "Returns the length of the longest contiguous subarray."
                def longest_equal_zero_one(list) do
                  :ok
@@ -57,5 +57,4 @@ defmodule Credence.Syntax.PreferSingleDocAttributeAnalyzeTest do
              end
              """)
   end
-
 end

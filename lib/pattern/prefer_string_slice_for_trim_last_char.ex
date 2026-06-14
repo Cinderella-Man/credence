@@ -104,8 +104,7 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastChar do
          {:->, _,
           [
             [
-              {:__block__, _,
-               [[{var, _, nil}]]}
+              {:__block__, _, [[{var, _, nil}]]}
             ],
             {:__block__, _, [""]}
           ]}

@@ -154,15 +154,15 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParam do
     # All must be variables with the same base name
     case base_names do
       [first | rest] ->
+        # An `_`-prefixed name in any clause means the author deliberately
+        # marked the parameter unused (kept for the signature/arity/contract).
+        # Respect that — only remove a param the author left un-underscored.
+        # A name reused in another argument's pattern is load-bearing — a
+        # non-linear match like `f(pk, [pk | tail])` only matches when the
+        # positions agree; removing it changes what the clause matches.
         first != nil and first != "_" and
           Enum.all?(rest, fn n -> n == first end) and
-          # An `_`-prefixed name in any clause means the author deliberately
-          # marked the parameter unused (kept for the signature/arity/contract).
-          # Respect that — only remove a param the author left un-underscored.
           not any_underscored?(params_at_pos) and
-          # A name reused in another argument's pattern is load-bearing — a
-          # non-linear match like `f(pk, [pk | tail])` only matches when the
-          # positions agree; removing it changes what the clause matches.
           not used_in_other_arg_patterns?(first, pos, args_per_clause) and
           base_unused_in_all_clauses?(first, clauses)
 
@@ -220,10 +220,12 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParam do
   defp extract_defp_args(_), do: []
 
   defp extract_base_name({:_, _, _}), do: "_"
+
   defp extract_base_name({name, _, ctx}) when is_atom(name) and is_atom(ctx) do
     str = Atom.to_string(name)
     if String.starts_with?(str, "_"), do: String.trim_leading(str, "_"), else: str
   end
+
   defp extract_base_name(_), do: nil
 
   defp extract_defp_guard({:defp, _, [{:when, _, [_, guard]}, _]}), do: guard
@@ -293,6 +295,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParam do
 
   defp remove_at_indices(list, indices) do
     index_set = MapSet.new(indices)
+
     Enum.reject(Enum.with_index(list), fn {_, idx} -> MapSet.member?(index_set, idx) end)
     |> Enum.map(fn {elem, _} -> elem end)
   end
