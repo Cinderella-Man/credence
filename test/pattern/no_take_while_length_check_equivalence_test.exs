@@ -13,7 +13,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckEquivalenceTest do
 
   @expr """
   half = div(len, 2)
-  0..(half - 1)
+  0..(half - 1)//1
   |> Enum.take_while(fn i -> Enum.at(g, i) == Enum.at(g, len - 1 - i) end)
   |> length() == half
   """

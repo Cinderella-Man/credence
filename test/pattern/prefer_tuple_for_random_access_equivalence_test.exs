@@ -8,8 +8,8 @@ defmodule Credence.Pattern.PreferTupleForRandomAccessEquivalenceTest do
     assert_equivalent(
       """
       n = length(numbers)
-      pairs = for i <- 0..(n - 2),
-                  j <- (i + 1)..(n - 1),
+      pairs = for i <- 0..(n - 2)//1,
+                  j <- (i + 1)..(n - 1)//1,
                   abs(Enum.fetch!(numbers, i) - Enum.fetch!(numbers, j)) == k,
                   do: {i, j}
       length(pairs)

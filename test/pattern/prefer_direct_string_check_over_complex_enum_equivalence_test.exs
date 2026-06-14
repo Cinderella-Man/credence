@@ -14,7 +14,7 @@ defmodule Credence.Pattern.PreferDirectStringCheckOverComplexEnumEquivalenceTest
               1
 
             n ->
-              2..div(n, 2)
+              2..div(n, 2)//1
               |> Enum.find(1, fn divisor ->
                 validate_pattern(string, n, divisor)
               end)
