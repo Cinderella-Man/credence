@@ -1,0 +1,175 @@
+[22m08:18:35.097 [info] [idx=102401] entry_point=max_unique_concat[0m
+[36m08:18:35.097 [debug] [LLM.call] provider=xiaomi_mimo_2_5_pro url=https://token-plan-sgp.xiaomimimo.com/v1/chat/completions model=mimo-v2.5-pro timeout=1800000ms
+[LLM.call] system:
+You translate Python coding exercises into Elixir coding exercises. You produce
+THREE things: an Elixir instruction, Elixir ExUnit tests, and an Elixir
+reference solution.
+
+INSTRUCTION rules: describe the PROBLEM, not the SOLUTION. Never mention
+specific Elixir functions, data structures, or recursion styles. State the
+function name, input/output contract, complexity, and edge-case behavior.
+
+CANONICAL NAMES (already chosen for you — use them verbatim everywhere):
+- The module MUST be named `Solution`.
+- The function MUST use the exact name given in the prompt (it already follows
+  Elixir convention — e.g. boolean predicates end with `?`, never `is_` prefix).
+- Tests AND the reference solution must both call this exact name.
+
+TEST rules: the test module MUST include `use ExUnit.Case, async: false` right
+after `defmodule`. Translate the Python test cases faithfully — same inputs,
+same expected outputs — as ExUnit assertions on `Solution.<fn>`.
+
+REFERENCE rules: a correct, idiomatic Elixir implementation of `Solution` that
+passes the tests. It is used only to validate the tests; quality is secondary
+to correctness.
+
+OUTPUT FORMAT (nothing else, no markdown fences):
+---INSTRUCTION---
+<elixir problem statement>
+---TEST---
+<elixir ExUnit test module>
+---REFERENCE---
+<elixir Solution module>
+---END---
+
+[LLM.call] user:
+Translate this Python exercise to Elixir.
+
+## Python Instruction
+Write a function that takes a list of strings as input, and returns the maximum length of a concatenated string with unique characters. The function should consider all possible combinations of strings in the input list.
+
+## Python Solution
+```python
+from itertools import combinations
+
+def max_unique_concat(arr):
+    max_length = 0
+    for r in range(1, len(arr) + 1):
+        for combo in combinations(arr, r):
+            concat_str = ''.join(combo)
+            if len(concat_str) == len(set(concat_str)):
+                max_length = max(max_length, len(concat_str))
+    return max_length
+```
+
+## Python Tests
+assert max_unique_concat(['un', 'iq', 'ue'])==4 # The maximum length of unique character string can be achieved by concatenating 'uniq' or 'ique'.
+assert max_unique_concat(['cha', 'r', 'act', 'ers'])==6 # The maximum length of unique character string can be achieved by concatenating 'cha', 'r', 'act', 'ers'.
+assert max_unique_concat(['abcdefghijklmnopqrstuvwxyz'])==26 # The maximum length of unique character string can be achieved by using the entire string as it contains all unique characters.
+
+## Canonical Elixir names (use verbatim)
+- Module: `Solution`
+- Function: `max_unique_concat`
+
+Output: ---INSTRUCTION--- / ---TEST--- / ---REFERENCE--- / ---END---
+
+[0m
+[36m08:19:37.741 [debug] [LLM.call] finish=stop len=1437 usage=%{"completion_tokens" => 2941, "completion_tokens_details" => %{"reasoning_tokens" => 2555}, "prompt_tokens" => 600, "prompt_tokens_details" => %{}, "total_tokens" => 3541}
+[LLM.call] response:
+---INSTRUCTION---
+Write a function that takes a list of strings as input and returns the maximum length of a concatenated string formed by any combination of the input strings such that all characters in the concatenated string are unique. The function should evaluate all possible subsets of the list. If no valid concatenation exists, return 0.
+
+The function name must be `max_unique_concat` and the module must be named `Solution`.
+
+---TEST---
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.max_unique_concat(["un", "iq", "ue"]) == 4
+  end
+
+  test "example 2" do
+    assert Solution.max_unique_concat(["cha", "r", "act", "ers"]) == 6
+  end
+
+  test "example 3" do
+    assert Solution.max_unique_concat(["abcdefghijklmnopqrstuvwxyz"]) == 26
+  end
+end
+
+---REFERENCE---
+defmodule Solution do
+  def max_unique_concat(arr) do
+    n = length(arr)
+    Enum.reduce(1..(2 ** n - 1), 0, fn bitmask, max_len ->
+      {strs, _} =
+        Enum.reduce(arr, {[], 0}, fn s, {acc, i} ->
+          if Bitwise.band(Bitwise.bsr(bitmask, i), 1) == 1 do
+            {[s | acc], i + 1}
+          else
+            {acc, i + 1}
+          end
+        end)
+      concat = Enum.join(Enum.reverse(strs))
+      if length(String.to_charlist(concat)) == length(Enum.uniq(String.to_charlist(concat))) do
+        max(max_len, String.length(concat))
+      else
+        max_len
+      end
+    end)
+  end
+end
+
+---END---[0m
+[22m08:19:37.741 [info] [LLM.call] xiaomi_mimo_2_5_pro completed in 62643ms — ok[0m
+[36m08:19:37.742 [debug] [Budget] spent so far (est.): $2.6634[0m
+[22m08:19:38.803 [info] [RoundTrip] reference PASSED tests[0m
+[22m08:19:38.804 [info] [idx=102401] translation fresh — solving[0m
+[22m08:19:38.804 [info] ===SOLVE_BOUNDARY===[0m
+[22m08:19:38.804 [info] [Solve attempt 1] generating (fn=max_unique_concat)[0m
+[36m08:19:38.804 [debug] [LLM.call] provider=local_qwen_thinking url=http://localhost:8080/v1/chat/completions model=Qwen/Qwen3.6-27B timeout=1800000ms
+[LLM.call] system:
+You write idiomatic Elixir. Given an Elixir problem statement and its ExUnit
+test suite, implement a module that passes the tests.
+
+Requirements:
+- The module MUST be named `Solution`.
+- Implement the function using the exact canonical name given (already
+  idiomatic — boolean predicates end with `?`, never the `is_` prefix).
+- Idiomatic Elixir: pattern matching, multi-clause functions, pipes, guards,
+  @doc/@spec, descriptive parameter names (never single letters), and prefix
+  unused params with `_` independently per clause.
+- Keep `use ExUnit.Case, async: false` in the test module; tests call
+  `Solution.<fn>`.
+
+OUTPUT (nothing else, no markdown fences):
+---MODULE---
+<elixir Solution module>
+---TEST---
+<the ExUnit test module>
+---END---
+
+[LLM.call] user:
+Implement this Elixir exercise.
+
+## Problem
+Write a function that takes a list of strings as input and returns the maximum length of a concatenated string formed by any combination of the input strings such that all characters in the concatenated string are unique. The function should evaluate all possible subsets of the list. If no valid concatenation exists, return 0.
+
+The function name must be `max_unique_concat` and the module must be named `Solution`.
+
+## Tests (your module must pass these)
+```elixir
+defmodule SolutionTest do
+  use ExUnit.Case, async: false
+
+  test "example 1" do
+    assert Solution.max_unique_concat(["un", "iq", "ue"]) == 4
+  end
+
+  test "example 2" do
+    assert Solution.max_unique_concat(["cha", "r", "act", "ers"]) == 6
+  end
+
+  test "example 3" do
+    assert Solution.max_unique_concat(["abcdefghijklmnopqrstuvwxyz"]) == 26
+  end
+end
+```
+
+Module: `Solution`. Function: `max_unique_concat`.
+Output the `Solution` module and the test suite.
+Output: ---MODULE--- / ---TEST--- / ---END---
+
+[0m
+[22m08:23:25.767 [info] [Budget] HEARTBEAT — 373 paid calls, est $2.6634 over 649.9min → ~$0.2459/hr, ~$5.9/day (tok in=2677853 cache_rd=19733056 out=1640780)[0m
