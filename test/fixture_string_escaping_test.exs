@@ -23,14 +23,9 @@ defmodule Credence.FixtureStringEscapingTest do
 
   @dirs ["test/pattern", "test/semantic", "test/syntax"]
 
-  @allow %{
-    "test/pattern/no_redundant_binary_syntax_fix_test.exs" =>
-      "the fix reprints the whole expression, dropping the input's trailing " <>
-        "newline; a heredoc expected (which has one) can't match, and the quoted " <>
-        "result has no heredoc/sigil-free form",
-    "test/semantic/missing_use_exunit_case_fix_test.exs" =>
-      "the fix forces a trailing blank line; mix format trims a heredoc's, changing the value"
-  }
+  # `allow/0`, `fixtures/1`, and `fixture_ok?/1` all live in
+  # `Credence.MetaTestSupport` — single source of truth, shared with
+  # `Credence.FixtureHealer` (which heals everything this gate would flag).
 
   defp files do
     @dirs |> Enum.flat_map(&Path.wildcard("#{&1}/**/*_test.exs")) |> Enum.sort()
@@ -39,10 +34,10 @@ defmodule Credence.FixtureStringEscapingTest do
   # `fixtures/1` and `fixture_ok?/1` live in `Credence.MetaTestSupport`, so the
   # generator pin asserts against the same code this gate enforces.
 
-  test "every code fixture is a heredoc — no escaped string, sigil, or <> concat" do
+  test "every code fixture is canonical — plain single-line / ~S'…' / heredoc" do
     bad =
       for path <- files(),
-          not Map.has_key?(@allow, path),
+          not Map.has_key?(allow(), path),
           {:ok, ast} = load_ast(path),
           node <- fixtures(ast),
           not fixture_ok?(node),
@@ -50,7 +45,8 @@ defmodule Credence.FixtureStringEscapingTest do
           do: path
 
     assert Enum.uniq(bad) == [],
-           "fixtures that aren't heredocs (use a \"\"\" heredoc):\n" <>
+           "non-canonical fixtures (single-line → \"…\"; with a quote → ~S'…'; " <>
+             "multi-line → a \"\"\" heredoc):\n" <>
              Enum.map_join(Enum.uniq(bad), "\n", &("  - " <> &1))
   end
 end

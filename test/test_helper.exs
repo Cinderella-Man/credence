@@ -24,4 +24,10 @@ Logger.configure(level: :info)
 # once into a gitignored cache on first run (fast parse-only analysis thereafter).
 # The `:corpus` tag is kept so the layer can be skipped for a quicker run with:
 #     mix test --exclude corpus
+# Self-heal non-canonical test fixtures before the suite compiles: plain strings
+# with a newline → `"""` heredoc, with a quote → `~S'…'`. Runs after test/support
+# compiles and before the `*_test.exs` files are required, so they compile against
+# canonical fixtures. Idempotent; a no-op once everything is canonical.
+Credence.FixtureHealer.heal_dirs()
+
 ExUnit.start(formatters: [Credence.QuietFormatter])

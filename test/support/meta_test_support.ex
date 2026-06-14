@@ -346,7 +346,8 @@ defmodule Credence.MetaTestSupport do
   """
   def fixture_ok?({:__block__, m, [s]}) when is_binary(s) do
     Keyword.get(m, :delimiter) == "\"\"\"" or
-      String.contains?(String.replace(s, "\\\"", "\""), "\"\"\"")
+      String.contains?(String.replace(s, "\\\"", "\""), "\"\"\"") or
+      single_line_plain?(s)
   end
 
   def fixture_ok?({:<<>>, m, parts}),
@@ -354,13 +355,37 @@ defmodule Credence.MetaTestSupport do
 
   def fixture_ok?({sg, m, [{:<<>>, _, [b]}, _]})
       when sg in [:sigil_s, :sigil_S] and is_binary(b),
-      do: Keyword.get(m, :delimiter) == "\"\"\"" or String.contains?(b, "\"\"\"")
+      do:
+        Keyword.get(m, :delimiter) == "\"\"\"" or String.contains?(b, "\"\"\"") or
+          (Keyword.get(m, :delimiter) == "'" and not has_newline?(b))
 
   def fixture_ok?({sg, m, [{:<<>>, _, parts}, _]}) when sg in [:sigil_s, :sigil_S],
     do: Keyword.get(m, :delimiter) == "\"\"\"" or not multiline_interp?(parts)
 
   def fixture_ok?({:<>, _, _}), do: false
   def fixture_ok?(_), do: false
+
+  @doc """
+  Files whose fixtures a heredoc/sigil rewrite would break (value-sensitive).
+  Single source of truth for `FixtureStringEscapingTest` and
+  `Credence.FixtureHealer` — both skip these. Path => reason.
+  """
+  def allow do
+    %{
+      "test/pattern/no_redundant_binary_syntax_fix_test.exs" =>
+        "the fix reprints the whole expression, dropping the input's trailing " <>
+          "newline; a heredoc expected (which has one) can't match, and the quoted " <>
+          "result has no heredoc/sigil-free form",
+      "test/semantic/missing_use_exunit_case_fix_test.exs" =>
+        "the fix forces a trailing blank line; mix format trims a heredoc's, changing the value"
+    }
+  end
+
+  # A plain `"…"` needs neither a heredoc nor escaping iff its value has no
+  # newline and no inner double-quote.
+  defp single_line_plain?(s), do: not has_newline?(s) and not String.contains?(s, "\"")
+
+  defp has_newline?(s), do: String.contains?(s, "\n") or String.contains?(s, "\\n")
 
   defp multiline_interp?(parts) do
     lit = parts |> Enum.filter(&is_binary/1) |> Enum.join()
