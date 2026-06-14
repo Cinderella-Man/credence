@@ -69,12 +69,12 @@ defmodule Credence.Pattern.NoIfBooleanResult do
     else_body = extract_clause(clauses, :else)
 
     cond do
-      is_true_literal?(do_body) and not is_nil(else_body) and
-          not is_boolean_literal?(else_body) ->
+      true_literal?(do_body) and not is_nil(else_body) and
+          not boolean_literal?(else_body) ->
         :true_expr
 
-      not is_nil(do_body) and not is_boolean_literal?(do_body) and
-          is_false_literal?(else_body) ->
+      not is_nil(do_body) and not boolean_literal?(do_body) and
+          false_literal?(else_body) ->
         :expr_false
 
       true ->
@@ -92,15 +92,15 @@ defmodule Credence.Pattern.NoIfBooleanResult do
     end)
   end
 
-  defp is_true_literal?(true), do: true
-  defp is_true_literal?({:__block__, _, [true]}), do: true
-  defp is_true_literal?(_), do: false
+  defp true_literal?(true), do: true
+  defp true_literal?({:__block__, _, [true]}), do: true
+  defp true_literal?(_), do: false
 
-  defp is_false_literal?(false), do: true
-  defp is_false_literal?({:__block__, _, [false]}), do: true
-  defp is_false_literal?(_), do: false
+  defp false_literal?(false), do: true
+  defp false_literal?({:__block__, _, [false]}), do: true
+  defp false_literal?(_), do: false
 
-  defp is_boolean_literal?(node), do: is_true_literal?(node) or is_false_literal?(node)
+  defp boolean_literal?(node), do: true_literal?(node) or false_literal?(node)
 
   # Postwalk callback: rewrite matching if nodes.
   defp maybe_rewrite({:if, _meta, [condition, clauses]} = node) when is_list(clauses) do

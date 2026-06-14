@@ -222,7 +222,7 @@ defmodule Credence.Pattern.PreferPatternMatchingForEmptyString do
     %Issue{
       rule: :prefer_pattern_matching_for_empty_string,
       message:
-        "Use pattern matching `\"\"` instead of `if String.trim(var) == \"\"` " <>
+        ~s[Use pattern matching `""` instead of `if String.trim(var) == ""` ] <>
           "to check for empty strings.",
       meta: %{line: Keyword.get(meta, :line)}
     }

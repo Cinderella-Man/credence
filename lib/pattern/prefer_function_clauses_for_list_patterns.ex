@@ -139,46 +139,23 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
   # Match def/defp with a `when` guard that contains `is_list(var)`.
   defp convertible({def_type, _meta, [{:when, when_meta, [fun_head, guard]}, body_kw]})
        when def_type in [:def, :defp] and is_list(body_kw) do
-    case extract_is_list_guard(guard) do
-      {:ok, list_var, remaining_guard} ->
-        case extract_do_body(body_kw) do
-          {:ok, case_body} ->
-            case unwrap_case(case_body) do
-              {:ok, case_subject, case_clauses} ->
-                if same_var?(case_subject, list_var) and length(case_clauses) >= 2 do
-                  case parse_case_clauses(case_clauses) do
-                    parsed when is_list(parsed) ->
-                      if Enum.all?(parsed, fn {pattern, _, _} -> list_pattern?(pattern) end) do
-                        {:ok,
-                         %{
-                           def_type: def_type,
-                           when_meta: when_meta,
-                           fun_head: fun_head,
-                           list_var: list_var,
-                           remaining_guard: remaining_guard,
-                           case_clauses: parsed
-                         }}
-                      else
-                        :no
-                      end
-
-                    :error ->
-                      :no
-                  end
-                else
-                  :no
-                end
-
-              _ ->
-                :no
-            end
-
-          _ ->
-            :no
-        end
-
-      _ ->
-        :no
+    with {:ok, list_var, remaining_guard} <- extract_is_list_guard(guard),
+         {:ok, case_body} <- extract_do_body(body_kw),
+         {:ok, case_subject, case_clauses} <- unwrap_case(case_body),
+         true <- same_var?(case_subject, list_var) and length(case_clauses) >= 2,
+         parsed when is_list(parsed) <- parse_case_clauses(case_clauses),
+         true <- Enum.all?(parsed, fn {pattern, _, _} -> list_pattern?(pattern) end) do
+      {:ok,
+       %{
+         def_type: def_type,
+         when_meta: when_meta,
+         fun_head: fun_head,
+         list_var: list_var,
+         remaining_guard: remaining_guard,
+         case_clauses: parsed
+       }}
+    else
+      _ -> :no
     end
   end
 

@@ -36,7 +36,7 @@ defmodule Credence.MetaTestSupport do
   @doc "The rule's short name, e.g. `NoManualFind`."
   def short(rule), do: rule |> Module.split() |> List.last()
 
-  @doc "Conventional path of a rule's test file for `kind` (\"check\" | \"fix\" | ...)."
+  @doc ~s[Conventional path of a rule's test file for `kind` ("check" | "fix" | ...).]
   def test_path(rule, kind), do: rule |> RuleName.from_module() |> RuleName.test_path(kind)
 
   @doc "Conventionally-named test module for a rule's `kind` file, e.g. `…CheckTest`."

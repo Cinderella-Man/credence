@@ -221,7 +221,7 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
   defp find_pattern(stmts) do
     Enum.find_value(Enum.with_index(stmts), fn
       {{:=, _, [{:{}, _, [_ | _] = bind_elems}, reduce_call]}, idx} ->
-        if is_reduce_while_call?(reduce_call) and length(bind_elems) >= 3 do
+        if reduce_while_call_p?(reduce_call) and length(bind_elems) >= 3 do
           case Enum.at(stmts, idx + 1) do
             {bool_name, _, ctx} when is_atom(bool_name) and is_atom(ctx) ->
               last_bind = List.last(bind_elems)
@@ -240,11 +240,11 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
     end)
   end
 
-  defp is_reduce_while_call?({{:., _, _} = dot, _, args})
+  defp reduce_while_call_p?({{:., _, _} = dot, _, args})
        when is_list(args) and length(args) >= 2,
        do: reduce_while_call?(dot)
 
-  defp is_reduce_while_call?(_), do: false
+  defp reduce_while_call_p?(_), do: false
 
   # Transform the reduce_while call: remove boolean from acc, params, halt/cont.
   defp transform_reduce_while({dot, call_meta, args}) do

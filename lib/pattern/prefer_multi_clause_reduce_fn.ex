@@ -126,17 +126,16 @@ defmodule Credence.Pattern.PreferMultiClauseReduceFn do
           rhs_name = var_name(rhs)
 
           cond do
-            # var == literal -> pattern match
-            is_atom(lhs_name) and Map.has_key?(acc_bindings, lhs_name) and is_nil(rhs_name) ->
+            # var == literal -> pattern match. `Map.has_key?` already implies the
+            # name is a real bound variable (var_name/1 returns an atom or nil,
+            # and nil is never a binding key), so no `is_atom` guard is needed.
+            Map.has_key?(acc_bindings, lhs_name) and is_nil(rhs_name) ->
               {first_param, replace_in_tuple(acc_pattern, lhs_name, rhs), nil}
 
-            is_atom(rhs_name) and Map.has_key?(acc_bindings, rhs_name) and is_nil(lhs_name) ->
+            Map.has_key?(acc_bindings, rhs_name) and is_nil(lhs_name) ->
               {first_param, replace_in_tuple(acc_pattern, rhs_name, lhs), nil}
 
-            # var == var -> guard
-            is_atom(lhs_name) and is_atom(rhs_name) ->
-              {first_param, acc_pattern, condition}
-
+            # var == var (and any other equality) -> keep the comparison as a guard
             true ->
               {first_param, acc_pattern, condition}
           end

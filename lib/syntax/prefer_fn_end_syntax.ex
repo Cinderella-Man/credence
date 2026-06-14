@@ -68,10 +68,10 @@ defmodule Credence.Syntax.PreferFnEndSyntax do
   end
 
   defp case_clause_line?(line) do
-    # A case/receive/cond/try clause typically starts with whitespace 
+    # A case/receive/cond/try clause typically starts with whitespace
     # followed by a simple pattern (identifier, literal, or _) then ->
     # Examples:  y -> body
-    #            _ -> body  
+    #            _ -> body
     #            :ok -> body
     #            {x, y} -> body
     # Or it's on the same line as case/receive/cond/try/do: case x do y -> y end

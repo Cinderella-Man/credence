@@ -284,7 +284,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParam do
   end
 
   defp rewrite_call_site({name, meta, args}, fn_name, unused)
-       when name == fn_name and is_list(args) and length(args) > 0 do
+       when name == fn_name and is_list(args) and args != [] do
     new_args = remove_at_indices(args, unused)
     {name, meta, new_args}
   end
@@ -302,8 +302,7 @@ defmodule Credence.Pattern.PreferRemoveUnusedPrivateFnParam do
 
   defp format_positions(indices) do
     indices
-    |> Enum.map(&(to_string(&1 + 1) <> suffix(&1)))
-    |> Enum.join(", ")
+    |> Enum.map_join(", ", &(to_string(&1 + 1) <> suffix(&1)))
   end
 
   defp suffix(0), do: "st"

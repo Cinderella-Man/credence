@@ -90,7 +90,7 @@ defmodule Credence.Syntax.NoElseIf do
     line = Enum.at(lines, idx)
 
     cond do
-      is_if_line?(line) and get_indent(line) == target_indent ->
+      if_line?(line) and get_indent(line) == target_indent ->
         {:ok, idx}
 
       get_indent(line) < target_indent ->
@@ -140,7 +140,7 @@ defmodule Credence.Syntax.NoElseIf do
       line = Enum.at(lines, i)
 
       if line != nil and get_indent(line) == target_indent and
-           (Regex.match?(~r/^\s*else\b/, line) or is_if_end?(line)) do
+           (Regex.match?(~r/^\s*else\b/, line) or if_end?(line)) do
         i
       end
     end)
@@ -164,7 +164,7 @@ defmodule Credence.Syntax.NoElseIf do
   defp find_end(lines, idx, target_indent) do
     Enum.find_value(idx..(length(lines) - 1), length(lines) - 1, fn i ->
       line = Enum.at(lines, i)
-      if line != nil and get_indent(line) == target_indent and is_if_end?(line), do: i
+      if line != nil and get_indent(line) == target_indent and if_end?(line), do: i
     end)
   end
 
@@ -211,8 +211,8 @@ defmodule Credence.Syntax.NoElseIf do
     end
   end
 
-  defp is_if_line?(line), do: Regex.match?(~r/^\s*if\b/, line)
-  defp is_if_end?(line), do: Regex.match?(~r/^\s*end\s*$/, line)
+  defp if_line?(line), do: Regex.match?(~r/^\s*if\b/, line)
+  defp if_end?(line), do: Regex.match?(~r/^\s*end\s*$/, line)
 
   defp extract_condition(line) do
     case Regex.run(~r/^\s*if\s+(.+?)\s+do\s*$/, line) do

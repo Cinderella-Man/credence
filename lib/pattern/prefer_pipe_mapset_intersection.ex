@@ -102,13 +102,7 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersection do
 
             case extract_intersection_chain(final_expr, vars) do
               {:ok, ordered_vars} ->
-                sets =
-                  for v <- ordered_vars do
-                    {_, expr} = Enum.find(assignments, fn {av, _} -> av == v end)
-                    {v, expr}
-                  end
-
-                {:ok, sets, final_expr}
+                {:ok, build_sets(ordered_vars, assignments), final_expr}
 
               :error ->
                 :error
@@ -120,6 +114,14 @@ defmodule Credence.Pattern.PreferPipeMapsetIntersection do
 
       [] ->
         :error
+    end
+  end
+
+  # Pair each ordered var back to its MapSet.new assignment expression.
+  defp build_sets(ordered_vars, assignments) do
+    for v <- ordered_vars do
+      {_, expr} = Enum.find(assignments, fn {av, _} -> av == v end)
+      {v, expr}
     end
   end
 

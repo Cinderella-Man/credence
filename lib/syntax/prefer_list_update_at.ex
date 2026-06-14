@@ -85,46 +85,16 @@ defmodule Credence.Syntax.PreferListUpdateAt do
   defp parse_three_args(_source, pos, source_len) when pos >= source_len, do: :not_found
 
   defp parse_three_args(source, pos, source_len) do
-    case collect_arg(source, pos, source_len) do
-      {:ok, arg1, after_arg1} ->
-        case skip_comma_and_ws(source, after_arg1, source_len) do
-          {:ok, after_comma1} ->
-            case collect_arg(source, after_comma1, source_len) do
-              {:ok, arg2, after_arg2} ->
-                case skip_comma_and_ws(source, after_arg2, source_len) do
-                  {:ok, after_comma2} ->
-                    case collect_arg(source, after_comma2, source_len) do
-                      {:ok, arg3, after_arg3} ->
-                        # After arg3 we expect a closing paren
-                        case skip_ws(source, after_arg3, source_len) do
-                          pos when pos < source_len ->
-                            case :binary.at(source, pos) do
-                              ?) -> {:ok, arg1, arg2, arg3, pos + 1}
-                              _ -> :not_found
-                            end
-
-                          _ ->
-                            :not_found
-                        end
-
-                      :not_found ->
-                        :not_found
-                    end
-
-                  :not_found ->
-                    :not_found
-                end
-
-              :not_found ->
-                :not_found
-            end
-
-          :not_found ->
-            :not_found
-        end
-
-      :not_found ->
-        :not_found
+    with {:ok, arg1, after_arg1} <- collect_arg(source, pos, source_len),
+         {:ok, after_comma1} <- skip_comma_and_ws(source, after_arg1, source_len),
+         {:ok, arg2, after_arg2} <- collect_arg(source, after_comma1, source_len),
+         {:ok, after_comma2} <- skip_comma_and_ws(source, after_arg2, source_len),
+         {:ok, arg3, after_arg3} <- collect_arg(source, after_comma2, source_len),
+         close_pos when close_pos < source_len <- skip_ws(source, after_arg3, source_len),
+         ?) <- :binary.at(source, close_pos) do
+      {:ok, arg1, arg2, arg3, close_pos + 1}
+    else
+      _ -> :not_found
     end
   end
 

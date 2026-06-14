@@ -85,7 +85,7 @@ defmodule Credence.Pattern.PreferEnumFrequencies do
             callback
           ]}
        ) do
-    if identity_group_by?(group_by_call) and is_count_of_vals_fn?(callback) do
+    if identity_group_by?(group_by_call) and count_of_vals_fn?(callback) do
       {:ok, build_issue(meta)}
     else
       :error
@@ -196,7 +196,7 @@ defmodule Credence.Pattern.PreferEnumFrequencies do
 
   # Enum.map(step, fn {k, v} -> {k, count(v)} end) — counts group sizes
   defp map_count_step?({{:., _, [{:__aliases__, _, [:Enum]}, :map]}, _, [callback]}),
-    do: is_count_of_vals_fn?(callback)
+    do: count_of_vals_fn?(callback)
 
   defp map_count_step?(_), do: false
 
@@ -215,7 +215,7 @@ defmodule Credence.Pattern.PreferEnumFrequencies do
   # Sourceror wraps 2-tuples in {:__block__, _, [tuple]}.
 
   # 3+ element tuple form: fn {a, b, c} -> ... — uses {:{}} tag
-  defp is_count_of_vals_fn?(
+  defp count_of_vals_fn?(
          {:fn, _,
           [
             {:->, _,
@@ -225,11 +225,11 @@ defmodule Credence.Pattern.PreferEnumFrequencies do
              ]}
           ]}
        ) do
-    same_var?(k_var, k_var2) and is_count_call_on?(count_call, g_var)
+    same_var?(k_var, k_var2) and count_call_on?(count_call, g_var)
   end
 
   # 2-tuple form, Sourceror-wrapped: fn {k, vals} -> {k, count(vals)} end
-  defp is_count_of_vals_fn?(
+  defp count_of_vals_fn?(
          {:fn, _,
           [
             {:->, _,
@@ -239,11 +239,11 @@ defmodule Credence.Pattern.PreferEnumFrequencies do
              ]}
           ]}
        ) do
-    same_var?(k_var, k_var2) and is_count_call_on?(count_call, g_var)
+    same_var?(k_var, k_var2) and count_call_on?(count_call, g_var)
   end
 
   # 2-tuple form, raw: fn {k, vals} -> {k, count(vals)} end
-  defp is_count_of_vals_fn?(
+  defp count_of_vals_fn?(
          {:fn, _,
           [
             {:->, _,
@@ -253,18 +253,18 @@ defmodule Credence.Pattern.PreferEnumFrequencies do
              ]}
           ]}
        ) do
-    same_var?(k_var, k_var2) and is_count_call_on?(count_call, g_var)
+    same_var?(k_var, k_var2) and count_call_on?(count_call, g_var)
   end
 
-  defp is_count_of_vals_fn?(_), do: false
+  defp count_of_vals_fn?(_), do: false
 
   # length(vals) — local call
-  defp is_count_call_on?({:length, _, [{var, _, ctx}]}, {var, _, ctx})
+  defp count_call_on?({:length, _, [{var, _, ctx}]}, {var, _, ctx})
        when is_atom(var) and is_atom(ctx),
        do: true
 
   # Kernel.length(vals) — remote call
-  defp is_count_call_on?(
+  defp count_call_on?(
          {{:., _, [{:__aliases__, _, [:Kernel]}, :length]}, _, [{var, _, ctx}]},
          {var, _, ctx}
        )
@@ -272,14 +272,14 @@ defmodule Credence.Pattern.PreferEnumFrequencies do
        do: true
 
   # Enum.count(vals) — also counts elements
-  defp is_count_call_on?(
+  defp count_call_on?(
          {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [{var, _, ctx}]},
          {var, _, ctx}
        )
        when is_atom(var) and is_atom(ctx),
        do: true
 
-  defp is_count_call_on?(_, _), do: false
+  defp count_call_on?(_, _), do: false
 
   defp same_var?({name, _, ctx}, {name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
   defp same_var?(_, _), do: false

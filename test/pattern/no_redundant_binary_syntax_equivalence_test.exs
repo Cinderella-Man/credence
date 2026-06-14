@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxEquivalenceTest do
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.NoRedundantBinarySyntax
 
-  test "<<\"hello\">> → \"hello\" is the same binary" do
+  test ~s(<<"hello">> → "hello" is the same binary) do
     assert_equivalent(
       """
       <<"hello">>

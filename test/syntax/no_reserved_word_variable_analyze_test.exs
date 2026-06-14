@@ -24,7 +24,7 @@ defmodule Credence.Syntax.NoReservedWordVariableAnalyzeTest do
       end
       """)
 
-    assert length(issues) >= 1
+    assert issues != []
     assert Enum.any?(issues, &(&1.rule == :no_reserved_word_variable))
   end
 

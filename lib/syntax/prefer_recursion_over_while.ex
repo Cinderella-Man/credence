@@ -289,13 +289,12 @@ defmodule Credence.Syntax.PreferRecursionOverWhile do
 
     reindented =
       ctx.body_lines
-      |> Enum.map(fn line ->
+      |> Enum.map_join("\n", fn line ->
         case String.starts_with?(line, body_src_indent) do
           true -> body_i <> String.replace_prefix(line, body_src_indent, "")
           false -> body_i <> String.trim_leading(line)
         end
       end)
-      |> Enum.join("\n")
 
     first_val = if inits == [], do: "nil", else: hd(inits)
 

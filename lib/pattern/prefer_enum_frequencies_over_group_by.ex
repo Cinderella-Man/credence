@@ -95,7 +95,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
 
   # Direct: Map.new(Enum.group_by(enum, & &1), fn {k, v} -> {k, length(v)} end)
   defp check_node({{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _, [group_by_call, callback]}) do
-    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+    if identity_group_by_direct?(group_by_call) and length_of_group_fn?(callback) do
       {:ok, build_issue(meta)}
     else
       :error
@@ -107,7 +107,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
          {{:., meta, [{:__aliases__, _, [:Enum]}, :into]}, _,
           [group_by_call, {:%{}, _, []}, callback]}
        ) do
-    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+    if identity_group_by_direct?(group_by_call) and length_of_group_fn?(callback) do
       {:ok, build_issue(meta)}
     else
       :error
@@ -154,7 +154,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
 
   # Direct: Map.new(Enum.group_by(enum, & &1), fn ...)
   defp fix_node({{:., meta, [{:__aliases__, _, [:Map]}, :new]}, _, [group_by_call, callback]}) do
-    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+    if identity_group_by_direct?(group_by_call) and length_of_group_fn?(callback) do
       {{:., _, _}, _, [enum, _key_fn]} = group_by_call
       {:ok, enum_frequencies(meta, enum)}
     else
@@ -167,7 +167,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
          {{:., meta, [{:__aliases__, _, [:Enum]}, :into]}, _,
           [group_by_call, {:%{}, _, []}, callback]}
        ) do
-    if identity_group_by_direct?(group_by_call) and is_length_of_group_fn?(callback) do
+    if identity_group_by_direct?(group_by_call) and length_of_group_fn?(callback) do
       {{:., _, _}, _, [enum, _key_fn]} = group_by_call
       {:ok, enum_frequencies(meta, enum)}
     else
@@ -246,12 +246,12 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
   # Piped collecting step: `|> Map.new(fn {k, v} -> {k, length(v)} end)` or the
   # equivalent `|> Enum.into(%{}, fn {k, v} -> {k, length(v)} end)`.
   defp count_collect_step?({{:., _, [{:__aliases__, _, [:Map]}, :new]}, _, [callback]}),
-    do: is_length_of_group_fn?(callback)
+    do: length_of_group_fn?(callback)
 
   defp count_collect_step?(
          {{:., _, [{:__aliases__, _, [:Enum]}, :into]}, _, [{:%{}, _, []}, callback]}
        ),
-       do: is_length_of_group_fn?(callback)
+       do: length_of_group_fn?(callback)
 
   defp count_collect_step?(_), do: false
 
@@ -260,7 +260,7 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
   # the wrapped and unwrapped forms.
 
   # 3+ element tuple form: fn {a, b, c} -> ... — uses {:{}} tag
-  defp is_length_of_group_fn?(
+  defp length_of_group_fn?(
          {:fn, _,
           [
             {:->, _,
@@ -270,11 +270,11 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
              ]}
           ]}
        ) do
-    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+    same_var?(k_var, k_var2) and length_call_on?(length_call, g_var)
   end
 
   # 2-tuple form, Sourceror-wrapped: fn {k, group} -> {k, length(group)} end
-  defp is_length_of_group_fn?(
+  defp length_of_group_fn?(
          {:fn, _,
           [
             {:->, _,
@@ -284,11 +284,11 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
              ]}
           ]}
        ) do
-    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+    same_var?(k_var, k_var2) and length_call_on?(length_call, g_var)
   end
 
   # 2-tuple form, raw: fn {k, group} -> {k, length(group)} end
-  defp is_length_of_group_fn?(
+  defp length_of_group_fn?(
          {:fn, _,
           [
             {:->, _,
@@ -298,18 +298,18 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
              ]}
           ]}
        ) do
-    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+    same_var?(k_var, k_var2) and length_call_on?(length_call, g_var)
   end
 
-  defp is_length_of_group_fn?(_), do: false
+  defp length_of_group_fn?(_), do: false
 
   # length(group_var) — local call
-  defp is_length_call_on?({:length, _, [{var, _, ctx}]}, {var, _, ctx})
+  defp length_call_on?({:length, _, [{var, _, ctx}]}, {var, _, ctx})
        when is_atom(var) and is_atom(ctx),
        do: true
 
   # Kernel.length(group_var) — remote call
-  defp is_length_call_on?(
+  defp length_call_on?(
          {{:., _, [{:__aliases__, _, [:Kernel]}, :length]}, _, [{var, _, ctx}]},
          {var, _, ctx}
        )
@@ -317,14 +317,14 @@ defmodule Credence.Pattern.PreferEnumFrequenciesOverGroupBy do
        do: true
 
   # Enum.count(group_var) — also counts elements
-  defp is_length_call_on?(
+  defp length_call_on?(
          {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [{var, _, ctx}]},
          {var, _, ctx}
        )
        when is_atom(var) and is_atom(ctx),
        do: true
 
-  defp is_length_call_on?(_, _), do: false
+  defp length_call_on?(_, _), do: false
 
   defp same_var?({name, _, ctx}, {name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
   defp same_var?(_, _), do: false

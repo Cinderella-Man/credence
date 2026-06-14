@@ -164,7 +164,7 @@ defmodule Credence.Pattern.PreferDirectStringCheckOverComplexEnum do
     string_slice?(slice_call) and
       dead_enum_all?(enum_all_call) and
       string_duplicate?(dup_call) and
-      is_var?(string_var)
+      var?(string_var)
   end
 
   defp match_do_block?(_), do: false
@@ -180,8 +180,8 @@ defmodule Credence.Pattern.PreferDirectStringCheckOverComplexEnum do
 
   defp string_duplicate?(_), do: false
 
-  defp is_var?({name, _, ctx}) when is_atom(name) and (is_nil(ctx) or is_atom(ctx)), do: true
-  defp is_var?(_), do: false
+  defp var?({name, _, ctx}) when is_atom(name) and (is_nil(ctx) or is_atom(ctx)), do: true
+  defp var?(_), do: false
 
   defp extract_clause(clauses, key) when is_list(clauses) do
     Enum.find_value(clauses, :error, fn

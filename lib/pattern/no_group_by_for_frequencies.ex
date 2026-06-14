@@ -80,7 +80,7 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
             callback
           ]}
        ) do
-    if is_length_of_group_fn?(callback) do
+    if length_of_group_fn?(callback) do
       {:ok, build_issue(meta)}
     else
       :error
@@ -150,7 +150,7 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
             callback
           ]}
        ) do
-    if is_length_of_group_fn?(callback) do
+    if length_of_group_fn?(callback) do
       {:ok, {{:., [], [{:__aliases__, [], [:Enum]}, :frequencies_by]}, meta, [enum, key_fn]}}
     else
       :error
@@ -181,7 +181,7 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
   defp group_by_step?(_), do: false
 
   defp map_new_length_step?({{:., _, [{:__aliases__, _, [:Map]}, :new]}, _, [callback]}),
-    do: is_length_of_group_fn?(callback)
+    do: length_of_group_fn?(callback)
 
   defp map_new_length_step?(_), do: false
 
@@ -190,7 +190,7 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
   # the wrapped and unwrapped forms.
 
   # 3+ element tuple form: fn {a, b, c} -> ... — uses {:{}} tag
-  defp is_length_of_group_fn?(
+  defp length_of_group_fn?(
          {:fn, _,
           [
             {:->, _,
@@ -200,11 +200,11 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
              ]}
           ]}
        ) do
-    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+    same_var?(k_var, k_var2) and length_call_on?(length_call, g_var)
   end
 
   # 2-tuple form, Sourceror-wrapped: fn {k, group} -> {k, length(group)} end
-  defp is_length_of_group_fn?(
+  defp length_of_group_fn?(
          {:fn, _,
           [
             {:->, _,
@@ -214,11 +214,11 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
              ]}
           ]}
        ) do
-    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+    same_var?(k_var, k_var2) and length_call_on?(length_call, g_var)
   end
 
   # 2-tuple form, raw: fn {k, group} -> {k, length(group)} end
-  defp is_length_of_group_fn?(
+  defp length_of_group_fn?(
          {:fn, _,
           [
             {:->, _,
@@ -228,18 +228,18 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
              ]}
           ]}
        ) do
-    same_var?(k_var, k_var2) and is_length_call_on?(length_call, g_var)
+    same_var?(k_var, k_var2) and length_call_on?(length_call, g_var)
   end
 
-  defp is_length_of_group_fn?(_), do: false
+  defp length_of_group_fn?(_), do: false
 
   # length(group_var) — local call
-  defp is_length_call_on?({:length, _, [{var, _, ctx}]}, {var, _, ctx})
+  defp length_call_on?({:length, _, [{var, _, ctx}]}, {var, _, ctx})
        when is_atom(var) and is_atom(ctx),
        do: true
 
   # Kernel.length(group_var) — remote call
-  defp is_length_call_on?(
+  defp length_call_on?(
          {{:., _, [{:__aliases__, _, [:Kernel]}, :length]}, _, [{var, _, ctx}]},
          {var, _, ctx}
        )
@@ -247,14 +247,14 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
        do: true
 
   # Enum.count(group_var) — also counts elements
-  defp is_length_call_on?(
+  defp length_call_on?(
          {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [{var, _, ctx}]},
          {var, _, ctx}
        )
        when is_atom(var) and is_atom(ctx),
        do: true
 
-  defp is_length_call_on?(_, _), do: false
+  defp length_call_on?(_, _), do: false
 
   defp same_var?({name, _, ctx}, {name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
   defp same_var?(_, _), do: false

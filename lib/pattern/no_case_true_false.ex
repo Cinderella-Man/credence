@@ -183,9 +183,7 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
   defp maybe_rewrite_case({:case, meta, [subject, kw]} = node) when is_list(kw) do
     case extract_do_clauses(kw) do
       [clause_a, clause_b] ->
-        if not provably_boolean?(subject) do
-          node
-        else
+        if provably_boolean?(subject) do
           case rewrite_clauses(clause_a, clause_b) do
             {:ok, do_body, else_body} ->
               {:if, meta, [subject, [do: do_body, else: else_body]]}
@@ -193,6 +191,8 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
             :skip ->
               node
           end
+        else
+          node
         end
 
       _ ->
@@ -206,9 +206,7 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
        when is_list(kw) do
     case extract_do_clauses(kw) do
       [clause_a, clause_b] ->
-        if not provably_boolean?(expr) do
-          node
-        else
+        if provably_boolean?(expr) do
           case rewrite_clauses(clause_a, clause_b) do
             {:ok, do_body, else_body} ->
               {:if, case_meta, [expr, [do: do_body, else: else_body]]}
@@ -216,6 +214,8 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
             :skip ->
               node
           end
+        else
+          node
         end
 
       _ ->

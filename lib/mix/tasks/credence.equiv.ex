@@ -199,7 +199,7 @@ defmodule Mix.Tasks.Credence.Equiv do
   end
 
   defp known_switches do
-    apply(Credence.Assumptions, :names, [])
+    Credence.Assumptions.names()
   end
 
   # Dimension name → its input list (dynamic dispatch: EquivalenceInputs is a
@@ -246,6 +246,10 @@ defmodule Mix.Tasks.Credence.Equiv do
   end
 
   defp eval(thunk, compare_messages?) do
+    # Dynamic dispatch (not a direct call): BehaviourEquivalence is a
+    # test/support module, absent under :dev, so a static call would warn
+    # "undefined function" at compile time. The task only runs under :test.
+    # credo:disable-for-next-line Credo.Check.Refactor.Apply
     apply(Credence.BehaviourEquivalence, :eval_outcome, [thunk, compare_messages?])
   end
 

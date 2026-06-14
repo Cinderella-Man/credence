@@ -79,7 +79,7 @@ defmodule Credence.FixTestsTaskTest do
   end
   '''
 
-  test "collapses a `result =~ …` run into one inline `fix(...) == \"\"\"…\"\"\"`" do
+  test ~s[collapses a `result =~ …` run into one inline `fix(...) == """…"""`] do
     in_temp(@tilde_shape, fn path ->
       FixTests.fix_file(path)
       out = File.read!(path)

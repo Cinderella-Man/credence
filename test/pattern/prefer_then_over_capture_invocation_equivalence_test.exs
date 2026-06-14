@@ -18,7 +18,7 @@ defmodule Credence.Pattern.PreferThenOverCaptureInvocationEquivalenceTest do
       """,
       rule: PreferThenOverCaptureInvocation,
       vars: [:number],
-      inputs: [1, 121, 123, 0, 12321, 1001, 42, -5, 1000]
+      inputs: [1, 121, 123, 0, 12_321, 1001, 42, -5, 1000]
     )
   end
 

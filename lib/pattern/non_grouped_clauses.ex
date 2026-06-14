@@ -131,8 +131,9 @@ defmodule Credence.Pattern.NonGroupedClauses do
     # groupings too). Skipping just those strays lets the safe clauses regroup.
     stray_set =
       stray_set
-      |> Enum.reject(&preceded_by_attr?(body, &1))
-      |> Enum.reject(&multi_statement_body?(Enum.at(body, &1)))
+      |> Enum.reject(fn i ->
+        preceded_by_attr?(body, i) or multi_statement_body?(Enum.at(body, i))
+      end)
       |> MapSet.new()
 
     if MapSet.size(stray_set) == 0 do

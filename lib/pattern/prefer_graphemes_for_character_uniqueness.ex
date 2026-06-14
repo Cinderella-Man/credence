@@ -62,47 +62,47 @@ defmodule Credence.Pattern.PreferGraphemesForCharacterUniqueness do
       Macro.prewalk(ast, [], fn
         # Full pipeline: Enum.count() |> (&(&1 == String.length(var))).()
         {:|>, pipe_meta, [left, capture_invocation]} = node, patches ->
-          case capture_invocation do
-            # Match the capture invocation pattern: (&expr).()
-            {{:., _, [capture_expr = {:&, _, [{:==, _, _}]}]}, _, []} ->
-              if enum_count_step?(rightmost_pipe_end(left)) do
-                case find_and_replace_charlist(left) do
-                  {:ok, new_left} ->
-                    # Build the replacement string
-                    # The capture expr has the comparison, render it
-                    clean_capture = strip_parens_meta(capture_expr)
-                    then_call = {:then, [], [clean_capture]}
-                    new_pipe = {:|>, pipe_meta, [new_left, then_call]}
-                    rendered = Sourceror.to_string(new_pipe)
-
-                    # Build patch covering from the | > to end of invocation
-                    pipe_range = Sourceror.get_range(node)
-
-                    case pipe_range do
-                      %Sourceror.Range{} = range ->
-                        patch = %{range: range, change: rendered}
-                        {node, [patch | patches]}
-
-                      _ ->
-                        {node, patches}
-                    end
-
-                  :error ->
-                    {node, patches}
-                end
-              else
-                {node, patches}
-              end
-
-            _ ->
-              {node, patches}
-          end
+          rewrite_count_pipe(node, pipe_meta, left, capture_invocation, patches)
 
         node, patches ->
           {node, patches}
       end)
 
     Enum.reverse(patches)
+  end
+
+  # Rewrite `Enum.count(...) |> (&(&1 == String.length(var))).()` to the
+  # grapheme form; returns the (possibly unchanged) `{node, patches}` accumulator.
+  defp rewrite_count_pipe(node, pipe_meta, left, capture_invocation, patches) do
+    case capture_invocation do
+      # Match the capture invocation pattern: (&expr).()
+      {{:., _, [capture_expr = {:&, _, [{:==, _, _}]}]}, _, []} ->
+        if enum_count_step?(rightmost_pipe_end(left)) do
+          case find_and_replace_charlist(left) do
+            {:ok, new_left} ->
+              clean_capture = strip_parens_meta(capture_expr)
+              then_call = {:then, [], [clean_capture]}
+              new_pipe = {:|>, pipe_meta, [new_left, then_call]}
+              rendered = Sourceror.to_string(new_pipe)
+
+              case Sourceror.get_range(node) do
+                %Sourceror.Range{} = range ->
+                  {node, [%{range: range, change: rendered} | patches]}
+
+                _ ->
+                  {node, patches}
+              end
+
+            :error ->
+              {node, patches}
+          end
+        else
+          {node, patches}
+        end
+
+      _ ->
+        {node, patches}
+    end
   end
 
   # Strip parens and closing metadata from AST nodes to avoid rendering issues

@@ -146,7 +146,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
           # parameters. When it does, we must use a `when` guard instead
           # of renaming variables (which would create unreachable clauses).
           var_equalities = extract_var_equalities(condition, call)
-          has_var_equalities? = length(var_equalities) > 0
+          has_var_equalities? = var_equalities != []
 
           guard_names =
             if existing_guard, do: collect_var_names(existing_guard), else: MapSet.new()

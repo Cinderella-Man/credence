@@ -101,15 +101,15 @@ defmodule Credence.Pattern.PreferTupleDestructureAfterWithIndex do
 
   # Walk the left side of a pipe to check if `Enum.with_index()` appears.
   defp pipe_contains_with_index?({:|>, _, [left, right]}) do
-    is_with_index?(right) or pipe_contains_with_index?(left)
+    with_index?(right) or pipe_contains_with_index?(left)
   end
 
-  defp pipe_contains_with_index?(node), do: is_with_index?(node)
+  defp pipe_contains_with_index?(node), do: with_index?(node)
 
-  defp is_with_index?({{:., _, [{:__aliases__, _, [:Enum]}, :with_index]}, _, args})
+  defp with_index?({{:., _, [{:__aliases__, _, [:Enum]}, :with_index]}, _, args})
        when is_list(args), do: true
 
-  defp is_with_index?(_), do: false
+  defp with_index?(_), do: false
 
   # Build a patch that replaces `var1, var2` with `{var1, var2}` in the fn head.
   defp build_destructure_patch(

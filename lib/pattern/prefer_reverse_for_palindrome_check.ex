@@ -68,19 +68,7 @@ defmodule Credence.Pattern.PreferReverseForPalindromeCheck do
     case extract_do_body(ast) do
       {:ok, stmts} ->
         if contains_palindrome_helper_pattern?(stmts) do
-          RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
-            Macro.prewalk(input, fn
-              {:__block__, meta, stmts} = node when is_list(stmts) ->
-                if contains_palindrome_helper_pattern?(stmts) do
-                  {:__block__, meta, rebuild_body(stmts)}
-                else
-                  node
-                end
-
-              node ->
-                node
-            end)
-          end)
+          RuleHelpers.patches_from_ast_transform(ast, source, &rebuild_palindrome_blocks/1)
         else
           []
         end
@@ -88,6 +76,20 @@ defmodule Credence.Pattern.PreferReverseForPalindromeCheck do
       :error ->
         []
     end
+  end
+
+  defp rebuild_palindrome_blocks(input) do
+    Macro.prewalk(input, fn
+      {:__block__, meta, stmts} = node when is_list(stmts) ->
+        if contains_palindrome_helper_pattern?(stmts) do
+          {:__block__, meta, rebuild_body(stmts)}
+        else
+          node
+        end
+
+      node ->
+        node
+    end)
   end
 
   defp extract_do_body({:defmodule, _, [_, kw]}) when is_list(kw) do
@@ -205,7 +207,7 @@ defmodule Credence.Pattern.PreferReverseForPalindromeCheck do
   defp recursive_call_in_branch?(_, _), do: false
 
   defp recursive_palindrome_call?({:palindrome_helper?, _, [list, incr, decr]}) do
-    increment?(incr) and decrement?(decr) and is_variable(list)
+    increment?(incr) and decrement?(decr) and variable?(list)
   end
 
   defp recursive_palindrome_call?({:__block__, _, [inner]}),
@@ -221,8 +223,8 @@ defmodule Credence.Pattern.PreferReverseForPalindromeCheck do
   defp decrement?({:-, _, [_, 1]}), do: true
   defp decrement?(_), do: false
 
-  defp is_variable({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
-  defp is_variable(_), do: false
+  defp variable?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
+  defp variable?(_), do: false
 
   defp rebuild_body(stmts) do
     Enum.flat_map(stmts, fn

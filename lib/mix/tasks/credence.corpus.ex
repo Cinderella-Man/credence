@@ -24,6 +24,8 @@ defmodule Mix.Tasks.Credence.Corpus do
 
   use Mix.Task
 
+  alias Credence.Corpus.Findings
+
   @impl Mix.Task
   def run(args) do
     Mix.Task.run("compile")
@@ -55,8 +57,8 @@ defmodule Mix.Tasks.Credence.Corpus do
   end
 
   defp update_snapshot do
-    lines = Credence.Corpus.Findings.all()
-    path = Credence.Corpus.Findings.snapshot_path()
+    lines = Findings.all()
+    path = Findings.snapshot_path()
     File.write!(path, snapshot_header() <> Enum.join(lines, "\n") <> "\n")
 
     Mix.shell().info(

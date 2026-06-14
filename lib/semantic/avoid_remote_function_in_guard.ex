@@ -57,32 +57,32 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuard do
   def fix(source, _diagnostic) do
     case parse(source) do
       {:ok, ast} ->
-        transformed = transform(ast)
-
-        if transformed == ast do
-          source
-        else
-          rendered = Sourceror.to_string(transformed)
-
-          case Sourceror.parse_string(rendered) do
-            {:ok, re_parsed} ->
-              patches = Credence.RuleHelpers.patches_from_diff(ast, re_parsed)
-
-              if patches == [] do
-                source
-              else
-                result = Sourceror.patch_string(source, patches)
-                if result == source, do: source, else: result
-              end
-
-            {:error, _} ->
-              source
-          end
-        end
+        apply_fix(source, ast, transform(ast))
 
       :error ->
         source
     end
+  end
+
+  defp apply_fix(source, ast, transformed) when transformed == ast, do: source
+
+  defp apply_fix(source, ast, transformed) do
+    rendered = Sourceror.to_string(transformed)
+
+    case Sourceror.parse_string(rendered) do
+      {:ok, re_parsed} ->
+        apply_patches(source, Credence.RuleHelpers.patches_from_diff(ast, re_parsed))
+
+      {:error, _} ->
+        source
+    end
+  end
+
+  defp apply_patches(source, []), do: source
+
+  defp apply_patches(source, patches) do
+    result = Sourceror.patch_string(source, patches)
+    if result == source, do: source, else: result
   end
 
   defp line(%{position: {line, _col}}), do: line

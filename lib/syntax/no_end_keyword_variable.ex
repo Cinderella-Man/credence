@@ -59,7 +59,7 @@ defmodule Credence.Syntax.NoEndKeywordVariable do
       indent_levels = MapSet.new(assignment_lines, fn {_, indent} -> indent end)
 
       lines
-      |> Enum.map(fn line ->
+      |> Enum.map_join("\n", fn line ->
         cond do
           # Assignment: `end = expr` -> `result = expr`
           Regex.match?(@assignment_pattern, line) ->
@@ -73,7 +73,6 @@ defmodule Credence.Syntax.NoEndKeywordVariable do
             line
         end
       end)
-      |> Enum.join("\n")
     else
       source
     end

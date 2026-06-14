@@ -342,13 +342,12 @@ defmodule Credence.Syntax.NoWhileKeyword do
 
     reindented =
       ctx.body_lines
-      |> Enum.map(fn line ->
+      |> Enum.map_join("\n", fn line ->
         case String.starts_with?(line, body_src_indent) do
           true -> body_i <> String.replace_prefix(line, body_src_indent, "")
           false -> body_i <> String.trim_leading(line)
         end
       end)
-      |> Enum.join("\n")
 
     # Catchall first (no guard), then recursive case with positive guard
     "#{def_indent}defp #{name}(#{base_params}), do: #{last_val}\n" <>

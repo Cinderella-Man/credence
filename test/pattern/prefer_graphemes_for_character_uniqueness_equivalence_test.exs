@@ -10,8 +10,8 @@ defmodule Credence.Pattern.PreferGraphemesForCharacterUniquenessEquivalenceTest 
   use Credence.RuleCase, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.Pattern.PreferGraphemesForCharacterUniqueness
   alias Credence.EquivalenceInputs, as: B
+  alias Credence.Pattern.PreferGraphemesForCharacterUniqueness
 
   test "fix preserves behaviour for single-codepoint strings" do
     assert_equivalent(

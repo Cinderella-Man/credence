@@ -90,7 +90,7 @@ defmodule Credence.Pattern.PreferCondForNestedIfCheckTest do
       issues = check(PreferCondForNestedIf, code)
       # The outermost if (a/b) is flagged, and the inner if (b/c) is flagged
       # after prewalk processes the outer first, the inner cond is still checked
-      assert length(issues) >= 1
+      assert issues != []
     end
 
     test "used as expression" do

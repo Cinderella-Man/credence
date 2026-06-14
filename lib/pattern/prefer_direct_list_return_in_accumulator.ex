@@ -104,7 +104,7 @@ defmodule Credence.Pattern.PreferDirectListReturnInAccumulator do
       {:ok, body} ->
         case extract_tuple_pair(body) do
           {:ok, first, second} ->
-            is_param_var?(first, params) and is_empty_list_literal?(second)
+            param_var?(first, params) and empty_list_literal?(second)
 
           :error ->
             false
@@ -132,7 +132,7 @@ defmodule Credence.Pattern.PreferDirectListReturnInAccumulator do
 
   defp extract_tuple_pair(_), do: :error
 
-  defp is_param_var?({name, _, ctx}, params)
+  defp param_var?({name, _, ctx}, params)
        when is_atom(name) and (is_nil(ctx) or is_atom(ctx)) do
     Enum.any?(params, fn
       {^name, _, _} -> true
@@ -140,14 +140,14 @@ defmodule Credence.Pattern.PreferDirectListReturnInAccumulator do
     end)
   end
 
-  defp is_param_var?(_, _), do: false
+  defp param_var?(_, _), do: false
 
-  defp is_empty_list_literal?({:__block__, _meta, [[]]}), do: true
-  defp is_empty_list_literal?(_), do: false
+  defp empty_list_literal?({:__block__, _meta, [[]]}), do: true
+  defp empty_list_literal?(_), do: false
 
   # Find callers that destructure the result as {var, _} = fn_call(...)
   defp find_destructure_caller(
-         {:=, _meta,
+         {:=, assign_meta,
           [
             {:__block__, _block_meta, [{{var_name, _, var_ctx}, {:_, _, _}}]},
             {fn_name, _call_meta, _args}
@@ -157,19 +157,16 @@ defmodule Credence.Pattern.PreferDirectListReturnInAccumulator do
        when is_atom(var_name) and (is_nil(var_ctx) or is_atom(var_ctx)) and
               is_atom(fn_name) do
     if Map.has_key?(base_case_fns, fn_name) do
-      line = get_line_from_caller(var_name, var_ctx)
-      {:ok, fn_name, line}
+      # Line of the `{var, _} = fn(...)` caller. (The variable's *context* —
+      # 3rd tuple element — is an atom/nil, never the meta; read the line from
+      # the assignment node's meta instead.)
+      {:ok, fn_name, Keyword.get(assign_meta, :line)}
     else
       :error
     end
   end
 
   defp find_destructure_caller(_, _), do: :error
-
-  defp get_line_from_caller(_var_name, var_ctx) when is_list(var_ctx),
-    do: Keyword.get(var_ctx, :line)
-
-  defp get_line_from_caller(_, _), do: nil
 
   # Rewrite nodes: change {acc, []} base cases to acc, and {var, _} = fn() to var = fn()
   defp rewrite_node(
