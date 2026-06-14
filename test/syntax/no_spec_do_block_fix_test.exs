@@ -124,6 +124,64 @@ defmodule Credence.Syntax.NoSpecDoBlockFixTest do
     assert fix(input) == expected
   end
 
+  test "converts @spec do with type spec to @spec" do
+    input = """
+    defmodule Solution do
+      @spec do
+        def find_majority_element(list) :: integer()
+      end
+
+      def find_majority_element(list) do
+        -1
+      end
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      @spec find_majority_element(list) :: integer()
+
+      def find_majority_element(list) do
+        -1
+      end
+    end
+    """
+
+    assert fix(input) == expected
+  end
+
+  test "fixed type-spec output no longer flags" do
+    assert analyze(
+             fix("""
+             defmodule Solution do
+               @spec do
+                 def find_majority_element(list) :: integer()
+               end
+
+               def find_majority_element(list) do
+                 -1
+               end
+             end
+             """)
+           ) == []
+  end
+
+  test "fixed type-spec output is well-formed (parses)" do
+    assert valid_syntax?(
+             fix("""
+             defmodule Solution do
+               @spec do
+                 def find_majority_element(list) :: integer()
+               end
+
+               def find_majority_element(list) do
+                 -1
+               end
+             end
+             """)
+           )
+  end
+
   test "leaves already-clean source unchanged" do
     input = """
     defmodule Solution do

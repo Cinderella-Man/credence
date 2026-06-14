@@ -7,12 +7,17 @@ defmodule Credence.Syntax.NoSpecDoBlock do
   an extra `end`, as if `@spec` were a block statement. This is invalid
   Elixir — `@spec` takes a type expression, not a `do` block.
 
-  The rule strips the spurious `@spec do` line and its matching `end`,
-  dedenting the content between them, leaving the function definition
-  intact and compilable. No behavior change — specs are metadata, and
-  the original never compiled.
+  Two fix strategies depending on the content:
 
-  ## Bad (won't parse)
+    * **Body block** — when the content is a function with a `do ... end`
+      body, the rule strips the spurious `@spec do` line and its matching
+      `end`, dedenting the content between them.
+
+    * **Spec line** — when the content is a single `def name(...) :: type`
+      line (no body), the rule produces `@spec name(...) :: type`,
+      removing the `def` prefix and the `do ... end` wrapper.
+
+  ## Bad (won't parse — body block)
 
       @spec do
         def my_sqrt(number) when number >= 0 do
@@ -25,6 +30,16 @@ defmodule Credence.Syntax.NoSpecDoBlock do
       def my_sqrt(number) when number >= 0 do
         number
       end
+
+  ## Bad (won't parse — spec line)
+
+      @spec do
+        def find_majority_element(list) :: integer()
+      end
+
+  ## Good
+
+      @spec find_majority_element(list) :: integer()
   """
   use Credence.Syntax.Rule
 
@@ -57,7 +72,7 @@ defmodule Credence.Syntax.NoSpecDoBlock do
     lines = String.split(source, "\n")
 
     # Find all @spec do lines and their matching end lines
-    removals =
+    all_blocks =
       lines
       |> Enum.with_index(0)
       |> Enum.flat_map(fn {line, idx} ->
@@ -71,30 +86,53 @@ defmodule Credence.Syntax.NoSpecDoBlock do
         end
       end)
 
-    # Build sets of indices to remove and ranges to dedent
-    remove_set = MapSet.new(Enum.flat_map(removals, fn {s, e, _} -> [s, e] end))
+    # Separate spec-like blocks (single def ... :: ... line) from body blocks
+    {spec_blocks, body_blocks} =
+      Enum.split_with(all_blocks, fn {s, e, _} ->
+        spec_like_content?(lines, s, e)
+      end)
 
-    dedent_ranges =
-      Enum.map(removals, fn {s, e, indent} ->
+    # Body blocks: remove @spec do / end, dedent content between
+    body_remove = MapSet.new(Enum.flat_map(body_blocks, fn {s, e, _} -> [s, e] end))
+
+    body_dedent =
+      Enum.map(body_blocks, fn {s, e, indent} ->
         {s + 1, e - 1, indent}
       end)
 
-    # Process lines: remove @spec do / end, dedent content between
+    # Spec blocks: replace @spec do with @spec ..., remove content + end
+    spec_remove = MapSet.new(Enum.flat_map(spec_blocks, fn {s, e, _} -> Enum.to_list(s..e) end))
+
+    spec_replace =
+      Map.new(Enum.map(spec_blocks, fn {s, e, indent} ->
+        content = extract_spec_content(lines, s, e)
+        new_line = String.duplicate(" ", indent) <> "@spec " <> content
+        {s, new_line}
+      end))
+
+    # Combined remove set
+    remove_set = MapSet.union(body_remove, spec_remove)
+
+    # Process lines: remove/replaced @spec do blocks, dedent body content
     lines
     |> Enum.with_index(0)
-    |> Enum.map(fn {line, idx} ->
-      if MapSet.member?(remove_set, idx) do
-        nil
-      else
-        dedent =
-          Enum.find_value(dedent_ranges, 0, fn {lo, hi, ind} ->
-            if idx >= lo and idx <= hi, do: ind, else: nil
-          end)
+    |> Enum.flat_map(fn {line, idx} ->
+      cond do
+        MapSet.member?(remove_set, idx) and Map.has_key?(spec_replace, idx) ->
+          [Map.fetch!(spec_replace, idx)]
 
-        if dedent > 0, do: dedent_line(line, dedent), else: line
+        MapSet.member?(remove_set, idx) ->
+          []
+
+        true ->
+          dedent =
+            Enum.find_value(body_dedent, 0, fn {lo, hi, ind} ->
+              if idx >= lo and idx <= hi, do: ind, else: nil
+            end)
+
+          if dedent > 0, do: [dedent_line(line, dedent)], else: [line]
       end
     end)
-    |> Enum.reject(&is_nil/1)
     |> Enum.join("\n")
   end
 
@@ -149,6 +187,38 @@ defmodule Credence.Syntax.NoSpecDoBlock do
       else
         line
       end
+    end
+  end
+
+  # True when the content between @spec do and its matching end is a single
+  # `def name(...) :: type` line (no body). These need special handling:
+  # strip `def ` and produce a valid `@spec` attribute.
+  defp spec_like_content?(lines, start_idx, end_idx) do
+    content_lines = Enum.slice(lines, (start_idx + 1)..(end_idx - 1))
+    trimmed = content_lines |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+
+    case trimmed do
+      [single] ->
+        Regex.match?(~r/^\s*def\s+.*::/, single) and not Regex.match?(~r/\bdo\b(?!:)/, single)
+
+      _ ->
+        false
+    end
+  end
+
+  # Extract the spec content from a spec-like block: find the first non-blank
+  # line between @spec do and end, strip the `def ` prefix.
+  defp extract_spec_content(lines, start_idx, end_idx) do
+    content_lines = Enum.slice(lines, (start_idx + 1)..(end_idx - 1))
+
+    content_line =
+      Enum.find_value(content_lines, fn line ->
+        if String.trim(line) != "", do: String.trim(line)
+      end)
+
+    case content_line do
+      nil -> ""
+      line -> Regex.replace(~r/^def\s+/, line, "")
     end
   end
 end

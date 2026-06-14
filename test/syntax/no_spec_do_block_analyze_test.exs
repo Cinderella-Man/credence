@@ -46,6 +46,21 @@ defmodule Credence.Syntax.NoSpecDoBlockAnalyzeTest do
            """) == []
   end
 
+  test "flags @spec do with def ... :: ... (type spec without body)" do
+    assert [%Issue{rule: :no_spec_do_block, meta: %{line: 2}}] =
+             analyze("""
+             defmodule Solution do
+               @spec do
+                 def find_majority_element(list) :: integer()
+               end
+
+               def find_majority_element(list) do
+                 -1
+               end
+             end
+             """)
+  end
+
   test "leaves good code alone" do
     assert analyze("""
            defmodule Solution do
