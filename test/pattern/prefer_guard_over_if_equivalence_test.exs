@@ -31,4 +31,35 @@ defmodule Credence.Pattern.PreferGuardOverIfEquivalenceTest do
       inputs: [1, -1, 0, 100, -50]
     )
   end
+
+  @var_eq_before """
+  defmodule Compress do
+    def process([], _index, result, current_char, count) do
+      result <> Integer.to_string(count)
+    end
+
+    def process([current_char | rest], index, result, prev_char, count) do
+      if current_char == prev_char do
+        process(rest, index + 1, result, prev_char, count + 1)
+      else
+        new_result = result <> prev_char <> Integer.to_string(count)
+        process(rest, index + 1, new_result, current_char, 1)
+      end
+    end
+  end
+  """
+
+  test "var == var equality body → guarded clauses preserve dispatch" do
+    assert_equivalent_module(@var_eq_before,
+      rule: PreferGuardOverIf,
+      call: {:process, 5},
+      inputs: [
+        [~c"aaabbb", 0, "", ?a, 3],
+        [~c"aabb", 0, "", ?a, 2],
+        [~c"ab", 0, "", ?a, 1],
+        [~c"bba", 0, "a3", ?b, 2],
+        [~c"a", 0, "", ?a, 1]
+      ]
+    )
+  end
 end

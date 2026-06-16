@@ -96,15 +96,16 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   end
 
   # Match def/defp with explicit body keyword list
-  defp check_node({def_kind, meta, [_head, body_kw]})
+  defp check_node({def_kind, meta, [head, body_kw]})
        when def_kind in [:def, :defp] and is_list(body_kw) do
     body = extract_body(body_kw)
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition) and not simple_equality_with_literal?(condition),
-          do: {:ok, meta[:line]},
-          else: :error
+        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
+             not head_has_bitstring?(head),
+           do: {:ok, meta[:line]},
+           else: :error
 
       :error ->
         :error
@@ -113,40 +114,74 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   defp check_node(_), do: :error
 
+  # A function head containing a binary/bitstring pattern (`<<c::utf8, rest::binary>>`)
+  # is skipped: the clause-splitting rewrite re-renders the head and
+  # `underscore_unused_params/2` mistakes the segment type specifiers (`utf8`,
+  # `binary`, …) for unused variables, underscoring them into `_utf8`/`_binary`
+  # — invalid specifiers that don't compile (the reverted bug).
+  defp head_has_bitstring?(head_ast) do
+    {_node, found?} =
+      Macro.prewalk(head_ast, false, fn
+        {:<<>>, _, _} = node, _acc -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found?
+  end
+
   defp try_build_patch({def_kind, _meta, [head_ast, body_kw]} = node)
        when def_kind in [:def, :defp] and is_list(body_kw) do
     body = extract_body(body_kw)
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) do
+        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
+             not head_has_bitstring?(head_ast) do
           {call, existing_guard} = extract_head_parts(head_ast)
           {do_body, else_body} = extract_branches(body)
 
           range = Sourceror.get_range(node)
 
+          # Check if the condition contains var == var equalities between
+          # parameters. When it does, we must use a `when` guard instead
+          # of renaming variables (which would create unreachable clauses).
+          var_equalities = extract_var_equalities(condition, call)
+          has_var_equalities? = var_equalities != []
+
           guard_names =
             if existing_guard, do: collect_var_names(existing_guard), else: MapSet.new()
 
           # Build first clause: defp call when condition do do_body end
-          # Underscore-prefix any params unused in guard + condition + do_body
-          first_guard = combine_guards(existing_guard, condition)
+          # For var == var conditions, keep the original condition as a guard.
+          first_combined_guard = combine_guards(existing_guard, condition)
+          first_guard = first_combined_guard
 
           first_used =
             guard_names
-            |> MapSet.union(collect_var_names(condition))
             |> MapSet.union(collect_var_names(do_body))
+            |> MapSet.union(collect_var_names(first_guard))
 
-          first_call = underscore_unused_params(call, first_used)
-          first_head = build_head(first_call, first_guard)
+          first_head = build_head(underscore_unused_params(call, first_used), first_guard)
           first_clause = {def_kind, [], [first_head, [do: do_body]]}
           first_text = Sourceror.to_string(first_clause)
 
           # Build second clause: defp call [when existing_guard] do else_body end
-          # Underscore-prefix any params unused in guard + else_body
-          second_used = MapSet.union(guard_names, collect_var_names(else_body))
-          second_call = underscore_unused_params(call, second_used)
-          second_head = build_head(second_call, existing_guard)
+          # For var == var equalities, the second clause is the catch-all
+          # (no guard from the if condition). Otherwise, negate the guard.
+          second_guard =
+            if has_var_equalities? do
+              # Keep only the existing guard (if any) for the else branch
+              existing_guard
+            else
+              existing_guard
+            end
+
+          second_used =
+            guard_names
+            |> MapSet.union(collect_var_names(else_body))
+            |> MapSet.union(collect_var_names(second_guard))
+
+          second_head = build_head(underscore_unused_params(call, second_used), second_guard)
           second_clause = {def_kind, [], [second_head, [do: else_body]]}
           second_text = Sourceror.to_string(second_clause)
 
@@ -315,6 +350,55 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   defp build_head(call, nil), do: call
   defp build_head(call, guard), do: {:when, [], [call, guard]}
+
+  # -- var-equality detection -----------------------------------------------
+
+  # Extract var == var equalities from the guard condition where both sides
+  # appear as parameters in the function head. Returns [{left_name, right_name}].
+  defp extract_var_equalities(condition, call) do
+    param_names = collect_param_names(call)
+
+    {_ast, equalities} =
+      Macro.prewalk(condition, [], fn
+        {op, _, [left, right]} = node, acc when op in [:==, :===] ->
+          case {var_name(left), var_name(right)} do
+            {l, r} when is_atom(l) and is_atom(r) and l != r ->
+              if l in param_names and r in param_names do
+                {node, [{l, r} | acc]}
+              else
+                {node, acc}
+              end
+
+            _ ->
+              {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.uniq(equalities)
+  end
+
+  # Collect all parameter variable names from a function call head.
+  defp collect_param_names(call) do
+    {_, names} =
+      Macro.prewalk(call, MapSet.new(), fn
+        {name, _, ctx} = node, acc
+        when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) and name != :_ ->
+          {node, MapSet.put(acc, name)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
+  end
+
+  # Extract the variable name from an AST node, handling __block__ wrappers.
+  defp var_name({name, _, ctx}) when is_atom(name) and (is_atom(ctx) or is_nil(ctx)), do: name
+  defp var_name({:__block__, _, [expr]}), do: var_name(expr)
+  defp var_name(_), do: nil
 
   # Collect all variable names referenced in an AST subtree.
   defp collect_var_names(ast) do
