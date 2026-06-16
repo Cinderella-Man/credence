@@ -1,4 +1,3 @@
-lib/pattern/no_bare_value_in_map_new.ex
 lib/pattern/no_case_true_false.ex
 lib/pattern/no_doc_false_on_private.ex
 lib/pattern/no_duplicate_function_clauses.ex
@@ -123,9 +122,6 @@ test/pattern/hallucinated_guard_fix_test.exs
 test/pattern/no_anon_fn_application_in_pipe_check_test.exs
 test/pattern/no_anon_fn_application_in_pipe_equivalence_test.exs
 test/pattern/no_anon_fn_application_in_pipe_fix_test.exs
-test/pattern/no_bare_value_in_map_new_check_test.exs
-test/pattern/no_bare_value_in_map_new_equivalence_test.exs
-test/pattern/no_bare_value_in_map_new_fix_test.exs
 test/pattern/no_capture_fn_apply_equivalence_test.exs
 test/pattern/no_capture_fn_apply_fix_test.exs
 test/pattern/no_case_boolean_result_check_test.exs
