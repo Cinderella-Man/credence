@@ -50,3 +50,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_integer_undigits_fix_test.exs`
 - Reason: not behavior-preserving — Integer.undigits/1 raises where the reduce returns a value: digit>=base (e.g. [12,5]: 125 vs ArgumentError), float elements (raise vs value), and any non-list enumerable (range/MapSet/stream — reduce accepts Enumerable, undigits requires a list). Check fires on syntactic reduce shape where enum is a variable, never statically provable to be an in-range integer list; only safe narrowing is a literal digit list (degenerate, matches no real code). Same no-safe-core outcome as prefer_integer_to_binary/prefer_integer_digits followups.
 
+## prefer_map_intersect_over_mapset_intersection — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_map_intersect_over_mapset_intersection.ex`
+  - `test/pattern/prefer_map_intersect_over_mapset_intersection_check_test.exs`
+  - `test/pattern/prefer_map_intersect_over_mapset_intersection_equivalence_test.exs`
+  - `test/pattern/prefer_map_intersect_over_mapset_intersection_fix_test.exs`
+- Reason: check flags bare pipeline the fix won't touch (check/fix disagree); wildcard merge_expr breaks on element-reference/side-effect ordering, common_keys binding deleted even if reused, and elem/2 crashes the fix on non-variable map args — no clean safe core without a full rewrite + intractable purity bound.
+
