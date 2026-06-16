@@ -34,3 +34,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_integer_digits_for_first_digit_fix_test.exs`
 - Reason: float input diverges (string path returns first digit, Integer.digits/1 raises) and base-type can't be proven integer statically — no safe core; fix also drops intermediate pipe ops (div(3)) by rebuilding from leftmost base.
 
+## prefer_integer_to_binary_for_bit_length — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_integer_to_binary_for_bit_length.ex`
+  - `test/pattern/prefer_integer_to_binary_for_bit_length_check_test.exs`
+  - `test/pattern/prefer_integer_to_binary_for_bit_length_equivalence_test.exs`
+  - `test/pattern/prefer_integer_to_binary_for_bit_length_fix_test.exs`
+- Reason: not behavior-preserving — float floor(:math.log(n)/:math.log(2))+1 diverges from integer_to_binary bit-length on 153+ large integers (e.g. n=2^48-1: 49 vs 48); added when n<0 clause changes function domain (crash→value); no statically-bounded safe core.
+
