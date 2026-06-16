@@ -5,7 +5,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateCheckTest do
   alias Credence.Pattern.NoDocFalseOnPrivate
 
   describe "does not flag" do
-    test "defp without @doc false" do
+    test "defp without @doc" do
       assert clean?(NoDocFalseOnPrivate, """
              defmodule Good do
                defp helper(x), do: x + 1
@@ -51,14 +51,31 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateCheckTest do
       assert issue.meta.line != nil
     end
 
-    test "multiple @doc false before defp" do
+    test "@doc with a string before defp" do
+      issues =
+        check(NoDocFalseOnPrivate, """
+        defmodule Bad do
+          @doc "Helper that finds the first unique character."
+          defp find_first_unique(string), do: string
+        end
+        """)
+
+      assert length(issues) == 1
+      issue = hd(issues)
+      assert %Issue{} = issue
+      assert issue.rule == :no_doc_false_on_private
+      assert issue.message =~ "redundant"
+      assert issue.meta.line != nil
+    end
+
+    test "multiple @doc before defp" do
       issues =
         check(NoDocFalseOnPrivate, """
         defmodule Bad do
           @doc false
           defp helper1(x), do: x + 1
 
-          @doc false
+          @doc "Some doc"
           defp helper2(x), do: x * 2
         end
         """)
@@ -71,6 +88,18 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateCheckTest do
         check(NoDocFalseOnPrivate, """
         defmodule Bad do
           @doc false
+          defp helper(x) when is_integer(x), do: x + 1
+        end
+        """)
+
+      assert length(issues) == 1
+    end
+
+    test "@doc with a string before a guarded defp" do
+      issues =
+        check(NoDocFalseOnPrivate, """
+        defmodule Bad do
+          @doc "Guarded helper"
           defp helper(x) when is_integer(x), do: x + 1
         end
         """)

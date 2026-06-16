@@ -158,7 +158,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
 
     test "pipe into case with multi-line true body" do
       assert flagged?(NoCaseTrueFalse, """
-             check(x)
+             valid?(x)
              |> case do
                true ->
                  value = process(x)

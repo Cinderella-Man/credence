@@ -3,8 +3,8 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
 
   alias Credence.Pattern.NoDocFalseOnPrivate
 
-  describe "removes a redundant @doc false before a defp" do
-    test "single defp" do
+  describe "removes a redundant @doc before a defp" do
+    test "single defp with @doc false" do
       input = """
       defmodule Bad do
         @doc false
@@ -21,13 +21,30 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
-    test "multiple defps — drops each @doc false, keeps the blank line between them" do
+    test "single defp with @doc string" do
+      input = """
+      defmodule Bad do
+        @doc "Helper that finds the first unique character."
+        defp find_first_unique(string), do: string
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        defp find_first_unique(string), do: string
+      end
+      """
+
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
+    end
+
+    test "multiple defps — drops each @doc, keeps the blank line between them" do
       input = """
       defmodule Bad do
         @doc false
         defp helper1(x), do: x + 1
 
-        @doc false
+        @doc "Some doc"
         defp helper2(x), do: x * 2
       end
       """
@@ -43,7 +60,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
-    test "guarded defp" do
+    test "guarded defp with @doc false" do
       input = """
       defmodule Bad do
         @doc false
@@ -54,6 +71,46 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       expected = """
       defmodule Bad do
         defp helper(x) when is_integer(x), do: x + 1
+      end
+      """
+
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
+    end
+
+    test "guarded defp with @doc string" do
+      input = """
+      defmodule Bad do
+        @doc "Guarded helper"
+        defp helper(x) when is_integer(x), do: x + 1
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        defp helper(x) when is_integer(x), do: x + 1
+      end
+      """
+
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
+    end
+
+    test "mix of public @doc and private @doc — only removes private ones" do
+      input = """
+      defmodule Mixed do
+        @doc "Public function"
+        def public_fn(x), do: helper(x)
+
+        @doc "Private helper"
+        defp helper(x), do: x + 1
+      end
+      """
+
+      expected = """
+      defmodule Mixed do
+        @doc "Public function"
+        def public_fn(x), do: helper(x)
+
+        defp helper(x), do: x + 1
       end
       """
 
@@ -67,6 +124,17 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       defmodule Good do
         @doc false
         def internal_api(x), do: x + 1
+      end
+      """
+
+      confirm_fix(fix(NoDocFalseOnPrivate, code), code)
+    end
+
+    test "@doc string on a public function" do
+      code = """
+      defmodule Good do
+        @doc "Does something"
+        def process(x), do: x + 1
       end
       """
 

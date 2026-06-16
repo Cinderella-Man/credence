@@ -1,6 +1,3 @@
-lib/pattern/no_case_true_false.ex
-lib/pattern/no_doc_false_on_private.ex
-lib/pattern/no_duplicate_function_clauses.ex
 lib/pattern/no_duplicate_spec.ex
 lib/pattern/no_find_value_default_case.ex
 lib/pattern/no_group_by_for_frequencies.ex
@@ -128,8 +125,6 @@ test/pattern/no_case_boolean_result_check_test.exs
 test/pattern/no_case_boolean_result_fix_test.exs
 test/pattern/no_case_destructure_in_pipe_fix_test.exs
 test/pattern/no_case_on_param_dispatch_fix_test.exs
-test/pattern/no_case_true_false_check_test.exs
-test/pattern/no_case_true_false_fix_test.exs
 test/pattern/no_case_tuple_guard_dispatch_fix_test.exs
 test/pattern/no_chunk_by_identity_for_dedup_equivalence_test.exs
 test/pattern/no_chunk_by_identity_for_dedup_fix_test.exs
@@ -140,14 +135,8 @@ test/pattern/no_dead_map_update_check_test.exs
 test/pattern/no_dead_map_update_equivalence_test.exs
 test/pattern/no_dead_map_update_fix_test.exs
 test/pattern/no_destructure_reconstruct_fix_test.exs
-test/pattern/no_doc_false_on_private_check_test.exs
-test/pattern/no_doc_false_on_private_equivalence_test.exs
-test/pattern/no_doc_false_on_private_fix_test.exs
 test/pattern/no_double_filter_fix_test.exs
 test/pattern/no_double_sort_same_list_fix_test.exs
-test/pattern/no_duplicate_function_clauses_check_test.exs
-test/pattern/no_duplicate_function_clauses_equivalence_test.exs
-test/pattern/no_duplicate_function_clauses_fix_test.exs
 test/pattern/no_duplicate_spec_check_test.exs
 test/pattern/no_duplicate_spec_equivalence_test.exs
 test/pattern/no_duplicate_spec_fix_test.exs
