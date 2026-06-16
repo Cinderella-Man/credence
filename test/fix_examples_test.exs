@@ -40,13 +40,13 @@ defmodule Credence.FixExamplesTest do
       Enum.map_join(1..n, ", ", fn x -> fizz_or_buzz(x) end)
     end
 
-    def divisible?(n, d), do: rem(n, d) == 0
+    def is_divisible(n, d), do: rem(n, d) == 0
 
     defp fizz_or_buzz(n) do
       cond do
-        divisible?(n, 15) -> "FizzBuzz"
-        divisible?(n, 3) -> "Fizz"
-        divisible?(n, 5) -> "Buzz"
+        is_divisible(n, 15) -> "FizzBuzz"
+        is_divisible(n, 3) -> "Fizz"
+        is_divisible(n, 5) -> "Buzz"
         true -> Integer.to_string(n)
       end
     end
@@ -102,12 +102,12 @@ defmodule Credence.FixExamplesTest do
       String.graphemes(text) |> Enum.map_join(fn c -> shift_char(c, -shift) end)
     end
 
-    def letter?(char) do
+    def is_letter(char) do
       String.match?(char, ~r/[a-zA-Z]/)
     end
 
     defp shift_char(char, shift) do
-      if letter?(char) do
+      if is_letter(char) do
         base = if char >= "a" and char <= "z", do: ?a, else: ?A
         <<rem(hd(String.to_charlist(char)) - base + shift + 26, 26) + base>>
       else
@@ -156,7 +156,7 @@ defmodule Credence.FixExamplesTest do
       else
         sorted = Enum.sort(nums, :desc)
         max_val = Enum.at(sorted, 0)
-        min_val = List.last(sorted)
+        min_val = Enum.at(sorted, -1)
         total = Enum.sum(nums)
         mean = :erlang.float(total / Enum.count(nums))
         %{max: max_val, min: min_val, mean: mean, count: Enum.count(nums)}
@@ -213,7 +213,7 @@ defmodule Credence.FixExamplesTest do
       |> Enum.take(n)
     end
 
-    def common_word?(word) do
+    def is_common_word(word) do
       word |> String.downcase() |> Kernel.in(["the", "a", "an", "is", "of", "to"])
     end
   end

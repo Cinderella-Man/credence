@@ -1159,8 +1159,8 @@ defmodule CredenceTest do
             sorted_desc = Enum.sort(words, :desc)
             top_3 = Enum.sort(words, :desc) |> Enum.take(3) |> Enum.reverse()
 
-            sorted_desc_reversed = Enum.reverse(sorted_desc)
-            [last, second_last | _] = sorted_desc_reversed
+            last = Enum.at(sorted_desc, -1)
+            second_last = Enum.at(sorted_desc, -2)
 
             unique_words = words |> Enum.uniq()
             unique_csv = Enum.map_join(unique_words, ",", fn w -> String.upcase(w) end)
@@ -1173,12 +1173,12 @@ defmodule CredenceTest do
               last: last,
               second_last: second_last,
               unique_csv: unique_csv,
-              palindrome: palindrome?(text)
+              palindrome: is_palindrome(text)
             }
           end
         end
 
-        def palindrome?(text) do
+        def is_palindrome(text) do
           cleaned = text |> String.downcase() |> String.replace(~r/[^a-z0-9]/, "")
           reversed = String.reverse(cleaned)
           cleaned == reversed
