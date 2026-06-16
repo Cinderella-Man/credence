@@ -92,3 +92,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_direct_string_check_over_complex_enum_fix_test.exs`
 - Reason: fix deletes an arbitrary Enum.all?(...) statement (any args accepted) treating its discarded value as dead; that expression can raise/have side effects, so removal diverges (BEFORE raises, AFTER returns true) — no tractable pure-only safe core; rule is also overfit to literal var names pattern/full_pattern.
 
+## prefer_enum_frequencies — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_enum_frequencies.ex`
+  - `test/pattern/prefer_enum_frequencies_check_test.exs`
+  - `test/pattern/prefer_enum_frequencies_equivalence_test.exs`
+  - `test/pattern/prefer_enum_frequencies_fix_test.exs`
+- Reason: not behavior-preserving — group_by(id,id)|>map(count) yields a list whose order ≠ Enum.frequencies map enumeration order for >32 distinct keys; the flagship stable Enum.sort with a tie-only comparator leaks that order into the result. No tractable safe core (sort/sort_by is order-sensitive under ties).
+
