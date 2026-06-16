@@ -1,4 +1,3 @@
-lib/pattern/avoid_length_guard_less_than2.ex
 lib/pattern/no_bare_value_in_map_new.ex
 lib/pattern/no_case_true_false.ex
 lib/pattern/no_doc_false_on_private.ex
@@ -120,9 +119,6 @@ test/pattern/avoid_graphemes_enum_count_with_predicate_fix_test.exs
 test/pattern/avoid_graphemes_length_check_test.exs
 test/pattern/avoid_graphemes_length_equivalence_test.exs
 test/pattern/avoid_graphemes_length_fix_test.exs
-test/pattern/avoid_length_guard_less_than2_check_test.exs
-test/pattern/avoid_length_guard_less_than2_equivalence_test.exs
-test/pattern/avoid_length_guard_less_than2_fix_test.exs
 test/pattern/hallucinated_guard_fix_test.exs
 test/pattern/no_anon_fn_application_in_pipe_check_test.exs
 test/pattern/no_anon_fn_application_in_pipe_equivalence_test.exs
