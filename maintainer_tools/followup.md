@@ -100,3 +100,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_enum_frequencies_fix_test.exs`
 - Reason: not behavior-preserving — group_by(id,id)|>map(count) yields a list whose order ≠ Enum.frequencies map enumeration order for >32 distinct keys; the flagship stable Enum.sort with a tie-only comparator leaks that order into the result. No tractable safe core (sort/sort_by is order-sensitive under ties).
 
+## prefer_enum_frequencies_over_group_by — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_enum_frequencies_over_group_by.ex`
+  - `test/pattern/prefer_enum_frequencies_over_group_by_check_test.exs`
+  - `test/pattern/prefer_enum_frequencies_over_group_by_equivalence_test.exs`
+  - `test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs`
+- Reason: duplicate of live no_group_by_for_frequencies — it already flags the identity group_by→count (piped, multi-step, and direct Map.new forms) and rewrites to Enum.frequencies_by(enum, & &1); fold the identity special-case (emit frequencies/1) into that rule instead of shipping a second overlapping rule. Rule itself is behavior-preserving (map collectors → === maps), but the fix-the-overlap edit lives outside this set.
+

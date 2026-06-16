@@ -1,4 +1,3 @@
-lib/pattern/prefer_enum_frequencies_over_group_by.ex
 lib/pattern/prefer_explicit_binary_arithmetic.ex
 lib/pattern/prefer_float_round.ex
 lib/pattern/prefer_frequencies_over_group_by.ex
@@ -241,9 +240,6 @@ test/pattern/no_zip_then_map_fix_test.exs
 test/pattern/prefer_desc_sort_over_negative_take_check_test.exs
 test/pattern/prefer_desc_sort_over_negative_take_equivalence_test.exs
 test/pattern/prefer_desc_sort_over_negative_take_fix_test.exs
-test/pattern/prefer_enum_frequencies_over_group_by_check_test.exs
-test/pattern/prefer_enum_frequencies_over_group_by_equivalence_test.exs
-test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs
 test/pattern/prefer_enum_reverse_two_equivalence_test.exs
 test/pattern/prefer_enum_reverse_two_fix_test.exs
 test/pattern/prefer_enum_slice_check_test.exs
