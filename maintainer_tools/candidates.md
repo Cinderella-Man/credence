@@ -1,4 +1,3 @@
-lib/pattern/no_list_foldl.ex
 lib/pattern/no_map_keys_or_values_for_iteration.ex
 lib/pattern/no_missing_require_logger.ex
 lib/pattern/no_redundant_assignment.ex
@@ -182,9 +181,6 @@ test/pattern/no_list_duplicate_flatten_equivalence_test.exs
 test/pattern/no_list_duplicate_flatten_fix_test.exs
 test/pattern/no_list_duplicate_join_equivalence_test.exs
 test/pattern/no_list_duplicate_join_fix_test.exs
-test/pattern/no_list_foldl_check_test.exs
-test/pattern/no_list_foldl_equivalence_test.exs
-test/pattern/no_list_foldl_fix_test.exs
 test/pattern/no_list_pop_at_for_access_equivalence_test.exs
 test/pattern/no_list_pop_at_for_access_fix_test.exs
 test/pattern/no_literal_list_typespec_check_test.exs
