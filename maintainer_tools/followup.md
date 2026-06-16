@@ -74,3 +74,12 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_negate_if_true_false_fix_test.exs`
 - Reason: overlaps live no_if_true_false (double-fires in analyze on `if cond do false else <bool-expr/true> end`; no_if_true_false collapses those first/better). Safe + has a unique non-boolean-else core, but de-duping needs folding no_if_true_false's territory check — a shared-file decision, out of scope.
 
+## prefer_pattern_matching_for_empty_string — 2026-06-17
+- Files:
+  - `lib/pattern/prefer_pattern_matching_for_empty_string.ex`
+  - `test/pattern/prefer_pattern_matching_for_empty_string_check_test.exs`
+  - `test/pattern/prefer_pattern_matching_for_empty_string_equivalence_test.exs`
+  - `test/pattern/prefer_pattern_matching_for_empty_string_fix_test.exs`
+  - `test/pattern/prefer_pattern_matching_for_empty_string_property_test.exs`
+- Reason: unsafe — String.trim(var)=="" rewritten to ""-pattern-match diverges on whitespace strings (e.g. " "), which single_codepoint_graphemes admits; trim's whitespace semantics are orthogonal to the codepoint promise, no safe narrow core, property test masks it via an unenforced no-whitespace guard.
+
