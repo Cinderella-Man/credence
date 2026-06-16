@@ -1,4 +1,3 @@
-lib/pattern/avoid_duplicate_enum_at.ex
 lib/pattern/avoid_length_guard_less_than2.ex
 lib/pattern/no_bare_value_in_map_new.ex
 lib/pattern/no_case_true_false.ex
@@ -111,16 +110,7 @@ lib/syntax/prefer_recursion_over_while.ex
 lib/syntax/prefer_scan_over_scanl.ex
 lib/syntax/prefer_single_doc_attribute.ex
 lib/syntax/prefer_spec_arrow_operator.ex
-test/corpus/accepted_findings.txt
-test/corpus/over_firing_test.exs
-test/credence_pipeline_test.exs
-test/credence_test.exs
-test/fix_examples_test.exs
-test/fix_showcase_test.exs
 test/pattern/assumptions_filtering_test.exs
-test/pattern/avoid_duplicate_enum_at_check_test.exs
-test/pattern/avoid_duplicate_enum_at_equivalence_test.exs
-test/pattern/avoid_duplicate_enum_at_fix_test.exs
 test/pattern/avoid_graphemes_enum_count_check_test.exs
 test/pattern/avoid_graphemes_enum_count_equivalence_test.exs
 test/pattern/avoid_graphemes_enum_count_fix_test.exs
