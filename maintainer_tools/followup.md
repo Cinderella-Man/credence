@@ -58,3 +58,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_map_intersect_over_mapset_intersection_fix_test.exs`
 - Reason: check flags bare pipeline the fix won't touch (check/fix disagree); wildcard merge_expr breaks on element-reference/side-effect ordering, common_keys binding deleted even if reused, and elem/2 crashes the fix on non-variable map args — no clean safe core without a full rewrite + intractable purity bound.
 
+## prefer_map_size — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_map_size.ex`
+  - `test/pattern/prefer_map_size_check_test.exs`
+  - `test/pattern/prefer_map_size_equivalence_test.exs`
+  - `test/pattern/prefer_map_size_fix_test.exs`
+- Reason: duplicate — both shapes (Map.keys|>Enum.count and Enum.count(Map.keys)) already flagged by live no_enum_count_for_length (Map.keys is in its @list_returning); prefer_map_size's scope is a strict subset. Fold the Map.keys(var) case into that rule to emit map_size/1, which requires editing a file outside this set.
+

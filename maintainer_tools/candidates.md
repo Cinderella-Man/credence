@@ -1,4 +1,3 @@
-lib/pattern/prefer_map_size.ex
 lib/pattern/prefer_mapset_for_set_equality.ex
 lib/pattern/prefer_multi_clause_reduce_fn.ex
 lib/pattern/prefer_negate_if_true_false.ex
@@ -235,9 +234,6 @@ test/pattern/prefer_erlang_float_check_test.exs
 test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
 test/pattern/prefer_map_put_new_fix_test.exs
-test/pattern/prefer_map_size_check_test.exs
-test/pattern/prefer_map_size_equivalence_test.exs
-test/pattern/prefer_map_size_fix_test.exs
 test/pattern/prefer_mapset_for_set_equality_check_test.exs
 test/pattern/prefer_mapset_for_set_equality_equivalence_test.exs
 test/pattern/prefer_mapset_for_set_equality_fix_test.exs
