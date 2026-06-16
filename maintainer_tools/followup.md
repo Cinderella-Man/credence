@@ -91,3 +91,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_prepend_in_accumulator_fix_test.exs`
 - Reason: unsafe — List.last(acc) reads the tail but the fix substitutes head (front) and swaps append→prepend; equivalent only for single-element accumulator seeds. Public build_groups/2 admits multi-element seeds ([5,1]→before [[2,1,5]] vs after [[5,1],[2]]); equivalence test masks it with single-element seeds only. No safe core (can't prove acc is single-element at entry).
 
+## prefer_remove_unused_private_fn_param — 2026-06-17
+- Files:
+  - `lib/pattern/prefer_remove_unused_private_fn_param.ex`
+  - `test/pattern/prefer_remove_unused_private_fn_param_check_test.exs`
+  - `test/pattern/prefer_remove_unused_private_fn_param_equivalence_test.exs`
+  - `test/pattern/prefer_remove_unused_private_fn_param_fix_test.exs`
+- Reason: unsafe — removing a defp param deletes the call-site arg expr (drops side effects/raises, e.g. compute(x, IO.puts("hi"))→compute(x)); call/head rewrite is arity-blind (foo/2+foo/3 → duplicate foo(a) clauses + undefined vars, won't compile), strands &name/2 captures, and groups defp globally across modules. No safe narrow core.
+
