@@ -114,4 +114,23 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
       assert issue.message =~ "Enum.all?"
     end
   end
+
+  # Safe-core boundary: a `&(...)` capture whose body ends in a CALL has an
+  # unreliable Sourceror range (the patch would orphan the capture's `)`), so
+  # the rule must NOT fire — while range-safe captures still do.
+  describe "skips a call-ending &(...) capture (range-unreliable)" do
+    test "&(not blank?(&1)) — body ends in a call" do
+      assert check(NoMapKeysOrValuesForIteration, "Enum.all?(Map.keys(m), &(not blank?(&1)))") ==
+               []
+    end
+
+    test "&(String.upcase(&1)) — body ends in a remote call" do
+      assert check(NoMapKeysOrValuesForIteration, "Enum.all?(Map.keys(m), &(String.upcase(&1)))") ==
+               []
+    end
+
+    test "still flags a literal-ending capture &(&1 > 0)" do
+      assert [%Issue{}] = check(NoMapKeysOrValuesForIteration, "Enum.all?(Map.keys(m), &(&1 > 0))")
+    end
+  end
 end

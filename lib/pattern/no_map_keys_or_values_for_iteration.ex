@@ -136,10 +136,14 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
         case args do
           [{{:., _, [{:__aliases__, _, [:Map]}, map_fn]}, _, [map_expr]} | enum_args]
           when map_fn in @map_funcs ->
-            pick(
-              fix_nested(enum_fn, dot_meta, alias_meta, call_meta, map_fn, map_expr, enum_args),
+            if safe_callbacks?(enum_args) do
+              pick(
+                fix_nested(enum_fn, dot_meta, alias_meta, call_meta, map_fn, map_expr, enum_args),
+                node
+              )
+            else
               node
-            )
+            end
 
           _ ->
             node
@@ -152,7 +156,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
          {{:., _, [{:__aliases__, _, [:Enum]}, enum_fn]}, _, enum_args}
        ]} = node
       when map_fn in @map_funcs ->
-        pick(fix_pipe(enum_fn, pipe_meta, map_fn, map_expr, enum_args), node)
+        if safe_callbacks?(enum_args),
+          do: pick(fix_pipe(enum_fn, pipe_meta, map_fn, map_expr, enum_args), node),
+          else: node
 
       # Pattern 3 — triple pipe:  map |> Map.<map_fn>() |> Enum.<enum_fn>(...)
       {:|>, pipe_meta,
@@ -161,7 +167,9 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
          {{:., _, [{:__aliases__, _, [:Enum]}, enum_fn]}, _, enum_args}
        ]} = node
       when map_fn in @map_funcs ->
-        pick(fix_pipe(enum_fn, pipe_meta, map_fn, map_expr, enum_args), node)
+        if safe_callbacks?(enum_args),
+          do: pick(fix_pipe(enum_fn, pipe_meta, map_fn, map_expr, enum_args), node),
+          else: node
 
       node ->
         node
@@ -694,6 +702,63 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   end
 
   defp fixable?(enum_fn, args) do
-    enum_fn in @fixable_funcs and not (enum_fn == :group_by and length(args) < 2)
+    enum_fn in @fixable_funcs and not (enum_fn == :group_by and length(args) < 2) and
+      safe_callbacks?(args)
   end
+
+  # The rule converts a `&(...)` capture callback to a `fn`, but Sourceror
+  # under-reports the source range of a parenthesized `&(...)` whose body ENDS
+  # IN A CALL — the range stops at the inner call's `)` and omits the capture's
+  # own `)`, so the patch would orphan a paren (`fn … end)`, non-compiling). The
+  # conversion is correct; only the patch range is wrong, and only for that
+  # shape. So we fire only when every callback is range-safe: a `fn`, a
+  # `&foo/1`, or a `&(...)` whose body ends in a literal / variable / capture
+  # arg (`&1`) — never a call.
+  defp safe_callbacks?(args), do: Enum.all?(args, &safe_callback?/1)
+
+  defp safe_callback?({:&, _, [{:/, _, _}]}), do: true
+  defp safe_callback?({:&, _, [body]}), do: ends_in_literal_or_var?(body)
+  defp safe_callback?(_), do: true
+
+  @recurse_ops [
+    :==,
+    :!=,
+    :===,
+    :!==,
+    :<,
+    :>,
+    :<=,
+    :>=,
+    :+,
+    :-,
+    :*,
+    :/,
+    :and,
+    :or,
+    :&&,
+    :||,
+    :++,
+    :--,
+    :<>,
+    :in,
+    :|>,
+    :"..",
+    :not,
+    :!,
+    :|
+  ]
+
+  defp ends_in_literal_or_var?({:__block__, _, [inner]}), do: ends_in_literal_or_var?(inner)
+
+  defp ends_in_literal_or_var?({op, _, args}) when op in @recurse_ops and is_list(args),
+    do: ends_in_literal_or_var?(List.last(args))
+
+  defp ends_in_literal_or_var?({:&, _, [n]}) when is_integer(n), do: true
+  defp ends_in_literal_or_var?({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: true
+
+  defp ends_in_literal_or_var?(lit)
+       when is_integer(lit) or is_float(lit) or is_atom(lit) or is_binary(lit),
+       do: true
+
+  defp ends_in_literal_or_var?(_), do: false
 end

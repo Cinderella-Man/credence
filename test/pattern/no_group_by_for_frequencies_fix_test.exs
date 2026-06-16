@@ -32,7 +32,8 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       |> Map.new(fn {k, g} -> {k, Enum.count(g)} end)
       """
 
-      expected = "Enum.frequencies_by(list, & &1)"
+      # identity key_fn → the cleaner `Enum.frequencies/1`
+      expected = "Enum.frequencies(list)"
 
       confirm_fix(fix(NoGroupByForFrequencies, code), expected)
     end
@@ -44,9 +45,30 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       |> Map.new(fn {key, group} -> {key, Kernel.length(group)} end)
       """
 
-      expected = "Enum.frequencies_by(list, fn x -> x end)"
+      # identity key_fn (`fn x -> x end`) → the cleaner `Enum.frequencies/1`
+      expected = "Enum.frequencies(list)"
 
       confirm_fix(fix(NoGroupByForFrequencies, code), expected)
+    end
+
+    test "head-position group_by/2 piped to Map.new (non-identity) → frequencies_by" do
+      confirm_fix(
+        fix(
+          NoGroupByForFrequencies,
+          "Enum.group_by(words, &String.downcase/1) |> Map.new(fn {k, g} -> {k, length(g)} end)"
+        ),
+        "Enum.frequencies_by(words, &String.downcase/1)"
+      )
+    end
+
+    test "head-position group_by/2 (identity) piped to Enum.into(%{}) → frequencies" do
+      confirm_fix(
+        fix(
+          NoGroupByForFrequencies,
+          "Enum.group_by(list, & &1) |> Enum.into(%{}, fn {k, g} -> {k, length(g)} end)"
+        ),
+        "Enum.frequencies(list)"
+      )
     end
 
     test "preserves leading pipe steps as the enum source" do
@@ -132,9 +154,12 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesFixTest do
       confirm_fix(fix(NoGroupByForFrequencies, code), code)
     end
 
-    test "head-position group_by in a pipe" do
+    # group_by/3 in head position carries a value_fun, which frequencies_by/2
+    # never calls — dropping a side-effecting value_fun would change the answer,
+    # so this stays a no-op (only group_by/2 head-position is rewritten).
+    test "head-position group_by/3 with a value_fun is left unchanged" do
       code = """
-      Enum.group_by(words, &String.downcase/1)
+      Enum.group_by(words, &String.downcase/1, fn x -> x.id end)
       |> Map.new(fn {key, group} -> {key, length(group)} end)
       """
 

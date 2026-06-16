@@ -180,15 +180,14 @@ defmodule Credence.Pattern.NoGroupByForFrequenciesCheckTest do
       assert check(NoGroupByForFrequencies, code) == []
     end
 
-    # Head-position group_by in a pipe: `Enum.group_by(enum, kf) |> Map.new(...)`.
-    # The enum lives inside the group_by call rather than in an earlier pipe
-    # step, which the fix does not extract — so flagging it would mean a finding
-    # with no fix. Out of the safe core.
-    test "head-position group_by in a pipe" do
+    # Head-position group_by/3 carries a value_fun, which frequencies_by/2 never
+    # calls — dropping a side-effecting value_fun would change the answer. (The
+    # group_by/2 head-position form IS now handled — see the fix tests.)
+    test "head-position group_by/3 with a value_fun" do
       code = """
       defmodule M do
         def freq(words) do
-          Enum.group_by(words, &String.downcase/1)
+          Enum.group_by(words, &String.downcase/1, fn x -> x.id end)
           |> Map.new(fn {key, group} -> {key, length(group)} end)
         end
       end
