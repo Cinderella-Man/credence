@@ -131,3 +131,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_string_first_last_fix_test.exs`
 - Reason: semantics-blind + diverges on empty string — String.split_at("",1)→{"",""} so orig "" == nil (false) vs fix nil == nil (true); emptiness unprovable from AST. Also the case subject is unchecked (_subject ignored in check & fix), so it fires on any `case f(x) do {first,_rest} -> last = String.last(x); first == last end` lookalike and rewrites to String.first(x)==String.last(x). No safe narrow core.
 
+## prefer_tuple_for_random_access — 2026-06-17
+- Files:
+  - `lib/pattern/prefer_tuple_for_random_access.ex`
+  - `test/pattern/prefer_tuple_for_random_access_check_test.exs`
+  - `test/pattern/prefer_tuple_for_random_access_equivalence_test.exs`
+  - `test/pattern/prefer_tuple_for_random_access_fix_test.exs`
+- Reason: Enum.fetch!→List.to_tuple+elem diverges on negative index (returns vs raises), non-list enumerables (List.to_tuple raises on range/map/stream), and exception type; var-type/index-sign unprovable from AST, no safe core.
+
