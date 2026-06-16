@@ -107,3 +107,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_reverse_for_palindrome_check_fix_test.exs`
 - Reason: semantics-blind match — fires on lookalikes that aren't palindrome checks (if-condition, base-case body, else branch, and Enum.at assignments are all unchecked wildcards) and forcibly rewrites to list == Enum.reverse(list); proven divergence (flipped !=/false-base lookalike returns true on [1,2,3,1] vs fix's false). Even a fully-locked core diverges on non-list inputs (length raises ArgumentError vs fix returns false on maps). No safe narrow core; also overfit to hardcoded names palindrome_check/palindrome_helper?.
 
+## prefer_string_at_for_char_access — 2026-06-17
+- Files:
+  - `lib/pattern/prefer_string_at_for_char_access.ex`
+  - `test/pattern/prefer_string_at_for_char_access_check_test.exs`
+  - `test/pattern/prefer_string_at_for_char_access_equivalence_test.exs`
+  - `test/pattern/prefer_string_at_for_char_access_fix_test.exs`
+- Reason: semantics-blind — fires on any x = List.to_string([y]) (y opaque var); fix <<y::utf8>> raises ArgumentError on binary/charlist y (valid List.to_string inputs return a string), and y's integer-codepoint-ness is unprovable from the AST, so no safe narrow core. Also rebinds body_var globally ignoring shadowing.
+
