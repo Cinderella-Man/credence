@@ -1,4 +1,3 @@
-lib/pattern/prefer_heredoc_for_multi_line_doc.ex
 lib/pattern/prefer_integer_digits_for_first_digit.ex
 lib/pattern/prefer_integer_to_binary_for_bit_length.ex
 lib/pattern/prefer_integer_undigits.ex
@@ -242,7 +241,6 @@ test/pattern/prefer_enum_split_fix_test.exs
 test/pattern/prefer_erlang_float_check_test.exs
 test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
-test/pattern/prefer_heredoc_for_multi_line_doc_fix_test.exs
 test/pattern/prefer_integer_digits_for_first_digit_check_test.exs
 test/pattern/prefer_integer_digits_for_first_digit_equivalence_test.exs
 test/pattern/prefer_integer_digits_for_first_digit_fix_test.exs

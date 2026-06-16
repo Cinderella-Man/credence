@@ -20,3 +20,9 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_function_clauses_for_list_patterns_fix_test.exs`
 - Reason: unsafe — fires on non-total list cases (CaseClauseError→FunctionClauseError) and its "already-covered" dropping ignores guards/clause-order, silently dropping a live case branch (f([],5): :a→:after); safe narrow guts flagship fixtures and overlaps accepted no_case_on_param_dispatch.
 
+## prefer_heredoc_for_multi_line_doc — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_heredoc_for_multi_line_doc.ex`
+  - `test/pattern/prefer_heredoc_for_multi_line_doc_fix_test.exs`
+- Reason: delta swaps per-node patches for whole-file Sourceror.to_string render, which reformats unrelated code (e.g. `x+1`→`x + 1`, `z=y`→`z = y`) on any non-formatter-clean input — diverges from exact-same-answer bar.
+
