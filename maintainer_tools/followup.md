@@ -68,3 +68,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_bitshift_over_math_pow_for_power_of2_fix_test.exs`
 - Reason: unsafe — trunc(2^x) ≠ 2^trunc(x) for non-integer x (2.5→5 vs 4) and pow overflows/raises for x≥1024 while shift returns a bignum; no non-degenerate safe core.
 
+## prefer_chunk_over_indexed_reduce — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_chunk_over_indexed_reduce.ex`
+  - `test/pattern/prefer_chunk_over_indexed_reduce_check_test.exs`
+  - `test/pattern/prefer_chunk_over_indexed_reduce_equivalence_test.exs`
+  - `test/pattern/prefer_chunk_over_indexed_reduce_fix_test.exs`
+- Reason: overfit template substitution — fix hardcodes a peak-count rewrite ignoring init acc / branch return values / boundary comparisons, and even the exact canonical snippet diverges under :strict (single-element [{}]/[%{}]/[[]] → orig 1, rewrite 0, since out-of-bounds Enum.at returns nil < tuple/map/list); no safe non-degenerate core.
+

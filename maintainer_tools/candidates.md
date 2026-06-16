@@ -1,4 +1,3 @@
-lib/pattern/prefer_chunk_over_indexed_reduce.ex
 lib/pattern/prefer_comprehension_for_filtered_range.ex
 lib/pattern/prefer_concat_over_flat_map_identity.ex
 lib/pattern/prefer_cond_for_nested_if.ex
@@ -247,9 +246,6 @@ test/pattern/no_unless_else_fix_test.exs
 test/pattern/no_zip_then_map_check_test.exs
 test/pattern/no_zip_then_map_equivalence_test.exs
 test/pattern/no_zip_then_map_fix_test.exs
-test/pattern/prefer_chunk_over_indexed_reduce_check_test.exs
-test/pattern/prefer_chunk_over_indexed_reduce_equivalence_test.exs
-test/pattern/prefer_chunk_over_indexed_reduce_fix_test.exs
 test/pattern/prefer_comprehension_for_filtered_range_check_test.exs
 test/pattern/prefer_comprehension_for_filtered_range_equivalence_test.exs
 test/pattern/prefer_comprehension_for_filtered_range_fix_test.exs
