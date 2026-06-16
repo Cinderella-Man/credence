@@ -123,3 +123,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_string_capitalize_fix_test.exs`
 - Reason: manual first-char String.upcase pattern is not equivalent to String.capitalize/1 — diverges on Unicode special-casing (ß→SS vs Ss, ligature ﬁ→FI vs Fi, digraph ǆ→Ǆ vs ǅ); divergence is input-dependent and unprovable from the AST, so no safe narrow core. Also the fix hardcodes "capitalize_string(string)" while the check fires on any function name, renaming other-named defps and breaking their callers.
 
+## prefer_string_first_last — 2026-06-17
+- Files:
+  - `lib/pattern/prefer_string_first_last.ex`
+  - `test/pattern/prefer_string_first_last_check_test.exs`
+  - `test/pattern/prefer_string_first_last_equivalence_test.exs`
+  - `test/pattern/prefer_string_first_last_fix_test.exs`
+- Reason: semantics-blind + diverges on empty string — String.split_at("",1)→{"",""} so orig "" == nil (false) vs fix nil == nil (true); emptiness unprovable from AST. Also the case subject is unchecked (_subject ignored in check & fix), so it fires on any `case f(x) do {first,_rest} -> last = String.last(x); first == last end` lookalike and rewrites to String.first(x)==String.last(x). No safe narrow core.
+
