@@ -1,4 +1,3 @@
-lib/pattern/prefer_map_new_with_transform.ex
 lib/pattern/prefer_map_size.ex
 lib/pattern/prefer_mapset_for_set_equality.ex
 lib/pattern/prefer_multi_clause_reduce_fn.ex
@@ -235,9 +234,6 @@ test/pattern/prefer_enum_split_fix_test.exs
 test/pattern/prefer_erlang_float_check_test.exs
 test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
-test/pattern/prefer_map_new_with_transform_check_test.exs
-test/pattern/prefer_map_new_with_transform_equivalence_test.exs
-test/pattern/prefer_map_new_with_transform_fix_test.exs
 test/pattern/prefer_map_put_new_fix_test.exs
 test/pattern/prefer_map_size_check_test.exs
 test/pattern/prefer_map_size_equivalence_test.exs
