@@ -99,3 +99,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_remove_unused_private_fn_param_fix_test.exs`
 - Reason: unsafe — removing a defp param deletes the call-site arg expr (drops side effects/raises, e.g. compute(x, IO.puts("hi"))→compute(x)); call/head rewrite is arity-blind (foo/2+foo/3 → duplicate foo(a) clauses + undefined vars, won't compile), strands &name/2 captures, and groups defp globally across modules. No safe narrow core.
 
+## prefer_reverse_for_palindrome_check — 2026-06-17
+- Files:
+  - `lib/pattern/prefer_reverse_for_palindrome_check.ex`
+  - `test/pattern/prefer_reverse_for_palindrome_check_check_test.exs`
+  - `test/pattern/prefer_reverse_for_palindrome_check_equivalence_test.exs`
+  - `test/pattern/prefer_reverse_for_palindrome_check_fix_test.exs`
+- Reason: semantics-blind match — fires on lookalikes that aren't palindrome checks (if-condition, base-case body, else branch, and Enum.at assignments are all unchecked wildcards) and forcibly rewrites to list == Enum.reverse(list); proven divergence (flipped !=/false-base lookalike returns true on [1,2,3,1] vs fix's false). Even a fully-locked core diverges on non-list inputs (length raises ArgumentError vs fix returns false on maps). No safe narrow core; also overfit to hardcoded names palindrome_check/palindrome_helper?.
+

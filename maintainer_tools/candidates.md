@@ -1,4 +1,3 @@
-lib/pattern/prefer_reverse_for_palindrome_check.ex
 lib/pattern/prefer_sigil_charlist.ex
 lib/pattern/prefer_string_at_for_char_access.ex
 lib/pattern/prefer_string_capitalize.ex
@@ -224,9 +223,6 @@ test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
 test/pattern/prefer_map_put_new_fix_test.exs
 test/pattern/prefer_regex_match_fix_test.exs
-test/pattern/prefer_reverse_for_palindrome_check_check_test.exs
-test/pattern/prefer_reverse_for_palindrome_check_equivalence_test.exs
-test/pattern/prefer_reverse_for_palindrome_check_fix_test.exs
 test/pattern/prefer_sigil_charlist_check_test.exs
 test/pattern/prefer_sigil_charlist_equivalence_test.exs
 test/pattern/prefer_sigil_charlist_fix_test.exs
