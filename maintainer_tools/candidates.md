@@ -1,4 +1,3 @@
-lib/pattern/prefer_no_question_mark_for_non_boolean.ex
 lib/pattern/prefer_pattern_match_empty_string.ex
 lib/pattern/prefer_pattern_match_over_conditional_in_recursive_count.ex
 lib/pattern/prefer_pattern_matching_for_empty_string.ex
@@ -231,9 +230,6 @@ test/pattern/prefer_erlang_float_check_test.exs
 test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
 test/pattern/prefer_map_put_new_fix_test.exs
-test/pattern/prefer_no_question_mark_for_non_boolean_check_test.exs
-test/pattern/prefer_no_question_mark_for_non_boolean_equivalence_test.exs
-test/pattern/prefer_no_question_mark_for_non_boolean_fix_test.exs
 test/pattern/prefer_pattern_match_empty_string_check_test.exs
 test/pattern/prefer_pattern_match_empty_string_equivalence_test.exs
 test/pattern/prefer_pattern_match_empty_string_fix_test.exs
