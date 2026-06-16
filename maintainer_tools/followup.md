@@ -44,3 +44,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/no_redundant_local_capture_fix_test.exs`
 - Reason: scope-blind fix silently miscompiles — global var map rewrites every same-named var.(args) module-wide (a/n calls bar instead of foo) and whole-line removal drops neighboring statements' side effects; both pass the compile gate. Needs per-scope matching, a rewrite not a narrowing.
 
+## no_unused_computation — 2026-06-16
+- Files:
+  - `lib/pattern/no_unused_computation.ex`
+  - `test/pattern/no_unused_computation_check_test.exs`
+  - `test/pattern/no_unused_computation_equivalence_test.exs`
+  - `test/pattern/no_unused_computation_fix_test.exs`
+- Reason: premise conflates purity with totality — every positive case (length/String.length/String.graphemes/abs/Enum.reverse, plus div/hd/String.to_integer) is partial and raises on some admitted input, so deleting the discarded call drops a crash; safe core (only is_*/total guards) is degenerate and excludes 100% of demonstrated cases.
+
