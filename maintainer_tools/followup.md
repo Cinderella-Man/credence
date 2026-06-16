@@ -42,3 +42,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_integer_to_binary_for_bit_length_fix_test.exs`
 - Reason: not behavior-preserving — float floor(:math.log(n)/:math.log(2))+1 diverges from integer_to_binary bit-length on 153+ large integers (e.g. n=2^48-1: 49 vs 48); added when n<0 clause changes function domain (crash→value); no statically-bounded safe core.
 
+## prefer_integer_undigits — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_integer_undigits.ex`
+  - `test/pattern/prefer_integer_undigits_check_test.exs`
+  - `test/pattern/prefer_integer_undigits_equivalence_test.exs`
+  - `test/pattern/prefer_integer_undigits_fix_test.exs`
+- Reason: not behavior-preserving — Integer.undigits/1 raises where the reduce returns a value: digit>=base (e.g. [12,5]: 125 vs ArgumentError), float elements (raise vs value), and any non-list enumerable (range/MapSet/stream — reduce accepts Enumerable, undigits requires a list). Check fires on syntactic reduce shape where enum is a variable, never statically provable to be an in-range integer list; only safe narrowing is a literal digit list (degenerate, matches no real code). Same no-safe-core outcome as prefer_integer_to_binary/prefer_integer_digits followups.
+
