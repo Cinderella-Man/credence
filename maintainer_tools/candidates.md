@@ -1,4 +1,3 @@
-lib/pattern/prefer_concat_over_flat_map_identity.ex
 lib/pattern/prefer_cond_for_nested_if.ex
 lib/pattern/prefer_counts_for_length.ex
 lib/pattern/prefer_direct_list_return_in_accumulator.ex
@@ -245,9 +244,6 @@ test/pattern/no_unless_else_fix_test.exs
 test/pattern/no_zip_then_map_check_test.exs
 test/pattern/no_zip_then_map_equivalence_test.exs
 test/pattern/no_zip_then_map_fix_test.exs
-test/pattern/prefer_concat_over_flat_map_identity_check_test.exs
-test/pattern/prefer_concat_over_flat_map_identity_equivalence_test.exs
-test/pattern/prefer_concat_over_flat_map_identity_fix_test.exs
 test/pattern/prefer_cond_for_nested_if_check_test.exs
 test/pattern/prefer_cond_for_nested_if_equivalence_test.exs
 test/pattern/prefer_cond_for_nested_if_fix_test.exs
