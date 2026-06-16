@@ -1,4 +1,3 @@
-lib/pattern/prefer_graphemes_for_character_uniqueness.ex
 lib/pattern/prefer_guard_over_if.ex
 lib/pattern/prefer_heredoc_for_multi_line_doc.ex
 lib/pattern/prefer_integer_digits_for_first_digit.ex
@@ -244,10 +243,6 @@ test/pattern/prefer_enum_split_fix_test.exs
 test/pattern/prefer_erlang_float_check_test.exs
 test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
-test/pattern/prefer_graphemes_for_character_uniqueness_check_test.exs
-test/pattern/prefer_graphemes_for_character_uniqueness_equivalence_test.exs
-test/pattern/prefer_graphemes_for_character_uniqueness_fix_test.exs
-test/pattern/prefer_graphemes_for_character_uniqueness_property_test.exs
 test/pattern/prefer_guard_over_if_check_test.exs
 test/pattern/prefer_guard_over_if_equivalence_test.exs
 test/pattern/prefer_guard_over_if_fix_test.exs
