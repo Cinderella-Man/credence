@@ -66,3 +66,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_map_size_fix_test.exs`
 - Reason: duplicate — both shapes (Map.keys|>Enum.count and Enum.count(Map.keys)) already flagged by live no_enum_count_for_length (Map.keys is in its @list_returning); prefer_map_size's scope is a strict subset. Fold the Map.keys(var) case into that rule to emit map_size/1, which requires editing a file outside this set.
 
+## prefer_negate_if_true_false — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_negate_if_true_false.ex`
+  - `test/pattern/prefer_negate_if_true_false_check_test.exs`
+  - `test/pattern/prefer_negate_if_true_false_equivalence_test.exs`
+  - `test/pattern/prefer_negate_if_true_false_fix_test.exs`
+- Reason: overlaps live no_if_true_false (double-fires in analyze on `if cond do false else <bool-expr/true> end`; no_if_true_false collapses those first/better). Safe + has a unique non-boolean-else core, but de-duping needs folding no_if_true_false's territory check — a shared-file decision, out of scope.
+
