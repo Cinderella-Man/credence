@@ -7,7 +7,8 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuard do
 
       cannot invoke remote function Module.function/arity inside a guard
 
-  The fix detects two consecutive `defp` clauses for the same function where:
+  The fix detects two consecutive `def`/`defp` clauses for the same function
+  where:
 
     1. The first has a `when` guard that contains a remote function call.
     2. The second is a plain fallback clause (no guard) with the same name/arity.
@@ -142,12 +143,14 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuard do
     end
   end
 
-  # Try to merge two consecutive defp clauses.
-  # Returns {:ok, merged_defp} or :error.
+  # Try to merge two consecutive def/defp clauses.
+  # Returns {:ok, merged_clause} or :error. Both clauses must share the same
+  # kind (a `def`/`defp` pair of the same name/arity can't coexist anyway).
   defp try_merge_defp_pair(
-         {:defp, meta1, [{:when, _when_meta, [head1, guard]}, body_kw1]},
-         {:defp, _meta2, [head2, body_kw2]}
-       ) do
+         {kind, meta1, [{:when, _when_meta, [head1, guard]}, body_kw1]},
+         {kind, _meta2, [head2, body_kw2]}
+       )
+       when kind in [:def, :defp] do
     with true <- same_function?(head1, head2),
          true <- guard_has_remote_call?(guard),
          {:ok, body1} <- extract_do_body(body_kw1),
@@ -163,9 +166,9 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuard do
            ]
          ]}
 
-      # Build the merged defp: use head1 (without when) + if body
+      # Build the merged clause: use head1 (without when) + if body
       new_body_kw = [{{:__block__, [], [:do]}, if_expr}]
-      {:ok, {:defp, meta1, [head1, new_body_kw]}}
+      {:ok, {kind, meta1, [head1, new_body_kw]}}
     else
       _ -> :error
     end

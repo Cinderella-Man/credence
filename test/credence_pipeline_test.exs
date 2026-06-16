@@ -80,10 +80,11 @@ defmodule Credence.PipelineTest do
 
       result = Credence.fix(source)
 
+      # Semantic prefixes `unused` → `_unused`; the pattern phase then removes
+      # the now-dead `_unused = 1` line (pure RHS, never read).
       expected = ~S"""
       defmodule CrdPT_UnusedVar do
         def example do
-          _unused = 1
           :ok
         end
       end
@@ -167,13 +168,13 @@ defmodule Credence.PipelineTest do
 
       result = Credence.fix(source)
 
-      # Semantic: unused → _unused; Pattern: Enum.reduce → Enum.sum
+      # Semantic: unused → _unused (then the dead line is removed);
+      # Pattern: Enum.reduce → Enum.sum
       expected = ~S"""
       defmodule CrdPT_MultiPhase do
         @doc "Sums a list."
         @spec total([number()]) :: number()
         def total(list) do
-          _unused = :ignored
           Enum.sum(list)
         end
       end
@@ -302,12 +303,13 @@ defmodule Credence.PipelineTest do
 
       result = Credence.fix(source)
 
+      # Pattern phase: Enum.reduce → Enum.sum, and the dead `_ignored = :ok`
+      # line (pure RHS, never read) is removed.
       expected = ~S"""
       defmodule CrdPT_CompilesWithWarning do
         @doc "Sums a list."
         @spec total([number()]) :: number()
         def total(list) do
-          _ignored = :ok
           Enum.sum(list)
         end
       end
@@ -822,7 +824,8 @@ defmodule Credence.PipelineTest do
 
       assert code_compiles?(result.code)
 
-      # Semantic should fix the unused var in Multi_B
+      # Semantic prefixes the unused var in Multi_B; the pattern phase then
+      # removes the dead `_unused = 2` line.
       expected = ~S"""
       defmodule CrdPT_Multi_A do
         def a, do: 1
@@ -830,7 +833,6 @@ defmodule Credence.PipelineTest do
 
       defmodule CrdPT_Multi_B do
         def b do
-          _unused = 2
           :ok
         end
       end

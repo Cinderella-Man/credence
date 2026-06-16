@@ -142,6 +142,47 @@ defmodule Credence.Semantic.AvoidRemoteFunctionInGuardFixTest do
     confirm_fix(fix(input), expected)
   end
 
+  test "merges public def clauses (compound or-guard) into if/else" do
+    input = """
+    defmodule Solution do
+      def convert(s, num_rows) when num_rows == 1 or num_rows >= String.length(s) do
+        s
+      end
+
+      def convert(s, _num_rows) do
+        s
+      end
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      def convert(s, num_rows) do
+        if num_rows == 1 or num_rows >= String.length(s) do
+          s
+        else
+          s
+        end
+      end
+    end
+    """
+
+    msg = "cannot invoke remote function String.length/1 inside a guard"
+    confirm_fix(fix(input, msg, 2), expected)
+  end
+
+  test "does not merge a mixed def/defp pair of the same name/arity" do
+    # A def and defp of the same name/arity can't coexist; never merge across kinds.
+    input = """
+    defmodule Example do
+      def foo(x) when MapSet.size(x) == 0, do: :empty
+      defp foo(x), do: x
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
   test "does not modify source without remote function calls in guard" do
     input = """
     defmodule Example do

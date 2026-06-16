@@ -767,6 +767,35 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
   end
 
+  describe "Enum.sum/2 → Enum.sum_by/2 (repair — sum with a mapper)" do
+    test "direct call with anonymous fn" do
+      confirm_fix(
+        fix(
+          "Enum.sum(1..n, fn k -> 1.0 / k end)",
+          "Enum.sum/2 is undefined or private. Did you mean:\n\n    * sum/1\n"
+        ),
+        "Enum.sum_by(1..n, fn k -> 1.0 / k end)"
+      )
+    end
+
+    test "piped" do
+      confirm_fix(
+        fix(
+          "1..n |> Enum.sum(fn k -> 1.0 / k end)",
+          "Enum.sum/2 is undefined or private"
+        ),
+        "1..n |> Enum.sum_by(fn k -> 1.0 / k end)"
+      )
+    end
+
+    test "valid Enum.sum/1 is untouched (no diagnostic, different arity)" do
+      confirm_fix(
+        fix("Enum.sum(numbers)", "Enum.last/1 is undefined or private"),
+        "Enum.sum(numbers)"
+      )
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "qualified: no-ops" do

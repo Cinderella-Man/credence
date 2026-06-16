@@ -64,6 +64,11 @@ defmodule Credence.Semantic.UndefinedFunction do
     # Wrong module
     {"Enum", "cycle", 1} => {:rename, "Stream", "cycle"},
 
+    # Enum.sum/2 does not exist (LLMs call sum with a mapper fn); the modern
+    # equivalent is Enum.sum_by/2 (same arg order, sums the mapper over each
+    # element). Repair — `Enum.sum/2` never compiles.
+    {"Enum", "sum", 2} => {:rename, "Enum", "sum_by"},
+
     # Hallucinated List.second — no such function, use Enum.at(list, 1)
     {"List", "second", 1} => {:rename_add_arg, "Enum", "at", "1"},
 
