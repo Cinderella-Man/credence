@@ -1,4 +1,3 @@
-lib/pattern/prefer_function_capture.ex
 lib/pattern/prefer_function_clauses_for_list_patterns.ex
 lib/pattern/prefer_graphemes_for_character_uniqueness.ex
 lib/pattern/prefer_guard_over_if.ex
@@ -246,9 +245,6 @@ test/pattern/prefer_enum_split_fix_test.exs
 test/pattern/prefer_erlang_float_check_test.exs
 test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
-test/pattern/prefer_function_capture_check_test.exs
-test/pattern/prefer_function_capture_equivalence_test.exs
-test/pattern/prefer_function_capture_fix_test.exs
 test/pattern/prefer_function_clauses_for_list_patterns_check_test.exs
 test/pattern/prefer_function_clauses_for_list_patterns_equivalence_test.exs
 test/pattern/prefer_function_clauses_for_list_patterns_fix_test.exs
