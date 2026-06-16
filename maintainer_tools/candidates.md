@@ -1,4 +1,3 @@
-lib/pattern/no_redundant_underscore_bind.ex
 lib/pattern/no_string_length_for_empty_check.ex
 lib/pattern/no_unused_computation.ex
 lib/pattern/no_unused_underscore_assignment.ex
@@ -227,9 +226,6 @@ test/pattern/no_redundant_list_traversal_fix_test.exs
 test/pattern/no_redundant_negated_guard_fix_test.exs
 test/pattern/no_redundant_to_list_equivalence_test.exs
 test/pattern/no_redundant_to_list_fix_test.exs
-test/pattern/no_redundant_underscore_bind_check_test.exs
-test/pattern/no_redundant_underscore_bind_equivalence_test.exs
-test/pattern/no_redundant_underscore_bind_fix_test.exs
 test/pattern/no_repeated_div_rem_fix_test.exs
 test/pattern/no_sort_for_top_k_check_test.exs
 test/pattern/no_sort_for_top_k_equivalence_test.exs
