@@ -83,3 +83,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_pattern_matching_for_empty_string_property_test.exs`
 - Reason: unsafe — String.trim(var)=="" rewritten to ""-pattern-match diverges on whitespace strings (e.g. " "), which single_codepoint_graphemes admits; trim's whitespace semantics are orthogonal to the codepoint promise, no safe narrow core, property test masks it via an unenforced no-whitespace guard.
 
+## prefer_prepend_in_accumulator — 2026-06-17
+- Files:
+  - `lib/pattern/prefer_prepend_in_accumulator.ex`
+  - `test/pattern/prefer_prepend_in_accumulator_check_test.exs`
+  - `test/pattern/prefer_prepend_in_accumulator_equivalence_test.exs`
+  - `test/pattern/prefer_prepend_in_accumulator_fix_test.exs`
+- Reason: unsafe — List.last(acc) reads the tail but the fix substitutes head (front) and swaps append→prepend; equivalent only for single-element accumulator seeds. Public build_groups/2 admits multi-element seeds ([5,1]→before [[2,1,5]] vs after [[5,1],[2]]); equivalence test masks it with single-element seeds only. No safe core (can't prove acc is single-element at entry).
+

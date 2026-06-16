@@ -1,4 +1,3 @@
-lib/pattern/prefer_prepend_in_accumulator.ex
 lib/pattern/prefer_reduce_while_with_halt_value.ex
 lib/pattern/prefer_remove_unused_private_fn_param.ex
 lib/pattern/prefer_reverse_for_palindrome_check.ex
@@ -226,9 +225,6 @@ test/pattern/prefer_erlang_float_check_test.exs
 test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
 test/pattern/prefer_map_put_new_fix_test.exs
-test/pattern/prefer_prepend_in_accumulator_check_test.exs
-test/pattern/prefer_prepend_in_accumulator_equivalence_test.exs
-test/pattern/prefer_prepend_in_accumulator_fix_test.exs
 test/pattern/prefer_reduce_while_with_halt_value_check_test.exs
 test/pattern/prefer_reduce_while_with_halt_value_equivalence_test.exs
 test/pattern/prefer_reduce_while_with_halt_value_fix_test.exs
