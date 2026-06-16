@@ -1,4 +1,3 @@
-lib/pattern/prefer_cond_for_nested_if.ex
 lib/pattern/prefer_counts_for_length.ex
 lib/pattern/prefer_direct_list_return_in_accumulator.ex
 lib/pattern/prefer_direct_string_check_over_complex_enum.ex
@@ -244,9 +243,6 @@ test/pattern/no_unless_else_fix_test.exs
 test/pattern/no_zip_then_map_check_test.exs
 test/pattern/no_zip_then_map_equivalence_test.exs
 test/pattern/no_zip_then_map_fix_test.exs
-test/pattern/prefer_cond_for_nested_if_check_test.exs
-test/pattern/prefer_cond_for_nested_if_equivalence_test.exs
-test/pattern/prefer_cond_for_nested_if_fix_test.exs
 test/pattern/prefer_counts_for_length_check_test.exs
 test/pattern/prefer_counts_for_length_equivalence_test.exs
 test/pattern/prefer_counts_for_length_fix_test.exs
