@@ -1,4 +1,3 @@
-lib/pattern/no_if_boolean_result.ex
 lib/pattern/no_if_empty_for_enum_min_max.ex
 lib/pattern/no_list_foldl.ex
 lib/pattern/no_map_keys_or_values_for_iteration.ex
@@ -158,9 +157,6 @@ test/pattern/no_grapheme_palindrome_fix_test.exs
 test/pattern/no_hd_tl_when_cons_bound_fix_test.exs
 test/pattern/no_identity_function_in_enum_equivalence_test.exs
 test/pattern/no_identity_function_in_enum_fix_test.exs
-test/pattern/no_if_boolean_result_check_test.exs
-test/pattern/no_if_boolean_result_equivalence_test.exs
-test/pattern/no_if_boolean_result_fix_test.exs
 test/pattern/no_if_empty_for_enum_min_max_check_test.exs
 test/pattern/no_if_empty_for_enum_min_max_equivalence_test.exs
 test/pattern/no_if_empty_for_enum_min_max_fix_test.exs
