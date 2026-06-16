@@ -52,3 +52,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/no_unused_computation_fix_test.exs`
 - Reason: premise conflates purity with totality — every positive case (length/String.length/String.graphemes/abs/Enum.reverse, plus div/hd/String.to_integer) is partial and raises on some admitted input, so deleting the discarded call drops a crash; safe core (only is_*/total guards) is degenerate and excludes 100% of demonstrated cases.
 
+## no_unused_underscore_assignment — 2026-06-16
+- Files:
+  - `lib/pattern/no_unused_underscore_assignment.ex`
+  - `test/pattern/no_unused_underscore_assignment_check_test.exs`
+  - `test/pattern/no_unused_underscore_assignment_equivalence_test.exs`
+  - `test/pattern/no_unused_underscore_assignment_fix_test.exs`
+- Reason: rule deletes the `_unused = <pure>` bindings the semantic UnusedVariable rule deliberately produces, breaking 4 end-to-end pipeline tests in shared test/credence_pipeline_test.exs (out of scope to change).
+

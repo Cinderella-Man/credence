@@ -1,4 +1,3 @@
-lib/pattern/no_unused_underscore_assignment.ex
 lib/pattern/non_grouped_clauses.ex
 lib/pattern/prefer_bitshift_over_math_pow_for_power_of2.ex
 lib/pattern/prefer_chunk_over_indexed_reduce.ex
@@ -247,9 +246,6 @@ test/pattern/no_uniq_then_count_equivalence_test.exs
 test/pattern/no_uniq_then_count_fix_test.exs
 test/pattern/no_unless_else_equivalence_test.exs
 test/pattern/no_unless_else_fix_test.exs
-test/pattern/no_unused_underscore_assignment_check_test.exs
-test/pattern/no_unused_underscore_assignment_equivalence_test.exs
-test/pattern/no_unused_underscore_assignment_fix_test.exs
 test/pattern/no_zip_then_map_check_test.exs
 test/pattern/no_zip_then_map_equivalence_test.exs
 test/pattern/no_zip_then_map_fix_test.exs
