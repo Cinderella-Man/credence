@@ -213,6 +213,17 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
              end
              """)
     end
+
+    test "require Logger co-located with the call inside the same function" do
+      assert clean?(NoMissingRequireLogger, """
+             defmodule MyApp do
+               def run do
+                 require Logger
+                 Logger.info("starting")
+               end
+             end
+             """)
+    end
   end
 
   describe "does not flag when import Logger is present" do
@@ -307,6 +318,20 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
              defmodule MyApp do
                def run do
                  IO.puts("Use Logger.info to log")
+               end
+             end
+             """)
+    end
+
+    # A Logger call inside a `quote` belongs to the generated code (which carries
+    # its own require), not the module defining the macro — so it is not flagged.
+    test "Logger macro call inside a quote is not attributed to the defining module" do
+      assert clean?(NoMissingRequireLogger, """
+             defmodule MyMacros do
+               defmacro emit do
+                 quote do
+                   Logger.info("from generated code")
+                 end
                end
              end
              """)

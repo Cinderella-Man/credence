@@ -1,4 +1,3 @@
-lib/pattern/no_missing_require_logger.ex
 lib/pattern/no_redundant_assignment.ex
 lib/pattern/no_redundant_local_capture.ex
 lib/pattern/no_redundant_underscore_bind.ex
@@ -209,7 +208,6 @@ test/pattern/no_map_put_get_increment_fix_test.exs
 test/pattern/no_map_then_aggregate_equivalence_test.exs
 test/pattern/no_map_then_aggregate_fix_test.exs
 test/pattern/no_map_update_then_fetch_fix_test.exs
-test/pattern/no_missing_require_logger_fix_test.exs
 test/pattern/no_nested_enum_on_same_enumerable_fix_test.exs
 test/pattern/no_piped_regex_replace_fix_test.exs
 test/pattern/no_reduce_for_group_by_fix_test.exs
