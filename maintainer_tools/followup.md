@@ -84,3 +84,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_direct_list_return_in_accumulator_fix_test.exs`
 - Reason: unsafe — keys on one clause/one {var,_} caller, no whole-module reconciliation: changes f's return to a bare list while other clauses internally destructure {res,errs}=f(...) (MatchError; BEFORE run(2)->[1,2], AFTER raises) and other {a,b}=f(...) callers break; arity untracked. Safe core needs whole-module return-shape/call-graph analysis beyond a reliable narrowing.
 
+## prefer_direct_string_check_over_complex_enum — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_direct_string_check_over_complex_enum.ex`
+  - `test/pattern/prefer_direct_string_check_over_complex_enum_check_test.exs`
+  - `test/pattern/prefer_direct_string_check_over_complex_enum_equivalence_test.exs`
+  - `test/pattern/prefer_direct_string_check_over_complex_enum_fix_test.exs`
+- Reason: fix deletes an arbitrary Enum.all?(...) statement (any args accepted) treating its discarded value as dead; that expression can raise/have side effects, so removal diverges (BEFORE raises, AFTER returns true) — no tractable pure-only safe core; rule is also overfit to literal var names pattern/full_pattern.
+
