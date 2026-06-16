@@ -1,4 +1,3 @@
-lib/pattern/prefer_float_round.ex
 lib/pattern/prefer_frequencies_over_group_by.ex
 lib/pattern/prefer_function_capture.ex
 lib/pattern/prefer_function_clauses_for_list_patterns.ex
@@ -248,9 +247,6 @@ test/pattern/prefer_enum_split_fix_test.exs
 test/pattern/prefer_erlang_float_check_test.exs
 test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
-test/pattern/prefer_float_round_check_test.exs
-test/pattern/prefer_float_round_equivalence_test.exs
-test/pattern/prefer_float_round_fix_test.exs
 test/pattern/prefer_frequencies_over_group_by_check_test.exs
 test/pattern/prefer_frequencies_over_group_by_equivalence_test.exs
 test/pattern/prefer_frequencies_over_group_by_fix_test.exs

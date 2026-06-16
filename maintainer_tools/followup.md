@@ -108,3 +108,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_enum_frequencies_over_group_by_fix_test.exs`
 - Reason: duplicate of live no_group_by_for_frequencies — it already flags the identity group_by→count (piped, multi-step, and direct Map.new forms) and rewrites to Enum.frequencies_by(enum, & &1); fold the identity special-case (emit frequencies/1) into that rule instead of shipping a second overlapping rule. Rule itself is behavior-preserving (map collectors → === maps), but the fix-the-overlap edit lives outside this set.
 
+## prefer_float_round — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_float_round.ex`
+  - `test/pattern/prefer_float_round_check_test.exs`
+  - `test/pattern/prefer_float_round_equivalence_test.exs`
+  - `test/pattern/prefer_float_round_fix_test.exs`
+- Reason: not behavior-preserving — :erlang.round(x*100)/100 (round-half-away on 100*x with FP pre-mult error) ≠ Float.round(x,2) on a dense float set (2.675→2.68 vs 2.67; 2.005, -2.675, 0.045 diverge) and raises on integer x where the trick returns a float; equivalence test cherry-picks 11 non-half inputs to hide it; no tractable safe core.
+
