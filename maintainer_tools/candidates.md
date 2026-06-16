@@ -1,4 +1,3 @@
-lib/pattern/no_string_length_for_empty_check.ex
 lib/pattern/no_unused_computation.ex
 lib/pattern/no_unused_underscore_assignment.ex
 lib/pattern/non_grouped_clauses.ex
@@ -238,9 +237,6 @@ test/pattern/no_string_concat_in_loop_equivalence_test.exs
 test/pattern/no_string_concat_in_loop_fix_test.exs
 test/pattern/no_string_length_for_char_check_equivalence_test.exs
 test/pattern/no_string_length_for_char_check_fix_test.exs
-test/pattern/no_string_length_for_empty_check_check_test.exs
-test/pattern/no_string_length_for_empty_check_equivalence_test.exs
-test/pattern/no_string_length_for_empty_check_fix_test.exs
 test/pattern/no_take_while_length_check_equivalence_test.exs
 test/pattern/no_take_while_length_check_fix_test.exs
 test/pattern/no_tautological_if_equivalence_test.exs
