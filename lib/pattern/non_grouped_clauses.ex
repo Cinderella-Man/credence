@@ -123,9 +123,17 @@ defmodule Credence.Pattern.NonGroupedClauses do
 
     # Don't move clauses preceded by a module attribute (`@impl true`, `@doc`,
     # etc.) — the attribute would be orphaned. `check/2` still flags them.
+    #
+    # Also don't move a clause with a MULTI-STATEMENT block body: reordering it
+    # leaves stale Sourceror `do`/`end` positions that make `Sourceror.to_string`
+    # render the block as a `do:` one-liner, dropping every statement after the
+    # first (uncompilable → the whole fix is reverted, losing all the other
+    # groupings too). Skipping just those strays lets the safe clauses regroup.
     stray_set =
       stray_set
-      |> Enum.reject(&preceded_by_attr?(body, &1))
+      |> Enum.reject(fn i ->
+        preceded_by_attr?(body, i) or multi_statement_body?(Enum.at(body, i))
+      end)
       |> MapSet.new()
 
     if MapSet.size(stray_set) == 0 do
@@ -149,6 +157,25 @@ defmodule Credence.Pattern.NonGroupedClauses do
     end
   end
 
+  # A clause whose do-body is a multi-statement block (`do s1\n s2 end`). Moving
+  # such a clause mis-renders under Sourceror (see the reject in group_clauses).
+  defp multi_statement_body?({kind, _, args}) when kind in [:def, :defp] and is_list(args) do
+    case List.last(args) do
+      kw when is_list(kw) -> match?({:__block__, _, [_, _ | _]}, do_body_value(kw))
+      _ -> false
+    end
+  end
+
+  defp multi_statement_body?(_), do: false
+
+  defp do_body_value(kw) do
+    Enum.find_value(kw, fn
+      {{:__block__, _, [:do]}, value} -> value
+      {:do, value} -> value
+      _ -> nil
+    end)
+  end
+
   defp insert_after_last_sibling(body, key, clauses) do
     last_idx =
       body
@@ -161,13 +188,16 @@ defmodule Credence.Pattern.NonGroupedClauses do
     before ++ clauses ++ after_part
   end
 
-  defp function_key({kind, _, [{:when, _, [{name, _, args} | _]} | _]})
+  # Require a body (`[head, _body]`): a bodiless head (`def f(a, b)` — a forward
+  # declaration for default args / docs) generates no clause and must not be
+  # counted toward grouping.
+  defp function_key({kind, _, [{:when, _, [{name, _, args} | _]}, _body]})
        when kind in [:def, :defp] and is_atom(name) do
     arity = if is_list(args), do: length(args), else: 0
     {name, arity}
   end
 
-  defp function_key({kind, _, [{name, _, args} | _]})
+  defp function_key({kind, _, [{name, _, args}, _body]})
        when kind in [:def, :defp] and is_atom(name) do
     arity = if is_list(args), do: length(args), else: 0
     {name, arity}
@@ -180,7 +210,33 @@ defmodule Credence.Pattern.NonGroupedClauses do
   # Preserve `prev_key` across them so `def foo / @doc / def foo` is still
   # seen as a consecutive group; reset on any other non-function statement.
   defp previous_key_after_non_function({:@, _, _}, prev_key), do: prev_key
-  defp previous_key_after_non_function(_expr, _prev_key), do: nil
+
+  # A module-level binding between clauses may be load-bearing — its value can be
+  # used in a later clause's guard (e.g. poison's `max_sig = 1 <<< 53` used via
+  # `unquote(max_sig)`). Reordering across it would break compilation, so treat
+  # it as group-preserving rather than a separator.
+  defp previous_key_after_non_function({:=, _, _}, prev_key), do: prev_key
+
+  defp previous_key_after_non_function(expr, prev_key) do
+    # A compile-time construct that defines clauses inside it (`for ... do def
+    # ... end`, and other macro blocks) is transparent to grouping: Elixir does
+    # not emit the grouped-clauses warning across macro-generated clauses, so a
+    # literal clause after such a block is not "ungrouped". Preserve prev_key;
+    # reset only on genuine non-clause statements.
+    if generates_clauses?(expr), do: prev_key, else: nil
+  end
+
+  # True if `expr` contains a nested def/defp (e.g. a `for`/comprehension or
+  # macro block that generates function clauses at compile time).
+  defp generates_clauses?(expr) do
+    {_, found} =
+      Macro.prewalk(expr, false, fn
+        {dt, _, _} = node, _acc when dt in [:def, :defp] -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
+  end
 
   defp preceded_by_attr?(body, idx) do
     idx > 0 and match?({:@, _, _}, Enum.at(body, idx - 1))

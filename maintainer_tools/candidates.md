@@ -1,4 +1,3 @@
-lib/pattern/non_grouped_clauses.ex
 lib/pattern/prefer_bitshift_over_math_pow_for_power_of2.ex
 lib/pattern/prefer_chunk_over_indexed_reduce.ex
 lib/pattern/prefer_comprehension_for_filtered_range.ex
@@ -249,7 +248,6 @@ test/pattern/no_unless_else_fix_test.exs
 test/pattern/no_zip_then_map_check_test.exs
 test/pattern/no_zip_then_map_equivalence_test.exs
 test/pattern/no_zip_then_map_fix_test.exs
-test/pattern/non_grouped_clauses_fix_test.exs
 test/pattern/prefer_bitshift_over_math_pow_for_power_of2_check_test.exs
 test/pattern/prefer_bitshift_over_math_pow_for_power_of2_equivalence_test.exs
 test/pattern/prefer_bitshift_over_math_pow_for_power_of2_fix_test.exs
