@@ -1,4 +1,3 @@
-lib/pattern/prefer_string_split_trim.ex
 lib/pattern/prefer_then_over_capture_invocation.ex
 lib/pattern/prefer_tuple_destructure_after_with_index.ex
 lib/pattern/prefer_tuple_for_random_access.ex
@@ -218,9 +217,6 @@ test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
 test/pattern/prefer_map_put_new_fix_test.exs
 test/pattern/prefer_regex_match_fix_test.exs
-test/pattern/prefer_string_split_trim_check_test.exs
-test/pattern/prefer_string_split_trim_equivalence_test.exs
-test/pattern/prefer_string_split_trim_fix_test.exs
 test/pattern/prefer_then_over_capture_invocation_check_test.exs
 test/pattern/prefer_then_over_capture_invocation_equivalence_test.exs
 test/pattern/prefer_then_over_capture_invocation_fix_test.exs
