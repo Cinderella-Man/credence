@@ -1,4 +1,3 @@
-lib/pattern/no_redundant_assignment.ex
 lib/pattern/no_redundant_local_capture.ex
 lib/pattern/no_redundant_underscore_bind.ex
 lib/pattern/no_string_length_for_empty_check.ex
@@ -215,8 +214,6 @@ test/pattern/no_reduce_for_map_building_equivalence_test.exs
 test/pattern/no_reduce_for_map_building_fix_test.exs
 test/pattern/no_reduce_while_without_halt_equivalence_test.exs
 test/pattern/no_reduce_while_without_halt_fix_test.exs
-test/pattern/no_redundant_assignment_check_test.exs
-test/pattern/no_redundant_assignment_fix_test.exs
 test/pattern/no_redundant_binary_syntax_check_test.exs
 test/pattern/no_redundant_binary_syntax_equivalence_test.exs
 test/pattern/no_redundant_binary_syntax_fix_test.exs

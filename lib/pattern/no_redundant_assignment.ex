@@ -1,13 +1,13 @@
 defmodule Credence.Pattern.NoRedundantAssignment do
   @moduledoc """
-  Detects a variable (or tuple/list of plain variables) being assigned and
-  immediately returned as the last two statements of a block.
+  Detects a single plain variable being assigned and immediately returned as
+  the last two statements of a block.
 
-  This is a common LLM verbosity pattern where the assignment adds no value.
-  In Elixir, the last expression in a block is its return value, so the
+  This is a common verbosity pattern where the assignment adds no value. In
+  Elixir, the last expression in a block is its return value, so the
   intermediate binding is unnecessary.
 
-  ## Tier 1 — simple variable
+  ## Example
 
       # Bad
       result = compute(x)
@@ -16,18 +16,10 @@ defmodule Credence.Pattern.NoRedundantAssignment do
       # Good
       compute(x)
 
-  ## Tier 2 — tuple/list of plain variables
-
-      # Bad
-      {a, b} = process(input)
-      {a, b}
-
-      # Good
-      process(input)
-
-  Patterns containing literals (e.g. `{:ok, result}`) are NOT fixed because
-  the match acts as an assertion — removing it would change error behavior.
-  Map patterns are never fixed because reconstruction produces a subset.
+  Only a single plain variable is fixed. Tuple/list patterns (`{a, b} =
+  process(input); {a, b}`) are left alone: collapsing them would discard the
+  match's implicit arity assertion, so the rewrite would not be strictly
+  behavior-preserving.
 
   ## Auto-fix
 
@@ -80,55 +72,16 @@ defmodule Credence.Pattern.NoRedundantAssignment do
 
   defp check_last_pair(_), do: :clean
 
-  # A pattern is fixable if it consists entirely of plain variables.
-  # Patterns with literals, pins, maps, or underscore are NOT fixable.
+  # Only a single plain variable is fixable. The tuple/list forms
+  # (`{a, b} = f(); {a, b}` -> `f()`) were dropped: collapsing them discards the
+  # implicit arity assertion of the match, so the rewrite is not strictly
+  # behavior-preserving (it would no longer raise on a wrong-shaped return).
+  defp fixable_pattern?({:__block__, _, [inner]}), do: fixable_pattern?(inner)
 
-  # Dispatch on type explicitly to avoid clause-matching ambiguity
-  # with cons cells and tuples.
-  defp fixable_pattern?(pattern) when is_tuple(pattern) do
-    case pattern do
-      # Sourceror __block__ wrapper — unwrap and retry
-      {:__block__, _, [inner]} -> fixable_pattern?(inner)
-      # Plain variable
-      {name, _, ctx} when is_atom(name) and is_atom(ctx) and name != :_ -> true
-      # 3+ element tuple: {:{}, _, elements}
-      {:{}, _, elements} when is_list(elements) -> Enum.all?(elements, &all_plain_variables?/1)
-      # 2-element tuple (only matches when tuple_size is 2)
-      {a, b} -> all_plain_variables?(a) and all_plain_variables?(b)
-      _ -> false
-    end
-  end
-
-  defp fixable_pattern?(pattern) when is_list(pattern) and pattern != [] do
-    fixable_list_or_cons?(pattern)
-  end
+  defp fixable_pattern?({name, _, ctx}) when is_atom(name) and is_atom(ctx) and name != :_,
+    do: true
 
   defp fixable_pattern?(_), do: false
-
-  # Recursively checks that every leaf in a pattern is a plain variable.
-  # Handles Sourceror __block__ wrapping and the cons operator {:|, _, [h, t]}.
-  defp all_plain_variables?({:__block__, _, [inner]}), do: all_plain_variables?(inner)
-
-  defp all_plain_variables?({:|, _, [head, tail]}),
-    do: all_plain_variables?(head) and all_plain_variables?(tail)
-
-  defp all_plain_variables?({name, _, ctx})
-       when is_atom(name) and is_atom(ctx) and name != :_,
-       do: true
-
-  defp all_plain_variables?(_), do: false
-
-  # Walks a list pattern (proper or cons cell) checking all leaves are plain variables.
-  defp fixable_list_or_cons?([head | tail]) do
-    all_plain_variables?(head) and
-      cond do
-        is_list(tail) and tail != [] -> fixable_list_or_cons?(tail)
-        tail == [] -> true
-        true -> all_plain_variables?(tail)
-      end
-  end
-
-  defp fixable_list_or_cons?(_), do: false
 
   # Two AST nodes are structurally identical if they represent the
   # same source code, ignoring position metadata. Using Macro.to_string
