@@ -146,3 +146,10 @@ one-line reason. Work these by hand later.
   - `test/semantic/avoid_binary_mid_pattern_fix_test.exs`
 - Reason: fix changes last byte from integer to 1-byte binary (binary_part/3), inverting `first == last` true→false; also leaves middle var unbound if used, and relaxes the >=2-byte match — type change, no safe core.
 
+## avoid_remote_function_in_guard — 2026-06-17
+- Files:
+  - `lib/semantic/avoid_remote_function_in_guard.ex`
+  - `test/semantic/avoid_remote_function_in_guard_check_test.exs`
+  - `test/semantic/avoid_remote_function_in_guard_fix_test.exs`
+- Reason: fix ignores diagnostic position and rewrites every module-wide def pair whose guard holds a Module.fun call — valid guard-safe guards (e.g. Bitwise.band) get merged into an `if` that propagates errors the guard swallowed (divergence on valid code); also matches name+arity only, not head patterns, so the merged clause drops fallback bindings (unbound vars). Safe core needs diagnostic-line targeting + identical heads = fix rewrite, not a check narrow.
+
