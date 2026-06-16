@@ -60,3 +60,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/no_unused_underscore_assignment_fix_test.exs`
 - Reason: rule deletes the `_unused = <pure>` bindings the semantic UnusedVariable rule deliberately produces, breaking 4 end-to-end pipeline tests in shared test/credence_pipeline_test.exs (out of scope to change).
 
+## prefer_bitshift_over_math_pow_for_power_of2 — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_bitshift_over_math_pow_for_power_of2.ex`
+  - `test/pattern/prefer_bitshift_over_math_pow_for_power_of2_check_test.exs`
+  - `test/pattern/prefer_bitshift_over_math_pow_for_power_of2_equivalence_test.exs`
+  - `test/pattern/prefer_bitshift_over_math_pow_for_power_of2_fix_test.exs`
+- Reason: unsafe — trunc(2^x) ≠ 2^trunc(x) for non-integer x (2.5→5 vs 4) and pow overflows/raises for x≥1024 while shift returns a bignum; no non-degenerate safe core.
+
