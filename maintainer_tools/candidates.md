@@ -1,4 +1,3 @@
-lib/pattern/prefer_string_capitalize.ex
 lib/pattern/prefer_string_first_last.ex
 lib/pattern/prefer_string_slice_for_trim_last_char.ex
 lib/pattern/prefer_string_split_trim.ex
@@ -221,9 +220,6 @@ test/pattern/prefer_erlang_float_equivalence_test.exs
 test/pattern/prefer_erlang_float_fix_test.exs
 test/pattern/prefer_map_put_new_fix_test.exs
 test/pattern/prefer_regex_match_fix_test.exs
-test/pattern/prefer_string_capitalize_check_test.exs
-test/pattern/prefer_string_capitalize_equivalence_test.exs
-test/pattern/prefer_string_capitalize_fix_test.exs
 test/pattern/prefer_string_first_last_check_test.exs
 test/pattern/prefer_string_first_last_equivalence_test.exs
 test/pattern/prefer_string_first_last_fix_test.exs

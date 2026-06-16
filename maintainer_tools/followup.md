@@ -115,3 +115,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_string_at_for_char_access_fix_test.exs`
 - Reason: semantics-blind — fires on any x = List.to_string([y]) (y opaque var); fix <<y::utf8>> raises ArgumentError on binary/charlist y (valid List.to_string inputs return a string), and y's integer-codepoint-ness is unprovable from the AST, so no safe narrow core. Also rebinds body_var globally ignoring shadowing.
 
+## prefer_string_capitalize — 2026-06-17
+- Files:
+  - `lib/pattern/prefer_string_capitalize.ex`
+  - `test/pattern/prefer_string_capitalize_check_test.exs`
+  - `test/pattern/prefer_string_capitalize_equivalence_test.exs`
+  - `test/pattern/prefer_string_capitalize_fix_test.exs`
+- Reason: manual first-char String.upcase pattern is not equivalent to String.capitalize/1 — diverges on Unicode special-casing (ß→SS vs Ss, ligature ﬁ→FI vs Fi, digraph ǆ→Ǆ vs ǅ); divergence is input-dependent and unprovable from the AST, so no safe narrow core. Also the fix hardcodes "capitalize_string(string)" while the check fires on any function name, renaming other-named defps and breaking their callers.
+
