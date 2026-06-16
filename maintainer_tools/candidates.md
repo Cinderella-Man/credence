@@ -1,4 +1,3 @@
-lib/pattern/no_map_keys_or_values_for_iteration.ex
 lib/pattern/no_missing_require_logger.ex
 lib/pattern/no_redundant_assignment.ex
 lib/pattern/no_redundant_local_capture.ex
@@ -204,7 +203,6 @@ test/pattern/no_map_keys_for_membership_equivalence_test.exs
 test/pattern/no_map_keys_for_membership_fix_test.exs
 test/pattern/no_map_keys_or_values_for_iteration_check_test.exs
 test/pattern/no_map_keys_or_values_for_iteration_equivalence_test.exs
-test/pattern/no_map_keys_or_values_for_iteration_fix_test.exs
 test/pattern/no_map_put_get_increment_check_test.exs
 test/pattern/no_map_put_get_increment_equivalence_test.exs
 test/pattern/no_map_put_get_increment_fix_test.exs

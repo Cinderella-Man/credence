@@ -28,3 +28,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/no_list_foldl_fix_test.exs`
 - Reason: List.foldl(x,…)→Enum.reduce(x,…) broadens domain — original raises FunctionClauseError on non-list enumerables (map/range) where the rewrite succeeds; expression rewrite can't add an is_list guard (unlike no_manual_list_reduce), and the only provably-list case (literal lists) is too narrow to be useful.
 
+## no_map_keys_or_values_for_iteration — 2026-06-16
+- Files:
+  - `lib/pattern/no_map_keys_or_values_for_iteration.ex`
+  - `test/pattern/no_map_keys_or_values_for_iteration_check_test.exs`
+  - `test/pattern/no_map_keys_or_values_for_iteration_equivalence_test.exs`
+  - `test/pattern/no_map_keys_or_values_for_iteration_fix_test.exs`
+- Reason: correct_capture_range's hand-rolled paren scanner miscounts char-literal ?) as a closing paren — regresses valid input `&(&1 == ?))` (was correct, now emits non-compiling `end))`); incomplete lexer trades one broken-capture class for another.
+
