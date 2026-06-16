@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(NoListConcatWithRecursiveResult, code) == expected
+      confirm_fix(fix(NoListConcatWithRecursiveResult, code), expected)
     end
 
     test "multi-element literal ++ self-call on a single-line clause" do
@@ -43,7 +43,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(NoListConcatWithRecursiveResult, code) == expected
+      confirm_fix(fix(NoListConcatWithRecursiveResult, code), expected)
     end
 
     test "literal ++ variable bound to a recursive call" do
@@ -69,7 +69,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(NoListConcatWithRecursiveResult, code) == expected
+      confirm_fix(fix(NoListConcatWithRecursiveResult, code), expected)
     end
 
     test "fixes only the literal-prefix clause, leaves the others" do
@@ -105,7 +105,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(NoListConcatWithRecursiveResult, code) == expected
+      confirm_fix(fix(NoListConcatWithRecursiveResult, code), expected)
     end
   end
 
@@ -127,7 +127,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(NoListConcatWithRecursiveResult, code) == code
+      confirm_fix(fix(NoListConcatWithRecursiveResult, code), code)
     end
 
     test "recursive_result ++ [literal] unchanged" do
@@ -141,7 +141,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(NoListConcatWithRecursiveResult, code) == code
+      confirm_fix(fix(NoListConcatWithRecursiveResult, code), code)
     end
 
     test "empty list literal ++ recursive result unchanged" do
@@ -155,7 +155,7 @@ defmodule Credence.Pattern.NoListConcatWithRecursiveResultFixTest do
       end
       """
 
-      assert fix(NoListConcatWithRecursiveResult, code) == code
+      confirm_fix(fix(NoListConcatWithRecursiveResult, code), code)
     end
   end
 

@@ -7,36 +7,30 @@ defmodule Credence.Pattern.NoFilterThenCountFixTest do
 
   describe "pipeline fix" do
     test "Enum.filter |> length() → Enum.count(enum, pred)" do
-      assert fix(
-               NoFilterThenCount,
-               """
-               numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end) |> length()
-               """
-             ) ==
-               """
-               numbers |> Enum.count(fn x -> rem(x, 2) == 0 end)
-               """
+      confirm_fix(
+        fix(
+          NoFilterThenCount,
+          "numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end) |> length()"
+        ),
+        "numbers |> Enum.count(fn x -> rem(x, 2) == 0 end)"
+      )
     end
 
     test "Enum.filter |> Enum.count() → Enum.count(enum, pred)" do
-      assert fix(
-               NoFilterThenCount,
-               """
-               numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end) |> Enum.count()
-               """
-             ) ==
-               """
-               numbers |> Enum.count(fn x -> rem(x, 2) == 0 end)
-               """
+      confirm_fix(
+        fix(
+          NoFilterThenCount,
+          "numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end) |> Enum.count()"
+        ),
+        "numbers |> Enum.count(fn x -> rem(x, 2) == 0 end)"
+      )
     end
 
     test "with capture syntax" do
-      assert fix(NoFilterThenCount, """
-             items |> Enum.filter(&(&1 > 0)) |> length()
-             """) ==
-               """
-               items |> Enum.count(&(&1 > 0))
-               """
+      confirm_fix(
+        fix(NoFilterThenCount, "items |> Enum.filter(&(&1 > 0)) |> length()"),
+        "items |> Enum.count(&(&1 > 0))"
+      )
     end
 
     test "inside longer pipeline" do
@@ -59,16 +53,14 @@ defmodule Credence.Pattern.NoFilterThenCountFixTest do
       end
       """
 
-      assert fix(NoFilterThenCount, input) == expected
+      confirm_fix(fix(NoFilterThenCount, input), expected)
     end
 
     test "2-arg filter piped to length" do
-      assert fix(NoFilterThenCount, """
-             Enum.filter(numbers, &even?/1) |> length()
-             """) ==
-               """
-               Enum.count(numbers, &even?/1)
-               """
+      confirm_fix(
+        fix(NoFilterThenCount, "Enum.filter(numbers, &even?/1) |> length()"),
+        "Enum.count(numbers, &even?/1)"
+      )
     end
   end
 
@@ -76,24 +68,20 @@ defmodule Credence.Pattern.NoFilterThenCountFixTest do
 
   describe "nested fix" do
     test "length(Enum.filter(enum, pred)) → Enum.count(enum, pred)" do
-      assert fix(NoFilterThenCount, """
-             length(Enum.filter(numbers, fn x -> rem(x, 2) == 0 end))
-             """) ==
-               """
-               Enum.count(numbers, fn x -> rem(x, 2) == 0 end)
-               """
+      confirm_fix(
+        fix(NoFilterThenCount, "length(Enum.filter(numbers, fn x -> rem(x, 2) == 0 end))"),
+        "Enum.count(numbers, fn x -> rem(x, 2) == 0 end)"
+      )
     end
 
     test "Enum.count(Enum.filter(enum, pred)) → Enum.count(enum, pred)" do
-      assert fix(
-               NoFilterThenCount,
-               """
-               Enum.count(Enum.filter(numbers, fn x -> rem(x, 2) == 0 end))
-               """
-             ) ==
-               """
-               Enum.count(numbers, fn x -> rem(x, 2) == 0 end)
-               """
+      confirm_fix(
+        fix(
+          NoFilterThenCount,
+          "Enum.count(Enum.filter(numbers, fn x -> rem(x, 2) == 0 end))"
+        ),
+        "Enum.count(numbers, fn x -> rem(x, 2) == 0 end)"
+      )
     end
   end
 
@@ -101,35 +89,27 @@ defmodule Credence.Pattern.NoFilterThenCountFixTest do
 
   describe "does not fix non-matching patterns" do
     test "leaves Enum.filter alone unchanged" do
-      code = """
-      numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end)
-      """
+      code = "numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end)"
 
-      assert fix(NoFilterThenCount, code) == code
+      confirm_fix(fix(NoFilterThenCount, code), code)
     end
 
     test "leaves Enum.count with predicate unchanged" do
-      code = """
-      Enum.count(numbers, fn x -> rem(x, 2) == 0 end)
-      """
+      code = "Enum.count(numbers, fn x -> rem(x, 2) == 0 end)"
 
-      assert fix(NoFilterThenCount, code) == code
+      confirm_fix(fix(NoFilterThenCount, code), code)
     end
 
     test "leaves length without filter unchanged" do
-      code = """
-      length(numbers)
-      """
+      code = "length(numbers)"
 
-      assert fix(NoFilterThenCount, code) == code
+      confirm_fix(fix(NoFilterThenCount, code), code)
     end
 
     test "leaves Enum.filter |> Enum.map unchanged" do
-      code = """
-      numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end) |> Enum.map(fn x -> x * x end)
-      """
+      code = "numbers |> Enum.filter(fn x -> rem(x, 2) == 0 end) |> Enum.map(fn x -> x * x end)"
 
-      assert fix(NoFilterThenCount, code) == code
+      confirm_fix(fix(NoFilterThenCount, code), code)
     end
   end
 end

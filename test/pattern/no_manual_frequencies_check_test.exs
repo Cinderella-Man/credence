@@ -57,9 +57,7 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
 
   describe "does NOT fire (no safe same-answer rewrite)" do
     test "already uses Enum.frequencies/1" do
-      code = """
-      string |> String.graphemes() |> Enum.frequencies()
-      """
+      code = "string |> String.graphemes() |> Enum.frequencies()"
 
       assert check(NoManualFrequencies, code) == []
     end

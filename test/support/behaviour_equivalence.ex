@@ -221,17 +221,15 @@ defmodule Credence.BehaviourEquivalence do
   `{:throw, term}` | `{:exit, term}`.
   """
   def eval_outcome(thunk, compare_messages? \\ false) when is_function(thunk, 0) do
-    try do
-      {:ok, thunk.()}
-    rescue
-      e ->
-        if compare_messages?,
-          do: {:raise, e.__struct__, Exception.message(e)},
-          else: {:raise, e.__struct__}
-    catch
-      :throw, t -> {:throw, t}
-      :exit, t -> {:exit, t}
-    end
+    {:ok, thunk.()}
+  rescue
+    e ->
+      if compare_messages?,
+        do: {:raise, e.__struct__, Exception.message(e)},
+        else: {:raise, e.__struct__}
+  catch
+    :throw, t -> {:throw, t}
+    :exit, t -> {:exit, t}
   end
 
   # ── internals ─────────────────────────────────────────────────────────

@@ -79,7 +79,7 @@ defmodule Credence.EquivalenceRegressionTest do
     # turns it into the letters ["a", "b", "c"]. Different results, even for plain
     # ASCII. (Reason in unfixable_confirmed.md: "value-type change ... on every
     # input incl. ASCII; no safe subset.")
-    test "input \"abc\": numbers [97, 98, 99] vs letters [\"a\", \"b\", \"c\"]" do
+    test ~s(input "abc": numbers [97, 98, 99] vs letters ["a", "b", "c"]) do
       before = "s |> String.to_charlist()"
       broken = "s |> String.graphemes()"
 

@@ -21,7 +21,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes direct pipeline: Enum.map(enum, f) |> Enum.join(sep)" do
@@ -41,7 +41,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes pipe pipeline: enum |> Enum.map(f) |> Enum.join(sep)" do
@@ -64,7 +64,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes pipe pipeline without separator" do
@@ -87,7 +87,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes nested: Enum.join(Enum.map(enum, f), sep)" do
@@ -107,7 +107,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes nested without separator" do
@@ -127,7 +127,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes longer pipeline with preceding steps" do
@@ -152,7 +152,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes pipeline that continues after join" do
@@ -177,7 +177,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes with multi-line anonymous function" do
@@ -200,7 +200,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes pipeline with two-arg Enum.map and capture" do
@@ -220,7 +220,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes multiple occurrences in same module" do
@@ -244,7 +244,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "fixes pattern inside callback" do
@@ -260,7 +260,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end)
       """
 
-      assert fix(UseMapJoin, input) == expected
+      confirm_fix(fix(UseMapJoin, input), expected)
     end
 
     test "preserves code that does not need fixing" do
@@ -272,7 +272,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == input
+      confirm_fix(fix(UseMapJoin, input), input)
     end
 
     test "does not modify intervening-step pattern" do
@@ -287,7 +287,7 @@ defmodule Credence.Pattern.UseMapJoinFixTest do
       end
       """
 
-      assert fix(UseMapJoin, input) == input
+      confirm_fix(fix(UseMapJoin, input), input)
     end
   end
 end

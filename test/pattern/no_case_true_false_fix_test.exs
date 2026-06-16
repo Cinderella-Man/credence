@@ -24,7 +24,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
 
     test "flipped false then true" do
@@ -43,7 +43,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
 
     test "complex expression in subject" do
@@ -62,7 +62,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
 
     test "multi-line bodies" do
@@ -85,7 +85,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
 
     test "function call as subject" do
@@ -104,7 +104,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
 
     test "nested inside a def" do
@@ -131,7 +131,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
 
     test "fixes multiple occurrences" do
@@ -173,7 +173,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
   end
 
@@ -198,7 +198,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
 
     test "false then wildcard" do
@@ -217,7 +217,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
   end
 
@@ -243,7 +243,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
 
     test "pipe chain into case true/false" do
@@ -267,7 +267,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
 
     test "pipe into case with flipped false/true" do
@@ -287,7 +287,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == expected
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
     end
   end
 
@@ -304,7 +304,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == input
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
     end
 
     test "case with pattern matching" do
@@ -315,7 +315,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == input
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
     end
 
     test "case with tuple patterns" do
@@ -326,7 +326,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == input
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
     end
 
     test "case with three clauses" do
@@ -338,7 +338,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == input
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
     end
 
     test "case with guards" do
@@ -349,7 +349,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == input
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
     end
 
     test "already an if/else" do
@@ -361,7 +361,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == input
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
     end
 
     test "returns source unchanged when nothing to fix" do
@@ -371,7 +371,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == input
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
     end
 
     test "piped case on a plain variable is not modified" do
@@ -385,7 +385,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
       end
       """
 
-      assert fix(NoCaseTrueFalse, input) == input
+      confirm_fix(fix(NoCaseTrueFalse, input), input)
     end
   end
 end

@@ -51,9 +51,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
     end
 
     test "detects bare Enum.reduce without alias prefix" do
-      code = """
-      Enum.reduce(list, 1, fn x, acc -> x * acc end)
-      """
+      code = "Enum.reduce(list, 1, fn x, acc -> x * acc end)"
 
       assert length(check(NoExplicitProductReduce, code)) == 1
     end
@@ -111,9 +109,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
     end
 
     test "reduce with float 1.0 accumulator (would change result type)" do
-      code = """
-      Enum.reduce(list, 1.0, fn x, acc -> x * acc end)
-      """
+      code = "Enum.reduce(list, 1.0, fn x, acc -> x * acc end)"
 
       assert check(NoExplicitProductReduce, code) == []
     end
@@ -143,17 +139,13 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
     end
 
     test "product of something other than the two reducer params" do
-      code = """
-      Enum.reduce(list, 1, fn x, acc -> x * x end)
-      """
+      code = "Enum.reduce(list, 1, fn x, acc -> x * x end)"
 
       assert check(NoExplicitProductReduce, code) == []
     end
 
     test "multiplication by a literal, not the accumulator" do
-      code = """
-      Enum.reduce(list, 1, fn x, acc -> x * 2 end)
-      """
+      code = "Enum.reduce(list, 1, fn x, acc -> x * 2 end)"
 
       assert check(NoExplicitProductReduce, code) == []
     end
@@ -162,9 +154,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
     # `x`, not the reducer parameter `x`. Rewriting to Enum.product would drop
     # that call and change the result, so we must not flag it.
     test "no issue: operand is a call that shares a param's name" do
-      code = """
-      Enum.reduce(list, 1, fn x, acc -> x() * acc end)
-      """
+      code = "Enum.reduce(list, 1, fn x, acc -> x() * acc end)"
 
       assert check(NoExplicitProductReduce, code) == []
     end
@@ -173,9 +163,7 @@ defmodule Credence.Pattern.NoExplicitProductReduceCheckTest do
     # element == acc at every step (otherwise FunctionClauseError), which is not
     # what Enum.product/1 computes.
     test "no issue: reducer params share a name" do
-      code = """
-      Enum.reduce(list, 1, fn x, x -> x * x end)
-      """
+      code = "Enum.reduce(list, 1, fn x, x -> x * x end)"
 
       assert check(NoExplicitProductReduce, code) == []
     end

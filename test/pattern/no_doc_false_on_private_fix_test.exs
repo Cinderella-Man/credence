@@ -18,7 +18,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, input) == expected
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
     test "multiple defps — drops each @doc false, keeps the blank line between them" do
@@ -40,7 +40,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, input) == expected
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
 
     test "guarded defp" do
@@ -57,7 +57,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, input) == expected
+      confirm_fix(fix(NoDocFalseOnPrivate, input), expected)
     end
   end
 
@@ -70,7 +70,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateFixTest do
       end
       """
 
-      assert fix(NoDocFalseOnPrivate, code) == code
+      confirm_fix(fix(NoDocFalseOnPrivate, code), code)
     end
   end
 end

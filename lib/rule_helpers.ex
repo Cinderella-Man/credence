@@ -166,18 +166,30 @@ defmodule Credence.RuleHelpers do
           e ->
             Logger.debug("[credence_fix] Code.compile_string raised: #{Exception.message(e)}")
 
-            :error
+            {:raised, e}
         end
       end)
 
     case result do
-      :error ->
-        {:error, diagnostics}
+      # The compiler RAISED (e.g. CompileError "cannot invoke @/1 outside
+      # module") rather than emitting a diagnostic, so `Code.with_diagnostics`
+      # captured nothing. Synthesize an error diagnostic from the exception so
+      # the semantic round can still match + fix it (without this, every such
+      # error was a 0-diagnostic dead end). Append to any captured diagnostics.
+      {:raised, e} ->
+        {:error, diagnostics ++ [exception_diagnostic(e)]}
 
       modules when is_list(modules) ->
         safe_cleanup_modules(modules)
         {:ok, diagnostics}
     end
+  end
+
+  # Build a diagnostic map (same shape as `Code.with_diagnostics` entries) from a
+  # raised compile exception, so semantic rules keyed on the message can match.
+  defp exception_diagnostic(e) do
+    line = if is_map(e) and is_integer(Map.get(e, :line)), do: Map.get(e, :line), else: 0
+    %{severity: :error, message: Exception.message(e), position: line, file: "credence_check.ex"}
   end
 
   @doc """
@@ -535,8 +547,8 @@ defmodule Credence.RuleHelpers do
 
     change_summary =
       Enum.map_join(changes, "\n", fn
-        {:removed, line_no, text} -> "  L#{line_no} - #{String.trim(text)}"
-        {:added, line_no, text} -> "  L#{line_no} + #{String.trim(text)}"
+        {:removed, line_no, text} -> "  L#{line_no} - #{String.trim_trailing(text)}"
+        {:added, line_no, text} -> "  L#{line_no} + #{String.trim_trailing(text)}"
       end)
 
     Logger.debug("[credence_fix] #{label}: source CHANGED:\n#{change_summary}")

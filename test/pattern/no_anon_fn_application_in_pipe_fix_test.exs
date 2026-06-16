@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeFixTest do
       end
       """
 
-      assert fix(NoAnonFnApplicationInPipe, input) == expected
+      confirm_fix(fix(NoAnonFnApplicationInPipe, input), expected)
     end
 
     test "multiple applications in one pipeline" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeFixTest do
       end
       """
 
-      assert fix(NoAnonFnApplicationInPipe, input) == expected
+      confirm_fix(fix(NoAnonFnApplicationInPipe, input), expected)
     end
   end
 
@@ -65,15 +65,13 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeFixTest do
       end
       """
 
-      assert fix(NoAnonFnApplicationInPipe, code) == code
+      confirm_fix(fix(NoAnonFnApplicationInPipe, code), code)
     end
 
     test ".(extra) — then/2 cannot carry extra args" do
-      code = """
-      x |> (fn a, b -> a + b end).(y)
-      """
+      code = "x |> (fn a, b -> a + b end).(y)"
 
-      assert fix(NoAnonFnApplicationInPipe, code) == code
+      confirm_fix(fix(NoAnonFnApplicationInPipe, code), code)
     end
   end
 end

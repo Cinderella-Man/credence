@@ -9,9 +9,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(
                  AvoidGraphemesEnumCountWithPredicate,
-                 """
-                 String.graphemes(str) |> Enum.count(&(&1 == "1"))
-                 """
+                 ~S'String.graphemes(str) |> Enum.count(&(&1 == "1"))'
                )
     end
 
@@ -19,9 +17,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(
                  AvoidGraphemesEnumCountWithPredicate,
-                 """
-                 str |> String.graphemes() |> Enum.count(&(&1 == "1"))
-                 """
+                 ~S'str |> String.graphemes() |> Enum.count(&(&1 == "1"))'
                )
     end
 
@@ -29,25 +25,19 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(
                  AvoidGraphemesEnumCountWithPredicate,
-                 """
-                 Enum.count(String.graphemes(str), &(&1 == "1"))
-                 """
+                 ~S'Enum.count(String.graphemes(str), &(&1 == "1"))'
                )
     end
 
     test "fn predicate in two-step pipe" do
-      code = """
-      String.graphemes(str) |> Enum.count(fn c -> c == "1" end)
-      """
+      code = ~S'String.graphemes(str) |> Enum.count(fn c -> c == "1" end)'
 
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(AvoidGraphemesEnumCountWithPredicate, code)
     end
 
     test "fn predicate in nested call" do
-      code = """
-      Enum.count(String.graphemes(str), fn c -> c == "1" end)
-      """
+      code = ~S'Enum.count(String.graphemes(str), fn c -> c == "1" end)'
 
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(AvoidGraphemesEnumCountWithPredicate, code)
@@ -57,9 +47,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(
                  AvoidGraphemesEnumCountWithPredicate,
-                 """
-                 Enum.count(String.graphemes(str), &(&1 === "a"))
-                 """
+                 ~S'Enum.count(String.graphemes(str), &(&1 === "a"))'
                )
     end
 
@@ -88,36 +76,28 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
     end
 
     test "sum_by counting fn in two-step pipe" do
-      code = """
-      String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)
-      """
+      code = ~S'String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)'
 
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(AvoidGraphemesEnumCountWithPredicate, code)
     end
 
     test "sum_by counting fn in three-step pipe" do
-      code = """
-      str |> String.graphemes() |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)
-      """
+      code = ~S'str |> String.graphemes() |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)'
 
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(AvoidGraphemesEnumCountWithPredicate, code)
     end
 
     test "sum_by counting fn in nested call" do
-      code = """
-      Enum.sum_by(String.graphemes(str), fn "1" -> 1; _ -> 0 end)
-      """
+      code = ~S'Enum.sum_by(String.graphemes(str), fn "1" -> 1; _ -> 0 end)'
 
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(AvoidGraphemesEnumCountWithPredicate, code)
     end
 
     test "sum_by counting fn with variable catch-all" do
-      code = """
-      String.graphemes(str) |> Enum.sum_by(fn "a" -> 1; _x -> 0 end)
-      """
+      code = ~S'String.graphemes(str) |> Enum.sum_by(fn "a" -> 1; _x -> 0 end)'
 
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(AvoidGraphemesEnumCountWithPredicate, code)
@@ -149,40 +129,30 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
       assert [%Issue{rule: :avoid_graphemes_enum_count_with_predicate}] =
                check(
                  AvoidGraphemesEnumCountWithPredicate,
-                 """
-                 Enum.count(String.graphemes(str), &(&1 == " "))
-                 """
+                 ~S'Enum.count(String.graphemes(str), &(&1 == " "))'
                )
     end
   end
 
   describe "does NOT flag" do
     test "Enum.count/2 with predicate on non-graphemes" do
-      assert check(AvoidGraphemesEnumCountWithPredicate, """
-             Enum.count(list, &(&1 == "1"))
-             """) == []
+      assert check(AvoidGraphemesEnumCountWithPredicate, ~S'Enum.count(list, &(&1 == "1"))') == []
     end
 
     test "graphemes with Enum.count/1 (no predicate — handled by sibling rule)" do
-      assert check(AvoidGraphemesEnumCountWithPredicate, """
-             String.graphemes(str) |> Enum.count()
-             """) ==
+      assert check(AvoidGraphemesEnumCountWithPredicate, "String.graphemes(str) |> Enum.count()") ==
                []
     end
 
     test "Enum.count/1 on graphemes (handled by sibling rule)" do
-      assert check(AvoidGraphemesEnumCountWithPredicate, """
-             Enum.count(String.graphemes(str))
-             """) ==
+      assert check(AvoidGraphemesEnumCountWithPredicate, "Enum.count(String.graphemes(str))") ==
                []
     end
 
     test "graphemes piped to something other than Enum.count" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               String.graphemes(str) |> Enum.filter(&(&1 == "1"))
-               """
+               ~S'String.graphemes(str) |> Enum.filter(&(&1 == "1"))'
              ) == []
     end
 
@@ -213,52 +183,40 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
     test "predicate with non-literal comparison" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               Enum.count(String.graphemes(str), &(&1 == var))
-               """
+               "Enum.count(String.graphemes(str), &(&1 == var))"
              ) == []
     end
 
     test "predicate with non-equality function" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               Enum.count(String.graphemes(str), &String.match?(&1, ~r/1/))
-               """
+               "Enum.count(String.graphemes(str), &String.match?(&1, ~r/1/))"
              ) == []
     end
 
     test "Enum.count/2 with non-capture function" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               Enum.count(String.graphemes(str), fn c -> String.contains?(c, "1") end)
-               """
+               ~S'Enum.count(String.graphemes(str), fn c -> String.contains?(c, "1") end)'
              ) == []
     end
 
     test "Enum.sum_by on non-graphemes" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               Enum.sum_by(list, fn "1" -> 1; _ -> 0 end)
-               """
+               ~S'Enum.sum_by(list, fn "1" -> 1; _ -> 0 end)'
              ) == []
     end
 
     test "sum_by with non-counting function" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               String.graphemes(str) |> Enum.sum_by(fn x -> x end)
-               """
+               "String.graphemes(str) |> Enum.sum_by(fn x -> x end)"
              ) == []
     end
 
     test "sum_by with 3 clauses" do
-      code = """
-      String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; "0" -> 0; _ -> 0 end)
-      """
+      code = ~S'String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; "0" -> 0; _ -> 0 end)'
 
       assert check(AvoidGraphemesEnumCountWithPredicate, code) == []
     end
@@ -266,18 +224,14 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
     test "sum_by with non-literal match" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               String.graphemes(str) |> Enum.sum_by(fn x when x == "1" -> 1; _ -> 0 end)
-               """
+               ~S'String.graphemes(str) |> Enum.sum_by(fn x when x == "1" -> 1; _ -> 0 end)'
              ) == []
     end
 
     test "sum_by with non-1/0 return values" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               String.graphemes(str) |> Enum.sum_by(fn "1" -> 2; _ -> 0 end)
-               """
+               ~S'String.graphemes(str) |> Enum.sum_by(fn "1" -> 2; _ -> 0 end)'
              ) == []
     end
 
@@ -285,18 +239,14 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateCheckTest do
     test "empty literal is not flagged" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               Enum.count(String.graphemes(str), &(&1 == ""))
-               """
+               ~S'Enum.count(String.graphemes(str), &(&1 == ""))'
              ) == []
     end
 
     test "multi-character literal is not flagged" do
       assert check(
                AvoidGraphemesEnumCountWithPredicate,
-               """
-               Enum.count(String.graphemes(str), &(&1 == "ab"))
-               """
+               ~S'Enum.count(String.graphemes(str), &(&1 == "ab"))'
              ) == []
     end
 

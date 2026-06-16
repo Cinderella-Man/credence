@@ -29,7 +29,7 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
       end
       """
 
-      assert fix(NoManualFrequencies, code) == expected
+      confirm_fix(fix(NoManualFrequencies, code), expected)
     end
 
     test "piped identity key collapses to Enum.frequencies/1" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
       end
       """
 
-      assert fix(NoManualFrequencies, code) == expected
+      confirm_fix(fix(NoManualFrequencies, code), expected)
     end
 
     test "derived key becomes Enum.frequencies_by/2 (key carried over verbatim)" do
@@ -69,7 +69,7 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
       end
       """
 
-      assert fix(NoManualFrequencies, code) == expected
+      confirm_fix(fix(NoManualFrequencies, code), expected)
     end
 
     test "non-frequency reduce is left unchanged" do
@@ -81,7 +81,7 @@ defmodule Credence.Pattern.NoManualFrequenciesFixTest do
       end
       """
 
-      assert fix(NoManualFrequencies, code) == code
+      confirm_fix(fix(NoManualFrequencies, code), code)
     end
   end
 

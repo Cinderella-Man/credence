@@ -5,39 +5,27 @@ defmodule Credence.Pattern.NoExplicitProductReduceFixTest do
 
   describe "rewrites explicit product reductions to Enum.product/1" do
     test "x * acc form" do
-      code = """
-      Enum.reduce(list, 1, fn x, acc -> x * acc end)
-      """
+      code = "Enum.reduce(list, 1, fn x, acc -> x * acc end)"
 
-      expected = """
-      Enum.product(list)
-      """
+      expected = "Enum.product(list)"
 
-      assert fix(NoExplicitProductReduce, code) == expected
+      confirm_fix(fix(NoExplicitProductReduce, code), expected)
     end
 
     test "acc * x form (reversed operand order)" do
-      code = """
-      Enum.reduce(list, 1, fn x, acc -> acc * x end)
-      """
+      code = "Enum.reduce(list, 1, fn x, acc -> acc * x end)"
 
-      expected = """
-      Enum.product(list)
-      """
+      expected = "Enum.product(list)"
 
-      assert fix(NoExplicitProductReduce, code) == expected
+      confirm_fix(fix(NoExplicitProductReduce, code), expected)
     end
 
     test "&*/2 capture form" do
-      code = """
-      Enum.reduce(list, 1, &*/2)
-      """
+      code = "Enum.reduce(list, 1, &*/2)"
 
-      expected = """
-      Enum.product(list)
-      """
+      expected = "Enum.product(list)"
 
-      assert fix(NoExplicitProductReduce, code) == expected
+      confirm_fix(fix(NoExplicitProductReduce, code), expected)
     end
 
     test "preserves surrounding code" do
@@ -61,13 +49,11 @@ defmodule Credence.Pattern.NoExplicitProductReduceFixTest do
       end
       """
 
-      assert fix(NoExplicitProductReduce, code) == expected
+      confirm_fix(fix(NoExplicitProductReduce, code), expected)
     end
 
     test "round-trip: fixed code produces no issues" do
-      code = """
-      Enum.reduce(list, 1, fn x, acc -> x * acc end)
-      """
+      code = "Enum.reduce(list, 1, fn x, acc -> x * acc end)"
 
       fixed = fix(NoExplicitProductReduce, code)
       assert clean?(NoExplicitProductReduce, fixed)
@@ -76,27 +62,21 @@ defmodule Credence.Pattern.NoExplicitProductReduceFixTest do
 
   describe "leaves non-product code unchanged" do
     test "sum reduction" do
-      code = """
-      Enum.reduce(list, 0, fn x, acc -> x + acc end)
-      """
+      code = "Enum.reduce(list, 0, fn x, acc -> x + acc end)"
 
-      assert fix(NoExplicitProductReduce, code) == code
+      confirm_fix(fix(NoExplicitProductReduce, code), code)
     end
 
     test "non-1 accumulator" do
-      code = """
-      Enum.reduce(list, 2, fn x, acc -> x * acc end)
-      """
+      code = "Enum.reduce(list, 2, fn x, acc -> x * acc end)"
 
-      assert fix(NoExplicitProductReduce, code) == code
+      confirm_fix(fix(NoExplicitProductReduce, code), code)
     end
 
     test "operand is a call sharing a param's name" do
-      code = """
-      Enum.reduce(list, 1, fn x, acc -> x() * acc end)
-      """
+      code = "Enum.reduce(list, 1, fn x, acc -> x() * acc end)"
 
-      assert fix(NoExplicitProductReduce, code) == code
+      confirm_fix(fix(NoExplicitProductReduce, code), code)
     end
   end
 end

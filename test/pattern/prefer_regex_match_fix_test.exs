@@ -28,7 +28,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == expected
+      confirm_fix(fix(PreferRegexMatch, code), expected)
     end
 
     test "[_ | _] then nil" do
@@ -55,7 +55,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == expected
+      confirm_fix(fix(PreferRegexMatch, code), expected)
     end
 
     test "nil then [_ | _] (bodies map by pattern, not source order)" do
@@ -82,7 +82,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == expected
+      confirm_fix(fix(PreferRegexMatch, code), expected)
     end
 
     test "multi-statement branch bodies" do
@@ -116,7 +116,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == expected
+      confirm_fix(fix(PreferRegexMatch, code), expected)
     end
   end
 
@@ -133,7 +133,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == code
+      confirm_fix(fix(PreferRegexMatch, code), code)
     end
 
     test "bound head is untouched" do
@@ -148,7 +148,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == code
+      confirm_fix(fix(PreferRegexMatch, code), code)
     end
 
     test "leading catch-all shadowing [_ | _] is untouched" do
@@ -163,7 +163,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == code
+      confirm_fix(fix(PreferRegexMatch, code), code)
     end
 
     test "single [_ | _] clause is untouched" do
@@ -177,7 +177,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == code
+      confirm_fix(fix(PreferRegexMatch, code), code)
     end
 
     test "bound captures are untouched" do
@@ -192,7 +192,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == code
+      confirm_fix(fix(PreferRegexMatch, code), code)
     end
 
     test "named catch-all is untouched" do
@@ -207,7 +207,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == code
+      confirm_fix(fix(PreferRegexMatch, code), code)
     end
 
     test "Regex.match? is untouched" do
@@ -217,7 +217,7 @@ defmodule Credence.Pattern.PreferRegexMatchFixTest do
       end
       """
 
-      assert fix(PreferRegexMatch, code) == code
+      confirm_fix(fix(PreferRegexMatch, code), code)
     end
   end
 end

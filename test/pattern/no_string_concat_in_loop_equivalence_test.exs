@@ -11,9 +11,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopEquivalenceTest do
 
   test "reduce(acc <> char) → Enum.join preserves the concatenation" do
     assert_equivalent(
-      """
-      Enum.reduce(graphemes, "", fn char, acc -> acc <> char end)
-      """,
+      ~S'Enum.reduce(graphemes, "", fn char, acc -> acc <> char end)',
       rule: NoStringConcatInLoop,
       vars: [:graphemes],
       inputs: [[], ["x"], ["a", "b", "c"], ["", "z", ""], ["日", "本"]]

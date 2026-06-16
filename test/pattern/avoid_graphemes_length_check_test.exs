@@ -7,23 +7,17 @@ defmodule Credence.Pattern.AvoidGraphemesLengthCheckTest do
   describe "flags graphemes piped to length" do
     test "three-step pipe" do
       assert [%Issue{rule: :avoid_graphemes_length}] =
-               check(AvoidGraphemesLength, """
-               str |> String.graphemes() |> length()
-               """)
+               check(AvoidGraphemesLength, "str |> String.graphemes() |> length()")
     end
 
     test "two-step pipe" do
       assert [%Issue{rule: :avoid_graphemes_length}] =
-               check(AvoidGraphemesLength, """
-               String.graphemes(str) |> length()
-               """)
+               check(AvoidGraphemesLength, "String.graphemes(str) |> length()")
     end
 
     test "nested call" do
       assert [%Issue{rule: :avoid_graphemes_length}] =
-               check(AvoidGraphemesLength, """
-               length(String.graphemes(str))
-               """)
+               check(AvoidGraphemesLength, "length(String.graphemes(str))")
     end
 
     test "longer pipeline before graphemes" do
@@ -52,24 +46,18 @@ defmodule Credence.Pattern.AvoidGraphemesLengthCheckTest do
       assert [%Issue{rule: :avoid_graphemes_length}] =
                check(
                  AvoidGraphemesLength,
-                 """
-                 Enum.map(list, &{&1, &1 |> String.graphemes() |> length()})
-                 """
+                 "Enum.map(list, &{&1, &1 |> String.graphemes() |> length()})"
                )
     end
   end
 
   describe "does NOT flag" do
     test "String.length/1" do
-      assert check(AvoidGraphemesLength, """
-             String.length(str)
-             """) == []
+      assert check(AvoidGraphemesLength, "String.length(str)") == []
     end
 
     test "graphemes piped to something other than length" do
-      assert check(AvoidGraphemesLength, """
-             String.graphemes(str) |> Enum.reverse()
-             """) == []
+      assert check(AvoidGraphemesLength, "String.graphemes(str) |> Enum.reverse()") == []
     end
 
     test "intermediate step between graphemes and length" do
@@ -95,9 +83,7 @@ defmodule Credence.Pattern.AvoidGraphemesLengthCheckTest do
     end
 
     test "unrelated length usage" do
-      assert check(AvoidGraphemesLength, """
-             length(list)
-             """) == []
+      assert check(AvoidGraphemesLength, "length(list)") == []
     end
 
     test "graphemes stored then counted via variable" do

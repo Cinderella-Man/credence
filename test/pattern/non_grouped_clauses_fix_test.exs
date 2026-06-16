@@ -21,7 +21,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == expected
+      confirm_fix(fix(NonGroupedClauses, input), expected)
     end
 
     test "three clauses of same function" do
@@ -45,7 +45,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == expected
+      confirm_fix(fix(NonGroupedClauses, input), expected)
     end
 
     test "defp clauses grouped" do
@@ -65,7 +65,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == expected
+      confirm_fix(fix(NonGroupedClauses, input), expected)
     end
   end
 
@@ -89,7 +89,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == expected
+      confirm_fix(fix(NonGroupedClauses, input), expected)
     end
 
     test "different arities not mixed" do
@@ -101,7 +101,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == input
+      confirm_fix(fix(NonGroupedClauses, input), input)
     end
 
     test "module attributes between consecutive clauses stay in place" do
@@ -114,7 +114,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == input
+      confirm_fix(fix(NonGroupedClauses, input), input)
     end
   end
 
@@ -128,7 +128,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == input
+      confirm_fix(fix(NonGroupedClauses, input), input)
     end
 
     test "single clause per function — no change" do
@@ -139,7 +139,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == input
+      confirm_fix(fix(NonGroupedClauses, input), input)
     end
 
     test "does not move a stray clause preceded by @impl true" do
@@ -155,7 +155,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == input
+      confirm_fix(fix(NonGroupedClauses, input), input)
     end
 
     test "does not move a stray clause preceded by @decorate" do
@@ -170,7 +170,7 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
       end
       """
 
-      assert fix(NonGroupedClauses, input) == input
+      confirm_fix(fix(NonGroupedClauses, input), input)
     end
   end
 end

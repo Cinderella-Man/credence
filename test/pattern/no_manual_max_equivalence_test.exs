@@ -17,9 +17,7 @@ defmodule Credence.Pattern.NoManualMaxEquivalenceTest do
 
   test "if a >= b, do: a, else: b → max(a, b) preserves value+type incl. equal-different-type" do
     assert_equivalent(
-      """
-      if a >= b, do: a, else: b
-      """,
+      "if a >= b, do: a, else: b",
       rule: NoManualMax,
       vars: [:a, :b],
       inputs: @pairs

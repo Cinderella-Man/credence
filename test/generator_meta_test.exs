@@ -49,7 +49,7 @@ defmodule Credence.GeneratorMetaTest do
            "rule file should be emitted at #{s.d.rule_path}"
 
     for ast <- s.asts, node <- fixtures(ast) do
-      assert fixture_ok?(node), "every fixture must be a heredoc — got #{src(node)}"
+      assert fixture_ok?(node), "every fixture must be canonical — got #{src(node)}"
     end
 
     for ast <- s.asts do

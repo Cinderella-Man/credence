@@ -12,9 +12,7 @@ defmodule Credence.Pattern.NoDeadMapUpdateEquivalenceTest do
 
   test "dead Map.update before Map.drop → Map.drop preserves the map" do
     assert_equivalent(
-      """
-      map |> Map.update(prev, 0, & &1) |> Map.drop([prev])
-      """,
+      "map |> Map.update(prev, 0, & &1) |> Map.drop([prev])",
       rule: NoDeadMapUpdate,
       vars: [:map, :prev],
       inputs: [

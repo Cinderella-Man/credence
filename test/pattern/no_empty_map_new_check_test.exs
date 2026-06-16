@@ -5,9 +5,7 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
 
   describe "flags zero-argument Map.new()" do
     test "detects Map.new() with no arguments" do
-      code = """
-      memo = Map.new()
-      """
+      code = "memo = Map.new()"
 
       [issue] = check(NoEmptyMapNew, code)
       assert issue.rule == :no_empty_map_new
@@ -15,27 +13,21 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
     end
 
     test "detects Map.new() in a function call argument" do
-      code = """
-      solve(coins, amount, Map.new())
-      """
+      code = "solve(coins, amount, Map.new())"
 
       [issue] = check(NoEmptyMapNew, code)
       assert issue.rule == :no_empty_map_new
     end
 
     test "detects Map.new without parentheses" do
-      code = """
-      memo = Map.new
-      """
+      code = "memo = Map.new"
 
       [issue] = check(NoEmptyMapNew, code)
       assert issue.rule == :no_empty_map_new
     end
 
     test "detects Map.new() on the left of a pipe (it is standalone)" do
-      code = """
-      Map.new() |> foo()
-      """
+      code = "Map.new() |> foo()"
 
       [issue] = check(NoEmptyMapNew, code)
       assert issue.rule == :no_empty_map_new
@@ -60,49 +52,37 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
 
   describe "no issue" do
     test "does not flag Map.new(enum, fun)" do
-      code = """
-      Map.new(list, fn x -> {x, true} end)
-      """
+      code = "Map.new(list, fn x -> {x, true} end)"
 
       assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag Map.new(enum)" do
-      code = """
-      Map.new(pairs)
-      """
+      code = "Map.new(pairs)"
 
       assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag piped Map.new() (the pipe supplies an argument)" do
-      code = """
-      list |> Map.new()
-      """
+      code = "list |> Map.new()"
 
       assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag a chained pipe into Map.new()" do
-      code = """
-      a |> b |> Map.new()
-      """
+      code = "a |> b |> Map.new()"
 
       assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag the %{} literal" do
-      code = """
-      memo = %{}
-      """
+      code = "memo = %{}"
 
       assert check(NoEmptyMapNew, code) == []
     end
 
     test "does not flag Map.put" do
-      code = """
-      Map.put(map, :key, value)
-      """
+      code = "Map.put(map, :key, value)"
 
       assert check(NoEmptyMapNew, code) == []
     end

@@ -16,9 +16,7 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeEquivalenceTest do
 
   test "value |> (fn x -> ... end).() → then(fn) preserves the result" do
     assert_equivalent(
-      """
-      list |> Enum.sort() |> (fn s -> [1 | s] end).()
-      """,
+      "list |> Enum.sort() |> (fn s -> [1 | s] end).()",
       rule: NoAnonFnApplicationInPipe,
       vars: [:list],
       inputs: [[], [3, 1, 2], [1], [2, 2, 1], [-1, -5, 0]]
@@ -27,9 +25,7 @@ defmodule Credence.Pattern.NoAnonFnApplicationInPipeEquivalenceTest do
 
   test "chained applications → chained then/2 preserve the result" do
     assert_equivalent(
-      """
-      x |> (fn a -> a + 1 end).() |> (fn b -> b * 2 end).()
-      """,
+      "x |> (fn a -> a + 1 end).() |> (fn b -> b * 2 end).()",
       rule: NoAnonFnApplicationInPipe,
       vars: [:x],
       inputs: [0, 1, -3, 10, 100]

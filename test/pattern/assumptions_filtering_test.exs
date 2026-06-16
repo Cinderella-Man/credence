@@ -5,6 +5,8 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
   2, 6, 7, 8, 9 and 11.
   """
   use ExUnit.Case
+
+  import Credence.RuleCase, only: [confirm_fix: 2]
   import ExUnit.CaptureLog
 
   # A module whose only fixable pattern is the switched with-predicate rule.
@@ -36,7 +38,7 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
   describe "default (helpful) mode" do
     test "a switched rule runs: the pattern is reported and fixed" do
       assert :avoid_graphemes_enum_count_with_predicate in issue_rules(@switched)
-      assert fix(@switched) == @switched_fixed
+      confirm_fix(fix(@switched), @switched_fixed)
     end
   end
 
@@ -44,7 +46,7 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
     test "no issue is reported and fix leaves the code untouched" do
       opts = [assumptions: %{single_codepoint_graphemes: false}]
       refute :avoid_graphemes_enum_count_with_predicate in issue_rules(@switched, opts)
-      assert fix(@switched, opts) == @switched
+      confirm_fix(fix(@switched, opts), @switched)
     end
   end
 
@@ -59,7 +61,7 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
     end
 
     test "the switched code is left untouched in :strict" do
-      assert fix(@switched, assumptions: :strict) == @switched
+      confirm_fix(fix(@switched, assumptions: :strict), @switched)
     end
   end
 
@@ -67,8 +69,8 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
     test "config :strict turns it off; a call passing :default turns it back on" do
       Application.put_env(:credence, :assumptions, :strict)
 
-      assert fix(@switched) == @switched
-      assert fix(@switched, assumptions: :default) == @switched_fixed
+      confirm_fix(fix(@switched), @switched)
+      confirm_fix(fix(@switched, assumptions: :default), @switched_fixed)
     end
   end
 
@@ -77,16 +79,18 @@ defmodule Credence.Pattern.AssumptionsFilteringTest do
       Application.put_env(:credence, :assumptions, :strict)
 
       # config alone → off
-      assert fix(@switched) == @switched
+      confirm_fix(fix(@switched), @switched)
 
       # call re-enables just this switch for this run
-      assert fix(@switched, assumptions: %{single_codepoint_graphemes: true}) ==
-               @switched_fixed
+      confirm_fix(
+        fix(@switched, assumptions: %{single_codepoint_graphemes: true}),
+        @switched_fixed
+      )
     end
 
     test "a missing config place does nothing (default behaviour)" do
       # no config set in this test
-      assert fix(@switched) == @switched_fixed
+      confirm_fix(fix(@switched), @switched_fixed)
     end
   end
 

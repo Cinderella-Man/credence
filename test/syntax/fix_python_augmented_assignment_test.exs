@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.FixPythonAugmentedAssignment
 
@@ -35,27 +35,15 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
     end
 
     test "detects -=" do
-      assert length(
-               analyze("""
-               value -= delta
-               """)
-             ) == 1
+      assert length(analyze("value -= delta")) == 1
     end
 
     test "detects *=" do
-      assert length(
-               analyze("""
-               total *= factor
-               """)
-             ) == 1
+      assert length(analyze("total *= factor")) == 1
     end
 
     test "detects /=" do
-      assert length(
-               analyze("""
-               value /= divisor
-               """)
-             ) == 1
+      assert length(analyze("value /= divisor")) == 1
     end
 
     test "detects multiple augmented assignments across lines" do
@@ -85,102 +73,62 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
     end
 
     test "code without augmented assignment" do
-      assert analyze("""
-             y = x + 1
-             """) == []
+      assert analyze("y = x + 1") == []
     end
 
     test "operator inside a string literal" do
-      assert analyze("""
-             x = "a += b"
-             """) == []
+      assert analyze(~S'x = "a += b"') == []
 
-      assert analyze("""
-             msg = "5/=2 ratio"
-             """) == []
+      assert analyze(~S'msg = "5/=2 ratio"') == []
     end
 
     test "qualified (dotted) left-hand side — cannot be rebound" do
-      assert analyze("""
-             socket.assigns.count += 1
-             """) == []
+      assert analyze("socket.assigns.count += 1") == []
     end
 
     test "indexed left-hand side — not a bare variable" do
-      assert analyze("""
-             arr[i] += 1
-             """) == []
+      assert analyze("arr[i] += 1") == []
     end
 
     test "augmented op that is not the leading statement" do
-      assert analyze("""
-             z = a += b
-             """) == []
+      assert analyze("z = a += b") == []
     end
 
     test "no right-hand side" do
-      assert analyze("""
-             x += 
-             """) == []
+      assert analyze("x += ") == []
     end
   end
 
   describe "fix/1 — bare-variable rewrites (RHS parenthesised)" do
     test "fixes += with simple variable" do
-      assert fix("""
-             count += 1
-             """) == """
-             count = count + (1)
-             """
+      confirm_fix(fix("count += 1"), "count = count + (1)")
     end
 
     test "fixes += with no surrounding spaces" do
-      assert fix("""
-             x+=1
-             """) == """
-             x = x + (1)
-             """
+      confirm_fix(fix("x+=1"), "x = x + (1)")
     end
 
     test "fixes += with a complex right-hand side" do
-      assert fix("""
-             count += Map.get(prefix_counts, new_sum - goal, 0)
-             """) ==
-               """
-               count = count + (Map.get(prefix_counts, new_sum - goal, 0))
-               """
+      confirm_fix(
+        fix("count += Map.get(prefix_counts, new_sum - goal, 0)"),
+        "count = count + (Map.get(prefix_counts, new_sum - goal, 0))"
+      )
     end
 
     test "fixes -= with simple variable" do
-      assert fix("""
-             value -= delta
-             """) == """
-             value = value - (delta)
-             """
+      confirm_fix(fix("value -= delta"), "value = value - (delta)")
     end
 
     test "fixes *= with simple variable" do
-      assert fix("""
-             total *= factor
-             """) == """
-             total = total * (factor)
-             """
+      confirm_fix(fix("total *= factor"), "total = total * (factor)")
     end
 
     test "fixes /= with simple variable" do
-      assert fix("""
-             value /= divisor
-             """) == """
-             value = value / (divisor)
-             """
+      confirm_fix(fix("value /= divisor"), "value = value / (divisor)")
     end
 
     test "preserves leading indentation" do
-      assert fix("""
-                 count += 1
-             """) == """
-                 count = count + (1)
-             """
+      confirm_fix(fix("    count += 1"), "    count = count + (1)")
     end
 
     test "fixes multiple augmented assignments across lines" do
@@ -194,7 +142,7 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
       b = b - (2)
       """
 
-      assert fix(source) == expected
+      confirm_fix(fix(source), expected)
     end
 
     test "the exact pattern from the row log" do
@@ -214,7 +162,7 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
       end
       """
 
-      assert fix(source) == expected
+      confirm_fix(fix(source), expected)
     end
   end
 
@@ -222,95 +170,63 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
     # Python `x *= 3 + 4` means `x = x * (3 + 4)` (== 14), NOT `x = x * 3 + 4`
     # (== 10). The naive unparenthesised rewrite would change the answer.
     test "*= with a lower-precedence right-hand side" do
-      assert fix("""
-             x *= 3 + 4
-             """) == """
-             x = x * (3 + 4)
-             """
+      confirm_fix(fix("x *= 3 + 4"), "x = x * (3 + 4)")
     end
 
     test "-= with a subtraction right-hand side" do
-      assert fix("""
-             x -= 3 - 1
-             """) == """
-             x = x - (3 - 1)
-             """
+      confirm_fix(fix("x -= 3 - 1"), "x = x - (3 - 1)")
     end
 
     test "/= with a lower-precedence right-hand side" do
-      assert fix("""
-             x /= a + b
-             """) == """
-             x = x / (a + b)
-             """
+      confirm_fix(fix("x /= a + b"), "x = x / (a + b)")
     end
 
     test "-= with a negative literal" do
-      assert fix("""
-             x -= -1
-             """) == """
-             x = x - (-1)
-             """
+      confirm_fix(fix("x -= -1"), "x = x - (-1)")
     end
   end
 
   describe "fix/1 — no-ops (must not corrupt valid code)" do
     test "comment line unchanged" do
-      code = """
-      # x += 1 is Python
+      code = "# x += 1 is Python"
 
-      """
-
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "code without augmented assignment unchanged" do
-      code = """
-      y = x + 1
+      code = "y = x + 1"
 
-      """
-
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "operator inside a string literal unchanged" do
-      code = """
-      x = "a += b"
-      """
+      code = ~S'x = "a += b"'
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "string literal containing /= unchanged" do
-      code = """
-      msg = "5/=2 ratio"
-      """
+      code = ~S'msg = "5/=2 ratio"'
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "qualified left-hand side unchanged" do
-      code = """
-      socket.assigns.count += 1
-      """
+      code = "socket.assigns.count += 1"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "indexed left-hand side unchanged" do
-      code = """
-      arr[i] += 1
-      """
+      code = "arr[i] += 1"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "augmented op not leading the statement unchanged" do
-      code = """
-      z = a += b
-      """
+      code = "z = a += b"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
   end
 
@@ -331,19 +247,11 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignmentTest do
     end
 
     test "fix reaches a fixpoint — fixed output no longer flags" do
-      assert analyze(
-               fix("""
-               count += 1
-               """)
-             ) == []
+      assert analyze(fix("count += 1")) == []
     end
 
     test "fix output is well-formed (parses)" do
-      assert valid_syntax?(
-               fix("""
-               count += 1
-               """)
-             )
+      assert valid_syntax?(fix("count += 1"))
     end
   end
 end

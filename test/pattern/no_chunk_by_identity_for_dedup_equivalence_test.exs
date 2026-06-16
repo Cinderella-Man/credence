@@ -13,9 +13,7 @@ defmodule Credence.Pattern.NoChunkByIdentityForDedupEquivalenceTest do
 
   test "chunk_by(&1) |> map(first) → Enum.dedup preserves the deduped list" do
     assert_equivalent(
-      """
-      Enum.chunk_by(list, & &1) |> Enum.map(&List.first/1)
-      """,
+      "Enum.chunk_by(list, & &1) |> Enum.map(&List.first/1)",
       rule: NoChunkByIdentityForDedup,
       vars: [:list],
       inputs: [[], [1, 1, 2, 2, 1], [1, 1.0, 1], [1, 2, 3], [:a, :a, :b, :a]]

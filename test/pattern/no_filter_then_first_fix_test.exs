@@ -7,12 +7,10 @@ defmodule Credence.Pattern.NoFilterThenFirstFixTest do
 
   describe "pipeline fix" do
     test "Stream.filter(coll, pred) |> Enum.at(0) → Enum.find(coll, pred)" do
-      assert fix(NoFilterThenFirst, """
-             Stream.filter(nums, &even?/1) |> Enum.at(0)
-             """) ==
-               """
-               Enum.find(nums, &even?/1)
-               """
+      confirm_fix(
+        fix(NoFilterThenFirst, "Stream.filter(nums, &even?/1) |> Enum.at(0)"),
+        "Enum.find(nums, &even?/1)"
+      )
     end
 
     test "inside longer pipeline" do
@@ -35,7 +33,7 @@ defmodule Credence.Pattern.NoFilterThenFirstFixTest do
       end
       """
 
-      assert fix(NoFilterThenFirst, input) == expected
+      confirm_fix(fix(NoFilterThenFirst, input), expected)
     end
   end
 
@@ -43,12 +41,10 @@ defmodule Credence.Pattern.NoFilterThenFirstFixTest do
 
   describe "nested fix" do
     test "Enum.at(Stream.filter(coll, pred), 0) → Enum.find(coll, pred)" do
-      assert fix(NoFilterThenFirst, """
-             Enum.at(Stream.filter(nums, &even?/1), 0)
-             """) ==
-               """
-               Enum.find(nums, &even?/1)
-               """
+      confirm_fix(
+        fix(NoFilterThenFirst, "Enum.at(Stream.filter(nums, &even?/1), 0)"),
+        "Enum.find(nums, &even?/1)"
+      )
     end
   end
 
@@ -60,19 +56,15 @@ defmodule Credence.Pattern.NoFilterThenFirstFixTest do
 
   describe "leaves eager Enum.filter unchanged" do
     test "leaves Enum.filter |> Enum.at(0) unchanged" do
-      code = """
-      Enum.filter(nums, &even?/1) |> Enum.at(0)
-      """
+      code = "Enum.filter(nums, &even?/1) |> Enum.at(0)"
 
-      assert fix(NoFilterThenFirst, code) == code
+      confirm_fix(fix(NoFilterThenFirst, code), code)
     end
 
     test "leaves nested Enum.at(Enum.filter(...), 0) unchanged" do
-      code = """
-      Enum.at(Enum.filter(nums, &even?/1), 0)
-      """
+      code = "Enum.at(Enum.filter(nums, &even?/1), 0)"
 
-      assert fix(NoFilterThenFirst, code) == code
+      confirm_fix(fix(NoFilterThenFirst, code), code)
     end
   end
 
@@ -80,19 +72,15 @@ defmodule Credence.Pattern.NoFilterThenFirstFixTest do
 
   describe "does not fix non-matching patterns" do
     test "leaves Stream.filter |> Enum.at(1) unchanged" do
-      code = """
-      Stream.filter(nums, &even?/1) |> Enum.at(1)
-      """
+      code = "Stream.filter(nums, &even?/1) |> Enum.at(1)"
 
-      assert fix(NoFilterThenFirst, code) == code
+      confirm_fix(fix(NoFilterThenFirst, code), code)
     end
 
     test "leaves Enum.find unchanged" do
-      code = """
-      Enum.find(nums, &even?/1)
-      """
+      code = "Enum.find(nums, &even?/1)"
 
-      assert fix(NoFilterThenFirst, code) == code
+      confirm_fix(fix(NoFilterThenFirst, code), code)
     end
   end
 end

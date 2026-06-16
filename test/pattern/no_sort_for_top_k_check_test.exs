@@ -28,9 +28,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
     end
 
     test "flags inside anonymous function" do
-      code = """
-      Enum.map(list, fn x -> Enum.sort(x) |> Enum.at(0) end)
-      """
+      code = "Enum.map(list, fn x -> Enum.sort(x) |> Enum.at(0) end)"
 
       assert length(check(NoSortForTopK, code)) == 1
     end
@@ -49,9 +47,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
     end
 
     test "flags nested pipeline in tuple" do
-      code = """
-      Enum.map(list, &{&1, Enum.sort(&1) |> Enum.at(0)})
-      """
+      code = "Enum.map(list, &{&1, Enum.sort(&1) |> Enum.at(0)})"
 
       assert length(check(NoSortForTopK, code)) == 1
     end
@@ -119,9 +115,7 @@ defmodule Credence.Pattern.NoSortForTopKCheckTest do
     end
 
     test "does not flag sort |> at(0) followed by more steps" do
-      code = """
-      Enum.sort(list) |> Enum.at(0) |> to_string()
-      """
+      code = "Enum.sort(list) |> Enum.at(0) |> to_string()"
 
       assert check(NoSortForTopK, code) == []
     end

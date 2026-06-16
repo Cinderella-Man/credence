@@ -5,9 +5,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
 
   describe "flags" do
     test "Enum.into(enum, MapSet.new())" do
-      code = """
-      Enum.into(list, MapSet.new())
-      """
+      code = "Enum.into(list, MapSet.new())"
 
       [issue] = check(NoEnumIntoEmptyMapset, code)
       assert issue.rule == :no_enum_into_empty_mapset
@@ -15,9 +13,7 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
     end
 
     test "Enum.into(enum, MapSet.new(), fun)" do
-      code = """
-      Enum.into(list, MapSet.new(), fn x -> x * 2 end)
-      """
+      code = "Enum.into(list, MapSet.new(), fn x -> x * 2 end)"
 
       [issue] = check(NoEnumIntoEmptyMapset, code)
       assert issue.rule == :no_enum_into_empty_mapset
@@ -25,18 +21,14 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
     end
 
     test "piped Enum.into(MapSet.new())" do
-      code = """
-      list |> Enum.into(MapSet.new())
-      """
+      code = "list |> Enum.into(MapSet.new())"
 
       [issue] = check(NoEnumIntoEmptyMapset, code)
       assert issue.rule == :no_enum_into_empty_mapset
     end
 
     test "piped Enum.into(MapSet.new(), fun)" do
-      code = """
-      list |> Enum.into(MapSet.new(), fn x -> x * 2 end)
-      """
+      code = "list |> Enum.into(MapSet.new(), fn x -> x * 2 end)"
 
       [issue] = check(NoEnumIntoEmptyMapset, code)
       assert issue.rule == :no_enum_into_empty_mapset
@@ -72,57 +64,43 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetCheckTest do
 
   describe "does not flag" do
     test "Enum.into with a non-empty/variable MapSet target" do
-      code = """
-      Enum.into(list, existing_set)
-      """
+      code = "Enum.into(list, existing_set)"
 
       assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "Enum.into with a variable target and a transform fun" do
-      code = """
-      Enum.into(list, my_mapset, fn x -> x * 2 end)
-      """
+      code = "Enum.into(list, my_mapset, fn x -> x * 2 end)"
 
       assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "MapSet.new/1" do
-      code = """
-      MapSet.new(list)
-      """
+      code = "MapSet.new(list)"
 
       assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "MapSet.new/2" do
-      code = """
-      MapSet.new(list, fn x -> x * 2 end)
-      """
+      code = "MapSet.new(list, fn x -> x * 2 end)"
 
       assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "Enum.into with an empty map literal" do
-      code = """
-      Enum.into(list, %{})
-      """
+      code = "Enum.into(list, %{})"
 
       assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "Enum.into with a list" do
-      code = """
-      Enum.into(map, [], fn {k, v} -> {k, v} end)
-      """
+      code = "Enum.into(map, [], fn {k, v} -> {k, v} end)"
 
       assert check(NoEnumIntoEmptyMapset, code) == []
     end
 
     test "Enum.into targeting MapSet.new(seed) with a seed argument" do
-      code = """
-      Enum.into(list, MapSet.new([0]))
-      """
+      code = "Enum.into(list, MapSet.new([0]))"
 
       assert check(NoEnumIntoEmptyMapset, code) == []
     end

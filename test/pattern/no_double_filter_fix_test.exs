@@ -20,7 +20,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(NoDoubleFilter, code) == expected
+      confirm_fix(fix(NoDoubleFilter, code), expected)
     end
 
     test "eq / neq" do
@@ -39,7 +39,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(NoDoubleFilter, code) == expected
+      confirm_fix(fix(NoDoubleFilter, code), expected)
     end
 
     test "operand is a bound variable" do
@@ -58,7 +58,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(NoDoubleFilter, code) == expected
+      confirm_fix(fix(NoDoubleFilter, code), expected)
     end
   end
 
@@ -72,7 +72,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(NoDoubleFilter, code) == code
+      confirm_fix(fix(NoDoubleFilter, code), code)
     end
 
     test "non-adjacent filters is a no-op" do
@@ -85,7 +85,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(NoDoubleFilter, code) == code
+      confirm_fix(fix(NoDoubleFilter, code), code)
     end
 
     test "single filter is a no-op" do
@@ -96,7 +96,7 @@ defmodule Credence.Pattern.NoDoubleFilterFixTest do
       end
       """
 
-      assert fix(NoDoubleFilter, code) == code
+      confirm_fix(fix(NoDoubleFilter, code), code)
     end
   end
 end

@@ -20,7 +20,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(NoCaptureFnApply, code) == expected
+    confirm_fix(fix(NoCaptureFnApply, code), expected)
   end
 
   test "inlines a capture with arithmetic" do
@@ -40,7 +40,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(NoCaptureFnApply, code) == expected
+    confirm_fix(fix(NoCaptureFnApply, code), expected)
   end
 
   test "inlines multiple capture applications on separate lines" do
@@ -64,7 +64,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(NoCaptureFnApply, code) == expected
+    confirm_fix(fix(NoCaptureFnApply, code), expected)
   end
 
   test "leaves a capture with a side-effecting arg untouched" do
@@ -76,7 +76,7 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(NoCaptureFnApply, code) == code
+    confirm_fix(fix(NoCaptureFnApply, code), code)
   end
 
   test "leaves a plain anonymous-function application untouched" do
@@ -89,6 +89,6 @@ defmodule Credence.Pattern.NoCaptureFnApplyFixTest do
     end
     """
 
-    assert fix(NoCaptureFnApply, code) == code
+    confirm_fix(fix(NoCaptureFnApply, code), code)
   end
 end

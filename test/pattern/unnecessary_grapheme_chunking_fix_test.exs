@@ -26,7 +26,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(UnnecessaryGraphemeChunking, input) == expected
+      confirm_fix(fix(UnnecessaryGraphemeChunking, input), expected)
     end
 
     test "fixes pipeline with literal chunk size" do
@@ -51,7 +51,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(UnnecessaryGraphemeChunking, input) == expected
+      confirm_fix(fix(UnnecessaryGraphemeChunking, input), expected)
     end
 
     test "fixes pipeline with fn join" do
@@ -76,7 +76,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(UnnecessaryGraphemeChunking, input) == expected
+      confirm_fix(fix(UnnecessaryGraphemeChunking, input), expected)
     end
 
     test "fixes pipeline with implicit discard" do
@@ -101,7 +101,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(UnnecessaryGraphemeChunking, input) == expected
+      confirm_fix(fix(UnnecessaryGraphemeChunking, input), expected)
     end
 
     test "preserves pipeline stages before graphemes" do
@@ -139,7 +139,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(UnnecessaryGraphemeChunking, input) == expected
+      confirm_fix(fix(UnnecessaryGraphemeChunking, input), expected)
     end
 
     test "fixes multiple pipelines in the same module" do
@@ -167,7 +167,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(UnnecessaryGraphemeChunking, input) == expected
+      confirm_fix(fix(UnnecessaryGraphemeChunking, input), expected)
     end
 
     test "does not modify code without the pattern" do
@@ -177,7 +177,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(UnnecessaryGraphemeChunking, code) == code
+      confirm_fix(fix(UnnecessaryGraphemeChunking, code), code)
     end
 
     test "fix inside nested anonymous function" do
@@ -206,7 +206,7 @@ defmodule Credence.Pattern.UnnecessaryGraphemeChunkingFixTest do
       end
       """
 
-      assert fix(UnnecessaryGraphemeChunking, input) == expected
+      confirm_fix(fix(UnnecessaryGraphemeChunking, input), expected)
     end
   end
 end

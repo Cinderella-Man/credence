@@ -19,7 +19,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       """
 
-      assert fix(NoTrailingNewlineInDoc, code) == expected
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), expected)
     end
 
     test "@moduledoc trailing newline" do
@@ -37,7 +37,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       """
 
-      assert fix(NoTrailingNewlineInDoc, code) == expected
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), expected)
     end
 
     test "@typedoc trailing newline" do
@@ -55,7 +55,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       """
 
-      assert fix(NoTrailingNewlineInDoc, code) == expected
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), expected)
     end
 
     test "multiple trailing newlines" do
@@ -73,7 +73,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       """
 
-      assert fix(NoTrailingNewlineInDoc, code) == expected
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), expected)
     end
 
     test "multiple doc attrs in one file" do
@@ -95,7 +95,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       """
 
-      assert fix(NoTrailingNewlineInDoc, code) == expected
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), expected)
     end
 
     test "preserves surrounding code" do
@@ -119,7 +119,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       """
 
-      assert fix(NoTrailingNewlineInDoc, code) == expected
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), expected)
     end
   end
 
@@ -134,7 +134,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       '''
 
-      assert fix(NoTrailingNewlineInDoc, code) == code
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), code)
     end
 
     test "leaves single-line heredoc @moduledoc unchanged" do
@@ -147,7 +147,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       '''
 
-      assert fix(NoTrailingNewlineInDoc, code) == code
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), code)
     end
 
     test "leaves multi-line heredoc @doc unchanged" do
@@ -165,7 +165,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       '''
 
-      assert fix(NoTrailingNewlineInDoc, code) == code
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), code)
     end
   end
 
@@ -178,7 +178,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       """
 
-      assert fix(NoTrailingNewlineInDoc, code) == code
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), code)
     end
 
     test "returns source unchanged when nothing to fix" do
@@ -189,7 +189,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       """
 
-      assert fix(NoTrailingNewlineInDoc, code) == code
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), code)
     end
 
     test "does not touch @doc false" do
@@ -200,7 +200,7 @@ defmodule Credence.Pattern.NoTrailingNewlineInDocFixTest do
       end
       """
 
-      assert fix(NoTrailingNewlineInDoc, code) == code
+      confirm_fix(fix(NoTrailingNewlineInDoc, code), code)
     end
   end
 end

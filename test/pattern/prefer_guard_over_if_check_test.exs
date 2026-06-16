@@ -343,9 +343,7 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
 
   describe "does not flag function with non-if body" do
     test "simple expression body" do
-      assert clean?(PreferGuardOverIf, """
-             defp double(x), do: x * 2
-             """)
+      assert clean?(PreferGuardOverIf, "defp double(x), do: x * 2")
     end
 
     test "case in body" do

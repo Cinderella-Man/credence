@@ -20,9 +20,7 @@ defmodule Credence.Pattern.NoSortForTopKEquivalenceTest do
 
   test "sort |> at(0) → Enum.min(_, fn -> nil end) preserves behaviour incl. empty list" do
     assert_equivalent(
-      """
-      Enum.sort(list) |> Enum.at(0)
-      """,
+      "Enum.sort(list) |> Enum.at(0)",
       rule: NoSortForTopK,
       vars: [:list],
       inputs: B.term_lists()
@@ -31,9 +29,7 @@ defmodule Credence.Pattern.NoSortForTopKEquivalenceTest do
 
   test "sort |> reverse |> at(0) → Enum.max(_, fn -> nil end) preserves behaviour incl. empty list" do
     assert_equivalent(
-      """
-      Enum.sort(list) |> Enum.reverse() |> Enum.at(0)
-      """,
+      "Enum.sort(list) |> Enum.reverse() |> Enum.at(0)",
       rule: NoSortForTopK,
       vars: [:list],
       inputs: B.term_lists()

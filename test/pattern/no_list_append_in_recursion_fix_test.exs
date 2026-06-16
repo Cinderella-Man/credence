@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       end
       """
 
-      assert fix(NoListAppendInRecursion, input) == expected
+      confirm_fix(fix(NoListAppendInRecursion, input), expected)
     end
 
     test "fixes guarded recursive clause" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       end
       """
 
-      assert fix(NoListAppendInRecursion, input) == expected
+      confirm_fix(fix(NoListAppendInRecursion, input), expected)
     end
 
     test "fixes multi-expression recursive body" do
@@ -75,7 +75,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       end
       """
 
-      assert fix(NoListAppendInRecursion, input) == expected
+      confirm_fix(fix(NoListAppendInRecursion, input), expected)
     end
 
     test "does not fix when no base case exists" do
@@ -88,7 +88,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       """
 
       # No base case to add reverse to — cannot fix safely.
-      assert fix(NoListAppendInRecursion, code) == code
+      confirm_fix(fix(NoListAppendInRecursion, code), code)
     end
 
     test "does not fix when base case does not return accumulator directly" do
@@ -103,7 +103,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       """
 
       # Base case wraps result in tuple — cannot fix.
-      assert fix(NoListAppendInRecursion, code) == code
+      confirm_fix(fix(NoListAppendInRecursion, code), code)
     end
 
     test "does not fix indirect append (assigned to variable)" do
@@ -118,7 +118,7 @@ defmodule Credence.Pattern.NoListAppendInRecursionFixTest do
       end
       """
 
-      assert fix(NoListAppendInRecursion, code) == code
+      confirm_fix(fix(NoListAppendInRecursion, code), code)
     end
 
     test "fixed code has no remaining issues" do

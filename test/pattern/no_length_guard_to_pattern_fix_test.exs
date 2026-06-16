@@ -21,7 +21,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(NoLengthGuardToPattern, input) == expected
+      confirm_fix(fix(NoLengthGuardToPattern, input), expected)
     end
 
     test "fixes length(list) == 1 into [_] = list pattern" do
@@ -41,7 +41,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(NoLengthGuardToPattern, input) == expected
+      confirm_fix(fix(NoLengthGuardToPattern, input), expected)
     end
 
     test "fixes length(list) == 3 into [_, _, _] = list pattern" do
@@ -61,7 +61,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(NoLengthGuardToPattern, input) == expected
+      confirm_fix(fix(NoLengthGuardToPattern, input), expected)
     end
 
     test "fixes length(list) == 5 into [_, _, _, _, _] = list pattern" do
@@ -81,7 +81,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(NoLengthGuardToPattern, input) == expected
+      confirm_fix(fix(NoLengthGuardToPattern, input), expected)
     end
 
     test "preserves remaining guard in compound expression" do
@@ -101,7 +101,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(NoLengthGuardToPattern, input) == expected
+      confirm_fix(fix(NoLengthGuardToPattern, input), expected)
     end
 
     test "preserves remaining guard when length check is on the right of and" do
@@ -121,7 +121,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(NoLengthGuardToPattern, input) == expected
+      confirm_fix(fix(NoLengthGuardToPattern, input), expected)
     end
 
     test "does not modify when variable is not a direct parameter" do
@@ -134,7 +134,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       """
 
       # Cannot fix — list is nested inside a map pattern, not a top-level param.
-      assert fix(NoLengthGuardToPattern, code) == code
+      confirm_fix(fix(NoLengthGuardToPattern, code), code)
     end
 
     test "does not modify length(list) == N for N > 5" do
@@ -146,7 +146,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(NoLengthGuardToPattern, code) == code
+      confirm_fix(fix(NoLengthGuardToPattern, code), code)
     end
 
     test "does not modify unfixable patterns like k <= length(nums)" do
@@ -158,7 +158,7 @@ defmodule Credence.Pattern.NoLengthGuardToPatternFixTest do
       end
       """
 
-      assert fix(NoLengthGuardToPattern, code) == code
+      confirm_fix(fix(NoLengthGuardToPattern, code), code)
     end
 
     test "fixed code has no remaining issues for > 0" do

@@ -5,63 +5,43 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
 
   describe "fix — removes the dead identity update" do
     test "piped Map.update |> Map.drop" do
-      code = """
-      map |> Map.update(prev, 0, & &1) |> Map.drop([prev])
-      """
+      code = "map |> Map.update(prev, 0, & &1) |> Map.drop([prev])"
 
-      expected = """
-      Map.drop(map, [prev])
-      """
+      expected = "Map.drop(map, [prev])"
 
-      assert fix(NoDeadMapUpdate, code) == expected
+      confirm_fix(fix(NoDeadMapUpdate, code), expected)
     end
 
     test "piped Map.update |> Map.delete" do
-      code = """
-      map |> Map.update(key, 0, & &1) |> Map.delete(key)
-      """
+      code = "map |> Map.update(key, 0, & &1) |> Map.delete(key)"
 
-      expected = """
-      Map.delete(map, key)
-      """
+      expected = "Map.delete(map, key)"
 
-      assert fix(NoDeadMapUpdate, code) == expected
+      confirm_fix(fix(NoDeadMapUpdate, code), expected)
     end
 
     test "direct Map.drop(Map.update(...), [key])" do
-      code = """
-      Map.drop(Map.update(map, key, 0, & &1), [key])
-      """
+      code = "Map.drop(Map.update(map, key, 0, & &1), [key])"
 
-      expected = """
-      Map.drop(map, [key])
-      """
+      expected = "Map.drop(map, [key])"
 
-      assert fix(NoDeadMapUpdate, code) == expected
+      confirm_fix(fix(NoDeadMapUpdate, code), expected)
     end
 
     test "direct Map.delete(Map.update(...), key)" do
-      code = """
-      Map.delete(Map.update(map, key, 0, & &1), key)
-      """
+      code = "Map.delete(Map.update(map, key, 0, & &1), key)"
 
-      expected = """
-      Map.delete(map, key)
-      """
+      expected = "Map.delete(map, key)"
 
-      assert fix(NoDeadMapUpdate, code) == expected
+      confirm_fix(fix(NoDeadMapUpdate, code), expected)
     end
 
     test "preserves other keys in the drop list" do
-      code = """
-      map |> Map.update(key, 0, & &1) |> Map.drop([key, other])
-      """
+      code = "map |> Map.update(key, 0, & &1) |> Map.drop([key, other])"
 
-      expected = """
-      Map.drop(map, [key, other])
-      """
+      expected = "Map.drop(map, [key, other])"
 
-      assert fix(NoDeadMapUpdate, code) == expected
+      confirm_fix(fix(NoDeadMapUpdate, code), expected)
     end
 
     test "preserves surrounding code" do
@@ -89,13 +69,11 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
       end
       """
 
-      assert fix(NoDeadMapUpdate, code) == expected
+      confirm_fix(fix(NoDeadMapUpdate, code), expected)
     end
 
     test "fixed code produces no further issues (round-trip)" do
-      code = """
-      map |> Map.update(prev, 0, & &1) |> Map.drop([prev])
-      """
+      code = "map |> Map.update(prev, 0, & &1) |> Map.drop([prev])"
 
       fixed = fix(NoDeadMapUpdate, code)
       assert clean?(NoDeadMapUpdate, fixed)
@@ -104,35 +82,27 @@ defmodule Credence.Pattern.NoDeadMapUpdateFixTest do
 
   describe "no-op — unsafe or non-matching shapes are untouched" do
     test "arithmetic fun is not rewritten" do
-      code = """
-      map |> Map.update(prev, 0, &(&1 - count)) |> Map.drop([prev])
-      """
+      code = "map |> Map.update(prev, 0, &(&1 - count)) |> Map.drop([prev])"
 
-      assert fix(NoDeadMapUpdate, code) == code
+      confirm_fix(fix(NoDeadMapUpdate, code), code)
     end
 
     test "non-literal default is not rewritten" do
-      code = """
-      map |> Map.update(key, default(), & &1) |> Map.drop([key])
-      """
+      code = "map |> Map.update(key, default(), & &1) |> Map.drop([key])"
 
-      assert fix(NoDeadMapUpdate, code) == code
+      confirm_fix(fix(NoDeadMapUpdate, code), code)
     end
 
     test "differing key is not rewritten" do
-      code = """
-      map |> Map.update(key_a, 0, & &1) |> Map.drop([key_b])
-      """
+      code = "map |> Map.update(key_a, 0, & &1) |> Map.drop([key_b])"
 
-      assert fix(NoDeadMapUpdate, code) == code
+      confirm_fix(fix(NoDeadMapUpdate, code), code)
     end
 
     test "lone Map.update is not rewritten" do
-      code = """
-      map |> Map.update(key, 0, & &1)
-      """
+      code = "map |> Map.update(key, 0, & &1)"
 
-      assert fix(NoDeadMapUpdate, code) == code
+      confirm_fix(fix(NoDeadMapUpdate, code), code)
     end
   end
 end

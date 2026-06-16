@@ -23,7 +23,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameFixTest do
       end
       """
 
-      assert fix(NoUnderscoreFunctionName, input) == expected
+      confirm_fix(fix(NoUnderscoreFunctionName, input), expected)
     end
 
     test "renames single-clause keyword syntax" do
@@ -39,7 +39,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameFixTest do
       end
       """
 
-      assert fix(NoUnderscoreFunctionName, input) == expected
+      confirm_fix(fix(NoUnderscoreFunctionName, input), expected)
     end
 
     test "renames guarded function with recursive call" do
@@ -59,7 +59,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameFixTest do
       end
       """
 
-      assert fix(NoUnderscoreFunctionName, input) == expected
+      confirm_fix(fix(NoUnderscoreFunctionName, input), expected)
     end
 
     test "renames function with multi-line body" do
@@ -85,7 +85,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameFixTest do
       end
       """
 
-      assert fix(NoUnderscoreFunctionName, input) == expected
+      confirm_fix(fix(NoUnderscoreFunctionName, input), expected)
     end
 
     test "renames multiple underscore functions" do
@@ -103,7 +103,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameFixTest do
       end
       """
 
-      assert fix(NoUnderscoreFunctionName, input) == expected
+      confirm_fix(fix(NoUnderscoreFunctionName, input), expected)
     end
 
     test "does not modify idiomatic do_ prefix" do
@@ -114,7 +114,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameFixTest do
       end
       """
 
-      assert fix(NoUnderscoreFunctionName, input) == input
+      confirm_fix(fix(NoUnderscoreFunctionName, input), input)
     end
 
     test "does not modify dunder names" do
@@ -126,7 +126,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameFixTest do
       end
       """
 
-      assert fix(NoUnderscoreFunctionName, input) == input
+      confirm_fix(fix(NoUnderscoreFunctionName, input), input)
     end
 
     test "returns source unchanged when no underscore functions present" do
@@ -137,7 +137,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameFixTest do
       end
       """
 
-      assert fix(NoUnderscoreFunctionName, input) == input
+      confirm_fix(fix(NoUnderscoreFunctionName, input), input)
     end
 
     test "roundtrip: fixed code produces no issues" do

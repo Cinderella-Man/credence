@@ -18,9 +18,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
     end
 
     test "Enum.find_value/2 || default" do
-      code = """
-      Enum.find_value(list, &process/1) || :default
-      """
+      code = "Enum.find_value(list, &process/1) || :default"
 
       issues = check(NoFindValueDefaultCase, code)
       assert length(issues) == 1
@@ -86,9 +84,7 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
     end
 
     test "Enum.find/2 || default is NOT flagged" do
-      code = """
-      Enum.find(list, &valid?/1) || :not_found
-      """
+      code = "Enum.find(list, &valid?/1) || :not_found"
 
       assert check(NoFindValueDefaultCase, code) == []
     end
@@ -152,17 +148,13 @@ defmodule Credence.Pattern.NoFindValueDefaultCaseCheckTest do
     end
 
     test "bare Enum.find_value/2 without nil check is NOT flagged" do
-      code = """
-      Enum.find_value(list, &process/1)
-      """
+      code = "Enum.find_value(list, &process/1)"
 
       assert check(NoFindValueDefaultCase, code) == []
     end
 
     test "bare Enum.find/2 without nil check is NOT flagged" do
-      code = """
-      Enum.find(list, &valid?/1)
-      """
+      code = "Enum.find(list, &valid?/1)"
 
       assert check(NoFindValueDefaultCase, code) == []
     end

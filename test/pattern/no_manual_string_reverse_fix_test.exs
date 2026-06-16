@@ -17,7 +17,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, input) == expected
+      confirm_fix(fix(NoManualStringReverse, input), expected)
     end
 
     test "fixes nested call form" do
@@ -33,7 +33,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, input) == expected
+      confirm_fix(fix(NoManualStringReverse, input), expected)
     end
 
     test "fixes pipeline with preceding steps" do
@@ -59,7 +59,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, input) == expected
+      confirm_fix(fix(NoManualStringReverse, input), expected)
     end
 
     test "fixes direct graphemes call in pipeline" do
@@ -75,7 +75,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, input) == expected
+      confirm_fix(fix(NoManualStringReverse, input), expected)
     end
 
     test "fixes multiple occurrences" do
@@ -99,7 +99,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, input) == expected
+      confirm_fix(fix(NoManualStringReverse, input), expected)
     end
 
     test "preserves pipeline steps after Enum.join" do
@@ -115,7 +115,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, input) == expected
+      confirm_fix(fix(NoManualStringReverse, input), expected)
     end
 
     test "preserves pipeline steps before graphemes" do
@@ -143,7 +143,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, input) == expected
+      confirm_fix(fix(NoManualStringReverse, input), expected)
     end
 
     test "fixes inside fn body" do
@@ -159,7 +159,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end)
       """
 
-      assert fix(NoManualStringReverse, input) == expected
+      confirm_fix(fix(NoManualStringReverse, input), expected)
     end
 
     test "does not modify code already using String.reverse/1" do
@@ -172,7 +172,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, code) == code
+      confirm_fix(fix(NoManualStringReverse, code), code)
     end
 
     test "does not modify Enum.join with separator" do
@@ -182,7 +182,7 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, code) == code
+      confirm_fix(fix(NoManualStringReverse, code), code)
     end
 
     test "does not modify unrelated pipelines" do
@@ -192,29 +192,24 @@ defmodule Credence.Pattern.NoManualStringReverseFixTest do
       end
       """
 
-      assert fix(NoManualStringReverse, code) == code
+      confirm_fix(fix(NoManualStringReverse, code), code)
     end
   end
 
   describe "graphemes + IO.iodata_to_binary reassemble (always-safe, no promise)" do
     test "fixes graphemes |> reverse |> IO.iodata_to_binary pipeline" do
-      input = """
-      def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()
-      """
+      input =
+        "def reverse(str), do: str |> String.graphemes() |> Enum.reverse() |> IO.iodata_to_binary()"
 
-      expected = """
-      def reverse(str), do: String.reverse(str)
-      """
+      expected = "def reverse(str), do: String.reverse(str)"
 
-      assert fix(NoManualStringReverse, input) == expected
+      confirm_fix(fix(NoManualStringReverse, input), expected)
     end
 
     test "does NOT touch codepoints (handled by NoCodepointStringReverse)" do
-      code = """
-      def reverse(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()
-      """
+      code = "def reverse(str), do: str |> String.codepoints() |> Enum.reverse() |> Enum.join()"
 
-      assert fix(NoManualStringReverse, code) == code
+      confirm_fix(fix(NoManualStringReverse, code), code)
     end
   end
 end

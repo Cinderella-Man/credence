@@ -167,9 +167,7 @@ defmodule Credence.Semantic.UndefinedFunction.MatcherFixTest do
     end
 
     test "module name not in error message" do
-      source = """
-      fibonacci(5)
-      """
+      source = "fibonacci(5)"
 
       assert fix_local(source, "undefined function fibonacci/1", 1) == source
     end
