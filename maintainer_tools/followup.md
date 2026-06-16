@@ -139,3 +139,10 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_tuple_for_random_access_fix_test.exs`
 - Reason: Enum.fetch!→List.to_tuple+elem diverges on negative index (returns vs raises), non-list enumerables (List.to_tuple raises on range/map/stream), and exception type; var-type/index-sign unprovable from AST, no safe core.
 
+## avoid_binary_mid_pattern — 2026-06-17
+- Files:
+  - `lib/semantic/avoid_binary_mid_pattern.ex`
+  - `test/semantic/avoid_binary_mid_pattern_check_test.exs`
+  - `test/semantic/avoid_binary_mid_pattern_fix_test.exs`
+- Reason: fix changes last byte from integer to 1-byte binary (binary_part/3), inverting `first == last` true→false; also leaves middle var unbound if used, and relaxes the >=2-byte match — type change, no safe core.
+

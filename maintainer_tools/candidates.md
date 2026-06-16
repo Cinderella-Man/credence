@@ -1,4 +1,3 @@
-lib/semantic/avoid_binary_mid_pattern.ex
 lib/semantic/avoid_remote_function_in_guard.ex
 lib/semantic/no_bare_doc_attribute.ex
 lib/semantic/no_bare_names_in_spec.ex
@@ -218,8 +217,6 @@ test/pattern/unnecessary_grapheme_chunking_check_test.exs
 test/pattern/unnecessary_grapheme_chunking_fix_test.exs
 test/pattern/use_map_join_equivalence_test.exs
 test/pattern/use_map_join_fix_test.exs
-test/semantic/avoid_binary_mid_pattern_check_test.exs
-test/semantic/avoid_binary_mid_pattern_fix_test.exs
 test/semantic/avoid_remote_function_in_guard_check_test.exs
 test/semantic/avoid_remote_function_in_guard_fix_test.exs
 test/semantic/missing_use_exunit_case_fix_test.exs
