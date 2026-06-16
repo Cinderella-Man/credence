@@ -76,3 +76,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_chunk_over_indexed_reduce_fix_test.exs`
 - Reason: overfit template substitution — fix hardcodes a peak-count rewrite ignoring init acc / branch return values / boundary comparisons, and even the exact canonical snippet diverges under :strict (single-element [{}]/[%{}]/[[]] → orig 1, rewrite 0, since out-of-bounds Enum.at returns nil < tuple/map/list); no safe non-degenerate core.
 
+## prefer_direct_list_return_in_accumulator — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_direct_list_return_in_accumulator.ex`
+  - `test/pattern/prefer_direct_list_return_in_accumulator_check_test.exs`
+  - `test/pattern/prefer_direct_list_return_in_accumulator_equivalence_test.exs`
+  - `test/pattern/prefer_direct_list_return_in_accumulator_fix_test.exs`
+- Reason: unsafe — keys on one clause/one {var,_} caller, no whole-module reconciliation: changes f's return to a bare list while other clauses internally destructure {res,errs}=f(...) (MatchError; BEFORE run(2)->[1,2], AFTER raises) and other {a,b}=f(...) callers break; arity untracked. Safe core needs whole-module return-shape/call-graph analysis beyond a reliable narrowing.
+
