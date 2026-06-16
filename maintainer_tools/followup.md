@@ -26,3 +26,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/prefer_heredoc_for_multi_line_doc_fix_test.exs`
 - Reason: delta swaps per-node patches for whole-file Sourceror.to_string render, which reformats unrelated code (e.g. `x+1`→`x + 1`, `z=y`→`z = y`) on any non-formatter-clean input — diverges from exact-same-answer bar.
 
+## prefer_integer_digits_for_first_digit — 2026-06-16
+- Files:
+  - `lib/pattern/prefer_integer_digits_for_first_digit.ex`
+  - `test/pattern/prefer_integer_digits_for_first_digit_check_test.exs`
+  - `test/pattern/prefer_integer_digits_for_first_digit_equivalence_test.exs`
+  - `test/pattern/prefer_integer_digits_for_first_digit_fix_test.exs`
+- Reason: float input diverges (string path returns first digit, Integer.digits/1 raises) and base-type can't be proven integer statically — no safe core; fix also drops intermediate pipe ops (div(3)) by rebuilding from leftmost base.
+
