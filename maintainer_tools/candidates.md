@@ -1,4 +1,3 @@
-lib/semantic/no_capture_as_bitwise_and.ex
 lib/semantic/no_doc_on_private_function.ex
 lib/semantic/no_non_negated_integer.ex
 lib/semantic/no_underscore_in_expression.ex
@@ -215,8 +214,6 @@ test/pattern/unnecessary_grapheme_chunking_fix_test.exs
 test/pattern/use_map_join_equivalence_test.exs
 test/pattern/use_map_join_fix_test.exs
 test/semantic/missing_use_exunit_case_fix_test.exs
-test/semantic/no_capture_as_bitwise_and_check_test.exs
-test/semantic/no_capture_as_bitwise_and_fix_test.exs
 test/semantic/no_doc_on_private_function_check_test.exs
 test/semantic/no_doc_on_private_function_fix_test.exs
 test/semantic/no_non_negated_integer_check_test.exs
