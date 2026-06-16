@@ -155,8 +155,11 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
 
   defp fixable_literal(_), do: :error
 
+  # Only flatten conjunctions. An equality inside an `or` disjunction
+  # (`… or x == :foo`) cannot be hoisted into the head — doing so would drop the
+  # other disjuncts — so a guard containing a top-level `or` yields no extractable
+  # equality (the whole `or` node is opaque here).
   defp flatten_guard({:and, _, [left, right]}), do: flatten_guard(left) ++ flatten_guard(right)
-  defp flatten_guard({:or, _, [left, right]}), do: flatten_guard(left) ++ flatten_guard(right)
   defp flatten_guard(other), do: [other]
 
   defp build_issue({var_name, literal, meta}) do

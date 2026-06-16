@@ -1,8 +1,3 @@
-lib/pattern/no_duplicate_spec.ex
-lib/pattern/no_find_value_default_case.ex
-lib/pattern/no_group_by_for_frequencies.ex
-lib/pattern/no_guard_equality_for_pattern_match.ex
-lib/pattern/no_identity_enum_map.ex
 lib/pattern/no_if_boolean_result.ex
 lib/pattern/no_if_empty_for_enum_min_max.ex
 lib/pattern/no_list_foldl.ex
@@ -137,9 +132,6 @@ test/pattern/no_dead_map_update_fix_test.exs
 test/pattern/no_destructure_reconstruct_fix_test.exs
 test/pattern/no_double_filter_fix_test.exs
 test/pattern/no_double_sort_same_list_fix_test.exs
-test/pattern/no_duplicate_spec_check_test.exs
-test/pattern/no_duplicate_spec_equivalence_test.exs
-test/pattern/no_duplicate_spec_fix_test.exs
 test/pattern/no_eager_with_index_in_reduce_fix_test.exs
 test/pattern/no_empty_map_new_check_test.exs
 test/pattern/no_empty_map_new_equivalence_test.exs
@@ -161,17 +153,9 @@ test/pattern/no_filter_then_count_equivalence_test.exs
 test/pattern/no_filter_then_count_fix_test.exs
 test/pattern/no_filter_then_first_equivalence_test.exs
 test/pattern/no_filter_then_first_fix_test.exs
-test/pattern/no_find_value_default_case_check_test.exs
-test/pattern/no_find_value_default_case_fix_test.exs
 test/pattern/no_grapheme_palindrome_check_test.exs
 test/pattern/no_grapheme_palindrome_fix_test.exs
-test/pattern/no_group_by_for_frequencies_fix_test.exs
-test/pattern/no_guard_equality_for_pattern_match_check_test.exs
-test/pattern/no_guard_equality_for_pattern_match_fix_test.exs
 test/pattern/no_hd_tl_when_cons_bound_fix_test.exs
-test/pattern/no_identity_enum_map_check_test.exs
-test/pattern/no_identity_enum_map_equivalence_test.exs
-test/pattern/no_identity_enum_map_fix_test.exs
 test/pattern/no_identity_function_in_enum_equivalence_test.exs
 test/pattern/no_identity_function_in_enum_fix_test.exs
 test/pattern/no_if_boolean_result_check_test.exs
