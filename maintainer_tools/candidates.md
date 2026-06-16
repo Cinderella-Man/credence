@@ -1,4 +1,3 @@
-lib/pattern/no_redundant_local_capture.ex
 lib/pattern/no_redundant_underscore_bind.ex
 lib/pattern/no_string_length_for_empty_check.ex
 lib/pattern/no_unused_computation.ex
@@ -225,9 +224,6 @@ test/pattern/no_redundant_enum_join_separator_check_test.exs
 test/pattern/no_redundant_enum_join_separator_equivalence_test.exs
 test/pattern/no_redundant_enum_join_separator_fix_test.exs
 test/pattern/no_redundant_list_traversal_fix_test.exs
-test/pattern/no_redundant_local_capture_check_test.exs
-test/pattern/no_redundant_local_capture_equivalence_test.exs
-test/pattern/no_redundant_local_capture_fix_test.exs
 test/pattern/no_redundant_negated_guard_fix_test.exs
 test/pattern/no_redundant_to_list_equivalence_test.exs
 test/pattern/no_redundant_to_list_fix_test.exs

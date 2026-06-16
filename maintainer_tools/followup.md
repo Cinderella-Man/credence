@@ -36,3 +36,11 @@ one-line reason. Work these by hand later.
   - `test/pattern/no_map_keys_or_values_for_iteration_fix_test.exs`
 - Reason: correct_capture_range's hand-rolled paren scanner miscounts char-literal ?) as a closing paren — regresses valid input `&(&1 == ?))` (was correct, now emits non-compiling `end))`); incomplete lexer trades one broken-capture class for another.
 
+## no_redundant_local_capture — 2026-06-16
+- Files:
+  - `lib/pattern/no_redundant_local_capture.ex`
+  - `test/pattern/no_redundant_local_capture_check_test.exs`
+  - `test/pattern/no_redundant_local_capture_equivalence_test.exs`
+  - `test/pattern/no_redundant_local_capture_fix_test.exs`
+- Reason: scope-blind fix silently miscompiles — global var map rewrites every same-named var.(args) module-wide (a/n calls bar instead of foo) and whole-line removal drops neighboring statements' side effects; both pass the compile gate. Needs per-scope matching, a rewrite not a narrowing.
+
