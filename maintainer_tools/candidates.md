@@ -1,4 +1,3 @@
-lib/pattern/remove_unreachable_clauses_after_catchall.ex
 lib/semantic/avoid_binary_mid_pattern.ex
 lib/semantic/avoid_remote_function_in_guard.ex
 lib/semantic/no_bare_doc_attribute.ex
@@ -215,9 +214,6 @@ test/pattern/prefer_erlang_float_fix_test.exs
 test/pattern/prefer_map_put_new_fix_test.exs
 test/pattern/prefer_regex_match_fix_test.exs
 test/pattern/redundant_list_guard_fix_test.exs
-test/pattern/remove_unreachable_clauses_after_catchall_check_test.exs
-test/pattern/remove_unreachable_clauses_after_catchall_equivalence_test.exs
-test/pattern/remove_unreachable_clauses_after_catchall_fix_test.exs
 test/pattern/unnecessary_grapheme_chunking_check_test.exs
 test/pattern/unnecessary_grapheme_chunking_fix_test.exs
 test/pattern/use_map_join_equivalence_test.exs
