@@ -626,6 +626,63 @@ defmodule Credence.RuleHelpers do
     |> Sourceror.to_string(opts)
   end
 
+  @doc """
+  The comments stored on `node`'s Sourceror metadata under `key`
+  (`:leading_comments` or `:trailing_comments`); `[]` for a node without them.
+  """
+  @spec node_comments(Macro.t(), :leading_comments | :trailing_comments) :: list()
+  def node_comments({_form, meta, _args}, key) when is_list(meta), do: Keyword.get(meta, key, [])
+  def node_comments(_node, _key), do: []
+
+  @doc """
+  Every comment (leading and trailing, at any depth) within `node`'s subtree, in
+  roughly document order. Use to rescue the comments of a node a fix discards.
+  """
+  @spec collect_comments(Macro.t()) :: list()
+  def collect_comments(node) do
+    {_node, acc} =
+      Macro.prewalk(node, [], fn
+        {_form, meta, _args} = n, acc when is_list(meta) ->
+          {n,
+           acc ++
+             Keyword.get(meta, :leading_comments, []) ++
+             Keyword.get(meta, :trailing_comments, [])}
+
+        n, acc ->
+          {n, acc}
+      end)
+
+    acc
+  end
+
+  @doc """
+  Carry comments onto `node`: `leading` is prepended to its leading comments,
+  `trailing` appended to its trailing comments. Used when a fix replaces one or
+  more nodes with `node` and must not drop the comments that sat on them. A node
+  without metadata (a bare literal) is returned unchanged.
+  """
+  @spec carry_comments(Macro.t(), list(), list()) :: Macro.t()
+  def carry_comments({form, meta, args}, leading, trailing) when is_list(meta) do
+    # Carried comments keep their original (now-stale) line, which Sourceror uses
+    # to position them — re-line them just before/after the target so leading
+    # renders before it and trailing after.
+    line = Keyword.get(meta, :line)
+    leading = reline(leading, line && line - 1)
+    trailing = reline(trailing, line && line + 1)
+
+    meta =
+      meta
+      |> Keyword.update(:leading_comments, leading, &(leading ++ &1))
+      |> Keyword.update(:trailing_comments, trailing, &(&1 ++ trailing))
+
+    {form, meta, args}
+  end
+
+  def carry_comments(node, _leading, _trailing), do: node
+
+  defp reline(comments, nil), do: comments
+  defp reline(comments, line), do: Enum.map(comments, &Map.put(&1, :line, line))
+
   # Sourceror infers layout (single-line vs. multi-line) from each node's
   # `line`/`column` metadata — a wide line span forces multi-line. When
   # a rule builds a replacement subtree by reusing original subnodes
@@ -637,11 +694,25 @@ defmodule Credence.RuleHelpers do
   defp strip_layout_meta(ast) do
     Macro.prewalk(ast, fn
       {form, meta, args} when is_list(meta) ->
-        {form, Keyword.drop(meta, [:line, :column, :closing, :last, :end]), args}
+        # Sourceror positions comments by line, so a node carrying a comment must
+        # keep its :line/:column or the comment is silently dropped on render.
+        # Such nodes are inherently multi-line anyway, so keeping their position
+        # does not cause the spurious wrapping the strip is meant to avoid.
+        to_drop =
+          if has_comments?(meta),
+            do: [:closing, :last, :end],
+            else: [:line, :column, :closing, :last, :end]
+
+        {form, Keyword.drop(meta, to_drop), args}
 
       other ->
         other
     end)
+  end
+
+  defp has_comments?(meta) do
+    Keyword.get(meta, :leading_comments, []) != [] or
+      Keyword.get(meta, :trailing_comments, []) != []
   end
 
   @doc """

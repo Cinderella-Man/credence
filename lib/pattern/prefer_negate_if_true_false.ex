@@ -79,13 +79,18 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
   # the moved else-body was a multi-statement block. Elixir is not
   # indentation-sensitive, so `mix format` (run after the fix) restores layout.
   defp whole_node_patch(node, condition, branches) do
+    # The do-branch IS `false`; reuse that node (rather than a fresh `false`) in
+    # the swapped else position so any comment that sat on it is preserved. The
+    # else-body is likewise reused. `render_replacement` strips stale positions
+    # but keeps those of comment-bearing nodes; `line: 1` anchors them.
+    do_false = extract_clause(branches, :do)
     else_body = extract_clause(branches, :else)
     negated = negate_condition(condition)
-    new_if = {:if, [], [negated, [do: else_body, else: false]]}
+    new_if = {:if, [line: 1], [negated, [do: else_body, else: do_false]]}
 
     %{
       range: Sourceror.get_range(node),
-      change: Sourceror.to_string(new_if)
+      change: Credence.RuleHelpers.render_replacement(new_if, %{})
     }
   end
 

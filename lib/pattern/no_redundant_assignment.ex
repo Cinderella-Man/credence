@@ -27,7 +27,7 @@ defmodule Credence.Pattern.NoRedundantAssignment do
   """
 
   use Credence.Pattern.Rule
-  alias Credence.Issue
+  alias Credence.{Issue, RuleHelpers}
 
   @impl true
   def check(ast, _opts) do
@@ -112,7 +112,7 @@ defmodule Credence.Pattern.NoRedundantAssignment do
       {:=, _, [lhs, rhs]} ->
         if fixable_pattern?(lhs) and structurally_identical?(lhs, last) do
           {preceding, _last_two} = Enum.split(statements, length(statements) - 2)
-          {:__block__, meta, preceding ++ [rhs]}
+          {:__block__, meta, preceding ++ [preserve_comments(rhs, second_to_last, last)]}
         else
           node
         end
@@ -123,4 +123,16 @@ defmodule Credence.Pattern.NoRedundantAssignment do
   end
 
   defp maybe_rewrite_block(node), do: node
+
+  # The assignment (lhs + `=`) and the trailing variable are both discarded; any
+  # comment that sat on them (e.g. a `# why` line before the assignment) must
+  # land on the surviving rhs so the fix never silently drops it.
+  defp preserve_comments(rhs, {:=, assign_meta, [lhs, _rhs]}, last) do
+    before = Keyword.get(assign_meta, :leading_comments, []) ++ RuleHelpers.collect_comments(lhs)
+
+    after_ =
+      Keyword.get(assign_meta, :trailing_comments, []) ++ RuleHelpers.collect_comments(last)
+
+    RuleHelpers.carry_comments(rhs, before, after_)
+  end
 end

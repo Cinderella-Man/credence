@@ -158,17 +158,17 @@ defmodule Credence.Pattern.NoCaseOnParamDispatch do
     end
   end
 
-  defp parse_clause({:->, _, [[{:when, _, [pattern, guard]}], body]}) do
-    if has_pin?(pattern), do: :error, else: {:ok, {pattern, guard, body}}
+  defp parse_clause({:->, meta, [[{:when, _, [pattern, guard]}], body]}) do
+    if has_pin?(pattern), do: :error, else: {:ok, {pattern, guard, body, meta}}
   end
 
-  defp parse_clause({:->, _, [[pattern], body]}) do
-    if has_pin?(pattern), do: :error, else: {:ok, {pattern, nil, body}}
+  defp parse_clause({:->, meta, [[pattern], body]}) do
+    if has_pin?(pattern), do: :error, else: {:ok, {pattern, nil, body, meta}}
   end
 
   defp parse_clause(_), do: :error
 
-  defp catch_all?({pattern, nil, _body}), do: match?({:var, _}, bare_var(pattern))
+  defp catch_all?({pattern, nil, _body, _meta}), do: match?({:var, _}, bare_var(pattern))
   defp catch_all?(_), do: false
 
   defp has_pin?(ast) do
@@ -192,12 +192,23 @@ defmodule Credence.Pattern.NoCaseOnParamDispatch do
     %{range: range, change: change}
   end
 
-  defp clause_to_head({pattern, guard, body}, kind, name, var, range) do
+  defp clause_to_head({pattern, guard, body, clause_meta}, kind, name, var, range) do
     head_pattern = build_head_pattern(pattern, guard, body, var)
     call = {name, [], [head_pattern]}
     head = if guard, do: {:when, [], [call, guard]}, else: call
-    def_ast = {kind, [], [head, [{{:__block__, [], [:do]}, body}]]}
-    RuleHelpers.render_replacement(def_ast, range)
+    # The def needs a `:line` for Sourceror to anchor a leading comment to it.
+    def_ast = {kind, [line: 1], [head, [{{:__block__, [], [:do]}, body}]]}
+
+    # The case clause's own comments (e.g. one documenting why the clause exists)
+    # sat on the `:->` node, which is discarded — carry them onto the generated
+    # `def` so they are not lost; `carry_comments` re-lines them to render before
+    # the head.
+    leading = Keyword.get(clause_meta, :leading_comments, [])
+    trailing = Keyword.get(clause_meta, :trailing_comments, [])
+
+    def_ast
+    |> RuleHelpers.carry_comments(leading, trailing)
+    |> RuleHelpers.render_replacement(range)
   end
 
   # Keep the parameter bound when the body or guard still refer to it.

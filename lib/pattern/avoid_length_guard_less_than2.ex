@@ -111,25 +111,17 @@ defmodule Credence.Pattern.AvoidLengthGuardLessThan2 do
   end
 
   # Preserve the original `, do:` one-liner form vs `do ... end` block form.
+  # `render_replacement` strips stale positions from the re-used body (so it does
+  # not render relative to its original far-away line numbers) while keeping the
+  # positions of any comment-bearing nodes, so a comment in the body survives.
+  # The `line: 1` gives the def a position to anchor a body comment against.
   defp render_clause(kind, call, body, :keyword) do
-    kw = [{{:__block__, [format: :keyword], [:do]}, strip_pos(body)}]
-    Sourceror.to_string({kind, [], [call, kw]})
+    kw = [{{:__block__, [format: :keyword], [:do]}, body}]
+    Credence.RuleHelpers.render_replacement({kind, [line: 1], [call, kw]}, %{})
   end
 
   defp render_clause(kind, call, body, :block) do
-    Sourceror.to_string({kind, [], [call, [do: strip_pos(body)]]})
-  end
-
-  # Drop stale source positions from the (re-used) body so it renders relative to
-  # the freshly-built clause instead of its original far-away line numbers.
-  defp strip_pos(ast) do
-    Macro.prewalk(ast, fn
-      {form, meta, args} when is_list(meta) ->
-        {form, Keyword.drop(meta, [:line, :column, :newlines, :end_of_expression]), args}
-
-      other ->
-        other
-    end)
+    Credence.RuleHelpers.render_replacement({kind, [line: 1], [call, [do: body]]}, %{})
   end
 
   defp build_issue(line) do
