@@ -1,0 +1,196 @@
+defmodule Credence.Semantic.NoUnderscoreInExpression do
+  @moduledoc """
+  Fixes compiler errors caused by using `_` in expression position,
+  such as a tuple key in a for-comprehension body.
+
+  The Elixir compiler rejects `_` in expression position:
+
+      for _ <- 0..(n - 1), into: %{} do
+        {_, :infinity}    # ← error: invalid use of _
+      end
+
+  The fix renames the `_` generator to a fresh variable (`idx`)
+  and updates all references in the comprehension body:
+
+      for idx <- 0..(n - 1), into: %{} do
+        {idx, :infinity}
+      end
+  """
+  use Credence.Semantic.Rule
+
+  alias Credence.Issue
+
+  @impl true
+  def match?(%{message: msg}) when is_binary(msg) do
+    String.contains?(msg, "invalid use of _")
+  end
+
+  def match?(_), do: false
+
+  @impl true
+  def to_issue(diagnostic) do
+    %Issue{
+      rule: :no_underscore_in_expression,
+      message: diagnostic.message,
+      meta: %{line: line(diagnostic)}
+    }
+  end
+
+  @impl true
+  def fix(source, _diagnostic) do
+    case parse(source) do
+      {:ok, ast} ->
+        transformed = transform_underscores(ast)
+
+        if transformed == ast do
+          source
+        else
+          patches = Credence.RuleHelpers.patches_from_diff(ast, transformed)
+
+          case patches do
+            [] -> source
+            _ -> Sourceror.patch_string(source, patches)
+          end
+        end
+
+      :error ->
+        source
+    end
+  end
+
+  defp line(%{position: {line, _col}}), do: line
+  defp line(%{position: line}) when is_integer(line), do: line
+
+  defp parse(source) do
+    {:ok, Sourceror.parse_string!(source)}
+  rescue
+    _ -> :error
+  end
+
+  # Forms that introduce a *pattern* or a new binding/scope. If any of these
+  # appear in the comprehension body we refuse to fix: a blind rename would
+  # rewrite `_` that sit in pattern position (e.g. `{_, _} = a`, a `case`
+  # wildcard, an `fn` arg), silently changing match semantics or shadowing a
+  # binding. Inside a body free of all of these, every `_` is unambiguously in
+  # expression position — exactly the invalid use the compiler rejects — so
+  # renaming all of them to one fresh variable is the same-answer fix.
+  @pattern_forms [
+    :=,
+    :case,
+    :cond,
+    :with,
+    :for,
+    :fn,
+    :receive,
+    :try,
+    :&,
+    :quote,
+    :unquote,
+    :<-,
+    :->,
+    :^
+  ]
+
+  defp transform_underscores(ast) do
+    Macro.postwalk(ast, fn
+      {:for, meta, args} = node when is_list(args) ->
+        if fixable?(args) do
+          fresh = fresh_var_name(args)
+          {:for, meta, rename_underscore_in_for_args(args, fresh)}
+        else
+          node
+        end
+
+      node ->
+        node
+    end)
+  end
+
+  # Safe to fix only when there is exactly one `_` generator (so a body `_`
+  # maps to it unambiguously) and the body uses `_` solely in expression
+  # position.
+  defp fixable?(args) do
+    underscore_generator_count(args) == 1 and fixable_body?(args)
+  end
+
+  defp underscore_generator_count(args) when is_list(args) do
+    Enum.count(args, fn
+      {:<-, _, [{:_, _, nil}, _]} -> true
+      _ -> false
+    end)
+  end
+
+  defp fixable_body?(args) do
+    case do_body(args) do
+      {:ok, body} -> contains_underscore?(body) and not contains_pattern_form?(body)
+      :error -> false
+    end
+  end
+
+  defp do_body(args) do
+    Enum.find_value(args, :error, fn
+      [{{:__block__, _, [:do]}, body}] -> {:ok, body}
+      _ -> false
+    end)
+  end
+
+  defp contains_underscore?(ast) do
+    {_, found} =
+      Macro.prewalk(ast, false, fn
+        {:_, _, ctx} = n, _acc when is_atom(ctx) -> {n, true}
+        n, acc -> {n, acc}
+      end)
+
+    found
+  end
+
+  defp contains_pattern_form?(ast) do
+    {_, found} =
+      Macro.prewalk(ast, false, fn
+        {head, _, _} = n, _acc when head in @pattern_forms -> {n, true}
+        n, acc -> {n, acc}
+      end)
+
+    found
+  end
+
+  # A variable name not used anywhere in the comprehension, so the renamed
+  # generator cannot collide with (or shadow) anything the body references.
+  defp fresh_var_name(args) do
+    used = collect_var_names(args)
+    candidates = [:idx, :i, :index] ++ Enum.map(0..999, &:"idx_#{&1}")
+    Enum.find(candidates, :idx, fn name -> not MapSet.member?(used, name) end)
+  end
+
+  defp collect_var_names(ast) do
+    {_, names} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {name, _, ctx} = n, acc when is_atom(name) and is_atom(ctx) ->
+          {n, MapSet.put(acc, name)}
+
+        n, acc ->
+          {n, acc}
+      end)
+
+    names
+  end
+
+  defp rename_underscore_in_for_args(args, fresh) do
+    Enum.map(args, fn
+      {:<-, arrow_meta, [{:_, var_meta, nil}, range]} ->
+        {:<-, arrow_meta, [{fresh, var_meta, nil}, range]}
+
+      [{{:__block__, do_meta, [:do]}, body}] ->
+        new_body =
+          Macro.prewalk(body, fn
+            {:_, u_meta, nil} -> {fresh, u_meta, nil}
+            other -> other
+          end)
+
+        [{{:__block__, do_meta, [:do]}, new_body}]
+
+      other ->
+        other
+    end)
+  end
+end
