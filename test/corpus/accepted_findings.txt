@@ -56,7 +56,6 @@ credo/lib/credo/execution.ex:152  no_doc_false_on_private
 credo/lib/credo/execution.ex:659  no_doc_false_on_private
 credo/lib/credo/execution.ex:667  no_doc_false_on_private
 credo/lib/credo/execution.ex:774  no_doc_false_on_private
-credo/lib/credo/execution/execution_timing.ex:93  no_map_keys_enum_lookup
 credo/lib/credo/execution/task/write_debug_report.ex:92  prefer_map_new
 credo/lib/credo/priority.ex:75  prefer_map_new
 credo/lib/credo/sources.ex:157  no_enum_into_empty_mapset

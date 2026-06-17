@@ -25,21 +25,32 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   Only flagged when **all three** conditions hold:
 
   1. `Map.keys(var)` is called on a simple variable,
-  2. The result is passed to one of: `Enum.all?`, `Enum.any?`,
-     `Enum.each`, `Enum.map`, `Enum.filter`, `Enum.reject`,
-     `Enum.flat_map`, and
+  2. The result is passed to `Enum.all?` or `Enum.any?`, and
   3. The callback body references `var` via `var[key]`,
      `Map.get(var, ...)`, `Map.fetch(var, ...)`, or
      `Map.fetch!(var, ...)`.
 
   Patterns where only keys are needed (no value lookup in the callback)
   are **not** flagged.
+
+  Only `all?`/`any?` are flagged because their result is a boolean — a
+  commutative AND/OR over the elements — so iterating the map directly (a
+  different order than `Map.keys/1` once a map exceeds 32 entries) gives the
+  same answer. `map`/`filter`/`reject`/`flat_map` return order-observable lists
+  and `each`'s side effects are order-sensitive, so rewriting them would not be
+  behaviour-preserving and they are left alone.
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
 
-  @flagged_enum_fns [:all?, :any?, :each, :map, :filter, :reject, :flat_map]
-  @keys_returning_fns [:filter, :reject]
+  # Only the boolean-returning sinks are order-insensitive: `all?`/`any?` compute
+  # a commutative AND/OR over the elements, so iterating the map directly (which
+  # visits entries in a different order than `Map.keys/1` once a map exceeds 32
+  # keys) yields the SAME boolean. `map`/`flat_map`/`filter`/`reject` return a
+  # list whose order is observable, and `each`'s side effects are order-sensitive
+  # — rewriting those is not behaviour-preserving for >32-key maps, so they are
+  # NOT flagged. See [[map-keys-order-vs-enum-order]].
+  @flagged_enum_fns [:all?, :any?]
 
   @impl true
   def check(ast, _opts) do
@@ -119,15 +130,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
     with {:ok, new_callback} <- transform_callback(callback, var_name) do
       mod = {:__aliases__, [], [:Enum]}
       enum_call = {{:., [], [mod, fn_name]}, [], [var_expr, new_callback]}
-
-      steps =
-        if fn_name in @keys_returning_fns do
-          [enum_call, build_extract_keys_pipe_step() | rest]
-        else
-          [enum_call | rest]
-        end
-
-      {:ok, rebuild_pipeline(steps)}
+      {:ok, rebuild_pipeline([enum_call | rest])}
     end
   end
 
@@ -136,38 +139,15 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
     with {:ok, new_callback} <- transform_callback(callback, var_name) do
       mod = {:__aliases__, [], [:Enum]}
       enum_step = {{:., [], [mod, fn_name]}, [], [new_callback]}
-
-      steps =
-        if fn_name in @keys_returning_fns do
-          [var_expr, enum_step, build_extract_keys_pipe_step() | rest]
-        else
-          [var_expr, enum_step | rest]
-        end
-
-      {:ok, rebuild_pipeline(steps)}
+      {:ok, rebuild_pipeline([var_expr, enum_step | rest])}
     end
   end
 
   # Enum.xxx(Map.keys(var), callback)
   defp apply_direct_fix(var_expr, var_name, mod, fn_name, callback) do
     with {:ok, new_callback} <- transform_callback(callback, var_name) do
-      enum_call = {{:., [], [mod, fn_name]}, [], [var_expr, new_callback]}
-
-      if fn_name in @keys_returning_fns do
-        {:ok, {:|>, [], [enum_call, build_extract_keys_pipe_step()]}}
-      else
-        {:ok, enum_call}
-      end
+      {:ok, {{:., [], [mod, fn_name]}, [], [var_expr, new_callback]}}
     end
-  end
-
-  # Builds: Enum.map(fn {k, _v} -> k end) — used as a piped step
-  defp build_extract_keys_pipe_step do
-    mod = {:__aliases__, [], [:Enum]}
-    key = {:k, [], nil}
-    val = {:_v, [], nil}
-    fn_ast = {:fn, [], [{:->, [], [[{key, val}], key]}]}
-    {{:., [], [mod, :map]}, [], [fn_ast]}
   end
 
   defp rebuild_pipeline([single]), do: single

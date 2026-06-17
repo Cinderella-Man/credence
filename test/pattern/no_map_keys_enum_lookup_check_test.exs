@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
   alias Credence.Pattern.NoMapKeysEnumLookup
 
   describe "NoMapKeysEnumLookup — check" do
-    # ---- Pipeline form: Map.keys(var) |> Enum.xxx(fn ... var[k] ...) ----
+    # ---- Pipeline form: Map.keys(var) |> Enum.all?/any?(fn ... var[k] ...) ----
 
     test "detects Map.keys |> Enum.all? with access syntax lookup" do
       code = """
@@ -24,36 +24,6 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       assert issue.message =~ "Enum.all?"
     end
 
-    test "detects Map.keys |> Enum.map with Map.get lookup" do
-      code = """
-      defmodule Bad do
-        def transform(counts) do
-          Map.keys(counts)
-          |> Enum.map(fn k -> {k, Map.get(counts, k, 0) * 2} end)
-        end
-      end
-      """
-
-      [issue] = check(NoMapKeysEnumLookup, code)
-      assert issue.message =~ "counts"
-      assert issue.message =~ "Enum.map"
-    end
-
-    test "detects Map.keys |> Enum.filter with Map.fetch! lookup" do
-      code = """
-      defmodule Bad do
-        def big_values(data) do
-          Map.keys(data)
-          |> Enum.filter(fn k -> Map.fetch!(data, k) > 100 end)
-        end
-      end
-      """
-
-      [issue] = check(NoMapKeysEnumLookup, code)
-      assert issue.message =~ "data"
-      assert issue.message =~ "Enum.filter"
-    end
-
     test "detects Map.keys |> Enum.any? with access lookup" do
       code = """
       defmodule Bad do
@@ -69,50 +39,22 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       assert issue.message =~ "Enum.any?"
     end
 
-    test "detects Map.keys |> Enum.each with access lookup" do
+    test "detects Map.keys |> Enum.all? with Map.fetch! lookup" do
       code = """
       defmodule Bad do
-        def print_all(scores) do
-          Map.keys(scores)
-          |> Enum.each(fn k -> IO.puts(scores[k]) end)
+        def big_values(data) do
+          Map.keys(data)
+          |> Enum.all?(fn k -> Map.fetch!(data, k) > 100 end)
         end
       end
       """
 
       [issue] = check(NoMapKeysEnumLookup, code)
-      assert issue.message =~ "scores"
-      assert issue.message =~ "Enum.each"
+      assert issue.message =~ "data"
+      assert issue.message =~ "Enum.all?"
     end
 
-    test "detects Map.keys |> Enum.reject with access lookup" do
-      code = """
-      defmodule Bad do
-        def remove_zeros(freq) do
-          Map.keys(freq)
-          |> Enum.reject(fn k -> freq[k] == 0 end)
-        end
-      end
-      """
-
-      [issue] = check(NoMapKeysEnumLookup, code)
-      assert issue.message =~ "freq"
-    end
-
-    test "detects Map.keys |> Enum.flat_map with access lookup" do
-      code = """
-      defmodule Bad do
-        def expand(groups) do
-          Map.keys(groups)
-          |> Enum.flat_map(fn k -> groups[k] end)
-        end
-      end
-      """
-
-      [issue] = check(NoMapKeysEnumLookup, code)
-      assert issue.message =~ "groups"
-    end
-
-    # ---- Three-step pipeline: var |> Map.keys() |> Enum.xxx(fn ...) ----
+    # ---- Three-step pipeline: var |> Map.keys() |> Enum.all?/any?(fn ...) ----
 
     test "detects var |> Map.keys() |> Enum.all? with lookup" do
       code = """
@@ -129,7 +71,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       assert issue.message =~ "freqs"
     end
 
-    # ---- Direct call form: Enum.xxx(Map.keys(var), fn ...) ----
+    # ---- Direct call form: Enum.all?/any?(Map.keys(var), fn ...) ----
 
     test "detects direct call Enum.all?(Map.keys(var), fn ...)" do
       code = """
@@ -147,20 +89,91 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       assert issue.message =~ "Enum.all?"
     end
 
-    test "detects direct call Enum.map(Map.keys(var), fn ...)" do
+    # ---- NOT flagged: order-observable sinks (narrowed away) ----
+    #
+    # `map`/`filter`/`reject`/`flat_map` return order-observable lists and
+    # `each`'s side effects are order-sensitive. Direct map traversal visits
+    # entries in a different order than `Map.keys/1` once a map exceeds 32 keys,
+    # so rewriting these is not behaviour-preserving — they are NOT flagged.
+
+    test "does not flag Map.keys |> Enum.map (order-observable list)" do
       code = """
-      defmodule Bad do
+      defmodule Good do
+        def transform(counts) do
+          Map.keys(counts)
+          |> Enum.map(fn k -> {k, Map.get(counts, k, 0) * 2} end)
+        end
+      end
+      """
+
+      assert check(NoMapKeysEnumLookup, code) == []
+    end
+
+    test "does not flag Map.keys |> Enum.filter (order-observable list)" do
+      code = """
+      defmodule Good do
+        def big_values(data) do
+          Map.keys(data)
+          |> Enum.filter(fn k -> Map.fetch!(data, k) > 100 end)
+        end
+      end
+      """
+
+      assert check(NoMapKeysEnumLookup, code) == []
+    end
+
+    test "does not flag Map.keys |> Enum.reject (order-observable list)" do
+      code = """
+      defmodule Good do
+        def remove_zeros(freq) do
+          Map.keys(freq)
+          |> Enum.reject(fn k -> freq[k] == 0 end)
+        end
+      end
+      """
+
+      assert check(NoMapKeysEnumLookup, code) == []
+    end
+
+    test "does not flag Map.keys |> Enum.flat_map (order-observable list)" do
+      code = """
+      defmodule Good do
+        def expand(groups) do
+          Map.keys(groups)
+          |> Enum.flat_map(fn k -> groups[k] end)
+        end
+      end
+      """
+
+      assert check(NoMapKeysEnumLookup, code) == []
+    end
+
+    test "does not flag Map.keys |> Enum.each (order-sensitive side effects)" do
+      code = """
+      defmodule Good do
+        def print_all(scores) do
+          Map.keys(scores)
+          |> Enum.each(fn k -> IO.puts(scores[k]) end)
+        end
+      end
+      """
+
+      assert check(NoMapKeysEnumLookup, code) == []
+    end
+
+    test "does not flag direct call Enum.map(Map.keys(var), fn ...)" do
+      code = """
+      defmodule Good do
         def pairs(m) do
           Enum.map(Map.keys(m), fn k -> {k, Map.get(m, k)} end)
         end
       end
       """
 
-      [issue] = check(NoMapKeysEnumLookup, code)
-      assert issue.message =~ "Enum.map"
+      assert check(NoMapKeysEnumLookup, code) == []
     end
 
-    # ---- Negative cases ----
+    # ---- Other negative cases ----
 
     test "does not flag Map.keys |> Enum.sort (no callback lookup)" do
       code = """
@@ -204,7 +217,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       defmodule Good do
         def lookup(source, target) do
           Map.keys(source)
-          |> Enum.map(fn k -> target[k] end)
+          |> Enum.all?(fn k -> target[k] end)
         end
       end
       """
@@ -241,7 +254,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       defmodule Good do
         def process(m) do
           keys = Map.keys(m)
-          Enum.map(keys, fn k -> m[k] end)
+          Enum.all?(keys, fn k -> m[k] end)
         end
       end
       """
@@ -253,7 +266,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupCheckTest do
       code = """
       defmodule Good do
         def foo(m) do
-          MyModule.keys(m) |> Enum.map(fn k -> m[k] end)
+          MyModule.keys(m) |> Enum.all?(fn k -> m[k] end)
         end
       end
       """
