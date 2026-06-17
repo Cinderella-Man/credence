@@ -1,4 +1,3 @@
-lib/semantic/remove_unused_typespec_when_var.ex
 lib/semantic/require_defmodule_wrapper.ex
 lib/semantic/undefined_function.ex
 lib/syntax/close_unclosed_doc_heredoc.ex
@@ -206,8 +205,6 @@ test/pattern/use_map_join_equivalence_test.exs
 test/pattern/use_map_join_fix_test.exs
 test/semantic/missing_use_exunit_case_fix_test.exs
 test/semantic/outdented_heredoc_fix_test.exs
-test/semantic/remove_unused_typespec_when_var_check_test.exs
-test/semantic/remove_unused_typespec_when_var_fix_test.exs
 test/semantic/require_defmodule_wrapper_check_test.exs
 test/semantic/require_defmodule_wrapper_fix_test.exs
 test/semantic/undefined_function_add_arg_fix_test.exs
