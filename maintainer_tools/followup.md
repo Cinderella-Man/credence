@@ -27,3 +27,6 @@ so a future scan won't re-flag it.
   - `test/pattern/avoid_graphemes_enum_count_fix_test.exs`
 - Reason: duplicate of no_enum_count_for_length (already flags+fixes Enum.count on String.graphemes/1 as provably-list → length(...)), which with avoid_graphemes_length already reaches the same String.length(x) endpoint; fold/drop needs a cross-file change.
 
+## test/pattern/avoid_graphemes_enum_count_equivalence_test.exs — 2026-06-17
+- Reason: orphan test — no owning rule in tree or sister.
+

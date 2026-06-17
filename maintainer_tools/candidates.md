@@ -1,4 +1,3 @@
-test/pattern/avoid_graphemes_enum_count_equivalence_test.exs
 test/pattern/avoid_graphemes_enum_count_fix_test.exs
 lib/pattern/avoid_graphemes_enum_count_with_predicate.ex
 test/pattern/avoid_graphemes_enum_count_with_predicate_check_test.exs
