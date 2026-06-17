@@ -195,3 +195,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/no_end_keyword_variable_fix_test.exs`
 - Reason: line-regex cannot tell a variable-return/use `end` from a block-closing `end` (or heredoc/string text) on unparseable source — fix renames real block closers at colliding indent and string contents; syntax phase has no parse-revert; no safe narrow core.
 
+## no_for_comprehension_by_step — 2026-06-17
+- Files:
+  - `lib/syntax/no_for_comprehension_by_step.ex`
+  - `test/syntax/no_for_comprehension_by_step_analyze_test.exs`
+  - `test/syntax/no_for_comprehension_by_step_fix_test.exs`
+- Reason: line-regex misfires on unparseable files — flags & corrupts valid `for ... do ... end` lines whose body string contains " by " (e.g. `for x <- 1..10 do IO.puts("written by hand") end` → broken output); syntax phase has no parse-revert; fix hardcodes `<=` (wrong for negative step); target syntax is speculative; no safe narrow core distinguishes bare `by` from `by`-in-string.
+
