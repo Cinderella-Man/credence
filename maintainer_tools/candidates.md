@@ -1,4 +1,3 @@
-lib/syntax/fix_div_rem.ex
 lib/syntax/fix_do_block_fusion.ex
 lib/syntax/fix_missing_module_end.ex
 lib/syntax/fix_truncated_binary_close.ex
@@ -204,7 +203,6 @@ test/semantic/outdented_heredoc_fix_test.exs
 test/semantic/undefined_string_alphanumeric_fix_test.exs
 test/semantic/unused_variable_test.exs
 test/semantic/used_underscore_variable_fix_test.exs
-test/syntax/fix_div_rem_test.exs
 test/syntax/fix_do_block_fusion_analyze_test.exs
 test/syntax/fix_do_block_fusion_fix_test.exs
 test/syntax/fix_malformed_spec_analyze_test.exs
