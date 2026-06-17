@@ -429,6 +429,23 @@ defmodule Credence.RuleHelpers do
     |> Enum.flat_map(fn {o, m} -> diff_patches(o, m) end)
   end
 
+  # A `:__block__` whose statement count changed — a sibling statement/def was
+  # added or removed (e.g. a rule that deletes a `defp` or de-duplicates a
+  # clause). Align the structurally-equal siblings and patch only what changed,
+  # instead of re-rendering — and thereby reformatting (comment indentation,
+  # blank lines, `def ..., do:` layout) — the whole block. Restricted to blocks
+  # because their statements are line-occupying, so a removed one can be deleted
+  # whole-line; inline sibling lists (call args, tuples) fall through to the
+  # whole-node render below, which is small and already correct. Falls back for
+  # anything that can't be aligned cleanly.
+  defp diff_patches({:__block__, _, args_o} = orig, {:__block__, _, args_m} = modified)
+       when is_list(args_o) and is_list(args_m) do
+    case aligned_patches(args_o, args_m) do
+      {:ok, patches} -> patches
+      :fallback -> whole_node_patch(orig, modified)
+    end
+  end
+
   # Lists of the same length — zip and recurse.
   defp diff_patches([_ | _] = orig, [_ | _] = modified)
        when length(orig) == length(modified) do
@@ -453,6 +470,98 @@ defmodule Credence.RuleHelpers do
       range ->
         [%{range: range, change: render_replacement(modified, range)}]
     end
+  end
+
+  defp whole_node_patch(orig, modified) do
+    case node_range(orig) do
+      nil -> []
+      range -> [%{range: range, change: render_replacement(modified, range)}]
+    end
+  end
+
+  # Align two same-form-but-different-length sibling lists by structural
+  # (metadata-insensitive) equality and emit minimal patches: recurse into
+  # siblings changed in place, delete removed ones whole-line. Returns
+  # `:fallback` for any shape we can't place safely (net insertions, rangeless
+  # nodes, or an unexpected error) so the caller re-renders the whole parent.
+  defp aligned_patches(orig, modified) do
+    stripped_o = Enum.map(orig, &strip_all_meta/1)
+    stripped_m = Enum.map(modified, &strip_all_meta/1)
+
+    stripped_o
+    |> List.myers_difference(stripped_m)
+    |> walk_ops(orig, modified, 0, 0, [])
+  rescue
+    _ -> :fallback
+  end
+
+  defp walk_ops([], _orig, _modified, _io, _im, acc), do: {:ok, acc}
+
+  defp walk_ops([{:eq, els} | rest], orig, modified, io, im, acc) do
+    n = length(els)
+    walk_ops(rest, orig, modified, io + n, im + n, acc)
+  end
+
+  # A deletion immediately followed by an insertion. Only an *equal-count* gap is
+  # an unambiguous in-place modification — pair the siblings positionally and
+  # recurse. An unequal gap mixes modifications with deletions/insertions whose
+  # correspondence a sequence diff can't resolve (it has no unchanged sibling to
+  # anchor on), so positional pairing would mis-align; fall back to a whole-node
+  # render there.
+  defp walk_ops([{:del, dl}, {:ins, il} | rest], orig, modified, io, im, acc) do
+    dn = length(dl)
+
+    if dn == length(il) do
+      paired =
+        Enum.flat_map(0..(dn - 1)//1, fn i ->
+          diff_patches(Enum.at(orig, io + i), Enum.at(modified, im + i))
+        end)
+
+      walk_ops(rest, orig, modified, io + dn, im + dn, acc ++ paired)
+    else
+      :fallback
+    end
+  end
+
+  defp walk_ops([{:del, dl} | rest], orig, modified, io, im, acc) do
+    case deletion_patches(Enum.slice(orig, io..(io + length(dl) - 1)//1)) do
+      {:ok, dels} -> walk_ops(rest, orig, modified, io + length(dl), im, acc ++ dels)
+      :fallback -> :fallback
+    end
+  end
+
+  # A bare insertion — fall back (no safe anchor to place it at).
+  defp walk_ops([{:ins, _} | _], _orig, _modified, _io, _im, _acc), do: :fallback
+
+  # Delete each node by removing its whole line span (from column 1 of its first
+  # line through column 1 of the line after its last) so no blank-but-indented
+  # remnant is left. Falls back if any node lacks a range.
+  defp deletion_patches(nodes) do
+    Enum.reduce_while(nodes, {:ok, []}, fn node, {:ok, acc} ->
+      case node_range(node) do
+        %Sourceror.Range{start: s, end: e} ->
+          patch = %{
+            range: %{start: [line: s[:line], column: 1], end: [line: e[:line] + 1, column: 1]},
+            change: ""
+          }
+
+          {:cont, {:ok, [patch | acc]}}
+
+        _ ->
+          {:halt, :fallback}
+      end
+    end)
+    |> case do
+      {:ok, patches} -> {:ok, Enum.reverse(patches)}
+      other -> other
+    end
+  end
+
+  defp strip_all_meta(node) do
+    Macro.prewalk(node, fn
+      {form, meta, args} when is_list(meta) -> {form, [], args}
+      other -> other
+    end)
   end
 
   defp node_range(node) when is_tuple(node) and tuple_size(node) == 3 do

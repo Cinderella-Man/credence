@@ -295,12 +295,11 @@ defmodule Credence.Pattern.NoManualListLastFixTest do
       end
       """
 
+      # The surviving clause keeps its one-line `, do:` form (a surgical patch,
+      # not a whole-block re-render); the deleted non-adjacent clause is removed.
       expected = """
       defmodule Bad do
-        defp last(list) do
-          hd(Enum.reverse(list))
-        end
-
+        defp last(list), do: hd(Enum.reverse(list))
         def other(x), do: x + 1
       end
       """

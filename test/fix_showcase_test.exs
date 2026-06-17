@@ -80,8 +80,7 @@ defmodule Credence.FixShowcaseTest do
         total_length = Enum.reduce(words, 0, fn el, acc -> acc + String.length(el) end)
         avg_length = :erlang.float(total_length / Enum.count(words))
 
-        frequencies =
-          Enum.frequencies_by(words, &String.downcase/1)
+        frequencies = Enum.frequencies_by(words, &String.downcase/1)
 
         sorted_desc = Enum.sort(words, :desc)
         top_3 = Enum.sort(words, :desc) |> Enum.take(3) |> Enum.reverse()
