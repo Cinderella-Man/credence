@@ -216,3 +216,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/no_output_marker_lines_fix_test.exs`
 - Reason: line-regex strips `---WORD---` lines anywhere in an unparseable file, including inside heredocs/docstrings (proven: @moduledoc content corrupted); syntax phase has no per-rule parse-revert; no safe narrow core distinguishes a wrapping marker from a marker that is string content. Same class as no_markdown_code_fences / no_for_comprehension_by_step / no_end_keyword_variable.
 
+## no_reserved_word_variable — 2026-06-17
+- Files:
+  - `lib/syntax/no_reserved_word_variable.ex`
+  - `test/syntax/no_reserved_word_variable_analyze_test.exs`
+  - `test/syntax/no_reserved_word_variable_fix_test.exs`
+- Reason: line-regex on unparseable source corrupts reserved words inside string literals & @moduledoc heredocs (proven: {before, after} in a docstring → after_val while real error untouched); syntax phase has no per-rule parse-revert; analyze/fix regexes diverge (fix's is mangled by Elixir string-escaping); duplicates already-rejected no_end_keyword_variable for `end`; no safe narrow core distinguishes a binding from a block-closing keyword or string content. Same class as no_end_keyword_variable / no_markdown_code_fences.
+
