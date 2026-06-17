@@ -258,3 +258,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/prefer_list_update_at_fix_test.exs`
 - Reason: List.update_elem(...) is valid Elixir that parses, so the syntax phase (runs only on unparseable source) never reaches this rule on its own target — proven dead; and when a real syntax error elsewhere makes a file unparseable, its naive string match rewrites the text inside @moduledoc docstrings/string literals (proven corruption) — same rejected class as no_while_keyword/prefer_cond_do_keyword. Belongs in a pattern/semantic AST phase (out-of-scope shared-file change); no safe narrow core in syntax.
 
+## prefer_recursion_over_while — 2026-06-17
+- Files:
+  - `lib/syntax/prefer_recursion_over_while.ex`
+  - `test/syntax/prefer_recursion_over_while_analyze_test.exs`
+  - `test/syntax/prefer_recursion_over_while_fix_test.exs`
+- Reason: duplicate of already-rejected no_while_keyword; `while c do..end` parses (syntax phase never reaches it on its own target), line-regex corrupts `while..do` inside @moduledoc heredocs of unparseable files, and the while→tail-recursion fix is a speculative non-behavior-preserving heuristic. No safe narrow core in syntax phase.
+

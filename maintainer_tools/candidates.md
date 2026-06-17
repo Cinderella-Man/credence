@@ -1,4 +1,3 @@
-lib/syntax/prefer_recursion_over_while.ex
 lib/syntax/prefer_scan_over_scanl.ex
 lib/syntax/prefer_single_doc_attribute.ex
 lib/syntax/prefer_spec_arrow_operator.ex
@@ -196,8 +195,6 @@ test/syntax/fix_scientific_notation_analyze_test.exs
 test/syntax/fix_scientific_notation_fix_test.exs
 test/syntax/fix_stale_access_modifier_analyze_test.exs
 test/syntax/fix_stale_access_modifier_fix_test.exs
-test/syntax/prefer_recursion_over_while_analyze_test.exs
-test/syntax/prefer_recursion_over_while_fix_test.exs
 test/syntax/prefer_scan_over_scanl_analyze_test.exs
 test/syntax/prefer_scan_over_scanl_fix_test.exs
 test/syntax/prefer_single_doc_attribute_analyze_test.exs
