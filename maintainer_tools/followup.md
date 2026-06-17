@@ -265,3 +265,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/prefer_recursion_over_while_fix_test.exs`
 - Reason: duplicate of already-rejected no_while_keyword; `while c do..end` parses (syntax phase never reaches it on its own target), line-regex corrupts `while..do` inside @moduledoc heredocs of unparseable files, and the while→tail-recursion fix is a speculative non-behavior-preserving heuristic. No safe narrow core in syntax phase.
 
+## prefer_scan_over_scanl — 2026-06-17
+- Files:
+  - `lib/syntax/prefer_scan_over_scanl.ex`
+  - `test/syntax/prefer_scan_over_scanl_analyze_test.exs`
+  - `test/syntax/prefer_scan_over_scanl_fix_test.exs`
+- Reason: proven dead in syntax phase — Enum.scanl(...) is valid syntax (undefined-fn call parses), so the phase (runs only on unparseable source) never invokes this rule on its own target; as a passenger on otherwise-unparseable files its global String.replace corrupts "Enum.scanl(" inside heredocs/strings. Semantic mistake; belongs in pattern/semantic phase (shared-file change, out of scope). Same class as rejected prefer_list_update_at/no_while_keyword.
+
