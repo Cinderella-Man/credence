@@ -160,3 +160,10 @@ one-line reason. Work these by hand later.
   - `test/semantic/prefer_enum_join_fix_test.exs`
 - Reason: duplicate of UndefinedFunction (already matches "String.join/2 is undefined or private"); fold as a one-line @qualified_replacements entry {"String","join",2} => {:rename,"Enum","join"} instead of a parallel module whose match? over-broadly matches *String.join and which relies on alphabetical priority-500 tie-break to avoid shadowing
 
+## prefer_enum_slice_over_list_slice — 2026-06-17
+- Files:
+  - `lib/semantic/prefer_enum_slice_over_list_slice.ex`
+  - `test/semantic/prefer_enum_slice_over_list_slice_check_test.exs`
+  - `test/semantic/prefer_enum_slice_over_list_slice_fix_test.exs`
+- Reason: duplicate of UndefinedFunction (already matches "List.slice/3 is undefined or private" via qualified-ref regex, severity :warning); fold as one-line @qualified_replacements entry {"List","slice",3} => {:rename,"Enum","slice"} instead of a parallel module — shared-file edit, out of scope.
+
