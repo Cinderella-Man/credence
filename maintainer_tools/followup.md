@@ -223,3 +223,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/no_reserved_word_variable_fix_test.exs`
 - Reason: line-regex on unparseable source corrupts reserved words inside string literals & @moduledoc heredocs (proven: {before, after} in a docstring → after_val while real error untouched); syntax phase has no per-rule parse-revert; analyze/fix regexes diverge (fix's is mangled by Elixir string-escaping); duplicates already-rejected no_end_keyword_variable for `end`; no safe narrow core distinguishes a binding from a block-closing keyword or string content. Same class as no_end_keyword_variable / no_markdown_code_fences.
 
+## no_spec_do_block — 2026-06-17
+- Files:
+  - `lib/syntax/no_spec_do_block.ex`
+  - `test/syntax/no_spec_do_block_analyze_test.exs`
+  - `test/syntax/no_spec_do_block_fix_test.exs`
+- Reason: line-regex rewrites `@spec do` lines anywhere in an unparseable file, corrupting `@spec do ... end` inside docstrings/heredocs (proven: @moduledoc content mangled); syntax phase has no per-rule parse-revert; no safe narrow core distinguishes a real syntax error from string content; target syntax also speculative. Same class as no_markdown_code_fences / no_end_keyword_variable.
+
