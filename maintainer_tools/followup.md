@@ -153,3 +153,10 @@ one-line reason. Work these by hand later.
   - `test/semantic/avoid_remote_function_in_guard_fix_test.exs`
 - Reason: fix ignores diagnostic position and rewrites every module-wide def pair whose guard holds a Module.fun call — valid guard-safe guards (e.g. Bitwise.band) get merged into an `if` that propagates errors the guard swallowed (divergence on valid code); also matches name+arity only, not head patterns, so the merged clause drops fallback bindings (unbound vars). Safe core needs diagnostic-line targeting + identical heads = fix rewrite, not a check narrow.
 
+## prefer_enum_join — 2026-06-17
+- Files:
+  - `lib/semantic/prefer_enum_join.ex`
+  - `test/semantic/prefer_enum_join_check_test.exs`
+  - `test/semantic/prefer_enum_join_fix_test.exs`
+- Reason: duplicate of UndefinedFunction (already matches "String.join/2 is undefined or private"); fold as a one-line @qualified_replacements entry {"String","join",2} => {:rename,"Enum","join"} instead of a parallel module whose match? over-broadly matches *String.join and which relies on alphabetical priority-500 tie-break to avoid shadowing
+

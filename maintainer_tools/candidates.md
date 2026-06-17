@@ -1,4 +1,3 @@
-lib/semantic/prefer_enum_join.ex
 lib/semantic/prefer_enum_slice_over_list_slice.ex
 lib/semantic/prefer_explicit_range_step.ex
 lib/semantic/prefer_kernel_max_over_local.ex
@@ -212,8 +211,6 @@ test/pattern/use_map_join_equivalence_test.exs
 test/pattern/use_map_join_fix_test.exs
 test/semantic/missing_use_exunit_case_fix_test.exs
 test/semantic/outdented_heredoc_fix_test.exs
-test/semantic/prefer_enum_join_check_test.exs
-test/semantic/prefer_enum_join_fix_test.exs
 test/semantic/prefer_enum_slice_over_list_slice_check_test.exs
 test/semantic/prefer_enum_slice_over_list_slice_fix_test.exs
 test/semantic/prefer_explicit_range_step_check_test.exs
