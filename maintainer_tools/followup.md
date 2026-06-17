@@ -30,3 +30,10 @@ so a future scan won't re-flag it.
 ## test/pattern/avoid_graphemes_enum_count_equivalence_test.exs — 2026-06-17
 - Reason: orphan test — no owning rule in tree or sister.
 
+## no_trivial_delegation — 2026-06-17
+- Reason: dropped — premise unsound. The rule fires only on a wrapper that *renames*
+  its callee, but renaming is exactly the meaning-bearing idiom (`remove_topic`,
+  `compressible?`); "conveys meaning" is not machine-checkable and the only detectable
+  signal (rename) points the wrong way. 100% corpus false-positive (2/2). Rule +
+  check/fix/equivalence tests removed from the tree.
+
