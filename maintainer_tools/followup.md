@@ -188,3 +188,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/close_unclosed_fn_delimiter_fix_test.exs`
 - Reason: misfires on valid standalone-fn code (f = fn x -> foo(if .. end) end); real-bug vs valid differs only by paren depth, untrackable by regex on non-parsing source (parens in strings/charlists); also insert_ends drops a paren on multi-paren case. No safe regex-narrowable core.
 
+## no_end_keyword_variable — 2026-06-17
+- Files:
+  - `lib/syntax/no_end_keyword_variable.ex`
+  - `test/syntax/no_end_keyword_variable_analyze_test.exs`
+  - `test/syntax/no_end_keyword_variable_fix_test.exs`
+- Reason: line-regex cannot tell a variable-return/use `end` from a block-closing `end` (or heredoc/string text) on unparseable source — fix renames real block closers at colliding indent and string contents; syntax phase has no parse-revert; no safe narrow core.
+

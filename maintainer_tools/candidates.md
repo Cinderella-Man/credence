@@ -1,4 +1,3 @@
-lib/syntax/no_end_keyword_variable.ex
 lib/syntax/no_fn_with_capture.ex
 lib/syntax/no_for_comprehension_by_step.ex
 lib/syntax/no_markdown_code_fences.ex
@@ -208,8 +207,6 @@ test/syntax/fix_scientific_notation_analyze_test.exs
 test/syntax/fix_scientific_notation_fix_test.exs
 test/syntax/fix_stale_access_modifier_analyze_test.exs
 test/syntax/fix_stale_access_modifier_fix_test.exs
-test/syntax/no_end_keyword_variable_analyze_test.exs
-test/syntax/no_end_keyword_variable_fix_test.exs
 test/syntax/no_fn_with_capture_analyze_test.exs
 test/syntax/no_fn_with_capture_fix_test.exs
 test/syntax/no_for_comprehension_by_step_analyze_test.exs
