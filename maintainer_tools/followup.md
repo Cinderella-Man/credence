@@ -174,3 +174,10 @@ one-line reason. Work these by hand later.
   - `test/semantic/prefer_map_size_kernel_fix_test.exs`
 - Reason: duplicate — UndefinedFunction.match? already fires on "Map.size/1 is deprecated"; fold into its @qualified_replacements (needs a new bare-Kernel-rename variant in undefined_function.ex, a shared-file change) rather than ship a parallel module
 
+## prefer_tl_over_enum_tail — 2026-06-17
+- Files:
+  - `lib/semantic/prefer_tl_over_enum_tail.ex`
+  - `test/semantic/prefer_tl_over_enum_tail_check_test.exs`
+  - `test/semantic/prefer_tl_over_enum_tail_fix_test.exs`
+- Reason: duplicate — UndefinedFunction.match? already fires on "Enum.tail/1 is undefined or private" (parse_qualified_ref returns {"Enum","tail",1}); fold as a bare-Kernel rename of Enum.tail→tl into its @qualified_replacements (needs a new bare-Kernel-rename variant in undefined_function.ex, a shared-file change) rather than ship a parallel module.
+
