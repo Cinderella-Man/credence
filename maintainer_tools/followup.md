@@ -19,3 +19,11 @@ assumptions_test.exs / credence_test.exs) and rename the module off `.Pattern`
 so a future scan won't re-flag it.
 -->
 
+## avoid_graphemes_enum_count — 2026-06-17
+- Files:
+  - `lib/pattern/avoid_graphemes_enum_count.ex`
+  - `test/pattern/avoid_graphemes_enum_count_check_test.exs`
+  - `test/pattern/avoid_graphemes_enum_count_equivalence_test.exs`
+  - `test/pattern/avoid_graphemes_enum_count_fix_test.exs`
+- Reason: duplicate of no_enum_count_for_length (already flags+fixes Enum.count on String.graphemes/1 as provably-list → length(...)), which with avoid_graphemes_length already reaches the same String.length(x) endpoint; fold/drop needs a cross-file change.
+
