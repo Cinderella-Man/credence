@@ -1154,7 +1154,7 @@ defmodule CredenceTest do
             avg_length = :erlang.float(total_length / Enum.count(words))
 
             frequencies =
-              Enum.frequencies_by(words, fn word -> String.downcase(word) end)
+              Enum.frequencies_by(words, &String.downcase/1)
 
             sorted_desc = Enum.sort(words, :desc)
             top_3 = Enum.sort(words, :desc) |> Enum.take(3) |> Enum.reverse()
@@ -1163,7 +1163,7 @@ defmodule CredenceTest do
             second_last = Enum.at(sorted_desc, -2)
 
             unique_words = words |> Enum.uniq()
-            unique_csv = Enum.map_join(unique_words, ",", fn w -> String.upcase(w) end)
+            unique_csv = Enum.map_join(unique_words, ",", &String.upcase/1)
 
             %{
               char_count: char_count,

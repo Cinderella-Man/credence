@@ -37,7 +37,7 @@ defmodule Credence.FixExamplesTest do
     @moduledoc "Generates FizzBuzz sequences."
     @doc "Returns a FizzBuzz list for the given range."
     def generate(n) do
-      Enum.map_join(1..n, ", ", fn x -> fizz_or_buzz(x) end)
+      Enum.map_join(1..n, ", ", &fizz_or_buzz/1)
     end
 
     def is_divisible(n, d), do: rem(n, d) == 0
