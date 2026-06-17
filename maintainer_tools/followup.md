@@ -209,3 +209,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/no_markdown_code_fences_fix_test.exs`
 - Reason: line-regex strips fence lines anywhere in an unparseable file, corrupting markdown fences inside docstrings/heredocs (proven: @moduledoc content mutated); syntax phase has no parse-revert; no safe narrow core distinguishes a wrapping fence from a fence inside a string. Same class as no_for_comprehension_by_step / no_end_keyword_variable.
 
+## no_output_marker_lines — 2026-06-17
+- Files:
+  - `lib/syntax/no_output_marker_lines.ex`
+  - `test/syntax/no_output_marker_lines_analyze_test.exs`
+  - `test/syntax/no_output_marker_lines_fix_test.exs`
+- Reason: line-regex strips `---WORD---` lines anywhere in an unparseable file, including inside heredocs/docstrings (proven: @moduledoc content corrupted); syntax phase has no per-rule parse-revert; no safe narrow core distinguishes a wrapping marker from a marker that is string content. Same class as no_markdown_code_fences / no_for_comprehension_by_step / no_end_keyword_variable.
+
