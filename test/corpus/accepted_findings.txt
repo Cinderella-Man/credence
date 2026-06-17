@@ -1,0 +1,123 @@
+# Accepted corpus findings — over-fire regression snapshot.
+#
+# One line per accepted Pattern finding on the pinned hex packages (see
+# Credence.Corpus), formatted as:
+#
+#     <corpus-relative path>:<line>  <rule>   [ (xN) ]
+#
+# test/corpus/over_firing_test.exs asserts the LIVE set of findings equals
+# this pin, per package. A NEW line means Credence started flagging code it
+# did not before — a candidate over-fire; investigate before accepting. A
+# GONE line means a rule narrowed or was removed.
+#
+# DO NOT hand-edit. Regenerate after reviewing the test's drift report:
+#     mix credence.corpus --update-snapshot
+#
+# Why each firing rule is an accepted, behaviour-preserving suggestion (not
+# an over-fire) is documented in docs/09-corpus-over-firing-tests.md.
+
+credo/lib/credo/check/consistency/collector.ex:170  no_redundant_assignment
+credo/lib/credo/check/consistency/line_endings/collector.ex:12  no_manual_frequencies
+credo/lib/credo/check/consistency/multi_alias_import_require_use/collector.ex:84  prefer_map_new
+credo/lib/credo/check/consistency/parameter_pattern_matching/collector.ex:52  prefer_guard_over_if
+credo/lib/credo/check/consistency/space_around_operators.ex:103  no_guard_equality_for_pattern_match
+credo/lib/credo/check/consistency/space_around_operators.ex:107  no_guard_equality_for_pattern_match
+credo/lib/credo/check/consistency/space_around_operators.ex:111  no_guard_equality_for_pattern_match
+credo/lib/credo/check/design/duplicated_code.ex:144  prefer_map_new
+credo/lib/credo/check/design/duplicated_code.ex:157  no_manual_list_reduce
+credo/lib/credo/check/design/duplicated_code.ex:166  no_redundant_assignment
+credo/lib/credo/check/design/duplicated_code.ex:72  prefer_map_new
+credo/lib/credo/check/params.ex:48  no_reduce_for_map_building
+credo/lib/credo/check/readability/function_names.ex:162  no_enum_count_for_length
+credo/lib/credo/check/readability/parentheses_in_condition.ex:77  prefer_negate_if_true_false
+credo/lib/credo/check/refactor/cyclomatic_complexity.ex:131  no_enum_count_for_length
+credo/lib/credo/check/refactor/map_into.ex:80  no_length_guard_to_pattern
+credo/lib/credo/check/refactor/match_in_condition.ex:120  no_case_on_param_dispatch
+credo/lib/credo/check/refactor/perceived_complexity.ex:144  no_enum_count_for_length
+credo/lib/credo/check/refactor/redundant_with_clause_result.ex:58  no_case_true_false
+credo/lib/credo/check/refactor/with_clauses.ex:95  no_length_comparison_for_empty
+credo/lib/credo/check/warning/forbidden_module.ex:70  prefer_map_new_with_transform
+credo/lib/credo/check/warning/mix_env.ex:27  no_case_true_false
+credo/lib/credo/check/warning/unused_function_return_helper.ex:36  prefer_guard_over_if
+credo/lib/credo/cli/command/diff/diff_summary.ex:125  prefer_guard_over_if
+credo/lib/credo/cli/command/diff/diff_summary.ex:90  prefer_explicit_binary_arithmetic
+credo/lib/credo/cli/command/diff/diff_summary.ex:91  prefer_explicit_binary_arithmetic
+credo/lib/credo/cli/command/explain/explain_command.ex:131  no_case_boolean_result
+credo/lib/credo/cli/command/info/info_command.ex:54  prefer_map_new
+credo/lib/credo/cli/command/info/info_command.ex:62  prefer_map_new
+credo/lib/credo/cli/filename.ex:24  no_enum_count_for_length
+credo/lib/credo/cli/options.ex:128  prefer_map_new
+credo/lib/credo/cli/options.ex:132  prefer_map_new
+credo/lib/credo/cli/output/summary.ex:128  prefer_guard_over_if
+credo/lib/credo/cli/output/summary.ex:95  prefer_explicit_binary_arithmetic
+credo/lib/credo/cli/output/summary.ex:96  prefer_explicit_binary_arithmetic
+credo/lib/credo/cli/task/prepare_checks_to_run.ex:20  prefer_map_new
+credo/lib/credo/config_file.ex:157  avoid_length_guard_less_than2
+credo/lib/credo/execution.ex:152  no_doc_false_on_private
+credo/lib/credo/execution.ex:659  no_doc_false_on_private
+credo/lib/credo/execution.ex:667  no_doc_false_on_private
+credo/lib/credo/execution.ex:774  no_doc_false_on_private
+credo/lib/credo/execution/execution_timing.ex:93  no_map_keys_enum_lookup
+credo/lib/credo/execution/task/write_debug_report.ex:92  prefer_map_new
+credo/lib/credo/priority.ex:75  prefer_map_new
+credo/lib/credo/sources.ex:157  no_enum_into_empty_mapset
+credo/lib/credo/sources.ex:168  no_enum_into_empty_mapset
+credo/lib/credo/sources.ex:176  no_enum_into_empty_mapset
+credo/lib/credo/test/assertions.ex:182  use_map_join
+decimal/lib/decimal.ex:1375  prefer_guard_over_if
+decimal/lib/decimal.ex:277  no_case_boolean_result
+decimal/lib/decimal.ex:299  no_case_boolean_result
+ecto/lib/ecto.ex:685  prefer_guard_over_if
+ecto/lib/ecto/changeset.ex:2761  no_if_true_false
+ecto/lib/ecto/changeset.ex:3000  no_case_true_false
+ecto/lib/ecto/changeset.ex:494  prefer_map_new
+ecto/lib/ecto/multi.ex:861  no_find_value_default_case
+ecto/lib/ecto/query/builder.ex:1324  prefer_guard_over_if
+ecto/lib/ecto/query/builder.ex:1336  prefer_guard_over_if
+ecto/lib/ecto/query/builder.ex:1348  prefer_guard_over_if
+ecto/lib/ecto/query/builder.ex:558  no_duplicate_function_clauses
+ecto/lib/ecto/query/planner.ex:2234  prefer_map_new
+ecto/lib/ecto/repo/preloader.ex:105  no_redundant_assignment
+ecto/lib/ecto/uuid.ex:309  prefer_explicit_binary_arithmetic
+floki/lib/floki/css_escape.ex:30  no_case_on_param_dispatch
+floki/lib/floki/selector.ex:110  no_case_boolean_result
+floki/lib/floki/selector/attribute_selector.ex:32  no_case_on_param_dispatch
+floki/lib/floki/selector/pseudo_class.ex:183  no_case_boolean_result
+floki/lib/floki/selector/pseudo_class.ex:192  no_case_boolean_result
+floki/lib/floki/traversal.ex:19  no_redundant_assignment
+phoenix/lib/mix/phoenix/scope.ex:132  no_length_comparison_for_empty
+phoenix/lib/mix/phoenix/scope.ex:149  use_map_join
+phoenix/lib/mix/phoenix/scope.ex:63  use_map_join
+phoenix/lib/mix/tasks/phx.ex:25  no_case_on_param_dispatch
+phoenix/lib/mix/tasks/phx.gen.auth.ex:381  use_map_join
+phoenix/lib/mix/tasks/phx.gen.channel.ex:107  no_length_comparison_for_empty
+phoenix/lib/mix/tasks/phx.gen.embedded.ex:62  no_redundant_assignment
+phoenix/lib/mix/tasks/phx.gen.live.ex:187  no_cond_two_clauses
+phoenix/lib/phoenix/endpoint.ex:755  no_redundant_assignment
+phoenix/lib/phoenix/presence.ex:723  no_trivial_delegation
+phoenix/lib/phoenix/test/channel_test.ex:258  prefer_map_new
+phoenix/lib/phoenix/verified_routes.ex:744  no_case_on_param_dispatch
+plug/lib/plug/adapters/test/conn.ex:181  prefer_map_new
+plug/lib/plug/conn.ex:1827  no_empty_map_new
+plug/lib/plug/csrf_protection.ex:242  no_redundant_binary_syntax
+plug/lib/plug/upload.ex:135  prefer_explicit_binary_arithmetic
+poison/lib/poison/parser.ex:414  prefer_guard_over_if
+tesla/lib/tesla/adapter/gun.ex:189  prefer_map_new
+tesla/lib/tesla/adapter/mint.ex:101  prefer_map_new
+tesla/lib/tesla/adapter/mint.ex:76  prefer_map_new
+tesla/lib/tesla/middleware/compression.ex:90  no_trivial_delegation
+tesla/lib/tesla/middleware/decode_rels.ex:48  prefer_map_new
+tesla/lib/tesla/middleware/path_params/modern.ex:172  no_redundant_enum_join_separator
+tesla/lib/tesla/middleware/path_params/modern.ex:186  no_redundant_enum_join_separator
+tesla/lib/tesla/middleware/query.ex:76  no_case_true_false
+tesla/lib/tesla/middleware/query.ex:83  no_case_true_false
+tesla/lib/tesla/middleware/query/modern.ex:67  no_case_true_false
+tesla/lib/tesla/mock.ex:247  prefer_enum_reverse_two
+tesla/lib/tesla/multipart.ex:195  use_map_join
+tesla/lib/tesla/open_api/path_template.ex:101  no_case_true_false
+tesla/lib/tesla/open_api/path_template.ex:229  no_case_true_false
+tesla/lib/tesla/open_api/query_string.ex:121  no_case_true_false
+tesla/lib/tesla/param.ex:111  no_case_true_false
+tesla/lib/tesla/param.ex:152  no_case_true_false
+tesla/lib/tesla/param.ex:25  no_case_true_false
+tesla/lib/tesla/param.ex:65  no_case_true_false
