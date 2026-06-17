@@ -1,0 +1,99 @@
+defmodule Credence.Syntax.PreferCondDoKeyword do
+  @moduledoc """
+  Repairs `cond ->` written in place of `cond do`.
+
+  LLMs occasionally emit `cond ->` — mixing Rust/OCaml match-arm syntax into
+  Elixir — where Elixir requires `cond do`. The bare `cond ->` never parses, so
+  this is a REPAIR: replace the offending `cond ->` with `cond do`, opening the
+  block the trailing `end` was already waiting to close. `cond do … end` is the
+  only valid form, so the rewrite is behaviour-neutral.
+
+  Detection is driven by the parser itself. The rule replaces a **single**
+  `cond ->` occurrence and commits the result only when `Code.string_to_quoted/1`
+  then succeeds. A `cond ->` sitting inside a string, heredoc, or comment is
+  invisible to the parser, so replacing it never resolves a parse error and is
+  never the committed occurrence — it is left untouched even when the file is
+  unparseable for an unrelated reason.
+
+  ## Bad (won't parse)
+
+      cond ->
+        list == [] -> nil
+        true -> Enum.min(list)
+      end
+
+  ## Good
+
+      cond do
+        list == [] -> nil
+        true -> Enum.min(list)
+      end
+  """
+  use Credence.Syntax.Rule
+
+  alias Credence.Issue
+
+  # `cond` (word-boundary) then whitespace then `->` — the broken arm-syntax shape.
+  @pattern ~r/\bcond\s+->/
+
+  @impl true
+  def analyze(source) do
+    case repair(source) do
+      {:fixed, _fixed, line} ->
+        [
+          %Issue{
+            rule: :prefer_cond_do_keyword,
+            message: "`cond ->` should be `cond do`.",
+            meta: %{line: line}
+          }
+        ]
+
+      :no_fix ->
+        []
+    end
+  end
+
+  @impl true
+  def fix(source) do
+    case repair(source) do
+      {:fixed, fixed, _line} -> fixed
+      :no_fix -> source
+    end
+  end
+
+  # Replace exactly ONE `cond ->` — the first whose lone replacement makes the
+  # whole source parse — and commit only then. A `cond ->` that is string,
+  # heredoc, or comment content is invisible to the parser, so replacing it never
+  # resolves the parse error and is never the committed occurrence. analyze and
+  # fix share this helper, so they always agree.
+  defp repair(source) do
+    @pattern
+    |> Regex.scan(source, return: :index)
+    |> Enum.find_value(:no_fix, fn [{start, len}] ->
+      candidate = splice(source, start, len)
+
+      if candidate != source and parses?(candidate) do
+        {:fixed, candidate, line_at(source, start)}
+      else
+        false
+      end
+    end)
+  end
+
+  defp parses?(source), do: match?({:ok, _}, Code.string_to_quoted(source))
+
+  # `Regex.scan/3` :index offsets are byte-based; splice on bytes so any
+  # surrounding multibyte content is preserved exactly.
+  defp splice(source, start, len) do
+    before = binary_part(source, 0, start)
+    after_ = binary_part(source, start + len, byte_size(source) - start - len)
+    before <> "cond do" <> after_
+  end
+
+  defp line_at(source, byte_offset) do
+    source
+    |> binary_part(0, byte_offset)
+    |> String.split("\n")
+    |> length()
+  end
+end

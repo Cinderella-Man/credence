@@ -188,3 +188,70 @@ These 7 candidates were salvaged this session and are now live on `evolution_acc
 - **prefer_map_size** → folded into `no_enum_count_for_length`: when the counted arg is `Map.keys(m)`, emit `map_size(m)` (=== for all inputs incl. BadMapError on non-maps).
 - **prefer_negate_if_true_false** → kept as its own rule, narrowed to its UNIQUE territory (non-boolean else body OR non-provably-boolean condition) so it no longer double-fires with `no_if_true_false`. The negate-and-swap rewrite was already safe.
 - **prefer_map_intersect_over_mapset_intersection** → kept, narrowed: full two-statement block shape (check==fix), single-use intersection var, bare-var maps, and a PURE merge over count1/count2+literals (excludes element refs and makes the MapSet-vs-Map.intersect key-order difference unobservable). Large-map (>32 key) equivalence verified.
+
+## Syntax-phase followup batch — reviewed 2026-06-17 (14 rules: 3 recovered, 11 dropped)
+
+All 14 remaining followups were **syntax-phase** rules (`lib/syntax/*.ex`, sister
+`evolution`). The recovery vector — proven by the accepted `no_unclosed_fn_delimiter`
+and `no_doc_with_do_block` — is that a syntax rule may call `Code.string_to_quoted`
+**inside its own file** to (a) pinpoint the real parse error, fix only there, and
+(b) commit only if `parses?(fixed)` (a self-contained per-rule parse-revert). That
+single pattern defeats both blockers the loop cited everywhere ("needs error meta
+passed into the rule = shared-file change" → false; "corrupts strings/heredocs" →
+the gate reverts it). The hard limit: it only works when the rule's target is a
+**genuine parse error**. The classification axis below is "genuine parse error
+(recoverable) vs. valid Elixir that parses (dead — the phase, which runs only on
+unparseable source, never reaches the rule on its own target)".
+
+**RECOVERED (now live on `evolution_accepted`):**
+- **close_unclosed_fn_delimiter** — parser-pinpoint (`mismatched_delimiter` fn/`)`)
+  + insert `end` + remove the stray `end` whose deletion parses + gate. Narrowed to
+  own ONLY the stray-`end` variant (dropped the "inserting end already parses" branch
+  so it never double-fires with the accepted `no_unclosed_fn_delimiter`).
+- **no_markdown_code_fences** — strip only the **wrapping** fences (first/last
+  non-blank line) + parses?-gate. Interior docstring fences are structurally
+  excluded; the gate reverts any unrelated-passenger case.
+- **prefer_cond_do_keyword** — replace a **single** `cond ->`→`cond do` (the one
+  whose lone replacement parses) + gate. `cond do` is the unique valid form, so it
+  is behaviour-neutral; an in-string `cond ->` never makes the file parse → untouched.
+
+**DROPPED — DEAD in the syntax phase (target is valid Elixir that parses, so the
+phase never reaches the rule on its own target; belongs in pattern/semantic AST
+phase = a different rule, out of scope):**
+- **no_while_keyword** / **prefer_recursion_over_while** — `while c do .. end` parses
+  (call to undefined `while`); also the while→tail-recursion rewrite is a speculative
+  non-behaviour-preserving heuristic (guesses accumulator/loop/free vars). Duplicates.
+- **prefer_scan_over_scanl** — `Enum.scanl(..)` parses (undefined-fn call).
+- **prefer_list_update_at** — `List.update_elem(..)` parses (undefined-fn call).
+- **no_spec_do_block** — `@spec do .. end` parses as `@spec(do: ..)` (balanced).
+
+**DROPPED — speculative / non-unique repair (even where the target IS a parse error,
+the fix is a guess, not the unique behaviour-preserving repair):**
+- **prefer_fn_end_syntax** — bare `->`→`fn .. end` is non-unique (could be a case
+  clause, a missing `fn`, etc.); the moduledoc itself invents a phantom `_i` param.
+- **no_for_comprehension_by_step** — `by` is a speculative Python-ism; the rewrite
+  hardcodes `<=` (wrong for negative step) and `Stream.iterate|>take_while` is not the
+  unique meaning of `a..b by step`.
+
+**DROPPED — no safe core under parser-pinpoint+gate (the gate is real but cannot make
+the rule both correct AND useful):**
+- **no_output_marker_lines** — `---WORD---` is a valid `-` operator chain: it **parses**
+  mid-module (`a = 1\n---FOO---\nb = 2` → `{:ok,..}`), so the rule is partly dead; and when
+  it IS the error, single-line-strip under-removes (the survivor re-glues into an operator
+  chain that parses → gate commits a corrupted file) while strip-all corrupts `---WORD---`
+  inside docstrings (gate can't catch when an unrelated real marker is what broke parsing).
+  No design satisfies THE ONE BAR.
+- **no_reserved_word_variable** / **no_end_keyword_variable** — the real fix is a GLOBAL
+  rename of every binding-position occurrence, which is exactly the passenger-corruption
+  vector. Single-site+gate only repairs the degenerate "reserved word bound but NEVER used
+  again" shape (a used reserved word is itself a parse error, so a single-site rename leaves
+  it unparseable → gate reverts every canonical case). `end` ∈ `no_reserved_word_variable`'s
+  set, so `no_end_keyword_variable` adds nothing.
+
+**DROPPED — subsumed by a shipped rule:**
+- **prefer_single_doc_attribute** — its PATTERN-1 gate design is actually sound, BUT the
+  shipped `close_unclosed_doc_heredoc` targets the same unclosed-`@doc """` parse error and
+  sorts first (`CloseUnclosed…` < `PreferSingle…` at equal priority 500), so it repairs the
+  parse error first; adding this rule only duplicates the analyze diagnostic and its fix
+  never applies in-phase. (Verified empirically: `close_unclosed_doc_heredoc.fix` already
+  turns the canonical input into parseable code.)
