@@ -1,4 +1,3 @@
-lib/syntax/fix_missing_module_end.ex
 lib/syntax/fix_truncated_binary_close.ex
 lib/syntax/no_doc_with_do_block.ex
 lib/syntax/no_else_if.ex
@@ -204,8 +203,6 @@ test/semantic/unused_variable_test.exs
 test/semantic/used_underscore_variable_fix_test.exs
 test/syntax/fix_malformed_spec_analyze_test.exs
 test/syntax/fix_malformed_spec_fix_test.exs
-test/syntax/fix_missing_module_end_analyze_test.exs
-test/syntax/fix_missing_module_end_fix_test.exs
 test/syntax/fix_python_augmented_assignment_test.exs
 test/syntax/fix_python_floor_div_test.exs
 test/syntax/fix_python_modulo_analyze_test.exs
