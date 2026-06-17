@@ -279,3 +279,6 @@ one-line reason. Work these by hand later.
   - `test/syntax/prefer_single_doc_attribute_fix_test.exs`
 - Reason: global fix corrupts valid closed @doc heredocs (content beginning with "@doc" → whole block deleted) when riding as passenger on otherwise-unparseable files; "closing-triple-quotes" target parses so phase never reaches it (proven dead); no safe narrow core without parse-error location passed into rule (shared behaviour+phase change, out of scope). Same class as no_while_keyword/prefer_cond_do_keyword.
 
+## test/pattern/assumptions_filtering_test.exs — 2026-06-17
+- Reason: orphan test — no owning rule in tree or sister.
+

@@ -1,4 +1,3 @@
-test/pattern/assumptions_filtering_test.exs
 test/pattern/avoid_graphemes_enum_count_check_test.exs
 test/pattern/avoid_graphemes_enum_count_equivalence_test.exs
 test/pattern/avoid_graphemes_enum_count_fix_test.exs
