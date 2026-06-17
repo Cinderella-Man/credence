@@ -1,4 +1,3 @@
-lib/syntax/no_doc_with_do_block.ex
 lib/syntax/no_else_if.ex
 lib/syntax/no_end_keyword_variable.ex
 lib/syntax/no_fn_with_capture.ex
@@ -210,8 +209,6 @@ test/syntax/fix_scientific_notation_analyze_test.exs
 test/syntax/fix_scientific_notation_fix_test.exs
 test/syntax/fix_stale_access_modifier_analyze_test.exs
 test/syntax/fix_stale_access_modifier_fix_test.exs
-test/syntax/no_doc_with_do_block_analyze_test.exs
-test/syntax/no_doc_with_do_block_fix_test.exs
 test/syntax/no_else_if_analyze_test.exs
 test/syntax/no_else_if_fix_test.exs
 test/syntax/no_end_keyword_variable_analyze_test.exs
