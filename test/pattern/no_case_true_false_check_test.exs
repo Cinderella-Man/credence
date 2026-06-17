@@ -57,9 +57,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
     end
 
     test "inline case" do
-      assert flagged?(NoCaseTrueFalse, """
-             case is_nil(x) do true -> 0; false -> x end
-             """)
+      assert flagged?(NoCaseTrueFalse, "case is_nil(x) do true -> 0; false -> x end")
     end
 
     test "nested inside a def" do
@@ -160,7 +158,7 @@ defmodule Credence.Pattern.NoCaseTrueFalseCheckTest do
 
     test "pipe into case with multi-line true body" do
       assert flagged?(NoCaseTrueFalse, """
-             check(x)
+             valid?(x)
              |> case do
                true ->
                  value = process(x)

@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, input) == expected
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
     end
 
     test "with a direct expression" do
@@ -45,7 +45,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, input) == expected
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
     end
 
     test "multiple calls, independently" do
@@ -65,7 +65,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, input) == expected
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
     end
 
     test "in an assignment, leaving surrounding code intact" do
@@ -87,7 +87,49 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, input) == expected
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
+    end
+  end
+
+  describe "rewrites counting Map.keys to map_size/1" do
+    test "direct Enum.count(Map.keys(map))" do
+      input = """
+      defmodule Bad do
+        def key_count(map) do
+          Enum.count(Map.keys(map))
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def key_count(map) do
+          map_size(map)
+        end
+      end
+      """
+
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
+    end
+
+    test "piped Map.keys(map) |> Enum.count()" do
+      input = """
+      defmodule Bad do
+        def key_count(map) do
+          map |> Map.keys() |> Enum.count()
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def key_count(map) do
+          map_size(map)
+        end
+      end
+      """
+
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
     end
   end
 
@@ -101,7 +143,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, code) == code
+      confirm_fix(fix(NoEnumCountForLength, code), code)
     end
 
     test "length/1 (already correct)" do
@@ -111,7 +153,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, code) == code
+      confirm_fix(fix(NoEnumCountForLength, code), code)
     end
 
     test "Enum.count on a bare variable" do
@@ -125,7 +167,7 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
       end
       """
 
-      assert fix(NoEnumCountForLength, code) == code
+      confirm_fix(fix(NoEnumCountForLength, code), code)
     end
   end
 end

@@ -16,7 +16,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(NoReduceWhileWithoutHalt, code) == expected
+    confirm_fix(fix(NoReduceWhileWithoutHalt, code), expected)
   end
 
   test "handles pipeline form with multi-line block body" do
@@ -36,7 +36,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(NoReduceWhileWithoutHalt, code) == expected
+    confirm_fix(fix(NoReduceWhileWithoutHalt, code), expected)
   end
 
   test "preserves surrounding code" do
@@ -60,7 +60,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end
     """
 
-    assert fix(NoReduceWhileWithoutHalt, code) == expected
+    confirm_fix(fix(NoReduceWhileWithoutHalt, code), expected)
   end
 
   test "unwraps every clause of a multi-clause fn" do
@@ -78,7 +78,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(NoReduceWhileWithoutHalt, code) == expected
+    confirm_fix(fix(NoReduceWhileWithoutHalt, code), expected)
   end
 
   test "does not modify reduce_while with :halt" do
@@ -88,7 +88,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(NoReduceWhileWithoutHalt, code) == code
+    confirm_fix(fix(NoReduceWhileWithoutHalt, code), code)
   end
 
   test "does not modify a cont buried inside a case (not the literal last expr)" do
@@ -101,7 +101,7 @@ defmodule Credence.Pattern.NoReduceWhileWithoutHaltFixTest do
     end)
     """
 
-    assert fix(NoReduceWhileWithoutHalt, code) == code
+    confirm_fix(fix(NoReduceWhileWithoutHalt, code), code)
   end
 
   test "round-trip: fixed code produces no issues" do

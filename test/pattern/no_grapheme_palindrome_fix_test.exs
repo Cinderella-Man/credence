@@ -10,11 +10,9 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       graphemes == Enum.reverse(graphemes)
       """
 
-      expected = """
-      s == String.reverse(s)
-      """
+      expected = "s == String.reverse(s)"
 
-      assert fix(NoGraphemePalindrome, code) == expected
+      confirm_fix(fix(NoGraphemePalindrome, code), expected)
     end
 
     test "handles reversed comparison order" do
@@ -23,11 +21,9 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       Enum.reverse(graphemes) == graphemes
       """
 
-      expected = """
-      String.reverse(s) == s
-      """
+      expected = "String.reverse(s) == s"
 
-      assert fix(NoGraphemePalindrome, code) == expected
+      confirm_fix(fix(NoGraphemePalindrome, code), expected)
     end
 
     test "drops the binding inside a function body and preserves surrounding code" do
@@ -48,7 +44,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       end
       """
 
-      assert fix(NoGraphemePalindrome, code) == expected
+      confirm_fix(fix(NoGraphemePalindrome, code), expected)
     end
   end
 
@@ -68,7 +64,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       {pal, count}
       """
 
-      assert fix(NoGraphemePalindrome, code) == expected
+      confirm_fix(fix(NoGraphemePalindrome, code), expected)
     end
   end
 
@@ -84,7 +80,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       normalized == String.reverse(normalized)
       """
 
-      assert fix(NoGraphemePalindrome, code) == expected
+      confirm_fix(fix(NoGraphemePalindrome, code), expected)
     end
   end
 
@@ -97,7 +93,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       {pal, count}
       """
 
-      assert fix(NoGraphemePalindrome, code) == code
+      confirm_fix(fix(NoGraphemePalindrome, code), code)
     end
 
     test "does NOT rewrite the String.to_charlist form" do
@@ -106,7 +102,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       chars == Enum.reverse(chars)
       """
 
-      assert fix(NoGraphemePalindrome, code) == code
+      confirm_fix(fix(NoGraphemePalindrome, code), code)
     end
 
     test "does not modify unrelated list comparisons" do
@@ -115,7 +111,7 @@ defmodule Credence.Pattern.NoGraphemePalindromeFixTest do
       list == Enum.reverse(list)
       """
 
-      assert fix(NoGraphemePalindrome, code) == code
+      confirm_fix(fix(NoGraphemePalindrome, code), code)
     end
   end
 

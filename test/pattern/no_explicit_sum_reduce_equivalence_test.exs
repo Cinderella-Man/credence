@@ -12,9 +12,7 @@ defmodule Credence.Pattern.NoExplicitSumReduceEquivalenceTest do
 
   test "reduce(+) → Enum.sum preserves the total incl. value-kind" do
     assert_equivalent(
-      """
-      Enum.reduce(list, 0, fn x, acc -> acc + x end)
-      """,
+      "Enum.reduce(list, 0, fn x, acc -> acc + x end)",
       rule: NoExplicitSumReduce,
       vars: [:list],
       inputs: [[], [1, 2, 3], [1.0, 2.0], [1, 1.0, 2], [-1, -2, -3], Enum.to_list(1..50)]

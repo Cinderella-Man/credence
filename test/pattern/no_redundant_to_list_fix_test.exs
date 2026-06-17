@@ -4,53 +4,33 @@ defmodule Credence.Pattern.NoRedundantToListFixTest do
   alias Credence.Pattern.NoRedundantToList
 
   test "Enum.to_list(x) |> MapSet.new() → MapSet.new(x)" do
-    code = """
-    Enum.to_list(items) |> MapSet.new()
-    """
+    code = "Enum.to_list(items) |> MapSet.new()"
 
-    assert fix(NoRedundantToList, code) == """
-           MapSet.new(items)
-           """
+    confirm_fix(fix(NoRedundantToList, code), "MapSet.new(items)")
   end
 
   test "x |> Enum.to_list() |> MapSet.new() → MapSet.new(x)" do
-    code = """
-    items |> Enum.to_list() |> MapSet.new()
-    """
+    code = "items |> Enum.to_list() |> MapSet.new()"
 
-    assert fix(NoRedundantToList, code) == """
-           MapSet.new(items)
-           """
+    confirm_fix(fix(NoRedundantToList, code), "MapSet.new(items)")
   end
 
   test "MapSet.new(Enum.to_list(x)) → MapSet.new(x)" do
-    code = """
-    MapSet.new(Enum.to_list(items))
-    """
+    code = "MapSet.new(Enum.to_list(items))"
 
-    assert fix(NoRedundantToList, code) == """
-           MapSet.new(items)
-           """
+    confirm_fix(fix(NoRedundantToList, code), "MapSet.new(items)")
   end
 
   test "Enum.to_list(x) |> Map.new() → Map.new(x)" do
-    code = """
-    Enum.to_list(pairs) |> Map.new()
-    """
+    code = "Enum.to_list(pairs) |> Map.new()"
 
-    assert fix(NoRedundantToList, code) == """
-           Map.new(pairs)
-           """
+    confirm_fix(fix(NoRedundantToList, code), "Map.new(pairs)")
   end
 
   test "non-pipe /2 form keeps the transform arg" do
-    code = """
-    MapSet.new(Enum.to_list(items), fn x -> x + 1 end)
-    """
+    code = "MapSet.new(Enum.to_list(items), fn x -> x + 1 end)"
 
-    assert fix(NoRedundantToList, code) == """
-           MapSet.new(items, fn x -> x + 1 end)
-           """
+    confirm_fix(fix(NoRedundantToList, code), "MapSet.new(items, fn x -> x + 1 end)")
   end
 
   test "preserves surrounding code" do
@@ -74,7 +54,7 @@ defmodule Credence.Pattern.NoRedundantToListFixTest do
     end
     """
 
-    assert fix(NoRedundantToList, code) == expected
+    confirm_fix(fix(NoRedundantToList, code), expected)
   end
 
   test "fixed code produces no issues" do
@@ -92,10 +72,8 @@ defmodule Credence.Pattern.NoRedundantToListFixTest do
 
   # Narrowed-out unsafe case: the rule must NOT touch it (would drop the arg).
   test "pipe /2 form is left unchanged" do
-    code = """
-    Enum.to_list(items) |> MapSet.new(fn x -> x + 1 end)
-    """
+    code = "Enum.to_list(items) |> MapSet.new(fn x -> x + 1 end)"
 
-    assert fix(NoRedundantToList, code) == code
+    confirm_fix(fix(NoRedundantToList, code), code)
   end
 end

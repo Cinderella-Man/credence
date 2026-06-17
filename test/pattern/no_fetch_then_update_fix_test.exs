@@ -33,7 +33,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(NoFetchThenUpdate, code) == expected
+      confirm_fix(fix(NoFetchThenUpdate, code), expected)
     end
 
     test "Map.update/4 -> Map.put (default dropped, fun applied to bound value)" do
@@ -65,7 +65,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(NoFetchThenUpdate, code) == expected
+      confirm_fix(fix(NoFetchThenUpdate, code), expected)
     end
 
     test "literal atom key" do
@@ -91,7 +91,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(NoFetchThenUpdate, code) == expected
+      confirm_fix(fix(NoFetchThenUpdate, code), expected)
     end
   end
 
@@ -108,7 +108,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(NoFetchThenUpdate, code) == code
+      confirm_fix(fix(NoFetchThenUpdate, code), code)
     end
 
     test "no-op when the :ok value is bound to _" do
@@ -123,7 +123,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(NoFetchThenUpdate, code) == code
+      confirm_fix(fix(NoFetchThenUpdate, code), code)
     end
 
     test "no-op when the branch rebinds the map" do
@@ -142,7 +142,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(NoFetchThenUpdate, code) == code
+      confirm_fix(fix(NoFetchThenUpdate, code), code)
     end
 
     test "no-op when the fetched map is a non-simple expression" do
@@ -157,7 +157,7 @@ defmodule Credence.Pattern.NoFetchThenUpdateFixTest do
       end
       """
 
-      assert fix(NoFetchThenUpdate, code) == code
+      confirm_fix(fix(NoFetchThenUpdate, code), code)
     end
   end
 end

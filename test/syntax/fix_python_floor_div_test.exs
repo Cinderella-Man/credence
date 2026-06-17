@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.FixPythonFloorDivTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.FixPythonFloorDiv
 
@@ -15,9 +15,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
   describe "analyze/1 flags floor division" do
     test "infix word // word" do
       issues =
-        analyze("""
-        def half(n), do: n // 2
-        """)
+        analyze("def half(n), do: n // 2")
 
       assert length(issues) == 1
       assert hd(issues).rule == :python_floor_div
@@ -41,11 +39,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
     end
 
     test "Kernel.// standalone call" do
-      assert length(
-               analyze("""
-               def divide(a, b), do: Kernel.//(a, b)
-               """)
-             ) == 1
+      assert length(analyze("def divide(a, b), do: Kernel.//(a, b)")) == 1
     end
   end
 
@@ -66,15 +60,11 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
     end
 
     test "no issue for valid div/2 call" do
-      assert analyze("""
-             def half(n), do: div(n, 2)
-             """) == []
+      assert analyze("def half(n), do: div(n, 2)") == []
     end
 
     test "no issue for pipe into div" do
-      assert analyze("""
-             def half(n), do: n |> div(2)
-             """) == []
+      assert analyze("def half(n), do: n |> div(2)") == []
     end
 
     test "no issue for // inside a comment" do
@@ -89,27 +79,19 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
     end
 
     test "no issue for Kernel./ float division" do
-      assert analyze("""
-             def half(n), do: Kernel./(n, 2)
-             """) == []
+      assert analyze("def half(n), do: Kernel./(n, 2)") == []
     end
 
     test "no issue for range step 0..-2//1" do
-      assert analyze("""
-             Enum.slice(list, 0..-2//1)
-             """) == []
+      assert analyze("Enum.slice(list, 0..-2//1)") == []
     end
 
     test "no issue for range step 1..10//2" do
-      assert analyze("""
-             Enum.to_list(1..10//2)
-             """) == []
+      assert analyze("Enum.to_list(1..10//2)") == []
     end
 
     test "no issue for range step with variable bounds n..m//-1" do
-      assert analyze("""
-             Enum.to_list(n..m//-1)
-             """) == []
+      assert analyze("Enum.to_list(n..m//-1)") == []
     end
   end
 
@@ -119,61 +101,33 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
 
   describe "fix/1 rewrites word // word to div" do
     test "n // 2" do
-      assert fix("""
-             n // 2
-             """) == """
-             div(n, 2)
-             """
+      confirm_fix(fix("n // 2"), "div(n, 2)")
     end
 
     test "no spaces n//2" do
-      assert fix("""
-             n//2
-             """) == """
-             div(n, 2)
-             """
+      confirm_fix(fix("n//2"), "div(n, 2)")
     end
 
     test "integer // integer" do
-      assert fix("""
-             100 // 7
-             """) == """
-             div(100, 7)
-             """
+      confirm_fix(fix("100 // 7"), "div(100, 7)")
     end
 
     test "in assignment" do
-      assert fix("""
-             x = a // b
-             """) == """
-             x = div(a, b)
-             """
+      confirm_fix(fix("x = a // b"), "x = div(a, b)")
     end
   end
 
   describe "fix/1 preserves surrounding code (local swap)" do
     test "one-liner def head" do
-      assert fix("""
-             def half(n), do: n // 2
-             """) == """
-             def half(n), do: div(n, 2)
-             """
+      confirm_fix(fix("def half(n), do: n // 2"), "def half(n), do: div(n, 2)")
     end
 
     test "comparison / guard context" do
-      assert fix("""
-             if n // 2 == 0 do
-             """) == """
-             if div(n, 2) == 0 do
-             """
+      confirm_fix(fix("if n // 2 == 0 do"), "if div(n, 2) == 0 do")
     end
 
     test "preserves indentation" do
-      assert fix("""
-                   n // 2
-             """) == """
-                   div(n, 2)
-             """
+      confirm_fix(fix("      n // 2"), "      div(n, 2)")
     end
 
     test "only touches lines with floor division" do
@@ -193,17 +147,13 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
   end
 
   describe "fix/1 rewrites Kernel.//" do
     test "standalone call" do
-      assert fix("""
-             result = Kernel.//(a, b)
-             """) == """
-             result = div(a, b)
-             """
+      confirm_fix(fix("result = Kernel.//(a, b)"), "result = div(a, b)")
     end
 
     test "in pipe" do
@@ -227,7 +177,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
 
     test "the exact pattern from the row log — only Kernel.// is touched" do
@@ -249,7 +199,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
   end
 
@@ -264,7 +214,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       end
       """
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "valid div/2 call unchanged" do
@@ -274,7 +224,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       end
       """
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "pipe into div unchanged" do
@@ -284,7 +234,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       end
       """
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "comment with // unchanged" do
@@ -295,34 +245,25 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
       end
       """
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "range step 0..-2//1 unchanged" do
-      code = """
-      middle = Enum.slice(list, 0..-2//1)
+      code = "middle = Enum.slice(list, 0..-2//1)"
 
-      """
-
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "range step 1..10//2 unchanged" do
-      code = """
-      evens = Enum.to_list(1..10//2)
+      code = "evens = Enum.to_list(1..10//2)"
 
-      """
-
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "range step with variable bounds unchanged" do
-      code = """
-      Enum.reduce(n..m//-1, 0, fn i, acc -> i + acc end)
+      code = "Enum.reduce(n..m//-1, 0, fn i, acc -> i + acc end)"
 
-      """
-
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
   end
 
@@ -343,11 +284,7 @@ defmodule Credence.Syntax.FixPythonFloorDivTest do
 
   describe "fix output is well-formed" do
     test "fixed output parses" do
-      assert valid_syntax?(
-               fix("""
-               n // 2
-               """)
-             )
+      assert valid_syntax?(fix("n // 2"))
     end
   end
 end

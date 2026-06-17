@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input), expected)
     end
 
     test "fixes pipe form: Enum.with_index → Stream.with_index" do
@@ -49,7 +49,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input), expected)
     end
 
     test "preserves fn body unchanged" do
@@ -73,7 +73,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input), expected)
     end
 
     test "does not touch Enum.with_index outside reduce" do
@@ -84,7 +84,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, code) == code
+      confirm_fix(fix(NoEagerWithIndexInReduce, code), code)
     end
 
     test "round-trip: fixed code has zero issues" do
@@ -124,7 +124,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce), expected)
     end
   end
 
@@ -154,7 +154,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce), expected)
     end
 
     test "strips with_index from pipe, keeps upstream steps" do
@@ -180,7 +180,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce), expected)
     end
   end
 
@@ -206,7 +206,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce), expected)
     end
   end
 
@@ -268,7 +268,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input), expected)
     end
 
     test ":stream and :reduce produce different output" do
@@ -335,7 +335,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input), expected)
     end
 
     test "preserves String.graphemes in pipe form" do
@@ -367,7 +367,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       end
       """
 
-      assert fix(NoEagerWithIndexInReduce, input) == expected
+      confirm_fix(fix(NoEagerWithIndexInReduce, input), expected)
     end
 
     test "output compiles for graphemes pattern" do

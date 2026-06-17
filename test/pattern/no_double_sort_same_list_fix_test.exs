@@ -15,7 +15,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       desc = Enum.reverse(asc)
       """
 
-      assert fix(NoDoubleSortSameList, input) == expected
+      confirm_fix(fix(NoDoubleSortSameList, input), expected)
     end
 
     test "replaces piped desc sort with Enum.reverse" do
@@ -29,7 +29,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       desc = Enum.reverse(asc)
       """
 
-      assert fix(NoDoubleSortSameList, input) == expected
+      confirm_fix(fix(NoDoubleSortSameList, input), expected)
     end
 
     test "does not modify code that sorts different lists" do
@@ -38,7 +38,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       sorted_b = Enum.sort(b, :desc)
       """
 
-      assert fix(NoDoubleSortSameList, code) == code
+      confirm_fix(fix(NoDoubleSortSameList, code), code)
     end
 
     test "does not modify code with custom comparator" do
@@ -47,7 +47,7 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       by_age = Enum.sort(items, &(&1.age <= &2.age))
       """
 
-      assert fix(NoDoubleSortSameList, code) == code
+      confirm_fix(fix(NoDoubleSortSameList, code), code)
     end
 
     test "fixes the real-world maximum_product example" do
@@ -79,15 +79,13 @@ defmodule Credence.Pattern.NoDoubleSortSameListFixTest do
       end
       """
 
-      assert fix(NoDoubleSortSameList, input) == expected
+      confirm_fix(fix(NoDoubleSortSameList, input), expected)
     end
 
     test "preserves single-direction sorts" do
-      code = """
-      sorted = Enum.sort(list)
-      """
+      code = "sorted = Enum.sort(list)"
 
-      assert fix(NoDoubleSortSameList, code) == code
+      confirm_fix(fix(NoDoubleSortSameList, code), code)
     end
 
     test "fixed code produces no issues" do

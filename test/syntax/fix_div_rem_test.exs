@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.FixDivRemTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.FixDivRem
 
@@ -110,27 +110,19 @@ defmodule Credence.Syntax.FixDivRemTest do
 
   describe "fix/1" do
     test "fixes simple infix div" do
-      source = """
-      x = a div b
-      """
+      source = "x = a div b"
 
-      expected = """
-      x = div(a, b)
-      """
+      expected = "x = div(a, b)"
 
-      assert FixDivRem.fix(source) == expected
+      confirm_fix(FixDivRem.fix(source), expected)
     end
 
     test "fixes simple infix rem" do
-      source = """
-      x = a rem b
-      """
+      source = "x = a rem b"
 
-      expected = """
-      x = rem(a, b)
-      """
+      expected = "x = rem(a, b)"
 
-      assert FixDivRem.fix(source) == expected
+      confirm_fix(FixDivRem.fix(source), expected)
     end
 
     test "fixes div with assignment" do
@@ -152,7 +144,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert FixDivRem.fix(source) == expected
+      confirm_fix(FixDivRem.fix(source), expected)
     end
 
     test "fixes complex left operand" do
@@ -174,7 +166,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert FixDivRem.fix(source) == expected
+      confirm_fix(FixDivRem.fix(source), expected)
     end
 
     test "fixes both div and rem in same file" do
@@ -198,7 +190,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert FixDivRem.fix(source) == expected
+      confirm_fix(FixDivRem.fix(source), expected)
     end
 
     test "does not modify valid function call syntax" do
@@ -208,7 +200,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert FixDivRem.fix(source) == source
+      confirm_fix(FixDivRem.fix(source), source)
     end
 
     test "does not rewrite infix rem inside capture" do
@@ -220,7 +212,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert FixDivRem.fix(source) == source
+      confirm_fix(FixDivRem.fix(source), source)
     end
 
     test "does not modify pipe syntax" do
@@ -230,7 +222,7 @@ defmodule Credence.Syntax.FixDivRemTest do
       end
       """
 
-      assert FixDivRem.fix(source) == source
+      confirm_fix(FixDivRem.fix(source), source)
     end
 
     test "fixed code produces valid Elixir" do
@@ -247,9 +239,7 @@ defmodule Credence.Syntax.FixDivRemTest do
     end
 
     test "fix reaches a fixpoint — fixed output no longer flags" do
-      source = """
-      x = a div b
-      """
+      source = "x = a div b"
 
       assert FixDivRem.analyze(FixDivRem.fix(source)) == []
     end
@@ -260,6 +250,38 @@ defmodule Credence.Syntax.FixDivRemTest do
                x = a div b
                """)
              )
+    end
+
+    test "does not mangle div inside function call arguments" do
+      source = """
+          moves_minus = do_minto1((n - 1) div 2, 0)
+          moves_plus = do_minto1((n + 1) div 2, 0)
+      """
+
+      expected = """
+          moves_minus = do_minto1(Kernel.div((n - 1), 2), 0)
+          moves_plus = do_minto1(Kernel.div((n + 1), 2), 0)
+      """
+
+      confirm_fix(FixDivRem.fix(source), expected)
+    end
+
+    test "fixed code with function args produces valid Elixir" do
+      source = """
+      defmodule KernelDivTest do
+        def minto1(n) do
+          moves_minus = do_minto1((n - 1) div 2, 0)
+          moves_plus = do_minto1((n + 1) div 2, 0)
+          min(moves_minus, moves_plus)
+        end
+
+        defp do_minto1(1, moves), do: moves
+        defp do_minto1(n, moves), do: do_minto1(div(n, 2), moves + 1)
+      end
+      """
+
+      fixed = FixDivRem.fix(source)
+      assert valid_syntax?(fixed)
     end
   end
 end

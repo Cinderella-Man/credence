@@ -21,7 +21,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, input) == expected
+      confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
 
     test "fixes pipeline with capture syntax predicate" do
@@ -44,7 +44,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, input) == expected
+      confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
 
     test "fixes direct call: length(Enum.take_while(...))" do
@@ -64,7 +64,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, input) == expected
+      confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
 
     test "fixes direct call: Enum.count(Enum.take_while(...))" do
@@ -84,7 +84,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, input) == expected
+      confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
 
     test "fixes multiline fn predicate in pipeline" do
@@ -113,7 +113,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, input) == expected
+      confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
 
     test "fixes comparison expression" do
@@ -133,7 +133,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, input) == expected
+      confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
 
     test "fixes longer pipeline with take_while at end" do
@@ -160,7 +160,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, input) == expected
+      confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
 
     test "fixes multiple occurrences in same file" do
@@ -186,7 +186,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, input) == expected
+      confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
 
     test "fix does not modify non-flagged code" do
@@ -198,7 +198,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, code) == code
+      confirm_fix(fix(NoTakeWhileLengthCheck, code), code)
     end
 
     test "fix preserves unrelated code in same module" do
@@ -226,7 +226,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheckFixTest do
       end
       """
 
-      assert fix(NoTakeWhileLengthCheck, input) == expected
+      confirm_fix(fix(NoTakeWhileLengthCheck, input), expected)
     end
   end
 end

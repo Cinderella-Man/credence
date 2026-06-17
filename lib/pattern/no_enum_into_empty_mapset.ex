@@ -62,14 +62,18 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapset do
            {{:., dot_meta, [{:__aliases__, alias_meta, [:MapSet]}, :new]}, call_meta, [fun]}
          ]}
 
-      # Piped 2-arg: enum |> Enum.into(MapSet.new()) → MapSet.new(enum)
-      {:|>, _pipe_meta,
+      # Piped 2-arg: enum |> Enum.into(MapSet.new()) → enum |> MapSet.new()
+      # Keep the pipe (consistent with the 3-arg clause above): un-piping into
+      # `MapSet.new(enum)` nests a multi-stage `enum` pipe as an argument, which
+      # mix format then wraps — worse than just continuing the chain.
+      {:|>, pipe_meta,
        [
          enum,
          {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :into]}, call_meta,
           [{{:., _, [{:__aliases__, _, [:MapSet]}, :new]}, _, []}]}
        ]} ->
-        {{:., dot_meta, [{:__aliases__, alias_meta, [:MapSet]}, :new]}, call_meta, [enum]}
+        {:|>, pipe_meta,
+         [enum, {{:., dot_meta, [{:__aliases__, alias_meta, [:MapSet]}, :new]}, call_meta, []}]}
 
       # Direct 3-arg: Enum.into(enum, MapSet.new(), fun) → MapSet.new(enum, fun)
       {{:., dot_meta, [{:__aliases__, alias_meta, [:Enum]}, :into]}, call_meta,

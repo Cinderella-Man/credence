@@ -4,51 +4,35 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
   alias Credence.Pattern.NoEmptyMapNew
 
   test "replaces Map.new() with %{}" do
-    code = """
-    memo = Map.new()
-    """
+    code = "memo = Map.new()"
 
-    expected = """
-    memo = %{}
-    """
+    expected = "memo = %{}"
 
-    assert fix(NoEmptyMapNew, code) == expected
+    confirm_fix(fix(NoEmptyMapNew, code), expected)
   end
 
   test "replaces Map.new() in a function argument" do
-    code = """
-    solve(coins, amount, Map.new())
-    """
+    code = "solve(coins, amount, Map.new())"
 
-    expected = """
-    solve(coins, amount, %{})
-    """
+    expected = "solve(coins, amount, %{})"
 
-    assert fix(NoEmptyMapNew, code) == expected
+    confirm_fix(fix(NoEmptyMapNew, code), expected)
   end
 
   test "replaces Map.new without parentheses" do
-    code = """
-    memo = Map.new
-    """
+    code = "memo = Map.new"
 
-    expected = """
-    memo = %{}
-    """
+    expected = "memo = %{}"
 
-    assert fix(NoEmptyMapNew, code) == expected
+    confirm_fix(fix(NoEmptyMapNew, code), expected)
   end
 
   test "replaces standalone Map.new() on the left of a pipe" do
-    code = """
-    Map.new() |> foo()
-    """
+    code = "Map.new() |> foo()"
 
-    expected = """
-    %{} |> foo()
-    """
+    expected = "%{} |> foo()"
 
-    assert fix(NoEmptyMapNew, code) == expected
+    confirm_fix(fix(NoEmptyMapNew, code), expected)
   end
 
   test "replaces every occurrence and preserves surrounding code" do
@@ -70,52 +54,40 @@ defmodule Credence.Pattern.NoEmptyMapNewFixTest do
     end
     """
 
-    assert fix(NoEmptyMapNew, code) == expected
+    confirm_fix(fix(NoEmptyMapNew, code), expected)
   end
 
   describe "no-op" do
     test "leaves piped Map.new() alone" do
-      code = """
-      list |> Map.new()
-      """
+      code = "list |> Map.new()"
 
-      assert fix(NoEmptyMapNew, code) == code
+      confirm_fix(fix(NoEmptyMapNew, code), code)
     end
 
     test "leaves Map.new(enum) alone" do
-      code = """
-      Map.new(pairs)
-      """
+      code = "Map.new(pairs)"
 
-      assert fix(NoEmptyMapNew, code) == code
+      confirm_fix(fix(NoEmptyMapNew, code), code)
     end
 
     test "leaves the %{} literal alone" do
-      code = """
-      memo = %{}
-      """
+      code = "memo = %{}"
 
-      assert fix(NoEmptyMapNew, code) == code
+      confirm_fix(fix(NoEmptyMapNew, code), code)
     end
   end
 
   describe "fix round-trip produces no issues" do
     test "single assignment" do
       fixed =
-        fix(NoEmptyMapNew, """
-        memo = Map.new()
-
-        """)
+        fix(NoEmptyMapNew, "memo = Map.new()")
 
       assert clean?(NoEmptyMapNew, fixed)
     end
 
     test "function argument" do
       fixed =
-        fix(NoEmptyMapNew, """
-        solve(coins, amount, Map.new())
-
-        """)
+        fix(NoEmptyMapNew, "solve(coins, amount, Map.new())")
 
       assert clean?(NoEmptyMapNew, fixed)
     end

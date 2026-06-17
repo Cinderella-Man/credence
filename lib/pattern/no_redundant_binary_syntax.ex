@@ -29,6 +29,15 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
   never flagged — their `<<>>` nodes are AST implementation details,
   not user-written binary syntax.
 
+  A `<<"literal">>` in a clause head is also left alone when a sibling clause
+  of the same `case`/`fn` matches a real binary pattern (`<<"/", rest::binary>>`)
+  — there the binary syntax is deliberately kept parallel, not redundant:
+
+      case url do
+        <<"/">> -> root()                 # kept — parallels the next clause
+        <<"/", rest::binary>> -> sub(rest)
+      end
+
   ## Auto-fix
 
   Unwraps the string literal by removing the surrounding `<<` and `>>`.
@@ -39,18 +48,25 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
 
   @impl true
   def check(ast, _opts) do
+    exempt = parallel_binary_exemptions(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, acc ->
-        if sigil_node?(node) do
-          # Replace with an opaque atom so prewalk does not recurse into
-          # the sigil's children — their <<>> is an AST implementation
-          # detail, not user-written binary syntax.
-          {:__sigil_skip__, acc}
-        else
-          case detect_pattern(node) do
-            {:ok, meta} -> {node, [build_issue(meta) | acc]}
-            :skip -> {node, acc}
-          end
+        cond do
+          sigil_node?(node) ->
+            # Replace with an opaque atom so prewalk does not recurse into
+            # the sigil's children — their <<>> is an AST implementation
+            # detail, not user-written binary syntax.
+            {:__sigil_skip__, acc}
+
+          MapSet.member?(exempt, node) ->
+            {node, acc}
+
+          true ->
+            case detect_pattern(node) do
+              {:ok, meta} -> {node, [build_issue(meta) | acc]}
+              :skip -> {node, acc}
+            end
         end
       end)
 
@@ -59,6 +75,8 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
 
   @impl true
   def fix_patches(ast, _opts) do
+    exempt = parallel_binary_exemptions(ast)
+
     {_ast, patches} =
       Macro.prewalk(ast, [], fn node, acc ->
         cond do
@@ -66,6 +84,9 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
             # Same trick as `check/2`: replace with an opaque atom so
             # prewalk doesn't descend into the sigil's internal <<>>.
             {:__sigil_skip__, acc}
+
+          MapSet.member?(exempt, node) ->
+            {node, acc}
 
           patch = detect_for_patch(node) ->
             {node, [patch | acc]}
@@ -77,6 +98,76 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
 
     Enum.reverse(patches)
   end
+
+  # A `<<"literal">>` written to visually line up with a sibling clause that
+  # genuinely needs binary syntax (`<<"/", rest::binary>>`) is intentional, not
+  # redundant. Collect every such literal — a single-string `<<>>` in a clause
+  # head of a `case`/`fn`/… whose construct has another clause head matching a
+  # real (multi-segment / typed / byte) binary — so the rule leaves them, and
+  # only them, alone. Keyed by the node itself; Sourceror nodes carry position
+  # metadata, so a literal elsewhere in the source is a different value.
+  defp parallel_binary_exemptions(ast) do
+    {_ast, exempt} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        # `fn`'s clauses are the node's args, which prewalk does not revisit as a
+        # standalone list — handle it directly. `case`/`cond`/… hold their clause
+        # list as a `do:` value, which prewalk *does* visit as a list (below).
+        {:fn, _meta, clauses} = node, acc when is_list(clauses) ->
+          {node, if(clause_list?(clauses), do: exempt_clause_heads(clauses, acc), else: acc)}
+
+        list, acc when is_list(list) ->
+          if clause_list?(list), do: {list, exempt_clause_heads(list, acc)}, else: {list, acc}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    exempt
+  end
+
+  defp clause_list?(list), do: list != [] and Enum.all?(list, &match?({:->, _, _}, &1))
+
+  defp exempt_clause_heads(clauses, acc) do
+    heads = Enum.map(clauses, &clause_head/1)
+
+    if Enum.any?(heads, &contains_real_binary?/1) do
+      heads
+      |> Enum.flat_map(&single_literal_binaries/1)
+      |> Enum.reduce(acc, fn node, set -> MapSet.put(set, node) end)
+    else
+      acc
+    end
+  end
+
+  defp clause_head({:->, _, [head, _body]}), do: head
+  defp clause_head(_), do: []
+
+  # Any `<<>>` in `head` that is NOT a lone string literal — a real binary match.
+  defp contains_real_binary?(head) do
+    {_ast, found} =
+      Macro.prewalk(head, false, fn
+        {:<<>>, _, _} = n, acc -> {n, acc or not single_literal_binary?(n)}
+        n, acc -> {n, acc}
+      end)
+
+    found
+  end
+
+  defp single_literal_binaries(head) do
+    {_ast, found} =
+      Macro.prewalk(head, [], fn
+        {:<<>>, _, _} = n, acc ->
+          if single_literal_binary?(n), do: {n, [n | acc]}, else: {n, acc}
+
+        n, acc ->
+          {n, acc}
+      end)
+
+    found
+  end
+
+  defp single_literal_binary?({:<<>>, _, [child]}), do: binary_literal?(child)
+  defp single_literal_binary?(_), do: false
 
   # Sourceror's AST wraps the binary literal in :__block__ to carry
   # position metadata. Standard AST has the raw binary. Handle both.

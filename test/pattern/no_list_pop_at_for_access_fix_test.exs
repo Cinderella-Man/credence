@@ -21,7 +21,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(NoListPopAtForAccess, code) == expected
+      confirm_fix(fix(NoListPopAtForAccess, code), expected)
     end
 
     test "direct pop_at piped into elem(0)" do
@@ -41,7 +41,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(NoListPopAtForAccess, code) == expected
+      confirm_fix(fix(NoListPopAtForAccess, code), expected)
     end
 
     test "nested form" do
@@ -61,7 +61,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(NoListPopAtForAccess, code) == expected
+      confirm_fix(fix(NoListPopAtForAccess, code), expected)
     end
   end
 
@@ -83,7 +83,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(NoListPopAtForAccess, code) == expected
+      confirm_fix(fix(NoListPopAtForAccess, code), expected)
     end
 
     test "nested form" do
@@ -103,7 +103,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(NoListPopAtForAccess, code) == expected
+      confirm_fix(fix(NoListPopAtForAccess, code), expected)
     end
   end
 
@@ -117,7 +117,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(NoListPopAtForAccess, code) == code
+      confirm_fix(fix(NoListPopAtForAccess, code), code)
     end
 
     test "elem index outside {popped, rest} is a no-op" do
@@ -129,7 +129,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(NoListPopAtForAccess, code) == code
+      confirm_fix(fix(NoListPopAtForAccess, code), code)
     end
 
     test "plain elem on a tuple is a no-op" do
@@ -141,7 +141,7 @@ defmodule Credence.Pattern.NoListPopAtForAccessFixTest do
       end
       """
 
-      assert fix(NoListPopAtForAccess, code) == code
+      confirm_fix(fix(NoListPopAtForAccess, code), code)
     end
   end
 end

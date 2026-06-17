@@ -166,18 +166,30 @@ defmodule Credence.RuleHelpers do
           e ->
             Logger.debug("[credence_fix] Code.compile_string raised: #{Exception.message(e)}")
 
-            :error
+            {:raised, e}
         end
       end)
 
     case result do
-      :error ->
-        {:error, diagnostics}
+      # The compiler RAISED (e.g. CompileError "cannot invoke @/1 outside
+      # module") rather than emitting a diagnostic, so `Code.with_diagnostics`
+      # captured nothing. Synthesize an error diagnostic from the exception so
+      # the semantic round can still match + fix it (without this, every such
+      # error was a 0-diagnostic dead end). Append to any captured diagnostics.
+      {:raised, e} ->
+        {:error, diagnostics ++ [exception_diagnostic(e)]}
 
       modules when is_list(modules) ->
         safe_cleanup_modules(modules)
         {:ok, diagnostics}
     end
+  end
+
+  # Build a diagnostic map (same shape as `Code.with_diagnostics` entries) from a
+  # raised compile exception, so semantic rules keyed on the message can match.
+  defp exception_diagnostic(e) do
+    line = if is_map(e) and is_integer(Map.get(e, :line)), do: Map.get(e, :line), else: 0
+    %{severity: :error, message: Exception.message(e), position: line, file: "credence_check.ex"}
   end
 
   @doc """
@@ -392,14 +404,27 @@ defmodule Credence.RuleHelpers do
   # node's range. Result: patches at the *outermost* point of divergence,
   # never nested.
 
-  defp diff_patches(same, same), do: []
+  # Skip any node whose structure is unchanged ignoring metadata: it differs only
+  # in layout (the transform re-rendered it via `Sourceror.to_string`), so leaving
+  # it untouched preserves its original source rather than reformatting code the
+  # rule never meant to change.
+  defp diff_patches(orig, modified) do
+    if orig == modified or strip_all_meta(orig) == strip_all_meta(modified) do
+      []
+    else
+      diff_patches_structural(orig, modified)
+    end
+  end
 
   # `:__block__` wrappers around a single literal leaf (string, atom,
   # number) carry no source position of their own beyond the wrapper.
   # If the wrapped value changed, the patch must land at the wrapper's
   # range — recursing into the args list would drop us at a bare literal
   # with no range, losing the patch.
-  defp diff_patches({:__block__, _, [val_o]} = orig, {:__block__, _, [val_m]} = modified)
+  defp diff_patches_structural(
+         {:__block__, _, [val_o]} = orig,
+         {:__block__, _, [val_m]} = modified
+       )
        when val_o != val_m and not is_tuple(val_o) and not is_list(val_o) do
     case node_range(orig) do
       nil -> []
@@ -410,15 +435,32 @@ defmodule Credence.RuleHelpers do
   # Same 3-tuple shape with same arity — recurse into args. (Form must
   # be deeply equal too: an atom-form vs tuple-form is structurally
   # different and should patch the whole node.)
-  defp diff_patches({form, _, args_o}, {form, _, args_m})
+  defp diff_patches_structural({form, _, args_o}, {form, _, args_m})
        when is_list(args_o) and is_list(args_m) and length(args_o) == length(args_m) do
     args_o
     |> Enum.zip(args_m)
     |> Enum.flat_map(fn {o, m} -> diff_patches(o, m) end)
   end
 
+  # A `:__block__` whose statement count changed — a sibling statement/def was
+  # added or removed (e.g. a rule that deletes a `defp` or de-duplicates a
+  # clause). Align the structurally-equal siblings and patch only what changed,
+  # instead of re-rendering — and thereby reformatting (comment indentation,
+  # blank lines, `def ..., do:` layout) — the whole block. Restricted to blocks
+  # because their statements are line-occupying, so a removed one can be deleted
+  # whole-line; inline sibling lists (call args, tuples) fall through to the
+  # whole-node render below, which is small and already correct. Falls back for
+  # anything that can't be aligned cleanly.
+  defp diff_patches_structural({:__block__, _, args_o} = orig, {:__block__, _, args_m} = modified)
+       when is_list(args_o) and is_list(args_m) do
+    case aligned_patches(args_o, args_m) do
+      {:ok, patches} -> patches
+      :fallback -> whole_node_patch(orig, modified)
+    end
+  end
+
   # Lists of the same length — zip and recurse.
-  defp diff_patches([_ | _] = orig, [_ | _] = modified)
+  defp diff_patches_structural([_ | _] = orig, [_ | _] = modified)
        when length(orig) == length(modified) do
     orig
     |> Enum.zip(modified)
@@ -426,14 +468,14 @@ defmodule Credence.RuleHelpers do
   end
 
   # 2-tuples (keyword pair etc.) — recurse on each side.
-  defp diff_patches({a_o, b_o}, {a_m, b_m}) do
+  defp diff_patches_structural({a_o, b_o}, {a_m, b_m}) do
     diff_patches(a_o, a_m) ++ diff_patches(b_o, b_m)
   end
 
   # Structures diverge here — emit one patch covering the original
   # node's range. Skip if the original is a leaf without a range
   # (Sourceror can't pinpoint bare literals/atoms).
-  defp diff_patches(orig, modified) do
+  defp diff_patches_structural(orig, modified) do
     case node_range(orig) do
       nil ->
         []
@@ -441,6 +483,98 @@ defmodule Credence.RuleHelpers do
       range ->
         [%{range: range, change: render_replacement(modified, range)}]
     end
+  end
+
+  defp whole_node_patch(orig, modified) do
+    case node_range(orig) do
+      nil -> []
+      range -> [%{range: range, change: render_replacement(modified, range)}]
+    end
+  end
+
+  # Align two same-form-but-different-length sibling lists by structural
+  # (metadata-insensitive) equality and emit minimal patches: recurse into
+  # siblings changed in place, delete removed ones whole-line. Returns
+  # `:fallback` for any shape we can't place safely (net insertions, rangeless
+  # nodes, or an unexpected error) so the caller re-renders the whole parent.
+  defp aligned_patches(orig, modified) do
+    stripped_o = Enum.map(orig, &strip_all_meta/1)
+    stripped_m = Enum.map(modified, &strip_all_meta/1)
+
+    stripped_o
+    |> List.myers_difference(stripped_m)
+    |> walk_ops(orig, modified, 0, 0, [])
+  rescue
+    _ -> :fallback
+  end
+
+  defp walk_ops([], _orig, _modified, _io, _im, acc), do: {:ok, acc}
+
+  defp walk_ops([{:eq, els} | rest], orig, modified, io, im, acc) do
+    n = length(els)
+    walk_ops(rest, orig, modified, io + n, im + n, acc)
+  end
+
+  # A deletion immediately followed by an insertion. Only an *equal-count* gap is
+  # an unambiguous in-place modification — pair the siblings positionally and
+  # recurse. An unequal gap mixes modifications with deletions/insertions whose
+  # correspondence a sequence diff can't resolve (it has no unchanged sibling to
+  # anchor on), so positional pairing would mis-align; fall back to a whole-node
+  # render there.
+  defp walk_ops([{:del, dl}, {:ins, il} | rest], orig, modified, io, im, acc) do
+    dn = length(dl)
+
+    if dn == length(il) do
+      paired =
+        Enum.flat_map(0..(dn - 1)//1, fn i ->
+          diff_patches(Enum.at(orig, io + i), Enum.at(modified, im + i))
+        end)
+
+      walk_ops(rest, orig, modified, io + dn, im + dn, acc ++ paired)
+    else
+      :fallback
+    end
+  end
+
+  defp walk_ops([{:del, dl} | rest], orig, modified, io, im, acc) do
+    case deletion_patches(Enum.slice(orig, io..(io + length(dl) - 1)//1)) do
+      {:ok, dels} -> walk_ops(rest, orig, modified, io + length(dl), im, acc ++ dels)
+      :fallback -> :fallback
+    end
+  end
+
+  # A bare insertion — fall back (no safe anchor to place it at).
+  defp walk_ops([{:ins, _} | _], _orig, _modified, _io, _im, _acc), do: :fallback
+
+  # Delete each node by removing its whole line span (from column 1 of its first
+  # line through column 1 of the line after its last) so no blank-but-indented
+  # remnant is left. Falls back if any node lacks a range.
+  defp deletion_patches(nodes) do
+    Enum.reduce_while(nodes, {:ok, []}, fn node, {:ok, acc} ->
+      case node_range(node) do
+        %Sourceror.Range{start: s, end: e} ->
+          patch = %{
+            range: %{start: [line: s[:line], column: 1], end: [line: e[:line] + 1, column: 1]},
+            change: ""
+          }
+
+          {:cont, {:ok, [patch | acc]}}
+
+        _ ->
+          {:halt, :fallback}
+      end
+    end)
+    |> case do
+      {:ok, patches} -> {:ok, Enum.reverse(patches)}
+      other -> other
+    end
+  end
+
+  defp strip_all_meta(node) do
+    Macro.prewalk(node, fn
+      {form, meta, args} when is_list(meta) -> {form, [], args}
+      other -> other
+    end)
   end
 
   defp node_range(node) when is_tuple(node) and tuple_size(node) == 3 do
@@ -505,6 +639,83 @@ defmodule Credence.RuleHelpers do
     |> Sourceror.to_string(opts)
   end
 
+  @doc """
+  The comments stored on `node`'s Sourceror metadata under `key`
+  (`:leading_comments` or `:trailing_comments`); `[]` for a node without them.
+  """
+  @spec node_comments(Macro.t(), :leading_comments | :trailing_comments) :: list()
+  def node_comments({_form, meta, _args}, key) when is_list(meta), do: Keyword.get(meta, key, [])
+  def node_comments(_node, _key), do: []
+
+  @doc """
+  A whole-line deletion patch for `node` — removes its full line span (column 1
+  of its first line through column 1 of the line after its last), so no
+  blank-but-indented remnant is left. Returns `nil` if `node` has no range. Use
+  for a fix that removes a statement/clause without re-rendering its siblings.
+  """
+  @spec deletion_patch(Macro.t()) :: map() | nil
+  def deletion_patch(node) do
+    case node_range(node) do
+      %Sourceror.Range{start: s, end: e} ->
+        %{
+          range: %{start: [line: s[:line], column: 1], end: [line: e[:line] + 1, column: 1]},
+          change: ""
+        }
+
+      _ ->
+        nil
+    end
+  end
+
+  @doc """
+  Every comment (leading and trailing, at any depth) within `node`'s subtree, in
+  roughly document order. Use to rescue the comments of a node a fix discards.
+  """
+  @spec collect_comments(Macro.t()) :: list()
+  def collect_comments(node) do
+    {_node, acc} =
+      Macro.prewalk(node, [], fn
+        {_form, meta, _args} = n, acc when is_list(meta) ->
+          {n,
+           acc ++
+             Keyword.get(meta, :leading_comments, []) ++
+             Keyword.get(meta, :trailing_comments, [])}
+
+        n, acc ->
+          {n, acc}
+      end)
+
+    acc
+  end
+
+  @doc """
+  Carry comments onto `node`: `leading` is prepended to its leading comments,
+  `trailing` appended to its trailing comments. Used when a fix replaces one or
+  more nodes with `node` and must not drop the comments that sat on them. A node
+  without metadata (a bare literal) is returned unchanged.
+  """
+  @spec carry_comments(Macro.t(), list(), list()) :: Macro.t()
+  def carry_comments({form, meta, args}, leading, trailing) when is_list(meta) do
+    # Carried comments keep their original (now-stale) line, which Sourceror uses
+    # to position them — re-line them just before/after the target so leading
+    # renders before it and trailing after.
+    line = Keyword.get(meta, :line)
+    leading = reline(leading, line && line - 1)
+    trailing = reline(trailing, line && line + 1)
+
+    meta =
+      meta
+      |> Keyword.update(:leading_comments, leading, &(leading ++ &1))
+      |> Keyword.update(:trailing_comments, trailing, &(&1 ++ trailing))
+
+    {form, meta, args}
+  end
+
+  def carry_comments(node, _leading, _trailing), do: node
+
+  defp reline(comments, nil), do: comments
+  defp reline(comments, line), do: Enum.map(comments, &Map.put(&1, :line, line))
+
   # Sourceror infers layout (single-line vs. multi-line) from each node's
   # `line`/`column` metadata — a wide line span forces multi-line. When
   # a rule builds a replacement subtree by reusing original subnodes
@@ -516,11 +727,25 @@ defmodule Credence.RuleHelpers do
   defp strip_layout_meta(ast) do
     Macro.prewalk(ast, fn
       {form, meta, args} when is_list(meta) ->
-        {form, Keyword.drop(meta, [:line, :column, :closing, :last, :end]), args}
+        # Sourceror positions comments by line, so a node carrying a comment must
+        # keep its :line/:column or the comment is silently dropped on render.
+        # Such nodes are inherently multi-line anyway, so keeping their position
+        # does not cause the spurious wrapping the strip is meant to avoid.
+        to_drop =
+          if has_comments?(meta),
+            do: [:closing, :last, :end],
+            else: [:line, :column, :closing, :last, :end]
+
+        {form, Keyword.drop(meta, to_drop), args}
 
       other ->
         other
     end)
+  end
+
+  defp has_comments?(meta) do
+    Keyword.get(meta, :leading_comments, []) != [] or
+      Keyword.get(meta, :trailing_comments, []) != []
   end
 
   @doc """
@@ -535,8 +760,8 @@ defmodule Credence.RuleHelpers do
 
     change_summary =
       Enum.map_join(changes, "\n", fn
-        {:removed, line_no, text} -> "  L#{line_no} - #{String.trim(text)}"
-        {:added, line_no, text} -> "  L#{line_no} + #{String.trim(text)}"
+        {:removed, line_no, text} -> "  L#{line_no} - #{String.trim_trailing(text)}"
+        {:added, line_no, text} -> "  L#{line_no} + #{String.trim_trailing(text)}"
       end)
 
     Logger.debug("[credence_fix] #{label}: source CHANGED:\n#{change_summary}")

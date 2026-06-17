@@ -16,7 +16,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       |> Enum.reverse()
       """
 
-      assert fix(PreferDescSortOverNegativeTake, input) == expected
+      confirm_fix(fix(PreferDescSortOverNegativeTake, input), expected)
     end
 
     test "transforms direct Enum.sort(list) |> Enum.take(-n)" do
@@ -36,7 +36,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       end
       """
 
-      assert fix(PreferDescSortOverNegativeTake, input) == expected
+      confirm_fix(fix(PreferDescSortOverNegativeTake, input), expected)
     end
 
     test "transforms inside a defmodule" do
@@ -60,7 +60,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       end
       """
 
-      assert fix(PreferDescSortOverNegativeTake, input) == expected
+      confirm_fix(fix(PreferDescSortOverNegativeTake, input), expected)
     end
 
     test "transforms with longer pipeline before sort" do
@@ -78,7 +78,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       |> Enum.reverse()
       """
 
-      assert fix(PreferDescSortOverNegativeTake, input) == expected
+      confirm_fix(fix(PreferDescSortOverNegativeTake, input), expected)
     end
 
     test "transforms multiple independent pipelines" do
@@ -96,31 +96,25 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       end
       """
 
-      assert fix(PreferDescSortOverNegativeTake, input) == expected
+      confirm_fix(fix(PreferDescSortOverNegativeTake, input), expected)
     end
 
     test "does not modify already correct code" do
-      code = """
-      nums |> Enum.sort(:desc) |> Enum.take(3)
-      """
+      code = "nums |> Enum.sort(:desc) |> Enum.take(3)"
 
-      assert fix(PreferDescSortOverNegativeTake, code) == code
+      confirm_fix(fix(PreferDescSortOverNegativeTake, code), code)
     end
 
     test "does not modify positive take" do
-      code = """
-      nums |> Enum.sort() |> Enum.take(3)
-      """
+      code = "nums |> Enum.sort() |> Enum.take(3)"
 
-      assert fix(PreferDescSortOverNegativeTake, code) == code
+      confirm_fix(fix(PreferDescSortOverNegativeTake, code), code)
     end
 
     test "does not modify when sort has comparator" do
-      code = """
-      nums |> Enum.sort(&(&1 >= &2)) |> Enum.take(-3)
-      """
+      code = "nums |> Enum.sort(&(&1 >= &2)) |> Enum.take(-3)"
 
-      assert fix(PreferDescSortOverNegativeTake, code) == code
+      confirm_fix(fix(PreferDescSortOverNegativeTake, code), code)
     end
 
     test "does not modify when sort and take are not adjacent" do
@@ -131,7 +125,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       |> Enum.take(-3)
       """
 
-      assert fix(PreferDescSortOverNegativeTake, code) == code
+      confirm_fix(fix(PreferDescSortOverNegativeTake, code), code)
     end
 
     test "produces valid Elixir code" do
@@ -155,7 +149,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       end
       """
 
-      assert fix(PreferDescSortOverNegativeTake, input) == expected
+      confirm_fix(fix(PreferDescSortOverNegativeTake, input), expected)
     end
 
     test "produces valid Elixir code for direct form" do
@@ -175,7 +169,7 @@ defmodule Credence.Pattern.PreferDescSortOverNegativeTakeFixTest do
       end
       """
 
-      assert fix(PreferDescSortOverNegativeTake, input) == expected
+      confirm_fix(fix(PreferDescSortOverNegativeTake, input), expected)
     end
   end
 end

@@ -117,6 +117,10 @@ defmodule Credence.Pattern do
 
       not RuleHelpers.compiles?(fixed) ->
         Logger.warning("[credence_fix] #{name}: fix produced non-compiling output, reverting")
+        # Visibility (Tunex `08` T1.3): log the broken before/after so a reverted
+        # fix's diff lands in the row log for the deterministic bugfix-lane seed.
+        # The revert *logic* is unchanged — `:reverted` is already a clean signal.
+        RuleHelpers.log_diff(name, source, fixed)
 
         {source, [{rule, :reverted} | applied]}
 
@@ -194,9 +198,17 @@ defmodule Credence.Pattern do
   end
 
   defp parse_error_issue(line, error_msg, token) do
+    # parse errors carry either a binary message or an {opening, hint} tuple
+    error_str =
+      case error_msg do
+        msg when is_binary(msg) -> msg
+        {opening, hint} when is_binary(opening) and is_binary(hint) -> opening <> "..." <> hint
+        other -> inspect(other)
+      end
+
     %Credence.Issue{
       rule: :parse_error,
-      message: "Syntax error: #{error_msg} at token #{inspect(token)}",
+      message: "Syntax error: #{error_str} at token #{inspect(token)}",
       meta: %{line: line}
     }
   end

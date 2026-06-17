@@ -21,7 +21,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, input) == expected
+      confirm_fix(fix(NoStringConcatInLoop, input), expected)
     end
 
     test "fixes Enum.reduce with transform to Enum.map_join" do
@@ -41,7 +41,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, input) == expected
+      confirm_fix(fix(NoStringConcatInLoop, input), expected)
     end
 
     test "fixes pipeline Enum.reduce to Enum.join" do
@@ -61,7 +61,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, input) == expected
+      confirm_fix(fix(NoStringConcatInLoop, input), expected)
     end
 
     test "fixes Enum.reduce in longer pipeline" do
@@ -85,7 +85,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, input) == expected
+      confirm_fix(fix(NoStringConcatInLoop, input), expected)
     end
 
     test "fixes multiple Enum.reduce calls independently" do
@@ -109,7 +109,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, input) == expected
+      confirm_fix(fix(NoStringConcatInLoop, input), expected)
     end
 
     test "fixes inline do: form" do
@@ -125,7 +125,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, input) == expected
+      confirm_fix(fix(NoStringConcatInLoop, input), expected)
     end
 
     test "does not change code without issues" do
@@ -137,7 +137,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, code) == code
+      confirm_fix(fix(NoStringConcatInLoop, code), code)
     end
 
     test "does not change unfixable patterns" do
@@ -151,7 +151,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, code) == code
+      confirm_fix(fix(NoStringConcatInLoop, code), code)
     end
 
     test "does not change Enum.reduce with non-empty initial acc" do
@@ -163,7 +163,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, code) == code
+      confirm_fix(fix(NoStringConcatInLoop, code), code)
     end
 
     test "does not change Enum.reduce with block body when acc used in preceding stmts" do
@@ -178,7 +178,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, code) == code
+      confirm_fix(fix(NoStringConcatInLoop, code), code)
     end
 
     test "fixes block body Enum.reduce to Enum.map_join" do
@@ -204,7 +204,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, input) == expected
+      confirm_fix(fix(NoStringConcatInLoop, input), expected)
     end
 
     test "fixes pipeline block body Enum.reduce to Enum.map_join" do
@@ -232,7 +232,7 @@ defmodule Credence.Pattern.NoStringConcatInLoopFixTest do
       end
       """
 
-      assert fix(NoStringConcatInLoop, input) == expected
+      confirm_fix(fix(NoStringConcatInLoop, input), expected)
     end
   end
 end

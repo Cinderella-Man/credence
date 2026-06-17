@@ -2,7 +2,7 @@ defmodule Credence.Pattern.NoDocFalseOnPrivateEquivalenceTest do
   @moduledoc """
   Tier 3a (cosmetic) — no runtime behaviour to compare.
 
-  The rule deletes a `@doc false` that sits above a `defp`. The compiler
+  The rule deletes any `@doc` annotation that sits above a `defp`. The compiler
   discards `@doc` on a private function entirely, so removing it changes no
   emitted code; no input can witness a difference.
   """

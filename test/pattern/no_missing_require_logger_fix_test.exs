@@ -27,7 +27,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
 
     test "places require after existing use statement" do
@@ -53,7 +53,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
 
     test "places require after existing alias block" do
@@ -79,7 +79,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
 
     test "places require after mixed directives" do
@@ -109,7 +109,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
 
     test "places require after existing require" do
@@ -135,7 +135,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
 
     test "handles module with only Logger calls, no directives" do
@@ -157,7 +157,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
 
     test "handles multiple Logger calls — inserts only one require" do
@@ -189,7 +189,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
   end
 
@@ -209,7 +209,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == input
+      confirm_fix(fix(NoMissingRequireLogger, input), input)
     end
 
     test "import Logger exists" do
@@ -223,7 +223,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == input
+      confirm_fix(fix(NoMissingRequireLogger, input), input)
     end
   end
 
@@ -237,7 +237,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == input
+      confirm_fix(fix(NoMissingRequireLogger, input), input)
     end
 
     test "only Logger function calls (no require needed)" do
@@ -249,7 +249,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == input
+      confirm_fix(fix(NoMissingRequireLogger, input), input)
     end
   end
 
@@ -293,7 +293,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
   end
 
@@ -321,7 +321,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
 
     test "places require after moduledoc and use" do
@@ -349,7 +349,7 @@ defmodule Credence.Pattern.NoMissingRequireLoggerFixTest do
       end
       """
 
-      assert fix(NoMissingRequireLogger, input) == expected
+      confirm_fix(fix(NoMissingRequireLogger, input), expected)
     end
   end
 end

@@ -7,23 +7,23 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
 
   describe "single string literal" do
     test "single char" do
-      assert fix(NoRedundantBinarySyntax, ~s(<<"b">>)) == ~s("b")
+      confirm_fix(fix(NoRedundantBinarySyntax, ~S'<<"b">>'), ~S'"b"')
     end
 
     test "multi-char" do
-      assert fix(NoRedundantBinarySyntax, ~s(<<"hello">>)) == ~s("hello")
+      confirm_fix(fix(NoRedundantBinarySyntax, ~S'<<"hello">>'), ~S'"hello"')
     end
 
     test "empty string" do
-      assert fix(NoRedundantBinarySyntax, ~s(<<"">>)) == ~s("")
+      confirm_fix(fix(NoRedundantBinarySyntax, ~S'<<"">>'), ~S'""')
     end
 
     test "string with spaces" do
-      assert fix(NoRedundantBinarySyntax, ~s(<<"hello world">>)) == ~s("hello world")
+      confirm_fix(fix(NoRedundantBinarySyntax, ~S'<<"hello world">>'), ~S'"hello world"')
     end
 
     test "with spaces inside <<>>" do
-      assert fix(NoRedundantBinarySyntax, ~s(<< "b" >>)) == ~s("b")
+      confirm_fix(fix(NoRedundantBinarySyntax, ~S'<< "b" >>'), ~S'"b"')
     end
   end
 
@@ -31,11 +31,14 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
 
   describe "multiple on same line" do
     test "list of wrapped graphemes" do
-      assert fix(NoRedundantBinarySyntax, ~s([<<"b">>, <<"a">>, <<"n">>])) == ~s(["b", "a", "n"])
+      confirm_fix(
+        fix(NoRedundantBinarySyntax, ~S'[<<"b">>, <<"a">>, <<"n">>]'),
+        ~S'["b", "a", "n"]'
+      )
     end
 
     test "tuple of wrapped strings" do
-      assert fix(NoRedundantBinarySyntax, ~s({<<"x">>, <<"y">>})) == ~s({"x", "y"})
+      confirm_fix(fix(NoRedundantBinarySyntax, ~S'{<<"x">>, <<"y">>}'), ~S'{"x", "y"}')
     end
   end
 
@@ -43,9 +46,9 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
 
   describe "realistic context" do
     test "fixes binary syntax inside assert" do
-      code = ~s{assert Mod.func("banana") == [<<"b">>, <<"a">>, <<"n">>]}
+      code = ~S'assert Mod.func("banana") == [<<"b">>, <<"a">>, <<"n">>]'
       fixed = fix(NoRedundantBinarySyntax, code)
-      assert fixed == ~s{assert Mod.func("banana") == ["b", "a", "n"]}
+      confirm_fix(fixed, ~S'assert Mod.func("banana") == ["b", "a", "n"]')
     end
 
     test "preserves surrounding code" do
@@ -65,7 +68,7 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
       end
       """
 
-      assert fix(NoRedundantBinarySyntax, code) == expected
+      confirm_fix(fix(NoRedundantBinarySyntax, code), expected)
     end
 
     test "fixes in case expression" do
@@ -83,51 +86,83 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
       end
       """
 
-      assert fix(NoRedundantBinarySyntax, code) == expected
+      confirm_fix(fix(NoRedundantBinarySyntax, code), expected)
     end
   end
 
   # ── no-ops ─────────────────────────────────────────────────────
 
+  describe "parallel binary clause" do
+    test "keeps a <<literal>> head that lines up with a binary-match clause" do
+      code = """
+      case url do
+        <<"/">> -> root()
+        <<"/", rest::binary>> -> sub(rest)
+        _ -> other()
+      end
+      """
+
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
+    end
+
+    test "still fixes a <<literal>> in a clause body" do
+      code = """
+      case url do
+        <<"/", rest::binary>> -> handle(<<"x">>, rest)
+        <<"/">> -> root()
+      end
+      """
+
+      expected = """
+      case url do
+        <<"/", rest::binary>> -> handle("x", rest)
+        <<"/">> -> root()
+      end
+      """
+
+      confirm_fix(fix(NoRedundantBinarySyntax, code), expected)
+    end
+  end
+
   describe "no-ops" do
     test "returns source unchanged when nothing to fix" do
-      code = ~s(x = "hello")
-      assert fix(NoRedundantBinarySyntax, code) == code
+      code = ~S'x = "hello"'
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
     end
 
     test "does not touch byte values" do
       code = "<<1, 2, 3>>"
-      assert fix(NoRedundantBinarySyntax, code) == code
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
     end
 
     test "does not touch multiple string segments" do
-      code = ~s(<<"a", "b">>)
-      assert fix(NoRedundantBinarySyntax, code) == code
+      code = ~S'<<"a", "b">>'
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
     end
 
     test "does not touch pattern with rest" do
-      code = ~s(<<"a", rest::binary>>)
-      assert fix(NoRedundantBinarySyntax, code) == code
+      code = ~S'<<"a", rest::binary>>'
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
     end
 
     test "does not touch variable with type specifier" do
       code = "<<x::utf8>>"
-      assert fix(NoRedundantBinarySyntax, code) == code
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
     end
 
     test "does not touch string with type specifier" do
-      code = ~s(<<"a"::binary>>)
-      assert fix(NoRedundantBinarySyntax, code) == code
+      code = ~S'<<"a"::binary>>'
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
     end
 
     test "does not touch regex sigils" do
-      code = ~s{String.replace(text, ~r/[^a-z0-9]/, "")}
-      assert fix(NoRedundantBinarySyntax, code) == code
+      code = ~S'String.replace(text, ~r/[^a-z0-9]/, "")'
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
     end
 
     test "does not touch word sigils" do
       code = "@vowels ~w(a e i o u)"
-      assert fix(NoRedundantBinarySyntax, code) == code
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
     end
   end
 

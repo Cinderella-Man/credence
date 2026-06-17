@@ -238,7 +238,7 @@ opt-outs remain; nothing is unconstructible.
   the correct call. Not behaviour-preserving (crash → work); marked `mark_equivalence_repair` (T3c).
   (Earlier "SAFE/T2" note was wrong — there is no valid before-behaviour.)
 
-### T2 module-call (37) — compile before/after module, invoke fn over input set
+### T2 module-call (36) — compile before/after module, invoke fn over input set
 Structural / cross-statement: no_case_on_param_dispatch, no_destructure_reconstruct,
 no_double_filter, no_double_sort_same_list, no_enum_at_midpoint_access,
 no_guard_equality_for_pattern_match, no_hd_tl_when_cons_bound, no_is_nil_guard,
@@ -247,8 +247,8 @@ no_list_append_in_recursion, no_list_concat_with_recursive_result, no_list_to_tu
 no_manual_count_with_predicate ⚑, no_manual_find ⚑, no_manual_list_last,
 no_manual_list_reduce ⚑, no_map_get_sentinel, no_map_update_then_fetch,
 no_multiple_enum_at, no_nested_enum_on_same_enumerable, no_redundant_comparison_guard,
-no_redundant_negated_guard, no_repeated_div_rem, no_trivial_delegation,
-no_underscore_function_name, no_unnecessary_catch_all_raise, prefer_guard_over_if.
+no_redundant_negated_guard, no_repeated_div_rem, no_underscore_function_name,
+no_unnecessary_catch_all_raise, prefer_guard_over_if.
 Converted from opt-out (deep-dive): **inconsistent_param_names** (param rename across
 clauses/body — miss/collision changes return), **non_grouped_clauses** (clause reorder with
 NO overlap guard — can change pattern-match dispatch), **no_missing_require_logger** (before
@@ -340,7 +340,7 @@ above is the human worklist.)
    - Proof tests: `no_enum_at_negative_index` (T1), `no_codepoint_string_reverse` (T1 — **dual
      exemplar**: passes on single-codepoint strings, and the suite *catches* the divergence on
      multi-codepoint graphemes, demonstrating why the rule carries `single_codepoint_graphemes`),
-     `no_sort_then_reverse` (T1 stability), `no_trivial_delegation` (T2), `use_map_join` (PROBE),
+     `no_sort_then_reverse` (T1 stability), `no_case_on_param_dispatch` (T2), `use_map_join` (PROBE),
      `redundant_list_guard` (T2 — divergence demo: pins the confirmed bug via `assert_raise` until narrowed).
    - Note: `apply_rule_fix/3` bypasses assumption gating, so the suite tests the fix unconditionally
      (correct — an assumption-gated rule must still be witnessed safe *within* its domain).

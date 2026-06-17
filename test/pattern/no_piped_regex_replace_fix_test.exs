@@ -17,7 +17,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
       end
       """
 
-      assert fix(NoPipedRegexReplace, code) == expected
+      confirm_fix(fix(NoPipedRegexReplace, code), expected)
     end
 
     test "multi-line pipeline from log (idx=0 attempt 2)" do
@@ -45,7 +45,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
       end
       """
 
-      assert fix(NoPipedRegexReplace, code) == expected
+      confirm_fix(fix(NoPipedRegexReplace, code), expected)
     end
 
     test "pipeline with options argument" do
@@ -61,7 +61,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
       end
       """
 
-      assert fix(NoPipedRegexReplace, code) == expected
+      confirm_fix(fix(NoPipedRegexReplace, code), expected)
     end
 
     test "multiple piped Regex.replace calls" do
@@ -85,7 +85,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
       end
       """
 
-      assert fix(NoPipedRegexReplace, code) == expected
+      confirm_fix(fix(NoPipedRegexReplace, code), expected)
     end
   end
 
@@ -97,7 +97,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
       end
       """
 
-      assert fix(NoPipedRegexReplace, code) == code
+      confirm_fix(fix(NoPipedRegexReplace, code), code)
     end
 
     test "String.replace in pipeline unchanged" do
@@ -107,7 +107,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
       end
       """
 
-      assert fix(NoPipedRegexReplace, code) == code
+      confirm_fix(fix(NoPipedRegexReplace, code), code)
     end
 
     test "Regex.replace inside then/2 unchanged" do
@@ -119,7 +119,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
       end
       """
 
-      assert fix(NoPipedRegexReplace, code) == code
+      confirm_fix(fix(NoPipedRegexReplace, code), code)
     end
 
     test "code with no Regex usage unchanged" do
@@ -129,7 +129,7 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
       end
       """
 
-      assert fix(NoPipedRegexReplace, code) == code
+      confirm_fix(fix(NoPipedRegexReplace, code), code)
     end
   end
 end

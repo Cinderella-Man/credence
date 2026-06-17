@@ -83,7 +83,6 @@ defmodule Credence.PipelineTest do
       expected = ~S"""
       defmodule CrdPT_UnusedVar do
         def example do
-          _unused = 1
           :ok
         end
       end
@@ -173,7 +172,6 @@ defmodule Credence.PipelineTest do
         @doc "Sums a list."
         @spec total([number()]) :: number()
         def total(list) do
-          _unused = :ignored
           Enum.sum(list)
         end
       end
@@ -307,7 +305,6 @@ defmodule Credence.PipelineTest do
         @doc "Sums a list."
         @spec total([number()]) :: number()
         def total(list) do
-          _ignored = :ok
           Enum.sum(list)
         end
       end
@@ -830,7 +827,6 @@ defmodule Credence.PipelineTest do
 
       defmodule CrdPT_Multi_B do
         def b do
-          _unused = 2
           :ok
         end
       end

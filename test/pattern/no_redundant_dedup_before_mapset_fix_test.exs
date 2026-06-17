@@ -4,63 +4,43 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
   alias Credence.Pattern.NoRedundantDedupBeforeMapset
 
   test "Enum.dedup(x) |> MapSet.new() -> MapSet.new(x)" do
-    code = """
-    Enum.dedup(items) |> MapSet.new()
-    """
+    code = "Enum.dedup(items) |> MapSet.new()"
 
-    expected = """
-    MapSet.new(items)
-    """
+    expected = "MapSet.new(items)"
 
-    assert fix(NoRedundantDedupBeforeMapset, code) == expected
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, code), expected)
   end
 
   test "x |> Enum.dedup() |> MapSet.new() -> MapSet.new(x)" do
-    code = """
-    items |> Enum.dedup() |> MapSet.new()
-    """
+    code = "items |> Enum.dedup() |> MapSet.new()"
 
-    expected = """
-    MapSet.new(items)
-    """
+    expected = "MapSet.new(items)"
 
-    assert fix(NoRedundantDedupBeforeMapset, code) == expected
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, code), expected)
   end
 
   test "MapSet.new(Enum.dedup(x)) -> MapSet.new(x)" do
-    code = """
-    MapSet.new(Enum.dedup(items))
-    """
+    code = "MapSet.new(Enum.dedup(items))"
 
-    expected = """
-    MapSet.new(items)
-    """
+    expected = "MapSet.new(items)"
 
-    assert fix(NoRedundantDedupBeforeMapset, code) == expected
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, code), expected)
   end
 
   test "Enum.uniq(x) |> MapSet.new() -> MapSet.new(x)" do
-    code = """
-    Enum.uniq(items) |> MapSet.new()
-    """
+    code = "Enum.uniq(items) |> MapSet.new()"
 
-    expected = """
-    MapSet.new(items)
-    """
+    expected = "MapSet.new(items)"
 
-    assert fix(NoRedundantDedupBeforeMapset, code) == expected
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, code), expected)
   end
 
   test "MapSet.new(Enum.uniq(x)) -> MapSet.new(x)" do
-    code = """
-    MapSet.new(Enum.uniq(items))
-    """
+    code = "MapSet.new(Enum.uniq(items))"
 
-    expected = """
-    MapSet.new(items)
-    """
+    expected = "MapSet.new(items)"
 
-    assert fix(NoRedundantDedupBeforeMapset, code) == expected
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, code), expected)
   end
 
   test "preserves surrounding code, fixes multiple occurrences" do
@@ -84,7 +64,7 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
     end
     """
 
-    assert fix(NoRedundantDedupBeforeMapset, code) == expected
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, code), expected)
   end
 
   test "fixed code produces no further issues" do
@@ -102,18 +82,14 @@ defmodule Credence.Pattern.NoRedundantDedupBeforeMapsetFixTest do
 
   # No-op: the sort/sort_by intermediate cases are left untouched.
   test "Enum.uniq(x) |> Enum.sort() |> MapSet.new() is left alone" do
-    code = """
-    Enum.uniq(items) |> Enum.sort() |> MapSet.new()
-    """
+    code = "Enum.uniq(items) |> Enum.sort() |> MapSet.new()"
 
-    assert fix(NoRedundantDedupBeforeMapset, code) == code
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, code), code)
   end
 
   test "items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new() is left alone" do
-    code = """
-    items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new()
-    """
+    code = "items |> Enum.dedup() |> Enum.sort_by(& &1) |> MapSet.new()"
 
-    assert fix(NoRedundantDedupBeforeMapset, code) == code
+    confirm_fix(fix(NoRedundantDedupBeforeMapset, code), code)
   end
 end

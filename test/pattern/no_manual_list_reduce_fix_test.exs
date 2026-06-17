@@ -26,7 +26,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(NoManualListReduce, code) == expected
+      confirm_fix(fix(NoManualListReduce, code), expected)
     end
 
     test "arity-3 with a threaded-through parameter" do
@@ -44,7 +44,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(NoManualListReduce, code) == expected
+      confirm_fix(fix(NoManualListReduce, code), expected)
     end
 
     test "clauses in reversed order collapse at the first clause position" do
@@ -61,7 +61,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(NoManualListReduce, code) == expected
+      confirm_fix(fix(NoManualListReduce, code), expected)
     end
 
     test "cons-building update" do
@@ -78,7 +78,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(NoManualListReduce, code) == expected
+      confirm_fix(fix(NoManualListReduce, code), expected)
     end
   end
 
@@ -90,7 +90,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(NoManualListReduce, code) == code
+      confirm_fix(fix(NoManualListReduce, code), code)
     end
 
     test "leaves an existing Enum.reduce/3 call untouched" do
@@ -100,7 +100,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(NoManualListReduce, code) == code
+      confirm_fix(fix(NoManualListReduce, code), code)
     end
 
     test "leaves an update that reads the tail untouched" do
@@ -111,7 +111,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(NoManualListReduce, code) == code
+      confirm_fix(fix(NoManualListReduce, code), code)
     end
 
     test "leaves a multi-statement recursive body untouched" do
@@ -125,7 +125,7 @@ defmodule Credence.Pattern.NoManualListReduceFixTest do
       end
       """
 
-      assert fix(NoManualListReduce, code) == code
+      confirm_fix(fix(NoManualListReduce, code), code)
     end
   end
 end

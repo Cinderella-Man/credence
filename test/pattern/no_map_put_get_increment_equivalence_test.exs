@@ -13,9 +13,7 @@ defmodule Credence.Pattern.NoMapPutGetIncrementEquivalenceTest do
 
   test "Map.put(get + 1) → Map.update preserves the map incl. absent/present/float-value keys" do
     assert_equivalent(
-      """
-      Map.put(freqs, char, Map.get(freqs, char, 0) + 1)
-      """,
+      "Map.put(freqs, char, Map.get(freqs, char, 0) + 1)",
       rule: NoMapPutGetIncrement,
       vars: [:freqs, :char],
       inputs: [

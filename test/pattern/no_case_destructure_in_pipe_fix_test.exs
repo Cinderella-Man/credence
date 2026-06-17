@@ -31,7 +31,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(NoCaseDestructureInPipe, code) == expected
+      confirm_fix(fix(NoCaseDestructureInPipe, code), expected)
     end
 
     test "underscore wildcard pattern" do
@@ -57,7 +57,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(NoCaseDestructureInPipe, code) == expected
+      confirm_fix(fix(NoCaseDestructureInPipe, code), expected)
     end
   end
 
@@ -79,7 +79,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(NoCaseDestructureInPipe, code) == code
+      confirm_fix(fix(NoCaseDestructureInPipe, code), code)
     end
 
     test "tagged-tuple pattern (refutable)" do
@@ -95,7 +95,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(NoCaseDestructureInPipe, code) == code
+      confirm_fix(fix(NoCaseDestructureInPipe, code), code)
     end
 
     test "guarded variable pattern (refutable)" do
@@ -111,7 +111,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(NoCaseDestructureInPipe, code) == code
+      confirm_fix(fix(NoCaseDestructureInPipe, code), code)
     end
 
     test "multi-clause case in pipe" do
@@ -128,7 +128,7 @@ defmodule Credence.Pattern.NoCaseDestructureInPipeFixTest do
       end
       """
 
-      assert fix(NoCaseDestructureInPipe, code) == code
+      confirm_fix(fix(NoCaseDestructureInPipe, code), code)
     end
   end
 end

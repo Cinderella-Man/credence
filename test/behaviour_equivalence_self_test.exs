@@ -26,7 +26,7 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
   use ExUnit.Case, async: true
 
   import Credence.BehaviourEquivalence
-  alias Credence.Pattern.NoEnumAtNegativeIndex
+  alias Credence.Pattern.NoLengthComparisonForEmpty
   alias Credence.Pattern.NoTautologicalIf
 
   # Check 2 needs a rule that finds a problem but offers no fix. None of the real
@@ -45,8 +45,8 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
   describe "assert_equivalent refuses a broken test setup" do
     test "fewer than 3 inputs is rejected" do
       assert_raise ExUnit.AssertionError, fn ->
-        assert_equivalent("Enum.at(list, -1)",
-          rule: NoEnumAtNegativeIndex,
+        assert_equivalent("length(list) == 0",
+          rule: NoLengthComparisonForEmpty,
           vars: [:list],
           # Only 2 inputs — the checker wants at least 3.
           inputs: [[1, 2, 3], [4, 5]]
@@ -56,9 +56,9 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
 
     test "a snippet the rule does not apply to is rejected" do
       assert_raise ExUnit.AssertionError, fn ->
-        assert_equivalent("Enum.at(list, 0)",
-          # Index 0 is not negative, so this "negative index" rule does nothing here.
-          rule: NoEnumAtNegativeIndex,
+        assert_equivalent("length(list) == 100",
+          # 100 is outside the 0–5 range this rule rewrites, so it does nothing here.
+          rule: NoLengthComparisonForEmpty,
           vars: [:list],
           inputs: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
         )
@@ -94,10 +94,11 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
     # If the three tests above raised for some unrelated reason, this would catch
     # it: a real rule, a snippet it applies to, and 3 inputs must pass cleanly.
     test "real rule + applicable snippet + 3 inputs passes" do
-      assert assert_equivalent("Enum.at(list, -1)",
-               rule: NoEnumAtNegativeIndex,
+      assert assert_equivalent("length(list) == 0",
+               rule: NoLengthComparisonForEmpty,
                vars: [:list],
-               inputs: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+               # Include an empty list so the original gives 2 distinct results.
+               inputs: [[1, 2, 3], [], [4, 5, 6]]
              ) == :ok
     end
 

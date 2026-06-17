@@ -125,12 +125,14 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
-  # TIER 2 — tuple/list of plain variables
+  # Tuple/list patterns are LEFT ALONE — narrowed to a single plain variable,
+  # since collapsing `{a, b} = f(); {a, b}` would discard the match's arity
+  # assertion (not strictly behavior-preserving).
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "flags tuple pattern assign-and-return" do
+  describe "leaves tuple/list pattern assign-and-return alone" do
     test "two-element tuple" do
-      assert flagged?(NoRedundantAssignment, """
+      assert clean?(NoRedundantAssignment, """
              def run(input) do
                {a, b} = process(input)
                {a, b}
@@ -139,18 +141,16 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "three-element tuple" do
-      assert flagged?(NoRedundantAssignment, """
+      assert clean?(NoRedundantAssignment, """
              def run(input) do
                {x, y, z} = compute(input)
                {x, y, z}
              end
              """)
     end
-  end
 
-  describe "flags list pattern assign-and-return" do
     test "head-tail cons pattern" do
-      assert flagged?(NoRedundantAssignment, """
+      assert clean?(NoRedundantAssignment, """
              def run(list) do
                [h | t] = list
                [h | t]
@@ -159,7 +159,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentCheckTest do
     end
 
     test "flat list of variables" do
-      assert flagged?(NoRedundantAssignment, """
+      assert clean?(NoRedundantAssignment, """
              def run(input) do
                [a, b] = process(input)
                [a, b]

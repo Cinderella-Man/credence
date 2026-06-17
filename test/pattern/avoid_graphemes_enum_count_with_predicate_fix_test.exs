@@ -5,214 +5,172 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateFixTest do
 
   describe "predicate → String.count" do
     test "nested call with capture predicate" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               Enum.count(String.graphemes(str), &(&1 == "1"))
-               """
-             ) ==
-               """
-               String.count(str, "1")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'Enum.count(String.graphemes(str), &(&1 == "1"))'
+        ),
+        ~S'String.count(str, "1")'
+      )
     end
 
     test "two-step pipe with capture predicate" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               String.graphemes(str) |> Enum.count(&(&1 == "1"))
-               """
-             ) ==
-               """
-               String.count(str, "1")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'String.graphemes(str) |> Enum.count(&(&1 == "1"))'
+        ),
+        ~S'String.count(str, "1")'
+      )
     end
 
     test "three-step pipe collapses to direct call" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               str |> String.graphemes() |> Enum.count(&(&1 == "1"))
-               """
-             ) ==
-               """
-               String.count(str, "1")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'str |> String.graphemes() |> Enum.count(&(&1 == "1"))'
+        ),
+        ~S'String.count(str, "1")'
+      )
     end
 
     test "keeps upstream pipeline, replaces last two steps" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               str |> String.trim() |> String.graphemes() |> Enum.count(&(&1 == "1"))
-               """
-             ) ==
-               """
-               str |> String.trim() |> String.count("1")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'str |> String.trim() |> String.graphemes() |> Enum.count(&(&1 == "1"))'
+        ),
+        ~S'str |> String.trim() |> String.count("1")'
+      )
     end
 
     test "fn predicate in nested call" do
-      code = """
-      Enum.count(String.graphemes(str), fn c -> c == "1" end)
-      """
+      code = ~S'Enum.count(String.graphemes(str), fn c -> c == "1" end)'
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == """
-             String.count(str, "1")
-             """
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), ~S'String.count(str, "1")')
     end
 
     test "triple-equals capture predicate" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               Enum.count(String.graphemes(str), &(&1 === "a"))
-               """
-             ) ==
-               """
-               String.count(str, "a")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'Enum.count(String.graphemes(str), &(&1 === "a"))'
+        ),
+        ~S'String.count(str, "a")'
+      )
     end
 
     test "sum_by counting fn in nested call" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               Enum.sum_by(String.graphemes(str), fn "1" -> 1; _ -> 0 end)
-               """
-             ) ==
-               """
-               String.count(str, "1")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'Enum.sum_by(String.graphemes(str), fn "1" -> 1; _ -> 0 end)'
+        ),
+        ~S'String.count(str, "1")'
+      )
     end
 
     test "sum_by counting fn in two-step pipe" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)
-               """
-             ) ==
-               """
-               String.count(str, "1")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'String.graphemes(str) |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)'
+        ),
+        ~S'String.count(str, "1")'
+      )
     end
 
     test "sum_by counting fn in three-step pipe" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               str |> String.graphemes() |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)
-               """
-             ) ==
-               """
-               String.count(str, "1")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'str |> String.graphemes() |> Enum.sum_by(fn "1" -> 1; _ -> 0 end)'
+        ),
+        ~S'String.count(str, "1")'
+      )
     end
 
     test "sum_by counting fn keeps upstream pipeline" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               str |> String.trim() |> String.graphemes() |> Enum.sum_by(fn "a" -> 1; _ -> 0 end)
-               """
-             ) ==
-               """
-               str |> String.trim() |> String.count("a")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'str |> String.trim() |> String.graphemes() |> Enum.sum_by(fn "a" -> 1; _ -> 0 end)'
+        ),
+        ~S'str |> String.trim() |> String.count("a")'
+      )
     end
 
     test "sum_by counting fn with variable catch-all" do
-      assert fix(
-               AvoidGraphemesEnumCountWithPredicate,
-               """
-               String.graphemes(str) |> Enum.sum_by(fn "x" -> 1; _rest -> 0 end)
-               """
-             ) ==
-               """
-               String.count(str, "x")
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCountWithPredicate,
+          ~S'String.graphemes(str) |> Enum.sum_by(fn "x" -> 1; _rest -> 0 end)'
+        ),
+        ~S'String.count(str, "x")'
+      )
     end
   end
 
   describe "no-ops" do
     test "String.count unchanged" do
-      code = """
-      String.count(str, "1")
-      """
+      code = ~S'String.count(str, "1")'
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
 
     test "Enum.count on non-graphemes unchanged" do
-      code = """
-      Enum.count(list, &(&1 == "1"))
-      """
+      code = ~S'Enum.count(list, &(&1 == "1"))'
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
 
     test "no-predicate case passes through (handled by sibling rule)" do
-      code = """
-      String.graphemes(str) |> Enum.count()
-      """
+      code = "String.graphemes(str) |> Enum.count()"
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
 
     test "non-literal predicate passes through" do
-      code = """
-      Enum.count(String.graphemes(str), &(&1 == var))
-      """
+      code = "Enum.count(String.graphemes(str), &(&1 == var))"
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
 
     test "sum_by on non-graphemes unchanged" do
-      code = """
-      Enum.sum_by(list, fn "1" -> 1; _ -> 0 end)
-      """
+      code = ~S'Enum.sum_by(list, fn "1" -> 1; _ -> 0 end)'
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
 
     test "sum_by with non-counting function unchanged" do
-      code = """
-      String.graphemes(str) |> Enum.sum_by(fn x -> x end)
-      """
+      code = "String.graphemes(str) |> Enum.sum_by(fn x -> x end)"
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
 
     test "sum_by with non-1/0 returns unchanged" do
-      code = """
-      String.graphemes(str) |> Enum.sum_by(fn "1" -> 2; _ -> 0 end)
-      """
+      code = ~S'String.graphemes(str) |> Enum.sum_by(fn "1" -> 2; _ -> 0 end)'
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
 
     # Narrowing (decision 6a): non-single-codepoint literals are left untouched.
     test "empty literal passes through" do
-      code = """
-      Enum.count(String.graphemes(str), &(&1 == ""))
-      """
+      code = ~S'Enum.count(String.graphemes(str), &(&1 == ""))'
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
 
     test "multi-character literal passes through" do
-      code = """
-      Enum.count(String.graphemes(str), &(&1 == "ab"))
-      """
+      code = ~S'Enum.count(String.graphemes(str), &(&1 == "ab"))'
 
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
 
     test "decomposed (two-codepoint) accent literal passes through" do
       nfd = "e" <> <<0x301::utf8>>
       code = ~s[Enum.count(String.graphemes(str), &(&1 == "#{nfd}"))]
-      assert fix(AvoidGraphemesEnumCountWithPredicate, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCountWithPredicate, code), code)
     end
   end
 

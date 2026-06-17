@@ -71,24 +71,41 @@ defmodule Credence.Pattern.NoEnumCountForLength do
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       # Direct: Enum.count(list_expr) → length(list_expr)
       {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [arg]} = node ->
-        if not predicate?(arg) and provably_list?(arg) do
-          {:length, [], [arg]}
-        else
-          node
+        cond do
+          predicate?(arg) -> node
+          match?({:ok, _}, map_keys_arg(arg)) -> map_size_call(arg)
+          provably_list?(arg) -> {:length, [], [arg]}
+          true -> node
         end
 
       # Pipeline: list_lhs |> Enum.count() → list_lhs |> length()
       {:|>, pmeta, [lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, cmeta, []}]} = node ->
-        if provably_list?(lhs) do
-          {:|>, pmeta, [lhs, {:length, cmeta, []}]}
-        else
-          node
+        cond do
+          match?({:ok, _}, map_keys_arg(lhs)) -> map_size_call(lhs)
+          provably_list?(lhs) -> {:|>, pmeta, [lhs, {:length, cmeta, []}]}
+          true -> node
         end
 
       node ->
         node
     end)
   end
+
+  # Counting `Map.keys(m)` is `map_size(m)` exactly (=== for every input,
+  # including the BadMapError raised on a non-map) and skips the intermediate
+  # key-list allocation, so prefer it over `length(Map.keys(m))`.
+  defp map_size_call(arg) do
+    {:ok, inner} = map_keys_arg(arg)
+    {:map_size, [], [inner]}
+  end
+
+  # `Map.keys(inner)` — as a direct call or as `inner |> Map.keys()`.
+  defp map_keys_arg({{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, [inner]}), do: {:ok, inner}
+
+  defp map_keys_arg({:|>, _, [lhs, {{:., _, [{:__aliases__, _, [:Map]}, :keys]}, _, []}]}),
+    do: {:ok, lhs}
+
+  defp map_keys_arg(_), do: :error
 
   # Direct call: Enum.count(arg)
   defp check_node({{:., meta, [mod, :count]}, _, [arg]}) do

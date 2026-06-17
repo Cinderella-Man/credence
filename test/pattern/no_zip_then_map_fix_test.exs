@@ -12,11 +12,9 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.map(fn {name, score} -> {name, score * 2} end)
       """
 
-      expected = """
-      Enum.zip_with(names, scores, fn name, score -> {name, score * 2} end)
-      """
+      expected = "Enum.zip_with(names, scores, fn name, score -> {name, score * 2} end)"
 
-      assert fix(NoZipThenMap, code) == expected
+      confirm_fix(fix(NoZipThenMap, code), expected)
     end
 
     test "multiline fn body" do
@@ -27,11 +25,9 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       end)
       """
 
-      expected = """
-      Enum.zip_with(keys, values, fn k, v -> Map.put(acc, k, v) end)
-      """
+      expected = "Enum.zip_with(keys, values, fn k, v -> Map.put(acc, k, v) end)"
 
-      assert fix(NoZipThenMap, code) == expected
+      confirm_fix(fix(NoZipThenMap, code), expected)
     end
 
     test "zip in longer pipeline" do
@@ -48,7 +44,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.zip_with(other, fn a, b -> a + b end)
       """
 
-      assert fix(NoZipThenMap, code) == expected
+      confirm_fix(fix(NoZipThenMap, code), expected)
     end
 
     test "zip from variable piped to map" do
@@ -63,7 +59,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.zip_with(other, fn x, y -> x + y end)
       """
 
-      assert fix(NoZipThenMap, code) == expected
+      confirm_fix(fix(NoZipThenMap, code), expected)
     end
   end
 
@@ -77,23 +73,17 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       end)
       """
 
-      expected = """
-      Enum.zip_with(names, scores, fn name, score -> {name, score * 2} end)
-      """
+      expected = "Enum.zip_with(names, scores, fn name, score -> {name, score * 2} end)"
 
-      assert fix(NoZipThenMap, code) == expected
+      confirm_fix(fix(NoZipThenMap, code), expected)
     end
 
     test "single-line nested form" do
-      code = """
-      Enum.map(Enum.zip(a, b), fn {x, y} -> x + y end)
-      """
+      code = "Enum.map(Enum.zip(a, b), fn {x, y} -> x + y end)"
 
-      expected = """
-      Enum.zip_with(a, b, fn x, y -> x + y end)
-      """
+      expected = "Enum.zip_with(a, b, fn x, y -> x + y end)"
 
-      assert fix(NoZipThenMap, code) == expected
+      confirm_fix(fix(NoZipThenMap, code), expected)
     end
   end
 
@@ -106,17 +96,15 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.map(fn {name, age} when is_binary(name) -> {name, age} end)
       """
 
-      assert fix(NoZipThenMap, code) == code
+      confirm_fix(fix(NoZipThenMap, code), code)
     end
   end
 
   describe "no fix when already idiomatic" do
     test "Enum.zip_with is unchanged" do
-      code = """
-      Enum.zip_with(names, scores, fn name, score -> {name, score} end)
-      """
+      code = "Enum.zip_with(names, scores, fn name, score -> {name, score} end)"
 
-      assert fix(NoZipThenMap, code) == code
+      confirm_fix(fix(NoZipThenMap, code), code)
     end
   end
 
@@ -127,7 +115,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.map(fn pair -> pair end)
       """
 
-      assert fix(NoZipThenMap, code) == code
+      confirm_fix(fix(NoZipThenMap, code), code)
     end
   end
 
@@ -140,7 +128,7 @@ defmodule Credence.Pattern.NoZipThenMapFixTest do
       |> Enum.map(fn {a, b} -> a + b end)
       """
 
-      assert fix(NoZipThenMap, code) == code
+      confirm_fix(fix(NoZipThenMap, code), code)
     end
   end
 end

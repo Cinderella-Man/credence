@@ -7,28 +7,18 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
   describe "Enum.join" do
     test "direct: Enum.join(list, \"\") → Enum.join(list)" do
-      assert fix(NoRedundantEnumJoinSeparator, """
-             Enum.join(list, "")
-             """) == """
-             Enum.join(list)
-             """
+      confirm_fix(fix(NoRedundantEnumJoinSeparator, ~S'Enum.join(list, "")'), "Enum.join(list)")
     end
 
     test "single-step pipe collapses: list |> Enum.join(\"\") → Enum.join(list)" do
-      assert fix(NoRedundantEnumJoinSeparator, """
-             list |> Enum.join("")
-             """) == """
-             Enum.join(list)
-             """
+      confirm_fix(fix(NoRedundantEnumJoinSeparator, ~S'list |> Enum.join("")'), "Enum.join(list)")
     end
 
     test "multi-step pipe keeps pipe: list |> Enum.reverse() |> Enum.join(\"\") → ... |> Enum.join()" do
-      assert fix(NoRedundantEnumJoinSeparator, """
-             list |> Enum.reverse() |> Enum.join("")
-             """) ==
-               """
-               list |> Enum.reverse() |> Enum.join()
-               """
+      confirm_fix(
+        fix(NoRedundantEnumJoinSeparator, ~S'list |> Enum.reverse() |> Enum.join("")'),
+        "list |> Enum.reverse() |> Enum.join()"
+      )
     end
   end
 
@@ -36,43 +26,37 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
   describe "Enum.map_join" do
     test "direct: Enum.map_join(list, \"\", mapper) → Enum.map_join(list, mapper)" do
-      assert fix(NoRedundantEnumJoinSeparator, """
-             Enum.map_join(list, "", &to_string/1)
-             """) ==
-               """
-               Enum.map_join(list, &to_string/1)
-               """
+      confirm_fix(
+        fix(NoRedundantEnumJoinSeparator, ~S'Enum.map_join(list, "", &to_string/1)'),
+        "Enum.map_join(list, &to_string/1)"
+      )
     end
 
     test "single-step pipe collapses: list |> Enum.map_join(\"\", mapper) → Enum.map_join(list, mapper)" do
-      assert fix(NoRedundantEnumJoinSeparator, """
-             list |> Enum.map_join("", &to_string/1)
-             """) ==
-               """
-               Enum.map_join(list, &to_string/1)
-               """
+      confirm_fix(
+        fix(NoRedundantEnumJoinSeparator, ~S'list |> Enum.map_join("", &to_string/1)'),
+        "Enum.map_join(list, &to_string/1)"
+      )
     end
 
     test "multi-step pipe keeps pipe" do
-      assert fix(
-               NoRedundantEnumJoinSeparator,
-               """
-               list |> Enum.reverse() |> Enum.map_join("", &to_string/1)
-               """
-             ) == """
-             list |> Enum.reverse() |> Enum.map_join(&to_string/1)
-             """
+      confirm_fix(
+        fix(
+          NoRedundantEnumJoinSeparator,
+          ~S'list |> Enum.reverse() |> Enum.map_join("", &to_string/1)'
+        ),
+        "list |> Enum.reverse() |> Enum.map_join(&to_string/1)"
+      )
     end
 
     test "inline fn mapper" do
-      assert fix(
-               NoRedundantEnumJoinSeparator,
-               """
-               Enum.map_join(list, "", fn x -> String.upcase(x) end)
-               """
-             ) == """
-             Enum.map_join(list, fn x -> String.upcase(x) end)
-             """
+      confirm_fix(
+        fix(
+          NoRedundantEnumJoinSeparator,
+          ~S'Enum.map_join(list, "", fn x -> String.upcase(x) end)'
+        ),
+        "Enum.map_join(list, fn x -> String.upcase(x) end)"
+      )
     end
   end
 
@@ -104,7 +88,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       end
       """
 
-      assert fix(NoRedundantEnumJoinSeparator, input) == expected
+      confirm_fix(fix(NoRedundantEnumJoinSeparator, input), expected)
     end
   end
 
@@ -112,12 +96,10 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
 
   describe "no-ops" do
     test "preserves non-empty separator" do
-      assert fix(NoRedundantEnumJoinSeparator, """
-             Enum.join(list, ", ")
-             """) ==
-               """
-               Enum.join(list, ", ")
-               """
+      confirm_fix(
+        fix(NoRedundantEnumJoinSeparator, ~S'Enum.join(list, ", ")'),
+        ~S'Enum.join(list, ", ")'
+      )
     end
 
     test "preserves surrounding code" do
@@ -137,7 +119,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       end
       """
 
-      assert fix(NoRedundantEnumJoinSeparator, input) == expected
+      confirm_fix(fix(NoRedundantEnumJoinSeparator, input), expected)
     end
   end
 
@@ -158,7 +140,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       """
 
       first = fix(NoRedundantEnumJoinSeparator, input)
-      assert fix(NoRedundantEnumJoinSeparator, first) == first
+      confirm_fix(fix(NoRedundantEnumJoinSeparator, first), first)
     end
   end
 
@@ -193,7 +175,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       """
 
       # Exact compare proves the @doc heredoc is preserved (not collapsed to a string).
-      assert fix(NoRedundantEnumJoinSeparator, input) == expected
+      confirm_fix(fix(NoRedundantEnumJoinSeparator, input), expected)
     end
 
     test "fix does not collapse @moduledoc heredoc" do
@@ -222,7 +204,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       """
 
       # Exact compare proves the @moduledoc heredoc is preserved.
-      assert fix(NoRedundantEnumJoinSeparator, input) == expected
+      confirm_fix(fix(NoRedundantEnumJoinSeparator, input), expected)
     end
   end
 

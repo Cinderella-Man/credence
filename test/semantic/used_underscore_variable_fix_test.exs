@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.UsedUnderscoreVariable
 
@@ -27,7 +27,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       end
       """
 
-      assert UsedUnderscoreVariable.fix(source, diag("_target_n", 2)) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_target_n", 2)), expected)
     end
 
     test "does not rename other underscore variables" do
@@ -43,7 +43,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       end
       """
 
-      assert UsedUnderscoreVariable.fix(source, diag("_target_n", 2)) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_target_n", 2)), expected)
     end
   end
 
@@ -66,7 +66,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       """
 
       # Diagnostic points to line 3 (body usage of _acc)
-      assert UsedUnderscoreVariable.fix(source, diag("_acc", 3)) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_acc", 3)), expected)
     end
 
     test "fixes parameter and multiple body usages(and gap)" do
@@ -88,7 +88,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       end
       """
 
-      assert UsedUnderscoreVariable.fix(source, diag("_data", 3)) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_data", 3)), expected)
     end
 
     test "fixes parameter and multiple body usages" do
@@ -110,7 +110,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       end
       """
 
-      assert UsedUnderscoreVariable.fix(source, diag("_data", 3)) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_data", 3)), expected)
     end
   end
 
@@ -130,7 +130,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       end
       """
 
-      assert UsedUnderscoreVariable.fix(source, diag("_target_n", 2)) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_target_n", 2)), expected)
     end
 
     test "does not touch other function clauses (multi-line)" do
@@ -159,7 +159,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       """
 
       # Diagnostic points to line 3 (body usage in first clause)
-      assert UsedUnderscoreVariable.fix(source, diag("_limit", 3)) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_limit", 3)), expected)
     end
   end
 
@@ -177,7 +177,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       end
       """
 
-      assert UsedUnderscoreVariable.fix(source, diag("_n", 2)) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_n", 2)), expected)
     end
 
     test "handles single-character underscore variable" do
@@ -193,21 +193,15 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       end
       """
 
-      assert UsedUnderscoreVariable.fix(source, diag("_x", 2)) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_x", 2)), expected)
     end
   end
 
   describe "fix/2 — position formats" do
     test "handles bare integer position" do
-      source = """
-      def check(_x, y) when y > _x, do: :ok
+      source = "def check(_x, y) when y > _x, do: :ok"
 
-      """
-
-      expected = """
-      def check(x, y) when y > x, do: :ok
-
-      """
+      expected = "def check(x, y) when y > x, do: :ok"
 
       bare_diag = %{
         severity: :warning,
@@ -217,16 +211,13 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
         position: 1
       }
 
-      assert UsedUnderscoreVariable.fix(source, bare_diag) == expected
+      confirm_fix(UsedUnderscoreVariable.fix(source, bare_diag), expected)
     end
   end
 
   describe "fix/2 — no-ops" do
     test "returns source unchanged when variable has no underscore" do
-      source = """
-      def check(x, y) when y > x, do: :ok
-
-      """
+      source = "def check(x, y) when y > x, do: :ok"
 
       weird_diag = %{
         severity: :warning,
@@ -236,14 +227,11 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
         position: {1, 1}
       }
 
-      assert UsedUnderscoreVariable.fix(source, weird_diag) == source
+      confirm_fix(UsedUnderscoreVariable.fix(source, weird_diag), source)
     end
 
     test "returns source unchanged when position is nil" do
-      source = """
-      some code
-
-      """
+      source = "some code"
 
       bad_diag = %{
         severity: :warning,
@@ -253,14 +241,11 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
         position: nil
       }
 
-      assert UsedUnderscoreVariable.fix(source, bad_diag) == source
+      confirm_fix(UsedUnderscoreVariable.fix(source, bad_diag), source)
     end
 
     test "returns source unchanged when message has no variable name" do
-      source = """
-      some code
-
-      """
+      source = "some code"
 
       bad_diag = %{
         severity: :warning,
@@ -268,7 +253,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
         position: {1, 1}
       }
 
-      assert UsedUnderscoreVariable.fix(source, bad_diag) == source
+      confirm_fix(UsedUnderscoreVariable.fix(source, bad_diag), source)
     end
   end
 
@@ -287,7 +272,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       """
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed == expected
+      confirm_fix(fixed, expected)
     end
 
     test "fixes underscore variable used in body end-to-end" do
@@ -308,7 +293,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       """
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed == expected
+      confirm_fix(fixed, expected)
     end
 
     test "does not modify correctly unused underscore variable" do
@@ -319,7 +304,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       """
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed == source
+      confirm_fix(fixed, source)
     end
   end
 

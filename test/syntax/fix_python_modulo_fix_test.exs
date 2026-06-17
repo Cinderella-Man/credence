@@ -1,7 +1,7 @@
 defmodule Credence.Syntax.FixPythonModuloFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Syntax.FixPythonModulo
   defp analyze(code), do: FixPythonModulo.analyze(code)
@@ -13,35 +13,19 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "identifier % integer" do
     test "year % 4 → rem(year, 4)" do
-      assert fix("""
-             year % 4
-             """) == """
-             rem(year, 4)
-             """
+      confirm_fix(fix("year % 4"), "rem(year, 4)")
     end
 
     test "n % 2 → rem(n, 2)" do
-      assert fix("""
-             n % 2
-             """) == """
-             rem(n, 2)
-             """
+      confirm_fix(fix("n % 2"), "rem(n, 2)")
     end
 
     test "year % 100 → rem(year, 100)" do
-      assert fix("""
-             year % 100
-             """) == """
-             rem(year, 100)
-             """
+      confirm_fix(fix("year % 100"), "rem(year, 100)")
     end
 
     test "year % 400 → rem(year, 400)" do
-      assert fix("""
-             year % 400
-             """) == """
-             rem(year, 400)
-             """
+      confirm_fix(fix("year % 400"), "rem(year, 400)")
     end
   end
 
@@ -51,19 +35,11 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "identifier % identifier" do
     test "a % b → rem(a, b)" do
-      assert fix("""
-             a % b
-             """) == """
-             rem(a, b)
-             """
+      confirm_fix(fix("a % b"), "rem(a, b)")
     end
 
     test "n % divisor → rem(n, divisor)" do
-      assert fix("""
-             n % divisor
-             """) == """
-             rem(n, divisor)
-             """
+      confirm_fix(fix("n % divisor"), "rem(n, divisor)")
     end
   end
 
@@ -73,11 +49,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "integer % integer" do
     test "100 % 7 → rem(100, 7)" do
-      assert fix("""
-             100 % 7
-             """) == """
-             rem(100, 7)
-             """
+      confirm_fix(fix("100 % 7"), "rem(100, 7)")
     end
   end
 
@@ -87,19 +59,11 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "without spaces" do
     test "n%2 → rem(n, 2)" do
-      assert fix("""
-             n%2
-             """) == """
-             rem(n, 2)
-             """
+      confirm_fix(fix("n%2"), "rem(n, 2)")
     end
 
     test "year%4 → rem(year, 4)" do
-      assert fix("""
-             year%4
-             """) == """
-             rem(year, 4)
-             """
+      confirm_fix(fix("year%4"), "rem(year, 4)")
     end
   end
 
@@ -109,27 +73,15 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "in comparisons" do
     test "n % 2 == 0 → rem(n, 2) == 0" do
-      assert fix("""
-             n % 2 == 0
-             """) == """
-             rem(n, 2) == 0
-             """
+      confirm_fix(fix("n % 2 == 0"), "rem(n, 2) == 0")
     end
 
     test "year % 4 != 0 → rem(year, 4) != 0" do
-      assert fix("""
-             year % 4 != 0
-             """) == """
-             rem(year, 4) != 0
-             """
+      confirm_fix(fix("year % 4 != 0"), "rem(year, 4) != 0")
     end
 
     test "n % 2 == 1 → rem(n, 2) == 1" do
-      assert fix("""
-             n % 2 == 1
-             """) == """
-             rem(n, 2) == 1
-             """
+      confirm_fix(fix("n % 2 == 1"), "rem(n, 2) == 1")
     end
   end
 
@@ -139,19 +91,11 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "in assignments" do
     test "remainder = n % 2 → remainder = rem(n, 2)" do
-      assert fix("""
-             remainder = n % 2
-             """) == """
-             remainder = rem(n, 2)
-             """
+      confirm_fix(fix("remainder = n % 2"), "remainder = rem(n, 2)")
     end
 
     test "r = a % b → r = rem(a, b)" do
-      assert fix("""
-             r = a % b
-             """) == """
-             r = rem(a, b)
-             """
+      confirm_fix(fix("r = a % b"), "r = rem(a, b)")
     end
   end
 
@@ -161,30 +105,24 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "multiple on same line" do
     test "tuple with three modulo ops" do
-      assert fix("""
-             {year % 4, year % 100, year % 400}
-             """) ==
-               """
-               {rem(year, 4), rem(year, 100), rem(year, 400)}
-               """
+      confirm_fix(
+        fix("{year % 4, year % 100, year % 400}"),
+        "{rem(year, 4), rem(year, 100), rem(year, 400)}"
+      )
     end
 
     test "boolean expression" do
-      assert fix("""
-             year % 4 == 0 and year % 100 != 0
-             """) ==
-               """
-               rem(year, 4) == 0 and rem(year, 100) != 0
-               """
+      confirm_fix(
+        fix("year % 4 == 0 and year % 100 != 0"),
+        "rem(year, 4) == 0 and rem(year, 100) != 0"
+      )
     end
 
     test "complex boolean with or" do
-      assert fix("""
-             year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
-             """) ==
-               """
-               rem(year, 4) == 0 and (rem(year, 100) != 0 or rem(year, 400) == 0)
-               """
+      confirm_fix(
+        fix("year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)"),
+        "rem(year, 4) == 0 and (rem(year, 100) != 0 or rem(year, 400) == 0)"
+      )
     end
   end
 
@@ -194,21 +132,17 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "in guards" do
     test "when year % 4 != 0" do
-      assert fix("""
-             def leap?(year) when year % 4 != 0, do: false
-             """) ==
-               """
-               def leap?(year) when rem(year, 4) != 0, do: false
-               """
+      confirm_fix(
+        fix("def leap?(year) when year % 4 != 0, do: false"),
+        "def leap?(year) when rem(year, 4) != 0, do: false"
+      )
     end
 
     test "when n % 2 == 0" do
-      assert fix("""
-             def even?(n) when n % 2 == 0, do: true
-             """) ==
-               """
-               def even?(n) when rem(n, 2) == 0, do: true
-               """
+      confirm_fix(
+        fix("def even?(n) when n % 2 == 0, do: true"),
+        "def even?(n) when rem(n, 2) == 0, do: true"
+      )
     end
   end
 
@@ -236,7 +170,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
 
     test "case-based leap year" do
@@ -262,7 +196,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
 
     test "if-based leap year" do
@@ -278,7 +212,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
   end
 
@@ -310,7 +244,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
   end
 
@@ -320,21 +254,11 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "realistic even/odd" do
     test "one-liner even? predicate" do
-      assert fix("""
-             def even?(n), do: n % 2 == 0
-             """) ==
-               """
-               def even?(n), do: rem(n, 2) == 0
-               """
+      confirm_fix(fix("def even?(n), do: n % 2 == 0"), "def even?(n), do: rem(n, 2) == 0")
     end
 
     test "one-liner odd? predicate" do
-      assert fix("""
-             def odd?(n), do: n % 2 != 0
-             """) ==
-               """
-               def odd?(n), do: rem(n, 2) != 0
-               """
+      confirm_fix(fix("def odd?(n), do: n % 2 != 0"), "def odd?(n), do: rem(n, 2) != 0")
     end
   end
 
@@ -360,15 +284,11 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       end
       """
 
-      assert fix(input) == expected
+      confirm_fix(fix(input), expected)
     end
 
     test "preserves indentation" do
-      assert fix("""
-                   n % 2
-             """) == """
-                   rem(n, 2)
-             """
+      confirm_fix(fix("      n % 2"), "      rem(n, 2)")
     end
   end
 
@@ -378,43 +298,33 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "does not touch maps and structs" do
     test "map literal unchanged" do
-      code = """
-      %{key: value}
-      """
+      code = "%{key: value}"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "map in assignment unchanged" do
-      code = """
-      x = %{a: 1, b: 2}
-      """
+      code = "x = %{a: 1, b: 2}"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "map update unchanged" do
-      code = """
-      %{map | key: new_value}
-      """
+      code = "%{map | key: new_value}"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "struct literal unchanged" do
-      code = """
-      %MyStruct{field: value}
-      """
+      code = "%MyStruct{field: value}"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "map pattern in function head unchanged" do
-      code = """
-      def foo(%{year: year}), do: year
-      """
+      code = "def foo(%{year: year}), do: year"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
   end
 
@@ -424,19 +334,15 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "does not touch already correct code" do
     test "rem(n, 2) unchanged" do
-      code = """
-      rem(n, 2)
-      """
+      code = "rem(n, 2)"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "Integer.mod(n, 2) unchanged" do
-      code = """
-      Integer.mod(n, 2)
-      """
+      code = "Integer.mod(n, 2)"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "no modulo at all" do
@@ -447,7 +353,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
       """
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
   end
 
@@ -457,19 +363,15 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "does not touch comments" do
     test "comment with % unchanged" do
-      code = """
-      # n % 2 is the remainder
-      """
+      code = "# n % 2 is the remainder"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
 
     test "indented comment unchanged" do
-      code = """
-        # year % 4 check
-      """
+      code = "  # year % 4 check"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
   end
 
@@ -479,11 +381,9 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "does not touch float operand" do
     test "n % 2.0 unchanged" do
-      code = """
-      n % 2.0
-      """
+      code = "n % 2.0"
 
-      assert fix(code) == code
+      confirm_fix(fix(code), code)
     end
   end
 
@@ -504,11 +404,7 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
 
   describe "fix output is well-formed" do
     test "fixed output parses" do
-      assert valid_syntax?(
-               fix("""
-               year % 4
-               """)
-             )
+      assert valid_syntax?(fix("year % 4"))
     end
   end
 end

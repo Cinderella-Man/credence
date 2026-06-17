@@ -24,7 +24,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(PreferEnumSlice, input) == expected
+      confirm_fix(fix(PreferEnumSlice, input), expected)
     end
 
     test "fixes nested Enum.take(Enum.drop(...)) to Enum.slice" do
@@ -44,7 +44,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(PreferEnumSlice, input) == expected
+      confirm_fix(fix(PreferEnumSlice, input), expected)
     end
 
     test "fixes single pipe Enum.drop |> Enum.take to Enum.slice" do
@@ -64,7 +64,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(PreferEnumSlice, input) == expected
+      confirm_fix(fix(PreferEnumSlice, input), expected)
     end
 
     test "fixes pipeline with preceding steps" do
@@ -91,7 +91,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(PreferEnumSlice, input) == expected
+      confirm_fix(fix(PreferEnumSlice, input), expected)
     end
 
     test "fixes multiple occurrences in the same file" do
@@ -115,7 +115,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(PreferEnumSlice, input) == expected
+      confirm_fix(fix(PreferEnumSlice, input), expected)
     end
 
     test "fix inside anonymous function" do
@@ -134,7 +134,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end)
       """
 
-      assert fix(PreferEnumSlice, input) == expected
+      confirm_fix(fix(PreferEnumSlice, input), expected)
     end
 
     test "does not modify non-literal (field-access) amounts — could be negative" do
@@ -146,7 +146,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(PreferEnumSlice, code) == code
+      confirm_fix(fix(PreferEnumSlice, code), code)
     end
 
     test "does not modify code without the pattern" do
@@ -159,7 +159,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(PreferEnumSlice, code) == code
+      confirm_fix(fix(PreferEnumSlice, code), code)
     end
 
     test "does not modify reversed order" do
@@ -173,7 +173,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(PreferEnumSlice, code) == code
+      confirm_fix(fix(PreferEnumSlice, code), code)
     end
 
     test "does not modify Stream" do
@@ -187,7 +187,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
       end
       """
 
-      assert fix(PreferEnumSlice, code) == code
+      confirm_fix(fix(PreferEnumSlice, code), code)
     end
 
     test "fix is idempotent" do
@@ -203,7 +203,7 @@ defmodule Credence.Pattern.PreferEnumSliceFixTest do
 
       first_pass = fix(PreferEnumSlice, input)
       second_pass = fix(PreferEnumSlice, first_pass)
-      assert first_pass == second_pass
+      confirm_fix(first_pass, second_pass)
     end
 
     test "fixed pipeline passes check" do

@@ -25,6 +25,8 @@ output channel is the verdict file `../_verdict`, containing exactly one of:
 
 ## Data files (in `maintainer_tools/`)
 - consumes `candidates.md` — flat path list, the live queue; drains in place.
+  **Generated** by `generate_candidates.sh`, not hand-edited — re-run it whenever
+  the evolution branch gains rules.
 - writes `followup.md` — structured, needs human attention.
 - the stub pre-pass (`move_unfixable_out.sh`) writes `unfixable_unreviewed.md`
   (stage 2's input).
@@ -56,6 +58,10 @@ failures (no verdict / crash / token-limit) are not followups — the row revert
 and retries with backoff (15/30/45/60 min, then hourly) until Claude recovers.
 
 ## Per-script index
+- `generate_candidates.sh` — (re)build `candidates.md` from the sister: every rule
+  the evolution branch added/changed vs `main` that has no `accepted`/`promoted`/
+  `followup` commit yet, emitted as anchored sets. `--dry-run` to preview. This is
+  the queue's source of truth — no more hand-parsing the main↔evolution diff.
 - `review_loop.sh` — the orchestrator (self-heal → pick set → classify → run
   session → read verdict → gate → commit/push).
 - `review_lib.sh` — shared helpers (`rule_kind`, `rule_base`, `group_tests`,

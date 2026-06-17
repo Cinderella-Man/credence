@@ -21,7 +21,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "fixes if b < a, do: a, else: b" do
@@ -41,7 +41,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "fixes if b <= a, do: a, else: b" do
@@ -61,19 +61,15 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "fixes complex expressions" do
-      input = """
-      new_current = if(current_sum + num >= num, do: current_sum + num, else: num)
-      """
+      input = "new_current = if(current_sum + num >= num, do: current_sum + num, else: num)"
 
-      expected = """
-      new_current = max(current_sum + num, num)
-      """
+      expected = "new_current = max(current_sum + num, num)"
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "fixes two complex expressions in same module" do
@@ -97,7 +93,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "preserves surrounding code" do
@@ -121,7 +117,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "fixes nested max patterns (inner if first)" do
@@ -141,7 +137,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "fixes if b > a, do: b, else: a (also a max pattern)" do
@@ -157,7 +153,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "idempotent: running fix twice produces same result" do
@@ -171,7 +167,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
 
       once = fix(NoManualMax, input)
       twice = fix(NoManualMax, once)
-      assert once == twice
+      confirm_fix(once, twice)
     end
 
     # ---- Negative fix cases: unchanged ----
@@ -183,7 +179,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, code) == code
+      confirm_fix(fix(NoManualMax, code), code)
     end
 
     test "does not change code with non-comparison condition" do
@@ -193,7 +189,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, code) == code
+      confirm_fix(fix(NoManualMax, code), code)
     end
 
     test "does not change code with mismatched branches" do
@@ -203,7 +199,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, code) == code
+      confirm_fix(fix(NoManualMax, code), code)
     end
 
     test "does not change code with == condition" do
@@ -213,7 +209,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, code) == code
+      confirm_fix(fix(NoManualMax, code), code)
     end
 
     test "does not change code with compound condition" do
@@ -223,7 +219,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, code) == code
+      confirm_fix(fix(NoManualMax, code), code)
     end
 
     test "does not change if without else" do
@@ -233,15 +229,13 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       """
 
-      assert fix(NoManualMax, code) == code
+      confirm_fix(fix(NoManualMax, code), code)
     end
 
     test "does not change max/2 usage (already correct)" do
-      code = """
-      def bigger(a, b), do: max(a, b)
-      """
+      code = "def bigger(a, b), do: max(a, b)"
 
-      assert fix(NoManualMax, code) == code
+      confirm_fix(fix(NoManualMax, code), code)
     end
   end
 
@@ -283,7 +277,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       '''
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "does not alter lines outside the if expression" do
@@ -317,7 +311,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
       end
       '''
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
 
     test "preserves comment formatting" do
@@ -343,7 +337,7 @@ defmodule Credence.Pattern.NoManualMaxFixTest do
 
       """
 
-      assert fix(NoManualMax, input) == expected
+      confirm_fix(fix(NoManualMax, input), expected)
     end
   end
 end

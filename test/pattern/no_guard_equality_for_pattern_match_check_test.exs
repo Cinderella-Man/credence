@@ -165,15 +165,16 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       assert Enum.any?(messages, &(&1 =~ "m == :three"))
     end
 
-    test "detects equalities inside or-guard" do
+    test "does not extract equalities inside an or-guard" do
+      # `n == :two or n == :three` cannot be hoisted into the head — a single
+      # head can't express an OR — so no equality is extractable.
       code = """
       defmodule OrGuard do
         def foo(n) when n == :two or n == :three, do: :ok
       end
       """
 
-      issues = check(NoGuardEqualityForPatternMatch, code)
-      assert length(issues) == 2
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "does not flag float literals" do
@@ -259,19 +260,16 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchCheckTest do
       assert hd(issues).message =~ "n == :zero"
     end
 
-    test "detects nested and/or combinations" do
+    test "does not extract from a top-level or" do
+      # A top-level `or` makes the whole guard opaque — neither `n == :two` nor
+      # `k == :three` can be hoisted into a single head without dropping a branch.
       code = """
       defmodule NestedGuard do
         def foo(n, m, k) when (n == :two and m > 0) or k == :three, do: :ok
       end
       """
 
-      issues = check(NoGuardEqualityForPatternMatch, code)
-      assert length(issues) == 2
-
-      messages = Enum.map(issues, & &1.message)
-      assert Enum.any?(messages, &(&1 =~ "n == :two"))
-      assert Enum.any?(messages, &(&1 =~ "k == :three"))
+      assert check(NoGuardEqualityForPatternMatch, code) == []
     end
 
     test "does not flag comparison to composite types" do

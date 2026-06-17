@@ -11,9 +11,7 @@ defmodule Credence.Pattern.AvoidGraphemesLengthEquivalenceTest do
 
   test "length(String.graphemes(string)) → String.length preserves the count over Unicode" do
     assert_equivalent(
-      """
-      length(String.graphemes(string))
-      """,
+      "length(String.graphemes(string))",
       rule: AvoidGraphemesLength,
       vars: [:string],
       inputs: B.unicode_strings()

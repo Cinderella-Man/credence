@@ -52,14 +52,43 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"List", "pop", 1} => {:rename, "List", "last"},
     {"List", "drop", 2} => {:rename, "Enum", "drop"},
 
+    # Hallucinated List.* that should be Enum.*
+    {"List", "max", 1} => {:rename, "Enum", "max"},
+    {"List", "min", 1} => {:rename, "Enum", "min"},
+    {"List", "sum", 1} => {:rename, "Enum", "sum"},
+    {"List", "product", 1} => {:rename, "Enum", "product"},
+
+    # List.at/2 does not exist; the idiomatic equivalent is Enum.at/2
+    {"List", "at", 2} => {:rename, "Enum", "at"},
+
     # Wrong module
     {"Enum", "cycle", 1} => {:rename, "Stream", "cycle"},
+
+    # Enum.sum/2 does not exist (LLMs call sum with a mapper fn); the modern
+    # equivalent is Enum.sum_by/2 (same arg order, sums the mapper over each
+    # element). Repair — `Enum.sum/2` never compiles.
+    {"Enum", "sum", 2} => {:rename, "Enum", "sum_by"},
 
     # Hallucinated List.second — no such function, use Enum.at(list, 1)
     {"List", "second", 1} => {:rename_add_arg, "Enum", "at", "1"},
 
     # Hallucinated Enum.take_last — use Enum.take(list, -n)
-    {"Enum", "take_last", 2} => {:rename_negate_arg, "Enum", "take", 1}
+    {"Enum", "take_last", 2} => {:rename_negate_arg, "Enum", "take", 1},
+
+    # Enum.length/1 does not exist; use Kernel.length/1 (bare local call)
+    {"Enum", "length", 1} => {:drop_module, "length"},
+
+    # String.join/2 does not exist; the idiomatic call is Enum.join/2 (same args)
+    {"String", "join", 2} => {:rename, "Enum", "join"},
+
+    # List.slice/3 does not exist; Enum.slice/3 has the same (enum, start, count)
+    {"List", "slice", 3} => {:rename, "Enum", "slice"},
+
+    # Map.size/1 is deprecated in favour of the Kernel guard-safe map_size/1
+    {"Map", "size", 1} => {:drop_module, "map_size"},
+
+    # Enum.tail/1 does not exist; the head/tail equivalent is Kernel.tl/1
+    {"Enum", "tail", 1} => {:drop_module, "tl"}
   }
 
   @local_replacements %{
@@ -154,6 +183,10 @@ defmodule Credence.Semantic.UndefinedFunction do
           "#{new_mod}.#{new_fun}",
           arg_index
         )
+
+      {:drop_module, new_fun} ->
+        # Replace Module.fun(...) with new_fun(...) — strips the module prefix
+        replace_drop_module(source, line_no, mod, fun, new_fun)
 
       nil ->
         case Credence.FunctionMatcher.suggest(source, mod, fun, arity, visibility: :public_only) do
@@ -250,6 +283,30 @@ defmodule Credence.Semantic.UndefinedFunction do
     else
       result
     end
+  end
+
+  defp replace_drop_module(source, line_no, mod, fun, new_fun) do
+    # Replace Module.fun with new_fun — preserves args, strips module prefix
+    # Match both Module.fun(...) and Module.fun forms
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.map_join("\n", fn
+      {line, ^line_no} ->
+        line
+        |> String.replace("#{mod}.#{fun}(", "#{new_fun}(", global: false)
+        |> then(fn result ->
+          if result == line do
+            # Try without parens (e.g. piped Enum.length())
+            String.replace(line, "#{mod}.#{fun}", new_fun, global: false)
+          else
+            result
+          end
+        end)
+
+      {line, _} ->
+        line
+    end)
   end
 
   defp replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text) do

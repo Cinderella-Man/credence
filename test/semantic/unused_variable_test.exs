@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.UnusedVariableTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.UnusedVariable
   # ── Unit tests (rule logic with synthetic diagnostics) ──────────
@@ -66,7 +66,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert UnusedVariable.fix(source, diag) == expected
+      confirm_fix(UnusedVariable.fix(source, diag), expected)
     end
 
     test "does not double-prefix already underscored variable" do
@@ -86,7 +86,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       }
 
       # Already underscored — left untouched.
-      assert UnusedVariable.fix(source, diag) == source
+      confirm_fix(UnusedVariable.fix(source, diag), source)
     end
 
     test "fixes on correct line only" do
@@ -110,14 +110,11 @@ defmodule Credence.Semantic.UnusedVariableTest do
       total
       """
 
-      assert UnusedVariable.fix(source, diag) == expected
+      confirm_fix(UnusedVariable.fix(source, diag), expected)
     end
 
     test "handles position as bare integer" do
-      source = """
-      x = 1
-
-      """
+      source = "x = 1"
 
       diag = %{
         severity: :warning,
@@ -127,10 +124,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
         position: 1
       }
 
-      assert UnusedVariable.fix(source, diag) == """
-             _x = 1
-
-             """
+      confirm_fix(UnusedVariable.fix(source, diag), "_x = 1")
     end
   end
 
@@ -189,7 +183,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
 
     test "no issues when all variables are used" do
@@ -246,7 +240,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
 
     test "atom-keyed map, binding matches key" do
@@ -262,7 +256,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
 
     test "function name contains the binding name as a substring" do
@@ -278,7 +272,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
 
     test "function name ENDS with the binding's letters" do
@@ -296,7 +290,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
   end
 
@@ -318,7 +312,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
 
     test "list cons pattern with unused tail" do
@@ -334,7 +328,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
 
     test "lambda argument unused" do
@@ -350,7 +344,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
 
     test "multi-clause function — only the clause whose arg is unused gets touched" do
@@ -368,7 +362,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
 
     test "case clause with unused binding" do
@@ -394,7 +388,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
   end
 
@@ -422,7 +416,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
 
     test "three unused in nested pattern — all underscored, structure intact" do
@@ -444,7 +438,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
       end
       """
 
-      assert Credence.Semantic.fix(source) == expected
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
   end
 
@@ -504,10 +498,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
   describe "fix/2 — safety guards" do
     test "no column AND var name appears more than once on the line — skip" do
-      source = """
-        %{"foo" => foo} = params
-
-      """
+      source = ~S'  %{"foo" => foo} = params'
 
       diag = %{
         severity: :warning,
@@ -517,14 +508,11 @@ defmodule Credence.Semantic.UnusedVariableTest do
         position: 1
       }
 
-      assert UnusedVariable.fix(source, diag) == source
+      confirm_fix(UnusedVariable.fix(source, diag), source)
     end
 
     test "column points past the end of the line — skip" do
-      source = """
-      x = 1
-
-      """
+      source = "x = 1"
 
       diag = %{
         severity: :warning,
@@ -534,14 +522,11 @@ defmodule Credence.Semantic.UnusedVariableTest do
         position: {1, 100}
       }
 
-      assert UnusedVariable.fix(source, diag) == source
+      confirm_fix(UnusedVariable.fix(source, diag), source)
     end
 
     test "text at the given column does not start with the var name — skip" do
-      source = """
-      y = x
-
-      """
+      source = "y = x"
 
       diag = %{
         severity: :warning,
@@ -551,7 +536,7 @@ defmodule Credence.Semantic.UnusedVariableTest do
         position: {1, 1}
       }
 
-      assert UnusedVariable.fix(source, diag) == source
+      confirm_fix(UnusedVariable.fix(source, diag), source)
     end
   end
 

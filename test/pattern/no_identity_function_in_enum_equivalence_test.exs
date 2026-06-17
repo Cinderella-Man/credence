@@ -12,9 +12,7 @@ defmodule Credence.Pattern.NoIdentityFunctionInEnumEquivalenceTest do
 
   test "Enum.uniq_by(list, fn x -> x end) → Enum.uniq(list) preserves the result" do
     assert_equivalent(
-      """
-      Enum.uniq_by(list, fn x -> x end)
-      """,
+      "Enum.uniq_by(list, fn x -> x end)",
       rule: NoIdentityFunctionInEnum,
       vars: [:list],
       inputs: B.term_lists()

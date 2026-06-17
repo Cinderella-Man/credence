@@ -5,76 +5,60 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountFixTest do
 
   describe "no predicate → String.length" do
     test "nested call" do
-      assert fix(AvoidGraphemesEnumCount, """
-             Enum.count(String.graphemes(str))
-             """) ==
-               """
-               String.length(str)
-               """
+      confirm_fix(
+        fix(AvoidGraphemesEnumCount, "Enum.count(String.graphemes(str))"),
+        "String.length(str)"
+      )
     end
 
     test "two-step pipe" do
-      assert fix(AvoidGraphemesEnumCount, """
-             String.graphemes(str) |> Enum.count()
-             """) ==
-               """
-               String.length(str)
-               """
+      confirm_fix(
+        fix(AvoidGraphemesEnumCount, "String.graphemes(str) |> Enum.count()"),
+        "String.length(str)"
+      )
     end
 
     test "three-step pipe collapses to direct call" do
-      assert fix(AvoidGraphemesEnumCount, """
-             str |> String.graphemes() |> Enum.count()
-             """) ==
-               """
-               String.length(str)
-               """
+      confirm_fix(
+        fix(AvoidGraphemesEnumCount, "str |> String.graphemes() |> Enum.count()"),
+        "String.length(str)"
+      )
     end
 
     test "keeps upstream pipeline, replaces last two steps" do
-      assert fix(
-               AvoidGraphemesEnumCount,
-               """
-               str |> String.trim() |> String.graphemes() |> Enum.count()
-               """
-             ) ==
-               """
-               str |> String.trim() |> String.length()
-               """
+      confirm_fix(
+        fix(
+          AvoidGraphemesEnumCount,
+          "str |> String.trim() |> String.graphemes() |> Enum.count()"
+        ),
+        "str |> String.trim() |> String.length()"
+      )
     end
   end
 
   describe "no-ops" do
     test "String.length unchanged" do
-      code = """
-      String.length(str)
-      """
+      code = "String.length(str)"
 
-      assert fix(AvoidGraphemesEnumCount, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCount, code), code)
     end
 
     test "Enum.count on non-graphemes unchanged" do
-      code = """
-      Enum.count(list)
-      """
+      code = "Enum.count(list)"
 
-      assert fix(AvoidGraphemesEnumCount, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCount, code), code)
     end
 
     test "predicate case passes through unchanged" do
-      code = """
-      String.graphemes(str) |> Enum.count(&(&1 == "a"))
-      """
+      code = ~S'String.graphemes(str) |> Enum.count(&(&1 == "a"))'
 
-      assert fix(AvoidGraphemesEnumCount, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCount, code), code)
     end
 
     test "nested predicate case passes through unchanged" do
-      code = """
-      Enum.count(String.graphemes(str), &(&1 == "a"))
-      """
+      code = ~S'Enum.count(String.graphemes(str), &(&1 == "a"))'
 
-      assert fix(AvoidGraphemesEnumCount, code) == code
+      confirm_fix(fix(AvoidGraphemesEnumCount, code), code)
     end
   end
 

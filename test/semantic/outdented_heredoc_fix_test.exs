@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.OutdentedHeredocFixTest do
   use ExUnit.Case
 
-  import Credence.RuleCase, only: [valid_syntax?: 1]
+  import Credence.RuleCase, only: [confirm_fix: 2, valid_syntax?: 1]
 
   alias Credence.Semantic.OutdentedHeredoc
 
@@ -33,7 +33,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       end
       '''
 
-      assert OutdentedHeredoc.fix(source, diag(3)) == expected
+      confirm_fix(OutdentedHeredoc.fix(source, diag(3)), expected)
     end
 
     test "fixes all outdented lines in the heredoc in one call" do
@@ -60,7 +60,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       '''
 
       # Diagnostic points to any one line — all get fixed
-      assert OutdentedHeredoc.fix(source, diag(3)) == expected
+      confirm_fix(OutdentedHeredoc.fix(source, diag(3)), expected)
     end
 
     test "handles 4-space nested indentation" do
@@ -88,7 +88,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       end
       '''
 
-      assert OutdentedHeredoc.fix(source, diag(4)) == expected
+      confirm_fix(OutdentedHeredoc.fix(source, diag(4)), expected)
     end
 
     test "does not change lines already at or beyond closing indent" do
@@ -117,7 +117,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       '''
 
       # Line 3 (Summary.) gets fixed, iex lines already have enough indent
-      assert OutdentedHeredoc.fix(source, diag(3)) == expected
+      confirm_fix(OutdentedHeredoc.fix(source, diag(3)), expected)
     end
 
     test "does not change blank lines" do
@@ -132,7 +132,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       end
       '''
 
-      assert OutdentedHeredoc.fix(source, diag(4)) == source
+      confirm_fix(OutdentedHeredoc.fix(source, diag(4)), source)
     end
 
     test "does not change already properly indented heredoc" do
@@ -145,7 +145,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       end
       '''
 
-      assert OutdentedHeredoc.fix(source, diag(3)) == source
+      confirm_fix(OutdentedHeredoc.fix(source, diag(3)), source)
     end
 
     test "handles @moduledoc heredoc" do
@@ -169,7 +169,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       end
       '''
 
-      assert OutdentedHeredoc.fix(source, diag(3)) == expected
+      confirm_fix(OutdentedHeredoc.fix(source, diag(3)), expected)
     end
 
     test "handles non-doc heredoc (plain string)" do
@@ -193,7 +193,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       end
       '''
 
-      assert OutdentedHeredoc.fix(source, diag(4)) == expected
+      confirm_fix(OutdentedHeredoc.fix(source, diag(4)), expected)
     end
 
     test "handles bare integer position" do
@@ -216,28 +216,22 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       '''
 
       bare_diag = %{severity: :warning, message: "outdented heredoc line", position: 3}
-      assert OutdentedHeredoc.fix(source, bare_diag) == expected
+      confirm_fix(OutdentedHeredoc.fix(source, bare_diag), expected)
     end
   end
 
   describe "fix/2 — no-ops" do
     test "returns source unchanged when position is nil" do
-      source = """
-      some code
-
-      """
+      source = "some code"
 
       bad_diag = %{severity: :warning, message: "outdented heredoc line", position: nil}
-      assert OutdentedHeredoc.fix(source, bad_diag) == source
+      confirm_fix(OutdentedHeredoc.fix(source, bad_diag), source)
     end
 
     test "returns source unchanged when no closing delimiter found" do
-      source = """
-      not a heredoc at all
+      source = "not a heredoc at all"
 
-      """
-
-      assert OutdentedHeredoc.fix(source, diag(1)) == source
+      confirm_fix(OutdentedHeredoc.fix(source, diag(1)), source)
     end
 
     test "returns source unchanged when no opening delimiter found" do
@@ -246,7 +240,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
         """
       '''
 
-      assert OutdentedHeredoc.fix(source, diag(1)) == source
+      confirm_fix(OutdentedHeredoc.fix(source, diag(1)), source)
     end
   end
 
@@ -273,7 +267,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       '''
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed == expected
+      confirm_fix(fixed, expected)
     end
 
     test "does not modify properly indented heredoc" do
@@ -287,7 +281,7 @@ defmodule Credence.Semantic.OutdentedHeredocFixTest do
       '''
 
       fixed = Credence.Semantic.fix(source)
-      assert fixed == source
+      confirm_fix(fixed, source)
     end
   end
 

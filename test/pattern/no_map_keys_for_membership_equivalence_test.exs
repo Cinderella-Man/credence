@@ -12,9 +12,7 @@ defmodule Credence.Pattern.NoMapKeysForMembershipEquivalenceTest do
 
   test "x in Map.keys(m) → Map.has_key?(m, x) preserves the boolean incl. value-kind keys" do
     assert_equivalent(
-      """
-      x in Map.keys(m)
-      """,
+      "x in Map.keys(m)",
       rule: NoMapKeysForMembership,
       vars: [:x, :m],
       inputs: [

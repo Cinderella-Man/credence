@@ -19,7 +19,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == expected
+      confirm_fix(fix(NoManualFind, code), expected)
     end
 
     test "arity 2 threading a default parameter" do
@@ -37,7 +37,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == expected
+      confirm_fix(fix(NoManualFind, code), expected)
     end
 
     test "clauses in reversed order collapse at the first clause position" do
@@ -55,7 +55,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == expected
+      confirm_fix(fix(NoManualFind, code), expected)
     end
 
     test "is_* guard over the head" do
@@ -73,7 +73,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == expected
+      confirm_fix(fix(NoManualFind, code), expected)
     end
 
     test "compound boolean guard over the head" do
@@ -91,7 +91,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == expected
+      confirm_fix(fix(NoManualFind, code), expected)
     end
 
     test "public def" do
@@ -109,7 +109,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == expected
+      confirm_fix(fix(NoManualFind, code), expected)
     end
   end
 
@@ -121,7 +121,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == code
+      confirm_fix(fix(NoManualFind, code), code)
     end
 
     test "leaves a raising guard untouched" do
@@ -133,7 +133,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == code
+      confirm_fix(fix(NoManualFind, code), code)
     end
 
     test "leaves a guard referencing the second parameter untouched" do
@@ -145,7 +145,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == code
+      confirm_fix(fix(NoManualFind, code), code)
     end
 
     test "leaves an existing Enum.find/3 call untouched" do
@@ -155,7 +155,7 @@ defmodule Credence.Pattern.NoManualFindFixTest do
       end
       """
 
-      assert fix(NoManualFind, code) == code
+      confirm_fix(fix(NoManualFind, code), code)
     end
   end
 end

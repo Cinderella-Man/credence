@@ -5,15 +5,11 @@ defmodule Credence.Pattern.PreferEnumReverseTwoFixTest do
 
   describe "fix" do
     test "fixes simple Enum.reverse(acc) ++ tail" do
-      input = """
-      Enum.reverse(acc) ++ tail
-      """
+      input = "Enum.reverse(acc) ++ tail"
 
-      expected = """
-      Enum.reverse(acc, tail)
-      """
+      expected = "Enum.reverse(acc, tail)"
 
-      assert fix(PreferEnumReverseTwo, input) == expected
+      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
 
     test "fixes inside a module" do
@@ -33,57 +29,41 @@ defmodule Credence.Pattern.PreferEnumReverseTwoFixTest do
       end
       """
 
-      assert fix(PreferEnumReverseTwo, input) == expected
+      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
 
     test "fixes with complex acc expression" do
-      input = """
-      Enum.reverse(Enum.sort(list)) ++ tail
-      """
+      input = "Enum.reverse(Enum.sort(list)) ++ tail"
 
-      expected = """
-      Enum.reverse(Enum.sort(list), tail)
-      """
+      expected = "Enum.reverse(Enum.sort(list), tail)"
 
-      assert fix(PreferEnumReverseTwo, input) == expected
+      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
 
     test "fixes with complex tail expression" do
-      input = """
-      Enum.reverse(acc) ++ Enum.map(tail, &to_string/1)
-      """
+      input = "Enum.reverse(acc) ++ Enum.map(tail, &to_string/1)"
 
-      expected = """
-      Enum.reverse(acc, Enum.map(tail, &to_string/1))
-      """
+      expected = "Enum.reverse(acc, Enum.map(tail, &to_string/1))"
 
-      assert fix(PreferEnumReverseTwo, input) == expected
+      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
 
     test "fixes chained ++ from inside out" do
       # Right-associative: Enum.reverse(a) ++ (Enum.reverse(b) ++ c)
       # Should become:     Enum.reverse(a, Enum.reverse(b, c))
-      input = """
-      Enum.reverse(a) ++ Enum.reverse(b) ++ c
-      """
+      input = "Enum.reverse(a) ++ Enum.reverse(b) ++ c"
 
-      expected = """
-      Enum.reverse(a, Enum.reverse(b, c))
-      """
+      expected = "Enum.reverse(a, Enum.reverse(b, c))"
 
-      assert fix(PreferEnumReverseTwo, input) == expected
+      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
 
     test "fixes with explicit parentheses" do
-      input = """
-      (Enum.reverse(acc) ++ tail) ++ other
-      """
+      input = "(Enum.reverse(acc) ++ tail) ++ other"
 
-      expected = """
-      Enum.reverse(acc, tail) ++ other
-      """
+      expected = "Enum.reverse(acc, tail) ++ other"
 
-      assert fix(PreferEnumReverseTwo, input) == expected
+      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
 
     test "fixes multiple occurrences in different functions" do
@@ -101,7 +81,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoFixTest do
       end
       """
 
-      assert fix(PreferEnumReverseTwo, input) == expected
+      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
 
     test "fixes real-world do_merge pattern" do
@@ -119,7 +99,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoFixTest do
       end
       """
 
-      assert fix(PreferEnumReverseTwo, input) == expected
+      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
 
     test "does not modify code that is already correct" do
@@ -129,7 +109,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoFixTest do
       end
       """
 
-      assert fix(PreferEnumReverseTwo, code) == code
+      confirm_fix(fix(PreferEnumReverseTwo, code), code)
     end
 
     test "preserves other code around the fix" do
@@ -153,7 +133,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoFixTest do
       end
       """
 
-      assert fix(PreferEnumReverseTwo, input) == expected
+      confirm_fix(fix(PreferEnumReverseTwo, input), expected)
     end
   end
 end

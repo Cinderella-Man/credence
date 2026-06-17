@@ -11,9 +11,7 @@ defmodule Credence.Pattern.PreferEnumReverseTwoEquivalenceTest do
 
   test "Enum.reverse(acc) ++ tail → Enum.reverse(acc, tail) preserves the list" do
     assert_equivalent(
-      """
-      Enum.reverse(acc) ++ tail
-      """,
+      "Enum.reverse(acc) ++ tail",
       rule: PreferEnumReverseTwo,
       vars: [:acc, :tail],
       inputs: [{[1, 2], [3, 4]}, {[], [1]}, {[1], []}, {[], []}, {[1, 1.0], [2]}]

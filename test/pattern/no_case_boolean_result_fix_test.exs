@@ -16,11 +16,9 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      expected = """
-      match?(:ok, result)
-      """
+      expected = "match?(:ok, result)"
 
-      assert fix(NoCaseBooleanResult, code) == expected
+      confirm_fix(fix(NoCaseBooleanResult, code), expected)
     end
 
     test "atom pattern -> false; _ -> true" do
@@ -31,11 +29,9 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      expected = """
-      not match?(:ok, result)
-      """
+      expected = "not match?(:ok, result)"
 
-      assert fix(NoCaseBooleanResult, code) == expected
+      confirm_fix(fix(NoCaseBooleanResult, code), expected)
     end
 
     test "tuple pattern -> true; _ -> false" do
@@ -46,11 +42,9 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      expected = """
-      match?({:ok, _}, File.read(path))
-      """
+      expected = "match?({:ok, _}, File.read(path))"
 
-      assert fix(NoCaseBooleanResult, code) == expected
+      confirm_fix(fix(NoCaseBooleanResult, code), expected)
     end
 
     test "integer pattern -> true; _ -> false" do
@@ -61,11 +55,9 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      expected = """
-      match?(0, status)
-      """
+      expected = "match?(0, status)"
 
-      assert fix(NoCaseBooleanResult, code) == expected
+      confirm_fix(fix(NoCaseBooleanResult, code), expected)
     end
 
     test "piped case with trailing wildcard" do
@@ -86,7 +78,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       )
       """
 
-      assert fix(NoCaseBooleanResult, code) == expected
+      confirm_fix(fix(NoCaseBooleanResult, code), expected)
     end
   end
 
@@ -103,7 +95,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      assert fix(NoCaseBooleanResult, code) == code
+      confirm_fix(fix(NoCaseBooleanResult, code), code)
     end
 
     test "variable pattern, then wildcard (case is constant)" do
@@ -114,7 +106,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      assert fix(NoCaseBooleanResult, code) == code
+      confirm_fix(fix(NoCaseBooleanResult, code), code)
     end
 
     test "wildcard FIRST, false then true (second clause is dead)" do
@@ -125,7 +117,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      assert fix(NoCaseBooleanResult, code) == code
+      confirm_fix(fix(NoCaseBooleanResult, code), code)
     end
 
     test "wildcard FIRST, true then false (second clause is dead)" do
@@ -136,7 +128,7 @@ defmodule Credence.Pattern.NoCaseBooleanResultFixTest do
       end
       """
 
-      assert fix(NoCaseBooleanResult, code) == code
+      confirm_fix(fix(NoCaseBooleanResult, code), code)
     end
   end
 end

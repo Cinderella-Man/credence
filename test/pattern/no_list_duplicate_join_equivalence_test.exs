@@ -13,9 +13,7 @@ defmodule Credence.Pattern.NoListDuplicateJoinEquivalenceTest do
 
   test "Enum.join(List.duplicate(s, n)) → String.duplicate(s, n) over n >= 0" do
     assert_equivalent(
-      """
-      Enum.join(List.duplicate("=", n))
-      """,
+      ~S'Enum.join(List.duplicate("=", n))',
       rule: NoListDuplicateJoin,
       vars: [:n],
       inputs: [0, 1, 3, 10, 100]

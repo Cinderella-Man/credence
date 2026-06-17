@@ -35,6 +35,30 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     test "Enum.take_last/2" do
       assert UndefinedFunction.match?(warning("Enum.take_last/2 is undefined or private"))
     end
+
+    test "List.at/2" do
+      assert UndefinedFunction.match?(warning("List.at/2 is undefined or private"))
+    end
+
+    test "Enum.length/1" do
+      assert UndefinedFunction.match?(warning("Enum.length/1 is undefined or private"))
+    end
+
+    test "List.max/1" do
+      assert UndefinedFunction.match?(warning("List.max/1 is undefined or private"))
+    end
+
+    test "List.min/1" do
+      assert UndefinedFunction.match?(warning("List.min/1 is undefined or private"))
+    end
+
+    test "List.sum/1" do
+      assert UndefinedFunction.match?(warning("List.sum/1 is undefined or private"))
+    end
+
+    test "List.product/1" do
+      assert UndefinedFunction.match?(warning("List.product/1 is undefined or private"))
+    end
   end
 
   describe "match?/1 – qualified: deprecated" do
@@ -118,6 +142,15 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
 
     test "no parseable function ref" do
       refute UndefinedFunction.match?(warning("something is undefined or private"))
+    end
+
+    test "module redefinition warning does not match" do
+      refute UndefinedFunction.match?(%{
+               severity: :warning,
+               message:
+                 "redefining module Solution (current version loaded from _build/test/lib/workspace/ebin/Elixir.Solution.beam)",
+               position: 1
+             })
     end
   end
 

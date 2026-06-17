@@ -16,9 +16,7 @@ defmodule Credence.Pattern.NoSortThenReverseEquivalenceTest do
 
   test "sort |> reverse → sort(:desc) preserves ordering incl. ties" do
     assert_equivalent(
-      """
-      x |> Enum.sort() |> Enum.reverse()
-      """,
+      "x |> Enum.sort() |> Enum.reverse()",
       rule: NoSortThenReverse,
       vars: [:x],
       inputs: B.stability_lists()

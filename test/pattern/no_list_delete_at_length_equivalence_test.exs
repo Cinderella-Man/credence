@@ -13,9 +13,7 @@ defmodule Credence.Pattern.NoListDeleteAtLengthEquivalenceTest do
 
   test "delete_at(list, length-1) → delete_at(list, -1) preserves behaviour incl. empty" do
     assert_equivalent(
-      """
-      List.delete_at(list, length(list) - 1)
-      """,
+      "List.delete_at(list, length(list) - 1)",
       rule: NoListDeleteAtLength,
       vars: [:list],
       inputs: B.term_lists()

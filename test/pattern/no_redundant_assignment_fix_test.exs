@@ -22,7 +22,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
 
     test "function call RHS" do
@@ -39,7 +39,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
 
     test "pipe chain" do
@@ -56,7 +56,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
 
     test "preserves preceding statements" do
@@ -75,7 +75,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
 
     test "last pair of multiple rebindings" do
@@ -96,7 +96,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
 
     test "RHS references the same variable" do
@@ -113,7 +113,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
 
     test "inside a module" do
@@ -134,7 +134,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
 
     test "inside a case arm" do
@@ -163,7 +163,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
 
     test "inside an if branch" do
@@ -188,7 +188,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
   end
 
@@ -196,7 +196,9 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
   # TIER 2 — tuple/list of plain variables
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "removes tuple pattern assign-and-return" do
+  # Tuple/list patterns are left unchanged — narrowed to a single plain variable
+  # (collapsing `{a, b} = f(); {a, b}` would discard the match's arity assertion).
+  describe "leaves tuple/list pattern assign-and-return unchanged" do
     test "two-element tuple" do
       input = """
       def run(input) do
@@ -205,13 +207,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      expected = """
-      def run(input) do
-        process(input)
-      end
-      """
-
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
 
     test "three-element tuple" do
@@ -222,17 +218,9 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      expected = """
-      def run(input) do
-        compute(input)
-      end
-      """
-
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
-  end
 
-  describe "removes list pattern assign-and-return" do
     test "head-tail cons pattern" do
       input = """
       def run(list) do
@@ -241,13 +229,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      expected = """
-      def run(list) do
-        list
-      end
-      """
-
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
 
     test "flat list of variables" do
@@ -258,13 +240,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      expected = """
-      def run(input) do
-        process(input)
-      end
-      """
-
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
   end
 
@@ -300,7 +276,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == expected
+      confirm_fix(fix(NoRedundantAssignment, input), expected)
     end
   end
 
@@ -317,7 +293,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
 
     test "tuple with integer literal" do
@@ -328,7 +304,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
   end
 
@@ -341,7 +317,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
   end
 
@@ -354,7 +330,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
 
     test "partial return" do
@@ -365,7 +341,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
 
     test "different variable name" do
@@ -376,7 +352,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
   end
 
@@ -390,7 +366,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
   end
 
@@ -403,7 +379,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
   end
 
@@ -415,7 +391,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
 
     test "no redundant pattern" do
@@ -426,7 +402,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
 
     test "no block at all" do
@@ -436,7 +412,7 @@ defmodule Credence.Pattern.NoRedundantAssignmentFixTest do
       end
       """
 
-      assert fix(NoRedundantAssignment, input) == input
+      confirm_fix(fix(NoRedundantAssignment, input), input)
     end
   end
 end

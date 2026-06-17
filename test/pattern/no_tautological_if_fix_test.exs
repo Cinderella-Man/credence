@@ -27,7 +27,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(NoTautologicalIf, input) == expected
+      confirm_fix(fix(NoTautologicalIf, input), expected)
     end
 
     test "inline form" do
@@ -43,7 +43,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(NoTautologicalIf, input) == expected
+      confirm_fix(fix(NoTautologicalIf, input), expected)
     end
   end
 
@@ -63,7 +63,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(NoTautologicalIf, code) == code
+      confirm_fix(fix(NoTautologicalIf, code), code)
     end
 
     test "condition that binds a variable" do
@@ -77,7 +77,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(NoTautologicalIf, code) == code
+      confirm_fix(fix(NoTautologicalIf, code), code)
     end
 
     test "body binds a variable" do
@@ -93,7 +93,7 @@ defmodule Credence.Pattern.NoTautologicalIfFixTest do
       end
       """
 
-      assert fix(NoTautologicalIf, code) == code
+      confirm_fix(fix(NoTautologicalIf, code), code)
     end
   end
 end

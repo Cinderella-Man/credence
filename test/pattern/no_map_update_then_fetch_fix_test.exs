@@ -28,7 +28,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, input) == expected
+      confirm_fix(fix(NoMapUpdateThenFetch, input), expected)
     end
 
     test "fixes Map.update!/3 followed by Map.get (Map.put + Map.fetch!)" do
@@ -52,7 +52,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, input) == expected
+      confirm_fix(fix(NoMapUpdateThenFetch, input), expected)
     end
 
     test "fixes Map.update/4 followed by Map.get" do
@@ -79,7 +79,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, input) == expected
+      confirm_fix(fix(NoMapUpdateThenFetch, input), expected)
     end
 
     test "fixes with intervening code that doesn't reference the map variable" do
@@ -108,7 +108,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, input) == expected
+      confirm_fix(fix(NoMapUpdateThenFetch, input), expected)
     end
 
     test "fixes multiple update+fetch pairs in the same function" do
@@ -142,7 +142,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, input) == expected
+      confirm_fix(fix(NoMapUpdateThenFetch, input), expected)
     end
 
     test "does not modify code without Map.update" do
@@ -152,7 +152,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, code) == code
+      confirm_fix(fix(NoMapUpdateThenFetch, code), code)
     end
 
     test "does not modify code with only Map.update and no following fetch" do
@@ -164,7 +164,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, code) == code
+      confirm_fix(fix(NoMapUpdateThenFetch, code), code)
     end
 
     test "does not modify when fetch is on a different variable" do
@@ -178,7 +178,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, code) == code
+      confirm_fix(fix(NoMapUpdateThenFetch, code), code)
     end
 
     test "does not modify when fetch is on a different key" do
@@ -192,7 +192,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, code) == code
+      confirm_fix(fix(NoMapUpdateThenFetch, code), code)
     end
 
     test "does not modify when intervening code references the map variable" do
@@ -207,7 +207,7 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchFixTest do
       end
       """
 
-      assert fix(NoMapUpdateThenFetch, code) == code
+      confirm_fix(fix(NoMapUpdateThenFetch, code), code)
     end
   end
 end

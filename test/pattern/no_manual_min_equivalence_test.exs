@@ -16,9 +16,7 @@ defmodule Credence.Pattern.NoManualMinEquivalenceTest do
 
   test "if a <= b, do: a, else: b → min(a, b) preserves value+type incl. equal-different-type" do
     assert_equivalent(
-      """
-      if a <= b, do: a, else: b
-      """,
+      "if a <= b, do: a, else: b",
       rule: NoManualMin,
       vars: [:a, :b],
       inputs: @pairs
