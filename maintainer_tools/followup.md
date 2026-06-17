@@ -251,3 +251,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/prefer_fn_end_syntax_fix_test.exs`
 - Reason: line-regex on unparseable source corrupts `->` inside @moduledoc heredocs (proven: docstring `acc -> acc * 2` rewritten while real error `def f([` untouched) and wraps valid multi-clause `fn` 2-arg clauses; even the happy path is broken (`f = x -> foo(x)` -> `f = fn x -> foo(x end)`, won't parse). Same rejected class as no_while_keyword/no_spec_do_block; no parse-error location into rule, no safe narrow core.
 
+## prefer_list_update_at — 2026-06-17
+- Files:
+  - `lib/syntax/prefer_list_update_at.ex`
+  - `test/syntax/prefer_list_update_at_analyze_test.exs`
+  - `test/syntax/prefer_list_update_at_fix_test.exs`
+- Reason: List.update_elem(...) is valid Elixir that parses, so the syntax phase (runs only on unparseable source) never reaches this rule on its own target — proven dead; and when a real syntax error elsewhere makes a file unparseable, its naive string match rewrites the text inside @moduledoc docstrings/string literals (proven corruption) — same rejected class as no_while_keyword/prefer_cond_do_keyword. Belongs in a pattern/semantic AST phase (out-of-scope shared-file change); no safe narrow core in syntax.
+
