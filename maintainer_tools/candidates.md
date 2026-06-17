@@ -1,4 +1,3 @@
-lib/syntax/prefer_spec_arrow_operator.ex
 test/pattern/assumptions_filtering_test.exs
 test/pattern/avoid_graphemes_enum_count_check_test.exs
 test/pattern/avoid_graphemes_enum_count_equivalence_test.exs
@@ -193,5 +192,3 @@ test/syntax/fix_scientific_notation_analyze_test.exs
 test/syntax/fix_scientific_notation_fix_test.exs
 test/syntax/fix_stale_access_modifier_analyze_test.exs
 test/syntax/fix_stale_access_modifier_fix_test.exs
-test/syntax/prefer_spec_arrow_operator_analyze_test.exs
-test/syntax/prefer_spec_arrow_operator_fix_test.exs
