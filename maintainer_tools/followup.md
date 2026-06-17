@@ -181,3 +181,10 @@ one-line reason. Work these by hand later.
   - `test/semantic/prefer_tl_over_enum_tail_fix_test.exs`
 - Reason: duplicate — UndefinedFunction.match? already fires on "Enum.tail/1 is undefined or private" (parse_qualified_ref returns {"Enum","tail",1}); fold as a bare-Kernel rename of Enum.tail→tl into its @qualified_replacements (needs a new bare-Kernel-rename variant in undefined_function.ex, a shared-file change) rather than ship a parallel module.
 
+## close_unclosed_fn_delimiter — 2026-06-17
+- Files:
+  - `lib/syntax/close_unclosed_fn_delimiter.ex`
+  - `test/syntax/close_unclosed_fn_delimiter_analyze_test.exs`
+  - `test/syntax/close_unclosed_fn_delimiter_fix_test.exs`
+- Reason: misfires on valid standalone-fn code (f = fn x -> foo(if .. end) end); real-bug vs valid differs only by paren depth, untrackable by regex on non-parsing source (parens in strings/charlists); also insert_ends drops a paren on multi-paren case. No safe regex-narrowable core.
+

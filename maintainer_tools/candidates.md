@@ -1,4 +1,3 @@
-lib/syntax/close_unclosed_fn_delimiter.ex
 lib/syntax/fix_div_rem.ex
 lib/syntax/fix_do_block_fusion.ex
 lib/syntax/fix_missing_module_end.ex
@@ -205,8 +204,6 @@ test/semantic/outdented_heredoc_fix_test.exs
 test/semantic/undefined_string_alphanumeric_fix_test.exs
 test/semantic/unused_variable_test.exs
 test/semantic/used_underscore_variable_fix_test.exs
-test/syntax/close_unclosed_fn_delimiter_analyze_test.exs
-test/syntax/close_unclosed_fn_delimiter_fix_test.exs
 test/syntax/fix_div_rem_test.exs
 test/syntax/fix_do_block_fusion_analyze_test.exs
 test/syntax/fix_do_block_fusion_fix_test.exs
