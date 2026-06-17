@@ -1,4 +1,3 @@
-lib/semantic/prefer_kernel_max_over_local.ex
 lib/semantic/prefer_map_size_kernel.ex
 lib/semantic/prefer_tl_over_enum_tail.ex
 lib/semantic/remove_unused_typespec_when_var.ex
@@ -209,8 +208,6 @@ test/pattern/use_map_join_equivalence_test.exs
 test/pattern/use_map_join_fix_test.exs
 test/semantic/missing_use_exunit_case_fix_test.exs
 test/semantic/outdented_heredoc_fix_test.exs
-test/semantic/prefer_kernel_max_over_local_check_test.exs
-test/semantic/prefer_kernel_max_over_local_fix_test.exs
 test/semantic/prefer_map_size_kernel_check_test.exs
 test/semantic/prefer_map_size_kernel_fix_test.exs
 test/semantic/prefer_tl_over_enum_tail_check_test.exs
