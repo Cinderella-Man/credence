@@ -513,6 +513,289 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
   end
 
+  describe "List.at → Enum.at" do
+    test "direct call" do
+      confirm_fix(
+        fix(
+          "List.at(list, index)",
+          """
+          List.at/2 is undefined or private
+          """
+        ),
+        "Enum.at(list, index)"
+      )
+    end
+
+    test "piped" do
+      confirm_fix(
+        fix(
+          "list |> List.at(index)",
+          """
+          List.at/2 is undefined or private
+          """
+        ),
+        "list |> Enum.at(index)"
+      )
+    end
+
+    test "only on reported line" do
+      input = """
+      List.first(xs)
+      List.at(xs, 0)
+      List.last(xs)
+      """
+
+      confirm_fix(
+        fix(
+          input,
+          """
+          List.at/2 is undefined or private
+          """,
+          2
+        ),
+        """
+        List.first(xs)
+        Enum.at(xs, 0)
+        List.last(xs)
+        """
+      )
+    end
+
+    test "realistic context with div" do
+      input = """
+      defmodule Solution do
+        def get_middle(list) do
+          index = div(length(list), 2)
+          List.at(list, index)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Solution do
+        def get_middle(list) do
+          index = div(length(list), 2)
+          Enum.at(list, index)
+        end
+      end
+      """
+
+      confirm_fix(fix(input, "List.at/2 is undefined or private", 4), expected)
+    end
+  end
+
+  describe "Enum.length → length" do
+    test "direct call" do
+      confirm_fix(
+        fix(
+          "Enum.length(list)",
+          """
+          Enum.length/1 is undefined or private
+          """
+        ),
+        "length(list)"
+      )
+    end
+
+    test "in assignment" do
+      confirm_fix(
+        fix(
+          "n = Enum.length(items)",
+          """
+          Enum.length/1 is undefined or private
+          """
+        ),
+        "n = length(items)"
+      )
+    end
+
+    test "only on reported line" do
+      input = """
+      Enum.count(x)
+      Enum.length(x)
+      Enum.at(x, 0)
+      """
+
+      confirm_fix(
+        fix(
+          input,
+          """
+          Enum.length/1 is undefined or private
+          """,
+          2
+        ),
+        """
+        Enum.count(x)
+        length(x)
+        Enum.at(x, 0)
+        """
+      )
+    end
+
+    test "realistic context from LLM log" do
+      input = """
+      defmodule Solution do
+        @spec partition_array(list(integer()), integer()) :: integer()
+        def partition_array(list, k) when is_list(list) and is_integer(k) do
+          {less, _greater_equal} = Enum.split_with(list, fn element -> element < k end)
+          Enum.length(less)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Solution do
+        @spec partition_array(list(integer()), integer()) :: integer()
+        def partition_array(list, k) when is_list(list) and is_integer(k) do
+          {less, _greater_equal} = Enum.split_with(list, fn element -> element < k end)
+          length(less)
+        end
+      end
+      """
+
+      confirm_fix(fix(input, "Enum.length/1 is undefined or private", 5), expected)
+    end
+  end
+
+  # ── List.* → Enum.* ─────────────────────────────────────────────
+
+  describe "List.max → Enum.max" do
+    test "direct call" do
+      confirm_fix(
+        fix(
+          "List.max(integers)",
+          "List.max/1 is undefined or private"
+        ),
+        "Enum.max(integers)"
+      )
+    end
+
+    test "in expression" do
+      confirm_fix(
+        fix(
+          "List.max(integers) - List.min(integers)",
+          "List.max/1 is undefined or private"
+        ),
+        "Enum.max(integers) - List.min(integers)"
+      )
+    end
+
+    test "piped" do
+      confirm_fix(
+        fix(
+          "integers |> List.max()",
+          "List.max/1 is undefined or private"
+        ),
+        "integers |> Enum.max()"
+      )
+    end
+  end
+
+  describe "List.min → Enum.min" do
+    test "direct call" do
+      confirm_fix(
+        fix(
+          "List.min(integers)",
+          "List.min/1 is undefined or private"
+        ),
+        "Enum.min(integers)"
+      )
+    end
+
+    test "in expression" do
+      confirm_fix(
+        fix(
+          "List.max(integers) - List.min(integers)",
+          "List.min/1 is undefined or private"
+        ),
+        "List.max(integers) - Enum.min(integers)"
+      )
+    end
+
+    test "piped" do
+      confirm_fix(
+        fix(
+          "integers |> List.min()",
+          "List.min/1 is undefined or private"
+        ),
+        "integers |> Enum.min()"
+      )
+    end
+  end
+
+  describe "List.sum → Enum.sum" do
+    test "direct call" do
+      confirm_fix(
+        fix(
+          "List.sum(numbers)",
+          "List.sum/1 is undefined or private"
+        ),
+        "Enum.sum(numbers)"
+      )
+    end
+
+    test "piped" do
+      confirm_fix(
+        fix(
+          "numbers |> List.sum()",
+          "List.sum/1 is undefined or private"
+        ),
+        "numbers |> Enum.sum()"
+      )
+    end
+  end
+
+  describe "List.product → Enum.product" do
+    test "direct call" do
+      confirm_fix(
+        fix(
+          "List.product(numbers)",
+          "List.product/1 is undefined or private"
+        ),
+        "Enum.product(numbers)"
+      )
+    end
+
+    test "piped" do
+      confirm_fix(
+        fix(
+          "numbers |> List.product()",
+          "List.product/1 is undefined or private"
+        ),
+        "numbers |> Enum.product()"
+      )
+    end
+  end
+
+  describe "Enum.sum/2 → Enum.sum_by/2 (repair — sum with a mapper)" do
+    test "direct call with anonymous fn" do
+      confirm_fix(
+        fix(
+          "Enum.sum(1..n, fn k -> 1.0 / k end)",
+          "Enum.sum/2 is undefined or private. Did you mean:\n\n    * sum/1\n"
+        ),
+        "Enum.sum_by(1..n, fn k -> 1.0 / k end)"
+      )
+    end
+
+    test "piped" do
+      confirm_fix(
+        fix(
+          "1..n |> Enum.sum(fn k -> 1.0 / k end)",
+          "Enum.sum/2 is undefined or private"
+        ),
+        "1..n |> Enum.sum_by(fn k -> 1.0 / k end)"
+      )
+    end
+
+    test "valid Enum.sum/1 is untouched (no diagnostic, different arity)" do
+      confirm_fix(
+        fix("Enum.sum(numbers)", "Enum.last/1 is undefined or private"),
+        "Enum.sum(numbers)"
+      )
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "qualified: no-ops" do
