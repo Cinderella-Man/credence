@@ -202,3 +202,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/no_for_comprehension_by_step_fix_test.exs`
 - Reason: line-regex misfires on unparseable files — flags & corrupts valid `for ... do ... end` lines whose body string contains " by " (e.g. `for x <- 1..10 do IO.puts("written by hand") end` → broken output); syntax phase has no parse-revert; fix hardcodes `<=` (wrong for negative step); target syntax is speculative; no safe narrow core distinguishes bare `by` from `by`-in-string.
 
+## no_markdown_code_fences — 2026-06-17
+- Files:
+  - `lib/syntax/no_markdown_code_fences.ex`
+  - `test/syntax/no_markdown_code_fences_analyze_test.exs`
+  - `test/syntax/no_markdown_code_fences_fix_test.exs`
+- Reason: line-regex strips fence lines anywhere in an unparseable file, corrupting markdown fences inside docstrings/heredocs (proven: @moduledoc content mutated); syntax phase has no parse-revert; no safe narrow core distinguishes a wrapping fence from a fence inside a string. Same class as no_for_comprehension_by_step / no_end_keyword_variable.
+

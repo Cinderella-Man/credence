@@ -1,4 +1,3 @@
-lib/syntax/no_markdown_code_fences.ex
 lib/syntax/no_output_marker_lines.ex
 lib/syntax/no_reserved_word_variable.ex
 lib/syntax/no_spec_do_block.ex
@@ -205,8 +204,6 @@ test/syntax/fix_scientific_notation_analyze_test.exs
 test/syntax/fix_scientific_notation_fix_test.exs
 test/syntax/fix_stale_access_modifier_analyze_test.exs
 test/syntax/fix_stale_access_modifier_fix_test.exs
-test/syntax/no_markdown_code_fences_analyze_test.exs
-test/syntax/no_markdown_code_fences_fix_test.exs
 test/syntax/no_output_marker_lines_analyze_test.exs
 test/syntax/no_output_marker_lines_fix_test.exs
 test/syntax/no_reserved_word_variable_analyze_test.exs
