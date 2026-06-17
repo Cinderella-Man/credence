@@ -126,3 +126,65 @@ re-proposed.
   narrowing to provably-float x only removes the integer issue; the dense rounding
   divergence is the core behaviour and there's no statically-identifiable agreeing subset.
   (The rule's equivalence test cherry-picked 11 non-half inputs to hide it.) Dropped.
+
+## prefer_integer_digits_for_first_digit — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_integer_digits_for_first_digit.ex` (+ check/fix/equivalence tests)
+- Reason: float input diverges — string path (`n |> abs |> to_string |> String.first |> String.to_integer`) returns a digit (`3.14`→`3`) where `Integer.digits/1` raises FunctionClauseError (value-vs-crash). The base is always a runtime variable, never a provable integer at the AST; the fix also drops intermediate pipe ops (`div(3)`) by rebuilding from the leftmost base. Only safe gate (integer literal) is degenerate. Dropped.
+
+## prefer_integer_to_binary_for_bit_length — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_integer_to_binary_for_bit_length.ex` (+ check/fix/equivalence tests)
+- Reason: `floor(:math.log(n)/:math.log(2)) + 1` ≠ `integer_to_binary(n,2) |> String.length` — smallest divergence at n=2^48−1 (log→49, true→48), recurring at every 2^k−1 for k≥48 (ordinary 48-bit ints, the exact regime bit-length is used). Added `when n<0` clause turns a crash into a value (domain change). Operand is a runtime var, unbounded below 2^48; literal-only gate is degenerate. Dropped.
+
+## prefer_integer_undigits — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_integer_undigits.ex` (+ check/fix/equivalence tests)
+- Reason: `Enum.reduce(ds,0,fn d,acc->acc*10+d end)` vs `Integer.undigits(ds)` diverges — digit≥base `[12,3]`→123 vs ArgumentError; float elems→value vs FunctionClauseError; non-list enumerable (`1..3`)→value vs raise; map→ArithmeticError vs FunctionClauseError. Check fires on the reduce shape over a variable, never a provable in-range integer list; literal-list-only gate is degenerate. Dropped.
+
+## prefer_pattern_matching_for_empty_string — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_pattern_matching_for_empty_string.ex` (+ check/fix/equivalence/property tests)
+- Reason: `String.trim(var) == ""` rewritten to a `""` pattern match diverges on whitespace — `String.trim(" ")==""` is true but `match?("", " ")` is false (orig returns `[]`, fix raises on the else path). The rule structurally requires `String.trim`, whose whitespace-collapsing semantics cannot be expressed as a `""` literal; no bare-`==""` core to retreat to. Dropped.
+
+## prefer_prepend_in_accumulator — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_prepend_in_accumulator.ex` (+ check/fix/equivalence tests)
+- Reason: `List.last(acc)` reads the TAIL; the fix substitutes `head` (front) + flips `acc++[x]`→`[x|acc]` + drops `Enum.reverse`. `build_groups([1,2],[3])`: orig reads last=2, `3==2+1` true→`[[3,2,1]]`; fix reads head=1, `3==1+1` false→`[[1,2],[3]]`. Equivalent only for single-element seed accumulators, which is unprovable from the function body (callers out of scope). Dropped.
+
+## prefer_remove_unused_private_fn_param — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_remove_unused_private_fn_param.ex` (+ check/fix/equivalence tests)
+- Reason: removing a defp param deletes the call-site arg expr (drops side effects — `compute(x, IO.puts("hi"))`→`compute(x)`); the call rewriter is arity-blind (foo/2+foo/3 → wrong-arity calls that don't compile), strands `&name/n` captures, and groups defp globally across modules. Value-safety needs all call sites statically visible (defeated by captures/`apply`/sibling arities). Same family as `remove-unused-private-fn-param-unsafe`. Dropped.
+
+## prefer_reverse_for_palindrome_check — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_reverse_for_palindrome_check.ex` (+ check/fix/equivalence tests)
+- Reason: `recursive_case_body?` discards the comparison operator, so a `!=`/false-base lookalike is force-rewritten to `list == Enum.reverse(list)` — returns true on `[1,2,3,4]` vs fix's false. Even a locked core diverges on non-list input (`length(map)` raises vs fix returns false). Argument type unprovable; overfit to hardcoded names palindrome_check/palindrome_helper?. Dropped.
+
+## prefer_string_at_for_char_access — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_string_at_for_char_access.ex` (+ check/fix/equivalence tests)
+- Reason: `x = List.to_string([y])` → `<<y::utf8>>` diverges whenever y is not an integer codepoint — `y="ab"`: `List.to_string(["ab"])=="ab"` (valid) vs `<<"ab"::utf8>>` raises ArgumentError. `code_var` is always a bound variable, never a provable 0..0x10FFFF integer; literal-only gate matches nothing. Also rebinds body_var globally ignoring shadowing. Dropped.
+
+## prefer_string_capitalize — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_string_capitalize.ex` (+ check/fix/equivalence tests)
+- Reason: manual `String.upcase(String.first(s)) <> String.downcase(String.slice(s,1..))` ≠ `String.capitalize/1` under Unicode special-casing — ß→"SS" vs "Ss", ligature ﬁ→"FI" vs "Fi", digraph ǆ→"Ǆ" vs "ǅ". Divergence is driven by runtime string content, unprovable from the AST. Fix also hardcodes `capitalize_string` while firing on any function name, renaming other defps. Dropped.
+
+## prefer_string_first_last — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_string_first_last.ex` (+ check/fix/equivalence/property tests)
+- Reason: empty-string divergence — `String.split_at("",1)→{"",""}` so orig `"" == String.last("")` = `""==nil` → false vs fix `String.first("")==String.last("")` = `nil==nil` → true. Emptiness unprovable from AST (subject is a runtime var); the case subject is unchecked so it fires on lookalikes. Dropped.
+
+## prefer_tuple_for_random_access — dropped 2026-06-17
+- Files (sister `evolution`): `lib/pattern/prefer_tuple_for_random_access.ex` (+ check/fix/equivalence tests)
+- Reason: `Enum.fetch!(coll,i)` → `elem(List.to_tuple(coll),i)` diverges on negative index (`i=-1` returns vs raises), out-of-bounds (Enum.OutOfBoundsError vs ArgumentError), and non-list enumerables (range/map raise on List.to_tuple). The rule fires only when coll is a variable and i a loop variable from a range, so both type and sign are unprovable; list+literal-index gate matches nothing. (Memory: [[enum-fetch-to-elem-tuple-unsafe]].) Dropped.
+
+## avoid_binary_mid_pattern — dropped 2026-06-17
+- Files (sister `evolution`): `lib/semantic/avoid_binary_mid_pattern.ex` (+ check/fix tests)
+- Reason: in `<<first, mid::binary, last>>`, `last` is an integer byte; the fix sets it to a 1-byte BINARY via `binary_part/3`, so `first == last` becomes int-vs-binary — `"aa"`: intended `97==97` true → fix `97 == "a"` false (true→false inversion). Type change inherent to binary_part; no value of str makes a binary equal an integer. Also leaves `mid` unbound and relaxes the ≥2-byte match. Dropped.
+
+## avoid_remote_function_in_guard — dropped 2026-06-17
+- Files (sister `evolution`): `lib/semantic/avoid_remote_function_in_guard.ex` (+ check/fix tests)
+- Reason: two divergences. (A) head mismatch — `same_function?` checks name+arity only, merging clauses with different head patterns (f([h|_t],…)+f([],…) → FunctionClauseError on f([],0)). (B) guard error-swallowing — a guard that raises (x/0, `MapSet.size(:bad)`, even `Bitwise.band(:a,1)`) silently fails the guard → fallback, but lifted into `if` it propagates. Remote calls in guards are exactly the ops whose runtime errors guards swallow; lifting any into `if` diverges. No AST-provable non-raising subset. Dropped.
+
+## RECOVERED 2026-06-17 (narrowed or folded — NOT dropped; do not re-propose as standalone)
+These 7 candidates were salvaged this session and are now live on `evolution_accepted`:
+- **prefer_enum_join** → folded into `UndefinedFunction` `@qualified_replacements`: `{"String","join",2} => {:rename,"Enum","join"}`. Standalone module redundant.
+- **prefer_enum_slice_over_list_slice** → folded: `{"List","slice",3} => {:rename,"Enum","slice"}`.
+- **prefer_map_size_kernel** → folded: `{"Map","size",1} => {:drop_module,"map_size"}` (existing bare-Kernel variant; "Map.size/1 is deprecated").
+- **prefer_tl_over_enum_tail** → folded: `{"Enum","tail",1} => {:drop_module,"tl"}`.
+- **prefer_map_size** → folded into `no_enum_count_for_length`: when the counted arg is `Map.keys(m)`, emit `map_size(m)` (=== for all inputs incl. BadMapError on non-maps).
+- **prefer_negate_if_true_false** → kept as its own rule, narrowed to its UNIQUE territory (non-boolean else body OR non-provably-boolean condition) so it no longer double-fires with `no_if_true_false`. The negate-and-swap rewrite was already safe.
+- **prefer_map_intersect_over_mapset_intersection** → kept, narrowed: full two-statement block shape (check==fix), single-use intersection var, bare-var maps, and a PURE merge over count1/count2+literals (excludes element refs and makes the MapSet-vs-Map.intersect key-order difference unobservable). Large-map (>32 key) equivalence verified.

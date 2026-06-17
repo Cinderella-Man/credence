@@ -76,7 +76,19 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Enum", "take_last", 2} => {:rename_negate_arg, "Enum", "take", 1},
 
     # Enum.length/1 does not exist; use Kernel.length/1 (bare local call)
-    {"Enum", "length", 1} => {:drop_module, "length"}
+    {"Enum", "length", 1} => {:drop_module, "length"},
+
+    # String.join/2 does not exist; the idiomatic call is Enum.join/2 (same args)
+    {"String", "join", 2} => {:rename, "Enum", "join"},
+
+    # List.slice/3 does not exist; Enum.slice/3 has the same (enum, start, count)
+    {"List", "slice", 3} => {:rename, "Enum", "slice"},
+
+    # Map.size/1 is deprecated in favour of the Kernel guard-safe map_size/1
+    {"Map", "size", 1} => {:drop_module, "map_size"},
+
+    # Enum.tail/1 does not exist; the head/tail equivalent is Kernel.tl/1
+    {"Enum", "tail", 1} => {:drop_module, "tl"}
   }
 
   @local_replacements %{

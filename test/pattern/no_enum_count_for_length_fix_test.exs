@@ -91,6 +91,48 @@ defmodule Credence.Pattern.NoEnumCountForLengthFixTest do
     end
   end
 
+  describe "rewrites counting Map.keys to map_size/1" do
+    test "direct Enum.count(Map.keys(map))" do
+      input = """
+      defmodule Bad do
+        def key_count(map) do
+          Enum.count(Map.keys(map))
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def key_count(map) do
+          map_size(map)
+        end
+      end
+      """
+
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
+    end
+
+    test "piped Map.keys(map) |> Enum.count()" do
+      input = """
+      defmodule Bad do
+        def key_count(map) do
+          map |> Map.keys() |> Enum.count()
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def key_count(map) do
+          map_size(map)
+        end
+      end
+      """
+
+      confirm_fix(fix(NoEnumCountForLength, input), expected)
+    end
+  end
+
   describe "leaves untouched" do
     test "Enum.count/2 with a predicate" do
       code = """

@@ -235,6 +235,48 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDocFixTest do
 
       confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
     end
+
+    test "does not reformat unrelated, not-yet-formatted code" do
+      # The per-node patch touches only the @doc; surrounding code that the
+      # formatter would rewrite (`x+1`, `(z=y)`) must be left byte-for-byte.
+      code = """
+      defmodule Example do
+        @doc "Line one.\\nLine two."
+        def foo(x), do: x+1
+        def bar(y), do: (z=y)
+      end
+      """
+
+      expected = ~S'''
+      defmodule Example do
+        @doc """
+        Line one.
+        Line two.
+        """
+        def foo(x), do: x+1
+        def bar(y), do: (z=y)
+      end
+      '''
+
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), expected)
+    end
+
+    test "leaves a real-newline @doc untouched (out of scope)" do
+      # A doc string that already spans multiple source lines is NOT escaped
+      # `\n`, so it is left alone: its multi-line range trips a
+      # `Sourceror.patch_string` newline-swallow edge, and the whole-file
+      # re-render that would dodge it reformats unrelated code. Only the
+      # `\n`-escaped form (what LLMs emit) is converted.
+      code = """
+      defmodule Example do
+        @doc "Line one.
+      Line two."
+        def foo, do: :ok
+      end
+      """
+
+      confirm_fix(fix(PreferHeredocForMultiLineDoc, code), code)
+    end
   end
 
   describe "fix/2 — no-ops" do

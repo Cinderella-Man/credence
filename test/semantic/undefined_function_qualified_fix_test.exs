@@ -821,4 +821,44 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       )
     end
   end
+
+  # Folded from standalone candidate rules (prefer_enum_join,
+  # prefer_enum_slice_over_list_slice, prefer_map_size_kernel,
+  # prefer_tl_over_enum_tail) — each was a duplicate of this diagnostic matcher.
+
+  describe "String.join → Enum.join" do
+    test "direct call" do
+      confirm_fix(
+        fix(~S'String.join(parts, ", ")', "String.join/2 is undefined or private"),
+        ~S'Enum.join(parts, ", ")'
+      )
+    end
+  end
+
+  describe "List.slice → Enum.slice" do
+    test "direct call" do
+      confirm_fix(
+        fix("List.slice(list, 1, 3)", "List.slice/3 is undefined or private"),
+        "Enum.slice(list, 1, 3)"
+      )
+    end
+  end
+
+  describe "Map.size → map_size (deprecated)" do
+    test "direct call" do
+      confirm_fix(
+        fix("Map.size(map)", "Map.size/1 is deprecated. Use map_size/1 instead."),
+        "map_size(map)"
+      )
+    end
+  end
+
+  describe "Enum.tail → tl" do
+    test "direct call" do
+      confirm_fix(
+        fix("Enum.tail(chars)", "Enum.tail/1 is undefined or private"),
+        "tl(chars)"
+      )
+    end
+  end
 end

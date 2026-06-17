@@ -24,11 +24,19 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
   `\\n` escapes into heredoc format. The fixer preserves indentation and
   strips unnecessary trailing `\\n` (since heredocs naturally end with a
   newline). Strings containing `\\\"\\\"\\\"` are left unchanged.
+
+  ## Scope
+
+  Only `\\n`-escaped strings (the form LLMs emit) are converted, via a
+  per-node patch over just the doc attribute. A doc string that *already*
+  spans multiple source lines (a real-newline regular string) is left
+  untouched: its multi-line range trips a `Sourceror.patch_string` edge that
+  swallows the following newline, and the only safe alternative — rendering
+  the whole file — would reformat unrelated, not-yet-formatted code.
   """
 
   use Credence.Pattern.Rule
   alias Credence.Issue
-  alias Credence.RuleHelpers
 
   @doc_attrs [:doc, :moduledoc, :typedoc]
 
@@ -48,7 +56,7 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
         when attr in @doc_attrs and is_binary(value) ->
           already_heredoc = Keyword.get(str_meta, :delimiter) == ~s(""")
 
-          if not already_heredoc and (raw_multi_line?(value) or real_multi_line?(value)) do
+          if not already_heredoc and raw_multi_line?(value) do
             {node, [build_issue(meta, attr) | acc]}
           else
             {node, acc}
@@ -63,14 +71,15 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
 
   @impl true
   def fix_patches(ast, _opts) do
-    # Sourceror's AST preserves both shapes of multi-line doc strings:
-    # `@doc "a\\nb"` keeps the literal `\\n` in the string value, while
-    # `@doc """\na\nb\n"""` carries a `:delimiter` of `~s(""")` in the
-    # block metadata. `fix_doc_node/1` handles both via `raw_multi_line?`
-    # and `real_multi_line?`. The `:delimiter` check skips already-heredoc
-    # strings — re-processing one through `Sourceror.to_string` corrupts
-    # indentation.
-    RuleHelpers.patches_from_postwalk(ast, &fix_doc_node/1)
+    # Emit one patch per converted `@doc`/`@moduledoc`/`@typedoc` node, scoped
+    # to that node's range. A previous version rendered the whole fixed AST
+    # through `Sourceror.to_string` and patched the entire file, which
+    # reformatted unrelated code (`x+1` → `x + 1`, `z=y` → `z = y`) on any
+    # input that wasn't already formatter-clean — a change outside the rule's
+    # scope. `patches_from_postwalk` diffs the original against the transformed
+    # AST and patches only the changed `@doc` subtrees; `Sourceror.patch_string`
+    # re-indents the multi-line heredoc replacement to the node's start column.
+    Credence.RuleHelpers.patches_from_postwalk(ast, &fix_doc_node/1)
   end
 
   defp fix_doc_node({:@, meta, [{attr, attr_meta, [{:__block__, str_meta, [value]}]}]} = node)
@@ -78,26 +87,15 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
     # Already a heredoc — leave it alone.  Sourceror records the delimiter
     # in the string block's metadata; re-processing a heredoc through
     # Sourceror.to_string corrupts indentation and destroys the file.
-    if Keyword.get(str_meta, :delimiter) == ~s(""") do
+    if Keyword.get(str_meta, :delimiter) == ~s(""") or not raw_multi_line?(value) do
       node
     else
-      cond do
-        raw_multi_line?(value) ->
-          # Sourceror needs the value to end with `\n` so the closing
-          # `"""` renders on its own line — without it the closing
-          # delimiter ends up glued to the last content line.
-          content = unescape_value(value) |> ensure_trailing_newline()
-          new_str_meta = Keyword.put(str_meta, :delimiter, ~s("""))
-          {:@, meta, [{attr, attr_meta, [{:__block__, new_str_meta, [content]}]}]}
-
-        real_multi_line?(value) ->
-          content = ensure_trailing_newline(value)
-          new_str_meta = Keyword.put(str_meta, :delimiter, ~s("""))
-          {:@, meta, [{attr, attr_meta, [{:__block__, new_str_meta, [content]}]}]}
-
-        true ->
-          node
-      end
+      # Sourceror needs the value to end with `\n` so the closing `"""`
+      # renders on its own line — without it the closing delimiter ends up
+      # glued to the last content line.
+      content = unescape_value(value) |> ensure_trailing_newline()
+      new_str_meta = Keyword.put(str_meta, :delimiter, ~s("""))
+      {:@, meta, [{attr, attr_meta, [{:__block__, new_str_meta, [content]}]}]}
     end
   end
 
@@ -110,11 +108,6 @@ defmodule Credence.Pattern.PreferHeredocForMultiLineDoc do
   defp raw_multi_line?(value) do
     trimmed = String.trim_trailing(value, "\\n")
     String.contains?(trimmed, "\\n")
-  end
-
-  defp real_multi_line?(value) do
-    trimmed = String.trim_trailing(value, "\n")
-    String.contains?(trimmed, "\n")
   end
 
   defp unescape_value(value) do
