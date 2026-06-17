@@ -1,4 +1,3 @@
-lib/syntax/no_unclosed_fn_delimiter.ex
 lib/syntax/no_while_keyword.ex
 lib/syntax/prefer_cond_do_keyword.ex
 lib/syntax/prefer_fn_end_syntax.ex
@@ -201,8 +200,6 @@ test/syntax/fix_scientific_notation_analyze_test.exs
 test/syntax/fix_scientific_notation_fix_test.exs
 test/syntax/fix_stale_access_modifier_analyze_test.exs
 test/syntax/fix_stale_access_modifier_fix_test.exs
-test/syntax/no_unclosed_fn_delimiter_analyze_test.exs
-test/syntax/no_unclosed_fn_delimiter_fix_test.exs
 test/syntax/no_while_keyword_analyze_test.exs
 test/syntax/no_while_keyword_fix_test.exs
 test/syntax/prefer_cond_do_keyword_analyze_test.exs
