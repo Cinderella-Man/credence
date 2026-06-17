@@ -237,3 +237,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/no_while_keyword_fix_test.exs`
 - Reason: line-regex flags `while <cond> do` lines anywhere in valid source — proven to misfire inside an @moduledoc heredoc (line 5 flagged, code parses), and the fix would mangle that docstring; same rejected class as no_markdown_code_fences / no_spec_do_block (syntax phase has no per-rule parse-revert, no safe narrow core distinguishing a real loop from string content). Also `while c do ... end` is parseable Elixir (call to undefined `while`), not a true syntax error, and the while→tail-recursion rewrite is a speculative heuristic (guesses accumulator/loop/free vars), not behavior-preserving on general input.
 
+## prefer_cond_do_keyword — 2026-06-17
+- Files:
+  - `lib/syntax/prefer_cond_do_keyword.ex`
+  - `test/syntax/prefer_cond_do_keyword_analyze_test.exs`
+  - `test/syntax/prefer_cond_do_keyword_fix_test.exs`
+- Reason: line-regex rewrites `cond ->` anywhere in an unparseable file, corrupting `cond ->` text inside @moduledoc/heredocs (proven: docstring mangled while real error is elsewhere `def f([`); analyze flags the same valid doc line; syntax phase has no per-rule parse-revert and fix/analyze get no parse-error location, so no safe narrow core distinguishes a real syntax error from string content; narrowing needs error meta passed into the rule (shared Rule behaviour + phase change), out of scope. Same class as no_while_keyword / no_spec_do_block / no_markdown_code_fences.
+
