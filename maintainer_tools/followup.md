@@ -167,3 +167,10 @@ one-line reason. Work these by hand later.
   - `test/semantic/prefer_enum_slice_over_list_slice_fix_test.exs`
 - Reason: duplicate of UndefinedFunction (already matches "List.slice/3 is undefined or private" via qualified-ref regex, severity :warning); fold as one-line @qualified_replacements entry {"List","slice",3} => {:rename,"Enum","slice"} instead of a parallel module — shared-file edit, out of scope.
 
+## prefer_map_size_kernel — 2026-06-17
+- Files:
+  - `lib/semantic/prefer_map_size_kernel.ex`
+  - `test/semantic/prefer_map_size_kernel_check_test.exs`
+  - `test/semantic/prefer_map_size_kernel_fix_test.exs`
+- Reason: duplicate — UndefinedFunction.match? already fires on "Map.size/1 is deprecated"; fold into its @qualified_replacements (needs a new bare-Kernel-rename variant in undefined_function.ex, a shared-file change) rather than ship a parallel module
+
