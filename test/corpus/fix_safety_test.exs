@@ -37,6 +37,116 @@ defmodule Credence.Corpus.FixSafetyTest do
       violations = comment_loss_violations(pkg)
       assert violations == [], report(pkg, unquote(version), violations)
     end
+
+    test "fixes on #{pkg} v#{version} introduce no mangled `__`-prefixed variable" do
+      pkg = unquote(pkg)
+      violations = var_mangling_violations(pkg)
+      assert violations == [], mangling_report(pkg, unquote(version), violations)
+    end
+
+    test "fixes on #{pkg} v#{version} reformat no unrelated code (over-reach)" do
+      pkg = unquote(pkg)
+      violations = over_reach_violations(pkg)
+      assert violations == [], over_reach_report(pkg, unquote(version), violations)
+    end
+  end
+
+  # A fix must change CODE, never merely re-wrap unrelated lines. After
+  # mix-format-normalizing both sides, a replacement hunk whose deleted and
+  # inserted text are identical except for whitespace is pure reformatting the
+  # fix had no business touching (e.g. collapsing an unrelated multi-line
+  # `@attr` keyword list onto one line). A real change differs in tokens, so it
+  # is not flagged.
+  defp over_reach_violations(pkg) do
+    pkg
+    |> findings_by_file_rule()
+    |> Enum.flat_map(fn {{rel, rule, path}, lines} ->
+      src = File.read!(path)
+      fixed = safe_fix(rule, src)
+
+      case rewrap_hunks(src, fixed) do
+        [] -> []
+        hunks -> [%{rule: rule, rel: rel, lines: Enum.sort(lines), hunks: hunks}]
+      end
+    end)
+  end
+
+  defp rewrap_hunks(src, fixed) do
+    fin = String.split(fmt(src), "\n")
+    fout = String.split(fmt(fixed), "\n")
+
+    fin
+    |> List.myers_difference(fout)
+    |> paired_hunks()
+    |> Enum.filter(fn {del, ins} -> del != [] and ins != [] and nospace(del) == nospace(ins) end)
+    |> Enum.map(fn {del, _ins} -> Enum.map_join(del, " ⏎ ", &String.trim/1) end)
+  end
+
+  # Adjacent del+ins ops are a replacement hunk; del-only / ins-only are real
+  # additions/removals, not re-wraps.
+  defp paired_hunks([{:del, d}, {:ins, i} | rest]), do: [{d, i} | paired_hunks(rest)]
+  defp paired_hunks([_op | rest]), do: paired_hunks(rest)
+  defp paired_hunks([]), do: []
+
+  defp nospace(lines), do: lines |> Enum.join("\n") |> String.replace(~r/\s+/, "")
+
+  defp fmt(source) do
+    IO.iodata_to_binary(Code.format_string!(source))
+  rescue
+    _ -> source
+  end
+
+  # A fix that re-underscores an already-unused `_x` param into `__x` is a bug
+  # (`__x` is not a conventional unused name and reads as a typo). Flag any
+  # `__`-prefixed variable the fix introduces that was not already in the source.
+  defp var_mangling_violations(pkg) do
+    pkg
+    |> findings_by_file_rule()
+    |> Enum.flat_map(fn {{rel, rule, path}, lines} ->
+      src = File.read!(path)
+      fixed = safe_fix(rule, src)
+
+      case introduced_mangled_vars(src, fixed) do
+        [] -> []
+        mangled -> [%{rule: rule, rel: rel, lines: Enum.sort(lines), mangled: mangled}]
+      end
+    end)
+  end
+
+  defp introduced_mangled_vars(src, fixed) do
+    before = MapSet.new(var_names(src))
+
+    fixed
+    |> var_names()
+    |> Enum.filter(&mangled_var?/1)
+    |> Enum.reject(&MapSet.member?(before, &1))
+    |> Enum.uniq()
+  end
+
+  defp var_names(source) do
+    case Code.string_to_quoted(source) do
+      {:ok, ast} ->
+        {_ast, acc} =
+          Macro.prewalk(ast, [], fn
+            {name, _meta, ctx} = node, acc when is_atom(name) and is_atom(ctx) ->
+              {node, [name | acc]}
+
+            node, acc ->
+              {node, acc}
+          end)
+
+        acc
+
+      _ ->
+        []
+    end
+  end
+
+  # `__foo` (double-underscore, lowercase, no trailing `__`) — the mangling shape.
+  # Excludes the `__MODULE__`/`__ENV__`/… special forms (they end in `__`).
+  defp mangled_var?(name) do
+    s = Atom.to_string(name)
+    String.starts_with?(s, "__") and not String.ends_with?(s, "__")
   end
 
   # One entry per (file, rule) whose single-rule fix loses a comment.
@@ -102,6 +212,37 @@ defmodule Credence.Corpus.FixSafetyTest do
     #{length(violations)} fix(es) on #{pkg} v#{version} silently drop a source comment
     (the replacement AST does not carry the comment that sat in the rewritten
     construct). Each line is a rule whose fix must preserve the comment:
+
+    #{body}
+    """
+  end
+
+  defp mangling_report(pkg, version, violations) do
+    body =
+      Enum.map_join(violations, "\n", fn v ->
+        "  • #{v.rel}:#{Enum.join(v.lines, ",")}  #{v.rule}\n" <>
+          "      introduced variable(s): #{Enum.join(v.mangled, ", ")}"
+      end)
+
+    """
+    #{length(violations)} fix(es) on #{pkg} v#{version} introduce a mangled `__`-prefixed
+    variable (an already-unused `_x` re-underscored into `__x`):
+
+    #{body}
+    """
+  end
+
+  defp over_reach_report(pkg, version, violations) do
+    body =
+      Enum.map_join(violations, "\n", fn v ->
+        "  • #{v.rel}:#{Enum.join(v.lines, ",")}  #{v.rule}\n" <>
+          Enum.map_join(v.hunks, "\n", &"      re-wrapped (unchanged) code: #{&1}")
+      end)
+
+    """
+    #{length(violations)} fix(es) on #{pkg} v#{version} reformat code they did not change
+    (a hunk whose text is identical except for whitespace — the fix re-wrapped a
+    node it had no business touching). Each is a rule whose fix must be surgical:
 
     #{body}
     """

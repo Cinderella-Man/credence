@@ -123,6 +123,57 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxCheckTest do
     end
   end
 
+  # ── does NOT flag a <<literal>> kept parallel to a binary-match clause ──
+
+  describe "does NOT flag a <<literal>> head parallel to a real binary pattern" do
+    test "case clause beside a multi-segment binary pattern" do
+      code = """
+      case url do
+        <<"/">> -> root()
+        <<"/", rest::binary>> -> sub(rest)
+        _ -> other()
+      end
+      """
+
+      assert check(NoRedundantBinarySyntax, code) == []
+    end
+
+    test "anonymous fn clause beside a binary pattern" do
+      code = """
+      fn
+        <<"x">> -> 1
+        <<"x", _::binary>> -> 2
+      end
+      """
+
+      assert check(NoRedundantBinarySyntax, code) == []
+    end
+  end
+
+  describe "still flags despite a nearby clause list" do
+    test "a <<literal>> in a clause BODY (not a head) is not parallel" do
+      code = """
+      case url do
+        <<"/", rest::binary>> -> wrap(rest)
+        _ -> <<"fallback">>
+      end
+      """
+
+      assert [%Issue{}] = check(NoRedundantBinarySyntax, code)
+    end
+
+    test "single-literal heads with no real-binary sibling are still redundant" do
+      code = """
+      case x do
+        <<"a">> -> 1
+        <<"b">> -> 2
+      end
+      """
+
+      assert [%Issue{}, %Issue{}] = check(NoRedundantBinarySyntax, code)
+    end
+  end
+
   # ── does NOT flag sigils (regression) ──────────────────────────
 
   describe "does NOT flag sigils (regression)" do

@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     confirm_fix(fix(NoCaseOnParamDispatch, code), expected)
   end
 
-  test "list patterns, catch-all body refers to the parameter (kept via `_ = v`)" do
+  test "list patterns, catch-all body refers to the parameter (kept as the bare var)" do
     code = """
     def pick_coins(coins) do
       case coins do
@@ -41,7 +41,7 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
     def pick_coins([]), do: 0
     def pick_coins([first]), do: first
     def pick_coins([first, second]), do: max(first, second)
-    def pick_coins(_ = coins), do: do_pick_coins(coins, 0, 0)
+    def pick_coins(coins), do: do_pick_coins(coins, 0, 0)
     """
 
     confirm_fix(fix(NoCaseOnParamDispatch, code), expected)

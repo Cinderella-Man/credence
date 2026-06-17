@@ -46,18 +46,46 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
 
   @impl true
   def fix_patches(ast, _opts) do
-    RuleHelpers.patches_from_ast_transform(ast, "", fn ast ->
-      Macro.prewalk(ast, fn
-        {:__block__, meta, stmts} when is_list(stmts) ->
-          case strip_duplicate_clauses(stmts) do
-            [single] -> single
-            kept -> {:__block__, meta, kept}
+    # Delete each duplicate clause surgically (whole-line), so the surrounding
+    # code — unrelated module attributes, other clauses — keeps its exact source.
+    # Re-rendering the whole block reformatted distant code (e.g. collapsed a
+    # multi-line `@attr` keyword list).
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        {:__block__, _meta, stmts} = node, acc when is_list(stmts) ->
+          dups = duplicate_clause_nodes(stmts)
+          {node, acc ++ Enum.map(dups, &RuleHelpers.deletion_patch/1)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reject(patches, &is_nil/1)
+  end
+
+  # The duplicate clause nodes (every clause after the first of each signature) —
+  # i.e. exactly the nodes `strip_duplicate_clauses/1` drops.
+  defp duplicate_clause_nodes(stmts) do
+    {_seen, dups} =
+      Enum.reduce(stmts, {MapSet.new(), []}, fn
+        {dt, _, _} = node, {seen, dups} when dt in [:def, :defp] ->
+          case extract_clause_info(node) do
+            {name, arity, args, guard} ->
+              sig = signature(name, arity, args, guard)
+
+              if MapSet.member?(seen, sig),
+                do: {seen, [node | dups]},
+                else: {MapSet.put(seen, sig), dups}
+
+            nil ->
+              {seen, dups}
           end
 
-        node ->
-          node
+        _node, acc ->
+          acc
       end)
-    end)
+
+    Enum.reverse(dups)
   end
 
   # Detect duplicate function clauses in a block of statements.
@@ -86,33 +114,6 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
       end)
 
     issues
-  end
-
-  # Remove duplicate function clauses, keeping only the first of each signature.
-  defp strip_duplicate_clauses(stmts) do
-    {_, filtered} =
-      Enum.reduce(stmts, {MapSet.new(), []}, fn
-        {dt, _, _} = node, {seen, acc} when dt in [:def, :defp] ->
-          case extract_clause_info(node) do
-            {name, arity, args, guard} ->
-              sig = signature(name, arity, args, guard)
-
-              if MapSet.member?(seen, sig) do
-                # Duplicate — drop it
-                {seen, acc}
-              else
-                {MapSet.put(seen, sig), [node | acc]}
-              end
-
-            nil ->
-              {seen, [node | acc]}
-          end
-
-        node, {seen, acc} ->
-          {seen, [node | acc]}
-      end)
-
-    Enum.reverse(filtered)
   end
 
   # Extract {name, arity, args, guard_parts} from a def/defp node.

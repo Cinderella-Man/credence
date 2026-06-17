@@ -19,10 +19,18 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapsetFixTest do
     confirm_fix(fix(NoEnumIntoEmptyMapset, code), expected)
   end
 
-  test "rewrites piped Enum.into(MapSet.new()) to MapSet.new(enum)" do
+  test "rewrites piped Enum.into(MapSet.new()) to piped MapSet.new()" do
     code = "pairs |> Enum.into(MapSet.new())"
 
-    expected = "MapSet.new(pairs)"
+    expected = "pairs |> MapSet.new()"
+
+    confirm_fix(fix(NoEnumIntoEmptyMapset, code), expected)
+  end
+
+  test "keeps a multi-stage pipe instead of nesting it as an argument" do
+    code = "path |> recurse_path() |> Enum.into(MapSet.new())"
+
+    expected = "path |> recurse_path() |> MapSet.new()"
 
     confirm_fix(fix(NoEnumIntoEmptyMapset, code), expected)
   end

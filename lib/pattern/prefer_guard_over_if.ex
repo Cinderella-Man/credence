@@ -419,7 +419,9 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   defp underscore_unused_params(head, used_names) do
     Macro.postwalk(head, fn
       {name, meta, ctx} when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
-        if name in used_names or name == :_ do
+        # Leave a name that is already underscore-prefixed (`_x`, `_`) alone —
+        # re-underscoring it into `__x` is not a conventional unused name.
+        if name in used_names or String.starts_with?(Atom.to_string(name), "_") do
           {name, meta, ctx}
         else
           {:"_#{name}", meta, ctx}

@@ -13,9 +13,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
 
     expected = """
     defmodule Example do
-      def bar(x, y) do
-        {x, y}
-      end
+      def bar(x, y), do: {x, y}
     end
     """
 
@@ -33,9 +31,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
 
     expected = """
     defmodule Example do
-      def bar(x, y) do
-        {x, y}
-      end
+      def bar(x, y), do: {x, y}
     end
     """
 
@@ -52,9 +48,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
 
     expected = """
     defmodule Example do
-      def bar(x, y) do
-        {x, y}
-      end
+      def bar(x, y), do: {x, y}
     end
     """
 

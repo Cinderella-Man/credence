@@ -148,7 +148,6 @@ test/pattern/no_take_while_length_check_fix_test.exs
 test/pattern/no_tautological_if_equivalence_test.exs
 test/pattern/no_tautological_if_fix_test.exs
 test/pattern/no_trailing_newline_in_doc_fix_test.exs
-test/pattern/no_trivial_delegation_fix_test.exs
 test/pattern/no_underscore_function_name_fix_test.exs
 test/pattern/no_uniq_then_count_equivalence_test.exs
 test/pattern/no_uniq_then_count_fix_test.exs

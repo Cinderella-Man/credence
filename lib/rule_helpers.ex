@@ -404,14 +404,27 @@ defmodule Credence.RuleHelpers do
   # node's range. Result: patches at the *outermost* point of divergence,
   # never nested.
 
-  defp diff_patches(same, same), do: []
+  # Skip any node whose structure is unchanged ignoring metadata: it differs only
+  # in layout (the transform re-rendered it via `Sourceror.to_string`), so leaving
+  # it untouched preserves its original source rather than reformatting code the
+  # rule never meant to change.
+  defp diff_patches(orig, modified) do
+    if orig == modified or strip_all_meta(orig) == strip_all_meta(modified) do
+      []
+    else
+      diff_patches_structural(orig, modified)
+    end
+  end
 
   # `:__block__` wrappers around a single literal leaf (string, atom,
   # number) carry no source position of their own beyond the wrapper.
   # If the wrapped value changed, the patch must land at the wrapper's
   # range — recursing into the args list would drop us at a bare literal
   # with no range, losing the patch.
-  defp diff_patches({:__block__, _, [val_o]} = orig, {:__block__, _, [val_m]} = modified)
+  defp diff_patches_structural(
+         {:__block__, _, [val_o]} = orig,
+         {:__block__, _, [val_m]} = modified
+       )
        when val_o != val_m and not is_tuple(val_o) and not is_list(val_o) do
     case node_range(orig) do
       nil -> []
@@ -422,7 +435,7 @@ defmodule Credence.RuleHelpers do
   # Same 3-tuple shape with same arity — recurse into args. (Form must
   # be deeply equal too: an atom-form vs tuple-form is structurally
   # different and should patch the whole node.)
-  defp diff_patches({form, _, args_o}, {form, _, args_m})
+  defp diff_patches_structural({form, _, args_o}, {form, _, args_m})
        when is_list(args_o) and is_list(args_m) and length(args_o) == length(args_m) do
     args_o
     |> Enum.zip(args_m)
@@ -438,7 +451,7 @@ defmodule Credence.RuleHelpers do
   # whole-line; inline sibling lists (call args, tuples) fall through to the
   # whole-node render below, which is small and already correct. Falls back for
   # anything that can't be aligned cleanly.
-  defp diff_patches({:__block__, _, args_o} = orig, {:__block__, _, args_m} = modified)
+  defp diff_patches_structural({:__block__, _, args_o} = orig, {:__block__, _, args_m} = modified)
        when is_list(args_o) and is_list(args_m) do
     case aligned_patches(args_o, args_m) do
       {:ok, patches} -> patches
@@ -447,7 +460,7 @@ defmodule Credence.RuleHelpers do
   end
 
   # Lists of the same length — zip and recurse.
-  defp diff_patches([_ | _] = orig, [_ | _] = modified)
+  defp diff_patches_structural([_ | _] = orig, [_ | _] = modified)
        when length(orig) == length(modified) do
     orig
     |> Enum.zip(modified)
@@ -455,14 +468,14 @@ defmodule Credence.RuleHelpers do
   end
 
   # 2-tuples (keyword pair etc.) — recurse on each side.
-  defp diff_patches({a_o, b_o}, {a_m, b_m}) do
+  defp diff_patches_structural({a_o, b_o}, {a_m, b_m}) do
     diff_patches(a_o, a_m) ++ diff_patches(b_o, b_m)
   end
 
   # Structures diverge here — emit one patch covering the original
   # node's range. Skip if the original is a leaf without a range
   # (Sourceror can't pinpoint bare literals/atoms).
-  defp diff_patches(orig, modified) do
+  defp diff_patches_structural(orig, modified) do
     case node_range(orig) do
       nil ->
         []
@@ -633,6 +646,26 @@ defmodule Credence.RuleHelpers do
   @spec node_comments(Macro.t(), :leading_comments | :trailing_comments) :: list()
   def node_comments({_form, meta, _args}, key) when is_list(meta), do: Keyword.get(meta, key, [])
   def node_comments(_node, _key), do: []
+
+  @doc """
+  A whole-line deletion patch for `node` — removes its full line span (column 1
+  of its first line through column 1 of the line after its last), so no
+  blank-but-indented remnant is left. Returns `nil` if `node` has no range. Use
+  for a fix that removes a statement/clause without re-rendering its siblings.
+  """
+  @spec deletion_patch(Macro.t()) :: map() | nil
+  def deletion_patch(node) do
+    case node_range(node) do
+      %Sourceror.Range{start: s, end: e} ->
+        %{
+          range: %{start: [line: s[:line], column: 1], end: [line: e[:line] + 1, column: 1]},
+          change: ""
+        }
+
+      _ ->
+        nil
+    end
+  end
 
   @doc """
   Every comment (leading and trailing, at any depth) within `node`'s subtree, in

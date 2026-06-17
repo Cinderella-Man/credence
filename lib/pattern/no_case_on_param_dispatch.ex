@@ -214,11 +214,24 @@ defmodule Credence.Pattern.NoCaseOnParamDispatch do
   # Keep the parameter bound when the body or guard still refer to it.
   defp build_head_pattern(pattern, guard, body, var) do
     cond do
-      binds_var?(pattern, var) -> pattern
-      mentions_var?(body, var) or mentions_var?(guard, var) -> {:=, [], [pattern, {var, [], nil}]}
-      true -> pattern
+      binds_var?(pattern, var) ->
+        pattern
+
+      mentions_var?(body, var) or mentions_var?(guard, var) ->
+        # A bare `_` that just needs to bind the dispatch var becomes the var
+        # itself (`chars`), not the redundant `_ = chars`. Any other pattern is
+        # kept and bound (`[h | t] = chars`).
+        if bare_underscore?(pattern),
+          do: {var, [], nil},
+          else: {:=, [], [pattern, {var, [], nil}]}
+
+      true ->
+        pattern
     end
   end
+
+  defp bare_underscore?({:_, _meta, ctx}) when is_atom(ctx), do: true
+  defp bare_underscore?(_), do: false
 
   # Does `var` appear as a bound variable anywhere in a pattern? (Patterns have
   # no `^` pins here — they are rejected upstream — so every matching var node

@@ -39,11 +39,9 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:def, meta, [{:when, _, [_call, guard]} | _rest]} = node, issues ->
-          {node, find_fixable_length(guard, meta, issues)}
-
-        {:defp, meta, [{:when, _, [_call, guard]} | _rest]} = node, issues ->
-          {node, find_fixable_length(guard, meta, issues)}
+        {kind, meta, [{:when, _, [call, guard]} | _rest]} = node, issues
+        when kind in [:def, :defp] ->
+          {node, flag_if_fixable(call, guard, meta, issues)}
 
         node, issues ->
           {node, issues}
@@ -51,6 +49,25 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
 
     Enum.reverse(issues)
   end
+
+  # Flag only what the fix can actually rewrite: a `length(var) > 0` / `== N`
+  # guard whose `var` is a top-level function parameter. Mirroring the fix
+  # (`extract_fixable_check` + the param check in `replace_param`) keeps check and
+  # fix in agreement, so the rule never flags a guard it would then no-op on
+  # (e.g. a `length(x) == 1` on a variable captured deep inside a pattern).
+  defp flag_if_fixable(call, guard, def_meta, acc) do
+    with {:ok, var, pattern_kind, _remaining} <- extract_fixable_check(guard),
+         true <- var_is_param?(call, var) do
+      [build_issue(pattern_kind, Keyword.get(def_meta, :line)) | acc]
+    else
+      _ -> acc
+    end
+  end
+
+  defp var_is_param?({_name, _meta, params}, var) when is_list(params),
+    do: Enum.any?(params, &same_var?(&1, var))
+
+  defp var_is_param?(_call, _var), do: false
 
   @impl true
   def fix_patches(ast, _opts) do
@@ -67,39 +84,6 @@ defmodule Credence.Pattern.NoLengthGuardToPattern do
   end
 
   # Check helpers
-  defp find_fixable_length(guard_ast, def_meta, acc) do
-    {_ast, issues} =
-      Macro.prewalk(guard_ast, acc, fn
-        # length(var) > 0
-        {:>, meta, [{:length, _, [_var]}, n_node]} = node, issues ->
-          if unwrap_int(n_node) == 0 do
-            line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
-            {node, [build_issue(:non_empty, line) | issues]}
-          else
-            {node, issues}
-          end
-
-        # length(var) == N where N in 1..5
-        {:==, meta, [{:length, _, [_var]}, n_node]} = node, issues ->
-          case unwrap_int(n_node) do
-            n when is_integer(n) and n >= 1 and n <= 5 ->
-              line = Keyword.get(meta, :line) || Keyword.get(def_meta, :line)
-              {node, [build_issue({:exact, n}, line) | issues]}
-
-            _ ->
-              {node, issues}
-          end
-
-        node, issues ->
-          {node, issues}
-      end)
-
-    issues
-  end
-
-  defp unwrap_int({:__block__, _, [n]}) when is_integer(n), do: n
-  defp unwrap_int(_), do: nil
-
   defp build_issue(:non_empty, line) do
     %Issue{
       rule: :no_length_guard_to_pattern,

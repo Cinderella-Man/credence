@@ -92,6 +92,38 @@ defmodule Credence.Pattern.NoRedundantBinarySyntaxFixTest do
 
   # ── no-ops ─────────────────────────────────────────────────────
 
+  describe "parallel binary clause" do
+    test "keeps a <<literal>> head that lines up with a binary-match clause" do
+      code = """
+      case url do
+        <<"/">> -> root()
+        <<"/", rest::binary>> -> sub(rest)
+        _ -> other()
+      end
+      """
+
+      confirm_fix(fix(NoRedundantBinarySyntax, code), code)
+    end
+
+    test "still fixes a <<literal>> in a clause body" do
+      code = """
+      case url do
+        <<"/", rest::binary>> -> handle(<<"x">>, rest)
+        <<"/">> -> root()
+      end
+      """
+
+      expected = """
+      case url do
+        <<"/", rest::binary>> -> handle("x", rest)
+        <<"/">> -> root()
+      end
+      """
+
+      confirm_fix(fix(NoRedundantBinarySyntax, code), expected)
+    end
+  end
+
   describe "no-ops" do
     test "returns source unchanged when nothing to fix" do
       code = ~S'x = "hello"'
