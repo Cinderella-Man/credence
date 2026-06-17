@@ -244,3 +244,10 @@ one-line reason. Work these by hand later.
   - `test/syntax/prefer_cond_do_keyword_fix_test.exs`
 - Reason: line-regex rewrites `cond ->` anywhere in an unparseable file, corrupting `cond ->` text inside @moduledoc/heredocs (proven: docstring mangled while real error is elsewhere `def f([`); analyze flags the same valid doc line; syntax phase has no per-rule parse-revert and fix/analyze get no parse-error location, so no safe narrow core distinguishes a real syntax error from string content; narrowing needs error meta passed into the rule (shared Rule behaviour + phase change), out of scope. Same class as no_while_keyword / no_spec_do_block / no_markdown_code_fences.
 
+## prefer_fn_end_syntax — 2026-06-17
+- Files:
+  - `lib/syntax/prefer_fn_end_syntax.ex`
+  - `test/syntax/prefer_fn_end_syntax_analyze_test.exs`
+  - `test/syntax/prefer_fn_end_syntax_fix_test.exs`
+- Reason: line-regex on unparseable source corrupts `->` inside @moduledoc heredocs (proven: docstring `acc -> acc * 2` rewritten while real error `def f([` untouched) and wraps valid multi-clause `fn` 2-arg clauses; even the happy path is broken (`f = x -> foo(x)` -> `f = fn x -> foo(x end)`, won't parse). Same rejected class as no_while_keyword/no_spec_do_block; no parse-error location into rule, no safe narrow core.
+
