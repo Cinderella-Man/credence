@@ -268,11 +268,17 @@ defmodule Credence.RuleHelpers do
 
   # `Sourceror.patch_string` re-indents multi-line replacements to
   # match the patch's start column, which can turn empty blank lines
-  # in the replacement into whitespace-only lines. Clean those up.
+  # in the replacement into whitespace-only lines. Collapse only those
+  # all-whitespace lines to empty — do NOT trim content lines, since a
+  # content line's trailing whitespace may be significant *inside* a
+  # multi-line string/heredoc literal (e.g. expected output in a doctest),
+  # which a blanket trim would silently mutate.
   defp strip_trailing_ws_per_line(text) do
     text
     |> String.split("\n")
-    |> Enum.map_join("\n", &String.trim_trailing/1)
+    |> Enum.map_join("\n", fn line ->
+      if String.trim(line) == "", do: "", else: line
+    end)
   end
 
   @doc """

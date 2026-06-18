@@ -48,12 +48,12 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   def fix_patches(ast, _opts) do
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
-        {kind, _meta, [{:when, _when_meta, [call, guard]} = when_node | rest]} = node, acc
+        {kind, _meta, [{:when, _when_meta, [call, guard]} | rest]} = node, acc
         when kind in [:def, :defp] ->
           {_name, _call_meta, params} = call
           param_names = extract_param_names(params)
 
-          case build_when_patch(when_node, call, guard, rest, param_names) do
+          case build_when_patch(node, call, guard, rest, param_names) do
             nil -> {node, acc}
             patch -> {node, [patch | acc]}
           end
@@ -69,7 +69,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   # source range with either the rewritten call (when every guard
   # equality has been substituted into the head) or `call when remaining_guard`
   # (when some guard expressions remain). Body is untouched.
-  defp build_when_patch(when_node, call, guard, rest, param_names) do
+  defp build_when_patch(node, call, guard, rest, param_names) do
     if guard_safe_to_fix?(guard) do
       case find_guard_equalities(guard, param_names) do
         [] ->
@@ -87,13 +87,26 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
             new_params = apply_fixes_to_params(params, matches)
             new_call = put_elem(call, 2, new_params)
 
-            change =
+            new_head =
               case remaining_guard do
-                nil -> Macro.to_string(new_call)
-                remaining -> "#{Macro.to_string(new_call)} when #{Macro.to_string(remaining)}"
+                nil -> new_call
+                remaining -> {:when, [], [new_call, remaining]}
               end
 
-            %{range: Sourceror.get_range(when_node), change: change}
+            # Render the WHOLE clause (new head + the untouched body) rather than
+            # patching just the `:when` node: Sourceror's range for `:when`
+            # over-extends to the trailing comma of a `head when g, do: …`
+            # one-liner, so a string patch there eats the comma and yields
+            # non-compiling `name(pattern) do: …`. Rebuilding the def renders the
+            # `, do:` correctly; the body is reused verbatim (mix format then
+            # normalises layout, so unchanged code is not reformatted).
+            {kind, _meta, _args} = node
+            new_def = {kind, [line: 1], [new_head | rest]}
+
+            %{
+              range: Sourceror.get_range(node),
+              change: Credence.RuleHelpers.render_replacement(new_def, %{})
+            }
           end
       end
     end

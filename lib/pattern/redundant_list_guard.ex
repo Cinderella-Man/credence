@@ -53,9 +53,11 @@ defmodule Credence.Pattern.RedundantListGuard do
 
   @impl true
   def check(ast, _opts) do
+    cons_index = cons_indices_by_sig(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, issues ->
-        case check_node(node) do
+        case check_node(node, cons_index) do
           {:ok, new_issues} -> {node, new_issues ++ issues}
           :error -> {node, issues}
         end
@@ -66,31 +68,43 @@ defmodule Credence.Pattern.RedundantListGuard do
 
   @impl true
   def fix_patches(ast, _opts) do
+    cons_index = cons_indices_by_sig(ast)
+
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {def_type, meta, [{:when, when_meta, [fun_head, guard]}, body]} = node
       when def_type in [:def, :defp] ->
         args = extract_args(fun_head)
         cons_tail_vars = collect_cons_tails(args)
+        redundant_vars = find_redundant_is_list(guard, cons_tail_vars)
 
-        case find_redundant_is_list(guard, cons_tail_vars) do
-          [] ->
-            node
-
-          redundant_vars ->
-            case simplify_guard(guard, redundant_vars) do
-              :always_true ->
-                # Entire guard is redundant — remove the `when` clause
-                {def_type, meta, [fun_head, body]}
-
-              {:ok, simplified_guard} ->
-                # Only some sub-expressions were redundant
-                {def_type, meta, [{:when, when_meta, [fun_head, simplified_guard]}, body]}
-            end
+        if redundant_vars != [] and
+             guard_load_bearing?(fun_head, meta, args, redundant_vars, cons_index) do
+          node
+        else
+          fix_guarded_clause(node, def_type, meta, when_meta, fun_head, guard, body, cons_tail_vars)
         end
 
       node ->
         node
     end)
+  end
+
+  defp fix_guarded_clause(node, def_type, meta, when_meta, fun_head, guard, body, cons_tail_vars) do
+    case find_redundant_is_list(guard, cons_tail_vars) do
+      [] ->
+        node
+
+      redundant_vars ->
+        case simplify_guard(guard, redundant_vars) do
+          :always_true ->
+            # Entire guard is redundant — remove the `when` clause
+            {def_type, meta, [fun_head, body]}
+
+          {:ok, simplified_guard} ->
+            # Only some sub-expressions were redundant
+            {def_type, meta, [{:when, when_meta, [fun_head, simplified_guard]}, body]}
+        end
+    end
   end
 
   # GUARD SIMPLIFICATION
@@ -131,19 +145,30 @@ defmodule Credence.Pattern.RedundantListGuard do
   end
 
   # Match def/defp with a `when` guard.
-  defp check_node({def_type, _meta, [{:when, when_meta, [fun_head, guard]}, _body]})
+  defp check_node({def_type, meta, [{:when, when_meta, [fun_head, guard]}, _body]}, cons_index)
        when def_type in [:def, :defp] do
     args = extract_args(fun_head)
     cons_tail_vars = collect_cons_tails(args)
     redundant_vars = find_redundant_is_list(guard, cons_tail_vars)
 
-    case redundant_vars do
-      [] ->
+    cond do
+      redundant_vars == [] ->
         :error
 
-      vars ->
+      # Removing the guard widens this clause to also match improper-tail inputs
+      # it currently rejects. That is safe under `proper_lists` UNLESS another
+      # clause of the same name/arity has a *cons* pattern at the same argument
+      # position — a clause written specifically to destructure an improper
+      # tail. Then the guard is load-bearing (it routes the improper case to
+      # that sibling), the `proper_lists` promise is locally false, and removing
+      # it would steal that input. A bare catch-all (`f(_)`) sibling is not such
+      # a signal, so the rule still fires there (per the assumption's intent).
+      guard_load_bearing?(fun_head, meta, args, redundant_vars, cons_index) ->
+        :error
+
+      true ->
         issues =
-          Enum.map(vars, fn var ->
+          Enum.map(redundant_vars, fn var ->
             %Issue{
               rule: :redundant_list_guard,
               message: build_message(var),
@@ -155,7 +180,102 @@ defmodule Credence.Pattern.RedundantListGuard do
     end
   end
 
-  defp check_node(_), do: :error
+  defp check_node(_, _), do: :error
+
+  # `%{{name, arity} => [{line, MapSet(cons_arg_index)}]}` — for every def/defp
+  # clause, which argument positions hold a cons (`[_ | _]`) pattern. Lets a
+  # candidate clause ask whether a *sibling* clause destructures a cons at the
+  # same position (see `guard_load_bearing?/5`). Bodiless heads are 1-element
+  # and excluded; they generate no clause.
+  defp cons_indices_by_sig(ast) do
+    {_ast, map} =
+      Macro.prewalk(ast, %{}, fn
+        {dt, meta, [head, _body]} = node, acc when dt in [:def, :defp] ->
+          case head_sig(head) do
+            {name, arity, args} ->
+              entry = {Keyword.get(meta, :line) || 0, cons_arg_indices(args)}
+              {node, Map.update(acc, {name, arity}, [entry], &[entry | &1])}
+
+            nil ->
+              {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    map
+  end
+
+  defp head_sig({:when, _, [{name, _, args} | _guard]}) when is_atom(name) and is_list(args),
+    do: {name, length(args), args}
+
+  defp head_sig({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args), args}
+  defp head_sig(_), do: nil
+
+  # Top-level argument indices whose pattern contains a cons (`[_ | _]`).
+  defp cons_arg_indices(args) do
+    args
+    |> Enum.with_index()
+    |> Enum.filter(fn {arg, _i} -> contains_cons?(arg) end)
+    |> Enum.map(fn {_arg, i} -> i end)
+    |> MapSet.new()
+  end
+
+  defp contains_cons?(arg) do
+    {_node, found?} =
+      Macro.prewalk(arg, false, fn
+        {:|, _, _} = node, _acc -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found?
+  end
+
+  # True when removing the redundant guard is unsafe because a *sibling* clause
+  # (same name/arity, different source line) has a cons pattern at one of the
+  # argument positions this clause guards with `is_list` — i.e. a clause that
+  # can match the improper tail the guard currently filters out.
+  defp guard_load_bearing?(fun_head, meta, args, redundant_vars, cons_index) do
+    case head_sig(fun_head) do
+      {name, arity, _args} ->
+        line = Keyword.get(meta, :line) || 0
+        guarded = guarded_cons_indices(args, redundant_vars)
+
+        sibling_cons =
+          cons_index
+          |> Map.get({name, arity}, [])
+          |> Enum.reject(fn {l, _idxs} -> l == line end)
+          |> Enum.reduce(MapSet.new(), fn {_l, idxs}, acc -> MapSet.union(acc, idxs) end)
+
+        not MapSet.disjoint?(guarded, sibling_cons)
+
+      nil ->
+        false
+    end
+  end
+
+  # Argument indices whose cons tail is one of the redundant (guarded) vars.
+  defp guarded_cons_indices(args, redundant_vars) do
+    args
+    |> Enum.with_index()
+    |> Enum.filter(fn {arg, _i} -> cons_tail_in?(arg, redundant_vars) end)
+    |> Enum.map(fn {_arg, i} -> i end)
+    |> MapSet.new()
+  end
+
+  defp cons_tail_in?(arg, redundant_vars) do
+    {_node, found?} =
+      Macro.prewalk(arg, false, fn
+        {:|, _, [_h, {name, _, ctx}]} = node, acc when is_atom(name) and is_atom(ctx) ->
+          {node, acc or name in redundant_vars}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found?
+  end
 
   defp extract_args({_fun_name, _, args}) when is_list(args), do: args
   defp extract_args(_), do: []

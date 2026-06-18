@@ -122,19 +122,40 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
   # 1-element `[head]` declaration form for default args / docs) generates no
   # runtime clause and must not be compared against the real clauses below it.
   defp extract_clause_info({dt, _, [head, _body]}) when dt in [:def, :defp] do
-    case head do
-      {:when, _, [{name, _, args} | guard_parts]} when is_atom(name) and is_list(args) ->
-        {name, length(args), args, guard_parts}
-
-      {name, _, args} when is_atom(name) and is_list(args) ->
-        {name, length(args), args, []}
-
-      _ ->
+    cond do
+      # A head containing `unquote(...)` is macro-generated: the surface AST
+      # collapses every `unquote(var)` to the same placeholder, so distinct
+      # clauses (e.g. `def f(unquote(lower))` vs `def f(unquote(upper))`, each
+      # expanding to a different literal) look identical and would be wrongly
+      # deleted. The real patterns are only known after expansion, so skip it.
+      contains_unquote?(head) ->
         nil
+
+      true ->
+        case head do
+          {:when, _, [{name, _, args} | guard_parts]} when is_atom(name) and is_list(args) ->
+            {name, length(args), args, guard_parts}
+
+          {name, _, args} when is_atom(name) and is_list(args) ->
+            {name, length(args), args, []}
+
+          _ ->
+            nil
+        end
     end
   end
 
   defp extract_clause_info(_), do: nil
+
+  defp contains_unquote?(head) do
+    {_node, found?} =
+      Macro.prewalk(head, false, fn
+        {form, _, _} = node, _acc when form in [:unquote, :unquote_splicing] -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found?
+  end
 
   # Build a comparable signature for a clause. Args and guards are normalized
   # together with a shared binding map so that variable identity is preserved:

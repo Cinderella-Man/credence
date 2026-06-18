@@ -489,4 +489,38 @@ defmodule Credence.Pattern.NoCondTwoClausesFixTest do
       confirm_fix(fix(NoCondTwoClauses, input), input)
     end
   end
+
+  describe "comment preservation" do
+    # Comments sitting on the `->` clauses (not inside their bodies) must survive
+    # the cond→if rewrite that discards the clause wrappers.
+    test "carries clause comments onto the do/else bodies" do
+      input = """
+      def run(rules, years) do
+        cond do
+          # If there are no more rules for the year, continue with the next year
+          no_more_rules ->
+            next_year(years)
+
+          # Else continue with those rules
+          true ->
+            apply(rules)
+        end
+      end
+      """
+
+      expected = """
+      def run(rules, years) do
+        if no_more_rules do
+          # If there are no more rules for the year, continue with the next year
+          next_year(years)
+        else
+          # Else continue with those rules
+          apply(rules)
+        end
+      end
+      """
+
+      confirm_fix(fix(NoCondTwoClauses, input), expected)
+    end
+  end
 end

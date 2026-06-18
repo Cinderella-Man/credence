@@ -133,7 +133,14 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
     {{:., [], [{:__aliases__, [], [:Enum]}, fn_name]}, [], [var, fallback_fn]}
   end
 
-  # Sourceror wraps keyword keys as {{:__block__, _, [:key]}, value}
+  # Sourceror wraps keyword keys as {{:__block__, _, [:key]}, value}.
+  # `opts` is the second arg of an `if` node. For the standard `if cond, do:…`
+  # form it is a keyword list, but a custom `if`/2 macro (e.g. Nx's
+  # `defmacro if(pred, do_else)` or Explorer's query DSL) can pass a bare
+  # variable there — guard so the rule degrades to "no match" instead of
+  # crashing on `Keyword.get/3`.
+  defp fetch_kw_value(opts, _key) when not is_list(opts), do: :error
+
   defp fetch_kw_value(opts, key) do
     case Keyword.get(opts, key) do
       nil ->

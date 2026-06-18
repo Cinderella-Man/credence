@@ -97,4 +97,22 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesFixTest do
 
     confirm_fix(fix(NoDuplicateFunctionClauses, code), code)
   end
+
+  # `unquote(lower)` and `unquote(upper)` expand to distinct literal patterns,
+  # so deleting either changes runtime dispatch. The fix must not touch clauses
+  # whose head contains `unquote`.
+  test "does not delete macro-generated clauses (unquote in head)" do
+    code = """
+    defmodule Good do
+      defmacro gen do
+        quote do
+          def to_num(unquote(lower)), do: 1
+          def to_num(unquote(upper)), do: 2
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(NoDuplicateFunctionClauses, code), code)
+  end
 end

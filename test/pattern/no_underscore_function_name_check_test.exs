@@ -123,5 +123,32 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
 
       assert check(NoUnderscoreFunctionName, code) == []
     end
+
+    # The fix renames a `defp _name` to `do_name` but cannot rewrite an
+    # arity-style capture `&_name/arity` (its AST node is indistinguishable
+    # from a bare variable), which would leave a dangling reference that fails
+    # to compile. So a name referenced by `&_name/arity` must not be flagged.
+    test "does not flag a function referenced by an arity-style capture &_name/arity" do
+      code = """
+      defmodule Good do
+        def run(list), do: Enum.map(list, &_step/1)
+        defp _step(x), do: x + 1
+      end
+      """
+
+      assert check(NoUnderscoreFunctionName, code) == []
+    end
+
+    test "still flags a function referenced only by a call-style capture &_name(&1)" do
+      code = """
+      defmodule Bad do
+        def run(list), do: Enum.map(list, &_step(&1))
+        defp _step(x), do: x + 1
+      end
+      """
+
+      [issue] = check(NoUnderscoreFunctionName, code)
+      assert issue.rule == :no_underscore_function_name
+    end
   end
 end

@@ -141,4 +141,42 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesCheckTest do
       assert length(issues) == 1
     end
   end
+
+  describe "macro-generated clauses (unquote in head)" do
+    # Inside a `quote`, `def f(unquote(a))` and `def f(unquote(b))` expand to
+    # different literal patterns, so they are NOT duplicates — but the surface
+    # AST collapses every `unquote(var)` to the same placeholder, which would
+    # make them look identical. A head containing `unquote` must be skipped.
+    test "does not flag clauses whose head contains unquote" do
+      issues =
+        check(NoDuplicateFunctionClauses, """
+        defmodule Bad do
+          defmacro gen do
+            quote do
+              def to_num(unquote(lower)), do: 1
+              def to_num(unquote(upper)), do: 2
+            end
+          end
+        end
+        """)
+
+      assert issues == []
+    end
+
+    test "still flags genuinely-identical clauses inside a quote (no unquote)" do
+      issues =
+        check(NoDuplicateFunctionClauses, """
+        defmodule Bad do
+          defmacro gen do
+            quote do
+              def to_num(:a), do: 1
+              def to_num(:a), do: 2
+            end
+          end
+        end
+        """)
+
+      assert length(issues) == 1
+    end
+  end
 end

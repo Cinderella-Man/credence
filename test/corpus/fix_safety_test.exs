@@ -78,8 +78,25 @@ defmodule Credence.Corpus.FixSafetyTest do
     fin
     |> List.myers_difference(fout)
     |> paired_hunks()
-    |> Enum.filter(fn {del, ins} -> del != [] and ins != [] and nospace(del) == nospace(ins) end)
+    |> Enum.filter(fn {del, ins} ->
+      del != [] and ins != [] and nospace(del) == nospace(ins) and not reindent_only?(del, ins)
+    end)
     |> Enum.map(fn {del, _ins} -> Enum.map_join(del, " ⏎ ", &String.trim/1) end)
+  end
+
+  # A pure *leading-indentation* shift (same line count, each line identical
+  # after trimming leading whitespace) is a legitimate structural consequence of
+  # the fix, not over-reach: both sides are already mix-formatted, so a surviving
+  # indent difference means the code genuinely sits at a new nesting depth (e.g.
+  # `no_redundant_assignment` removing `x =` dedents its multi-line RHS, or
+  # `prefer_map_new_with_transform` moving a `fn` into a deeper argument). A
+  # gratuitous re-wrap (collapsing/reflowing unrelated code) changes line count
+  # or internal spacing and so still trips the check above.
+  defp reindent_only?(del, ins) do
+    length(del) == length(ins) and
+      Enum.all?(Enum.zip(del, ins), fn {d, i} ->
+        String.trim_leading(d) == String.trim_leading(i)
+      end)
   end
 
   # Adjacent del+ins ops are a replacement hunk; del-only / ins-only are real

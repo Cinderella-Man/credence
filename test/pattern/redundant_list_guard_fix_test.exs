@@ -241,5 +241,26 @@ defmodule Credence.Pattern.RedundantListGuardFixTest do
 
       confirm_fix(fix(RedundantListGuard, input), expected)
     end
+
+    # A later clause with the same head pattern relies on this guard to send
+    # improper-tail input its way. Removing the guard would make this clause
+    # swallow that input, so the fix must leave the function untouched.
+    test "leaves a guarded clause untouched when a later clause shares its head" do
+      code = """
+      defmodule Example do
+        def walk([]), do: :ok
+
+        def walk([h | t]) when is_list(t) do
+          {h, walk(t)}
+        end
+
+        def walk([h | t]) do
+          {h, t}
+        end
+      end
+      """
+
+      confirm_fix(fix(RedundantListGuard, code), code)
+    end
   end
 end

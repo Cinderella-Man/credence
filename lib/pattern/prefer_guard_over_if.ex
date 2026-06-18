@@ -162,7 +162,20 @@ defmodule Credence.Pattern.PreferGuardOverIf do
             |> MapSet.union(collect_var_names(first_guard))
 
           first_head = build_head(underscore_unused_params(call, first_used), first_guard)
-          first_clause = {def_kind, [], [first_head, [do: do_body]]}
+
+          # Carry any comment that led the `if` (a `# why` line before it in the
+          # body) onto the first generated clause — the if node is discarded, so
+          # the comment would otherwise be dropped. `line: 1` anchors it.
+          if_leading =
+            case if_node_of(body) do
+              {:if, m, _} -> Keyword.get(m, :leading_comments, [])
+              _ -> []
+            end
+
+          first_clause =
+            {def_kind, [line: 1], [first_head, [do: do_body]]}
+            |> Credence.RuleHelpers.carry_comments(if_leading, [])
+
           first_text = Sourceror.to_string(first_clause)
 
           # Build second clause: defp call [when existing_guard] do else_body end
@@ -223,6 +236,12 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   defp extract_if_else({:__block__, _, [expr]}), do: extract_if_else(expr)
 
   defp extract_if_else(_), do: :error
+
+  # The `:if` node within a def body (unwrapping a single-expression block), or
+  # nil — used to recover the comment that led the `if`.
+  defp if_node_of({:__block__, _, [expr]}), do: if_node_of(expr)
+  defp if_node_of({:if, _, _} = node), do: node
+  defp if_node_of(_), do: nil
 
   defp has_both_branches?(clauses) do
     has_clause?(clauses, :do) and has_clause?(clauses, :else)
