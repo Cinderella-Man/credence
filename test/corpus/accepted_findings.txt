@@ -819,7 +819,6 @@ blockscout/apps/explorer/lib/explorer/chain/import/runner/addresses.ex:68  prefe
 blockscout/apps/explorer/lib/explorer/chain/import/runner/internal_transactions.ex:881  no_redundant_assignment
 blockscout/apps/explorer/lib/explorer/chain/log.ex:105  prefer_then_over_capture_invocation
 blockscout/apps/explorer/lib/explorer/chain/log.ex:96  prefer_then_over_capture_invocation
-blockscout/apps/explorer/lib/explorer/chain/map_cache.ex:275  remove_unreachable_clauses_after_catchall
 blockscout/apps/explorer/lib/explorer/chain/mud.ex:372  prefer_map_new
 blockscout/apps/explorer/lib/explorer/chain/mud.ex:525  no_case_on_param_dispatch
 blockscout/apps/explorer/lib/explorer/chain/mud.ex:584  no_zip_then_map
@@ -5500,14 +5499,12 @@ prometheus_ex/lib/prometheus/config.ex:41  no_case_boolean_result
 prometheus_ex/lib/prometheus/error.ex:159  no_case_on_param_dispatch
 propcheck/lib/properties.ex:150  no_case_true_false
 propcheck/lib/properties.ex:171  no_case_boolean_result
-propcheck/lib/statem/model_dsl.ex:358  remove_unreachable_clauses_after_catchall
 propcheck/lib/statem/reporter.ex:171  no_redundant_enum_join_separator
 propcheck/lib/statem/reporter.ex:178  no_redundant_enum_join_separator
 propcheck/lib/statem/reporter.ex:183  no_redundant_enum_join_separator
 propcheck/lib/statem/reporter.ex:273  no_redundant_enum_join_separator
 propcheck/lib/statem/reporter.ex:276  no_redundant_enum_join_separator
 propcheck/lib/statem/reporter.ex:279  no_redundant_enum_join_separator
-propcheck/lib/statem_dsl.ex:324  remove_unreachable_clauses_after_catchall
 propcheck/lib/statem_dsl.ex:478  no_length_guard_to_pattern
 propcheck/lib/statem_dsl.ex:547  no_redundant_assignment
 propcheck/lib/statem_dsl.ex:603  no_redundant_assignment
@@ -6950,7 +6947,6 @@ verk/lib/verk/queue_stats.ex:88  no_doc_false_on_private
 vex/lib/vex.ex:48  no_case_true_false
 vix/lib/vix/g_object/double.ex:33  prefer_erlang_float
 vix/lib/vix/g_object/string.ex:19  no_redundant_binary_syntax
-vix/lib/vix/operator.ex:1239  remove_unreachable_clauses_after_catchall
 vix/lib/vix/vips/image.ex:1518  prefer_erlang_float
 vix/lib/vix/vips/image.ex:1532  no_length_comparison_for_empty
 vix/lib/vix/vips/image.ex:175  no_redundant_comparison_guard

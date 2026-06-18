@@ -10,15 +10,21 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   but the head `f(0)` does not (pattern uses `===`), so substituting a number
   would change which clause a float-equal value routes to.
 
+  `nil` is an atom, so it is fixable too (`when x == nil` → `f(nil)`): `nil` has
+  no cross-type value-equal partner, so `== nil` and the `nil` head match the
+  exact same inputs (notably NOT `false`).
+
   ## Bad
 
       defp do_count(n, _a, b) when n == 2, do: b
       def process(action) when action == :stop, do: :halted
+      def encode(value, _) when value == nil, do: <<0>>
 
   ## Good
 
       defp do_count(2, _a, b), do: b
       def process(:stop), do: :halted
+      def encode(nil, _), do: <<0>>
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
@@ -221,10 +227,14 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
     match_map = Map.new(matches, fn {var_name, literal, _meta} -> {var_name, literal} end)
 
     Enum.map(params, fn
-      {name, meta, context} when is_atom(name) and is_atom(context) ->
-        case Map.get(match_map, name) do
-          nil -> {name, meta, context}
-          literal -> literal
+      {name, _meta, context} = param when is_atom(name) and is_atom(context) ->
+        # `Map.fetch` (not `Map.get`) so a matched literal of `nil` — itself an
+        # atom, indistinguishable from `Map.get`'s "absent" sentinel — is still
+        # substituted into the head. Otherwise `f(x) when x == nil` lost its guard
+        # WITHOUT gaining the `nil` pattern, making the clause match everything.
+        case Map.fetch(match_map, name) do
+          {:ok, literal} -> literal
+          :error -> param
         end
 
       other ->

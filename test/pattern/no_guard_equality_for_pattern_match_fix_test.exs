@@ -165,4 +165,76 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchFixTest do
       confirm_fix(fix(NoGuardEqualityForPatternMatch, code), code)
     end
   end
+
+  # `nil` is an atom literal, so it must be substituted into the head like any
+  # other atom. Previously the guard was dropped but `nil` was NOT substituted
+  # (a `Map.get` nil-sentinel collision), leaving a clause that matched everything.
+  describe "nil literal is substituted into the head" do
+    test "removes nil guard and substitutes nil" do
+      input = "def f(x) when x == nil, do: :was_nil"
+      expected = "def f(nil), do: :was_nil"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    test "reversed equality (nil == var)" do
+      input = "def f(x) when nil == x, do: :ok"
+      expected = "def f(nil), do: :ok"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    test "nil among other parameters" do
+      input = "def f(a, x, b) when x == nil, do: {a, b}"
+      expected = "def f(a, nil, b), do: {a, b}"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    test "nil alongside an atom equality (both substituted, guard fully removed)" do
+      input = "def f(x, y) when x == nil and y == :ok, do: :both"
+      expected = "def f(nil, :ok), do: :both"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    test "nil substituted, a non-equality guard kept" do
+      input = "def f(x, n) when x == nil and is_integer(n), do: n"
+      expected = "def f(nil, n) when is_integer(n), do: n"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    test "the tds shape: nil clause keeps later same-arity clauses reachable" do
+      input = """
+      defmodule M do
+        def encode(:int, value, _) when value == nil, do: <<0>>
+        def encode(:int, value, _), do: <<value>>
+      end
+      """
+
+      expected = """
+      defmodule M do
+        def encode(:int, nil, _), do: <<0>>
+        def encode(:int, value, _), do: <<value>>
+      end
+      """
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    test "the tzdata shape: nil arg amid a cons pattern" do
+      input = "def calc(a, [h | t], rules, c) when rules == nil, do: {a, h, t, c}"
+      expected = "def calc(a, [h | t], nil, c), do: {a, h, t, c}"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, input), expected)
+    end
+
+    test "no-op when the body still references the matched variable" do
+      # Substituting x->nil would leave the body referencing an unbound `x`.
+      code = "def f(x) when x == nil, do: inspect(x)"
+
+      confirm_fix(fix(NoGuardEqualityForPatternMatch, code), code)
+    end
+  end
 end

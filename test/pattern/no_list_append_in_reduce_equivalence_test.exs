@@ -19,4 +19,16 @@ defmodule Credence.Pattern.NoListAppendInReduceEquivalenceTest do
       inputs: [[], [1], [1, 2, 3], [-1, -2, -3], Enum.to_list(1..20)]
     )
   end
+
+  # The reduce result is an operand of `++`, so the fix uses the call form
+  # `Enum.reverse(Enum.reduce(...)) ++ [99]`. This proves that output computes the
+  # same value as the original `reduce(... acc ++ [x]) ++ [99]`.
+  test "reduce in an ++ operator context preserves the value (call form)" do
+    assert_equivalent(
+      "Enum.reduce(list, [], fn item, acc -> acc ++ [item * 2] end) ++ [99]",
+      rule: NoListAppendInReduce,
+      vars: [:list],
+      inputs: [[], [1], [1, 2, 3], [-1, -2, -3], Enum.to_list(1..20)]
+    )
+  end
 end

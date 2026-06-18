@@ -29,4 +29,41 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatchEquivalenceTest do
       inputs: [:stop, :go, :run, nil, 1, "stop"]
     )
   end
+
+  # The regression case: `x == nil` → `f(nil)`. Critically, `nil` and `false`
+  # are distinct — `x == nil` is FALSE for `false` — so `false` must still route
+  # to the catch-all, not the nil clause. Inputs exercise nil, false, and others.
+  @nil_before """
+  defmodule Bad do
+    def classify(x) when x == nil, do: :nothing
+    def classify(_x), do: :something
+  end
+  """
+
+  test "nil-equality guard → nil pattern head preserves dispatch (nil != false)" do
+    assert_equivalent_module(@nil_before,
+      rule: NoGuardEqualityForPatternMatch,
+      call: {:classify, 1},
+      inputs: [nil, false, true, :nothing, 0, "", [], "nil"]
+    )
+  end
+
+  # Multi-clause shadowing shape (mirrors tds): the nil clause is NOT last, so a
+  # broken fix (guard dropped, nil not substituted) would shadow the later
+  # clauses. Inputs prove every non-nil value still routes correctly.
+  @multi_before """
+  defmodule Bad do
+    def size(n) when n == nil, do: 0
+    def size(n) when is_integer(n), do: n
+    def size(_), do: -1
+  end
+  """
+
+  test "nil clause before other clauses preserves dispatch for all inputs" do
+    assert_equivalent_module(@multi_before,
+      rule: NoGuardEqualityForPatternMatch,
+      call: {:size, 1},
+      inputs: [nil, 0, 7, -3, :atom, "str", false]
+    )
+  end
 end

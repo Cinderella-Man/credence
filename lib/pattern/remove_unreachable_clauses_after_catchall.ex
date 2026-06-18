@@ -49,6 +49,11 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
   express any distinct behaviour — is safe to delete, so that is all this rule
   removes.
 
+  A clause with a *dynamic* head name (`def unquote(op)(a, b)`, generated inside
+  a macro) is also left alone: its name is only known at expansion time, so
+  distinct functions would otherwise collapse into one `{nil, arity}` group and
+  a live clause could be deleted as a phantom duplicate.
+
   ## Auto-fix
 
   Deletes each catch-all clause that follows the first catch-all in a consecutive
@@ -167,7 +172,12 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
       {:when, _, _} ->
         false
 
-      {_, _, args} when is_list(args) ->
+      # The clause name must be a statically-known atom. A dynamic head name
+      # (`def unquote(op)(a, b)` inside a macro) cannot be identified, so distinct
+      # macro-generated functions would otherwise collapse to one `{nil, arity}`
+      # group and be deleted as "duplicates". We cannot prove reachability across
+      # such clauses, so they are never catch-alls.
+      {name, _, args} when is_atom(name) and is_list(args) ->
         args != [] and Enum.all?(args, &bare_var_or_underscore?/1) and
           not repeated_named_var?(args)
 

@@ -184,4 +184,66 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallCheckTest do
       assert clean?(RemoveUnreachableClausesAfterCatchall, code)
     end
   end
+
+  # A dynamic head name (`def unquote(op)(...)`, macro-generated) is unidentifiable,
+  # so distinct functions must never be grouped/flagged as duplicate catch-alls.
+  describe "does NOT flag dynamically-named (unquote) clauses" do
+    test "vix shape: def/defp unquote pair of the same arity" do
+      code = """
+      defmodule M do
+        for {op, name} <- @ops do
+          def unquote(op)(a, b) do
+            unquote(name)(a, b)
+          end
+
+          defp unquote(name)(a, b) do
+            a + b
+          end
+        end
+      end
+      """
+
+      assert clean?(RemoveUnreachableClausesAfterCatchall, code)
+    end
+
+    test "propcheck shape: sibling unquote defs, two share an arity" do
+      code = """
+      defmodule M do
+        def unquote(pre)(_state, _call), do: true
+        def unquote(next)(state, _call, _result), do: state
+        def unquote(post)(_state, _call, _res), do: true
+        def unquote(args)(_state), do: []
+      end
+      """
+
+      assert clean?(RemoveUnreachableClausesAfterCatchall, code)
+    end
+
+    test "two same-arity dynamic catch-alls are not treated as duplicates" do
+      code = """
+      defmodule M do
+        def unquote(a)(_x, _y), do: 1
+        def unquote(b)(_x, _y), do: 2
+      end
+      """
+
+      assert clean?(RemoveUnreachableClausesAfterCatchall, code)
+    end
+  end
+
+  describe "still flags a genuine duplicate alongside dynamic clauses" do
+    test "real duplicate catch-all is flagged; the dynamic clause is ignored" do
+      code = """
+      defmodule M do
+        def unquote(a)(_x, _y), do: 1
+
+        def real(_x, _y), do: 2
+        def real(_x, _y), do: 3
+      end
+      """
+
+      assert [issue] = check(RemoveUnreachableClausesAfterCatchall, code)
+      assert issue.rule == :remove_unreachable_clauses_after_catchall
+    end
+  end
 end
