@@ -71,39 +71,78 @@ defmodule Credence.Corpus.FixSafetyTest do
     end)
   end
 
+  # An eq run longer than this between two changed hunks splits them into
+  # separate "change regions": code far from any real change.
+  @region_gap 3
+
+  # A re-wrap hunk (deleted and inserted text token-identical, differing only in
+  # whitespace) is over-reach ONLY when it stands alone — in a region of the diff
+  # with no real token change. A re-wrap that shares a change region with a real
+  # token change is a legitimate consequence of that change: rewriting `case`→
+  # `if` (a real token change) dedents the branch body one level, so mix-format
+  # re-wraps it — unavoidable for any correct fix. The gratuitous case the check
+  # targets (re-rendering a parent reformats an *unrelated* node) lands in its
+  # own region, far from the real edit, and is still flagged.
   defp rewrap_hunks(src, fixed) do
     fin = String.split(fmt(src), "\n")
     fout = String.split(fmt(fixed), "\n")
 
     fin
     |> List.myers_difference(fout)
-    |> paired_hunks()
-    |> Enum.filter(fn {del, ins} ->
-      del != [] and ins != [] and nospace(del) == nospace(ins) and not reindent_only?(del, ins)
-    end)
-    |> Enum.map(fn {del, _ins} -> Enum.map_join(del, " ⏎ ", &String.trim/1) end)
+    |> change_events()
+    |> regions()
+    |> Enum.flat_map(&over_reach_in_region/1)
   end
 
-  # A pure *leading-indentation* shift (same line count, each line identical
-  # after trimming leading whitespace) is a legitimate structural consequence of
-  # the fix, not over-reach: both sides are already mix-formatted, so a surviving
-  # indent difference means the code genuinely sits at a new nesting depth (e.g.
-  # `no_redundant_assignment` removing `x =` dedents its multi-line RHS, or
-  # `prefer_map_new_with_transform` moving a `fn` into a deeper argument). A
-  # gratuitous re-wrap (collapsing/reflowing unrelated code) changes line count
-  # or internal spacing and so still trips the check above.
+  # Flatten the diff into a stream of `{:gap, n}` (an eq run of n lines),
+  # `{:real, del}` (tokens actually changed — incl. a bare deletion/insertion),
+  # and `{:reflow, del}` (token-identical, whitespace-only). Pure-reindent hunks
+  # (same line count, equal after trimming leading whitespace) are dropped: a
+  # leading-indent shift is always a legitimate depth change.
+  defp change_events([]), do: []
+  defp change_events([{:eq, ls} | rest]), do: [{:gap, length(ls)} | change_events(rest)]
+
+  defp change_events([{:del, d}, {:ins, i} | rest]) do
+    cond do
+      nospace(d) == nospace(i) and reindent_only?(d, i) -> change_events(rest)
+      nospace(d) == nospace(i) -> [{:reflow, d} | change_events(rest)]
+      true -> [{:real, d} | change_events(rest)]
+    end
+  end
+
+  defp change_events([{:del, d} | rest]), do: [{:real, d} | change_events(rest)]
+  defp change_events([{:ins, _} | rest]), do: [{:real, []} | change_events(rest)]
+
+  # Group events into regions, splitting on any eq gap longer than @region_gap.
+  defp regions(events) do
+    {regions, current} =
+      Enum.reduce(events, {[], []}, fn
+        {:gap, n}, {regions, current} when n > @region_gap -> {[Enum.reverse(current) | regions], []}
+        {:gap, _}, acc -> acc
+        ev, {regions, current} -> {regions, [ev | current]}
+      end)
+
+    Enum.reverse([Enum.reverse(current) | regions]) |> Enum.reject(&(&1 == []))
+  end
+
+  # A region with a real token change makes its re-wraps legitimate; a region of
+  # pure re-wraps reformatted code with no real edit, which is over-reach.
+  defp over_reach_in_region(region) do
+    if Enum.any?(region, &match?({:real, _}, &1)) do
+      []
+    else
+      for {:reflow, del} <- region, do: Enum.map_join(del, " ⏎ ", &String.trim/1)
+    end
+  end
+
+  # A pure *leading-indentation* shift (same line count, each line equal after
+  # trimming leading whitespace) is always a legitimate depth change.
   defp reindent_only?(del, ins) do
     length(del) == length(ins) and
       Enum.all?(Enum.zip(del, ins), fn {d, i} ->
         String.trim_leading(d) == String.trim_leading(i)
       end)
   end
-
-  # Adjacent del+ins ops are a replacement hunk; del-only / ins-only are real
-  # additions/removals, not re-wraps.
-  defp paired_hunks([{:del, d}, {:ins, i} | rest]), do: [{d, i} | paired_hunks(rest)]
-  defp paired_hunks([_op | rest]), do: paired_hunks(rest)
-  defp paired_hunks([]), do: []
 
   defp nospace(lines), do: lines |> Enum.join("\n") |> String.replace(~r/\s+/, "")
 

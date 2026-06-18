@@ -48,7 +48,48 @@ defmodule Credence.Pattern.NoRedundantAssignment do
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite_block/1)
+    # Emit surgical patches rather than rebuilding the whole `__block__`: the
+    # block goes from N statements to N-1, which the AST-diff cannot align
+    # (an unequal del/ins gap) and so re-renders — and reformats — the entire
+    # block, including unrelated sibling statements. Instead, replace just the
+    # `lhs = rhs` statement with `rhs` and delete the trailing variable's line.
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        {:__block__, _meta, statements} = node, acc
+        when is_list(statements) and length(statements) >= 2 ->
+          {node, block_patches(statements) ++ acc}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    patches
+  end
+
+  defp block_patches(statements) do
+    second_to_last = Enum.at(statements, -2)
+    last = Enum.at(statements, -1)
+
+    case second_to_last do
+      {:=, _, [lhs, rhs]} ->
+        if fixable_pattern?(lhs) and structurally_identical?(lhs, last) do
+          rhs = preserve_comments(rhs, second_to_last, last)
+
+          [
+            %{
+              range: Sourceror.get_range(second_to_last),
+              change: RuleHelpers.render_replacement(rhs, %{})
+            },
+            RuleHelpers.deletion_patch(last)
+          ]
+          |> Enum.reject(&is_nil/1)
+        else
+          []
+        end
+
+      _ ->
+        []
+    end
   end
 
   # Checks if the last two statements in a block form a redundant
@@ -100,29 +141,6 @@ defmodule Credence.Pattern.NoRedundantAssignment do
       meta: %{line: Keyword.get(meta, :line)}
     }
   end
-
-  # Postwalk callback: rewrites a __block__ if its last two statements
-  # form a redundant assign-and-return.
-  defp maybe_rewrite_block({:__block__, meta, statements} = node)
-       when is_list(statements) and length(statements) >= 2 do
-    second_to_last = Enum.at(statements, -2)
-    last = Enum.at(statements, -1)
-
-    case second_to_last do
-      {:=, _, [lhs, rhs]} ->
-        if fixable_pattern?(lhs) and structurally_identical?(lhs, last) do
-          {preceding, _last_two} = Enum.split(statements, length(statements) - 2)
-          {:__block__, meta, preceding ++ [preserve_comments(rhs, second_to_last, last)]}
-        else
-          node
-        end
-
-      _ ->
-        node
-    end
-  end
-
-  defp maybe_rewrite_block(node), do: node
 
   # The assignment (lhs + `=`) and the trailing variable are both discarded; any
   # comment that sat on them (e.g. a `# why` line before the assignment) must

@@ -260,10 +260,37 @@ defmodule Credence.RuleHelpers do
         source
 
       patches when is_list(patches) ->
-        source
-        |> Sourceror.patch_string(patches)
-        |> strip_trailing_ws_per_line()
+        fixed =
+          source
+          |> Sourceror.patch_string(patches)
+          |> strip_trailing_ws_per_line()
+
+        # Safety invariants: a fix must never ship source that does not parse,
+        # and must never drop a source comment. A patch can occasionally render
+        # invalid code (a Sourceror range that under-counts a spaced operator
+        # call and strands a delimiter) or silently lose a comment that sat on a
+        # rewritten/removed node (the replacement AST is rendered fresh). In
+        # either case discard the fix rather than emit broken or lossy output —
+        # the finding is still reported, it just goes unfixed. Rules that carry
+        # comments through the rewrite themselves keep their fix; only those that
+        # would actually lose one self-revert here.
+        if parses?(fixed) and not drops_comment?(source, fixed), do: fixed, else: source
     end
+  end
+
+  defp parses?(source), do: match?({:ok, _}, Code.string_to_quoted(source))
+
+  defp drops_comment?(before, after_) do
+    counts = fn src ->
+      case Code.string_to_quoted_with_comments(src) do
+        {:ok, _ast, comments} -> comments |> Enum.map(&String.trim(&1.text)) |> Enum.frequencies()
+        _ -> %{}
+      end
+    end
+
+    cb = counts.(before)
+    ca = counts.(after_)
+    Enum.any?(cb, fn {text, n} -> n > Map.get(ca, text, 0) end)
   end
 
   # `Sourceror.patch_string` re-indents multi-line replacements to
