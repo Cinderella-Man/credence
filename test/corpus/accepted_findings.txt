@@ -4677,7 +4677,6 @@ logflare/lib/logflare/system_metrics/all_logs_logged/poller.ex:36  no_map_then_a
 logflare/lib/logflare/users/api.ex:88  no_map_then_aggregate
 logflare/lib/logflare/utils/deep_update.ex:56  prefer_map_new_with_transform
 logflare/lib/logflare/utils/deep_update.ex:78  prefer_map_new_with_transform
-logflare/lib/logflare/utils/guards.ex:21  hallucinated_guard
 logflare/lib/logflare/vercel/client.ex:112  no_case_boolean_result
 logflare/lib/logflare_web/controllers/api/partner/user_controller.ex:80  no_reduce_for_map_building
 logflare/lib/logflare_web/controllers/auth/unsubscribe_controller.ex:150  no_is_nil_guard
@@ -5250,24 +5249,11 @@ petal_components/lib/petal_components/helpers.ex:52  use_map_join
 petal_components/lib/petal_components/icon.ex:82  prefer_concat_over_flat_map_identity
 petal_components/lib/petal_components/rating.ex:53  prefer_erlang_float
 pfx/lib/mix/tasks/iana.specials.ex:139  prefer_map_new
-pfx/lib/pfx.ex:1284  hallucinated_guard
-pfx/lib/pfx.ex:1295  hallucinated_guard
-pfx/lib/pfx.ex:1343  hallucinated_guard
-pfx/lib/pfx.ex:1349  hallucinated_guard
 pfx/lib/pfx.ex:1601  no_anon_fn_application_in_pipe
 pfx/lib/pfx.ex:1604  no_anon_fn_application_in_pipe
-pfx/lib/pfx.ex:2004  hallucinated_guard
-pfx/lib/pfx.ex:2010  hallucinated_guard
 pfx/lib/pfx.ex:2485  prefer_function_capture
-pfx/lib/pfx.ex:2591  hallucinated_guard
-pfx/lib/pfx.ex:2594  hallucinated_guard
 pfx/lib/pfx.ex:3259  no_case_true_false
-pfx/lib/pfx.ex:3966  hallucinated_guard  (x2)
-pfx/lib/pfx.ex:3980  hallucinated_guard
 pfx/lib/pfx.ex:4102  prefer_then_over_capture_invocation
-pfx/lib/pfx.ex:54  hallucinated_guard
-pfx/lib/pfx.ex:55  hallucinated_guard
-pfx/lib/pfx.ex:92  hallucinated_guard
 phoenix/lib/mix/phoenix/scope.ex:132  no_length_comparison_for_empty
 phoenix/lib/mix/phoenix/scope.ex:149  use_map_join
 phoenix/lib/mix/phoenix/scope.ex:63  use_map_join
@@ -6804,7 +6790,6 @@ tds/lib/tds/messages.ex:329  no_case_on_param_dispatch
 tds/lib/tds/types.ex:1167  no_is_nil_guard
 tds/lib/tds/types.ex:1235  no_guard_equality_for_pattern_match
 tds/lib/tds/types.ex:1239  no_guard_equality_for_pattern_match
-tds/lib/tds/types.ex:1327  prefer_guard_over_if
 tds/lib/tds/types.ex:1437  no_guard_equality_for_pattern_match
 telemetry_metrics_prometheus_core/lib/core/aggregator.ex:133  prefer_guard_over_if
 temp/lib/temp.ex:135  no_case_true_false
@@ -6892,10 +6877,7 @@ toml_elixir/lib/toml_elixir/parser/document.ex:426  no_case_on_param_dispatch
 toml_elixir/lib/toml_elixir/parser/state.ex:32  no_if_true_false
 toml_elixir/lib/toml_elixir/parser/value.ex:311  no_case_true_false
 toml_elixir/lib/toml_elixir/parser/value.ex:71  no_case_on_param_dispatch
-tucan/lib/tucan.ex:332  hallucinated_guard
 tucan/lib/tucan.ex:4630  no_case_true_false
-tucan/lib/tucan.ex:4718  hallucinated_guard
-tucan/lib/tucan.ex:4731  hallucinated_guard
 tucan/lib/tucan.ex:484  prefer_map_new
 tucan/lib/tucan.ex:498  no_case_true_false
 tucan/lib/tucan/layers.ex:60  prefer_function_capture

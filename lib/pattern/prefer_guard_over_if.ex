@@ -103,7 +103,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
     case extract_if_else(body) do
       {:ok, condition} ->
         if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
-             not head_has_bitstring?(head),
+             not head_has_bitstring?(head) and not head_has_attribute?(head),
            do: {:ok, meta[:line]},
            else: :error
 
@@ -129,6 +129,34 @@ defmodule Credence.Pattern.PreferGuardOverIf do
     found?
   end
 
+  # A PARAMETER pattern-matching a module attribute (`def encode(@max_size, rest)`)
+  # is skipped for the same reason as a bitstring head: the rewrite re-renders the
+  # head through `underscore_unused_params/2`, whose postwalk sees the variable
+  # node *inside* `@attr` (`{:@, _, [{name, _, nil}]}`) and underscores it into
+  # `@_attr` — an undefined attribute that evaluates to `nil`, silently breaking
+  # the match. Only the param patterns are scanned: an attribute in the `when`
+  # guard (`when level in @levels`) is carried through verbatim, never
+  # underscored, so it is safe and must not block the fix.
+  defp head_has_attribute?(head_ast) do
+    call =
+      case head_ast do
+        {:when, _, [c, _guard]} -> c
+        other -> other
+      end
+
+    {_node, found?} =
+      Macro.prewalk(call, false, fn
+        {:@, _, [{name, _, ctx}]} = node, _acc
+        when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
+          {node, true}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found?
+  end
+
   defp try_build_patch({def_kind, _meta, [head_ast, body_kw]} = node)
        when def_kind in [:def, :defp] and is_list(body_kw) do
     body = extract_body(body_kw)
@@ -136,7 +164,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
     case extract_if_else(body) do
       {:ok, condition} ->
         if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
-             not head_has_bitstring?(head_ast) do
+             not head_has_bitstring?(head_ast) and not head_has_attribute?(head_ast) do
           {call, existing_guard} = extract_head_parts(head_ast)
           {do_body, else_body} = extract_branches(body)
 

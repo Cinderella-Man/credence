@@ -24,6 +24,20 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
 
       Map.new(1..5, fn i -> {i, i * i} end)
 
+  When the `Enum.map` is fed by an upstream pipeline, that pipeline is kept and
+  the map step folds into a piped `Map.new/2` (the collection stays in the pipe):
+
+      # Bad
+      list
+      |> filter_keys()
+      |> Enum.map(fn {k, v} -> {k, f(v)} end)
+      |> Map.new()
+
+      # Good
+      list
+      |> filter_keys()
+      |> Map.new(fn {k, v} -> {k, f(v)} end)
+
   ## Scope
 
   Flags when ALL of these hold:
@@ -129,15 +143,22 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
 
             before != [] ->
               # 1-arg Enum.map in pipeline context: ... |> Enum.map(fn ...)
-              # Extract the collection from the pipe and pass it directly
-              coll_from_pipe = List.last(before)
-              remaining_before = Enum.drop(before, -1)
-              map_new_call = build_map_new_call(coll_from_pipe, fn_arg)
+              case before do
+                [coll] ->
+                  # The collection IS the pipe head (a complete expression), so
+                  # inline it as `Map.new/2`'s first argument.
+                  map_new_call = build_map_new_call(coll, fn_arg)
+                  if after_ == [], do: map_new_call, else: rebuild_pipeline([], map_new_call, after_)
 
-              if remaining_before == [] and after_ == [] do
-                map_new_call
-              else
-                rebuild_pipeline(remaining_before, map_new_call, after_)
+                _ ->
+                  # There is an upstream pipeline before `Enum.map`. Its last step
+                  # is itself a pipe stage missing its piped input, so it must NOT
+                  # be pulled out as an explicit collection (that loses the input
+                  # and produces `Map.new/3`). Instead keep the whole upstream
+                  # pipeline intact and pipe it into a 1-arg `Map.new(fn)` — which
+                  # in pipe position is exactly `Map.new/2`.
+                  map_new_step = build_map_new_fn_step(fn_arg)
+                  rebuild_pipeline(before, map_new_step, after_)
               end
 
             true ->
@@ -201,6 +222,12 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
 
   defp build_map_new_call(coll, fn_arg) do
     {{:., [], [{:__aliases__, [], [:Map]}, :new]}, [], [coll, fn_arg]}
+  end
+
+  # 1-arg `Map.new(fn)` — only ever emitted as a pipe step, where the piped
+  # collection supplies the first argument, making it `Map.new/2`.
+  defp build_map_new_fn_step(fn_arg) do
+    {{:., [], [{:__aliases__, [], [:Map]}, :new]}, [], [fn_arg]}
   end
 
   # --- pipeline helpers ---

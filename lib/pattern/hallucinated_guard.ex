@@ -28,10 +28,12 @@ defmodule Credence.Pattern.HallucinatedGuard do
 
   @impl true
   def check(ast, _opts) do
+    active = MapSet.difference(@guard_names, defined_guards(ast))
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {name, meta, [_arg]} = node, issues when is_atom(name) ->
-          if name in @guard_names do
+          if MapSet.member?(active, name) do
             {node, [build_issue(name, meta) | issues]}
           else
             {node, issues}
@@ -46,11 +48,17 @@ defmodule Credence.Pattern.HallucinatedGuard do
 
   @impl true
   def fix_patches(ast, _opts) do
+    defined = defined_guards(ast)
+
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
       {name, _, [arg]} = node when is_atom(name) ->
         case Map.get(@hallucinated_guards, name) do
           {op, bound} ->
-            {:and, [], [{:is_integer, [], [arg]}, {op, [], [arg, bound]}]}
+            if MapSet.member?(defined, name) do
+              node
+            else
+              {:and, [], [{:is_integer, [], [arg]}, {op, [], [arg, bound]}]}
+            end
 
           nil ->
             node
@@ -60,6 +68,32 @@ defmodule Credence.Pattern.HallucinatedGuard do
         node
     end)
   end
+
+  # Names from `@guard_names` that the module DEFINES as a guard via
+  # `defguard`/`defguardp` at arity 1. A defined guard is not hallucinated — it
+  # exists — so it must be left untouched everywhere: rewriting it would corrupt
+  # the definition head (`defguardp is_pos_integer(x) when ...` → invalid) and
+  # needlessly unroll the user's own abstraction at its call sites.
+  defp defined_guards(ast) do
+    {_ast, defined} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {dg, _, [head | _]} = node, acc when dg in [:defguard, :defguardp] ->
+          case guard_head(head) do
+            {name, 1} -> {node, MapSet.put(acc, name)}
+            _ -> {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    MapSet.intersection(defined, @guard_names)
+  end
+
+  # The `name/arity` a `defguard(p)` head defines, stripping the `when` guard.
+  defp guard_head({:when, _, [call, _guard]}), do: guard_head(call)
+  defp guard_head({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
+  defp guard_head(_), do: nil
 
   defp build_issue(name, meta) do
     %Issue{
