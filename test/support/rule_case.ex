@@ -109,7 +109,10 @@ defmodule Credence.RuleCase do
   `Code.compile_string` reach from the test.
   """
   def compiles?(code) do
-    Code.compile_string(code)
+    # `with_diagnostics` keeps fixture-compile warnings (deprecated charlist,
+    # redefined module, …) out of the suite output; it is process-local, so it
+    # is safe under `async: true`.
+    Code.with_diagnostics(fn -> Code.compile_string(code) end)
     true
   rescue
     _ -> false

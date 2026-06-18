@@ -94,7 +94,7 @@ defmodule Credence.Corpus.Findings do
         {rel, issue.meta[:line], issue.rule}
       end
 
-    Corpus.Progress.tick()
+    Corpus.Progress.tick(:analyze)
     findings
   end
 end

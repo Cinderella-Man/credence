@@ -278,11 +278,21 @@ defmodule Credence.RuleHelpers do
     end
   end
 
-  defp parses?(source), do: match?({:ok, _}, Code.string_to_quoted(source))
+  # `Code.string_to_quoted/1` emits a tokenizer warning (e.g. deprecated
+  # single-quoted charlists) when the source contains one. These gate checks
+  # only care about the {:ok | :error} result, not the warnings — and they run
+  # on every fix — so collect diagnostics instead of printing them.
+  defp parses?(source) do
+    {result, _diagnostics} = Code.with_diagnostics(fn -> Code.string_to_quoted(source) end)
+    match?({:ok, _}, result)
+  end
 
   defp drops_comment?(before, after_) do
     counts = fn src ->
-      case Code.string_to_quoted_with_comments(src) do
+      {result, _diagnostics} =
+        Code.with_diagnostics(fn -> Code.string_to_quoted_with_comments(src) end)
+
+      case result do
         {:ok, _ast, comments} -> comments |> Enum.map(&String.trim(&1.text)) |> Enum.frequencies()
         _ -> %{}
       end

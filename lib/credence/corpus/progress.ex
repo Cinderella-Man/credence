@@ -1,50 +1,52 @@
 defmodule Credence.Corpus.Progress do
   @moduledoc """
-  Lightweight, parallel-safe progress counter for the corpus over-firing test.
+  Lightweight, parallel-safe progress counters for the corpus test layers.
 
-  The over-firing suite runs one `async` test per corpus entry, so files are
-  validated concurrently across schedulers. `start/2` registers a shared,
-  lock-free `:atomics` counter (in `:persistent_term`); `tick/0` — called once
-  per validated file from `Credence.Corpus.Findings` — bumps it and prints a
-  `Validated Q out of P files` line every `step` files (and on the last one).
+  Both corpus suites run one `async` test per entry, so work happens concurrently
+  across schedulers. `start/5` registers a shared, lock-free `:atomics` counter
+  (in `:persistent_term`) under a caller-chosen `key`; `tick/1` bumps it and
+  prints a `<verb> Q out of P <unit>` line every `step` ticks (and on the last).
 
-  `tick/0` is a no-op when no tracker is registered, so the same `Findings` code
-  path used by the `mix credence.corpus` task and the rule unit tests stays
-  silent — only the over-firing test opts in.
+  Each phase uses its own `key` (the over-firing analyze pass and the fix-safety
+  pass run in the same `mix test` and would otherwise clobber one counter), so
+  they report independently. `tick/1` is a no-op when no tracker is registered
+  for the key, keeping the same code paths silent under the `mix credence.corpus`
+  task and the rule unit tests.
   """
 
-  @key {__MODULE__, :tracker}
-
-  @doc "Register a counter for `total` files, reporting every `step` files."
-  @spec start(non_neg_integer(), pos_integer()) :: :ok
-  def start(total, step) when is_integer(total) and is_integer(step) and step > 0 do
+  @doc "Register a counter `key` for `total` items, reporting every `step` as `\"<verb> Q out of P <unit>\"`."
+  @spec start(atom(), non_neg_integer(), pos_integer(), String.t(), String.t()) :: :ok
+  def start(key, total, step, verb, unit)
+      when is_atom(key) and is_integer(total) and is_integer(step) and step > 0 do
     ref = :atomics.new(1, signed: false)
-    :persistent_term.put(@key, {ref, total, step})
+    :persistent_term.put(pt_key(key), {ref, total, step, verb, unit})
     :ok
   end
 
-  @doc "Count one validated file; print progress at each `step` boundary."
-  @spec tick() :: :ok
-  def tick do
-    case :persistent_term.get(@key, nil) do
+  @doc "Count one item for `key`; print progress at each `step` boundary."
+  @spec tick(atom()) :: :ok
+  def tick(key) do
+    case :persistent_term.get(pt_key(key), nil) do
       nil ->
         :ok
 
-      {ref, total, step} ->
+      {ref, total, step, verb, unit} ->
         n = :atomics.add_get(ref, 1, 1)
 
         if rem(n, step) == 0 or n == total do
-          IO.puts("  [corpus] Validated #{n} out of #{total} files")
+          IO.puts("  [corpus] #{verb} #{n} out of #{total} #{unit}")
         end
 
         :ok
     end
   end
 
-  @doc "Remove the tracker (subsequent `tick/0` calls are no-ops)."
-  @spec stop() :: :ok
-  def stop do
-    :persistent_term.erase(@key)
+  @doc "Remove the tracker for `key` (subsequent `tick/1` calls are no-ops)."
+  @spec stop(atom()) :: :ok
+  def stop(key) do
+    :persistent_term.erase(pt_key(key))
     :ok
   end
+
+  defp pt_key(key), do: {__MODULE__, key}
 end

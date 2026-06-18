@@ -78,8 +78,8 @@ defmodule Credence.Corpus.OverFiringTest do
         "with a whitelist of #{whitelist_count} accepted findings (#{rule_count} rules)."
     )
 
-    Progress.start(total_files, @progress_step)
-    on_exit(&Progress.stop/0)
+    Progress.start(:analyze, total_files, @progress_step, "Validated", "files")
+    on_exit(fn -> Progress.stop(:analyze) end)
     :ok
   end
 

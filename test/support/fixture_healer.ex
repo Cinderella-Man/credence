@@ -221,7 +221,9 @@ defmodule Credence.FixtureHealer do
   # The fixture's true compiled value (Sourceror's binary is only partly
   # un-escaped, so render → eval the well-formed source instead).
   defp value_of(node) do
-    {value, _} = Code.eval_string(Sourceror.to_string(node), [], file: "nofile")
+    {{value, _}, _diagnostics} =
+      Code.with_diagnostics(fn -> Code.eval_string(Sourceror.to_string(node), [], file: "nofile") end)
+
     if is_binary(value), do: {:ok, value}, else: :error
   rescue
     _ -> :error
@@ -301,7 +303,12 @@ defmodule Credence.FixtureHealer do
     |> Meta.fixtures()
     |> Enum.map(fn node ->
       try do
-        {:ok, elem(Code.eval_string(Sourceror.to_string(node), [], file: "nofile"), 0)}
+        {evaled, _diagnostics} =
+          Code.with_diagnostics(fn ->
+            Code.eval_string(Sourceror.to_string(node), [], file: "nofile")
+          end)
+
+        {:ok, elem(evaled, 0)}
       rescue
         _ -> :uneval
       end

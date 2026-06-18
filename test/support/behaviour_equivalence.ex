@@ -221,6 +221,15 @@ defmodule Credence.BehaviourEquivalence do
   `{:throw, term}` | `{:exit, term}`.
   """
   def eval_outcome(thunk, compare_messages? \\ false) when is_function(thunk, 0) do
+    # Running a fixture can emit a *runtime* warning (e.g. building a descending
+    # range `0..-1` on a degenerate input) — not a compiler diagnostic, so
+    # `with_diagnostics` cannot catch it. Capture and discard `:stderr` around the
+    # execution so these expected edge-case warnings don't litter the suite.
+    {outcome, _stderr} = ExUnit.CaptureIO.with_io(:standard_error, fn -> run_outcome(thunk, compare_messages?) end)
+    outcome
+  end
+
+  defp run_outcome(thunk, compare_messages?) do
     {:ok, thunk.()}
   rescue
     e ->
@@ -339,14 +348,14 @@ defmodule Credence.BehaviourEquivalence do
   defp args_by_arity(input, _arity) when is_list(input), do: input
   defp args_by_arity(input, _arity), do: [input]
 
-  # Suppress compiler warnings (unused var, etc.) emitted during eval while
-  # keeping the return value.
+  # Suppress compiler warnings (unused var, deprecated charlist, redefined
+  # module, …) emitted while eval'ing fixture code, keeping the return value.
+  # `Code.with_diagnostics/1` collects diagnostics instead of printing them and
+  # is process-local — unlike `capture_io(:stderr, …)`, which races and leaks
+  # across the `async: true` suite.
   defp silence(fun) do
-    ExUnit.CaptureIO.capture_io(:stderr, fn -> send(self(), {:silenced, fun.()}) end)
-
-    receive do
-      {:silenced, result} -> result
-    end
+    {result, _diagnostics} = Code.with_diagnostics(fun)
+    result
   end
 
   defp divergence_msg(rule, input, o, n, before, fixed) do

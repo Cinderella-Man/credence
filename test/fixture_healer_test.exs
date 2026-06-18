@@ -12,8 +12,14 @@ defmodule Credence.FixtureHealerTest do
     |> Meta.fixture_ok?()
   end
 
-  defp value_of(node),
-    do: elem(Code.eval_string(Sourceror.to_string(node), [], file: "nofile"), 0)
+  defp value_of(node) do
+    {evaled, _diagnostics} =
+      Code.with_diagnostics(fn ->
+        Code.eval_string(Sourceror.to_string(node), [], file: "nofile")
+      end)
+
+    elem(evaled, 0)
+  end
 
   defp values(src),
     do: src |> Sourceror.parse_string!() |> Meta.fixtures() |> Enum.map(&value_of/1)

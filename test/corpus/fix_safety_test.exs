@@ -28,31 +28,67 @@ defmodule Credence.Corpus.FixSafetyTest do
   @moduletag timeout: 180_000
 
   alias Credence.{Corpus, Pattern, RuleHelpers, RuleName}
+  alias Credence.Corpus.Progress
+
+  @progress_step 500
 
   setup_all do
     Corpus.ensure_fetched!()
+
+    total_files =
+      Corpus.entries()
+      |> Enum.map(fn {name, _label} -> length(Corpus.lib_files(name)) end)
+      |> Enum.sum()
+
+    IO.puts("\n  [corpus] Fix-safety: applying & checking every accepted fix across #{total_files} files.")
+    Progress.start(:fix, total_files, @progress_step, "Fix-checked", "files")
+    on_exit(fn -> Progress.stop(:fix) end)
     :ok
   end
 
+  # One test per entry. The three safety invariants (no comment loss, no mangled
+  # `__var`, no over-reach) are checked together so each (file, rule) fix is
+  # computed ONCE — not re-analyzed and re-applied three times.
   for {pkg, version} <- Corpus.entries() do
-    test "fixes on #{pkg} v#{version} drop no source comments" do
+    test "fixes on #{pkg} v#{version} are safe (no comment loss, mangling, or over-reach)" do
       pkg = unquote(pkg)
-      violations = comment_loss_violations(pkg)
-      assert violations == [], report(pkg, unquote(version), violations)
-    end
+      version = unquote(version)
+      %{comments: comments, mangling: mangling, over_reach: over_reach} = fix_safety_violations(pkg)
 
-    test "fixes on #{pkg} v#{version} introduce no mangled `__`-prefixed variable" do
-      pkg = unquote(pkg)
-      violations = var_mangling_violations(pkg)
-      assert violations == [], mangling_report(pkg, unquote(version), violations)
-    end
-
-    test "fixes on #{pkg} v#{version} reformat no unrelated code (over-reach)" do
-      pkg = unquote(pkg)
-      violations = over_reach_violations(pkg)
-      assert violations == [], over_reach_report(pkg, unquote(version), violations)
+      assert comments == [], report(pkg, version, comments)
+      assert mangling == [], mangling_report(pkg, version, mangling)
+      assert over_reach == [], over_reach_report(pkg, version, over_reach)
     end
   end
+
+  # Apply each (file, rule) fix once and run all three checks on the result.
+  defp fix_safety_violations(pkg) do
+    pkg
+    |> findings_by_file_rule()
+    |> Enum.reduce(%{comments: [], mangling: [], over_reach: []}, fn {{rel, rule, path}, lines},
+                                                                     acc ->
+      src = File.read!(path)
+      fixed = safe_fix(rule, src)
+
+      # A check-only rule (or a self-reverted fix) leaves the source byte-for-byte
+      # unchanged — no comment can be lost, no var mangled, nothing reformatted —
+      # so skip the (parse + mix-format) work entirely.
+      if fixed == src do
+        acc
+      else
+        meta = %{rule: rule, rel: rel, lines: Enum.sort(lines)}
+
+        acc
+        |> collect(:comments, lost_comments(src, fixed), &Map.put(meta, :lost, &1))
+        |> collect(:mangling, introduced_mangled_vars(src, fixed), &Map.put(meta, :mangled, &1))
+        |> collect(:over_reach, rewrap_hunks(src, fixed), &Map.put(meta, :hunks, &1))
+      end
+    end)
+    |> Map.new(fn {key, violations} -> {key, Enum.reverse(violations)} end)
+  end
+
+  defp collect(acc, _key, [], _build), do: acc
+  defp collect(acc, key, found, build), do: Map.update!(acc, key, &[build.(found) | &1])
 
   # A fix must change CODE, never merely re-wrap unrelated lines. After
   # mix-format-normalizing both sides, a replacement hunk whose deleted and
@@ -60,20 +96,6 @@ defmodule Credence.Corpus.FixSafetyTest do
   # fix had no business touching (e.g. collapsing an unrelated multi-line
   # `@attr` keyword list onto one line). A real change differs in tokens, so it
   # is not flagged.
-  defp over_reach_violations(pkg) do
-    pkg
-    |> findings_by_file_rule()
-    |> Enum.flat_map(fn {{rel, rule, path}, lines} ->
-      src = File.read!(path)
-      fixed = safe_fix(rule, src)
-
-      case rewrap_hunks(src, fixed) do
-        [] -> []
-        hunks -> [%{rule: rule, rel: rel, lines: Enum.sort(lines), hunks: hunks}]
-      end
-    end)
-  end
-
   # An eq run longer than this between two changed hunks splits them into
   # separate "change regions": code far from any real change.
   @region_gap 3
@@ -150,7 +172,12 @@ defmodule Credence.Corpus.FixSafetyTest do
   defp nospace(lines), do: lines |> Enum.join("\n") |> String.replace(~r/\s+/, "")
 
   defp fmt(source) do
-    IO.iodata_to_binary(Code.format_string!(source))
+    # Real corpus sources contain deprecated single-quoted charlists, etc.;
+    # `with_diagnostics` keeps the tokenizer's warnings out of the suite output.
+    {formatted, _diagnostics} =
+      Code.with_diagnostics(fn -> IO.iodata_to_binary(Code.format_string!(source)) end)
+
+    formatted
   rescue
     _ -> source
   end
@@ -158,20 +185,6 @@ defmodule Credence.Corpus.FixSafetyTest do
   # A fix that re-underscores an already-unused `_x` param into `__x` is a bug
   # (`__x` is not a conventional unused name and reads as a typo). Flag any
   # `__`-prefixed variable the fix introduces that was not already in the source.
-  defp var_mangling_violations(pkg) do
-    pkg
-    |> findings_by_file_rule()
-    |> Enum.flat_map(fn {{rel, rule, path}, lines} ->
-      src = File.read!(path)
-      fixed = safe_fix(rule, src)
-
-      case introduced_mangled_vars(src, fixed) do
-        [] -> []
-        mangled -> [%{rule: rule, rel: rel, lines: Enum.sort(lines), mangled: mangled}]
-      end
-    end)
-  end
-
   defp introduced_mangled_vars(src, fixed) do
     before = MapSet.new(var_names(src))
 
@@ -183,7 +196,9 @@ defmodule Credence.Corpus.FixSafetyTest do
   end
 
   defp var_names(source) do
-    case Code.string_to_quoted(source) do
+    {result, _diagnostics} = Code.with_diagnostics(fn -> Code.string_to_quoted(source) end)
+
+    case result do
       {:ok, ast} ->
         {_ast, acc} =
           Macro.prewalk(ast, [], fn
@@ -208,21 +223,6 @@ defmodule Credence.Corpus.FixSafetyTest do
     String.starts_with?(s, "__") and not String.ends_with?(s, "__")
   end
 
-  # One entry per (file, rule) whose single-rule fix loses a comment.
-  defp comment_loss_violations(pkg) do
-    pkg
-    |> findings_by_file_rule()
-    |> Enum.flat_map(fn {{rel, rule, path}, lines} ->
-      src = File.read!(path)
-      fixed = safe_fix(rule, src)
-
-      case lost_comments(src, fixed) do
-        [] -> []
-        lost -> [%{rule: rule, rel: rel, lines: Enum.sort(lines), lost: lost}]
-      end
-    end)
-  end
-
   # {rel, rule, abs_path} => [finding_line, ...] for every Pattern finding.
   defp findings_by_file_rule(pkg) do
     pkg
@@ -231,9 +231,13 @@ defmodule Credence.Corpus.FixSafetyTest do
       source = File.read!(path)
       rel = Path.relative_to(path, Corpus.root())
 
-      for issue <- Pattern.analyze(source), issue.rule != :parse_error do
-        {{rel, issue.rule, path}, issue.meta[:line]}
-      end
+      findings =
+        for issue <- Pattern.analyze(source), issue.rule != :parse_error do
+          {{rel, issue.rule, path}, issue.meta[:line]}
+        end
+
+      Progress.tick(:fix)
+      findings
     end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
@@ -254,7 +258,10 @@ defmodule Credence.Corpus.FixSafetyTest do
   end
 
   defp comment_counts(source) do
-    case Code.string_to_quoted_with_comments(source) do
+    {result, _diagnostics} =
+      Code.with_diagnostics(fn -> Code.string_to_quoted_with_comments(source) end)
+
+    case result do
       {:ok, _ast, comments} -> comments |> Enum.map(&String.trim(&1.text)) |> Enum.frequencies()
       _ -> %{}
     end
