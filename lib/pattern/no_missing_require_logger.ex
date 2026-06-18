@@ -81,7 +81,43 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_fix_module/1)
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        {:defmodule, _meta, [_name, kw]} = node, acc when is_list(kw) ->
+          {node, require_patch(kw) ++ acc}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    patches
+  end
+
+  # A single zero-width insertion patch placing `require Logger` (as its own
+  # paragraph) just before the first non-directive statement. Inserting
+  # surgically — rather than rebuilding the module body with the extra statement
+  # — avoids re-rendering, and thereby reformatting, the rest of the module.
+  defp require_patch(kw) do
+    with body when not is_nil(body) <- extract_do_body(kw),
+         true <- has_logger_macro_call?(body) and not has_logger_require?(body),
+         statements = block_to_list(body),
+         anchor when not is_nil(anchor) <- Enum.at(statements, find_directive_end(statements)),
+         %Sourceror.Range{start: start} <- Sourceror.get_range(anchor) do
+      # Anchor the insertion at column 1 of the statement's line (not its own
+      # column): `Sourceror.patch_string` re-indents a multi-line change to the
+      # patch's start column, which would double the indentation. At column 1 the
+      # change is inserted verbatim, so we bake the indent in ourselves.
+      indent = String.duplicate(" ", start[:column] - 1)
+
+      [
+        %{
+          range: %{start: [line: start[:line], column: 1], end: [line: start[:line], column: 1]},
+          change: indent <> "require Logger\n\n"
+        }
+      ]
+    else
+      _ -> []
+    end
   end
 
   # Walks the body looking for Logger.macro_name(...) calls.
@@ -137,42 +173,9 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
   defp block_to_list({:__block__, _, stmts}), do: stmts
   defp block_to_list(single), do: [single]
 
-  defp maybe_fix_module({:defmodule, meta, [name, kw]}) do
-    case extract_do_body(kw) do
-      nil ->
-        {:defmodule, meta, [name, kw]}
-
-      body ->
-        statements = block_to_list(body)
-
-        if has_logger_macro_call?(body) and not has_logger_require?(body) do
-          new_statements = insert_require(statements)
-          new_body = {:__block__, [], new_statements}
-          {:defmodule, meta, [name, replace_do_body(kw, new_body)]}
-        else
-          {:defmodule, meta, [name, kw]}
-        end
-    end
-  end
-
-  defp maybe_fix_module(node), do: node
-
   # Extracts the body from a defmodule's keyword argument list.
   defp extract_do_body([{{:__block__, _, [:do]}, body}]), do: body
   defp extract_do_body(_), do: nil
-
-  defp replace_do_body([{{:__block__, m, [:do]}, _old}], new_body),
-    do: [{{:__block__, m, [:do]}, new_body}]
-
-  defp replace_do_body(other, _new_body), do: other
-
-  # Inserts `require Logger` after the last directive-like statement
-  # at the top of the module body.
-  defp insert_require(statements) do
-    require_ast = Sourceror.parse_string!("require Logger")
-    insert_idx = find_directive_end(statements)
-    List.insert_at(statements, insert_idx, require_ast)
-  end
 
   @directives [:use, :import, :require, :alias]
 

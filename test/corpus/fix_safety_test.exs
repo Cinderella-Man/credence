@@ -23,6 +23,9 @@ defmodule Credence.Corpus.FixSafetyTest do
   use ExUnit.Case, async: true
 
   @moduletag :corpus
+  # Large entries (beefy app repos) can exceed ExUnit's default 60s per test;
+  # applying fixes is heavier than analysis, so give generous headroom.
+  @moduletag timeout: 180_000
 
   alias Credence.{Corpus, Pattern, RuleHelpers, RuleName}
 
@@ -31,7 +34,7 @@ defmodule Credence.Corpus.FixSafetyTest do
     :ok
   end
 
-  for {pkg, version} <- Corpus.packages() do
+  for {pkg, version} <- Corpus.entries() do
     test "fixes on #{pkg} v#{version} drop no source comments" do
       pkg = unquote(pkg)
       violations = comment_loss_violations(pkg)

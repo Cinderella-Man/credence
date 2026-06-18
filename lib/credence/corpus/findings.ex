@@ -43,11 +43,11 @@ defmodule Credence.Corpus.Findings do
     |> format()
   end
 
-  @doc "Sorted finding-identity lines across every pinned package."
+  @doc "Sorted finding-identity lines across every pinned corpus entry."
   @spec all() :: [String.t()]
   def all do
-    Corpus.packages()
-    |> Enum.flat_map(fn {pkg, _version} -> for_package(pkg) end)
+    Corpus.entries()
+    |> Enum.flat_map(fn {name, _label} -> for_package(name) end)
     |> Enum.sort()
   end
 
@@ -89,8 +89,12 @@ defmodule Credence.Corpus.Findings do
     source = File.read!(path)
     rel = Path.relative_to(path, Corpus.root())
 
-    for issue <- Credence.Pattern.analyze(source), issue.rule != :parse_error do
-      {rel, issue.meta[:line], issue.rule}
-    end
+    findings =
+      for issue <- Credence.Pattern.analyze(source), issue.rule != :parse_error do
+        {rel, issue.meta[:line], issue.rule}
+      end
+
+    Corpus.Progress.tick()
+    findings
   end
 end

@@ -556,8 +556,9 @@ defmodule Credence.RuleHelpers do
   # render there.
   defp walk_ops([{:del, dl}, {:ins, il} | rest], orig, modified, io, im, acc) do
     dn = length(dl)
+    inn = length(il)
 
-    if dn == length(il) do
+    if dn == inn do
       paired =
         Enum.flat_map(0..(dn - 1)//1, fn i ->
           diff_patches(Enum.at(orig, io + i), Enum.at(modified, im + i))
@@ -565,7 +566,20 @@ defmodule Credence.RuleHelpers do
 
       walk_ops(rest, orig, modified, io + dn, im + dn, acc ++ paired)
     else
-      :fallback
+      # An N→1 collapse (several function clauses folded into one `Enum.reduce`):
+      # replace just the changed span — the deleted originals' combined source
+      # range — with the single replacement node, so sibling statements outside
+      # the span keep their exact source (no whole-block re-render/reformat).
+      # Other unequal gaps (N→M, M>1) need inter-statement spacing that only a
+      # full re-render reproduces, so they fall back.
+      if inn == 1 do
+        case span_patch(Enum.slice(orig, io, dn), Enum.at(modified, im)) do
+          {:ok, patch} -> walk_ops(rest, orig, modified, io + dn, im + inn, acc ++ [patch])
+          :fallback -> :fallback
+        end
+      else
+        :fallback
+      end
     end
   end
 
@@ -578,6 +592,16 @@ defmodule Credence.RuleHelpers do
 
   # A bare insertion — fall back (no safe anchor to place it at).
   defp walk_ops([{:ins, _} | _], _orig, _modified, _io, _im, _acc), do: :fallback
+
+  # Replace the combined source range of `del_nodes` with `ins_node` rendered,
+  # leaving everything else (including the blank line after the span) untouched.
+  # `:fallback` if the span has no resolvable range.
+  defp span_patch(del_nodes, ins_node) do
+    case range_from(List.first(del_nodes), List.last(del_nodes)) do
+      nil -> :fallback
+      range -> {:ok, %{range: range, change: render_replacement(ins_node, range)}}
+    end
+  end
 
   # Delete each node by removing its whole line span (from column 1 of its first
   # line through column 1 of the line after its last) so no blank-but-indented

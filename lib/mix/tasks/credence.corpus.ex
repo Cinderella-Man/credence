@@ -48,7 +48,7 @@ defmodule Mix.Tasks.Credence.Corpus do
   end
 
   defp require_corpus! do
-    if Enum.all?(Credence.Corpus.packages(), fn {pkg, _} -> not Credence.Corpus.fetched?(pkg) end) do
+    if Enum.all?(Credence.Corpus.entries(), fn {name, _} -> not Credence.Corpus.fetched?(name) end) do
       Mix.raise(
         "No corpus found in #{Credence.Corpus.root()}/. " <>
           "Run `mix credence.corpus.fetch` first (or `mix test`)."
@@ -93,7 +93,7 @@ defmodule Mix.Tasks.Credence.Corpus do
   #   findings: [{package, relative_path, rule, line}]   (excludes :parse_error)
   #   crashes:  [{package, relative_path, message}]      (a rule raised on the file)
   defp analyze_corpus do
-    Enum.reduce(Credence.Corpus.packages(), {[], []}, fn {pkg, _version}, acc ->
+    Enum.reduce(Credence.Corpus.entries(), {[], []}, fn {pkg, _label}, acc ->
       pkg
       |> Credence.Corpus.lib_files()
       |> Enum.reduce(acc, fn path, {f, c} ->
