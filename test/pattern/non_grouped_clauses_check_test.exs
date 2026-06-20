@@ -129,5 +129,19 @@ defmodule Credence.Pattern.NonGroupedClausesCheckTest do
 
       assert check(NonGroupedClauses, code) == []
     end
+
+    # A directive (require/import/alias) between clauses does not trigger
+    # Elixir's grouped-clauses warning, so it must not be flagged.
+    test "directive (require) between same clauses is not flagged" do
+      code = """
+      defmodule M do
+        def handle_info(:a, s), do: {:noreply, s}
+        require Logger
+        def handle_info(:b, s), do: {:noreply, s}
+      end
+      """
+
+      assert check(NonGroupedClauses, code) == []
+    end
   end
 end

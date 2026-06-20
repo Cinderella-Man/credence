@@ -34,8 +34,11 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {:__block__, _, stmts} = node, acc when is_list(stmts) ->
-          new_issues = detect_duplicate_clauses(stmts) ++ acc
-          {node, new_issues}
+          new =
+            for {dup, name, arity} <- duplicate_clauses(stmts),
+                do: build_issue(elem(dup, 1), name, arity)
+
+          {node, new ++ acc}
 
         node, acc ->
           {node, acc}
@@ -53,7 +56,7 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
         {:__block__, _meta, stmts} = node, acc when is_list(stmts) ->
-          dups = duplicate_clause_nodes(stmts)
+          dups = for {dup, _name, _arity} <- duplicate_clauses(stmts), do: dup
           {node, acc ++ Enum.map(dups, &RuleHelpers.deletion_patch/1)}
 
         node, acc ->
@@ -63,95 +66,161 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
     Enum.reject(patches, &is_nil/1)
   end
 
-  # The duplicate clause nodes (every clause after the first of each signature) —
-  # i.e. exactly the nodes `strip_duplicate_clauses/1` drops.
-  defp duplicate_clause_nodes(stmts) do
-    {_seen, dups} =
-      Enum.reduce(stmts, {MapSet.new(), []}, fn
-        {dt, _, _} = node, {seen, dups} when dt in [:def, :defp] ->
-          case extract_clause_info(node) do
-            {name, arity, args, guard} ->
-              sig = signature(name, arity, args, guard)
+  # The duplicate clauses in a block: every def/defp clause after the first with
+  # the same full signature. Returns `[{node, name, arity}]`. Used by both check
+  # (→ issues) and fix (→ deletion patches), so they agree exactly.
+  #
+  # The signature is computed in source order while tracking module-attribute
+  # *redefinitions*: a clause that references `@ops` is distinct from an earlier
+  # same-head clause if `@ops` was reassigned between them (its guard then filters
+  # a different set). The signature also includes the (normalized) BODY — two
+  # clauses that share a head but have different bodies are NOT collapsed: the
+  # later one is the author's likely copy-paste bug, not safe-to-delete noise.
+  defp duplicate_clauses(stmts) do
+    {_seen, _vers, dups} =
+      Enum.reduce(stmts, {MapSet.new(), %{}, []}, fn stmt, {seen, vers, dups} ->
+        case attr_assignment_name(stmt) do
+          {:ok, attr} ->
+            {seen, Map.update(vers, attr, 1, &(&1 + 1)), dups}
 
-              if MapSet.member?(seen, sig),
-                do: {seen, [node | dups]},
-                else: {MapSet.put(seen, sig), dups}
+          :error ->
+            case clause_signature(stmt, vers) do
+              {:ok, sig, name, arity} ->
+                if MapSet.member?(seen, sig),
+                  do: {seen, vers, [{stmt, name, arity} | dups]},
+                  else: {MapSet.put(seen, sig), vers, dups}
 
-            nil ->
-              {seen, dups}
-          end
-
-        _node, acc ->
-          acc
+              :error ->
+                {seen, vers, dups}
+            end
+        end
       end)
 
     Enum.reverse(dups)
   end
 
-  # Detect duplicate function clauses in a block of statements.
-  defp detect_duplicate_clauses(stmts) do
-    {_, issues} =
-      Enum.reduce(stmts, {MapSet.new(), []}, fn
-        {dt, _, _} = node, {seen, issues} when dt in [:def, :defp] ->
-          case extract_clause_info(node) do
-            {name, arity, args, guard} ->
-              sig = signature(name, arity, args, guard)
+  # A module-attribute assignment `@name value` (inner has a non-empty arg list),
+  # as opposed to a usage `@name` (inner is a context atom).
+  defp attr_assignment_name({:@, _, [{name, _, args}]})
+       when is_atom(name) and is_list(args) and args != [],
+       do: {:ok, name}
 
-              if MapSet.member?(seen, sig) do
-                meta = elem(node, 1)
-                issue = build_issue(meta, name, arity)
-                {seen, [issue | issues]}
-              else
-                {MapSet.put(seen, sig), issues}
-              end
+  defp attr_assignment_name(_), do: :error
 
-            nil ->
-              {seen, issues}
-          end
-
-        _node, acc ->
-          acc
-      end)
-
-    issues
-  end
-
-  # Extract {name, arity, args, guard_parts} from a def/defp node.
+  # Build `{:ok, signature, name, arity}` for a def/defp clause, or `:error`.
   #
-  # Requires a body (`[head, _body]`): a bodiless head (`def code(x)` — the
+  # Requires a body (`[head, body]`): a bodiless head (`def code(x)` — the
   # 1-element `[head]` declaration form for default args / docs) generates no
   # runtime clause and must not be compared against the real clauses below it.
-  defp extract_clause_info({dt, _, [head, _body]}) when dt in [:def, :defp] do
-    case head do
-      {:when, _, [{name, _, args} | guard_parts]} when is_atom(name) and is_list(args) ->
-        {name, length(args), args, guard_parts}
+  defp clause_signature({dt, _meta, [head, body]}, attr_versions) when dt in [:def, :defp] do
+    # A head containing `unquote(...)` is macro-generated: the surface AST
+    # collapses every `unquote(var)` to the same placeholder, so distinct clauses
+    # (e.g. `def f(unquote(lower))` vs `def f(unquote(upper))`) look identical and
+    # would be wrongly deleted. The real patterns are only known after expansion.
+    if contains_unquote?(head) do
+      :error
+    else
+      case head_parts(head) do
+        {name, args, guard_parts} ->
+          do_body = extract_do_value(body)
+          {norm_args, norm_guards, norm_body} = normalize_clause(args, guard_parts, do_body)
+          attr_refs = referenced_attr_versions([args, guard_parts, do_body], attr_versions)
+          sig = {name, length(args), norm_args, norm_guards, norm_body, attr_refs}
+          {:ok, sig, name, length(args)}
 
-      {name, _, args} when is_atom(name) and is_list(args) ->
-        {name, length(args), args, []}
-
-      _ ->
-        nil
+        nil ->
+          :error
+      end
     end
   end
 
-  defp extract_clause_info(_), do: nil
+  defp clause_signature(_, _), do: :error
 
-  # Build a comparable signature for a clause. Args and guards are normalized
-  # together with a shared binding map so that variable identity is preserved:
-  # the Nth distinct variable name becomes `{:v, N}`, and a *repeated* name reuses
-  # its placeholder. This keeps `def f(x, x)` (a non-linear equality constraint)
-  # distinct from `def f(a, b)` — without it, both collapse to two placeholders
-  # and reachable clauses get flagged as duplicates.
-  defp signature(name, arity, args, guard_parts) do
-    {normalized_args, state} = Enum.map_reduce(args, {%{}, 0}, &normalize_node/2)
-    {normalized_guards, _state} = Enum.map_reduce(guard_parts, state, &normalize_node/2)
-    {name, arity, normalized_args, normalized_guards}
+  defp head_parts({:when, _, [{name, _, args} | guard_parts]})
+       when is_atom(name) and is_list(args),
+       do: {name, args, guard_parts}
+
+  defp head_parts({name, _, args}) when is_atom(name) and is_list(args), do: {name, args, []}
+  defp head_parts(_), do: nil
+
+  defp extract_do_value(body) when is_list(body) do
+    case Keyword.fetch(body, :do) do
+      {:ok, v} ->
+        v
+
+      :error ->
+        Enum.find_value(body, fn
+          {{:__block__, _, [:do]}, v} -> v
+          _ -> nil
+        end)
+    end
   end
 
-  # Stateful normalization threading `{name => placeholder_index, next_index}`.
+  defp extract_do_value(_), do: nil
+
+  # Normalize args, guards and body together with ONE shared variable-binding map
+  # so variable identity is preserved across all three.
+  defp normalize_clause(args, guard_parts, do_body) do
+    {norm_args, state} = Enum.map_reduce(args, {%{}, 0}, &normalize_node/2)
+    {norm_guards, state} = Enum.map_reduce(guard_parts, state, &normalize_node/2)
+    {norm_body, _state} = normalize_node(do_body, state)
+    {norm_args, norm_guards, norm_body}
+  end
+
+  # For every module attribute *used* anywhere in `asts`, its current version
+  # (how many times it has been (re)assigned so far in the block). Sorted so the
+  # signature is order-independent.
+  defp referenced_attr_versions(asts, attr_versions) do
+    {_ast, used} =
+      Macro.prewalk(asts, MapSet.new(), fn
+        {:@, _, [{name, _, ctx}]} = node, acc when is_atom(name) and is_atom(ctx) ->
+          {node, MapSet.put(acc, name)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    used
+    |> Enum.map(fn name -> {name, Map.get(attr_versions, name, 0)} end)
+    |> Enum.sort()
+  end
+
+  defp contains_unquote?(head) do
+    {_node, found?} =
+      Macro.prewalk(head, false, fn
+        {form, _, _} = node, _acc when form in [:unquote, :unquote_splicing] -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found?
+  end
+
+  # The Nth distinct variable name becomes `{:v, N}` and a *repeated* name reuses
+  # its placeholder, threading `{name => placeholder_index, next_index}`. This
+  # keeps `def f(x, x)` (a non-linear equality constraint) distinct from
+  # `def f(a, b)`.
+
   # Bare `_` is always a fresh placeholder (each underscore is independent).
   defp normalize_node({:_, _, ctx}, {names, n}) when is_atom(ctx) do
     {{:v, n}, {names, n + 1}}
+  end
+
+  # `__MODULE__` is the current-module constant, NOT a bindable variable. In
+  # struct-name position `%__MODULE__{}` matches only this module's struct while
+  # `%_{}` matches any struct, so they must stay distinct — keep `__MODULE__`
+  # literal rather than collapsing it to a `_`-style placeholder.
+  defp normalize_node({:__MODULE__, _, ctx}, state) when is_atom(ctx) do
+    {{:special, :__MODULE__}, state}
+  end
+
+  # A bare name on the RHS of a pipe (`text |> is_list`) is a FUNCTION reference,
+  # not a variable — keep its name literal so `|> is_list` and `|> is_binary`
+  # (and other pipe-form guards) stay distinct instead of collapsing to the same
+  # placeholder.
+  defp normalize_node({:|>, _, [left, {fname, _, ctx}]}, state)
+       when is_atom(fname) and is_atom(ctx) do
+    {nleft, state} = normalize_node(left, state)
+    {{:|>, [nleft, {:fn_ref, fname}]}, state}
   end
 
   defp normalize_node({var, _, ctx}, {names, n}) when is_atom(var) and is_atom(ctx) do

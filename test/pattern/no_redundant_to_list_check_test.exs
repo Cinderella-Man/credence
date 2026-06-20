@@ -145,5 +145,21 @@ defmodule Credence.Pattern.NoRedundantToListCheckTest do
 
       assert check(NoRedundantToList, code) == []
     end
+
+    # Only `Map.new`/`MapSet.new` accept an arbitrary enumerable. `Map.take`'s
+    # keys argument is list-shaped — stripping `Enum.to_list` would pass a
+    # non-list enumerable (e.g. a MapSet) and trigger a deprecation, so a
+    # non-`.new` function must not be flagged.
+    test "does not flag Enum.to_list feeding a non-.new function (Map.take)" do
+      code = """
+      defmodule Example do
+        def run(record, resource) do
+          record |> Map.take(Enum.to_list(attribute_names(resource)))
+        end
+      end
+      """
+
+      assert check(NoRedundantToList, code) == []
+    end
   end
 end

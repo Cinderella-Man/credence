@@ -387,5 +387,39 @@ defmodule Credence.Pattern.NoCaseTrueFalseFixTest do
 
       confirm_fix(fix(NoCaseTrueFalse, input), input)
     end
+
+    # A comment sitting on a clause (not inside its body) must not be dropped
+    # when the clause wrapper is discarded in the case→if rewrite.
+    test "preserves a comment attached to a clause" do
+      input = """
+      defmodule Example do
+        defp check(conn) do
+          case Map.has_key?(conn, :flag) do
+            true ->
+              enable(conn)
+
+            # TODO: remove when flag is required
+            false ->
+              conn
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        defp check(conn) do
+          if Map.has_key?(conn, :flag) do
+            enable(conn)
+          else
+            # TODO: remove when flag is required
+            conn
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(NoCaseTrueFalse, input), expected)
+    end
   end
 end

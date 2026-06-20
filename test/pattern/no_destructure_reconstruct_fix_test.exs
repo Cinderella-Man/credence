@@ -218,6 +218,21 @@ defmodule Credence.Pattern.NoDestructureReconstructFixTest do
       confirm_fix(fix(NoDestructureReconstruct, code), code)
     end
 
+    # Reassigning a destructured variable before reconstruction would make the
+    # `= items` collapse return stale input — the fix must leave it untouched.
+    test "does not rewrite when a destructured variable is reassigned" do
+      code = """
+      defmodule Good do
+        defp normalize([language, script, territory]) do
+          script = maybe_nil_script(script, territory)
+          [language, script, territory]
+        end
+      end
+      """
+
+      confirm_fix(fix(NoDestructureReconstruct, code), code)
+    end
+
     test "round-trip: case branch fix produces zero issues" do
       code = """
       defmodule Bad do

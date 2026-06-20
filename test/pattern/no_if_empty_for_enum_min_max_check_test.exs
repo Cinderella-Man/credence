@@ -153,5 +153,24 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMaxCheckTest do
 
       assert check(NoIfEmptyForEnumMinMax, code) == []
     end
+
+    # A custom `if`/2 macro (e.g. Nx's `defmacro if(pred, do_else)`) passes a
+    # bare variable where the standard `if` has a keyword list. The rule must
+    # not crash calling `Keyword.get/3` on a non-list — it should just not fire.
+    test "does not crash on a custom if/2 whose second arg is a bare variable" do
+      code = """
+      defmodule Custom do
+        defmacro if(pred, do_else) do
+          quote do
+            cond do
+              unquote(pred) -> unquote(do_else)
+            end
+          end
+        end
+      end
+      """
+
+      assert check(NoIfEmptyForEnumMinMax, code) == []
+    end
   end
 end

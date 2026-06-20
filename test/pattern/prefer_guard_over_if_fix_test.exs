@@ -321,4 +321,56 @@ defmodule Credence.Pattern.PreferGuardOverIfFixTest do
 
     confirm_fix(fix(PreferGuardOverIf, code), code)
   end
+
+  # A non-linear head (a variable repeated in the pattern) is a join/equality
+  # constraint. The unused copy must NOT be underscored — doing so would change
+  # the matched domain. It is left intact (an unused-var warning is harmless).
+  test "preserves a non-linear (repeated) head variable across the split" do
+    input = """
+    defp same(a, a) do
+      if a > 0 do
+        :pos
+      else
+        :other
+      end
+    end
+    """
+
+    expected = """
+    defp same(a, a) when a > 0 do
+      :pos
+    end
+    defp same(a, a) do
+      :other
+    end
+    """
+
+    confirm_fix(fix(PreferGuardOverIf, input), expected)
+  end
+
+  # Underscoring an unused param must not collide with an existing `_name` in the
+  # head — `{v, _v}` would otherwise become `{_v, _v}`, an unintended equality
+  # constraint. The unused `v` is left as-is.
+  test "does not underscore a param when it would collide with an existing _name" do
+    input = """
+    defp pick({v, _v}, flag) do
+      if flag > 0 do
+        v
+      else
+        :none
+      end
+    end
+    """
+
+    expected = """
+    defp pick({v, _v}, flag) when flag > 0 do
+      v
+    end
+    defp pick({v, _v}, _flag) do
+      :none
+    end
+    """
+
+    confirm_fix(fix(PreferGuardOverIf, input), expected)
+  end
 end

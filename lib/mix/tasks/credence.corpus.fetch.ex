@@ -20,9 +20,9 @@ defmodule Mix.Tasks.Credence.Corpus.Fetch do
     Credence.Corpus.ensure_fetched!()
 
     present =
-      Credence.Corpus.packages()
-      |> Enum.map(fn {pkg, version} ->
-        "  #{pkg} #{version} — #{length(Credence.Corpus.lib_files(pkg))} lib files"
+      Credence.Corpus.entries()
+      |> Enum.map(fn {name, label} ->
+        "  #{name} #{label} — #{length(Credence.Corpus.lib_files(name))} lib files"
       end)
 
     Mix.shell().info("Corpus ready in #{Credence.Corpus.root()}/:\n" <> Enum.join(present, "\n"))

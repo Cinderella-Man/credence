@@ -48,38 +48,123 @@ defmodule Credence.Pattern.PreferErlangFloat do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn
-        {op, meta, [left, right]} = node, acc when op in [:*, :/, :+, :-] ->
-          cond do
-            # operand OP identity (right-hand identity)
-            identity_right?(op, unwrap_float(right)) ->
-              {node, [build_issue(meta) | acc]}
+    if overrides_arith_operators?(ast) do
+      []
+    else
+      defn_ops = defn_operator_positions(ast)
 
-            # identity OP operand (left-hand identity, commutative ops only)
-            op in [:*, :+] and identity_left?(op, unwrap_float(left)) ->
-              {node, [build_issue(meta) | acc]}
+      {_ast, issues} =
+        Macro.prewalk(ast, [], fn
+          {op, meta, [left, right]} = node, acc
+          when op in [:*, :/, :+, :-] ->
+            cond do
+              MapSet.member?(defn_ops, position(meta)) ->
+                {node, acc}
 
-            true ->
-              {node, acc}
-          end
+              # operand OP identity (right-hand identity)
+              identity_right?(op, unwrap_float(right)) ->
+                {node, [build_issue(meta) | acc]}
+
+              # identity OP operand (left-hand identity, commutative ops only)
+              op in [:*, :+] and identity_left?(op, unwrap_float(left)) ->
+                {node, [build_issue(meta) | acc]}
+
+              true ->
+                {node, acc}
+            end
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      Enum.reverse(issues)
+    end
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    if overrides_arith_operators?(ast) do
+      []
+    else
+      defn_ops = defn_operator_positions(ast)
+      Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_to_erlang_float(&1, defn_ops))
+    end
+  end
+
+  # `* 1.0` / `/ 1.0` are float coercion ONLY when `*`//` are the Kernel
+  # operators on numbers. They are not when:
+  #
+  #  - the module overrides arithmetic operators (`use Image.Math`,
+  #    `import Kernel, except: [*: 2]`) — every `*` is then a struct/image
+  #    operation, and `:erlang.float/1` on that struct crashes; OR
+  #  - the operand is an Nx tensor inside a `defn`/`defnp` body — `:erlang.float/1`
+  #    is a raw BIF outside the defn-allowed function set.
+  #
+  # The first is module-wide (skip the whole file); the second is per operator
+  # node (regular `def`s in the same module are still fair game).
+  defp overrides_arith_operators?(ast) do
+    {_ast, found} =
+      Macro.prewalk(ast, false, fn
+        _node, true ->
+          {nil, true}
+
+        {:use, _, [{:__aliases__, _, parts} | _]} = node, _
+        when is_list(parts) and parts != [] ->
+          {node, List.last(parts) == :Math}
+
+        {:import, _, [{:__aliases__, _, [:Kernel]} | rest]} = node, _ ->
+          {node, mentions_arith_op?(rest)}
 
         node, acc ->
           {node, acc}
       end)
 
-    Enum.reverse(issues)
+    found
   end
 
-  @impl true
-  def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_to_erlang_float/1)
+  defp mentions_arith_op?(ast) do
+    {_ast, found} =
+      Macro.prewalk(ast, false, fn
+        _node, true -> {nil, true}
+        op, _ when op in [:*, :/, :+, :-] -> {op, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
   end
+
+  defp defn_operator_positions(ast) do
+    {_ast, set} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {defn, _, _} = node, acc when defn in [:defn, :defnp] ->
+          {_n, inner} =
+            Macro.prewalk(node, acc, fn
+              {op, meta, [_l, _r]} = n, a when op in [:*, :/, :+, :-] ->
+                {n, MapSet.put(a, position(meta))}
+
+              n, a ->
+                {n, a}
+            end)
+
+          {node, inner}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    set
+  end
+
+  defp position(meta), do: {Keyword.get(meta, :line), Keyword.get(meta, :column)}
 
   # Replace identity-coercion arithmetic with `:erlang.float(operand)`, where the
   # operand is whichever side is not the `1.0` / `0.0` identity literal.
-  defp maybe_to_erlang_float({op, _meta, [left, right]} = node) when op in [:*, :/, :+, :-] do
+  defp maybe_to_erlang_float({op, meta, [left, right]} = node, defn_ops)
+       when op in [:*, :/, :+, :-] do
     cond do
+      MapSet.member?(defn_ops, position(meta)) ->
+        node
+
       identity_right?(op, unwrap_float(right)) ->
         erlang_float(unwrap_block(left))
 
@@ -91,7 +176,7 @@ defmodule Credence.Pattern.PreferErlangFloat do
     end
   end
 
-  defp maybe_to_erlang_float(node), do: node
+  defp maybe_to_erlang_float(node, _defn_ops), do: node
 
   # Strip a single Sourceror `{:__block__, _, [inner]}` wrapper (around a bare
   # variable or literal); leave compound expression nodes untouched.

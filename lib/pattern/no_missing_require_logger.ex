@@ -57,31 +57,130 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn
-        {:defmodule, meta, [_name, kw]} = node, acc when is_list(kw) ->
-          case Credence.RuleHelpers.extract_do_body(kw) do
-            {:ok, body} ->
-              if has_logger_macro_call?(body) and not has_logger_require?(body) do
-                {node, [build_issue(meta) | acc]}
-              else
-                {node, acc}
-              end
-
-            :error ->
-              {node, acc}
-          end
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    Enum.reverse(issues)
+    for {{:defmodule, meta, _}, _kw} <- unsatisfied_modules(ast), do: build_issue(meta)
   end
 
   @impl true
   def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_fix_module/1)
+    Enum.flat_map(unsatisfied_modules(ast), fn {_node, kw} -> require_patch(kw) end)
+  end
+
+  # Modules (innermost-first within each scope) that call a Logger macro and have
+  # NOTHING in scope that would provide `require Logger`. "In scope" includes the
+  # module's own directives AND those inherited from enclosing modules / file
+  # scope, because `require`/`alias` propagate lexically downward. A module is
+  # treated as satisfied (not flagged, not auto-required) when, anywhere in scope:
+  #   * `require`/`import`/`use Logger`,
+  #   * an `alias` that makes `Logger` refer to a *different* module
+  #     (`alias Conform.Logger` / `alias X, as: Logger`) — then `Logger.*` is not
+  #     the stdlib macro at all, or
+  #   * any `use SomeModule` — whose `__using__` may inject `require Logger`
+  #     (common for app/web base modules and logging mix-ins); we can't expand it.
+  defp unsatisfied_modules(ast) do
+    collect_unsatisfied(top_statements(ast), false, [])
+    |> Enum.reverse()
+  end
+
+  defp collect_unsatisfied(statements, inherited?, acc) do
+    scope_provides? = inherited? or Enum.any?(statements, &provides_logger?/1)
+
+    Enum.reduce(statements, acc, fn
+      {:defmodule, _meta, [_name, kw]} = node, acc when is_list(kw) ->
+        case extract_do_body(kw) do
+          nil ->
+            acc
+
+          body ->
+            stmts = block_to_list(body)
+
+            self_provides? =
+              scope_provides? or Enum.any?(stmts, &provides_logger?/1) or
+                has_logger_require?(body)
+
+            acc =
+              if has_logger_macro_call?(body) and not self_provides?,
+                do: [{node, kw} | acc],
+                else: acc
+
+            collect_unsatisfied(stmts, self_provides?, acc)
+        end
+
+      _other, acc ->
+        acc
+    end)
+  end
+
+  defp top_statements({:__block__, _, stmts}), do: stmts
+  defp top_statements(single), do: [single]
+
+  # OTP/stdlib behaviour modules whose `use` does NOT inject `require Logger`.
+  # Other `use X` are custom mix-ins (app/web bases, logging helpers) whose
+  # `__using__` commonly injects `require Logger` / `alias …Logger`, which we
+  # cannot expand — so we conservatively treat them as providing it.
+  @stdlib_use_targets [
+    [:GenServer],
+    [:Agent],
+    [:Task],
+    [:Supervisor],
+    [:DynamicSupervisor],
+    [:Application],
+    [:GenEvent],
+    [:GenStage],
+    [:Registry],
+    [:Bitwise]
+  ]
+
+  # Does a single statement bring `require Logger` into scope, alias `Logger` to a
+  # non-stdlib module, or possibly inject a require via a custom `use`?
+  defp provides_logger?({:use, _, [{:__aliases__, _, parts} | _]}) when is_list(parts),
+    do: parts not in @stdlib_use_targets
+
+  defp provides_logger?({:use, _, [_ | _]}), do: true
+
+  defp provides_logger?({d, _, [{:__aliases__, _, parts} | _]})
+       when d in [:require, :import] and is_list(parts),
+       do: List.last(parts) == :Logger
+
+  defp provides_logger?({:alias, _, args}), do: alias_targets_logger?(args)
+  defp provides_logger?(_), do: false
+
+  # `alias Conform.Logger` (multi-segment ending in Logger) or
+  # `alias X, as: Logger` (X ≠ Logger) make `Logger` refer to a non-stdlib module.
+  defp alias_targets_logger?([{:__aliases__, _, parts}])
+       when is_list(parts),
+       do: length(parts) > 1 and List.last(parts) == :Logger
+
+  defp alias_targets_logger?([{:__aliases__, _, target}, opts]) when is_list(opts) do
+    match?({:__aliases__, _, [:Logger]}, Keyword.get(opts, :as)) and target != [:Logger]
+  end
+
+  defp alias_targets_logger?(_), do: false
+
+  # A single zero-width insertion patch placing `require Logger` (as its own
+  # paragraph) just before the first non-directive statement. Inserting
+  # surgically — rather than rebuilding the module body with the extra statement
+  # — avoids re-rendering, and thereby reformatting, the rest of the module.
+  defp require_patch(kw) do
+    with body when not is_nil(body) <- extract_do_body(kw),
+         true <- has_logger_macro_call?(body) and not has_logger_require?(body),
+         statements = block_to_list(body),
+         anchor when not is_nil(anchor) <- Enum.at(statements, find_directive_end(statements)),
+         %Sourceror.Range{start: start} <- Sourceror.get_range(anchor) do
+      # Anchor the insertion at column 1 of the statement's line (not its own
+      # column): `Sourceror.patch_string` re-indents a multi-line change to the
+      # patch's start column, which would double the indentation. At column 1 the
+      # change is inserted verbatim, so we bake the indent in ourselves.
+      indent = String.duplicate(" ", start[:column] - 1)
+
+      [
+        %{
+          range: %{start: [line: start[:line], column: 1], end: [line: start[:line], column: 1]},
+          change: indent <> "require Logger\n\n"
+        }
+      ]
+    else
+      _ -> []
+    end
   end
 
   # Walks the body looking for Logger.macro_name(...) calls.
@@ -137,42 +236,9 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
   defp block_to_list({:__block__, _, stmts}), do: stmts
   defp block_to_list(single), do: [single]
 
-  defp maybe_fix_module({:defmodule, meta, [name, kw]}) do
-    case extract_do_body(kw) do
-      nil ->
-        {:defmodule, meta, [name, kw]}
-
-      body ->
-        statements = block_to_list(body)
-
-        if has_logger_macro_call?(body) and not has_logger_require?(body) do
-          new_statements = insert_require(statements)
-          new_body = {:__block__, [], new_statements}
-          {:defmodule, meta, [name, replace_do_body(kw, new_body)]}
-        else
-          {:defmodule, meta, [name, kw]}
-        end
-    end
-  end
-
-  defp maybe_fix_module(node), do: node
-
   # Extracts the body from a defmodule's keyword argument list.
   defp extract_do_body([{{:__block__, _, [:do]}, body}]), do: body
   defp extract_do_body(_), do: nil
-
-  defp replace_do_body([{{:__block__, m, [:do]}, _old}], new_body),
-    do: [{{:__block__, m, [:do]}, new_body}]
-
-  defp replace_do_body(other, _new_body), do: other
-
-  # Inserts `require Logger` after the last directive-like statement
-  # at the top of the module body.
-  defp insert_require(statements) do
-    require_ast = Sourceror.parse_string!("require Logger")
-    insert_idx = find_directive_end(statements)
-    List.insert_at(statements, insert_idx, require_ast)
-  end
 
   @directives [:use, :import, :require, :alias]
 

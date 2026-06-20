@@ -235,5 +235,26 @@ defmodule Credence.Pattern.NonGroupedClausesFixTest do
 
       confirm_fix(fix(NonGroupedClauses, input), expected)
     end
+
+    # A stray clause whose single-statement body is a `do…end` block (here a
+    # `case`) must not be moved — re-rendering it would collapse the block to a
+    # `do:` one-liner and re-bind the trailing block to `def` (uncompilable). It
+    # is left in place (check still flags it).
+    test "does not move a stray clause whose body is a single do-block construct" do
+      code = """
+      defmodule M do
+        def foo(1), do: 1
+        def bar(x), do: x
+
+        def foo(x) do
+          case x do
+            _ -> x
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(NonGroupedClauses, code), code)
+    end
   end
 end

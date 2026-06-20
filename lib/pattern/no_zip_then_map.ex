@@ -98,7 +98,12 @@ defmodule Credence.Pattern.NoZipThenMap do
 
   @impl true
   def fix_patches(ast, source: source) do
-    RuleHelpers.patches_from_ast_transform(ast, source, &transform_node/1)
+    # `transform_node/1` matches a single `Enum.zip |> Enum.map` (or nested) node;
+    # it must be WALKED over the tree, otherwise it only ever sees the module root
+    # and the fix is a silent no-op for every real (nested) occurrence.
+    RuleHelpers.patches_from_ast_transform(ast, source, fn input ->
+      Macro.postwalk(input, &transform_node/1)
+    end)
   end
 
   # --- transform ---

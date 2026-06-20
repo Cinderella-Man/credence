@@ -13,7 +13,8 @@ defmodule Credence.QuietFormatter do
 
   use GenServer
 
-  import ExUnit.Formatter, only: [format_test_failure: 5, format_test_all_failure: 5]
+  import ExUnit.Formatter,
+    only: [format_times: 1, format_test_failure: 5, format_test_all_failure: 5]
 
   @impl true
   def init(opts) do
@@ -69,7 +70,7 @@ defmodule Credence.QuietFormatter do
     {:noreply, %{state | failures: counter}}
   end
 
-  def handle_cast({:suite_finished, _times}, state) do
+  def handle_cast({:suite_finished, times_us}, state) do
     type_counts =
       state.counter
       |> Enum.sort()
@@ -88,6 +89,7 @@ defmodule Credence.QuietFormatter do
     color = if state.failures > 0, do: :red, else: :green
 
     IO.puts("")
+    IO.puts(format_times(times_us))
     IO.puts(colorize(color, summary, state))
     if state.seed, do: IO.puts("Randomized with seed #{state.seed}")
     {:noreply, state}

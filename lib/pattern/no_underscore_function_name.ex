@@ -40,12 +40,22 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
 
   @impl true
   def check(ast, _opts) do
+    if loads_nif?(ast) do
+      []
+    else
+      do_check(ast)
+    end
+  end
+
+  defp do_check(ast) do
+    captured = excluded_names(ast)
+
     {_ast, {_names, issues}} =
       Macro.postwalk(ast, {%{}, []}, fn
         {def_type, meta, [{:when, _, [{fn_name, _, args}, _guard]}, _body]} = node,
         {names, issues}
         when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
-          if underscore_prefixed?(fn_name) and not Map.has_key?(names, fn_name) do
+          if flaggable?(fn_name, names, captured) do
             {node,
              {Map.put(names, fn_name, true),
               [build_issue(def_type, fn_name, length(args), meta) | issues]}}
@@ -55,7 +65,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
 
         {def_type, meta, [{fn_name, _, args}, _body]} = node, {names, issues}
         when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
-          if underscore_prefixed?(fn_name) and not Map.has_key?(names, fn_name) do
+          if flaggable?(fn_name, names, captured) do
             {node,
              {Map.put(names, fn_name, true),
               [build_issue(def_type, fn_name, length(args), meta) | issues]}}
@@ -70,9 +80,14 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
     Enum.reverse(issues)
   end
 
+  defp flaggable?(fn_name, names, captured) do
+    underscore_prefixed?(fn_name) and not Map.has_key?(names, fn_name) and
+      not MapSet.member?(captured, fn_name)
+  end
+
   @impl true
   def fix_patches(ast, _opts) do
-    name_map = collect_renames(ast)
+    name_map = if loads_nif?(ast), do: %{}, else: collect_renames(ast)
 
     if map_size(name_map) == 0 do
       []
@@ -82,17 +97,19 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
   end
 
   defp collect_renames(ast) do
+    captured = excluded_names(ast)
+
     {_ast, names} =
       Macro.postwalk(ast, MapSet.new(), fn
         {def_type, _meta, [{:when, _, [{fn_name, _, args}, _guard]}, _body]} = node, names
         when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
-          if underscore_prefixed?(fn_name),
+          if underscore_prefixed?(fn_name) and not MapSet.member?(captured, fn_name),
             do: {node, MapSet.put(names, fn_name)},
             else: {node, names}
 
         {def_type, _meta, [{fn_name, _, args}, _body]} = node, names
         when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) ->
-          if underscore_prefixed?(fn_name),
+          if underscore_prefixed?(fn_name) and not MapSet.member?(captured, fn_name),
             do: {node, MapSet.put(names, fn_name)},
             else: {node, names}
 
@@ -101,6 +118,66 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
       end)
 
     for name <- names, into: %{}, do: {name, suggested_name(name)}
+  end
+
+  # Names that cannot be renamed safely because at least one reference to them
+  # is not a parenthesised call (`name(args)`) — the only shape `rename_node/2`
+  # rewrites. Renaming the def while leaving such a reference pointing at the old
+  # name produces a dangling reference that fails to compile, so these names are
+  # excluded from both flagging and the fix:
+  #
+  #   - arity-style captures `&name/arity` (`captured_arity_names/1`); and
+  #   - bare references `{name, _, ctx}` with no argument list — a name used in a
+  #     pipe without parens (`x |> _value`), whose AST is indistinguishable from
+  #     a variable (`bare_reference_names/1`).
+  defp excluded_names(ast) do
+    MapSet.union(captured_arity_names(ast), bare_reference_names(ast))
+  end
+
+  defp bare_reference_names(ast) do
+    {_ast, names} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {name, _meta, ctx} = node, acc when is_atom(name) and is_atom(ctx) ->
+          if underscore_prefixed?(name),
+            do: {node, MapSet.put(acc, name)},
+            else: {node, acc}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
+  end
+
+  # A module that binds a native NIF via `:erlang.load_nif/2`. Its functions —
+  # especially the `_`-prefixed stubs — are bound to the native library BY NAME;
+  # renaming them silently orphans the binding (the extension becomes a runtime
+  # no-op). Leave every function in such a module untouched.
+  defp loads_nif?(ast) do
+    {_ast, found} =
+      Macro.prewalk(ast, false, fn
+        _node, true -> {nil, true}
+        # `:erlang.load_nif/2` — the module atom may be Sourceror-wrapped in a
+        # `__block__`, and there is no other `load_nif`, so match on the function.
+        {{:., _, [_mod, :load_nif]}, _, _} = node, _ -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
+  end
+
+  defp captured_arity_names(ast) do
+    {_ast, names} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {:&, _, [{:/, _, [{name, _, ctx}, _arity]}]} = node, acc
+        when is_atom(name) and is_atom(ctx) ->
+          {node, MapSet.put(acc, name)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
   end
 
   defp rename_node({fn_name, meta, args}, name_map)

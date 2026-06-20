@@ -35,4 +35,7 @@ maintainer_tools/stage_1_promote_fixable_rules/.review_logs/
 maintainer_tools/stage_2_promote_non_fixable/.review_logs/
 maintainer_tools/stage_3_resurrect_followups/.review_logs/
 
-.claude
+.claudemaintainer_tools/corpus_whitelist_validator/accepted_findings.txt
+maintainer_tools/corpus_whitelist_validator/data/
+maintainer_tools/corpus_whitelist_validator/reports/
+maintainer_tools/corpus_whitelist_validator/.logs/

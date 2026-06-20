@@ -102,8 +102,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
-             not head_has_bitstring?(head),
+        if splittable?(head, body, condition),
            do: {:ok, meta[:line]},
            else: :error
 
@@ -113,6 +112,49 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   end
 
   defp check_node(_), do: :error
+
+  # All the guards that must hold for the if→clause split to be safe, shared by
+  # check and fix so they agree exactly.
+  defp splittable?(head, body, condition) do
+    guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
+      not head_has_bitstring?(head) and not head_has_attribute?(head) and
+      not head_has_default?(head) and not body_has_h_sigil?(body)
+  end
+
+  # A head parameter carrying a default (`def f(x \\ nil)`): the rewrite copies
+  # the head onto BOTH generated clauses, and Elixir forbids declaring a
+  # default more than once for the same function ("default values are defined
+  # multiple times") — a compile error. Skip.
+  defp head_has_default?(head_ast) do
+    call =
+      case head_ast do
+        {:when, _, [c, _guard]} -> c
+        other -> other
+      end
+
+    {_node, found?} =
+      Macro.prewalk(call, false, fn
+        {:\\, _, _} = node, _acc -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found?
+  end
+
+  # A `~H` (Phoenix component) body implicitly references a variable literally
+  # named `assigns`. The rewrite re-renders the head through
+  # `underscore_unused_params/2`, which — blind to the macro-level reference —
+  # underscores `assigns` into `_assigns`, and `~H` then fails to compile
+  # ("~H requires a variable named \"assigns\""). Skip such bodies entirely.
+  defp body_has_h_sigil?(body) do
+    {_node, found?} =
+      Macro.prewalk(body, false, fn
+        {:sigil_H, _, _} = node, _acc -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found?
+  end
 
   # A function head containing a binary/bitstring pattern (`<<c::utf8, rest::binary>>`)
   # is skipped: the clause-splitting rewrite re-renders the head and
@@ -129,14 +171,41 @@ defmodule Credence.Pattern.PreferGuardOverIf do
     found?
   end
 
+  # A PARAMETER pattern-matching a module attribute (`def encode(@max_size, rest)`)
+  # is skipped for the same reason as a bitstring head: the rewrite re-renders the
+  # head through `underscore_unused_params/2`, whose postwalk sees the variable
+  # node *inside* `@attr` (`{:@, _, [{name, _, nil}]}`) and underscores it into
+  # `@_attr` — an undefined attribute that evaluates to `nil`, silently breaking
+  # the match. Only the param patterns are scanned: an attribute in the `when`
+  # guard (`when level in @levels`) is carried through verbatim, never
+  # underscored, so it is safe and must not block the fix.
+  defp head_has_attribute?(head_ast) do
+    call =
+      case head_ast do
+        {:when, _, [c, _guard]} -> c
+        other -> other
+      end
+
+    {_node, found?} =
+      Macro.prewalk(call, false, fn
+        {:@, _, [{name, _, ctx}]} = node, _acc
+        when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
+          {node, true}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found?
+  end
+
   defp try_build_patch({def_kind, _meta, [head_ast, body_kw]} = node)
        when def_kind in [:def, :defp] and is_list(body_kw) do
     body = extract_body(body_kw)
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
-             not head_has_bitstring?(head_ast) do
+        if splittable?(head_ast, body, condition) do
           {call, existing_guard} = extract_head_parts(head_ast)
           {do_body, else_body} = extract_branches(body)
 
@@ -162,7 +231,20 @@ defmodule Credence.Pattern.PreferGuardOverIf do
             |> MapSet.union(collect_var_names(first_guard))
 
           first_head = build_head(underscore_unused_params(call, first_used), first_guard)
-          first_clause = {def_kind, [], [first_head, [do: do_body]]}
+
+          # Carry any comment that led the `if` (a `# why` line before it in the
+          # body) onto the first generated clause — the if node is discarded, so
+          # the comment would otherwise be dropped. `line: 1` anchors it.
+          if_leading =
+            case if_node_of(body) do
+              {:if, m, _} -> Keyword.get(m, :leading_comments, [])
+              _ -> []
+            end
+
+          first_clause =
+            {def_kind, [line: 1], [first_head, [do: do_body]]}
+            |> Credence.RuleHelpers.carry_comments(if_leading, [])
+
           first_text = Sourceror.to_string(first_clause)
 
           # Build second clause: defp call [when existing_guard] do else_body end
@@ -223,6 +305,12 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   defp extract_if_else({:__block__, _, [expr]}), do: extract_if_else(expr)
 
   defp extract_if_else(_), do: :error
+
+  # The `:if` node within a def body (unwrapping a single-expression block), or
+  # nil — used to recover the comment that led the `if`.
+  defp if_node_of({:__block__, _, [expr]}), do: if_node_of(expr)
+  defp if_node_of({:if, _, _} = node), do: node
+  defp if_node_of(_), do: nil
 
   defp has_both_branches?(clauses) do
     has_clause?(clauses, :do) and has_clause?(clauses, :else)
@@ -417,18 +505,49 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   # In a function head AST, prefix any variable not in `used_names` with `_`.
   defp underscore_unused_params(head, used_names) do
+    counts = var_counts(head)
+    existing = collect_var_names(head)
+
     Macro.postwalk(head, fn
-      {name, meta, ctx} when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
-        # Leave a name that is already underscore-prefixed (`_x`, `_`) alone —
-        # re-underscoring it into `__x` is not a conventional unused name.
-        if name in used_names or String.starts_with?(Atom.to_string(name), "_") do
-          {name, meta, ctx}
-        else
+      {name, meta, ctx} = node when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
+        if safe_to_underscore?(name, used_names, counts, existing) do
           {:"_#{name}", meta, ctx}
+        else
+          node
         end
 
       node ->
         node
     end)
+  end
+
+  defp safe_to_underscore?(name, used_names, counts, existing) do
+    not (name in used_names) and
+      # Leave an already-underscore-prefixed name (`_x`, `_`) alone — re-underscoring
+      # it into `__x` is not a conventional unused name.
+      not String.starts_with?(Atom.to_string(name), "_") and
+      # Non-linear pattern variable (appears more than once in the head): the
+      # repetition is a join/equality constraint, e.g. `f(x, x)`. Underscoring it
+      # changes the matched domain — leave it (an unused-var warning is harmless).
+      Map.get(counts, name, 0) == 1 and
+      # Collision: `_name` already appears in the head, so underscoring `name`
+      # would create a `{_name, _name}`-style equality constraint that did not
+      # exist. Leave it.
+      not MapSet.member?(existing, :"_#{name}")
+  end
+
+  # Count occurrences of each (non-underscore) variable name in the head.
+  defp var_counts(head) do
+    {_ast, counts} =
+      Macro.prewalk(head, %{}, fn
+        {name, _, ctx} = node, acc
+        when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) and name != :_ ->
+          {node, Map.update(acc, name, 1, &(&1 + 1))}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    counts
   end
 end

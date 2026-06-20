@@ -152,5 +152,41 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameFixTest do
 
       assert check(NoUnderscoreFunctionName, fix(NoUnderscoreFunctionName, code)) == []
     end
+
+    # An arity-style capture `&_name/arity` cannot be rewritten by the rename
+    # (its node looks like a bare variable), so renaming the def would strand
+    # the capture pointing at a now-missing name. The fix must leave the whole
+    # function alone rather than ship code that fails to compile.
+    test "leaves a function referenced by &_name/arity untouched" do
+      input = """
+      defmodule Example do
+        def run(list), do: Enum.map(list, &_step/1)
+
+        defp _step(x), do: x + 1
+      end
+      """
+
+      confirm_fix(fix(NoUnderscoreFunctionName, input), input)
+    end
+
+    test "renames a call-style capture &_name(&1) along with the def" do
+      input = """
+      defmodule Example do
+        def run(list), do: Enum.map(list, &_step(&1))
+
+        defp _step(x), do: x + 1
+      end
+      """
+
+      expected = """
+      defmodule Example do
+        def run(list), do: Enum.map(list, &do_step(&1))
+
+        defp do_step(x), do: x + 1
+      end
+      """
+
+      confirm_fix(fix(NoUnderscoreFunctionName, input), expected)
+    end
   end
 end

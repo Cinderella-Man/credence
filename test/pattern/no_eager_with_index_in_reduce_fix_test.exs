@@ -52,6 +52,56 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
       confirm_fix(fix(NoEagerWithIndexInReduce, input), expected)
     end
 
+    # Regression: a non-default offset on Enum.with_index/2 must be carried over
+    # to Stream.with_index/2 — dropping it shifts every index by the offset.
+    test "preserves a non-default offset on the direct form" do
+      input = """
+      defmodule Bad do
+        def process(list) do
+          Enum.reduce(Enum.with_index(list, 1), %{}, fn {val, idx}, acc ->
+            Map.put(acc, idx, val)
+          end)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def process(list) do
+          Enum.reduce(Stream.with_index(list, 1), %{}, fn {val, idx}, acc ->
+            Map.put(acc, idx, val)
+          end)
+        end
+      end
+      """
+
+      confirm_fix(fix(NoEagerWithIndexInReduce, input), expected)
+    end
+
+    test "preserves a non-default offset on the pipe form" do
+      input = """
+      defmodule Bad do
+        def process(list) do
+          list
+          |> Enum.with_index(2)
+          |> Enum.reduce(%{}, fn {val, idx}, acc -> Map.put(acc, idx, val) end)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def process(list) do
+          list
+          |> Stream.with_index(2)
+          |> Enum.reduce(%{}, fn {val, idx}, acc -> Map.put(acc, idx, val) end)
+        end
+      end
+      """
+
+      confirm_fix(fix(NoEagerWithIndexInReduce, input), expected)
+    end
+
     test "preserves fn body unchanged" do
       input = """
       defmodule Bad do
@@ -201,6 +251,32 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduceFixTest do
         def process(list) do
           Enum.reduce(Stream.with_index(list), [], fn {{a, b}, idx}, acc ->
             [{idx, a, b} | acc]
+          end)
+        end
+      end
+      """
+
+      confirm_fix(fix(NoEagerWithIndexInReduce, input, fix_strategy: :reduce), expected)
+    end
+
+    # The accumulator-tracked index starts at 0, so a non-default offset cannot
+    # be represented — fall back to :stream, which keeps the 2-arg form.
+    test "falls back to stream when a non-default offset is present" do
+      input = """
+      defmodule Bad do
+        def process(list) do
+          Enum.reduce(Enum.with_index(list, 5), [], fn {val, idx}, acc ->
+            [{idx, val} | acc]
+          end)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Bad do
+        def process(list) do
+          Enum.reduce(Stream.with_index(list, 5), [], fn {val, idx}, acc ->
+            [{idx, val} | acc]
           end)
         end
       end

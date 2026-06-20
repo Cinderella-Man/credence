@@ -88,7 +88,8 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   defp check_pattern_body(pattern, body, meta) do
     case extract_var_names(pattern) do
       {:ok, var_names} when length(var_names) >= 2 ->
-        if body_contains_same_list?(body, var_names) do
+        if body_contains_same_list?(body, var_names) and
+             not reassigns_any?(body, var_names) do
           [build_issue(var_names, meta)]
         else
           []
@@ -167,7 +168,8 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
   defp fix_pattern_body(pattern, body, extra_ast \\ nil) do
     with {:ok, elements, list_node} <- RuleHelpers.unwrap_list(pattern),
          {:ok, var_names} when length(var_names) >= 2 <- extract_names_from_elements(elements),
-         true <- body_contains_same_list?(body, var_names) do
+         true <- body_contains_same_list?(body, var_names),
+         false <- reassigns_any?(body, var_names) do
       binding_var = {:items, [], nil}
       new_body = replace_reconstructed_list(body, var_names, binding_var)
 
@@ -206,6 +208,33 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
       node ->
         node
     end)
+  end
+
+  # The fix rebinds the whole list as `items` on the pattern and substitutes the
+  # reconstructed `[a, b, c]` in the body with `items`. That is only sound when
+  # the reconstructed list still equals the bound input — i.e. none of the
+  # destructured variables were reassigned between the head pattern and the
+  # reconstruction. If the body rebinds any of them (`script = …`,
+  # `{:ok, y} <- …`, `left = lazy(left)`), `items` holds the *original* values
+  # while the reconstruction used the recomputed ones, so substituting `items`
+  # silently returns stale data. Bail (in both check and fix) when any
+  # destructured name appears on the LHS of a match (`=`) or `<-` in the body.
+  defp reassigns_any?(body, var_names) do
+    target = MapSet.new(var_names)
+
+    {_, found} =
+      Macro.prewalk(body, false, fn
+        node, true ->
+          {node, true}
+
+        {op, _, [lhs, _rhs]} = node, false when op in [:=, :<-] ->
+          {node, not MapSet.disjoint?(collect_variable_names(lhs), target)}
+
+        node, false ->
+          {node, false}
+      end)
+
+    found
   end
 
   defp body_contains_same_list?(body, target_var_names) do

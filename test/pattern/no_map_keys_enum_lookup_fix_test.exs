@@ -198,5 +198,20 @@ defmodule Credence.Pattern.NoMapKeysEnumLookupFixTest do
 
       confirm_fix(fix(NoMapKeysEnumLookup, code), code)
     end
+
+    # Scope parity: the callback uses only the KEY (no `m[k]`/`Map.get(m, k)`
+    # value lookup), so the check does not flag it — and the fix must not rewrite
+    # it (it used to, introducing an unused `v` binding).
+    test "does not rewrite when the callback never looks up the map" do
+      code = "Map.keys(m) |> Enum.any?(fn k -> k in @keywords end)"
+
+      confirm_fix(fix(NoMapKeysEnumLookup, code), code)
+    end
+
+    test "does not rewrite a key-only direct call" do
+      code = "Enum.all?(Map.keys(m), fn k -> is_atom(k) end)"
+
+      confirm_fix(fix(NoMapKeysEnumLookup, code), code)
+    end
   end
 end

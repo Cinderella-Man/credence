@@ -268,6 +268,70 @@ defmodule Credence.Pattern.PreferErlangFloatCheckTest do
     end
   end
 
+  describe "does not flag operator-overloaded / defn contexts" do
+    # Inside `defn`/`defnp` the operands are Nx tensors; `:erlang.float/1` is a
+    # raw BIF outside the defn-allowed set and would break compilation.
+    test "skips `* 1.0` inside a defn body" do
+      code = """
+      defmodule M do
+        import Nx.Defn
+        defn scale(x), do: x * 1.0
+      end
+      """
+
+      assert clean?(PreferErlangFloat, code)
+    end
+
+    test "skips `* 1.0` inside a defnp body" do
+      code = """
+      defmodule M do
+        import Nx.Defn
+        defnp scale(x), do: x * 1.0
+      end
+      """
+
+      assert clean?(PreferErlangFloat, code)
+    end
+
+    # `use Image.Math` overrides `*`, so `* 1.0` is image multiplication, not
+    # float coercion — skip the whole module.
+    test "skips a module that uses an operator-overriding *.Math" do
+      code = """
+      defmodule M do
+        use Image.Math
+        def f(x), do: x * 1.0
+      end
+      """
+
+      assert clean?(PreferErlangFloat, code)
+    end
+
+    test "skips a module that imports Kernel excluding arithmetic operators" do
+      code = """
+      defmodule M do
+        import Kernel, except: [*: 2]
+        import MyMath
+        def f(x), do: x * 1.0
+      end
+      """
+
+      assert clean?(PreferErlangFloat, code)
+    end
+
+    # A regular `def` in a module that also has defns is still fair game.
+    test "still flags `* 1.0` in a regular def alongside defns" do
+      code = """
+      defmodule M do
+        import Nx.Defn
+        defn scale(x), do: x * 1.0
+        def to_f(n), do: n * 1.0
+      end
+      """
+
+      assert [%{rule: :prefer_erlang_float}] = check(PreferErlangFloat, code)
+    end
+  end
+
   # ═══════════════════════════════════════════════════════════════════
   # META
   # ═══════════════════════════════════════════════════════════════════

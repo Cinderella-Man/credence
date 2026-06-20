@@ -31,10 +31,14 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
         {:|>, meta,
          [
            _left,
-           {{:., _, [{:__aliases__, _, [:Regex]}, :replace]}, _, _args}
+           {{:., _, [{:__aliases__, _, [:Regex]}, :replace]}, _, args}
          ]} = node,
         acc ->
-          {node, [build_issue(meta) | acc]}
+          if misused_pipe?(args) do
+            {node, [build_issue(meta) | acc]}
+          else
+            {node, acc}
+          end
 
         node, acc ->
           {node, acc}
@@ -50,15 +54,15 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
         {:|>, _meta,
          [
            _left,
-           {{:., _, [{:__aliases__, _, [:Regex]} = alias_node, :replace]}, _, _args}
+           {{:., _, [{:__aliases__, _, [:Regex]} = alias_node, :replace]}, _, args}
          ]} = node,
         acc ->
-          patch = %{
-            range: Sourceror.get_range(alias_node),
-            change: "String"
-          }
-
-          {node, [patch | acc]}
+          if misused_pipe?(args) do
+            patch = %{range: Sourceror.get_range(alias_node), change: "String"}
+            {node, [patch | acc]}
+          else
+            {node, acc}
+          end
 
         node, acc ->
           {node, acc}
@@ -66,6 +70,26 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
 
     Enum.reverse(patches)
   end
+
+  # `regex |> Regex.replace(string, repl)` desugars to the CORRECT
+  # `Regex.replace(regex, string, repl)` and must not be rewritten — doing so
+  # would put a %Regex{} into `String.replace/3`'s subject slot and crash. The
+  # rule only targets the misuse where the pipe injects a string into the regex
+  # slot, i.e. `string |> Regex.replace(regex, repl)`. The tell is that the
+  # explicit first argument (the string slot) is itself a regex; then the piped
+  # value belongs in the string slot. When that arg is anything else, the piped
+  # value is presumably the regex (correct usage), so we leave it alone.
+  defp misused_pipe?([first | _]), do: regex_literal?(first)
+  defp misused_pipe?(_), do: false
+
+  defp regex_literal?({sigil, _, _}) when sigil in [:sigil_r, :sigil_R], do: true
+
+  defp regex_literal?({{:., _, [{:__aliases__, _, [:Regex]}, fun]}, _, _})
+       when fun in [:compile, :compile!],
+       do: true
+
+  defp regex_literal?({:|>, _, [_, right]}), do: regex_literal?(right)
+  defp regex_literal?(_), do: false
 
   defp build_issue(meta) do
     %Credence.Issue{

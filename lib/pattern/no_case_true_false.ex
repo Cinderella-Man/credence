@@ -43,6 +43,7 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -234,22 +235,34 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
          {pat_b, body_b} <- extract_clause(clause_b) do
       ua = unwrap_pattern(pat_a)
       ub = unwrap_pattern(pat_b)
+      # The `->`/pattern of each clause may carry comments (e.g. a `# TODO`
+      # before `false ->`). Rewriting to `if` drops the clause wrappers, so
+      # carry those comments onto the body that moves into `do`/`else`.
+      da = with_clause_comments(clause_a, body_a)
+      db = with_clause_comments(clause_b, body_b)
 
       cond do
         # true -> A; false -> B
-        ua == true and ub == false -> {:ok, body_a, body_b}
+        ua == true and ub == false -> {:ok, da, db}
         # false -> B; true -> A
-        ua == false and ub == true -> {:ok, body_b, body_a}
+        ua == false and ub == true -> {:ok, db, da}
         # true -> A; _ -> B
-        ua == true and ub == :wildcard -> {:ok, body_a, body_b}
+        ua == true and ub == :wildcard -> {:ok, da, db}
         # false -> B; _ -> A  (wildcard covers the true case)
-        ua == false and ub == :wildcard -> {:ok, body_b, body_a}
+        ua == false and ub == :wildcard -> {:ok, db, da}
         # Wildcard-first variants (unreachable second clause) — don't fix
         true -> :skip
       end
     else
       _ -> :skip
     end
+  end
+
+  # Comments that sat on the clause's `->`/pattern (not inside its body), carried
+  # onto the body as leading comments so the `case`→`if` rewrite preserves them.
+  defp with_clause_comments(clause, body) do
+    extra = RuleHelpers.collect_comments(clause) -- RuleHelpers.collect_comments(body)
+    RuleHelpers.carry_comments(body, extra, [])
   end
 
   defp extract_clause({:->, _, [[pattern], body]}), do: {pattern, body}

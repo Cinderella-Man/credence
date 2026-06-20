@@ -366,8 +366,11 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
   end
 
   describe "handles nested modules" do
-    test "flags inner module missing require even if outer has it" do
-      assert flagged?(NoMissingRequireLogger, """
+    # `require Logger` propagates lexically from an enclosing module into nested
+    # `defmodule`s (verified: the nested call compiles and runs), so the inner
+    # module is satisfied by the outer require and must NOT be flagged.
+    test "does not flag an inner module when the outer module has require Logger" do
+      assert clean?(NoMissingRequireLogger, """
              defmodule Outer do
                require Logger
 
@@ -390,6 +393,51 @@ defmodule Credence.Pattern.NoMissingRequireLoggerCheckTest do
                    Logger.info("from inner")
                  end
                end
+             end
+             """)
+    end
+
+    # `alias Cluster.Logger` makes `Logger.*` a non-stdlib (function, not macro)
+    # call — no `require` needed.
+    test "clean when Logger is aliased to a non-stdlib module" do
+      assert clean?(NoMissingRequireLogger, """
+             defmodule M do
+               alias Cluster.Logger
+
+               def run, do: Logger.info("hi")
+             end
+             """)
+    end
+
+    # A custom `use` may inject `require Logger` via its `__using__`.
+    test "clean when the module uses a custom (non-stdlib) module" do
+      assert clean?(NoMissingRequireLogger, """
+             defmodule M do
+               use Realtime.Logs
+
+               def run, do: Logger.info("hi")
+             end
+             """)
+    end
+
+    # `require Logger` at file scope (above the defmodule) propagates in.
+    test "clean when require Logger is at file scope above the module" do
+      assert clean?(NoMissingRequireLogger, """
+             require Logger
+
+             defmodule M do
+               def run, do: Logger.info("hi")
+             end
+             """)
+    end
+
+    # `use GenServer` (stdlib) does NOT inject require Logger — still flagged.
+    test "still flags use GenServer with a Logger call and no require" do
+      assert flagged?(NoMissingRequireLogger, """
+             defmodule M do
+               use GenServer
+
+               def run, do: Logger.info("hi")
              end
              """)
     end

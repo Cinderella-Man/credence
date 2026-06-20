@@ -47,6 +47,7 @@ defmodule Credence.Pattern.NoCondTwoClauses do
 
   use Credence.Pattern.Rule
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -120,10 +121,25 @@ defmodule Credence.Pattern.NoCondTwoClauses do
   # Builds an if/else node from the two cond clauses.
   defp rewrite_to_if(meta, first_clause, second_clause, original_kw) do
     {:->, _, [[condition], do_body]} = first_clause
-    {:->, _, [[_true], else_body]} = second_clause
+    {:->, _, [[_guard], else_body]} = second_clause
+
+    # Dropping the `->` clause wrappers loses any comment that sat on them
+    # (e.g. a comment above a clause). Carry those onto the body that moves into
+    # `do`/`else`. For the first clause the condition is reused as-is, so exclude
+    # its comments to avoid duplicating them.
+    do_body = carry_clause_comments(do_body, first_clause, [do_body, condition])
+    else_body = carry_clause_comments(else_body, second_clause, [else_body])
 
     if_clauses = build_if_clauses(original_kw, do_body, else_body)
     {:if, meta, [condition, if_clauses]}
+  end
+
+  # Comments on `clause` that are not already carried by any node in `reused`,
+  # attached to `body` as leading comments.
+  defp carry_clause_comments(body, clause, reused) do
+    reused_comments = Enum.flat_map(reused, &RuleHelpers.collect_comments/1)
+    extra = RuleHelpers.collect_comments(clause) -- reused_comments
+    RuleHelpers.carry_comments(body, extra, [])
   end
 
   # Builds the keyword list for the if node, reusing the original cond's

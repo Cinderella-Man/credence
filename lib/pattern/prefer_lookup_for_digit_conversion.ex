@@ -186,13 +186,20 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
 
   defp extract_hex_mapping(clauses) do
     mappings =
-      Enum.map(clauses, fn {:defp, _, [{_name, _, [arg]}, body_kw]} ->
-        with {:ok, int} <- extract_integer(arg),
-             {:ok, str} <- extract_string(body_kw) do
-          {int, str}
-        else
-          _ -> :error
-        end
+      Enum.map(clauses, fn
+        {:defp, _, [{_name, _, [arg]}, body_kw]} ->
+          with {:ok, int} <- extract_integer(arg),
+               {:ok, str} <- extract_string(body_kw) do
+            {int, str}
+          else
+            _ -> :error
+          end
+
+        # Any other clause shape collected by name/arity (a guarded or
+        # otherwise non-simple `defp arg, do:` head) is not a hex-digit literal
+        # mapping — bail rather than crash the whole analyze on it.
+        _ ->
+          :error
       end)
 
     if Enum.any?(mappings, &(&1 == :error)) do

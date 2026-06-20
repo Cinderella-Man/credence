@@ -207,5 +207,19 @@ defmodule Credence.Pattern.NoMapThenAggregateCheckTest do
 
       assert check(NoMapThenAggregate, code) == []
     end
+
+    # The map→sum fusion must be reported ONCE, at the fusion site — not again at
+    # every downstream pipe step (Kernel.+, Float.round).
+    test "reports a single finding for a map→aggregate fusion with downstream steps" do
+      code = """
+      defmodule M do
+        def avg(list) do
+          Enum.map(list, & &1.score) |> Enum.sum() |> Kernel.+(1) |> Float.round(2)
+        end
+      end
+      """
+
+      assert [_one] = check(NoMapThenAggregate, code)
+    end
   end
 end

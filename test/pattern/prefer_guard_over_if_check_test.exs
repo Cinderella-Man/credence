@@ -370,4 +370,34 @@ defmodule Credence.Pattern.PreferGuardOverIfCheckTest do
              """)
     end
   end
+
+  describe "does not flag heads that would break the clause split" do
+    # Splitting copies the head onto both clauses, and a default may be declared
+    # only once across a function's clauses — a compile error otherwise.
+    test "head with a default argument" do
+      assert clean?(PreferGuardOverIf, """
+             defp get_org(org \\\\ nil) do
+               if is_nil(org) do
+                 :default
+               else
+                 org
+               end
+             end
+             """)
+    end
+
+    # `~H` requires a variable literally named `assigns`; the rewrite would
+    # underscore it to `_assigns`, breaking compilation.
+    test "body containing a ~H sigil (Phoenix component)" do
+      assert clean?(PreferGuardOverIf, """
+             def render(assigns) do
+               if @loading do
+                 ~H"<div>loading</div>"
+               else
+                 ~H"<div>done</div>"
+               end
+             end
+             """)
+    end
+  end
 end

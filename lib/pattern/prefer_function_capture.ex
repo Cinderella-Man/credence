@@ -30,15 +30,16 @@ defmodule Credence.Pattern.PreferFunctionCapture do
 
   @impl true
   def check(ast, _opts) do
+    captured = captured_fn_positions(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {:fn, meta, [{:->, _, [[param], body]}]} = node, issues ->
-          case analyze_fn_body(param, body) do
-            {:ok, _capture_info} ->
-              {node, [create_issue(meta) | issues]}
-
-            :error ->
-              {node, issues}
+          with false <- MapSet.member?(captured, position_key(meta)),
+               {:ok, _capture_info} <- analyze_fn_body(param, body) do
+            {node, [create_issue(meta) | issues]}
+          else
+            _ -> {node, issues}
           end
 
         node, issues ->
@@ -50,17 +51,47 @@ defmodule Credence.Pattern.PreferFunctionCapture do
 
   @impl true
   def fix_patches(ast, _opts) do
+    captured = captured_fn_positions(ast)
+
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      {:fn, _meta, [{:->, _, [[param], body]}]} = node ->
-        case analyze_fn_body(param, body) do
-          {:ok, capture_info} -> build_capture(capture_info)
-          :error -> node
+      {:fn, meta, [{:->, _, [[param], body]}]} = node ->
+        with false <- MapSet.member?(captured, position_key(meta)),
+             {:ok, capture_info} <- analyze_fn_body(param, body) do
+          build_capture(capture_info)
+        else
+          _ -> node
         end
 
       node ->
         node
     end)
   end
+
+  # Positions of every `fn` lexically inside a `&` capture. Rewriting such a fn
+  # to `&fun/1` would nest it inside the enclosing capture
+  # (`&Enum.map(&1, &fun/1)`), which is a compile error ("nested captures are
+  # not allowed"). The explicit `fn` was written precisely to avoid that, so we
+  # leave it alone. Keyed by `{line, column}`, which is unique per source node.
+  defp captured_fn_positions(ast) do
+    {_ast, positions} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {:&, _, _} = capture, acc ->
+          {_c, inner} =
+            Macro.prewalk(capture, acc, fn
+              {:fn, meta, _} = f, a -> {f, MapSet.put(a, position_key(meta))}
+              n, a -> {n, a}
+            end)
+
+          {capture, inner}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    positions
+  end
+
+  defp position_key(meta), do: {Keyword.get(meta, :line), Keyword.get(meta, :column)}
 
   # Special-form / macro names that are written like a one-argument call but
   # CANNOT be captured: `&var!/1`, `&super/1`, `&unquote/1` are compile errors

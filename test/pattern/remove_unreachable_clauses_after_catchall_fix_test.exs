@@ -179,4 +179,89 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallFixTest do
       confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), code)
     end
   end
+
+  # Dynamic head names (`def unquote(op)(...)`) are unidentifiable, so the rule
+  # must never delete one as a phantom duplicate. Previously it grouped distinct
+  # macro-generated functions by `{nil, arity}` and deleted live clauses.
+  describe "leaves dynamically-named (unquote) clauses untouched" do
+    test "no-op: vix shape (def calls a defp, both unquote-named, same arity)" do
+      code = """
+      defmodule M do
+        for {op, name} <- @ops do
+          def unquote(op)(a, b) do
+            unquote(name)(a, b)
+          end
+
+          defp unquote(name)(a, b) do
+            a + b
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), code)
+    end
+
+    test "no-op: propcheck shape (sibling unquote defs, two share arity 3)" do
+      code = """
+      defmodule M do
+        def unquote(pre)(_state, _call), do: true
+        def unquote(next)(state, _call, _result), do: state
+        def unquote(post)(_state, _call, _res), do: true
+        def unquote(args)(_state), do: []
+      end
+      """
+
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), code)
+    end
+
+    test "no-op: two dynamic catch-alls of the same arity" do
+      code = """
+      defmodule M do
+        def unquote(a)(_x, _y), do: 1
+        def unquote(b)(_x, _y), do: 2
+      end
+      """
+
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), code)
+    end
+  end
+
+  describe "real duplicates still removed when dynamic clauses are present" do
+    test "removes the genuine duplicate, leaves the dynamic clause" do
+      input = """
+      defmodule M do
+        def unquote(a)(_x, _y), do: 1
+
+        def real(_x, _y), do: 2
+        def real(_x, _y), do: 3
+      end
+      """
+
+      expected = """
+      defmodule M do
+        def unquote(a)(_x, _y), do: 1
+
+        def real(_x, _y), do: 2
+      end
+      """
+
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, input), expected)
+    end
+
+    # Conservative edge: a dynamic clause BETWEEN two real catch-alls breaks
+    # their adjacency, so the duplicate is not removed. Safe (we never delete a
+    # reachable clause); documented as a deliberate non-fix.
+    test "no-op: real duplicate separated from its catch-all by a dynamic clause" do
+      code = """
+      defmodule M do
+        def real(_x, _y), do: 1
+        def unquote(a)(_x, _y), do: 2
+        def real(_x, _y), do: 3
+      end
+      """
+
+      confirm_fix(fix(RemoveUnreachableClausesAfterCatchall, code), code)
+    end
+  end
 end

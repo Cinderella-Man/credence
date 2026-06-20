@@ -10,15 +10,21 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   but the head `f(0)` does not (pattern uses `===`), so substituting a number
   would change which clause a float-equal value routes to.
 
+  `nil` is an atom, so it is fixable too (`when x == nil` → `f(nil)`): `nil` has
+  no cross-type value-equal partner, so `== nil` and the `nil` head match the
+  exact same inputs (notably NOT `false`).
+
   ## Bad
 
       defp do_count(n, _a, b) when n == 2, do: b
       def process(action) when action == :stop, do: :halted
+      def encode(value, _) when value == nil, do: <<0>>
 
   ## Good
 
       defp do_count(2, _a, b), do: b
       def process(:stop), do: :halted
+      def encode(nil, _), do: <<0>>
   """
   use Credence.Pattern.Rule
   alias Credence.Issue
@@ -48,12 +54,12 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   def fix_patches(ast, _opts) do
     {_ast, patches} =
       Macro.prewalk(ast, [], fn
-        {kind, _meta, [{:when, _when_meta, [call, guard]} = when_node | rest]} = node, acc
+        {kind, _meta, [{:when, _when_meta, [call, guard]} | rest]} = node, acc
         when kind in [:def, :defp] ->
           {_name, _call_meta, params} = call
           param_names = extract_param_names(params)
 
-          case build_when_patch(when_node, call, guard, rest, param_names) do
+          case build_when_patch(node, call, guard, rest, param_names) do
             nil -> {node, acc}
             patch -> {node, [patch | acc]}
           end
@@ -69,7 +75,7 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
   # source range with either the rewritten call (when every guard
   # equality has been substituted into the head) or `call when remaining_guard`
   # (when some guard expressions remain). Body is untouched.
-  defp build_when_patch(when_node, call, guard, rest, param_names) do
+  defp build_when_patch(node, call, guard, rest, param_names) do
     if guard_safe_to_fix?(guard) do
       case find_guard_equalities(guard, param_names) do
         [] ->
@@ -87,13 +93,26 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
             new_params = apply_fixes_to_params(params, matches)
             new_call = put_elem(call, 2, new_params)
 
-            change =
+            new_head =
               case remaining_guard do
-                nil -> Macro.to_string(new_call)
-                remaining -> "#{Macro.to_string(new_call)} when #{Macro.to_string(remaining)}"
+                nil -> new_call
+                remaining -> {:when, [], [new_call, remaining]}
               end
 
-            %{range: Sourceror.get_range(when_node), change: change}
+            # Render the WHOLE clause (new head + the untouched body) rather than
+            # patching just the `:when` node: Sourceror's range for `:when`
+            # over-extends to the trailing comma of a `head when g, do: …`
+            # one-liner, so a string patch there eats the comma and yields
+            # non-compiling `name(pattern) do: …`. Rebuilding the def renders the
+            # `, do:` correctly; the body is reused verbatim (mix format then
+            # normalises layout, so unchanged code is not reformatted).
+            {kind, _meta, _args} = node
+            new_def = {kind, [line: 1], [new_head | rest]}
+
+            %{
+              range: Sourceror.get_range(node),
+              change: Credence.RuleHelpers.render_replacement(new_def, %{})
+            }
           end
       end
     end
@@ -208,10 +227,14 @@ defmodule Credence.Pattern.NoGuardEqualityForPatternMatch do
     match_map = Map.new(matches, fn {var_name, literal, _meta} -> {var_name, literal} end)
 
     Enum.map(params, fn
-      {name, meta, context} when is_atom(name) and is_atom(context) ->
-        case Map.get(match_map, name) do
-          nil -> {name, meta, context}
-          literal -> literal
+      {name, _meta, context} = param when is_atom(name) and is_atom(context) ->
+        # `Map.fetch` (not `Map.get`) so a matched literal of `nil` — itself an
+        # atom, indistinguishable from `Map.get`'s "absent" sentinel — is still
+        # substituted into the head. Otherwise `f(x) when x == nil` lost its guard
+        # WITHOUT gaining the `nil` pattern, making the clause match everything.
+        case Map.fetch(match_map, name) do
+          {:ok, literal} -> literal
+          :error -> param
         end
 
       other ->

@@ -131,5 +131,18 @@ defmodule Credence.Pattern.NoManualFrequenciesCheckTest do
 
       assert check(NoManualFrequencies, code) == []
     end
+
+    # The element param is a map pattern, not a plain variable. `var_name/1`
+    # returns nil for it; the fix would emit `fn nil -> …` with `number`
+    # unbound, so it must not fire.
+    test "element param is a destructuring map pattern, not a plain var" do
+      code = """
+      Enum.reduce(blocks, %{}, fn %{block_number: number}, acc ->
+        Map.update(acc, number, 1, &(&1 + 1))
+      end)
+      """
+
+      assert check(NoManualFrequencies, code) == []
+    end
   end
 end

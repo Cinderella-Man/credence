@@ -179,4 +179,28 @@ defmodule Credence.Pattern.NoCaseOnParamDispatchFixTest do
 
     confirm_fix(fix(NoCaseOnParamDispatch, code), code)
   end
+
+  # A bitstring type specifier (`::binary`) is not a binding of `binary`. When
+  # the body still references the scrutinee, the head must bind it explicitly
+  # (`<<…>> = binary`) — otherwise `binary` is an undefined variable.
+  test "binds the scrutinee when a bitstring clause body references it" do
+    input = """
+    def parse(binary) do
+      case binary do
+        <<number::utf8, _::binary>> when number in ?0..?9 ->
+          to_integer(binary)
+
+        _ ->
+          :error
+      end
+    end
+    """
+
+    expected = """
+    def parse(<<number::utf8, _::binary>> = binary) when number in ?0..?9, do: to_integer(binary)
+    def parse(_), do: :error
+    """
+
+    confirm_fix(fix(NoCaseOnParamDispatch, input), expected)
+  end
 end

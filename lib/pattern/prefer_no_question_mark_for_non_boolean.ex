@@ -201,6 +201,10 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBoolean do
   # true | false -> {:|, _, [{:__block__, _, [true]}, {:__block__, _, [false]}]} or similar
   defp boolean_type?({:boolean, _, _}), do: true
 
+  # `bool()` is the (deprecated) Erlang alias for `boolean()` — a function spec'd
+  # `:: bool()` is a genuine predicate and must not be stripped of its `?`.
+  defp boolean_type?({:bool, _, _}), do: true
+
   defp boolean_type?({:|, _, [left, right]}) do
     # Check if it's a union of true | false
     simple_union_boolean?([left, right])

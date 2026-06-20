@@ -3,6 +3,34 @@ defmodule Credence.Pattern.NoSortThenAtFixTest do
 
   alias Credence.Pattern.NoSortThenAt
 
+  # ── Piped collection (collection comes from the pipe, sort arg is direction) ──
+
+  describe "piped-collection sort – the lone sort arg is a direction, not the collection" do
+    # Regression: previously the lone `:desc` was misread as the collection
+    # (default :asc), producing `Enum.min(xs |> Enum.sort(), …)`. The collection
+    # is piped in, so the replacement must drop the sort and use `xs` directly.
+    test "xs |> Enum.sort(:desc) |> Enum.at(0) → Enum.max(xs, fn -> nil end)" do
+      confirm_fix(
+        fix(NoSortThenAt, "xs |> Enum.sort(:desc) |> Enum.at(0)"),
+        "Enum.max(xs, fn -> nil end)"
+      )
+    end
+
+    test "xs |> Enum.sort(:asc) |> Enum.at(-1) → Enum.max(xs, fn -> nil end)" do
+      confirm_fix(
+        fix(NoSortThenAt, "xs |> Enum.sort(:asc) |> Enum.at(-1)"),
+        "Enum.max(xs, fn -> nil end)"
+      )
+    end
+
+    test "xs |> Enum.sort(&>=/2) |> Enum.at(0) → Enum.max(xs, fn -> nil end)" do
+      confirm_fix(
+        fix(NoSortThenAt, "xs |> Enum.sort(&>=/2) |> Enum.at(0)"),
+        "Enum.max(xs, fn -> nil end)"
+      )
+    end
+  end
+
   # ── Atom direction (existing) ───────────────────────────────────────────
 
   describe "pipeline form – atom direction" do

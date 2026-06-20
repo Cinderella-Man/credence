@@ -104,8 +104,8 @@ defmodule Credence.Pattern.NoMapThenAggregate do
       nil ->
         :skip
 
-      new_ast ->
-        emit_patch(node, new_ast)
+      {map_step, agg_step, reduce_call} ->
+        emit_span_patch(node, map_step, agg_step, reduce_call)
     end
   end
 
@@ -122,6 +122,32 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   end
 
   defp build_patch(_), do: :skip
+
+  # Patch only the `Enum.map(f) |> Enum.<agg>()` span (map step start → agg step
+  # end) with the rendered reduce call — the `|>` before the map step and every
+  # other pipeline step are outside the range, so they stay byte-identical. But
+  # claim the WHOLE pipeline's lines for dedup so an enclosing `|>` node (visited
+  # later by the prewalk, on a different line) does not re-match the same map+agg
+  # and emit an overlapping second patch.
+  defp emit_span_patch(node, map_step, agg_step, reduce_call) do
+    r1 = Sourceror.get_range(map_step)
+    r2 = Sourceror.get_range(agg_step)
+    range = %{r1 | end: r2.end}
+    node_range = Sourceror.get_range(node)
+    range_lines = node_range.start[:line]..node_range.end[:line] |> Enum.into(MapSet.new())
+
+    # Render the reduce with the original pipeline's wrap budget so a multi-line
+    # pipeline yields a multi-line reduce. Unlike before, only the reduce is
+    # rendered (not the whole pipeline), so the budget cannot reformat the
+    # untouched before/after steps.
+    opts =
+      case original_line_budget(node, node_range) do
+        nil -> []
+        budget -> [line_length: budget]
+      end
+
+    {:ok, %{range: range, change: Sourceror.to_string(reduce_call, opts)}, range_lines}
+  end
 
   # Returns the length of the longest line touched by the original
   # expression's range, less the indentation of the first line — i.e.
@@ -165,6 +191,11 @@ defmodule Credence.Pattern.NoMapThenAggregate do
     {:ok, %{range: range, change: replacement}, range_lines}
   end
 
+  # Returns `{map_step, agg_step, reduce_call}` for the first `… |> Enum.map(f)
+  # |> Enum.<agg>()` adjacency, or nil. The caller patches ONLY the span from the
+  # map step to the agg step, so the rest of the pipeline (the `before`/`after`
+  # steps) stays byte-identical — re-rendering the whole pipeline reformatted
+  # unchanged upstream steps (a real over-reach found on a 50-package corpus).
   defp fix_pipeline({:|>, _, _} = node) do
     steps = flatten_pipeline(node)
 
@@ -176,17 +207,15 @@ defmodule Credence.Pattern.NoMapThenAggregate do
         map_fn = extract_map_fn(first)
         agg_fn = agg_fn_name(second)
         before = Enum.take(steps, idx)
-        after_ = Enum.drop(steps, idx + 2)
 
         reduce_call =
           if before == [] do
-            enum_source = extract_map_source(first)
-            build_reduce(enum_source, map_fn, agg_fn)
+            build_reduce(extract_map_source(first), map_fn, agg_fn)
           else
             build_reduce(nil, map_fn, agg_fn)
           end
 
-        rebuild_pipeline(before, reduce_call, after_)
+        {first, second, reduce_call}
       end
     end)
   end
@@ -298,9 +327,16 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   defp wrap_literal(int) when is_integer(int),
     do: {:__block__, [token: Integer.to_string(int)], [int]}
 
-  defp check_node({:|>, meta, _} = node) do
-    pipeline = flatten_pipeline(node)
-    check_pipeline(pipeline, meta)
+  # Only the `|>` node where the map step is IMMEDIATELY followed by the
+  # aggregator is a fusion site. Scanning the whole flattened pipeline instead
+  # re-reported the same `map |> agg` fusion at every downstream `|>` (e.g.
+  # `… |> Kernel.+` / `… |> Float.round`), pointing the finding at unrelated steps.
+  defp check_node({:|>, meta, [left, right]}) do
+    if agg_step?(right) and map_step?(rightmost(left)) do
+      {:ok, build_issue(agg_fn_name(right), meta)}
+    else
+      :error
+    end
   end
 
   defp check_node({{:., meta, [mod, agg_fn]}, _, [inner]})
@@ -314,19 +350,8 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
   defp check_node(_), do: :error
 
-  defp check_pipeline(steps, meta) do
-    steps
-    |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.find_value(fn [first, second] ->
-      if map_step?(first) and agg_step?(second) do
-        {:ok, build_issue(agg_fn_name(second), meta)}
-      end
-    end)
-    |> case do
-      {:ok, _} = result -> result
-      _ -> :error
-    end
-  end
+  defp rightmost({:|>, _, [_left, right]}), do: rightmost(right)
+  defp rightmost(other), do: other
 
   defp map_call?({{:., _, [mod, :map]}, _, args})
        when is_list(args) and length(args) == 2,
@@ -360,21 +385,6 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
   defp enum_module?({:__aliases__, _, [:Enum]}), do: true
   defp enum_module?(_), do: false
-
-  defp rebuild_pipeline([], reduce, []), do: reduce
-
-  defp rebuild_pipeline([], reduce, after_) do
-    Enum.reduce(after_, reduce, fn step, acc -> {:|>, [], [acc, step]} end)
-  end
-
-  defp rebuild_pipeline(before, reduce, after_) do
-    Enum.reduce(before, fn step, acc -> {:|>, [], [acc, step]} end)
-    |> then(fn pipeline ->
-      Enum.reduce(after_, {:|>, [], [pipeline, reduce]}, fn step, acc ->
-        {:|>, [], [acc, step]}
-      end)
-    end)
-  end
 
   defp build_issue(agg_fn, meta) do
     %Issue{

@@ -131,5 +131,13 @@ defmodule Credence.Pattern.NoPipedRegexReplaceFixTest do
 
       confirm_fix(fix(NoPipedRegexReplace, code), code)
     end
+
+    # Correct `regex |> Regex.replace(string, repl)` must be left untouched —
+    # rewriting it to String.replace would crash on the %Regex{} subject.
+    test "leaves a ~r-sigil piped into Regex.replace unchanged" do
+      code = "~r/[a-z]/ |> Regex.replace(input, fn x -> x end)"
+
+      confirm_fix(fix(NoPipedRegexReplace, code), code)
+    end
   end
 end

@@ -126,27 +126,42 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   defp try_fix_pipeline_three_step(_), do: :error
 
   # Map.keys(var) |> Enum.xxx(callback) [|> rest]
+  #
+  # Every apply_* path requires `references_map_var?` — the SAME third condition
+  # the check enforces — so the fix rewrites EXACTLY what the check flags. Without
+  # it the fix fired on `Map.keys(m) |> Enum.any?(fn k -> k in @const end)`, whose
+  # callback never looks up `m`: a needless rewrite (and an unused `v` binding) on
+  # code the check leaves clean.
   defp apply_pipeline_fix(var_expr, var_name, fn_name, callback, rest) do
-    with {:ok, new_callback} <- transform_callback(callback, var_name) do
+    with true <- references_map_var?(callback, var_name),
+         {:ok, new_callback} <- transform_callback(callback, var_name) do
       mod = {:__aliases__, [], [:Enum]}
       enum_call = {{:., [], [mod, fn_name]}, [], [var_expr, new_callback]}
       {:ok, rebuild_pipeline([enum_call | rest])}
+    else
+      _ -> :error
     end
   end
 
   # var |> Map.keys() |> Enum.xxx(callback) [|> rest]
   defp apply_three_step_fix(var_expr, var_name, fn_name, callback, rest) do
-    with {:ok, new_callback} <- transform_callback(callback, var_name) do
+    with true <- references_map_var?(callback, var_name),
+         {:ok, new_callback} <- transform_callback(callback, var_name) do
       mod = {:__aliases__, [], [:Enum]}
       enum_step = {{:., [], [mod, fn_name]}, [], [new_callback]}
       {:ok, rebuild_pipeline([var_expr, enum_step | rest])}
+    else
+      _ -> :error
     end
   end
 
   # Enum.xxx(Map.keys(var), callback)
   defp apply_direct_fix(var_expr, var_name, mod, fn_name, callback) do
-    with {:ok, new_callback} <- transform_callback(callback, var_name) do
+    with true <- references_map_var?(callback, var_name),
+         {:ok, new_callback} <- transform_callback(callback, var_name) do
       {:ok, {{:., [], [mod, fn_name]}, [], [var_expr, new_callback]}}
+    else
+      _ -> :error
     end
   end
 

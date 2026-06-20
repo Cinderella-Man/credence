@@ -260,19 +260,75 @@ defmodule Credence.RuleHelpers do
         source
 
       patches when is_list(patches) ->
-        source
-        |> Sourceror.patch_string(patches)
-        |> strip_trailing_ws_per_line()
+        fixed =
+          source
+          |> Sourceror.patch_string(patches)
+          |> strip_trailing_ws_per_line(source)
+
+        # Safety invariants: a fix must never ship source that does not parse,
+        # and must preserve the source's comments *exactly*. A patch can
+        # occasionally render invalid code (a Sourceror range that under-counts a
+        # spaced operator call and strands a delimiter); it can also lose a
+        # comment that sat on a rewritten/removed node (the replacement AST is
+        # rendered fresh) OR duplicate one (a comment carried into the
+        # re-rendered replacement while the original line, outside the patch
+        # range, survives — yielding two copies). In any of these cases discard
+        # the fix rather than emit broken, lossy, or doubled output — the finding
+        # is still reported, it just goes unfixed. Rules that carry comments
+        # through the rewrite faithfully (multiset unchanged) keep their fix.
+        if parses?(fixed) and not comments_changed?(source, fixed), do: fixed, else: source
     end
   end
 
-  # `Sourceror.patch_string` re-indents multi-line replacements to
-  # match the patch's start column, which can turn empty blank lines
-  # in the replacement into whitespace-only lines. Clean those up.
-  defp strip_trailing_ws_per_line(text) do
-    text
+  # `Code.string_to_quoted/1` emits a tokenizer warning (e.g. deprecated
+  # single-quoted charlists) when the source contains one. These gate checks
+  # only care about the {:ok | :error} result, not the warnings — and they run
+  # on every fix — so collect diagnostics instead of printing them.
+  defp parses?(source) do
+    {result, _diagnostics} = Code.with_diagnostics(fn -> Code.string_to_quoted(source) end)
+    match?({:ok, _}, result)
+  end
+
+  # True when the fix changed the source's comment multiset in *either*
+  # direction: dropped a comment (count fell — silent information loss when a
+  # rewritten/removed node is re-rendered from the bare AST) or duplicated one
+  # (count rose — a comment carried into a re-rendered replacement while the
+  # original line outside the patch range survives). A faithful fix leaves the
+  # comment multiset identical; anything else self-reverts in `apply_rule_fix`.
+  defp comments_changed?(before, after_) do
+    comment_multiset(before) != comment_multiset(after_)
+  end
+
+  defp comment_multiset(src) do
+    {result, _diagnostics} =
+      Code.with_diagnostics(fn -> Code.string_to_quoted_with_comments(src) end)
+
+    case result do
+      {:ok, _ast, comments} -> comments |> Enum.map(&String.trim(&1.text)) |> Enum.frequencies()
+      _ -> %{}
+    end
+  end
+
+  # `Sourceror.patch_string` re-indents multi-line replacements to match the
+  # patch's start column, which can turn empty blank lines in the replacement
+  # into whitespace-only lines. Collapse those all-whitespace lines to empty —
+  # but ONLY the ones the patch actually introduced. A blanket whole-file pass
+  # would also strip pre-existing whitespace-only lines that the patch never
+  # touched, including content lines *inside* a multi-line string/heredoc
+  # literal (e.g. a blank line in a doctest's expected output) far from the
+  # edit — a silent content mutation. We diff the patched output against the
+  # original line-by-line and normalise only inserted lines, leaving every
+  # unchanged (`:eq`) line byte-for-byte.
+  defp strip_trailing_ws_per_line(text, original) do
+    original
     |> String.split("\n")
-    |> Enum.map_join("\n", &String.trim_trailing/1)
+    |> List.myers_difference(String.split(text, "\n"))
+    |> Enum.flat_map(fn
+      {:eq, lines} -> lines
+      {:del, _lines} -> []
+      {:ins, lines} -> Enum.map(lines, fn line -> if String.trim(line) == "", do: "", else: line end)
+    end)
+    |> Enum.join("\n")
   end
 
   @doc """
@@ -523,8 +579,9 @@ defmodule Credence.RuleHelpers do
   # render there.
   defp walk_ops([{:del, dl}, {:ins, il} | rest], orig, modified, io, im, acc) do
     dn = length(dl)
+    inn = length(il)
 
-    if dn == length(il) do
+    if dn == inn do
       paired =
         Enum.flat_map(0..(dn - 1)//1, fn i ->
           diff_patches(Enum.at(orig, io + i), Enum.at(modified, im + i))
@@ -532,7 +589,20 @@ defmodule Credence.RuleHelpers do
 
       walk_ops(rest, orig, modified, io + dn, im + dn, acc ++ paired)
     else
-      :fallback
+      # An N→1 collapse (several function clauses folded into one `Enum.reduce`):
+      # replace just the changed span — the deleted originals' combined source
+      # range — with the single replacement node, so sibling statements outside
+      # the span keep their exact source (no whole-block re-render/reformat).
+      # Other unequal gaps (N→M, M>1) need inter-statement spacing that only a
+      # full re-render reproduces, so they fall back.
+      if inn == 1 do
+        case span_patch(Enum.slice(orig, io, dn), Enum.at(modified, im)) do
+          {:ok, patch} -> walk_ops(rest, orig, modified, io + dn, im + inn, acc ++ [patch])
+          :fallback -> :fallback
+        end
+      else
+        :fallback
+      end
     end
   end
 
@@ -545,6 +615,16 @@ defmodule Credence.RuleHelpers do
 
   # A bare insertion — fall back (no safe anchor to place it at).
   defp walk_ops([{:ins, _} | _], _orig, _modified, _io, _im, _acc), do: :fallback
+
+  # Replace the combined source range of `del_nodes` with `ins_node` rendered,
+  # leaving everything else (including the blank line after the span) untouched.
+  # `:fallback` if the span has no resolvable range.
+  defp span_patch(del_nodes, ins_node) do
+    case range_from(List.first(del_nodes), List.last(del_nodes)) do
+      nil -> :fallback
+      range -> {:ok, %{range: range, change: render_replacement(ins_node, range)}}
+    end
+  end
 
   # Delete each node by removing its whole line span (from column 1 of its first
   # line through column 1 of the line after its last) so no blank-but-indented

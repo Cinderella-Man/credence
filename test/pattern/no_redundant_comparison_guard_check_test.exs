@@ -211,5 +211,40 @@ defmodule Credence.Pattern.NoRedundantComparisonGuardCheckTest do
 
       assert check(NoRedundantComparisonGuard, code) == []
     end
+
+    # The earlier complementary clause has a DIFFERENT head pattern (the second
+    # argument's type tag differs), so it never consumed the domain reaching the
+    # later clause — the comparison there is NOT redundant. Dropping it would let
+    # negatives match the non_neg_integer clause and return :ok.
+    test "does not flag when the complementary earlier clause has a different head pattern" do
+      code = """
+      defmodule Good do
+        def match_type(value, {:type, 0, :neg_integer, []}) when is_integer(value) and value < 0,
+          do: :ok
+
+        def match_type(value, {:type, 0, :non_neg_integer, []})
+            when is_integer(value) and value >= 0,
+            do: :ok
+
+        def match_type(_value, _type), do: :mismatch
+      end
+      """
+
+      assert check(NoRedundantComparisonGuard, code) == []
+    end
+
+    # Same head pattern in both clauses → the earlier clause genuinely consumed
+    # the complementary domain, so the later comparison IS redundant.
+    test "still flags when the complementary earlier clause has the same head pattern" do
+      code = """
+      defmodule Bad do
+        def f({:tuple, n}, acc) when is_integer(n) and n >= 0, do: {:pos, n, acc}
+        def f({:tuple, n}, acc) when is_integer(n) and n < 0, do: {:neg, n, acc}
+        def f({:tuple, n}, acc), do: {:other, n, acc}
+      end
+      """
+
+      assert [%{rule: :no_redundant_comparison_guard}] = check(NoRedundantComparisonGuard, code)
+    end
   end
 end

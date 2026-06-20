@@ -44,10 +44,11 @@ defmodule Credence.Pattern.NoSortThenAt do
         # Pipeline: ... |> Enum.sort(...) |> Enum.at(literal_index)
         {:|>, meta, [left, {{:., _, [{:__aliases__, _, [:Enum]}, :at]}, _, at_args}]} = node,
         issues ->
-          sort_args = extract_sort_args(rightmost(left))
+          sort_node = rightmost(left)
+          sort_args = extract_sort_args(sort_node)
 
           if sort_args && has_endpoint_index?(at_args) &&
-               sort_direction(sort_args) != :unknown do
+               pipe_sort_direction(sort_args, left != sort_node) != :unknown do
             {node, [build_issue(meta) | issues]}
           else
             {node, issues}
@@ -107,17 +108,17 @@ defmodule Credence.Pattern.NoSortThenAt do
   end
 
   defp fix_pipe_sort_at(
-         {:|>, pipe_meta, [deeper, {{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, sort_args}]},
+         {:|>, _pipe_meta, [deeper, {{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, sort_args}]},
          index_arg,
          node
        )
        when is_list(sort_args) do
-    collection =
-      {:|>, pipe_meta, [deeper, {{:., [], [{:__aliases__, [], [:Enum]}, :sort]}, [], []}]}
-
-    case {literal_index(index_arg), sort_direction(sort_args)} do
-      {{:ok, 0}, dir} when dir in [:asc, :desc] -> replacement_call(dir, :first, collection)
-      {{:ok, -1}, dir} when dir in [:asc, :desc] -> replacement_call(dir, :last, collection)
+    # The sort's collection is piped in (`deeper`), so `sort_args` is the
+    # direction/comparator only — never the collection. The min/max replacement
+    # drops the sort entirely and operates directly on `deeper`.
+    case {literal_index(index_arg), pipe_sort_direction(sort_args, true)} do
+      {{:ok, 0}, dir} when dir in [:asc, :desc] -> replacement_call(dir, :first, deeper)
+      {{:ok, -1}, dir} when dir in [:asc, :desc] -> replacement_call(dir, :last, deeper)
       {_, _} -> node
     end
   end
@@ -146,6 +147,15 @@ defmodule Credence.Pattern.NoSortThenAt do
   defp literal_index({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
   defp literal_index({:-, _, [{:__block__, _, [n]}]}) when is_integer(n), do: {:ok, -n}
   defp literal_index(_), do: :error
+
+  # When the sort's collection is piped in (`xs |> Enum.sort(dir)`), the sort
+  # node's args are the direction/comparator ONLY — there is no leading
+  # collection arg. `sort_direction/1` expects a leading collection, so prepend a
+  # placeholder to keep its clauses aligned. A lone arg that is a comparator we
+  # cannot statically classify (e.g. a custom `fn`) yields `:unknown`, so the
+  # finding bails rather than guessing a direction.
+  defp pipe_sort_direction(sort_args, _piped? = true), do: sort_direction([nil | sort_args])
+  defp pipe_sort_direction(sort_args, _piped? = false), do: sort_direction(sort_args)
 
   defp sort_direction([_collection]), do: :asc
   defp sort_direction([_collection, {:__block__, _, [dir]}]) when dir in [:asc, :desc], do: dir

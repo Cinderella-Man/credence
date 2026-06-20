@@ -97,5 +97,27 @@ defmodule Credence.Pattern.NoPipedRegexReplaceCheckTest do
 
       assert check(NoPipedRegexReplace, code) == []
     end
+
+    # `regex |> Regex.replace(string, repl)` is the CORRECT (regex, string, repl)
+    # form — the piped value is the regex, the explicit first arg is the string.
+    # Rewriting to String.replace would put a %Regex{} in the subject slot and
+    # crash, so these must not be flagged.
+    test "does not flag a ~r-sigil piped into Regex.replace (correct usage)" do
+      code = "~r/[a-z]/ |> Regex.replace(input, fn x -> x end)"
+
+      assert check(NoPipedRegexReplace, code) == []
+    end
+
+    test "does not flag a Regex.compile! result piped into Regex.replace" do
+      code = ~S'pattern |> Regex.compile!() |> Regex.replace(input, "x")'
+
+      assert check(NoPipedRegexReplace, code) == []
+    end
+
+    test "does not flag a regex variable piped into Regex.replace" do
+      code = ~S're |> Regex.replace(subject, "x")'
+
+      assert check(NoPipedRegexReplace, code) == []
+    end
   end
 end

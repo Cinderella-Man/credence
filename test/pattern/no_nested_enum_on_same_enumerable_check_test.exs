@@ -73,5 +73,36 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerableCheckTest do
       assert [%Issue{rule: :no_nested_enum_on_same_enumerable}] =
                check(NoNestedEnumOnSameEnumerable, code)
     end
+
+    # Only nested `member?` is fixable (→ MapSet). A nested non-member? traversal
+    # (filter/map/reduce) is no longer flagged — the fixer can't rewrite it, and
+    # the "same" name is often a rebound accumulator.
+    test "does not flag a nested non-member? traversal" do
+      code = """
+      defmodule M do
+        def process(list) do
+          Enum.map(list, fn x ->
+            Enum.filter(list, &(&1 > x))
+          end)
+        end
+      end
+      """
+
+      assert check(NoNestedEnumOnSameEnumerable, code) == []
+    end
+
+    test "does not flag a nested reduce whose accumulator shadows the outer name" do
+      code = """
+      defmodule M do
+        def process(records) do
+          Enum.reduce(records, [], fn _x, records ->
+            Enum.map(records, & &1)
+          end)
+        end
+      end
+      """
+
+      assert check(NoNestedEnumOnSameEnumerable, code) == []
+    end
   end
 end

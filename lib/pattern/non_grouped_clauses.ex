@@ -132,7 +132,7 @@ defmodule Credence.Pattern.NonGroupedClauses do
     stray_set =
       stray_set
       |> Enum.reject(fn i ->
-        preceded_by_attr?(body, i) or multi_statement_body?(Enum.at(body, i))
+        preceded_by_attr?(body, i) or unsafe_to_move_body?(Enum.at(body, i))
       end)
       |> MapSet.new()
 
@@ -157,16 +157,50 @@ defmodule Credence.Pattern.NonGroupedClauses do
     end
   end
 
-  # A clause whose do-body is a multi-statement block (`do s1\n s2 end`). Moving
-  # such a clause mis-renders under Sourceror (see the reject in group_clauses).
-  defp multi_statement_body?({kind, _, args}) when kind in [:def, :defp] and is_list(args) do
+  # A clause whose do-body cannot be safely moved/re-rendered by Sourceror:
+  #   * a multi-statement block (`do s1\n s2 end`), OR
+  #   * a single statement that is itself a `do…end` block construct
+  #     (`with`/`case`/`if`/`unless`/`cond`/`for`/`receive`/`try`).
+  # In both cases moving the clause leaves stale `do`/`end` positions, so
+  # `Sourceror.to_string` renders the body as a `do:` one-liner — for a do-block
+  # statement that re-binds the trailing block to `def`, yielding `def/3`
+  # (uncompilable, whole fix reverted). Skipping just these strays lets the safe
+  # clauses regroup. `check/2` still flags them.
+  defp unsafe_to_move_body?({kind, _, args}) when kind in [:def, :defp] and is_list(args) do
     case List.last(args) do
-      kw when is_list(kw) -> match?({:__block__, _, [_, _ | _]}, do_body_value(kw))
-      _ -> false
+      kw when is_list(kw) ->
+        body = do_body_value(kw)
+        multi_statement?(body) or do_block_statement?(body)
+
+      _ ->
+        false
     end
   end
 
-  defp multi_statement_body?(_), do: false
+  defp unsafe_to_move_body?(_), do: false
+
+  defp multi_statement?({:__block__, _, [_, _ | _]}), do: true
+  defp multi_statement?(_), do: false
+
+  # A single statement that is itself a `do…end` block construct — its node's
+  # last argument is a keyword list carrying a `:do` key.
+  defp do_block_statement?({:__block__, _, [inner]}), do: do_block_statement?(inner)
+
+  defp do_block_statement?({_form, _meta, args}) when is_list(args) and args != [] do
+    case List.last(args) do
+      kw when is_list(kw) ->
+        Enum.any?(kw, fn
+          {{:__block__, _, [:do]}, _} -> true
+          {:do, _} -> true
+          _ -> false
+        end)
+
+      _ ->
+        false
+    end
+  end
+
+  defp do_block_statement?(_), do: false
 
   defp do_body_value(kw) do
     Enum.find_value(kw, fn
@@ -210,6 +244,13 @@ defmodule Credence.Pattern.NonGroupedClauses do
   # Preserve `prev_key` across them so `def foo / @doc / def foo` is still
   # seen as a consecutive group; reset on any other non-function statement.
   defp previous_key_after_non_function({:@, _, _}, prev_key), do: prev_key
+
+  # A directive (`require`/`import`/`alias`) between clauses does NOT trigger
+  # Elixir's grouped-clauses warning — the clauses compile warning-free — so it
+  # must be transparent to grouping (preserve `prev_key`), not a separator.
+  defp previous_key_after_non_function({directive, _, _}, prev_key)
+       when directive in [:require, :import, :alias],
+       do: prev_key
 
   # A module-level binding between clauses may be load-bearing — its value can be
   # used in a later clause's guard (e.g. poison's `max_sig = 1 <<< 53` used via

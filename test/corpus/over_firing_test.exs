@@ -42,10 +42,16 @@ defmodule Credence.Corpus.OverFiringTest do
   use ExUnit.Case, async: true
 
   @moduletag :corpus
+  # A few corpus entries are very large (beefy app repos / generated SDKs), so a
+  # single per-entry test can exceed ExUnit's default 60s. Give them headroom.
+  @moduletag timeout: 180_000
 
   alias Credence.Corpus
-  alias Credence.Corpus.Findings
+  alias Credence.Corpus.{Findings, Progress}
   alias Credence.{Pattern, RuleHelpers, RuleName}
+
+  # Emit a "Validated Q out of P files" line every this-many validated files.
+  @progress_step 500
 
   # Lines of source shown on each side of an offending line.
   @context 3
@@ -56,11 +62,28 @@ defmodule Credence.Corpus.OverFiringTest do
   @max_ast_lines 4
 
   setup_all do
-    Credence.Corpus.ensure_fetched!()
+    Corpus.ensure_fetched!()
+
+    total_files =
+      Corpus.entries()
+      |> Enum.map(fn {name, _label} -> length(Corpus.lib_files(name)) end)
+      |> Enum.sum()
+
+    rule_count = length(Pattern.default_rules())
+    whitelist_count = length(Findings.snapshot_lines())
+
+    IO.puts(
+      "\n  [corpus] Corpus test validating against #{total_files} files across " <>
+        "#{length(Corpus.packages())} hex packages + #{length(Corpus.repos())} repos, " <>
+        "with a whitelist of #{whitelist_count} accepted findings (#{rule_count} rules)."
+    )
+
+    Progress.start(:analyze, total_files, @progress_step, "Validated", "files")
+    on_exit(fn -> Progress.stop(:analyze) end)
     :ok
   end
 
-  for {pkg, version} <- Credence.Corpus.packages() do
+  for {pkg, version} <- Credence.Corpus.entries() do
     test "corpus findings on #{pkg} v#{version} match the accepted snapshot" do
       pkg = unquote(pkg)
       version = unquote(version)

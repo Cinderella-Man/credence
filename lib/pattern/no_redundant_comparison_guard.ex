@@ -52,7 +52,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
     clauses = collect_clauses(ast)
 
     clauses
-    |> Enum.group_by(fn {name, arity, _, _, _} -> {name, arity} end)
+    |> Enum.group_by(fn {name, arity, _, _, _, _} -> {name, arity} end)
     |> Enum.flat_map(fn {_key, group} -> analyze_group(group) end)
     |> Enum.sort_by(fn issue -> issue.meta[:line] || 0 end)
   end
@@ -100,14 +100,14 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   defp extract_clause({def_type, meta, [{:when, _, [{fn_name, _, args}, guard]}, _body]})
        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
     case extract_comparison_info(guard) do
-      {:ok, info} -> {:ok, {fn_name, length(args), info, meta, def_type}}
-      :error -> {:ok, {fn_name, length(args), nil, meta, def_type}}
+      {:ok, info} -> {:ok, {fn_name, length(args), info, meta, def_type, args}}
+      :error -> {:ok, {fn_name, length(args), nil, meta, def_type, args}}
     end
   end
 
   defp extract_clause({def_type, meta, [{fn_name, _, args}, _body]})
        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
-    {:ok, {fn_name, length(args), nil, meta, def_type}}
+    {:ok, {fn_name, length(args), nil, meta, def_type, args}}
   end
 
   defp extract_clause(_), do: :error
@@ -185,7 +185,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   defp analyze_group(clauses) do
     clauses
     |> Enum.with_index()
-    |> Enum.flat_map(fn {{_name, _arity, info, meta, def_type}, idx} ->
+    |> Enum.flat_map(fn {{_name, _arity, info, meta, def_type, head}, idx} ->
       case info do
         nil ->
           []
@@ -193,7 +193,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
         curr_info ->
           earlier = Enum.take(clauses, idx)
 
-          case find_complementary_earlier(earlier, curr_info) do
+          case find_complementary_earlier(earlier, curr_info, head) do
             nil -> []
             _prev -> [build_issue(def_type, curr_info, meta)]
           end
@@ -201,8 +201,8 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
     end)
   end
 
-  defp find_complementary_earlier(earlier_clauses, curr_info) do
-    Enum.find_value(earlier_clauses, fn {_n, _a, prev_info, _m, _d} ->
+  defp find_complementary_earlier(earlier_clauses, curr_info, curr_head) do
+    Enum.find_value(earlier_clauses, fn {_n, _a, prev_info, _m, _d, prev_head} ->
       case prev_info do
         nil ->
           nil
@@ -211,7 +211,8 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
           if complementary_ops?(prev.op, curr_info.op) and
                prev.var == curr_info.var and
                prev.literal == curr_info.literal and
-               matching_type_guards?(prev.type_guard, curr_info.type_guard) do
+               matching_type_guards?(prev.type_guard, curr_info.type_guard) and
+               same_head?(prev_head, curr_head) do
             prev
           end
       end
@@ -249,7 +250,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   defp collect_fixable_guards(ast) do
     ast
     |> collect_clauses_for_fix()
-    |> Enum.group_by(fn {name, arity, _, _} -> {name, arity} end)
+    |> Enum.group_by(fn {name, arity, _, _, _} -> {name, arity} end)
     |> Enum.flat_map(fn {_key, group} -> fixable_in_group(group) end)
   end
 
@@ -275,12 +276,12 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
         :error -> nil
       end
 
-    {:ok, {fn_name, length(args), info, guard}}
+    {:ok, {fn_name, length(args), info, guard, args}}
   end
 
   defp extract_clause_with_guard({def_type, _meta, [{fn_name, _, args}, _body]})
        when def_type in [:def, :defp] and is_atom(fn_name) and is_list(args) do
-    {:ok, {fn_name, length(args), nil, nil}}
+    {:ok, {fn_name, length(args), nil, nil, args}}
   end
 
   defp extract_clause_with_guard(_), do: :error
@@ -290,7 +291,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
   defp fixable_in_group(group) do
     group
     |> Enum.with_index()
-    |> Enum.flat_map(fn {{_n, _a, info, guard}, idx} ->
+    |> Enum.flat_map(fn {{_n, _a, info, guard, head}, idx} ->
       case info do
         nil ->
           []
@@ -298,7 +299,7 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
         curr_info ->
           earlier = Enum.take(group, idx)
 
-          if complementary_earlier?(earlier, curr_info) do
+          if complementary_earlier?(earlier, curr_info, head) do
             [guard]
           else
             []
@@ -307,8 +308,8 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
     end)
   end
 
-  defp complementary_earlier?(earlier, curr_info) do
-    Enum.any?(earlier, fn {_n, _a, prev_info, _g} ->
+  defp complementary_earlier?(earlier, curr_info, curr_head) do
+    Enum.any?(earlier, fn {_n, _a, prev_info, _g, prev_head} ->
       case prev_info do
         nil ->
           false
@@ -317,8 +318,25 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
           complementary_ops?(prev.op, curr_info.op) and
             prev.var == curr_info.var and
             prev.literal == curr_info.literal and
-            matching_type_guards?(prev.type_guard, curr_info.type_guard)
+            matching_type_guards?(prev.type_guard, curr_info.type_guard) and
+            same_head?(prev_head, curr_head)
       end
+    end)
+  end
+
+  # The earlier clause only consumes the complementary domain of inputs that
+  # also reach the later clause when the two clauses match the SAME inputs apart
+  # from the compared variable. A sufficient, safe condition is that their head
+  # argument patterns are structurally identical (ignoring metadata). When they
+  # differ (e.g. a `:neg_integer` type tag vs `:non_neg_integer`), the earlier
+  # clause was skipped on the head — not failed on the guard — so the later
+  # clause's comparison is NOT redundant.
+  defp same_head?(head_a, head_b), do: strip_meta(head_a) == strip_meta(head_b)
+
+  defp strip_meta(ast) do
+    Macro.prewalk(ast, fn
+      {form, _meta, args} -> {form, [], args}
+      other -> other
     end)
   end
 

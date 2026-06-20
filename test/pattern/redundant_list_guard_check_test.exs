@@ -161,5 +161,43 @@ defmodule Credence.Pattern.RedundantListGuardCheckTest do
 
       assert check(RedundantListGuard, code) == []
     end
+
+    # When a sibling clause has a *cons* pattern at the same argument position,
+    # the `is_list` guard is load-bearing: it routes the improper-tail case to
+    # that sibling (a clause written specifically to destructure `[h | t]` where
+    # `t` is not a list). Removing it would steal that input, so the guard is
+    # not redundant even under `proper_lists`.
+    test "does not flag when a sibling clause has a cons pattern at the same position" do
+      code = """
+      defmodule Good do
+        def walk([]), do: :ok
+
+        def walk([h | t]) when is_list(t) do
+          {h, walk(t)}
+        end
+
+        def walk([h | t]) do
+          {h, t}
+        end
+      end
+      """
+
+      assert check(RedundantListGuard, code) == []
+    end
+
+    # A bare catch-all sibling (`walk(other)`) is NOT a cons-destructuring
+    # improper handler, so under the `proper_lists` promise the guard is still
+    # redundant and the rule fires (mirrors the equivalence test fixture).
+    test "still flags when the only sibling is a bare catch-all clause" do
+      code = """
+      defmodule Bad do
+        def walk([h | t]) when is_list(t), do: {h, t}
+        def walk(other), do: other
+      end
+      """
+
+      [issue] = check(RedundantListGuard, code)
+      assert issue.rule == :redundant_list_guard
+    end
   end
 end

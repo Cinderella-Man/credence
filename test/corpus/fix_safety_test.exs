@@ -23,33 +23,72 @@ defmodule Credence.Corpus.FixSafetyTest do
   use ExUnit.Case, async: true
 
   @moduletag :corpus
+  # Large entries (beefy app repos) can exceed ExUnit's default 60s per test;
+  # applying fixes is heavier than analysis, so give generous headroom.
+  @moduletag timeout: 180_000
 
   alias Credence.{Corpus, Pattern, RuleHelpers, RuleName}
+  alias Credence.Corpus.Progress
+
+  @progress_step 500
 
   setup_all do
     Corpus.ensure_fetched!()
+
+    total_files =
+      Corpus.entries()
+      |> Enum.map(fn {name, _label} -> length(Corpus.lib_files(name)) end)
+      |> Enum.sum()
+
+    IO.puts("\n  [corpus] Fix-safety: applying & checking every accepted fix across #{total_files} files.")
+    Progress.start(:fix, total_files, @progress_step, "Fix-checked", "files")
+    on_exit(fn -> Progress.stop(:fix) end)
     :ok
   end
 
-  for {pkg, version} <- Corpus.packages() do
-    test "fixes on #{pkg} v#{version} drop no source comments" do
+  # One test per entry. The three safety invariants (no comment loss, no mangled
+  # `__var`, no over-reach) are checked together so each (file, rule) fix is
+  # computed ONCE — not re-analyzed and re-applied three times.
+  for {pkg, version} <- Corpus.entries() do
+    test "fixes on #{pkg} v#{version} are safe (no comment loss, mangling, or over-reach)" do
       pkg = unquote(pkg)
-      violations = comment_loss_violations(pkg)
-      assert violations == [], report(pkg, unquote(version), violations)
-    end
+      version = unquote(version)
+      %{comments: comments, mangling: mangling, over_reach: over_reach} = fix_safety_violations(pkg)
 
-    test "fixes on #{pkg} v#{version} introduce no mangled `__`-prefixed variable" do
-      pkg = unquote(pkg)
-      violations = var_mangling_violations(pkg)
-      assert violations == [], mangling_report(pkg, unquote(version), violations)
-    end
-
-    test "fixes on #{pkg} v#{version} reformat no unrelated code (over-reach)" do
-      pkg = unquote(pkg)
-      violations = over_reach_violations(pkg)
-      assert violations == [], over_reach_report(pkg, unquote(version), violations)
+      assert comments == [], report(pkg, version, comments)
+      assert mangling == [], mangling_report(pkg, version, mangling)
+      assert over_reach == [], over_reach_report(pkg, version, over_reach)
     end
   end
+
+  # Apply each (file, rule) fix once and run all three checks on the result.
+  defp fix_safety_violations(pkg) do
+    pkg
+    |> findings_by_file_rule()
+    |> Enum.reduce(%{comments: [], mangling: [], over_reach: []}, fn {{rel, rule, path}, lines},
+                                                                     acc ->
+      src = File.read!(path)
+      fixed = safe_fix(rule, src)
+
+      # A check-only rule (or a self-reverted fix) leaves the source byte-for-byte
+      # unchanged — no comment can be lost, no var mangled, nothing reformatted —
+      # so skip the (parse + mix-format) work entirely.
+      if fixed == src do
+        acc
+      else
+        meta = %{rule: rule, rel: rel, lines: Enum.sort(lines)}
+
+        acc
+        |> collect(:comments, lost_comments(src, fixed), &Map.put(meta, :lost, &1))
+        |> collect(:mangling, introduced_mangled_vars(src, fixed), &Map.put(meta, :mangled, &1))
+        |> collect(:over_reach, rewrap_hunks(src, fixed), &Map.put(meta, :hunks, &1))
+      end
+    end)
+    |> Map.new(fn {key, violations} -> {key, Enum.reverse(violations)} end)
+  end
+
+  defp collect(acc, _key, [], _build), do: acc
+  defp collect(acc, key, found, build), do: Map.update!(acc, key, &[build.(found) | &1])
 
   # A fix must change CODE, never merely re-wrap unrelated lines. After
   # mix-format-normalizing both sides, a replacement hunk whose deleted and
@@ -57,41 +96,88 @@ defmodule Credence.Corpus.FixSafetyTest do
   # fix had no business touching (e.g. collapsing an unrelated multi-line
   # `@attr` keyword list onto one line). A real change differs in tokens, so it
   # is not flagged.
-  defp over_reach_violations(pkg) do
-    pkg
-    |> findings_by_file_rule()
-    |> Enum.flat_map(fn {{rel, rule, path}, lines} ->
-      src = File.read!(path)
-      fixed = safe_fix(rule, src)
+  # An eq run longer than this between two changed hunks splits them into
+  # separate "change regions": code far from any real change.
+  @region_gap 3
 
-      case rewrap_hunks(src, fixed) do
-        [] -> []
-        hunks -> [%{rule: rule, rel: rel, lines: Enum.sort(lines), hunks: hunks}]
-      end
-    end)
-  end
-
+  # A re-wrap hunk (deleted and inserted text token-identical, differing only in
+  # whitespace) is over-reach ONLY when it stands alone — in a region of the diff
+  # with no real token change. A re-wrap that shares a change region with a real
+  # token change is a legitimate consequence of that change: rewriting `case`→
+  # `if` (a real token change) dedents the branch body one level, so mix-format
+  # re-wraps it — unavoidable for any correct fix. The gratuitous case the check
+  # targets (re-rendering a parent reformats an *unrelated* node) lands in its
+  # own region, far from the real edit, and is still flagged.
   defp rewrap_hunks(src, fixed) do
     fin = String.split(fmt(src), "\n")
     fout = String.split(fmt(fixed), "\n")
 
     fin
     |> List.myers_difference(fout)
-    |> paired_hunks()
-    |> Enum.filter(fn {del, ins} -> del != [] and ins != [] and nospace(del) == nospace(ins) end)
-    |> Enum.map(fn {del, _ins} -> Enum.map_join(del, " ⏎ ", &String.trim/1) end)
+    |> change_events()
+    |> regions()
+    |> Enum.flat_map(&over_reach_in_region/1)
   end
 
-  # Adjacent del+ins ops are a replacement hunk; del-only / ins-only are real
-  # additions/removals, not re-wraps.
-  defp paired_hunks([{:del, d}, {:ins, i} | rest]), do: [{d, i} | paired_hunks(rest)]
-  defp paired_hunks([_op | rest]), do: paired_hunks(rest)
-  defp paired_hunks([]), do: []
+  # Flatten the diff into a stream of `{:gap, n}` (an eq run of n lines),
+  # `{:real, del}` (tokens actually changed — incl. a bare deletion/insertion),
+  # and `{:reflow, del}` (token-identical, whitespace-only). Pure-reindent hunks
+  # (same line count, equal after trimming leading whitespace) are dropped: a
+  # leading-indent shift is always a legitimate depth change.
+  defp change_events([]), do: []
+  defp change_events([{:eq, ls} | rest]), do: [{:gap, length(ls)} | change_events(rest)]
+
+  defp change_events([{:del, d}, {:ins, i} | rest]) do
+    cond do
+      nospace(d) == nospace(i) and reindent_only?(d, i) -> change_events(rest)
+      nospace(d) == nospace(i) -> [{:reflow, d} | change_events(rest)]
+      true -> [{:real, d} | change_events(rest)]
+    end
+  end
+
+  defp change_events([{:del, d} | rest]), do: [{:real, d} | change_events(rest)]
+  defp change_events([{:ins, _} | rest]), do: [{:real, []} | change_events(rest)]
+
+  # Group events into regions, splitting on any eq gap longer than @region_gap.
+  defp regions(events) do
+    {regions, current} =
+      Enum.reduce(events, {[], []}, fn
+        {:gap, n}, {regions, current} when n > @region_gap -> {[Enum.reverse(current) | regions], []}
+        {:gap, _}, acc -> acc
+        ev, {regions, current} -> {regions, [ev | current]}
+      end)
+
+    Enum.reverse([Enum.reverse(current) | regions]) |> Enum.reject(&(&1 == []))
+  end
+
+  # A region with a real token change makes its re-wraps legitimate; a region of
+  # pure re-wraps reformatted code with no real edit, which is over-reach.
+  defp over_reach_in_region(region) do
+    if Enum.any?(region, &match?({:real, _}, &1)) do
+      []
+    else
+      for {:reflow, del} <- region, do: Enum.map_join(del, " ⏎ ", &String.trim/1)
+    end
+  end
+
+  # A pure *leading-indentation* shift (same line count, each line equal after
+  # trimming leading whitespace) is always a legitimate depth change.
+  defp reindent_only?(del, ins) do
+    length(del) == length(ins) and
+      Enum.all?(Enum.zip(del, ins), fn {d, i} ->
+        String.trim_leading(d) == String.trim_leading(i)
+      end)
+  end
 
   defp nospace(lines), do: lines |> Enum.join("\n") |> String.replace(~r/\s+/, "")
 
   defp fmt(source) do
-    IO.iodata_to_binary(Code.format_string!(source))
+    # Real corpus sources contain deprecated single-quoted charlists, etc.;
+    # `with_diagnostics` keeps the tokenizer's warnings out of the suite output.
+    {formatted, _diagnostics} =
+      Code.with_diagnostics(fn -> IO.iodata_to_binary(Code.format_string!(source)) end)
+
+    formatted
   rescue
     _ -> source
   end
@@ -99,20 +185,6 @@ defmodule Credence.Corpus.FixSafetyTest do
   # A fix that re-underscores an already-unused `_x` param into `__x` is a bug
   # (`__x` is not a conventional unused name and reads as a typo). Flag any
   # `__`-prefixed variable the fix introduces that was not already in the source.
-  defp var_mangling_violations(pkg) do
-    pkg
-    |> findings_by_file_rule()
-    |> Enum.flat_map(fn {{rel, rule, path}, lines} ->
-      src = File.read!(path)
-      fixed = safe_fix(rule, src)
-
-      case introduced_mangled_vars(src, fixed) do
-        [] -> []
-        mangled -> [%{rule: rule, rel: rel, lines: Enum.sort(lines), mangled: mangled}]
-      end
-    end)
-  end
-
   defp introduced_mangled_vars(src, fixed) do
     before = MapSet.new(var_names(src))
 
@@ -124,7 +196,9 @@ defmodule Credence.Corpus.FixSafetyTest do
   end
 
   defp var_names(source) do
-    case Code.string_to_quoted(source) do
+    {result, _diagnostics} = Code.with_diagnostics(fn -> Code.string_to_quoted(source) end)
+
+    case result do
       {:ok, ast} ->
         {_ast, acc} =
           Macro.prewalk(ast, [], fn
@@ -149,21 +223,6 @@ defmodule Credence.Corpus.FixSafetyTest do
     String.starts_with?(s, "__") and not String.ends_with?(s, "__")
   end
 
-  # One entry per (file, rule) whose single-rule fix loses a comment.
-  defp comment_loss_violations(pkg) do
-    pkg
-    |> findings_by_file_rule()
-    |> Enum.flat_map(fn {{rel, rule, path}, lines} ->
-      src = File.read!(path)
-      fixed = safe_fix(rule, src)
-
-      case lost_comments(src, fixed) do
-        [] -> []
-        lost -> [%{rule: rule, rel: rel, lines: Enum.sort(lines), lost: lost}]
-      end
-    end)
-  end
-
   # {rel, rule, abs_path} => [finding_line, ...] for every Pattern finding.
   defp findings_by_file_rule(pkg) do
     pkg
@@ -172,9 +231,13 @@ defmodule Credence.Corpus.FixSafetyTest do
       source = File.read!(path)
       rel = Path.relative_to(path, Corpus.root())
 
-      for issue <- Pattern.analyze(source), issue.rule != :parse_error do
-        {{rel, issue.rule, path}, issue.meta[:line]}
-      end
+      findings =
+        for issue <- Pattern.analyze(source), issue.rule != :parse_error do
+          {{rel, issue.rule, path}, issue.meta[:line]}
+        end
+
+      Progress.tick(:fix)
+      findings
     end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
@@ -195,7 +258,10 @@ defmodule Credence.Corpus.FixSafetyTest do
   end
 
   defp comment_counts(source) do
-    case Code.string_to_quoted_with_comments(source) do
+    {result, _diagnostics} =
+      Code.with_diagnostics(fn -> Code.string_to_quoted_with_comments(source) end)
+
+    case result do
       {:ok, _ast, comments} -> comments |> Enum.map(&String.trim(&1.text)) |> Enum.frequencies()
       _ -> %{}
     end
