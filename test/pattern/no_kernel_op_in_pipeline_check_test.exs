@@ -168,5 +168,25 @@ defmodule Credence.Pattern.NoKernelOpInPipelineCheckTest do
 
       assert check(NoKernelOpInPipeline, code) == []
     end
+
+    # The `Kernel.<=` step is consumed by a `|> case` that stays a pipe. `|>`
+    # binds tighter than `<=`, so flattening it would re-parse the downstream
+    # `case` against the operator's RHS — a precedence flip. Must not fire.
+    test "does not flag a Kernel op consumed by a surviving downstream pipe (|> case)" do
+      code = """
+      defmodule Example do
+        def run(offset, ttl) do
+          offset
+          |> Kernel.<=(ttl)
+          |> case do
+            true -> :ok
+            false -> :error
+          end
+        end
+      end
+      """
+
+      assert check(NoKernelOpInPipeline, code) == []
+    end
   end
 end

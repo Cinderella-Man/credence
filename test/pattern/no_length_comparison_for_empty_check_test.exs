@@ -192,6 +192,21 @@ defmodule Credence.Pattern.NoLengthComparisonForEmptyCheckTest do
     test "length(Map.get(m, k)) > 0 (dot-call arg)" do
       assert check(NoLengthComparisonForEmpty, "length(Map.get(m, k)) > 0") == []
     end
+
+    # A comparison inside a `quote` block may be spliced into a guard, where
+    # `length(value) > 0` (raises on a non-list) differs from `value != []`
+    # (matches a non-list). The destination is unknown, so don't flag it.
+    test "length(x) > 0 inside a quote block is not flagged" do
+      code = """
+      defmacro gen do
+        quote do
+          def m(value) when unquote(length(value) > 0), do: :ok
+        end
+      end
+      """
+
+      assert check(NoLengthComparisonForEmpty, code) == []
+    end
   end
 
   # ── metadata ───────────────────────────────────────────────────

@@ -28,7 +28,10 @@ defmodule Credence.Pattern.HallucinatedGuard do
 
   @impl true
   def check(ast, _opts) do
-    active = MapSet.difference(@guard_names, defined_guards(ast))
+    active =
+      if imports_or_uses?(ast),
+        do: MapSet.new(),
+        else: MapSet.difference(@guard_names, defined_guards(ast))
 
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
@@ -48,6 +51,14 @@ defmodule Credence.Pattern.HallucinatedGuard do
 
   @impl true
   def fix_patches(ast, _opts) do
+    if imports_or_uses?(ast) do
+      []
+    else
+      do_fix(ast)
+    end
+  end
+
+  defp do_fix(ast) do
     defined = defined_guards(ast)
 
     Credence.RuleHelpers.patches_from_postwalk(ast, fn
@@ -67,6 +78,23 @@ defmodule Credence.Pattern.HallucinatedGuard do
       node ->
         node
     end)
+  end
+
+  # A module that `import`s or `use`s another module may bring these guard names
+  # into scope as REAL custom guards (e.g. `import MyApp.Guards` defining
+  # `is_pos_integer/1`). We can't resolve the other module's definitions, and an
+  # unqualified guard call that compiles must be locally defined OR imported — so
+  # if any `import`/`use` is present, do not treat these names as hallucinated
+  # (unrolling an imported guard, possibly to a divergent definition, is unsafe).
+  defp imports_or_uses?(ast) do
+    {_ast, found} =
+      Macro.prewalk(ast, false, fn
+        _node, true -> {nil, true}
+        {directive, _, [_ | _]} = node, _ when directive in [:import, :use] -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
   end
 
   # Names from `@guard_names` that the module DEFINES as a guard via

@@ -128,6 +128,28 @@ defmodule Credence.Pattern.HallucinatedGuardCheckTest do
     end
   end
 
+  describe "does NOT flag when the guard may be imported" do
+    # An unqualified guard that compiles must be locally defined or imported; we
+    # can't resolve `import MyApp.Guards`, so don't treat it as hallucinated.
+    test "module with an import is left alone" do
+      assert check(HallucinatedGuard, """
+             defmodule M do
+               import MyApp.Guards
+               def f(x) when is_pos_integer(x), do: x
+             end
+             """) == []
+    end
+
+    test "module with a use is left alone" do
+      assert check(HallucinatedGuard, """
+             defmodule M do
+               use MyApp.Base
+               def f(x) when is_pos_integer(x), do: x
+             end
+             """) == []
+    end
+  end
+
   describe "still flags genuinely-hallucinated guards alongside defined ones" do
     test "only the undefined guard is flagged" do
       # is_pos_integer is defined (real); is_neg_integer is not (hallucinated).

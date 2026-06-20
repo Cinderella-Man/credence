@@ -10,8 +10,11 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       confirm_fix(fix(NoRedundantEnumJoinSeparator, ~S'Enum.join(list, "")'), "Enum.join(list)")
     end
 
-    test "single-step pipe collapses: list |> Enum.join(\"\") → Enum.join(list)" do
-      confirm_fix(fix(NoRedundantEnumJoinSeparator, ~S'list |> Enum.join("")'), "Enum.join(list)")
+    test "single-step pipe keeps the pipe: list |> Enum.join(\"\") → list |> Enum.join()" do
+      confirm_fix(
+        fix(NoRedundantEnumJoinSeparator, ~S'list |> Enum.join("")'),
+        "list |> Enum.join()"
+      )
     end
 
     test "multi-step pipe keeps pipe: list |> Enum.reverse() |> Enum.join(\"\") → ... |> Enum.join()" do
@@ -32,10 +35,10 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       )
     end
 
-    test "single-step pipe collapses: list |> Enum.map_join(\"\", mapper) → Enum.map_join(list, mapper)" do
+    test "single-step pipe keeps the pipe: list |> Enum.map_join(\"\", mapper) → list |> Enum.map_join(mapper)" do
       confirm_fix(
         fix(NoRedundantEnumJoinSeparator, ~S'list |> Enum.map_join("", &to_string/1)'),
-        "Enum.map_join(list, &to_string/1)"
+        "list |> Enum.map_join(&to_string/1)"
       )
     end
 
@@ -80,9 +83,9 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       defmodule M do
         def f(a, b) do
           x = Enum.join(a)
-          y = Enum.join(b)
+          y = b |> Enum.join()
           z = Enum.map_join(a, &to_string/1)
-          w = Enum.map_join(b, &to_string/1)
+          w = b |> Enum.map_join(&to_string/1)
           {x, y, z, w}
         end
       end
@@ -99,6 +102,20 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
       confirm_fix(
         fix(NoRedundantEnumJoinSeparator, ~S'Enum.join(list, ", ")'),
         ~S'Enum.join(list, ", ")'
+      )
+    end
+
+    # Scope parity: a clean `x |> Enum.join()` (no separator at all) is not
+    # flagged, so the fix must not touch it (it used to un-pipe it to
+    # `Enum.join(x)`).
+    test "does not rewrite a clean piped Enum.join/0" do
+      confirm_fix(fix(NoRedundantEnumJoinSeparator, "x |> Enum.join()"), "x |> Enum.join()")
+    end
+
+    test "does not rewrite a clean piped Enum.map_join/1" do
+      confirm_fix(
+        fix(NoRedundantEnumJoinSeparator, "x |> Enum.map_join(&to_string/1)"),
+        "x |> Enum.map_join(&to_string/1)"
       )
     end
 
@@ -199,7 +216,7 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparatorFixTest do
         It does them well.
         \"""
 
-        def run(list), do: Enum.join(list)
+        def run(list), do: list |> Enum.join()
       end
       """
 

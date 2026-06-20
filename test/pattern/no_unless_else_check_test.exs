@@ -203,4 +203,36 @@ defmodule Credence.Pattern.NoUnlessElseCheckTest do
              """)
     end
   end
+
+  describe "does not flag a module that defines its own unless (custom DSL)" do
+    test "skips the whole module when unless/3 is defined locally" do
+      assert clean?(NoUnlessElse, """
+             defmodule Explorer.Query do
+               def unless(condition, do: do_clause) do
+                 unless(condition, do: do_clause, else: nil)
+               end
+
+               def unless(condition, do: do_clause, else: else_clause) do
+                 __cond__([{true, do_clause}, {condition, else_clause}])
+               end
+             end
+             """)
+    end
+
+    test "skips even a real Kernel-style unless/else when the module redefines unless" do
+      assert clean?(NoUnlessElse, """
+             defmodule M do
+               defmacro unless(cond, clauses), do: build(cond, clauses)
+
+               def run(x) do
+                 unless x > 0 do
+                   :a
+                 else
+                   :b
+                 end
+               end
+             end
+             """)
+    end
+  end
 end

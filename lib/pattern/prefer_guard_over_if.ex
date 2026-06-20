@@ -102,8 +102,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
-             not head_has_bitstring?(head) and not head_has_attribute?(head),
+        if splittable?(head, body, condition),
            do: {:ok, meta[:line]},
            else: :error
 
@@ -113,6 +112,49 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   end
 
   defp check_node(_), do: :error
+
+  # All the guards that must hold for the if→clause split to be safe, shared by
+  # check and fix so they agree exactly.
+  defp splittable?(head, body, condition) do
+    guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
+      not head_has_bitstring?(head) and not head_has_attribute?(head) and
+      not head_has_default?(head) and not body_has_h_sigil?(body)
+  end
+
+  # A head parameter carrying a default (`def f(x \\ nil)`): the rewrite copies
+  # the head onto BOTH generated clauses, and Elixir forbids declaring a
+  # default more than once for the same function ("default values are defined
+  # multiple times") — a compile error. Skip.
+  defp head_has_default?(head_ast) do
+    call =
+      case head_ast do
+        {:when, _, [c, _guard]} -> c
+        other -> other
+      end
+
+    {_node, found?} =
+      Macro.prewalk(call, false, fn
+        {:\\, _, _} = node, _acc -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found?
+  end
+
+  # A `~H` (Phoenix component) body implicitly references a variable literally
+  # named `assigns`. The rewrite re-renders the head through
+  # `underscore_unused_params/2`, which — blind to the macro-level reference —
+  # underscores `assigns` into `_assigns`, and `~H` then fails to compile
+  # ("~H requires a variable named \"assigns\""). Skip such bodies entirely.
+  defp body_has_h_sigil?(body) do
+    {_node, found?} =
+      Macro.prewalk(body, false, fn
+        {:sigil_H, _, _} = node, _acc -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found?
+  end
 
   # A function head containing a binary/bitstring pattern (`<<c::utf8, rest::binary>>`)
   # is skipped: the clause-splitting rewrite re-renders the head and
@@ -163,8 +205,7 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
     case extract_if_else(body) do
       {:ok, condition} ->
-        if guard_eligible?(condition) and not simple_equality_with_literal?(condition) and
-             not head_has_bitstring?(head_ast) and not head_has_attribute?(head_ast) do
+        if splittable?(head_ast, body, condition) do
           {call, existing_guard} = extract_head_parts(head_ast)
           {do_body, else_body} = extract_branches(body)
 
@@ -464,18 +505,49 @@ defmodule Credence.Pattern.PreferGuardOverIf do
 
   # In a function head AST, prefix any variable not in `used_names` with `_`.
   defp underscore_unused_params(head, used_names) do
+    counts = var_counts(head)
+    existing = collect_var_names(head)
+
     Macro.postwalk(head, fn
-      {name, meta, ctx} when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
-        # Leave a name that is already underscore-prefixed (`_x`, `_`) alone —
-        # re-underscoring it into `__x` is not a conventional unused name.
-        if name in used_names or String.starts_with?(Atom.to_string(name), "_") do
-          {name, meta, ctx}
-        else
+      {name, meta, ctx} = node when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) ->
+        if safe_to_underscore?(name, used_names, counts, existing) do
           {:"_#{name}", meta, ctx}
+        else
+          node
         end
 
       node ->
         node
     end)
+  end
+
+  defp safe_to_underscore?(name, used_names, counts, existing) do
+    not (name in used_names) and
+      # Leave an already-underscore-prefixed name (`_x`, `_`) alone — re-underscoring
+      # it into `__x` is not a conventional unused name.
+      not String.starts_with?(Atom.to_string(name), "_") and
+      # Non-linear pattern variable (appears more than once in the head): the
+      # repetition is a join/equality constraint, e.g. `f(x, x)`. Underscoring it
+      # changes the matched domain — leave it (an unused-var warning is harmless).
+      Map.get(counts, name, 0) == 1 and
+      # Collision: `_name` already appears in the head, so underscoring `name`
+      # would create a `{_name, _name}`-style equality constraint that did not
+      # exist. Leave it.
+      not MapSet.member?(existing, :"_#{name}")
+  end
+
+  # Count occurrences of each (non-underscore) variable name in the head.
+  defp var_counts(head) do
+    {_ast, counts} =
+      Macro.prewalk(head, %{}, fn
+        {name, _, ctx} = node, acc
+        when is_atom(name) and (is_atom(ctx) or is_nil(ctx)) and name != :_ ->
+          {node, Map.update(acc, name, 1, &(&1 + 1))}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    counts
   end
 end

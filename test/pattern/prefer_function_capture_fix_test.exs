@@ -72,4 +72,12 @@ defmodule Credence.Pattern.PreferFunctionCaptureFixTest do
 
     confirm_fix(fix(PreferFunctionCapture, input), input)
   end
+
+  # An fn inside a `&` capture must be left as-is — rewriting it would yield a
+  # nested capture that does not compile.
+  test "does not rewrite an fn nested inside an enclosing & capture" do
+    input = "Enum.map(rows, &Enum.map(&1, fn v -> to_string(v) end))"
+
+    confirm_fix(fix(PreferFunctionCapture, input), input)
+  end
 end

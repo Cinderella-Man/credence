@@ -38,11 +38,18 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
 
   @impl true
   def check(ast, _opts) do
+    consumed = consumed_by_pipe_positions(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, meta, [_arg]}]} = node, acc
+        {:|>, pipe_meta, [lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, meta, [_arg]}]} = node,
+        acc
         when op in @flagged_ops ->
-          {node, [build_issue(meta, op) | acc]}
+          if unsafe_to_flatten?(node, lhs, pipe_meta, consumed) do
+            {node, acc}
+          else
+            {node, [build_issue(meta, op) | acc]}
+          end
 
         node, acc ->
           {node, acc}
@@ -53,14 +60,97 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
 
   @impl true
   def fix_patches(ast, _opts) do
+    consumed = consumed_by_pipe_positions(ast)
+
     RuleHelpers.patches_from_postwalk(ast, fn
-      {:|>, _meta, [lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, _, [arg]}]}
+      {:|>, pipe_meta, [lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, _, [arg]}]} = node
       when op in @flagged_ops ->
-        transform_kernel_pipe(lhs, op, arg)
+        if unsafe_to_flatten?(node, lhs, pipe_meta, consumed) do
+          node
+        else
+          transform_kernel_pipe(lhs, op, arg)
+        end
 
       node ->
         node
     end)
+  end
+
+  # A `Kernel.op` pipe step must NOT be flattened to infix when:
+  #
+  # 1. it is itself the LHS of a further `|>`. `|>` binds tighter than every
+  #    flagged operator, so `(a op b) |> rest` re-parses as `a op (b |> rest)` —
+  #    a precedence flip that changes meaning and usually crashes downstream.
+  #
+  # 2. it is a quoted macro fragment destined to be spliced INTO a pipe: its LHS
+  #    is a zero-arity call (`Enum.count()`, no upstream value yet) and it
+  #    contains an `unquote`. Flattening yields `upstream |> (Enum.count() == x)`,
+  #    which fails at macro expansion (cannot pipe into a binary operator). The
+  #    `unquote` + upstream-less head together mark this fragment.
+  defp unsafe_to_flatten?(node, lhs, pipe_meta, unsafe) do
+    MapSet.member?(unsafe, position(pipe_meta)) or
+      (zero_arity_call?(lhs) and contains_unquote?(node))
+  end
+
+  # Positions of `Kernel.op` pipe steps that cannot be safely flattened to infix
+  # because they are consumed by a pipe step that REMAINS a pipe after the fix.
+  #
+  # A whole chain of flagged Kernel ops (`a |> Kernel.==(b) |> Kernel.or(c)`)
+  # flattens together to `a == b or c`, so none is unsafe. But the moment a
+  # non-flagged step sits above an op in the chain (`a |> Kernel.<=(b) |> case`,
+  # `a |> Kernel.>=(b) |> f.()`), that step stays a `|>`; since `|>` binds
+  # tighter than every flagged operator, flattening the op below it re-parses
+  # `(x op y) |> step` as `x op (y |> step)`. We propagate this "consumed by a
+  # surviving pipe" context down the chain: it taints every op beneath the first
+  # non-flagged step.
+  defp consumed_by_pipe_positions(ast), do: collect_unsafe(ast, true, MapSet.new())
+
+  # `ctx_safe?` — is an op-pipe at this position safe to flatten (i.e. NOT
+  # consumed by a surviving pipe)? Only the lhs of a `|>` continues the chain;
+  # everything else is an independent expression (fresh safe context).
+  defp collect_unsafe({:|>, meta, [lhs, rhs]}, ctx_safe?, acc) do
+    rhs_kernel? = flagged_kernel_op?(rhs)
+    acc = if rhs_kernel? and not ctx_safe?, do: MapSet.put(acc, position(meta)), else: acc
+    acc = collect_unsafe(lhs, ctx_safe? and rhs_kernel?, acc)
+    collect_unsafe(rhs, true, acc)
+  end
+
+  defp collect_unsafe({form, _meta, args}, _ctx, acc) when is_list(args) do
+    acc = collect_unsafe(form, true, acc)
+    Enum.reduce(args, acc, &collect_unsafe(&1, true, &2))
+  end
+
+  defp collect_unsafe({a, b}, _ctx, acc) do
+    collect_unsafe(b, true, collect_unsafe(a, true, acc))
+  end
+
+  defp collect_unsafe(list, _ctx, acc) when is_list(list) do
+    Enum.reduce(list, acc, &collect_unsafe(&1, true, &2))
+  end
+
+  defp collect_unsafe(_leaf, _ctx, acc), do: acc
+
+  defp flagged_kernel_op?({{:., _, [{:__aliases__, _, [:Kernel]}, op]}, _, [_arg]})
+       when op in @flagged_ops,
+       do: true
+
+  defp flagged_kernel_op?(_), do: false
+
+  defp position(meta), do: {Keyword.get(meta, :line), Keyword.get(meta, :column)}
+
+  defp zero_arity_call?({fun, _meta, []}) when is_atom(fun), do: true
+  defp zero_arity_call?({{:., _, _}, _meta, []}), do: true
+  defp zero_arity_call?(_), do: false
+
+  defp contains_unquote?(ast) do
+    {_ast, found} =
+      Macro.prewalk(ast, false, fn
+        _node, true -> {nil, true}
+        {:unquote, _, _} = n, _ -> {n, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
   end
 
   defp transform_kernel_pipe(lhs, op, arg) do

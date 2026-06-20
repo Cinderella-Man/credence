@@ -327,9 +327,16 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   defp wrap_literal(int) when is_integer(int),
     do: {:__block__, [token: Integer.to_string(int)], [int]}
 
-  defp check_node({:|>, meta, _} = node) do
-    pipeline = flatten_pipeline(node)
-    check_pipeline(pipeline, meta)
+  # Only the `|>` node where the map step is IMMEDIATELY followed by the
+  # aggregator is a fusion site. Scanning the whole flattened pipeline instead
+  # re-reported the same `map |> agg` fusion at every downstream `|>` (e.g.
+  # `… |> Kernel.+` / `… |> Float.round`), pointing the finding at unrelated steps.
+  defp check_node({:|>, meta, [left, right]}) do
+    if agg_step?(right) and map_step?(rightmost(left)) do
+      {:ok, build_issue(agg_fn_name(right), meta)}
+    else
+      :error
+    end
   end
 
   defp check_node({{:., meta, [mod, agg_fn]}, _, [inner]})
@@ -343,19 +350,8 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
   defp check_node(_), do: :error
 
-  defp check_pipeline(steps, meta) do
-    steps
-    |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.find_value(fn [first, second] ->
-      if map_step?(first) and agg_step?(second) do
-        {:ok, build_issue(agg_fn_name(second), meta)}
-      end
-    end)
-    |> case do
-      {:ok, _} = result -> result
-      _ -> :error
-    end
-  end
+  defp rightmost({:|>, _, [_left, right]}), do: rightmost(right)
+  defp rightmost(other), do: other
 
   defp map_call?({{:., _, [mod, :map]}, _, args})
        when is_list(args) and length(args) == 2,

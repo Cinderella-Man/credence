@@ -62,64 +62,76 @@ defmodule Credence.Pattern.NoDuplicateSpec do
     end)
   end
 
-  # Walk the statement list and flag @spec annotations that are duplicates.
-  # A @spec is a duplicate if the same function name already had a @spec
-  # earlier in the same block, before the function definition was reached.
+  # Indices of @spec statements in `stmts` that are redundant duplicates. A spec
+  # is keyed on BOTH its text AND the function it annotates — the {name, arity}
+  # of the first def/defp that follows it. Keying on text alone wrongly deleted
+  # textually-identical specs that annotate *different* functions (e.g. a
+  # correctly-placed `@spec start_link/0` deleted as a "dup" of a misplaced one
+  # before `start_link/1`, or a `@spec test_project` above `def phx_test_project`).
+  defp duplicate_spec_indices(stmts) do
+    {_seen, dups} =
+      stmts
+      |> Enum.with_index()
+      |> Enum.reduce({MapSet.new(), MapSet.new()}, fn {stmt, idx}, {seen, dups} ->
+        case spec_dedup_key(stmt, stmts, idx) do
+          nil ->
+            {seen, dups}
+
+          key ->
+            if MapSet.member?(seen, key),
+              do: {seen, MapSet.put(dups, idx)},
+              else: {MapSet.put(seen, key), dups}
+        end
+      end)
+
+    dups
+  end
+
   defp detect_duplicate_specs(stmts) do
-    {_, issues} =
-      Enum.reduce(stmts, {MapSet.new(), []}, fn
-        {:@, _, [{:spec, _, _}]} = node, {seen, issues} ->
-          case spec_key(node) do
-            nil ->
-              {seen, issues}
+    dups = duplicate_spec_indices(stmts)
 
-            key ->
-              if MapSet.member?(seen, key) do
-                {seen, [build_issue(node) | issues]}
-              else
-                {MapSet.put(seen, key), issues}
-              end
-          end
-
-        _node, acc ->
-          acc
-      end)
-
-    issues
+    for {stmt, idx} <- Enum.with_index(stmts), MapSet.member?(dups, idx), do: build_issue(stmt)
   end
 
-  # Walk the statement list and remove @spec annotations that duplicate an
-  # earlier identical @spec, keeping the first of each.
   defp strip_duplicate_specs(stmts) do
-    {_, filtered} =
-      Enum.reduce(stmts, {MapSet.new(), []}, fn
-        {:@, _, [{:spec, _, _}]} = node, {seen, acc} ->
-          case spec_key(node) do
-            nil ->
-              {seen, [node | acc]}
+    dups = duplicate_spec_indices(stmts)
 
-            key ->
-              if MapSet.member?(seen, key) do
-                # Duplicate — drop it
-                {seen, acc}
-              else
-                {MapSet.put(seen, key), [node | acc]}
-              end
-          end
-
-        node, {seen, acc} ->
-          {seen, [node | acc]}
-      end)
-
-    Enum.reverse(filtered)
+    stmts
+    |> Enum.with_index()
+    |> Enum.reject(fn {_stmt, idx} -> MapSet.member?(dups, idx) end)
+    |> Enum.map(&elem(&1, 0))
   end
 
-  # Metadata-independent dedup key for a @spec: its full text (name, arity, AND
-  # types). Two specs are duplicates only if all three match — distinct
-  # overloaded specs for one function (e.g. two `@spec find/2` with different
-  # types) are valid and kept.
-  defp spec_key({:@, _, [{:spec, _, [spec_expr]}]}), do: Macro.to_string(spec_expr)
-  defp spec_key(_), do: nil
+  # Dedup key for a @spec: {full text (name, arity, AND types), annotated
+  # function {name, arity}}. `nil` when the statement is not a spec, or no
+  # function follows it (then it annotates nothing and is never a duplicate).
+  defp spec_dedup_key({:@, _, [{:spec, _, [spec_expr]}]}, stmts, idx) do
+    case following_def_name_arity(stmts, idx) do
+      nil -> nil
+      name_arity -> {Macro.to_string(spec_expr), name_arity}
+    end
+  end
+
+  defp spec_dedup_key(_, _, _), do: nil
+
+  # {name, arity} of the first def/defp that follows the statement at `idx` (the
+  # function this @spec is positioned to annotate), or nil.
+  defp following_def_name_arity(stmts, idx) do
+    stmts
+    |> Enum.drop(idx + 1)
+    |> Enum.find_value(fn
+      {dt, _, [head | _]} when dt in [:def, :defp, :defmacro, :defmacrop] -> def_name_arity(head)
+      _ -> nil
+    end)
+  end
+
+  defp def_name_arity({:when, _, [inner | _]}), do: def_name_arity(inner)
+
+  defp def_name_arity({name, _, args}) when is_atom(name) and is_list(args),
+    do: {name, length(args)}
+
+  defp def_name_arity({name, _, ctx}) when is_atom(name) and is_atom(ctx), do: {name, 0}
+  defp def_name_arity(_), do: nil
 
   # {name, arity} of a @spec, for the issue message.
   defp spec_name_arity({:@, _, [{:spec, _, [spec_expr]}]}), do: fun_name_arity(spec_expr)

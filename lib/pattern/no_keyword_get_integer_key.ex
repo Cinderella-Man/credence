@@ -43,9 +43,11 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   @impl true
   def check(ast, _opts) do
+    piped = piped_get_positions(ast)
+
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, acc ->
-        case detect(node) do
+        case detect(node, piped) do
           {:ok, meta} -> {node, [build_issue(meta) | acc]}
           :skip -> {node, acc}
         end
@@ -54,17 +56,40 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
     Enum.reverse(issues)
   end
 
-  # Direct call: Keyword.get(list, integer_key)
-  defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [_list, key]}) do
+  # Direct call: Keyword.get(list, integer_key). Only when NOT piped — a 2-arg
+  # node that is the RHS of a pipe is really `Keyword.get/3` (piped list + key +
+  # default), so its second arg is the DEFAULT, not the key (the rule does not
+  # flag 3-arg calls).
+  defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [_list, key]}, piped) do
+    if not MapSet.member?(piped, position(meta)) and integer_literal?(key),
+      do: {:ok, meta},
+      else: :skip
+  end
+
+  # Piped call: expr |> Keyword.get(integer_key). A 1-arg node only ever occurs
+  # in a pipe (Keyword.get needs ≥2 args), so the sole arg is the key.
+  defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [key]}, _piped) do
     if integer_literal?(key), do: {:ok, meta}, else: :skip
   end
 
-  # Piped call: expr |> Keyword.get(integer_key)
-  defp detect({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [key]}) do
-    if integer_literal?(key), do: {:ok, meta}, else: :skip
+  defp detect(_, _), do: :skip
+
+  # Positions of `Keyword.get` calls that are the RHS of a `|>` (their list
+  # argument comes from the pipe, shifting the explicit args left by one).
+  defp piped_get_positions(ast) do
+    {_ast, set} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, _}]} = node, acc ->
+          {node, MapSet.put(acc, position(meta))}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    set
   end
 
-  defp detect(_), do: :skip
+  defp position(meta), do: {Keyword.get(meta, :line), Keyword.get(meta, :column)}
 
   # Positives are `{:__block__, _, [n]}` (Sourceror wraps int literals).
   # Negatives are `{:-, _, [{:__block__, _, [n]}]}` — unary minus over
@@ -75,9 +100,11 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
 
   @impl true
   def fix_patches(ast, _opts) do
+    piped = piped_get_positions(ast)
+
     {_ast, patches} =
       Macro.prewalk(ast, [], fn node, acc ->
-        case detect_fix(node) do
+        case detect_fix(node, piped) do
           {:ok, patch} -> {node, [patch | acc]}
           :skip -> {node, acc}
         end
@@ -87,9 +114,14 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
   end
 
   # Direct: Keyword.get(list, integer) — only when list is a simple var
-  # (matches the legacy regex's `(\w+)` capture group).
-  defp detect_fix({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _meta, [list, key]} = node) do
-    with {:ok, n} <- integer_value(key),
+  # (matches the legacy regex's `(\w+)` capture group) and the call is NOT piped
+  # (a piped 2-arg node is `Keyword.get/3`, whose second arg is the default).
+  defp detect_fix(
+         {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, [list, key]} = node,
+         piped
+       ) do
+    with false <- MapSet.member?(piped, position(meta)),
+         {:ok, n} <- integer_value(key),
          {:ok, var} <- simple_var(list) do
       {:ok, %{range: Sourceror.get_range(node), change: direct_replacement(var, n)}}
     else
@@ -98,7 +130,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
   end
 
   # Piped: expr |> Keyword.get(integer)
-  defp detect_fix({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _meta, [key]} = node) do
+  defp detect_fix({{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, _meta, [key]} = node, _piped) do
     case integer_value(key) do
       {:ok, n} ->
         {:ok, %{range: Sourceror.get_range(node), change: piped_replacement(n)}}
@@ -108,7 +140,7 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKey do
     end
   end
 
-  defp detect_fix(_), do: :skip
+  defp detect_fix(_, _), do: :skip
 
   defp integer_value({:__block__, _, [n]}) when is_integer(n), do: {:ok, n}
   defp integer_value({:-, _, [{:__block__, _, [n]}]}) when is_integer(n), do: {:ok, -n}

@@ -229,6 +229,25 @@ defmodule Credence.Pattern.NoKernelOpInPipelineFixTest do
       confirm_fix(fix(NoKernelOpInPipeline, code), code)
     end
 
+    # Flattening a Kernel op consumed by a surviving `|> case` would flip
+    # operator precedence, so it must be left untouched.
+    test "leaves a Kernel op consumed by a downstream |> case unchanged" do
+      code = """
+      defmodule Example do
+        def run(offset, ttl) do
+          offset
+          |> Kernel.<=(ttl)
+          |> case do
+            true -> :ok
+            false -> :error
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(NoKernelOpInPipeline, code), code)
+    end
+
     test "preserves surrounding functions" do
       input = """
       defmodule Example do

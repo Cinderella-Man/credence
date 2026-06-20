@@ -248,5 +248,58 @@ defmodule Credence.Pattern.NoDestructureReconstructCheckTest do
 
       assert check(NoDestructureReconstruct, code) == []
     end
+
+    # A destructured variable reassigned (`=`) before the reconstruction means
+    # the rebuilt list no longer equals the bound input; collapsing it to
+    # `= items` would return the *original*, stale values. Must not fire.
+    test "does not flag when a destructured variable is reassigned before reconstruction" do
+      code = """
+      defmodule Good do
+        defp normalize([language, script, territory]) do
+          script = maybe_nil_script(script, territory)
+          [language, script, territory]
+        end
+      end
+      """
+
+      assert check(NoDestructureReconstruct, code) == []
+    end
+
+    # Same hazard via a `<-` rebind inside a `with`.
+    test "does not flag when a destructured variable is rebound by a <- clause" do
+      code = """
+      defmodule Good do
+        def to_rgb([y, u, v]) do
+          with {:ok, y} <- scale(y),
+               {:ok, u} <- scale(u),
+               {:ok, v} <- scale(v) do
+            bandjoin([y, u, v])
+          end
+        end
+      end
+      """
+
+      assert check(NoDestructureReconstruct, code) == []
+    end
+
+    # The reassignment guard is per-clause: a sibling clause that *does* rebind
+    # must not suppress a clean clause that does not.
+    test "still flags a clean clause when a sibling clause reassigns" do
+      code = """
+      defmodule Mixed do
+        defp omit([language, script, territory], true) do
+          script = maybe_nil(script, territory)
+          [language, script, territory]
+        end
+
+        defp omit([language, script, territory], false) do
+          [language, script, territory]
+        end
+      end
+      """
+
+      [issue] = check(NoDestructureReconstruct, code)
+      assert issue.rule == :no_destructure_reconstruct
+    end
   end
 end

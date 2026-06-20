@@ -170,13 +170,56 @@ defmodule Credence.Pattern.NoDuplicateFunctionClausesCheckTest do
           defmacro gen do
             quote do
               def to_num(:a), do: 1
-              def to_num(:a), do: 2
+              def to_num(:a), do: 1
             end
           end
         end
         """)
 
       assert length(issues) == 1
+    end
+  end
+
+  describe "distinct clauses that only look identical to a naive normalizer" do
+    test "does not collapse %__MODULE__{} and %_{} struct patterns" do
+      # `%__MODULE__{}` matches only this module's struct; `%_{}` matches any
+      # struct — different domains, different bodies, both reachable.
+      assert clean?(NoDuplicateFunctionClauses, """
+             defmodule Example do
+               def new(%__MODULE__{} = fields), do: keyed(fields)
+               def new(%_{} = fields), do: Map.new(fields)
+             end
+             """)
+    end
+
+    test "does not collapse pipe-form type guards (x |> is_list vs x |> is_binary)" do
+      assert clean?(NoDuplicateFunctionClauses, """
+             defmodule Example do
+               def encode(x) when x |> is_list(), do: :list
+               def encode(x) when x |> is_binary(), do: :binary
+             end
+             """)
+    end
+
+    test "does not collapse clauses whose @attr guard was redefined between them" do
+      assert clean?(NoDuplicateFunctionClauses, """
+             defmodule Example do
+               @ops ~w[> >=]a
+               def cmp(op) when op in @ops, do: :upper
+
+               @ops ~w[< <=]a
+               def cmp(op) when op in @ops, do: :lower
+             end
+             """)
+    end
+
+    test "does not delete a same-head clause whose body differs (likely author bug)" do
+      assert clean?(NoDuplicateFunctionClauses, """
+             defmodule Example do
+               def make(v) when is_binary(v), do: {:string, v}
+               def make(v) when is_binary(v), do: {:bytes, v}
+             end
+             """)
     end
   end
 end

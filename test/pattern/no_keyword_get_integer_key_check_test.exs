@@ -88,6 +88,16 @@ defmodule Credence.Pattern.NoKeywordGetIntegerKeyCheckTest do
     test "no Keyword.get at all" do
       assert check(NoKeywordGetIntegerKey, "List.last(acc)") == []
     end
+
+    # Piped `opts |> Keyword.get(:atom, default)` desugars to Keyword.get/3 — the
+    # integer is the DEFAULT, not the key. Must not be flagged.
+    test "piped Keyword.get with atom key and integer default" do
+      assert check(NoKeywordGetIntegerKey, "opts |> Keyword.get(:timeout, 5000)") == []
+    end
+
+    test "direct 3-arg Keyword.get with atom key and integer default" do
+      assert check(NoKeywordGetIntegerKey, "Keyword.get(opts, :timeout, 5000)") == []
+    end
   end
 
   # ── metadata ───────────────────────────────────────────────────

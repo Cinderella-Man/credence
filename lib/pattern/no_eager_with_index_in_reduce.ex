@@ -92,8 +92,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
          initial_acc,
          fn_node
        ]} ->
-        list = hd(wi_args)
-        fix_direct(list, initial_acc, fn_node, dot_meta, call_meta, strategy)
+        fix_direct(wi_args, initial_acc, fn_node, dot_meta, call_meta, strategy)
 
       # Piped: ... |> Enum.with_index() |> Enum.reduce(initial_acc, fn_node)
       {:|>, pipe_meta,
@@ -112,18 +111,23 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
     end
   end
 
-  # Stream strategy
-  defp fix_direct(list, initial_acc, fn_node, dot_meta, call_meta, :stream) do
+  # Stream strategy — pass the original `Enum.with_index` args through unchanged.
+  # `Stream.with_index/2` takes the same `(enum, offset)` signature, so a
+  # non-default offset (`Enum.with_index(list, 1)`) is preserved; dropping it
+  # would silently shift every index.
+  defp fix_direct(wi_args, initial_acc, fn_node, dot_meta, call_meta, :stream) do
     {{:., dot_meta, [{:__aliases__, [], [:Enum]}, :reduce]}, call_meta,
      [
-       {{:., [], [{:__aliases__, [], [:Stream]}, :with_index]}, [], [list]},
+       {{:., [], [{:__aliases__, [], [:Stream]}, :with_index]}, [], wi_args},
        initial_acc,
        fn_node
      ]}
   end
 
-  # Reduce strategy
-  defp fix_direct(list, initial_acc, fn_node, dot_meta, call_meta, :reduce) do
+  # Reduce strategy — only the no-offset form `Enum.with_index(list)`. The
+  # accumulator-tracked index starts at 0, so a non-default offset cannot be
+  # represented here; the multi-arg clause below falls back to :stream.
+  defp fix_direct([list], initial_acc, fn_node, dot_meta, call_meta, :reduce) do
     case transform_fn_for_reduce(fn_node) do
       {:ok, new_fn} ->
         reduce_call =
@@ -133,8 +137,14 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
         {:elem, [], [reduce_call, wrap_literal(1)]}
 
       :error ->
-        fix_direct(list, initial_acc, fn_node, dot_meta, call_meta, :stream)
+        fix_direct([list], initial_acc, fn_node, dot_meta, call_meta, :stream)
     end
+  end
+
+  # Reduce strategy with a non-default offset — fall back to :stream, which
+  # preserves the offset via 2-arg `Stream.with_index`.
+  defp fix_direct(wi_args, initial_acc, fn_node, dot_meta, call_meta, :reduce) do
+    fix_direct(wi_args, initial_acc, fn_node, dot_meta, call_meta, :stream)
   end
 
   # Stream strategy
@@ -147,6 +157,17 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
     {{:., rd_meta, [{:__aliases__, _, [:Enum]}, :reduce]}, rc_meta, reduce_args} =
       reduce_call
 
+    # A non-default offset on the `Enum.with_index(_, n)` can't be carried into
+    # the accumulator-tracked index (which starts at 0), so fall back to :stream,
+    # which keeps the offset.
+    if with_index_has_offset?(left) do
+      fix_pipe(left, reduce_call, pipe_meta, :stream)
+    else
+      fix_pipe_reduce(left, reduce_call, reduce_args, rd_meta, rc_meta, pipe_meta)
+    end
+  end
+
+  defp fix_pipe_reduce(left, reduce_call, reduce_args, rd_meta, rc_meta, pipe_meta) do
     case reduce_args do
       [initial_acc, fn_node] ->
         case transform_fn_for_reduce(fn_node) do
@@ -292,6 +313,21 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
 
   defp with_index_on_right?({:|>, _, [_, right]}), do: with_index_call?(right)
   defp with_index_on_right?(node), do: with_index_call?(node)
+
+  # Does the `Enum.with_index` call within `left` (the collection side of the
+  # reduce pipe) carry a non-default offset? The offset position differs by form:
+  # when with_index is itself piped (`list |> Enum.with_index(n)`) its enumerable
+  # comes from the pipe, so `n` is its first/only arg; when it is a direct call
+  # (`Enum.with_index(list, n)`) the offset is its second arg.
+  defp with_index_has_offset?(
+         {:|>, _, [_deeper, {{:., _, [{:__aliases__, _, [:Enum]}, :with_index]}, _, args}]}
+       ),
+       do: length(args) >= 1
+
+  defp with_index_has_offset?({{:., _, [{:__aliases__, _, [:Enum]}, :with_index]}, _, args}),
+    do: length(args) >= 2
+
+  defp with_index_has_offset?(_), do: false
 
   defp with_index_call?({{:., _, [{:__aliases__, _, [:Enum]}, :with_index]}, _, _}), do: true
   defp with_index_call?(_), do: false

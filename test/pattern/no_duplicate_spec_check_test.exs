@@ -106,5 +106,31 @@ defmodule Credence.Pattern.NoDuplicateSpecCheckTest do
 
       assert length(issues) == 1
     end
+
+    # Two textually-identical specs that annotate DIFFERENT functions (the
+    # following def differs) are not duplicates of each other.
+    test "does not flag identical-text specs annotating differently-named functions" do
+      assert check(NoDuplicateSpec, """
+             defmodule M do
+               @spec build(map()) :: map()
+               def test_project(opts), do: opts
+
+               @spec build(map()) :: map()
+               def phx_test_project(opts), do: opts
+             end
+             """) == []
+    end
+
+    test "does not flag identical-text specs annotating different arities" do
+      assert check(NoDuplicateSpec, """
+             defmodule M do
+               @spec start_link :: term()
+               def start_link(arg), do: arg
+
+               @spec start_link :: term()
+               def start_link, do: :ok
+             end
+             """) == []
+    end
   end
 end

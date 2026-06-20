@@ -59,35 +59,70 @@ defmodule Credence.Pattern.NoListAppendInReduce do
     # `wrap_with_reverse/2`.
     unsafe = unsafe_targets(ast)
 
-    Credence.RuleHelpers.patches_from_postwalk(ast, fn
-      # 3-arg standalone: Enum.reduce(enum, [], fn ...)
-      {{:., dot_meta, [{:__aliases__, al_meta, [:Enum]}, :reduce]}, call_meta,
-       [enum, initial, fun]} = node ->
-        case try_fix_lambda(initial, fun) do
-          {:ok, fixed_fun} ->
-            fixed_reduce =
-              {{:., dot_meta, [{:__aliases__, al_meta, [:Enum]}, :reduce]}, call_meta,
-               [enum, initial, fixed_fun]}
+    # The 3-arg STANDALONE reduce is a self-contained call node, so the diff path
+    # rewrites it surgically. The PIPED form is handled by `piped_patches/2`
+    # instead — wrapping `lhs |> reduce` into the deeper `(lhs |> reduce) |>
+    # reverse` shifts the structural alignment, and the AST-diff then
+    # mis-attributes the change to an unrelated node in `lhs` (e.g. corrupting an
+    # Ecto `[mb, flow]` join binding into `[[mb, flow]]`). So we emit a surgical
+    # byte-range patch on just the reduce step, leaving `lhs` untouched.
+    standalone =
+      Credence.RuleHelpers.patches_from_postwalk(ast, fn
+        {{:., dot_meta, [{:__aliases__, al_meta, [:Enum]}, :reduce]}, call_meta,
+         [enum, initial, fun]} = node ->
+          case try_fix_lambda(initial, fun) do
+            {:ok, fixed_fun} ->
+              fixed_reduce =
+                {{:., dot_meta, [{:__aliases__, al_meta, [:Enum]}, :reduce]}, call_meta,
+                 [enum, initial, fixed_fun]}
 
-            wrap_with_reverse(fixed_reduce, MapSet.member?(unsafe, node))
+              wrap_with_reverse(fixed_reduce, MapSet.member?(unsafe, node))
 
-          :skip ->
-            node
-        end
+            :skip ->
+              node
+          end
 
-      # Pipe: ... |> Enum.reduce([], fn ...) — insert the reverse stage
-      {:|>, pipe_meta, [lhs, rhs]} = node ->
-        case try_fix_piped_reduce(rhs) do
-          {:ok, fixed_rhs} ->
-            wrap_with_reverse({:|>, pipe_meta, [lhs, fixed_rhs]}, MapSet.member?(unsafe, node))
+        node ->
+          node
+      end)
 
-          :skip ->
-            node
-        end
+    standalone ++ piped_patches(ast, unsafe)
+  end
 
-      node ->
-        node
-    end)
+  # Surgical patches for the piped form `lhs |> Enum.reduce([], fn …)`.
+  defp piped_patches(ast, unsafe) do
+    {_ast, patches} =
+      Macro.prewalk(ast, [], fn
+        {:|>, _, [lhs, reduce_step]} = node, acc ->
+          case try_fix_piped_reduce(reduce_step) do
+            {:ok, fixed_step} ->
+              {node, [piped_patch(node, lhs, reduce_step, fixed_step, unsafe) | acc]}
+
+            :skip ->
+              {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reverse(patches)
+  end
+
+  defp piped_patch(node, lhs, reduce_step, fixed_step, unsafe) do
+    if MapSet.member?(unsafe, node) do
+      # `(lhs |> reduce) ++ …` — the whole pipe must be wrapped in a call. This is
+      # rare; re-rendering `lhs` is acceptable here.
+      whole = Sourceror.to_string({:|>, [], [lhs, fixed_step]})
+      %{range: Sourceror.get_range(node), change: "Enum.reverse(#{whole})"}
+    else
+      # Patch ONLY the reduce step; `|> Enum.reverse()` is appended textually so
+      # `lhs` (and everything before the reduce) keeps its exact source bytes.
+      %{
+        range: Sourceror.get_range(reduce_step),
+        change: Sourceror.to_string(fixed_step) <> " |> Enum.reverse()"
+      }
+    end
   end
 
   # `target |> Enum.reverse()` mis-associates when `target` is an operand of an

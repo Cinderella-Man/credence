@@ -28,7 +28,7 @@ defmodule Credence.Pattern.NoRedundantToList do
       Macro.prewalk(ast, [], fn
         # Pipe form: <to_list> |> Module.func()  (no extra args — arity-1 after pipe)
         {:|>, meta, [left, {{:., _, [{:__aliases__, _, [module]}, func]}, _, []}]} = node, acc
-        when is_atom(func) and module in [:MapSet, :Map] ->
+        when func == :new and module in [:MapSet, :Map] ->
           case extract_to_list_expr(left) do
             {:ok, _} ->
               issue = %Issue{
@@ -47,7 +47,7 @@ defmodule Credence.Pattern.NoRedundantToList do
 
         # Non-pipe form: Module.func(Enum.to_list(...), ...)
         {{:., _, [{:__aliases__, _, [module]}, func]}, meta, [first_arg | _rest]} = node, acc
-        when is_atom(func) and module in [:MapSet, :Map] ->
+        when func == :new and module in [:MapSet, :Map] ->
           case extract_to_list_expr(first_arg) do
             {:ok, _} ->
               issue = %Issue{
@@ -77,7 +77,7 @@ defmodule Credence.Pattern.NoRedundantToList do
       Macro.prewalk(ast, [], fn
         # Pipe form: <to_list> |> Module.func() → Module.func(expr)
         {:|>, _, [left, {{:., _, [{:__aliases__, _, [module]}, func]}, _, []}]} = node, acc
-        when is_atom(func) and module in [:MapSet, :Map] ->
+        when func == :new and module in [:MapSet, :Map] ->
           case extract_to_list_expr(left) do
             {:ok, expr} ->
               range = Sourceror.get_range(node)
@@ -90,7 +90,7 @@ defmodule Credence.Pattern.NoRedundantToList do
 
         # Non-pipe form: Module.func(Enum.to_list(expr)) → Module.func(expr)
         {{:., _, [{:__aliases__, _, [module]}, func]}, _, [first_arg | _rest]} = node, acc
-        when is_atom(func) and module in [:MapSet, :Map] ->
+        when func == :new and module in [:MapSet, :Map] ->
           case extract_to_list_expr(first_arg) do
             {:ok, expr} ->
               range = Sourceror.get_range(first_arg)

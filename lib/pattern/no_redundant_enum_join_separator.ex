@@ -79,21 +79,12 @@ defmodule Credence.Pattern.NoRedundantEnumJoinSeparator do
           do: {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :map_join]}, call_m, [mapper]},
           else: node
 
-      # Collapse single-step pipe: x |> Enum.join() → Enum.join(x)
-      # (fires after the "" removal above, since postwalk is bottom-up)
-      {:|>, _, [lhs, {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :join]}, call_m, []}]} = node ->
-        case lhs do
-          {:|>, _, _} -> node
-          _ -> {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :join]}, call_m, [lhs]}
-        end
-
-      # Collapse single-step pipe: x |> Enum.map_join(mapper) → Enum.map_join(x, mapper)
-      {:|>, _, [lhs, {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :map_join]}, call_m, [mapper]}]} =
-          node ->
-        case lhs do
-          {:|>, _, _} -> node
-          _ -> {{:., dot_m, [{:__aliases__, al_m, [:Enum]}, :map_join]}, call_m, [lhs, mapper]}
-        end
+      # NOTE: we deliberately do NOT collapse `x |> Enum.join()` to `Enum.join(x)`
+      # (or the map_join equivalent). The piped result of dropping `""` is already
+      # correct and idiomatic; collapsing it cannot tell "I just removed the `""`
+      # here" from a pre-existing `x |> Enum.join()` that the check never flagged,
+      # so it would rewrite clean code — putting the fix's scope outside the
+      # check's. Leave the pipe form as-is.
 
       node ->
         node

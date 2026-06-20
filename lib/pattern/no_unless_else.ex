@@ -34,25 +34,60 @@ defmodule Credence.Pattern.NoUnlessElse do
 
   @impl true
   def check(ast, _opts) do
-    {_ast, issues} =
-      Macro.prewalk(ast, [], fn
-        {:unless, meta, [_condition, clauses]} = node, acc ->
-          if has_else?(clauses) do
-            {node, [build_issue(meta) | acc]}
-          else
+    if defines_unless?(ast) do
+      []
+    else
+      {_ast, issues} =
+        Macro.prewalk(ast, [], fn
+          {:unless, meta, [_condition, clauses]} = node, acc ->
+            if has_else?(clauses) do
+              {node, [build_issue(meta) | acc]}
+            else
+              {node, acc}
+            end
+
+          node, acc ->
             {node, acc}
-          end
+        end)
+
+      Enum.reverse(issues)
+    end
+  end
+
+  @impl true
+  def fix_patches(ast, _opts) do
+    if defines_unless?(ast) do
+      []
+    else
+      Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
+    end
+  end
+
+  # A module may define its own `unless/2,3` (e.g. a query DSL like
+  # `Explorer.Query`). Then `unless` is NOT `Kernel.unless`, and its `def`
+  # head — `def unless(c, do: x, else: y)` — is itself shaped exactly like an
+  # `unless cond, do:, else:` call. Rewriting either the head or in-module calls
+  # to `if` breaks the DSL. If the file defines an `unless` function/macro,
+  # leave every `unless` in it untouched.
+  defp defines_unless?(ast) do
+    {_ast, found} =
+      Macro.prewalk(ast, false, fn
+        node, true ->
+          {node, true}
+
+        {dt, _, [{:unless, _, args} | _]} = node, false
+        when dt in [:def, :defp, :defmacro, :defmacrop] and is_list(args) ->
+          {node, true}
+
+        {dt, _, [{:when, _, [{:unless, _, args} | _]} | _]} = node, false
+        when dt in [:def, :defp, :defmacro, :defmacrop] and is_list(args) ->
+          {node, true}
 
         node, acc ->
           {node, acc}
       end)
 
-    Enum.reverse(issues)
-  end
-
-  @impl true
-  def fix_patches(ast, _opts) do
-    Credence.RuleHelpers.patches_from_postwalk(ast, &maybe_rewrite/1)
+    found
   end
 
   # Checks if a keyword list (from unless/if args) has an :else clause.

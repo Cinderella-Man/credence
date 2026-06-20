@@ -131,9 +131,13 @@ defmodule Credence.Pattern.NoManualFrequencies do
   #   - KEY that references the accumulator — can't be lifted into a key function
   #     that only receives the element (it would leave `acc` unbound).
   defp frequency_spec({:fn, _, [{:->, _, [params, fn_body]}]}) do
+    # `var_name/1` returns `nil` for a non-variable param (a map/tuple pattern
+    # like `%{block_number: number}`). `is_atom(nil)` is true, so guard against
+    # `nil` explicitly — otherwise a destructuring element param slips through
+    # and the fix emits `fn nil -> …` with the body vars unbound.
     with [elem_p, acc_p] <- params,
-         elem when is_atom(elem) <- var_name(elem_p),
-         acc when is_atom(acc) <- var_name(acc_p),
+         elem when is_atom(elem) and not is_nil(elem) <- var_name(elem_p),
+         acc when is_atom(acc) and not is_nil(acc) <- var_name(acc_p),
          {{:., _, [{:__aliases__, _, [:Map]}, :update]}, _, [acc_arg, key_arg, default, incr]} <-
            unwrap_block(fn_body),
          true <- var_name(acc_arg) == acc,

@@ -7,34 +7,38 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   All `Enum` functions accept maps directly and iterate over `{key, value}`
   pairs without allocating an intermediate list.
 
+  ## Scope — only order-INDEPENDENT terminals are rewritten
+
+  `Map.keys/1` and `Map.values/1` iterate in a different order than a direct
+  `Enum`-over-map traversal once the map has more than 32 keys (small-map array
+  vs. hash-tree iterator). So the rule rewrites ONLY operations whose result is
+  independent of iteration order — `all?`, `any?`, `count`, `empty?`,
+  `frequencies`, `frequencies_by`. Order-dependent ops (`map`, `filter`, `find`,
+  `at`, `take`, `join`, `reduce`, `sort`, …) would reorder the result and are
+  left untouched: neither flagged nor rewritten (check and fix share one scope
+  gate, `fixable?/2`). `Enum.sum`/`product`/`max`/`min` are already idiomatic and
+  also not flagged.
+
   ## Automatic fixing
 
-      # Callback wrapping
+      # Callback wrapping binds the user's variable to the right slot:
       Enum.all?(Map.values(degrees), fn v -> v == 0 end)
       → Enum.all?(degrees, fn {_k, v} -> v == 0 end)
 
-      # find/at → case expression
-      Enum.find(Map.values(m), fn v -> v > 0 end)
-      → case Enum.find(m, fn {_k, v} -> v > 0 end) do
-          nil -> nil; {_, v} -> v
-        end
+      Map.values(m) |> Enum.count()
+      → Enum.count(m)
 
-      # filter/sort/etc → chain with Enum.map
-      Map.keys(m) |> Enum.filter(fn k -> k > 0 end)
-      → m |> Enum.filter(fn {k, _v} -> k > 0 end)
-        |> Enum.map(fn {k, _v} -> k end)
-
-  `Enum.sum`, `Enum.product`, `Enum.max`, and `Enum.min` with
-  `Map.values`/`Map.keys` are already idiomatic and not flagged.
+      Enum.frequencies(Map.keys(m))
+      → Enum.frequencies_by(m, fn {k, _} -> k end)
 
   ## Bad
       Enum.all?(Map.values(degrees), fn v -> v == 0 end)
-      Map.keys(map) |> Enum.map(&to_string/1)
+      Map.values(map) |> Enum.count()
   ## Good
       Enum.all?(degrees, fn {_k, v} -> v == 0 end)
-      Enum.map(map, fn {k, _v} -> to_string(k) end)
+      Enum.count(map)
       Map.values(map) |> Enum.sum()       # already idiomatic
-      Enum.max(Map.values(m))              # already idiomatic
+      Map.values(m) |> Enum.filter(...)   # order-dependent — left alone
 
   ## Glossary (terms used throughout this module)
 
@@ -136,7 +140,10 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
         case args do
           [{{:., _, [{:__aliases__, _, [:Map]}, map_fn]}, _, [map_expr]} | enum_args]
           when map_fn in @map_funcs ->
-            if safe_callbacks?(enum_args) do
+            # `fixable?` (NOT just `safe_callbacks?`) so the fix rewrites EXACTLY
+            # the order-independent `enum_fn`s the check flags — never the
+            # order-dependent ones it deliberately skips.
+            if fixable?(enum_fn, enum_args) do
               pick(
                 fix_nested(enum_fn, dot_meta, alias_meta, call_meta, map_fn, map_expr, enum_args),
                 node
@@ -156,7 +163,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
          {{:., _, [{:__aliases__, _, [:Enum]}, enum_fn]}, _, enum_args}
        ]} = node
       when map_fn in @map_funcs ->
-        if safe_callbacks?(enum_args),
+        if fixable?(enum_fn, enum_args),
           do: pick(fix_pipe(enum_fn, pipe_meta, map_fn, map_expr, enum_args), node),
           else: node
 
@@ -167,7 +174,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
          {{:., _, [{:__aliases__, _, [:Enum]}, enum_fn]}, _, enum_args}
        ]} = node
       when map_fn in @map_funcs ->
-        if safe_callbacks?(enum_args),
+        if fixable?(enum_fn, enum_args),
           do: pick(fix_pipe(enum_fn, pipe_meta, map_fn, map_expr, enum_args), node),
           else: node
 
@@ -190,17 +197,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     enum_args = wrap_fns(enum_args, map_fn)
 
     case enum_fn do
-      f when f in [:all?, :any?, :each, :map, :flat_map, :frequencies_by, :find_value] ->
+      f when f in [:all?, :any?, :frequencies_by] ->
         on_first(enum_args, fn cb -> {:ok, enum.(f, [map_expr, cb])} end)
-
-      f when f in [:reduce, :reduce_while] ->
-        case enum_args do
-          [acc, cb] ->
-            if function?(cb), do: {:ok, enum.(f, [map_expr, acc, cb])}, else: :no
-
-          _ ->
-            :no
-        end
 
       :count ->
         case enum_args do
@@ -208,103 +206,13 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
           [cb | _] -> if function?(cb), do: {:ok, enum.(:count, [map_expr, cb])}, else: :no
         end
 
-      f when f in [:max_by, :min_by] ->
-        on_first(enum_args, fn cb ->
-          {:ok, elem_call(enum.(f, [map_expr, cb]), key_or_value_index(map_fn))}
-        end)
-
-      :at ->
-        case enum_args do
-          [idx] ->
-            {:ok, nil_or_extract_case(enum.(:at, [map_expr, idx]), map_fn, nil)}
-
-          [idx, default] ->
-            {:ok, nil_or_extract_case(enum.(:at, [map_expr, idx]), map_fn, default)}
-
-          _ ->
-            :no
-        end
-
-      :find ->
-        case enum_args do
-          [cb] ->
-            if function?(cb),
-              do: {:ok, nil_or_extract_case(enum.(:find, [map_expr, cb]), map_fn, nil)},
-              else: :no
-
-          [default, cb] ->
-            if function?(cb),
-              do: {:ok, nil_or_extract_case(enum.(:find, [map_expr, cb]), map_fn, default)},
-              else: :no
-
-          _ ->
-            :no
-        end
-
-      :random ->
-        on_empty(enum_args, fn ->
-          {:ok, elem_call(enum.(:random, [map_expr]), key_or_value_index(map_fn))}
-        end)
-
-      :join ->
-        case enum_args do
-          [] ->
-            {:ok, enum.(:map_join, [map_expr, wrap_str(""), extractor_lambda(map_fn)])}
-
-          [sep] ->
-            {:ok, enum.(:map_join, [map_expr, sep, extractor_lambda(map_fn)])}
-
-          _ ->
-            :no
-        end
-
       :empty? ->
         {:ok, enum.(:empty?, [map_expr | enum_args])}
-
-      f when f in [:filter, :reject] ->
-        on_first(enum_args, fn cb ->
-          {:ok, enum.(:map, [enum.(f, [map_expr, cb]), extractor_lambda(map_fn)])}
-        end)
-
-      f when f in [:uniq, :dedup] ->
-        on_empty(enum_args, fn ->
-          by_fn = if f == :uniq, do: :uniq_by, else: :dedup_by
-
-          {:ok,
-           enum.(:map, [
-             enum.(by_fn, [map_expr, extractor_lambda(map_fn)]),
-             extractor_lambda(map_fn)
-           ])}
-        end)
-
-      f when f in [:uniq_by, :dedup_by] ->
-        on_first(enum_args, fn cb ->
-          {:ok, enum.(:map, [enum.(f, [map_expr, cb]), extractor_lambda(map_fn)])}
-        end)
-
-      f when f in [:take_while, :drop_while] ->
-        on_first(enum_args, fn cb ->
-          {:ok, enum.(:map, [enum.(f, [map_expr, cb]), extractor_lambda(map_fn)])}
-        end)
-
-      f when f in [:take, :drop, :reverse, :sample, :shuffle, :slice, :take_every, :drop_every] ->
-        {:ok, enum.(:map, [enum.(f, [map_expr | enum_args]), extractor_lambda(map_fn)])}
 
       :frequencies ->
         on_empty(enum_args, fn ->
           {:ok, enum.(:frequencies_by, [map_expr, extractor_lambda(map_fn)])}
         end)
-
-      :group_by ->
-        case enum_args do
-          [key_cb, value_cb] ->
-            if function?(key_cb) and function?(value_cb),
-              do: {:ok, enum.(:group_by, [map_expr, key_cb, value_cb])},
-              else: :no
-
-          _ ->
-            :no
-        end
 
       _ ->
         :no
@@ -327,29 +235,13 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
       end
     end
 
-    # Same shape, but chained off an intermediate `lhs` instead of
-    # `map_expr`. Used when the rewrite emits a two-stage pipeline like
-    # `m |> Enum.filter(...) |> Enum.map(extractor)`.
-    chain = fn lhs, fn_name, args ->
-      case lhs do
-        {:|>, _, _} -> pipe_into_enum(pipe_meta, lhs, fn_name, args)
-        _ -> enum_call(fn_name, [lhs | args])
-      end
-    end
-
     # 1) Wrap any single-arg callbacks so the user's variable binds
     #    to the correct slot of the `{k, v}` pair.
     enum_args = wrap_fns(enum_args, map_fn)
 
     case enum_fn do
-      f when f in [:all?, :any?, :each, :map, :flat_map, :frequencies_by, :find_value] ->
+      f when f in [:all?, :any?, :frequencies_by] ->
         on_first(enum_args, fn cb -> {:ok, enum.(f, [cb])} end)
-
-      f when f in [:reduce, :reduce_while] ->
-        case enum_args do
-          [acc, cb] -> if function?(cb), do: {:ok, enum.(f, [acc, cb])}, else: :no
-          _ -> :no
-        end
 
       :count ->
         case enum_args do
@@ -357,99 +249,13 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
           [cb | _] -> if function?(cb), do: {:ok, enum.(:count, [cb])}, else: :no
         end
 
-      f when f in [:max_by, :min_by] ->
-        on_first(enum_args, fn cb ->
-          {:ok, pipe_into_elem(pipe_meta, enum.(f, [cb]), key_or_value_index(map_fn))}
-        end)
-
-      :at ->
-        case enum_args do
-          [idx] ->
-            {:ok, nil_or_extract_case(enum_call(:at, [map_expr, idx]), map_fn, nil)}
-
-          [idx, default] ->
-            {:ok, nil_or_extract_case(enum_call(:at, [map_expr, idx]), map_fn, default)}
-
-          _ ->
-            :no
-        end
-
-      :find ->
-        case enum_args do
-          [cb] ->
-            if function?(cb),
-              do: {:ok, nil_or_extract_case(enum_call(:find, [map_expr, cb]), map_fn, nil)},
-              else: :no
-
-          [default, cb] ->
-            if function?(cb),
-              do: {:ok, nil_or_extract_case(enum_call(:find, [map_expr, cb]), map_fn, default)},
-              else: :no
-
-          _ ->
-            :no
-        end
-
-      :random ->
-        on_empty(enum_args, fn ->
-          {:ok, pipe_into_elem(pipe_meta, enum.(:random, []), key_or_value_index(map_fn))}
-        end)
-
-      :join ->
-        case enum_args do
-          [] -> {:ok, enum_call(:map_join, [map_expr, wrap_str(""), extractor_lambda(map_fn)])}
-          [sep] -> {:ok, enum_call(:map_join, [map_expr, sep, extractor_lambda(map_fn)])}
-          _ -> :no
-        end
-
       :empty? ->
         {:ok, enum.(:empty?, enum_args)}
-
-      f when f in [:filter, :reject] ->
-        on_first(enum_args, fn cb ->
-          {:ok, chain.(enum.(f, [cb]), :map, [extractor_lambda(map_fn)])}
-        end)
-
-      f when f in [:uniq, :dedup] ->
-        on_empty(enum_args, fn ->
-          by_fn = if f == :uniq, do: :uniq_by, else: :dedup_by
-
-          {:ok,
-           chain.(
-             enum.(by_fn, [extractor_lambda(map_fn)]),
-             :map,
-             [extractor_lambda(map_fn)]
-           )}
-        end)
-
-      f when f in [:uniq_by, :dedup_by] ->
-        on_first(enum_args, fn cb ->
-          {:ok, chain.(enum.(f, [cb]), :map, [extractor_lambda(map_fn)])}
-        end)
-
-      f when f in [:take_while, :drop_while] ->
-        on_first(enum_args, fn cb ->
-          {:ok, chain.(enum.(f, [cb]), :map, [extractor_lambda(map_fn)])}
-        end)
-
-      f when f in [:take, :drop, :reverse, :sample, :shuffle, :slice, :take_every, :drop_every] ->
-        {:ok, chain.(enum.(f, enum_args), :map, [extractor_lambda(map_fn)])}
 
       :frequencies ->
         on_empty(enum_args, fn ->
           {:ok, enum.(:frequencies_by, [extractor_lambda(map_fn)])}
         end)
-
-      :group_by ->
-        case enum_args do
-          [key_cb, value_cb] ->
-            if function?(key_cb) and function?(value_cb),
-              do: {:ok, enum.(:group_by, [key_cb, value_cb])},
-              else: :no
-
-          _ ->
-            :no
-        end
 
       _ ->
         :no
@@ -614,28 +420,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   defp pipe_into_enum(pipe_meta, lhs, fn_name, args),
     do: {:|>, pipe_meta, [lhs, enum_call(fn_name, args)]}
 
-  # `lhs |> elem(index)`
-  defp pipe_into_elem(pipe_meta, lhs, index),
-    do: {:|>, pipe_meta, [lhs, {:elem, [], [index]}]}
-
-  # `elem(tuple, index)`
-  defp elem_call(tuple, index), do: {:elem, [], [tuple, index]}
-
-  # Index into the `{k, v}` pair to read after `max_by` / `min_by` /
-  # `random` — 0 picks the key, 1 picks the value.
-  defp key_or_value_index(:values), do: wrap_int(1)
-  defp key_or_value_index(:keys), do: wrap_int(0)
-
-  # Sourceror's renderer expects literals wrapped in `:__block__` with
-  # source-representation metadata. Builders that mint fresh literals
-  # wrap them so the surrounding Sourceror-shaped AST stays consistent
-  # for `Sourceror.to_string/1`.
-  defp wrap_int(n) when is_integer(n),
-    do: {:__block__, [token: Integer.to_string(n)], [n]}
-
-  defp wrap_str(s) when is_binary(s),
-    do: {:__block__, [delimiter: ~s(")], [s]}
-
   # Sourceror wraps 2-tuples in `:__block__` (so `{a, b}` doesn't get
   # rendered as map-update `a => b`). Builders that mint fresh tuple
   # patterns wrap them for consistency.
@@ -652,41 +436,6 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   defp extractor_lambda(:keys),
     do: {:fn, [], [{:->, [], [[wrap_tuple({{:k, [], nil}, {:_, [], nil}})], {:k, [], nil}]}]}
 
-  # The destructuring tuple pattern used inside a case clause when we
-  # need to extract just-keys / just-values after `find` / `at`.
-  #
-  #     :keys    →  {k, _v}
-  #     :values  →  {_k, v}
-  defp extractor_pattern(:values), do: wrap_tuple({{:_k, [], nil}, {:v, [], nil}})
-  defp extractor_pattern(:keys), do: wrap_tuple({{:k, [], nil}, {:_v, [], nil}})
-
-  # The bare variable that pairs with `extractor_pattern/1` — the right
-  # hand side of the matching clause is just this variable.
-  defp extractor_var(:values), do: {:v, [], nil}
-  defp extractor_var(:keys), do: {:k, [], nil}
-
-  # Wraps an `Enum.find` / `Enum.at` result in:
-  #
-  #     case <inner> do
-  #       nil -> <default>
-  #       {k, v} -> <k or v>
-  #     end
-  #
-  # so the rewritten expression yields just-key / just-value (or the
-  # default on miss), matching what the user originally asked for.
-  defp nil_or_extract_case(inner, map_fn, default) do
-    {:case, [],
-     [
-       inner,
-       [
-         do: [
-           {:->, [], [[nil], default]},
-           {:->, [], [[extractor_pattern(map_fn)], extractor_var(map_fn)]}
-         ]
-       ]
-     ]}
-  end
-
   # ════════════════════════════════════════════════════════════════
   # issue + fixability gate
   # ════════════════════════════════════════════════════════════════
@@ -701,9 +450,12 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     }
   end
 
+  # The single scope gate shared by check AND fix: an `enum_fn` is rewritten iff
+  # it is an order-independent terminal (`@fixable_funcs`) whose callbacks are
+  # range-safe. The check and the fix call this same predicate, so they flag and
+  # rewrite EXACTLY the same set — never an order-dependent op like `filter`.
   defp fixable?(enum_fn, args) do
-    enum_fn in @fixable_funcs and not (enum_fn == :group_by and length(args) < 2) and
-      safe_callbacks?(args)
+    enum_fn in @fixable_funcs and safe_callbacks?(args)
   end
 
   # The rule converts a `&(...)` capture callback to a `fn`, but Sourceror

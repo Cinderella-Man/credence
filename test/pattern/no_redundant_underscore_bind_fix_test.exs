@@ -84,11 +84,14 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       confirm_fix(fix(NoRedundantUnderscoreBind, input), expected)
     end
 
-    test "standalone match expression" do
-      confirm_fix(fix(NoRedundantUnderscoreBind, "_ = x"), "x")
+    # Statement-position `_ = x` is the warning-suppression idiom, not a
+    # redundant pattern bind — rewriting it to bare `x` would reintroduce the
+    # "variable has no effect" warning, so it is left untouched.
+    test "does not rewrite a standalone (statement-position) match expression" do
+      confirm_fix(fix(NoRedundantUnderscoreBind, "_ = x"), "_ = x")
     end
 
-    test "leaves a following statement untouched" do
+    test "does not rewrite a statement-position discard before another statement" do
       input = """
       defmodule Example do
         def foo(x) do
@@ -98,16 +101,7 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindFixTest do
       end
       """
 
-      expected = """
-      defmodule Example do
-        def foo(x) do
-          x
-          :ok
-        end
-      end
-      """
-
-      confirm_fix(fix(NoRedundantUnderscoreBind, input), expected)
+      confirm_fix(fix(NoRedundantUnderscoreBind, input), input)
     end
   end
 

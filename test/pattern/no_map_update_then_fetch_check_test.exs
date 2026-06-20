@@ -93,5 +93,43 @@ defmodule Credence.Pattern.NoMapUpdateThenFetchCheckTest do
 
       assert check(NoMapUpdateThenFetch, code) == []
     end
+
+    test "does not flag a fetch in a different function from the update" do
+      code = """
+      defmodule M do
+        def a(map), do: Map.update(map, :k, 1, &(&1 + 1))
+        def b(map), do: Map.fetch!(map, :k)
+      end
+      """
+
+      assert check(NoMapUpdateThenFetch, code) == []
+    end
+
+    test "does not flag a fetch on a different key than the update" do
+      code = """
+      defmodule M do
+        def run(opts) do
+          opts = Map.update(opts, :page, 1, &(&1 + 1))
+          Map.get(opts, :include, [])
+        end
+      end
+      """
+
+      assert check(NoMapUpdateThenFetch, code) == []
+    end
+
+    test "does not flag when the var is referenced between update and fetch" do
+      code = """
+      defmodule M do
+        def run(map) do
+          map = Map.update(map, :k, 1, &(&1 + 1))
+          log(map)
+          Map.fetch!(map, :k)
+        end
+      end
+      """
+
+      assert check(NoMapUpdateThenFetch, code) == []
+    end
   end
 end

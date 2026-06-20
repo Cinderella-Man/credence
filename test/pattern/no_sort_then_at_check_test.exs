@@ -309,6 +309,22 @@ defmodule Credence.Pattern.NoSortThenAtCheckTest do
 
       assert check(NoSortThenAt, code) == []
     end
+
+    # Piped collection: the lone sort arg is a custom comparator fn we cannot
+    # statically classify as :asc/:desc, so the direction is unknown — bail.
+    test "does not flag piped sort whose only arg is an opaque comparator fn" do
+      code = """
+      defmodule M do
+        def top(versions) do
+          versions
+          |> Enum.sort(fn a, b -> compare(a, b) == :gt end)
+          |> Enum.at(0)
+        end
+      end
+      """
+
+      assert check(NoSortThenAt, code) == []
+    end
   end
 
   # ── NOT FLAGGED: unrelated patterns ─────────────────────────────────────

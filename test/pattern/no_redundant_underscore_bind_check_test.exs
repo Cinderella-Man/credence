@@ -46,8 +46,22 @@ defmodule Credence.Pattern.NoRedundantUnderscoreBindCheckTest do
       assert length(check(NoRedundantUnderscoreBind, code)) == 2
     end
 
-    test "standalone match expression" do
-      assert flagged?(NoRedundantUnderscoreBind, "_ = x")
+    # A standalone `_ = x` in statement position is NOT redundant — it is the
+    # idiom for discarding a value without the "variable has no effect" warning,
+    # so it must not be flagged.
+    test "does not flag a standalone (statement-position) match expression" do
+      assert clean?(NoRedundantUnderscoreBind, "_ = x")
+    end
+
+    test "does not flag a statement-position discard in a function body" do
+      assert clean?(NoRedundantUnderscoreBind, """
+             defmodule Example do
+               def foo(x) do
+                 _ = x
+                 :ok
+               end
+             end
+             """)
     end
   end
 

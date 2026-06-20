@@ -28,36 +28,33 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
 
   @impl true
   def check(ast, _opts) do
-    # Pass 1: collect variables bound to Map.update/Map.update!
-    {_ast, update_vars} =
-      Macro.prewalk(ast, MapSet.new(), fn
-        {:=, _, [{var, _, nil}, {{:., _, [{:__aliases__, _, [:Map]}, func]}, _, _}]} = node, acc
-        when is_atom(var) and func in [:update, :update!] ->
-          {node, MapSet.put(acc, var)}
+    # Mirror the fix exactly: a `var = Map.update(map, key, …)` whose updated
+    # variable is next *referenced* (in the same block) by a `Map.fetch!/get(var,
+    # key)` with a MATCHING key. The earlier two-pass version flagged any
+    # `Map.fetch!/get` on a name bound by `Map.update` anywhere in the file —
+    # across functions, non-adjacent, ignoring the key — none of which the fix
+    # can act on. Walking blocks with the fix's own pairing keeps check and fix
+    # in lock-step.
+    {_ast, issues} =
+      Macro.prewalk(ast, [], fn
+        {:__block__, _, stmts} = node, acc when is_list(stmts) ->
+          {node, acc ++ detect_in_block(stmts)}
 
         node, acc ->
           {node, acc}
       end)
 
-    if MapSet.size(update_vars) == 0 do
-      []
+    issues
+  end
+
+  defp detect_in_block([]), do: []
+
+  defp detect_in_block([stmt | rest]) do
+    with {:ok, update} <- extract_map_update(stmt),
+         {:ok, fetch, remaining} <- find_matching_fetch(update, rest) do
+      [build_issue(update.var, fetch.type, fetch.meta) | detect_in_block(remaining)]
     else
-      # Pass 2: find Map.fetch!/Map.get on any of those variables
-      {_ast, issues} =
-        Macro.prewalk(ast, [], fn
-          {{:., _, [{:__aliases__, _, [:Map]}, func]}, meta, [{var, _, nil} | _]} = node, acc
-          when is_atom(var) and func in [:fetch!, :get] ->
-            if MapSet.member?(update_vars, var) do
-              {node, [build_issue(var, func, meta) | acc]}
-            else
-              {node, acc}
-            end
-
-          node, acc ->
-            {node, acc}
-        end)
-
-      Enum.reverse(issues)
+      _ -> detect_in_block(rest)
     end
   end
 
@@ -150,8 +147,9 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
   defp scan_fetch(var, key, [stmt | rest], skipped) do
     if references_var?(stmt, var) do
       case extract_fetch_assignment(stmt, var, key) do
-        {:ok, fetch_var, fetch_type} ->
-          {:ok, %{assign_var: fetch_var, type: fetch_type}, Enum.reverse(skipped) ++ rest}
+        {:ok, fetch_var, fetch_type, meta} ->
+          {:ok, %{assign_var: fetch_var, type: fetch_type, meta: meta},
+           Enum.reverse(skipped) ++ rest}
 
         :not_fetch ->
           :not_found
@@ -165,14 +163,14 @@ defmodule Credence.Pattern.NoMapUpdateThenFetch do
          {:=, _,
           [
             {fetch_var, _, nil},
-            {{:., _, [{:__aliases__, _, [:Map]}, func]}, _, [{var, _, nil}, fetch_key | _]}
+            {{:., _, [{:__aliases__, _, [:Map]}, func]}, meta, [{var, _, nil}, fetch_key | _]}
           ]},
          var,
          expected_key
        )
        when is_atom(fetch_var) and func in [:fetch!, :get] do
     if keys_match?(fetch_key, expected_key) do
-      {:ok, fetch_var, func}
+      {:ok, fetch_var, func, meta}
     else
       :not_fetch
     end

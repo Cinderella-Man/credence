@@ -57,6 +57,16 @@ defmodule Credence.Pattern.PreferNoQuestionMarkForNonBooleanCheckTest do
            """)
   end
 
+  # `bool()` is the deprecated Erlang alias for `boolean()` — still a predicate.
+  test "leaves a bool()-spec'd predicate alone" do
+    assert clean?(PreferNoQuestionMarkForNonBoolean, """
+           defmodule Example do
+             @spec log_level?(atom(), atom()) :: bool()
+             defp log_level?(level, threshold), do: level >= threshold
+           end
+           """)
+  end
+
   test "leaves function without ? suffix alone" do
     assert clean?(PreferNoQuestionMarkForNonBoolean, """
            defmodule Example do

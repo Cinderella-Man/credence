@@ -42,7 +42,7 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
 
   @impl true
   def check(ast, _opts) do
-    guard_ids = collect_guard_member_ids(ast)
+    guard_ids = skip_ids(ast)
 
     {_ast, issues} =
       Macro.prewalk(ast, [], fn node, acc ->
@@ -64,8 +64,29 @@ defmodule Credence.Pattern.NoLengthComparisonForEmpty do
 
   @impl true
   def fix_patches(ast, _opts) do
-    guard_ids = collect_guard_member_ids(ast)
+    guard_ids = skip_ids(ast)
     collect_patches(ast, guard_ids)
+  end
+
+  # Node positions where a `length(x) op N` comparison must NOT be rewritten: it
+  # is inside a `:when` guard (where `match?/2` is illegal), OR inside a `quote`
+  # block. A quoted fragment's destination is unknown and may be spliced into a
+  # guard, where `length(value) > 0` (raises → clause skipped on a non-list)
+  # differs from `value != []` (true on a non-list → clause matches) — a dispatch
+  # change. We can't tell where the splice lands, so conservatively skip all
+  # comparisons inside `quote`.
+  defp skip_ids(ast) do
+    MapSet.union(collect_guard_member_ids(ast), collect_quoted_member_ids(ast))
+  end
+
+  defp collect_quoted_member_ids(ast) do
+    {_ast, ids} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {:quote, _, _} = node, ids -> {node, collect_subtree_ids(node, ids)}
+        node, ids -> {node, ids}
+      end)
+
+    ids
   end
 
   #

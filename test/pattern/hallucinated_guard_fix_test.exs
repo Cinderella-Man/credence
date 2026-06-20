@@ -163,23 +163,65 @@ defmodule Credence.Pattern.HallucinatedGuardFixTest do
     end
   end
 
-  # The fixed output must always be a real Elixir guard expression, never an
-  # invalid `defguard` head.
+  # A guard the module DEFINES itself (`defguardp`) is real, not hallucinated —
+  # the fix must leave the head AND every call site untouched, never splitting
+  # the defguard head into an operator expression.
   describe "output validity" do
-    test "no defguard head is rewritten into an operator expression" do
-      for guard <- ~w(is_pos_integer is_non_neg_integer is_neg_integer is_non_pos_integer) do
-        code = """
-        defmodule M do
-          defguardp #{guard}(n) when is_integer(n) and n > 0
-          def f(x) when #{guard}(x), do: x
-        end
-        """
-
-        fixed = fix(HallucinatedGuard, code)
-        assert {:ok, _} = Code.string_to_quoted(fixed)
-        # the defguard head atom survives verbatim — never split into `... and ...`
-        assert fixed =~ "defguardp #{guard}(n)"
+    test "is_pos_integer defined locally is left untouched" do
+      code = """
+      defmodule M do
+        defguardp is_pos_integer(n) when is_integer(n) and n > 0
+        def f(x) when is_pos_integer(x), do: x
       end
+      """
+
+      confirm_fix(fix(HallucinatedGuard, code), code)
+    end
+
+    test "is_non_neg_integer defined locally is left untouched" do
+      code = """
+      defmodule M do
+        defguardp is_non_neg_integer(n) when is_integer(n) and n >= 0
+        def f(x) when is_non_neg_integer(x), do: x
+      end
+      """
+
+      confirm_fix(fix(HallucinatedGuard, code), code)
+    end
+
+    test "is_neg_integer defined locally is left untouched" do
+      code = """
+      defmodule M do
+        defguardp is_neg_integer(n) when is_integer(n) and n < 0
+        def f(x) when is_neg_integer(x), do: x
+      end
+      """
+
+      confirm_fix(fix(HallucinatedGuard, code), code)
+    end
+
+    test "is_non_pos_integer defined locally is left untouched" do
+      code = """
+      defmodule M do
+        defguardp is_non_pos_integer(n) when is_integer(n) and n <= 0
+        def f(x) when is_non_pos_integer(x), do: x
+      end
+      """
+
+      confirm_fix(fix(HallucinatedGuard, code), code)
+    end
+  end
+
+  describe "imported guards are not hallucinated" do
+    test "leaves is_pos_integer untouched when the module imports a guards module" do
+      code = """
+      defmodule M do
+        import MyApp.Guards
+        def f(x) when is_pos_integer(x), do: x
+      end
+      """
+
+      confirm_fix(fix(HallucinatedGuard, code), code)
     end
   end
 end

@@ -263,18 +263,20 @@ defmodule Credence.RuleHelpers do
         fixed =
           source
           |> Sourceror.patch_string(patches)
-          |> strip_trailing_ws_per_line()
+          |> strip_trailing_ws_per_line(source)
 
         # Safety invariants: a fix must never ship source that does not parse,
-        # and must never drop a source comment. A patch can occasionally render
-        # invalid code (a Sourceror range that under-counts a spaced operator
-        # call and strands a delimiter) or silently lose a comment that sat on a
-        # rewritten/removed node (the replacement AST is rendered fresh). In
-        # either case discard the fix rather than emit broken or lossy output —
-        # the finding is still reported, it just goes unfixed. Rules that carry
-        # comments through the rewrite themselves keep their fix; only those that
-        # would actually lose one self-revert here.
-        if parses?(fixed) and not drops_comment?(source, fixed), do: fixed, else: source
+        # and must preserve the source's comments *exactly*. A patch can
+        # occasionally render invalid code (a Sourceror range that under-counts a
+        # spaced operator call and strands a delimiter); it can also lose a
+        # comment that sat on a rewritten/removed node (the replacement AST is
+        # rendered fresh) OR duplicate one (a comment carried into the
+        # re-rendered replacement while the original line, outside the patch
+        # range, survives — yielding two copies). In any of these cases discard
+        # the fix rather than emit broken, lossy, or doubled output — the finding
+        # is still reported, it just goes unfixed. Rules that carry comments
+        # through the rewrite faithfully (multiset unchanged) keep their fix.
+        if parses?(fixed) and not comments_changed?(source, fixed), do: fixed, else: source
     end
   end
 
@@ -287,35 +289,46 @@ defmodule Credence.RuleHelpers do
     match?({:ok, _}, result)
   end
 
-  defp drops_comment?(before, after_) do
-    counts = fn src ->
-      {result, _diagnostics} =
-        Code.with_diagnostics(fn -> Code.string_to_quoted_with_comments(src) end)
-
-      case result do
-        {:ok, _ast, comments} -> comments |> Enum.map(&String.trim(&1.text)) |> Enum.frequencies()
-        _ -> %{}
-      end
-    end
-
-    cb = counts.(before)
-    ca = counts.(after_)
-    Enum.any?(cb, fn {text, n} -> n > Map.get(ca, text, 0) end)
+  # True when the fix changed the source's comment multiset in *either*
+  # direction: dropped a comment (count fell — silent information loss when a
+  # rewritten/removed node is re-rendered from the bare AST) or duplicated one
+  # (count rose — a comment carried into a re-rendered replacement while the
+  # original line outside the patch range survives). A faithful fix leaves the
+  # comment multiset identical; anything else self-reverts in `apply_rule_fix`.
+  defp comments_changed?(before, after_) do
+    comment_multiset(before) != comment_multiset(after_)
   end
 
-  # `Sourceror.patch_string` re-indents multi-line replacements to
-  # match the patch's start column, which can turn empty blank lines
-  # in the replacement into whitespace-only lines. Collapse only those
-  # all-whitespace lines to empty — do NOT trim content lines, since a
-  # content line's trailing whitespace may be significant *inside* a
-  # multi-line string/heredoc literal (e.g. expected output in a doctest),
-  # which a blanket trim would silently mutate.
-  defp strip_trailing_ws_per_line(text) do
-    text
+  defp comment_multiset(src) do
+    {result, _diagnostics} =
+      Code.with_diagnostics(fn -> Code.string_to_quoted_with_comments(src) end)
+
+    case result do
+      {:ok, _ast, comments} -> comments |> Enum.map(&String.trim(&1.text)) |> Enum.frequencies()
+      _ -> %{}
+    end
+  end
+
+  # `Sourceror.patch_string` re-indents multi-line replacements to match the
+  # patch's start column, which can turn empty blank lines in the replacement
+  # into whitespace-only lines. Collapse those all-whitespace lines to empty —
+  # but ONLY the ones the patch actually introduced. A blanket whole-file pass
+  # would also strip pre-existing whitespace-only lines that the patch never
+  # touched, including content lines *inside* a multi-line string/heredoc
+  # literal (e.g. a blank line in a doctest's expected output) far from the
+  # edit — a silent content mutation. We diff the patched output against the
+  # original line-by-line and normalise only inserted lines, leaving every
+  # unchanged (`:eq`) line byte-for-byte.
+  defp strip_trailing_ws_per_line(text, original) do
+    original
     |> String.split("\n")
-    |> Enum.map_join("\n", fn line ->
-      if String.trim(line) == "", do: "", else: line
+    |> List.myers_difference(String.split(text, "\n"))
+    |> Enum.flat_map(fn
+      {:eq, lines} -> lines
+      {:del, _lines} -> []
+      {:ins, lines} -> Enum.map(lines, fn line -> if String.trim(line) == "", do: "", else: line end)
     end)
+    |> Enum.join("\n")
   end
 
   @doc """

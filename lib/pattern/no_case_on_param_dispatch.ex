@@ -235,8 +235,21 @@ defmodule Credence.Pattern.NoCaseOnParamDispatch do
 
   # Does `var` appear as a bound variable anywhere in a pattern? (Patterns have
   # no `^` pins here — they are rejected upstream — so every matching var node
-  # is a binding occurrence.)
-  defp binds_var?(pattern, var), do: mentions_var?(pattern, var)
+  # is a binding occurrence.) Bitstring TYPE specifiers are not bindings: in
+  # `<<number::utf8, _::binary>>` the `binary`/`utf8` on the right of `::` are
+  # type atoms, not variables. If we mistook `::binary` for a binding of a
+  # scrutinee named `binary`, the head would not actually bind it and the body's
+  # reference would be an undefined variable. Strip the type side before checking.
+  defp binds_var?(pattern, var) do
+    pattern |> strip_bitstring_types() |> mentions_var?(var)
+  end
+
+  defp strip_bitstring_types(ast) do
+    Macro.prewalk(ast, fn
+      {:"::", meta, [value, _type]} -> {:"::", meta, [value, :__type_spec__]}
+      other -> other
+    end)
+  end
 
   defp mentions_var?(nil, _var), do: false
 

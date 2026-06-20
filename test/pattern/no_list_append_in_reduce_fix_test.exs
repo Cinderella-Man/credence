@@ -40,11 +40,12 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
       end
       """
 
+      # The surgical patch preserves the input's `list |>` line layout (it only
+      # rewrites the reduce step), rather than reflowing it to `list\n|>`.
       expected = """
       defmodule Example do
         def process(list) do
-          list
-          |> Enum.reduce([], fn item, acc ->
+          list |> Enum.reduce([], fn item, acc ->
             [item | acc]
           end) |> Enum.reverse()
         end
@@ -203,18 +204,56 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
     end
   end
 
-  # The fixed output must always parse and re-fix-clean, in every context.
-  describe "output is always valid in operator contexts" do
-    for {label, input} <- [
-          {"left operand of ++", "Enum.reduce(l, [], fn x, acc -> acc ++ [x] end) ++ [0]"},
-          {"right operand of ++", "[0] ++ Enum.reduce(l, [], fn x, acc -> acc ++ [x] end)"},
-          {"operand of <>", "Enum.reduce(l, [], fn x, acc -> acc ++ [x] end) <> bin"}
-        ] do
-      test "parses and is fix-stable: #{label}" do
-        fixed = fix(NoListAppendInReduce, unquote(input))
-        assert {:ok, _} = Code.string_to_quoted(fixed)
-        assert check(NoListAppendInReduce, fixed) == []
-      end
+  # In a tighter-than-pipe operator context the reverse wrap must use the CALL
+  # form `Enum.reverse(...)`, not the pipe form (which would mis-associate).
+  describe "output is valid in operator contexts" do
+    test "left operand of ++" do
+      confirm_fix(
+        fix(NoListAppendInReduce, "Enum.reduce(l, [], fn x, acc -> acc ++ [x] end) ++ [0]"),
+        "Enum.reverse(Enum.reduce(l, [], fn x, acc -> [x | acc] end)) ++ [0]"
+      )
+    end
+
+    test "right operand of ++" do
+      confirm_fix(
+        fix(NoListAppendInReduce, "[0] ++ Enum.reduce(l, [], fn x, acc -> acc ++ [x] end)"),
+        "[0] ++ Enum.reverse(Enum.reduce(l, [], fn x, acc -> [x | acc] end))"
+      )
+    end
+
+    test "operand of <>" do
+      confirm_fix(
+        fix(NoListAppendInReduce, "Enum.reduce(l, [], fn x, acc -> acc ++ [x] end) <> bin"),
+        "Enum.reverse(Enum.reduce(l, [], fn x, acc -> [x | acc] end)) <> bin"
+      )
+    end
+  end
+
+  # Regression: a piped reduce preceded by other pipe stages must rewrite ONLY
+  # the reduce step — the AST-diff path used to mis-attribute the change to a
+  # list elsewhere in the chain (corrupting an Ecto `[mb, flow]` join binding into
+  # `[[mb, flow]]`). The surgical byte-range patch leaves the upstream untouched.
+  describe "does not corrupt upstream pipe stages" do
+    test "preceding join/list-arg stages are left byte-for-byte" do
+      input = """
+      q
+      |> join(:inner, [mb], flow in assoc(mb, :flow))
+      |> join(:inner, [mb, flow], group in assoc(mb, :group))
+      |> Enum.reduce([], fn mb, acc ->
+        acc ++ [[mb.flow_name, mb.group_label]]
+      end)
+      """
+
+      expected = """
+      q
+      |> join(:inner, [mb], flow in assoc(mb, :flow))
+      |> join(:inner, [mb, flow], group in assoc(mb, :group))
+      |> Enum.reduce([], fn mb, acc ->
+        [[mb.flow_name, mb.group_label] | acc]
+      end) |> Enum.reverse()
+      """
+
+      confirm_fix(fix(NoListAppendInReduce, input), expected)
     end
   end
 end

@@ -40,7 +40,15 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
 
   @impl true
   def check(ast, _opts) do
-    captured = captured_arity_names(ast)
+    if loads_nif?(ast) do
+      []
+    else
+      do_check(ast)
+    end
+  end
+
+  defp do_check(ast) do
+    captured = excluded_names(ast)
 
     {_ast, {_names, issues}} =
       Macro.postwalk(ast, {%{}, []}, fn
@@ -79,7 +87,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
 
   @impl true
   def fix_patches(ast, _opts) do
-    name_map = collect_renames(ast)
+    name_map = if loads_nif?(ast), do: %{}, else: collect_renames(ast)
 
     if map_size(name_map) == 0 do
       []
@@ -89,7 +97,7 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
   end
 
   defp collect_renames(ast) do
-    captured = captured_arity_names(ast)
+    captured = excluded_names(ast)
 
     {_ast, names} =
       Macro.postwalk(ast, MapSet.new(), fn
@@ -112,12 +120,52 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
     for name <- names, into: %{}, do: {name, suggested_name(name)}
   end
 
-  # Names referenced by an arity-style capture `&name/arity`. The capture's
-  # name node is `{name, _, nil}` — indistinguishable from a bare variable, so
-  # `rename_node/2` (which only rewrites call nodes whose args are a list)
-  # leaves it untouched. Renaming the `defp` while leaving `&_name/arity`
-  # pointing at the old name produces a dangling reference that fails to
-  # compile, so such names are excluded from both flagging and the fix.
+  # Names that cannot be renamed safely because at least one reference to them
+  # is not a parenthesised call (`name(args)`) — the only shape `rename_node/2`
+  # rewrites. Renaming the def while leaving such a reference pointing at the old
+  # name produces a dangling reference that fails to compile, so these names are
+  # excluded from both flagging and the fix:
+  #
+  #   - arity-style captures `&name/arity` (`captured_arity_names/1`); and
+  #   - bare references `{name, _, ctx}` with no argument list — a name used in a
+  #     pipe without parens (`x |> _value`), whose AST is indistinguishable from
+  #     a variable (`bare_reference_names/1`).
+  defp excluded_names(ast) do
+    MapSet.union(captured_arity_names(ast), bare_reference_names(ast))
+  end
+
+  defp bare_reference_names(ast) do
+    {_ast, names} =
+      Macro.prewalk(ast, MapSet.new(), fn
+        {name, _meta, ctx} = node, acc when is_atom(name) and is_atom(ctx) ->
+          if underscore_prefixed?(name),
+            do: {node, MapSet.put(acc, name)},
+            else: {node, acc}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    names
+  end
+
+  # A module that binds a native NIF via `:erlang.load_nif/2`. Its functions —
+  # especially the `_`-prefixed stubs — are bound to the native library BY NAME;
+  # renaming them silently orphans the binding (the extension becomes a runtime
+  # no-op). Leave every function in such a module untouched.
+  defp loads_nif?(ast) do
+    {_ast, found} =
+      Macro.prewalk(ast, false, fn
+        _node, true -> {nil, true}
+        # `:erlang.load_nif/2` — the module atom may be Sourceror-wrapped in a
+        # `__block__`, and there is no other `load_nif`, so match on the function.
+        {{:., _, [_mod, :load_nif]}, _, _} = node, _ -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
+  end
+
   defp captured_arity_names(ast) do
     {_ast, names} =
       Macro.prewalk(ast, MapSet.new(), fn

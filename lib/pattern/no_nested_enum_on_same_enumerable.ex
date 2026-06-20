@@ -45,8 +45,15 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerable do
         fn node, {stack, issues} ->
           case extract_enum_call(node) do
             {:ok, func, var, meta} ->
+              # Only a nested `Enum.member?(var, …)` enclosed by a *non*-member?
+              # traversal of the same `var` is flagged — that is exactly the shape
+              # the fixer rewrites (wrap the outer call, `member?` → MapSet). The
+              # earlier check fired on every nested Enum call (map/filter/reduce),
+              # none of which the fixer can touch, producing no-op findings (and
+              # false positives where the "same" name was a rebound accumulator).
               new_issues =
-                if Enum.any?(stack, fn {_f, v} -> v == var end) do
+                if func == :member? and
+                     Enum.any?(stack, fn {f, v} -> v == var and f != :member? end) do
                   [
                     %Issue{
                       rule: :no_nested_enum_on_same_enumerable,

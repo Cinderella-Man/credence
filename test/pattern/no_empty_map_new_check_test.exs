@@ -86,5 +86,14 @@ defmodule Credence.Pattern.NoEmptyMapNewCheckTest do
 
       assert check(NoEmptyMapNew, code) == []
     end
+
+    # `&Map.new/0` is an arity capture whose `Map.new` operand is AST-identical
+    # to a real `Map.new()` call. Rewriting it would produce `&%{}/0`, which does
+    # not compile, so it must not be flagged.
+    test "does not flag the arity capture &Map.new/0" do
+      code = "build = &Map.new/0"
+
+      assert check(NoEmptyMapNew, code) == []
+    end
   end
 end

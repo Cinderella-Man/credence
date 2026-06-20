@@ -150,5 +150,34 @@ defmodule Credence.Pattern.NoUnderscoreFunctionNameCheckTest do
       [issue] = check(NoUnderscoreFunctionName, code)
       assert issue.rule == :no_underscore_function_name
     end
+
+    # A bare-pipe reference `x |> _value` has AST `{:_value, _, ctx}` — no
+    # argument list, indistinguishable from a variable — so the rename can't
+    # rewrite it. Renaming the def alone would leave a dangling reference, so the
+    # name must not be flagged.
+    test "does not flag a function referenced by a bare (no-parens) pipe" do
+      code = """
+      defmodule Good do
+        def run(x), do: x |> _value |> to_string()
+        defp _value(a), do: a * 2
+      end
+      """
+
+      assert check(NoUnderscoreFunctionName, code) == []
+    end
+
+    # The `_`-prefixed functions in a NIF module are bound to the native library
+    # by name via `:erlang.load_nif`; renaming them orphans the binding.
+    test "does not flag underscore functions in a NIF module (:erlang.load_nif)" do
+      code = """
+      defmodule Bad do
+        @on_load :init
+        def init, do: :erlang.load_nif(~c"./ext", 0)
+        def _env_put(_key, _value), do: :erlang.nif_error(:not_loaded)
+      end
+      """
+
+      assert check(NoUnderscoreFunctionName, code) == []
+    end
   end
 end

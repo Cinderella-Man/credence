@@ -275,22 +275,31 @@ defmodule Credence.Pattern.PreferMapNewWithTransformFixTest do
   # Output validity — the fix must never emit a non-existent Map.new/3.
   # ════════════════════════════════════════════════════════════════════════
 
+  # The `Enum.map(fn) |> Map.new()` pair collapses to `Map.new(_, fn)` (arity 2),
+  # never a `Map.new/3`, in every pipe position.
   describe "output is always a valid Map.new arity" do
-    for {label, input} <- [
-          {"upstream pipeline", "a |> b() |> Enum.map(fn x -> {x, x} end) |> Map.new()"},
-          {"single call head", "f() |> Enum.map(fn x -> {x, x} end) |> Map.new()"},
-          {"trailing step",
-           "a |> b() |> Enum.map(fn x -> {x, x} end) |> Map.new() |> Enum.to_list()"}
-        ] do
-      test "no Map.new/3 for: #{label}" do
-        fixed = fix(PreferMapNewWithTransform, unquote(input))
-        # Every Map.new call in the result has arity 0, 1, or 2 — never 3.
-        for {{:., _, [{:__aliases__, _, [:Map]}, :new]}, _, args} <-
-              fixed |> Code.string_to_quoted!() |> Macro.prewalk([], &{&1, [&1 | &2]}) |> elem(1),
-            into: [] do
-          assert length(args) <= 2, "emitted Map.new/#{length(args)} in: #{fixed}"
-        end
-      end
+    test "upstream pipeline" do
+      confirm_fix(
+        fix(PreferMapNewWithTransform, "a |> b() |> Enum.map(fn x -> {x, x} end) |> Map.new()"),
+        "a |> b() |> Map.new(fn x -> {x, x} end)"
+      )
+    end
+
+    test "single call head" do
+      confirm_fix(
+        fix(PreferMapNewWithTransform, "f() |> Enum.map(fn x -> {x, x} end) |> Map.new()"),
+        "Map.new(f(), fn x -> {x, x} end)"
+      )
+    end
+
+    test "trailing step" do
+      confirm_fix(
+        fix(
+          PreferMapNewWithTransform,
+          "a |> b() |> Enum.map(fn x -> {x, x} end) |> Map.new() |> Enum.to_list()"
+        ),
+        "a |> b() |> Map.new(fn x -> {x, x} end) |> Enum.to_list()"
+      )
     end
   end
 end

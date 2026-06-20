@@ -41,6 +41,12 @@ defmodule Credence.Pattern.NoEmptyMapNew do
     walk_and_collect(left, issues)
   end
 
+  # An arity capture `&Mod.fun/arity` (here `&Map.new/0`): the `Map.new`
+  # operand is a zero-arg *reference*, AST-identical to a real `Map.new()`
+  # call. Rewriting it to `%{}` would yield `&%{}/0`, which does not compile
+  # ("invalid args for &"). Don't descend into the capture.
+  defp walk_and_collect({:&, _, [{:/, _, [_fun, _arity]}]}, issues), do: issues
+
   defp walk_and_collect(node, issues) when is_tuple(node) and tuple_size(node) == 3 do
     {_form, _meta, args} = node
 
@@ -85,6 +91,9 @@ defmodule Credence.Pattern.NoEmptyMapNew do
     # Pipe RHS: skip _rhs (Map.new() there is not standalone).
     walk_patches(left, source, patches)
   end
+
+  # Arity capture `&Map.new/0`: see `walk_and_collect/2` — never rewrite.
+  defp walk_patches({:&, _, [{:/, _, [_fun, _arity]}]}, _source, patches), do: patches
 
   defp walk_patches(node, source, patches) when is_tuple(node) and tuple_size(node) == 3 do
     {_form, _meta, args} = node
