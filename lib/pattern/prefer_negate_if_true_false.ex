@@ -37,6 +37,13 @@ defmodule Credence.Pattern.PreferNegateIfTrueFalse do
   use Credence.Pattern.Rule
   alias Credence.Issue
 
+  # DSL-unsafe: introduces `!` to negate the condition. In Ash.Expr `!x` builds
+  # `%Ash.Query.Call{name: :!}` (no SQL translation) rather than `not`'s
+  # `%Ash.Query.Not{}`; in Nx.Defn `!` is reinterpreted. (Ecto would compile-error
+  # on `!`, which the compile gate already reverts, so it is not listed.)
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr, :nx_defn]
+
   @impl true
   def check(ast, _opts) do
     {_ast, issues} =

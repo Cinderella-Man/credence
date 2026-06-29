@@ -49,6 +49,13 @@ defmodule Credence.Pattern.NoTautologicalIf do
   """
 
   use Credence.Pattern.Rule
+
+  # DSL-unsafe in Nx.Defn only: deleting the `if` together with its condition
+  # assumes the condition is pure and total. In Nx.Defn the condition's `>` is an
+  # element-wise tensor op and `if` requires a scalar predicate, so the discarded
+  # condition can raise — removing it changes behaviour.
+  @impl true
+  def unsafe_in_dsl, do: [:nx_defn]
   alias Credence.Issue
 
   # Term-comparison operators are total (never raise) and side-effect free.

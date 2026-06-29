@@ -255,7 +255,7 @@ defmodule Credence.RuleHelpers do
     opts = Keyword.put(opts, :source, source)
     ast = Sourceror.parse_string!(source)
 
-    case rule.fix_patches(ast, opts) do
+    case drop_dsl_patches(rule.fix_patches(ast, opts), rule, ast, opts) do
       [] ->
         source
 
@@ -278,6 +278,62 @@ defmodule Credence.RuleHelpers do
         # through the rewrite faithfully (multiset unchanged) keep their fix.
         if parses?(fixed) and not comments_changed?(source, fixed), do: fixed, else: source
     end
+  end
+
+  # DSL gate, fix side: keep only the patches that do NOT land inside a macro
+  # block whose semantics this rule's fix cannot preserve (`unsafe_in_dsl/0`).
+  # Only the intersecting patches are dropped — a fix on plain code elsewhere in
+  # the same file still lands. A rule with no DSL sensitivity skips the work.
+  defp drop_dsl_patches(patches, rule, ast, opts) when is_list(patches) do
+    {kept, _dropped} = dsl_partition(rule, patches, ast, opts)
+    kept
+  end
+
+  defp drop_dsl_patches(other, _rule, _ast, _opts), do: other
+
+  @doc """
+  The patch ranges this rule's fix would have **dropped** inside its
+  `unsafe_in_dsl/0` blocks — i.e. the regions where a finding has no surviving
+  fix. The analyze-side gate (`Credence.Pattern.analyze/2`) suppresses a finding
+  exactly when its line falls in one of these ranges, so a finding is reported
+  iff its fix is applied. Computed from the same `fix_patches/2`,
+  `DslGuard.block_ranges/2` and `DslGuard.patch_blocked?/3` the fix-side gate
+  drops on, so the two gates can never disagree.
+  """
+  @spec dsl_dropped_ranges(module(), Macro.t(), keyword()) :: [map()]
+  def dsl_dropped_ranges(rule, ast, opts) do
+    patches =
+      try do
+        rule.fix_patches(ast, opts)
+      rescue
+        _ -> []
+      end
+
+    {_kept, dropped} = dsl_partition(rule, List.wrap(patches), ast, opts)
+    dropped
+  end
+
+  # Single shared decision for both gates: split a rule's patches into the ones
+  # that survive and the ranges of the ones blocked by an unsafe-family DSL block.
+  defp dsl_partition(rule, patches, ast, opts) when is_list(patches) do
+    case dsl_unsafe_families(rule) do
+      [] ->
+        {patches, []}
+
+      families ->
+        blocks = Credence.DslGuard.block_ranges(ast, opts)
+
+        {dropped, kept} =
+          Enum.split_with(patches, &Credence.DslGuard.patch_blocked?(Map.get(&1, :range), blocks, families))
+
+        {kept, dropped |> Enum.map(&Map.get(&1, :range)) |> Enum.reject(&is_nil/1)}
+    end
+  end
+
+  defp dsl_partition(_rule, patches, _ast, _opts), do: {patches, []}
+
+  defp dsl_unsafe_families(rule) do
+    if function_exported?(rule, :unsafe_in_dsl, 0), do: rule.unsafe_in_dsl(), else: []
   end
 
   # `Code.string_to_quoted/1` emits a tokenizer warning (e.g. deprecated

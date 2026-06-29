@@ -360,7 +360,6 @@ ash/lib/ash/policy/authorizer/authorizer.ex:2277  no_kernel_op_in_pipeline
 ash/lib/ash/policy/authorizer/authorizer.ex:843  no_eager_with_index_in_reduce
 ash/lib/ash/policy/chart/mermaid.ex:226  prefer_function_capture
 ash/lib/ash/policy/check/action.ex:93  no_length_comparison_for_empty
-ash/lib/ash/policy/check/relating_to_actor.ex:21  prefer_negate_if_true_false
 ash/lib/ash/query/boolean_expression.ex:272  prefer_guard_over_if
 ash/lib/ash/query/function/composite_type.ex:?  no_destructure_reconstruct
 ash/lib/ash/query/function/get_path.ex:?  no_destructure_reconstruct

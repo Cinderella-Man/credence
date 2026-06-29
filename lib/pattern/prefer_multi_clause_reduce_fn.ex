@@ -47,6 +47,12 @@ defmodule Credence.Pattern.PreferMultiClauseReduceFn do
       `nil`.
   """
   use Credence.Pattern.Rule
+
+  # DSL-unsafe in Nx.Defn only: the rewrite keeps/introduces an `if` in the reduce
+  # function; inside `defn` `if` is a reinterpreted macro (scalar predicate, branch
+  # shape/type unification), so the transformed fn is not equivalent.
+  @impl true
+  def unsafe_in_dsl, do: [:nx_defn]
   alias Credence.Issue
 
   @comparison_ops [:==, :!=, :===, :!==, :<, :>, :<=, :>=]

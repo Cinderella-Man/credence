@@ -58,6 +58,11 @@ defmodule Credence.Pattern.NoIfTrueFalse do
   """
 
   use Credence.Pattern.Rule
+
+  # DSL-unsafe: collapses the `if` to bare boolean expressions (and/or/not, flipped
+  # comparisons, `!==`) that Ash.Expr, Ecto.Query and Nx.Defn each reinterpret.
+  @impl true
+  def unsafe_in_dsl, do: :all
   alias Credence.Issue
 
   @impl true

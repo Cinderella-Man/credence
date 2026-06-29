@@ -21,6 +21,14 @@ defmodule Credence.Pattern.NoStringLengthForCharCheck do
       match?([_], String.graphemes(s))
   """
   use Credence.Pattern.Rule
+
+  # DSL-unsafe in Ash.Expr only: rewrites `String.length(x) == 1` to
+  # `match?([_], String.graphemes(x))`. Ash builds a translatable Call for the
+  # comparison but not for `match?`/`String.graphemes`. (Ecto/Nx can't express
+  # `String.length` inside an expression, so the rule only ever touches code
+  # already broken there.)
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr]
   alias Credence.Issue
 
   @impl true

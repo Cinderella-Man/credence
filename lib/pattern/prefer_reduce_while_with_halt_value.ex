@@ -44,6 +44,11 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
   """
 
   use Credence.Pattern.Rule
+
+  # DSL-unsafe: introduces `case`/reduce-while control flow that Ash.Expr forbids
+  # (use cond), Ecto.Query forbids, and Nx.Defn does not allow.
+  @impl true
+  def unsafe_in_dsl, do: :all
   alias Credence.Issue
   alias Credence.RuleHelpers
 

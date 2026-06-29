@@ -44,6 +44,15 @@ defmodule Credence.Pattern.PreferErlangFloat do
   """
 
   use Credence.Pattern.Rule
+
+  # DSL-unsafe in Ash.Expr / Ecto.Query: replaces float-coercion arithmetic
+  # (`x * 1.0`, `x / 1.0`) with `:erlang.float/1`. A bare Erlang call is not a
+  # query operator — Ash will not translate it and Ecto forbids it — whereas the
+  # original arithmetic maps to SQL. (Not flagged for Nx.Defn: `:erlang.float`
+  # isn't a defn op either, so such code is already broken there, not silently
+  # changed.)
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr, :ecto_query]
   alias Credence.Issue
 
   @impl true

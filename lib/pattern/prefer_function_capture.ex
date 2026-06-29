@@ -26,6 +26,12 @@ defmodule Credence.Pattern.PreferFunctionCapture do
       fn x -> Enum.map(x, &(&1 + 1)) end   # extra arguments beyond the param
   """
   use Credence.Pattern.Rule
+
+  # DSL-unsafe in Nx.Defn only: rewrites `fn x -> f(x) end` to `&f/1`. Function
+  # captures are restricted inside `defn`/`defnp` bodies, so the rewrite can fail
+  # to compile there.
+  @impl true
+  def unsafe_in_dsl, do: [:nx_defn]
   alias Credence.Issue
 
   @impl true

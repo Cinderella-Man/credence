@@ -35,6 +35,12 @@ defmodule Credence.Pattern.NoManualMin do
   """
 
   use Credence.Pattern.Rule
+
+  # DSL-unsafe: rewrites `if a <= b, do: a, else: b` to `min(a, b)`. `min/2` is not a
+  # query operator (Ash won't translate it, Ecto forbids it) and is tensor-blind in
+  # Nx.Defn where `<=` is element-wise.
+  @impl true
+  def unsafe_in_dsl, do: :all
   alias Credence.Issue
 
   @impl true
