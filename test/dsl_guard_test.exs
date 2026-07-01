@@ -205,6 +205,13 @@ defmodule Credence.DslGuardTest do
       assert inside?(src, 3)
     end
 
+    test "`in` alone is enough — a binding call whose only query signal is `in`" do
+      # No dot-access, no pin, and the binding var `p` is not referenced elsewhere;
+      # the `in` expression is the sole signal, so it must still register.
+      src = "defmodule M do\n  def q(query, ids), do: where(query, [p], status in ids)\nend\n"
+      assert inside?(src, 2)
+    end
+
     test "selecting whole rows (`[p], p`) IS a query — the binding is referenced" do
       src = "defmodule M do\n  def q(query), do: select(query, [p], p)\nend\n"
       assert inside?(src, 2)
@@ -294,6 +301,19 @@ defmodule Credence.DslGuardTest do
     test "aliasing: two identical blocks, one reshaped, is blocked (not masked by its twin)" do
       blocks = ranges("def f do\n  a = expr(x == ^y)\n  b = expr(x == ^y)\nend\n")
       patch = %{range: @enclose_range, change: "def f do\n  b = expr(x == ^y)\n  a = expr(x != ^y)\nend"}
+      assert DslGuard.patch_blocked?(patch, blocks, [:ash_expr])
+    end
+
+    test "a patch that overlaps a block's start without enclosing it is blocked" do
+      # Straddle, not enclose: the relaxation is ONLY for a patch that fully
+      # encloses the block. Even if the replacement text happens to contain the
+      # block verbatim, a partial overlap must stay blocked.
+      blocks = [%{range: r}] = ranges("def f do\n  a = expr(x == ^y)\nend\n")
+      patch = %{
+        range: %{start: [line: 2, column: 1], end: [line: r.end[:line], column: r.end[:column] - 2]},
+        change: "expr(x == ^y)"
+      }
+
       assert DslGuard.patch_blocked?(patch, blocks, [:ash_expr])
     end
   end
