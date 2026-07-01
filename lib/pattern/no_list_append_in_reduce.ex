@@ -131,11 +131,11 @@ defmodule Credence.Pattern.NoListAppendInReduce do
   # context emit the CALL form `Enum.reverse(target)` instead — a function call
   # binds tighter than every operator, so it is correct everywhere. Elsewhere keep
   # the idiomatic pipe form.
-  defp wrap_with_reverse(target, _unsafe_context? = true) do
+  defp wrap_with_reverse(target, true = _unsafe_context?) do
     {{:., [], [{:__aliases__, [], [:Enum]}, :reverse]}, [], [target]}
   end
 
-  defp wrap_with_reverse(target, _unsafe_context? = false) do
+  defp wrap_with_reverse(target, false = _unsafe_context?) do
     {:|>, [], [target, enum_reverse_call()]}
   end
 
@@ -161,10 +161,8 @@ defmodule Credence.Pattern.NoListAppendInReduce do
     if fix_target?(node), do: MapSet.put(acc, node), else: acc
   end
 
-  defp fix_target?(
-         {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [_enum, init, _fun]}
-       ),
-       do: empty_list?(init)
+  defp fix_target?({{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [_enum, init, _fun]}),
+    do: empty_list?(init)
 
   defp fix_target?(
          {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Enum]}, :reduce]}, _, [init, _fun]}]}

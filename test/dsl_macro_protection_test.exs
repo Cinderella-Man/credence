@@ -57,9 +57,14 @@ defmodule Credence.DslMacroProtectionTest do
     expr_body = fixture |> String.trim_trailing() |> indent(4)
 
     case family do
-      :nx_defn -> "defn __probe__(a, b, c, d, e, f, g, h) do\n#{body}\nend\n"
-      :ash_expr -> "def __probe__ do\n  expr(\n#{expr_body}\n  )\nend\n"
-      :ecto_query -> "def __probe__(query) do\n  where(query, [a, b, c],\n#{expr_body}\n  )\nend\n"
+      :nx_defn ->
+        "defn __probe__(a, b, c, d, e, f, g, h) do\n#{body}\nend\n"
+
+      :ash_expr ->
+        "def __probe__ do\n  expr(\n#{expr_body}\n  )\nend\n"
+
+      :ecto_query ->
+        "def __probe__(query) do\n  where(query, [a, b, c],\n#{expr_body}\n  )\nend\n"
     end
   end
 

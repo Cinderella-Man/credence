@@ -12,14 +12,15 @@ defmodule Credence.Pattern.DslGuardIntegrationTest do
   """
   use ExUnit.Case, async: true
 
-  alias Credence.RuleHelpers
   alias Credence.Pattern
 
   alias Credence.Pattern.{
-    PreferNegateIfTrueFalse,
+    NoCondTwoClauses,
     NoRedundantAssignment,
-    NoCondTwoClauses
+    PreferNegateIfTrueFalse
   }
+
+  alias Credence.RuleHelpers
 
   describe "the reported Ash bug — prefer_negate_if_true_false inside expr/1" do
     @ash """

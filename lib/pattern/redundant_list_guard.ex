@@ -81,7 +81,16 @@ defmodule Credence.Pattern.RedundantListGuard do
              guard_load_bearing?(fun_head, meta, args, redundant_vars, cons_index) do
           node
         else
-          fix_guarded_clause(node, def_type, meta, when_meta, fun_head, guard, body, cons_tail_vars)
+          fix_guarded_clause(
+            node,
+            def_type,
+            meta,
+            when_meta,
+            fun_head,
+            guard,
+            body,
+            cons_tail_vars
+          )
         end
 
       node ->
@@ -210,7 +219,9 @@ defmodule Credence.Pattern.RedundantListGuard do
   defp head_sig({:when, _, [{name, _, args} | _guard]}) when is_atom(name) and is_list(args),
     do: {name, length(args), args}
 
-  defp head_sig({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args), args}
+  defp head_sig({name, _, args}) when is_atom(name) and is_list(args),
+    do: {name, length(args), args}
+
   defp head_sig(_), do: nil
 
   # Top-level argument indices whose pattern contains a cons (`[_ | _]`).

@@ -391,9 +391,14 @@ defmodule Credence.RuleHelpers do
     |> String.split("\n")
     |> List.myers_difference(String.split(text, "\n"))
     |> Enum.flat_map(fn
-      {:eq, lines} -> lines
-      {:del, _lines} -> []
-      {:ins, lines} -> Enum.map(lines, fn line -> if String.trim(line) == "", do: "", else: line end)
+      {:eq, lines} ->
+        lines
+
+      {:del, _lines} ->
+        []
+
+      {:ins, lines} ->
+        Enum.map(lines, fn line -> if String.trim(line) == "", do: "", else: line end)
     end)
     |> Enum.join("\n")
   end

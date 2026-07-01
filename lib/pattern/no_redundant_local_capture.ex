@@ -199,8 +199,8 @@ defmodule Credence.Pattern.NoRedundantLocalCapture do
       %Sourceror.Range{start: [line: sl, column: sc], end: [line: el, column: ec]}
       when sl == el ->
         line = source |> String.split("\n") |> Enum.at(sl - 1, "")
-        before = String.slice(line, 0, max(sc - 1, 0)) || ""
-        rest = String.slice(line, (ec - 1)..-1//1) || ""
+        before = String.slice(line, 0, max(sc - 1, 0))
+        rest = String.slice(line, (ec - 1)..-1//1)
         String.trim(before) == "" and String.trim(rest) == ""
 
       _ ->

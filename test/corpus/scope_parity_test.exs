@@ -88,8 +88,14 @@ defmodule Credence.Corpus.ScopeParityTest do
           []
 
         fixed ->
-          [%{rule: RuleHelpers.rule_name(rule), rel: Path.relative_to(path, Corpus.root()),
-             src: src, fixed: fixed}]
+          [
+            %{
+              rule: RuleHelpers.rule_name(rule),
+              rel: Path.relative_to(path, Corpus.root()),
+              src: src,
+              fixed: fixed
+            }
+          ]
       end
     else
       []
@@ -159,7 +165,7 @@ defmodule Credence.Corpus.ScopeParityTest do
             _ -> []
           end)
 
-        ([Enum.map(lead, &"  #{&1}")] |> List.flatten()) ++ changed
+        (([Enum.map(lead, &"  #{&1}")] |> List.flatten()) ++ changed)
         |> Enum.join("\n")
     end
   end

@@ -139,18 +139,16 @@ defmodule Credence.AttributeProbe do
         _ -> src
       end
 
-    cond do
-      fixed == src ->
-        :no_fire
-
-      true ->
-        with {:ok, fa} <- Code.string_to_quoted(fixed),
-             {:ok, sa} <- Code.string_to_quoted(src) do
-          new = MapSet.difference(mangled_attrs(fa), mangled_attrs(sa))
-          if MapSet.size(new) > 0, do: {:mangled, MapSet.to_list(new), fixed}, else: :ok
-        else
-          _ -> :ok
-        end
+    if fixed == src do
+      :no_fire
+    else
+      with {:ok, fa} <- Code.string_to_quoted(fixed),
+           {:ok, sa} <- Code.string_to_quoted(src) do
+        new = MapSet.difference(mangled_attrs(fa), mangled_attrs(sa))
+        if MapSet.size(new) > 0, do: {:mangled, MapSet.to_list(new), fixed}, else: :ok
+      else
+        _ -> :ok
+      end
     end
   end
 

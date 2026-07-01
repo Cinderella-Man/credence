@@ -24,19 +24,19 @@ defmodule Credence.Pattern.HallucinatedGuard do
     is_non_pos_integer: {:<=, 0}
   }
 
-  @guard_names Map.keys(@hallucinated_guards) |> MapSet.new()
+  @guard_names Map.keys(@hallucinated_guards)
 
   @impl true
   def check(ast, _opts) do
     active =
       if imports_or_uses?(ast),
-        do: MapSet.new(),
-        else: MapSet.difference(@guard_names, defined_guards(ast))
+        do: [],
+        else: @guard_names -- defined_guards(ast)
 
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {name, meta, [_arg]} = node, issues when is_atom(name) ->
-          if MapSet.member?(active, name) do
+          if name in active do
             {node, [build_issue(name, meta) | issues]}
           else
             {node, issues}
@@ -65,7 +65,7 @@ defmodule Credence.Pattern.HallucinatedGuard do
       {name, _, [arg]} = node when is_atom(name) ->
         case Map.get(@hallucinated_guards, name) do
           {op, bound} ->
-            if MapSet.member?(defined, name) do
+            if name in defined do
               node
             else
               {:and, [], [{:is_integer, [], [arg]}, {op, [], [arg, bound]}]}
@@ -104,10 +104,10 @@ defmodule Credence.Pattern.HallucinatedGuard do
   # needlessly unroll the user's own abstraction at its call sites.
   defp defined_guards(ast) do
     {_ast, defined} =
-      Macro.prewalk(ast, MapSet.new(), fn
+      Macro.prewalk(ast, [], fn
         {dg, _, [head | _]} = node, acc when dg in [:defguard, :defguardp] ->
           case guard_head(head) do
-            {name, 1} -> {node, MapSet.put(acc, name)}
+            {name, 1} -> {node, [name | acc]}
             _ -> {node, acc}
           end
 
@@ -115,7 +115,7 @@ defmodule Credence.Pattern.HallucinatedGuard do
           {node, acc}
       end)
 
-    MapSet.intersection(defined, @guard_names)
+    Enum.filter(@guard_names, &(&1 in defined))
   end
 
   # The `name/arity` a `defguard(p)` head defines, stripping the `when` guard.

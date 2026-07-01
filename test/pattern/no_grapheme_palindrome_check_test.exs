@@ -1,8 +1,8 @@
 defmodule Credence.Pattern.NoGraphemePalindromeCheckTest do
   use Credence.RuleCase, async: true
 
-  alias Credence.Pattern.NoGraphemePalindrome
   alias Credence.Issue
+  alias Credence.Pattern.NoGraphemePalindrome
 
   describe "check" do
     test "passes code that compares strings directly with String.reverse" do

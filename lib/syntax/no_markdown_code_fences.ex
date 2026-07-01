@@ -107,8 +107,7 @@ defmodule Credence.Syntax.NoMarkdownCodeFences do
     kept =
       indexed
       |> Enum.reject(fn {_line, idx} -> idx in dropped end)
-      |> Enum.map(&elem(&1, 0))
-      |> Enum.join("\n")
+      |> Enum.map_join("\n", &elem(&1, 0))
 
     if kept != source and parses?(kept) do
       {:fixed, kept, dropped}

@@ -48,7 +48,8 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
 
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:|>, pipe_meta, [lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, meta, [_arg]}]} = node,
+        {:|>, pipe_meta, [lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, meta, [_arg]}]} =
+            node,
         acc
         when op in @flagged_ops ->
           if unsafe_to_flatten?(node, lhs, pipe_meta, consumed) do

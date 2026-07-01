@@ -40,7 +40,10 @@ defmodule Credence.Corpus.FixSafetyTest do
       |> Enum.map(fn {name, _label} -> length(Corpus.lib_files(name)) end)
       |> Enum.sum()
 
-    IO.puts("\n  [corpus] Fix-safety: applying & checking every accepted fix across #{total_files} files.")
+    IO.puts(
+      "\n  [corpus] Fix-safety: applying & checking every accepted fix across #{total_files} files."
+    )
+
     Progress.start(:fix, total_files, @progress_step, "Fix-checked", "files")
     on_exit(fn -> Progress.stop(:fix) end)
     :ok
@@ -53,7 +56,9 @@ defmodule Credence.Corpus.FixSafetyTest do
     test "fixes on #{pkg} v#{version} are safe (no comment loss, mangling, or over-reach)" do
       pkg = unquote(pkg)
       version = unquote(version)
-      %{comments: comments, mangling: mangling, over_reach: over_reach} = fix_safety_violations(pkg)
+
+      %{comments: comments, mangling: mangling, over_reach: over_reach} =
+        fix_safety_violations(pkg)
 
       assert comments == [], report(pkg, version, comments)
       assert mangling == [], mangling_report(pkg, version, mangling)
@@ -142,9 +147,14 @@ defmodule Credence.Corpus.FixSafetyTest do
   defp regions(events) do
     {regions, current} =
       Enum.reduce(events, {[], []}, fn
-        {:gap, n}, {regions, current} when n > @region_gap -> {[Enum.reverse(current) | regions], []}
-        {:gap, _}, acc -> acc
-        ev, {regions, current} -> {regions, [ev | current]}
+        {:gap, n}, {regions, current} when n > @region_gap ->
+          {[Enum.reverse(current) | regions], []}
+
+        {:gap, _}, acc ->
+          acc
+
+        ev, {regions, current} ->
+          {regions, [ev | current]}
       end)
 
     Enum.reverse([Enum.reverse(current) | regions]) |> Enum.reject(&(&1 == []))

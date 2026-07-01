@@ -8,7 +8,7 @@ defmodule Credence.Pattern.AvoidGraphemesEnumCountWithPredicateEquivalenceTest d
   import Credence.BehaviourEquivalence
   alias Credence.Pattern.AvoidGraphemesEnumCountWithPredicate
 
-  test "graphemes |> count(== \"a\") → String.count(str, \"a\") preserves the count" do
+  test ~s{graphemes |> count(== "a") → String.count(str, "a") preserves the count} do
     assert_equivalent(
       ~S'String.graphemes(str) |> Enum.count(&(&1 == "a"))',
       rule: AvoidGraphemesEnumCountWithPredicate,

@@ -108,7 +108,8 @@ defmodule Credence.Pattern.NoSortThenAt do
   end
 
   defp fix_pipe_sort_at(
-         {:|>, _pipe_meta, [deeper, {{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, sort_args}]},
+         {:|>, _pipe_meta,
+          [deeper, {{:., _, [{:__aliases__, _, [:Enum]}, :sort]}, _, sort_args}]},
          index_arg,
          node
        )
@@ -154,8 +155,8 @@ defmodule Credence.Pattern.NoSortThenAt do
   # placeholder to keep its clauses aligned. A lone arg that is a comparator we
   # cannot statically classify (e.g. a custom `fn`) yields `:unknown`, so the
   # finding bails rather than guessing a direction.
-  defp pipe_sort_direction(sort_args, _piped? = true), do: sort_direction([nil | sort_args])
-  defp pipe_sort_direction(sort_args, _piped? = false), do: sort_direction(sort_args)
+  defp pipe_sort_direction(sort_args, true = _piped?), do: sort_direction([nil | sort_args])
+  defp pipe_sort_direction(sort_args, false = _piped?), do: sort_direction(sort_args)
 
   defp sort_direction([_collection]), do: :asc
   defp sort_direction([_collection, {:__block__, _, [dir]}]) when dir in [:asc, :desc], do: dir

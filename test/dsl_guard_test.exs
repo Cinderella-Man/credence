@@ -271,11 +271,17 @@ defmodule Credence.DslGuardTest do
     end
 
     test "a patch inside the expr block is blocked", %{ranges: rs} do
-      assert DslGuard.patch_blocked?(%{start: [line: 3, column: 5], end: [line: 3, column: 25]}, rs)
+      assert DslGuard.patch_blocked?(
+               %{start: [line: 3, column: 5], end: [line: 3, column: 25]},
+               rs
+             )
     end
 
     test "a patch entirely outside is allowed", %{ranges: rs} do
-      refute DslGuard.patch_blocked?(%{start: [line: 1, column: 1], end: [line: 1, column: 5]}, rs)
+      refute DslGuard.patch_blocked?(
+               %{start: [line: 1, column: 1], end: [line: 1, column: 5]},
+               rs
+             )
     end
 
     test "a patch with no range is allowed", %{ranges: rs} do
@@ -288,19 +294,34 @@ defmodule Credence.DslGuardTest do
 
     test "an enclosing patch that carries the blocks through verbatim is NOT blocked" do
       blocks = ranges("def f do\n  a = expr(x == ^y)\n  b = expr(x == ^z)\nend\n")
-      patch = %{range: @enclose_range, change: "def f do\n  b = expr(x == ^z)\n  a = expr(x == ^y)\nend"}
+
+      patch = %{
+        range: @enclose_range,
+        change: "def f do\n  b = expr(x == ^z)\n  a = expr(x == ^y)\nend"
+      }
+
       refute DslGuard.patch_blocked?(patch, blocks, [:ash_expr])
     end
 
     test "an enclosing patch that reshapes a block IS blocked" do
       blocks = ranges("def f do\n  a = expr(x == ^y)\n  b = expr(x == ^z)\nend\n")
-      patch = %{range: @enclose_range, change: "def f do\n  b = expr(x == ^z)\n  a = expr(x != ^y)\nend"}
+
+      patch = %{
+        range: @enclose_range,
+        change: "def f do\n  b = expr(x == ^z)\n  a = expr(x != ^y)\nend"
+      }
+
       assert DslGuard.patch_blocked?(patch, blocks, [:ash_expr])
     end
 
     test "aliasing: two identical blocks, one reshaped, is blocked (not masked by its twin)" do
       blocks = ranges("def f do\n  a = expr(x == ^y)\n  b = expr(x == ^y)\nend\n")
-      patch = %{range: @enclose_range, change: "def f do\n  b = expr(x == ^y)\n  a = expr(x != ^y)\nend"}
+
+      patch = %{
+        range: @enclose_range,
+        change: "def f do\n  b = expr(x == ^y)\n  a = expr(x != ^y)\nend"
+      }
+
       assert DslGuard.patch_blocked?(patch, blocks, [:ash_expr])
     end
 
@@ -309,8 +330,12 @@ defmodule Credence.DslGuardTest do
       # encloses the block. Even if the replacement text happens to contain the
       # block verbatim, a partial overlap must stay blocked.
       blocks = [%{range: r}] = ranges("def f do\n  a = expr(x == ^y)\nend\n")
+
       patch = %{
-        range: %{start: [line: 2, column: 1], end: [line: r.end[:line], column: r.end[:column] - 2]},
+        range: %{
+          start: [line: 2, column: 1],
+          end: [line: r.end[:line], column: r.end[:column] - 2]
+        },
         change: "expr(x == ^y)"
       }
 

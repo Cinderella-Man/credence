@@ -125,47 +125,10 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
     |> Enum.with_index()
     |> Enum.find_value(fn {[first, second], idx} ->
       if map_step?(first) and map_new_empty_step?(second) do
-        {coll, fn_arg} = extract_map_parts(first)
-        before = Enum.take(steps, idx)
-        after_ = Enum.drop(steps, idx + 2)
-
-        pipeline =
-          cond do
-            coll != nil ->
-              # 2-arg Enum.map: Enum.map(coll, fn ...) — coll is explicit
-              map_new_call = build_map_new_call(coll, fn_arg)
-
-              if before == [] and after_ == [] do
-                map_new_call
-              else
-                rebuild_pipeline(before, map_new_call, after_)
-              end
-
-            before != [] ->
-              # 1-arg Enum.map in pipeline context: ... |> Enum.map(fn ...)
-              case before do
-                [coll] ->
-                  # The collection IS the pipe head (a complete expression), so
-                  # inline it as `Map.new/2`'s first argument.
-                  map_new_call = build_map_new_call(coll, fn_arg)
-                  if after_ == [], do: map_new_call, else: rebuild_pipeline([], map_new_call, after_)
-
-                _ ->
-                  # There is an upstream pipeline before `Enum.map`. Its last step
-                  # is itself a pipe stage missing its piped input, so it must NOT
-                  # be pulled out as an explicit collection (that loses the input
-                  # and produces `Map.new/3`). Instead keep the whole upstream
-                  # pipeline intact and pipe it into a 1-arg `Map.new(fn)` — which
-                  # in pipe position is exactly `Map.new/2`.
-                  map_new_step = build_map_new_fn_step(fn_arg)
-                  rebuild_pipeline(before, map_new_step, after_)
-              end
-
-            true ->
-              nil
-          end
-
-        if pipeline, do: {:ok, pipeline}
+        case build_map_new_pipeline(steps, first, idx) do
+          nil -> nil
+          pipeline -> {:ok, pipeline}
+        end
       end
     end)
   end
@@ -179,6 +142,50 @@ defmodule Credence.Pattern.PreferMapNewWithTransform do
   end
 
   defp transform_node(_), do: :error
+
+  # Build the replacement pipeline for the `Enum.map(...) |> Map.new/MapSet.new`
+  # window found at `idx`, or nil when the shape can't be rewritten safely. Split
+  # out of `transform_node/1` to keep the pipe-walking callback shallow.
+  defp build_map_new_pipeline(steps, first, idx) do
+    {coll, fn_arg} = extract_map_parts(first)
+    before = Enum.take(steps, idx)
+    after_ = Enum.drop(steps, idx + 2)
+
+    cond do
+      coll != nil ->
+        # 2-arg Enum.map: Enum.map(coll, fn ...) — coll is explicit
+        map_new_call = build_map_new_call(coll, fn_arg)
+
+        if before == [] and after_ == [] do
+          map_new_call
+        else
+          rebuild_pipeline(before, map_new_call, after_)
+        end
+
+      before != [] ->
+        # 1-arg Enum.map in pipeline context: ... |> Enum.map(fn ...)
+        case before do
+          [coll] ->
+            # The collection IS the pipe head (a complete expression), so
+            # inline it as `Map.new/2`'s first argument.
+            map_new_call = build_map_new_call(coll, fn_arg)
+            if after_ == [], do: map_new_call, else: rebuild_pipeline([], map_new_call, after_)
+
+          _ ->
+            # There is an upstream pipeline before `Enum.map`. Its last step
+            # is itself a pipe stage missing its piped input, so it must NOT
+            # be pulled out as an explicit collection (that loses the input
+            # and produces `Map.new/3`). Instead keep the whole upstream
+            # pipeline intact and pipe it into a 1-arg `Map.new(fn)` — which
+            # in pipe position is exactly `Map.new/2`.
+            map_new_step = build_map_new_fn_step(fn_arg)
+            rebuild_pipeline(before, map_new_step, after_)
+        end
+
+      true ->
+        nil
+    end
+  end
 
   # --- predicates ---
 

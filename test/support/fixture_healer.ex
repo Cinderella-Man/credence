@@ -222,7 +222,9 @@ defmodule Credence.FixtureHealer do
   # un-escaped, so render → eval the well-formed source instead).
   defp value_of(node) do
     {{value, _}, _diagnostics} =
-      Code.with_diagnostics(fn -> Code.eval_string(Sourceror.to_string(node), [], file: "nofile") end)
+      Code.with_diagnostics(fn ->
+        Code.eval_string(Sourceror.to_string(node), [], file: "nofile")
+      end)
 
     if is_binary(value), do: {:ok, value}, else: :error
   rescue

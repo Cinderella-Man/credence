@@ -198,7 +198,9 @@ defmodule Credence.Pattern.NoListAppendInReduceFixTest do
 
     test "reduce as the left side of a further pipe" do
       input = "Enum.reduce(list, [], fn i, acc -> acc ++ [i] end) |> Enum.sum()"
-      expected = "Enum.reduce(list, [], fn i, acc -> [i | acc] end) |> Enum.reverse() |> Enum.sum()"
+
+      expected =
+        "Enum.reduce(list, [], fn i, acc -> [i | acc] end) |> Enum.reverse() |> Enum.sum()"
 
       confirm_fix(fix(NoListAppendInReduce, input), expected)
     end

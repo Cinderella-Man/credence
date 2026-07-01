@@ -535,8 +535,7 @@ defmodule Credence.Corpus do
   # exercise Credence on large production Phoenix/umbrella codebases, not just
   # well-trodden library code.
   @repos [
-    {:accent, "https://github.com/mirego/accent.git",
-     "361876c0f3f2c14d779b91470e727696a88bf194"},
+    {:accent, "https://github.com/mirego/accent.git", "361876c0f3f2c14d779b91470e727696a88bf194"},
     {:archethic, "https://github.com/archethic-foundation/archethic-node.git",
      "7ea2e2262dcc58eacec7ca93baee4f5d14af12e7"},
     {:ash_admin, "https://github.com/ash-project/ash_admin.git",
@@ -561,12 +560,10 @@ defmodule Credence.Corpus do
      "256ec7787dc14fa666817199ec6aa5dc64787e37"},
     {:firezone, "https://github.com/firezone/firezone.git",
      "02da9189ab7c55aa9b7eb637dbace5df94fb9dbf"},
-    {:glific, "https://github.com/glific/glific.git",
-     "cbdee643951739fcf3d26444999562de06ad2d65"},
+    {:glific, "https://github.com/glific/glific.git", "cbdee643951739fcf3d26444999562de06ad2d65"},
     {:grpc, "https://github.com/elixir-grpc/grpc.git",
      "38b4aaadbd4f82f2511af429b0fbf486c154d984"},
-    {:hexpm, "https://github.com/hexpm/hexpm.git",
-     "c84a83e8ca8127a7acdc27631923a05d73cd24f0"},
+    {:hexpm, "https://github.com/hexpm/hexpm.git", "c84a83e8ca8127a7acdc27631923a05d73cd24f0"},
     {:instructor, "https://github.com/thmsmlr/instructor_ex.git",
      "c6dcad9e70c0db0d54c65efb85b56de4129d847b"},
     {:keila, "https://github.com/pentacent/keila.git",
@@ -605,8 +602,7 @@ defmodule Credence.Corpus do
      "b378f199a265e86afdf6efbc66dd174b6e002d89"},
     {:teslamate, "https://github.com/adriankumpf/teslamate.git",
      "a115cc9989fc47e9c3010d2f994ad79e46aed8e1"},
-    {:tucan, "https://github.com/pnezis/tucan.git",
-     "56b17b561cc788ae0035a92fa4c3cd35b9941ee3"}
+    {:tucan, "https://github.com/pnezis/tucan.git", "56b17b561cc788ae0035a92fa4c3cd35b9941ee3"}
   ]
 
   @root "corpus"

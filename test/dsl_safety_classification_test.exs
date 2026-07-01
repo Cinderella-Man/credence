@@ -48,7 +48,8 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "no_guard_equality_for_pattern_match" => "operates only on def/defp clause guards",
     "no_length_guard_to_pattern" => "rewrites a def/defp `when` length guard head only",
     "no_redundant_negated_guard" => "operates only on def/defp clause guards",
-    "prefer_pattern_match_empty_string" => "matches only def/defp clauses carrying a `when` guard",
+    "prefer_pattern_match_empty_string" =>
+      "matches only def/defp clauses carrying a `when` guard",
     "redundant_list_guard" => "operates only on def/defp clause guards",
     "prefer_guard_over_if" => "matches only a def/defp clause whose body is an if/else",
     "prefer_pattern_match_over_conditional_in_recursive_count" =>
@@ -66,10 +67,12 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "no_case_tuple_guard_dispatch" =>
       "matches an existing `case` with tuple/guard clauses; not valid compiling DSL code, so it never fires inside a real block",
     "no_map_update_then_fetch" => "matches an existing `case` over Map.update/fetch in a block",
-    "no_redundant_case_nil_clause" => "matches an existing `case`; keeps it, only drops a redundant nil clause",
+    "no_redundant_case_nil_clause" =>
+      "matches an existing `case`; keeps it, only drops a redundant nil clause",
     "prefer_function_clauses_for_list_patterns" =>
       "matches an existing `case` on list patterns; not valid compiling DSL code, so it never fires inside a real block",
-    "prefer_string_slice_for_trim_last_char" => "matches an existing `case String.graphemes(...)`",
+    "prefer_string_slice_for_trim_last_char" =>
+      "matches an existing `case String.graphemes(...)`",
     # The flagged `/` is function-capture arity (`&fun/N`), not the division operator.
     "no_identity_enum_map" => "the `/` is capture arity in an identity-fn matcher, not division",
     "no_redundant_local_capture" => "the `/` is capture arity (`&fn/arity`), not division",
@@ -94,13 +97,17 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "no_explicit_sum_reduce" =>
       "rewrites `Enum.reduce(list, 0, fn x, acc -> acc + x end)` to Enum.sum/1; the `+` lives in a reduce lambda that no DSL expression grammar can contain",
     # Plain-Elixir pipelines/reduces that cannot appear inside a DSL expression.
-    "no_take_while_length_check" => "matches Enum.take_while |> length/count; not expressible in a DSL expression",
+    "no_take_while_length_check" =>
+      "matches Enum.take_while |> length/count; not expressible in a DSL expression",
     "prefer_comprehension_for_filtered_range" =>
       "matches a literal range reduce |> reverse; not expressible in a DSL expression",
-    "prefer_enum_count" => "matches a manual count idiom in plain Elixir; the rewrite isn't a DSL-expression construct",
+    "prefer_enum_count" =>
+      "matches a manual count idiom in plain Elixir; the rewrite isn't a DSL-expression construct",
     # Condition copied verbatim — no operator changed, no guard dropped.
-    "no_unless_else" => "unless→if with branches swapped, condition unchanged (same as Kernel.unless)",
-    "prefer_cond_for_nested_if" => "nested if→cond copying every condition/body verbatim; no operator change"
+    "no_unless_else" =>
+      "unless→if with branches swapped, condition unchanged (same as Kernel.unless)",
+    "prefer_cond_for_nested_if" =>
+      "nested if→cond copying every condition/body verbatim; no operator change"
   }
 
   test "every rule whose fix changes a reinterpreted construct is classified" do

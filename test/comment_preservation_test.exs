@@ -20,8 +20,8 @@ defmodule Credence.CommentPreservationTest do
   """
   use ExUnit.Case, async: true
 
-  alias Credence.{RuleHelpers, RuleName}
   alias Credence.MetaTestSupport, as: Meta
+  alias Credence.{RuleHelpers, RuleName}
 
   # Known limitation, tracked rather than silently skipped: this rule rebuilds the
   # whole MapSet pipeline from scratch, so no original node survives to carry a
@@ -75,8 +75,9 @@ defmodule Credence.CommentPreservationTest do
 
     lines
     |> Enum.with_index()
-    |> Enum.filter(fn {line, _} -> probeable?(line) end)
-    |> Enum.filter(fn {line, idx} -> dropped?(rule, lines, idx, line, in_lines) end)
+    |> Enum.filter(fn {line, idx} ->
+      probeable?(line) and dropped?(rule, lines, idx, line, in_lines)
+    end)
     |> Enum.map(fn {line, _} -> String.trim(line) end)
     |> Enum.uniq()
   end

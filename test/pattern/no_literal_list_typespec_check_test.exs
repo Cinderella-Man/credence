@@ -1,8 +1,8 @@
 defmodule Credence.Pattern.NoLiteralListTypespecCheckTest do
   use Credence.RuleCase, async: true
 
-  alias Credence.Pattern.NoLiteralListTypespec
   alias Credence.Issue
+  alias Credence.Pattern.NoLiteralListTypespec
 
   describe "detects" do
     test "two-element type-call list return type" do

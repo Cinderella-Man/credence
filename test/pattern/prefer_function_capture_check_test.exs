@@ -70,7 +70,10 @@ defmodule Credence.Pattern.PreferFunctionCaptureCheckTest do
   # Rewriting an fn nested inside a `&` capture would produce an illegal nested
   # capture (`&Enum.map(&1, &to_string/1)`), so it must not be flagged.
   test "leaves an fn nested inside an enclosing & capture alone" do
-    assert clean?(PreferFunctionCapture, "Enum.map(rows, &Enum.map(&1, fn v -> to_string(v) end))")
+    assert clean?(
+             PreferFunctionCapture,
+             "Enum.map(rows, &Enum.map(&1, fn v -> to_string(v) end))"
+           )
   end
 
   test "still flags a top-level fn even when the file also has a capture-nested one" do

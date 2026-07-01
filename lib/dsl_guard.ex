@@ -205,7 +205,9 @@ defmodule Credence.DslGuard do
         intersecting =
           blocks
           |> filter_family(families)
-          |> Enum.filter(fn %{range: r} -> le(p_start, pos(r.end)) and le(pos(r.start), p_end) end)
+          |> Enum.filter(fn %{range: r} ->
+            le(p_start, pos(r.end)) and le(pos(r.start), p_end)
+          end)
 
         cond do
           intersecting == [] -> false
@@ -274,7 +276,8 @@ defmodule Credence.DslGuard do
     for %{family: f} = block <- blocks, f in families or (f == :custom and sensitive?), do: block
   end
 
-  defp for_families(blocks, families), do: blocks |> filter_family(families) |> Enum.map(& &1.range)
+  defp for_families(blocks, families),
+    do: blocks |> filter_family(families) |> Enum.map(& &1.range)
 
   # --- detection -------------------------------------------------------------
 
@@ -304,8 +307,13 @@ defmodule Credence.DslGuard do
 
   defp collect(_node, acc, _ctx), do: acc
 
-  defp qualified_family([:Ecto, :Query], name) when name == :from or name in @ecto_pipe_names, do: :ecto_query
-  defp qualified_family(mod, name) when mod in [[:Ash, :Expr], [:Ash, :Query]] and name in [:expr, :filter, :calculate, :aggregate], do: :ash_expr
+  defp qualified_family([:Ecto, :Query], name) when name == :from or name in @ecto_pipe_names,
+    do: :ecto_query
+
+  defp qualified_family(mod, name)
+       when mod in [[:Ash, :Expr], [:Ash, :Query]] and
+              name in [:expr, :filter, :calculate, :aggregate], do: :ash_expr
+
   defp qualified_family([:Nx, :Defn], name) when name in @defn_names, do: :nx_defn
   defp qualified_family(_mod, _name), do: nil
 
@@ -360,7 +368,10 @@ defmodule Credence.DslGuard do
   # A binding list is `[p]` / `[p, q]` / `[_]` — a list whose elements are all
   # bare variables or `_`. Sourceror wraps list literals in a `:__block__`.
   defp binding_list?({:__block__, _, [list]}), do: binding_list?(list)
-  defp binding_list?(list) when is_list(list) and list != [], do: Enum.all?(list, &var_or_underscore?/1)
+
+  defp binding_list?(list) when is_list(list) and list != [],
+    do: Enum.all?(list, &var_or_underscore?/1)
+
   defp binding_list?(_), do: false
 
   # An explicit empty binding — `where(query, [], ^cond)` — a valid Ecto form that
@@ -370,7 +381,9 @@ defmodule Credence.DslGuard do
   defp empty_binding?([]), do: true
   defp empty_binding?(_), do: false
 
-  defp var_or_underscore?({name, _meta, ctx}) when is_atom(name) and (is_atom(ctx) or is_nil(ctx)), do: true
+  defp var_or_underscore?({name, _meta, ctx})
+       when is_atom(name) and (is_atom(ctx) or is_nil(ctx)), do: true
+
   defp var_or_underscore?(_), do: false
 
   # The variable names introduced by every binding-list argument (ignoring `_`,
@@ -416,7 +429,12 @@ defmodule Credence.DslGuard do
   end
 
   defp has_in?(arg) do
-    {_ast, hit?} = Macro.prewalk(arg, false, fn {:in, _, [_, _]} = n, _ -> {n, true}; n, acc -> {n, acc} end)
+    {_ast, hit?} =
+      Macro.prewalk(arg, false, fn
+        {:in, _, [_, _]} = n, _ -> {n, true}
+        n, acc -> {n, acc}
+      end)
+
     hit?
   end
 
@@ -486,7 +504,8 @@ defmodule Credence.DslGuard do
   defp ash_dsl_imported?(ast) do
     {_ast, found?} =
       Macro.prewalk(ast, false, fn
-        {form, _, [{:__aliases__, _, [:Ash | _]} | _]} = node, _acc when form in [:import, :use] ->
+        {form, _, [{:__aliases__, _, [:Ash | _]} | _]} = node, _acc
+        when form in [:import, :use] ->
           {node, true}
 
         node, acc ->
@@ -514,12 +533,13 @@ defmodule Credence.DslGuard do
 
   defp fallback_range({_callee, meta, _args}) when is_list(meta) do
     case Keyword.get(meta, :line) do
-      line when is_integer(line) -> %{start: [line: line, column: 1], end: [line: line, column: 1]}
-      _ -> nil
+      line when is_integer(line) ->
+        %{start: [line: line, column: 1], end: [line: line, column: 1]}
+
+      _ ->
+        nil
     end
   end
-
-  defp fallback_range(_node), do: nil
 
   defp pos(position), do: {Keyword.fetch!(position, :line), Keyword.fetch!(position, :column)}
 

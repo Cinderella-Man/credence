@@ -50,7 +50,8 @@ defmodule Credence.Pattern.NoUnusedUnderscoreAssignment do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
         {:__block__, _meta, statements} = node, acc when is_list(statements) ->
-          {node, deletable_statements(statements, freq) |> Enum.map(&build_issue/1) |> Kernel.++(acc)}
+          {node,
+           deletable_statements(statements, freq) |> Enum.map(&build_issue/1) |> Kernel.++(acc)}
 
         node, acc ->
           {node, acc}
