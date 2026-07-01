@@ -302,15 +302,26 @@ defmodule Credence.RuleHelpers do
   """
   @spec dsl_dropped_ranges(module(), Macro.t(), keyword()) :: [map()]
   def dsl_dropped_ranges(rule, ast, opts) do
-    patches =
-      try do
-        rule.fix_patches(ast, opts)
-      rescue
-        _ -> []
-      end
+    # A DSL-safe rule (the large majority) can never drop a patch, so skip the
+    # `fix_patches/2` computation entirely — `analyze/2` calls this for every
+    # rule and would otherwise pay the fix cost on the ~9-in-10 rules that
+    # declare no DSL sensitivity. `dsl_partition/4` short-circuits on the same
+    # `[]`, so this only hoists that check ahead of the expensive call.
+    case dsl_unsafe_families(rule) do
+      [] ->
+        []
 
-    {_kept, dropped} = dsl_partition(rule, List.wrap(patches), ast, opts)
-    dropped
+      _families ->
+        patches =
+          try do
+            rule.fix_patches(ast, opts)
+          rescue
+            _ -> []
+          end
+
+        {_kept, dropped} = dsl_partition(rule, List.wrap(patches), ast, opts)
+        dropped
+    end
   end
 
   # Single shared decision for both gates: split a rule's patches into the ones
@@ -324,7 +335,7 @@ defmodule Credence.RuleHelpers do
         blocks = Credence.DslGuard.block_ranges(ast, opts)
 
         {dropped, kept} =
-          Enum.split_with(patches, &Credence.DslGuard.patch_blocked?(Map.get(&1, :range), blocks, families))
+          Enum.split_with(patches, &Credence.DslGuard.patch_blocked?(&1, blocks, families))
 
         {kept, dropped |> Enum.map(&Map.get(&1, :range)) |> Enum.reject(&is_nil/1)}
     end

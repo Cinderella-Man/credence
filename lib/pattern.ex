@@ -2,7 +2,7 @@ defmodule Credence.Pattern do
   @moduledoc """
   Pattern phase — detects and fixes anti-patterns in Elixir code.
 
-  Delegates to the 117 rules implementing `Credence.Pattern.Rule` behaviour.
+  Delegates to the rules implementing the `Credence.Pattern.Rule` behaviour.
   Rules are discovered automatically and run in priority order (lower first),
   with module name as tiebreaker for determinism.
   """

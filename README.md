@@ -169,8 +169,15 @@ and only in the families where it actually diverges. Findings are suppressed the
 too — Credence won't report inside a block what it won't fix, so the "every
 Pattern rule fixes what it finds" promise still holds.
 
-Detection is by call **shape**, not by import, so it works even when the macro
-arrives through a wrapper (`use MyAppWeb, :live_view`) or an alias.
+Detection is mostly by call **shape**, not by import, so it works even when the
+macro arrives through a wrapper (`use MyAppWeb, :live_view`) or an alias — this
+holds for `expr`, `from(x in Y, …)`, binding-list queries (`where([p], …)`) and
+`defn`. The exception is Ash's ambiguous names that collide with ordinary
+functions (`filter`, `calculate`, `aggregate`): a bare call to one of these is
+treated as DSL only when the file directly `import`s/`use`s an `Ash.*` module (a
+strong same-file signal). If your Ash macros arrive purely through a wrapper that
+hides the import, name them via `dsl_macros:` below. The qualified forms
+(`Ash.Query.filter/2`) are always covered.
 
 This is a best-effort, known-DSL list (Ash's `expr` family, the `Ecto.Query`
 macros, `Nx` `defn`) — **not** a guarantee. A reinterpreting DSL it doesn't know

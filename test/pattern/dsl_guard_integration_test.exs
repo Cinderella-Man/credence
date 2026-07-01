@@ -41,6 +41,77 @@ defmodule Credence.Pattern.DslGuardIntegrationTest do
     end
   end
 
+  describe "an enclosing fix that leaves the DSL block verbatim is applied (#5b)" do
+    # An `if` whose branch merely *contains* an `expr` — the flip lands on plain
+    # Elixir (`is_nil`), the `expr` is only moved. The old intersection gate dropped
+    # the whole fix; the preservation gate keeps it because the `expr` subtree is
+    # unchanged.
+    @enclosing """
+    def build(record) do
+      if is_nil(record.parent_id) do
+        false
+      else
+        expr(parent_id == ^record.parent_id)
+      end
+    end
+    """
+
+    test "the enclosing plain `if` is negated and the expr is left structurally intact" do
+      fixed = RuleHelpers.apply_rule_fix(PreferNegateIfTrueFalse, @enclosing)
+      assert fixed != @enclosing
+      assert fixed =~ "if !is_nil(record.parent_id) do"
+      assert fixed =~ "parent_id == ^record.parent_id"
+    end
+
+    test "analyze reports it (report iff fixed — parity holds)" do
+      assert Pattern.analyze(@enclosing, rules: [PreferNegateIfTrueFalse]) != []
+    end
+
+    # Two antipatterns: the outer plain `if` (safe to fix) and an inner `if` INSIDE
+    # the expr (must stay). The gate applies the outer, drops the inner.
+    @nested """
+    def build(record) do
+      if is_nil(record.deleted_at) do
+        false
+      else
+        expr(if inner do false else other end)
+      end
+    end
+    """
+
+    test "the outer plain if is fixed while the inner if inside expr is left alone" do
+      fixed = RuleHelpers.apply_rule_fix(PreferNegateIfTrueFalse, @nested)
+      assert fixed =~ "if !is_nil(record.deleted_at) do"
+      refute fixed =~ "!inner"
+    end
+  end
+
+  describe "the reported bug class via bare Ash.Query.filter (not a literal expr/1)" do
+    @bare_filter """
+    defmodule MyApp.Queries do
+      import Ash.Query
+
+      def visible(query) do
+        filter(query,
+          if is_nil(archived_at) do
+            false
+          else
+            visible
+          end
+        )
+      end
+    end
+    """
+
+    test "the !/not flip is dropped inside a bare imported filter" do
+      assert RuleHelpers.apply_rule_fix(PreferNegateIfTrueFalse, @bare_filter) == @bare_filter
+    end
+
+    test "the finding is suppressed for the bare filter body too" do
+      assert Pattern.analyze(@bare_filter, rules: [PreferNegateIfTrueFalse]) == []
+    end
+  end
+
   describe "the flag is scoped — plain code is still fixed" do
     test "prefer_negate_if_true_false still rewrites outside any DSL" do
       plain = """

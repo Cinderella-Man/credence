@@ -32,7 +32,7 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
 
   # Constructs that Ash.Expr / Ecto.Query / Nx.Defn reinterpret. Mirrors the
   # classification oracle the `unsafe_in_dsl` flags were derived from.
-  @ops ~w(! && || and or not == != === !== < > <= >= is_nil / div rem in)a
+  @ops ~w(! && || and or not == != === !== < > <= >= is_nil / div rem in + - * ** <> ++ --)a
   @ctrl ~w(if unless cond case with)a
 
   # Rules whose fix changes a reinterpreted construct in its fixtures yet is
@@ -43,7 +43,8 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
   @verified_dsl_safe %{
     # Match only a def/defp clause head or `when` guard — never a DSL expression.
     "avoid_length_guard_less_than2" => "rewrites a def/defp `when length(v) < 2` guard head only",
-    "hallucinated_guard" => "rewrites is_*_integer in a def/defp `when` guard only",
+    "hallucinated_guard" =>
+      "rewrites hallucinated guard names (is_pos_integer, …) that aren't real functions — they never occur in compiling code (DSL or not), and the rule stands down when the name is defined/imported",
     "no_guard_equality_for_pattern_match" => "operates only on def/defp clause guards",
     "no_length_guard_to_pattern" => "rewrites a def/defp `when` length guard head only",
     "no_redundant_negated_guard" => "operates only on def/defp clause guards",
@@ -55,19 +56,43 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "prefer_lookup_for_digit_conversion" => "matches and rewrites only module-level defp clauses",
     "no_case_on_param_dispatch" =>
       "matches only a def/defp body that is `case param`; splits to clause heads, never inside a DSL expression",
-    # Match an EXISTING `case` — illegal inside Ash expr / Ecto query / Nx defn, so it never fires there.
-    "no_case_true_false" => "matches an existing `case`; `case` can't appear inside a DSL expression",
-    "no_case_tuple_guard_dispatch" => "matches an existing `case`; `case` can't appear inside a DSL expression",
+    # Match an EXISTING `case` over a subject (booleans, tuples, Map results,
+    # graphemes) that no compiling Ash expr / Ecto query / Nx defn expression
+    # produces. `case` itself is not universally illegal in a DSL (Nx.Defn allows
+    # container matching), but a `case` on *these* subjects is not valid compiling
+    # DSL code, so the rule never fires inside a real block.
+    "no_case_true_false" =>
+      "matches an existing `case` over true/false clauses; not valid compiling DSL code, so it never fires inside a real block",
+    "no_case_tuple_guard_dispatch" =>
+      "matches an existing `case` with tuple/guard clauses; not valid compiling DSL code, so it never fires inside a real block",
     "no_map_update_then_fetch" => "matches an existing `case` over Map.update/fetch in a block",
     "no_redundant_case_nil_clause" => "matches an existing `case`; keeps it, only drops a redundant nil clause",
     "prefer_function_clauses_for_list_patterns" =>
-      "matches an existing `case`; `case` can't appear inside a DSL expression",
+      "matches an existing `case` on list patterns; not valid compiling DSL code, so it never fires inside a real block",
     "prefer_string_slice_for_trim_last_char" => "matches an existing `case String.graphemes(...)`",
     # The flagged `/` is function-capture arity (`&fun/N`), not the division operator.
     "no_identity_enum_map" => "the `/` is capture arity in an identity-fn matcher, not division",
     "no_redundant_local_capture" => "the `/` is capture arity (`&fn/arity`), not division",
-    "no_map_then_aggregate" => "the `/` is capture arity in the matched capture, not division",
-    "unnecessary_grapheme_chunking" => "the `/` is capture arity (`&Enum.join/1`), not division",
+    "no_map_then_aggregate" =>
+      "matches an Enum.map |> Enum.sum fusion; the `/` is capture arity and the introduced `+`/`*` — like all Enum.* here — never lands in a DSL expression",
+    "unnecessary_grapheme_chunking" =>
+      "matches a String.graphemes |> Enum.chunk_every(_, 1) |> Enum.map(&Enum.join) pipeline that isn't valid DSL-expression code; the `/` is capture arity and the introduced `-`/`..//` never reach a DSL expression",
+    # Arithmetic/concat (+ - * <> ++) changed only inside plain-Elixir
+    # Enum/reduce/recursion idioms that no DSL expression grammar can contain.
+    "no_string_concat_in_loop" =>
+      "rewrites an Enum.reduce(list, \"\", fn e, acc -> acc <> e end) string-build to Enum.join/map_join; the reduce+lambda+`<>` shape can't appear inside an Ash expr / Ecto query / Nx defn",
+    "no_list_append_in_recursion" =>
+      "matches a multi-clause def/defp with a recursive `acc ++ [x]` tail call; a function definition is never a DSL expression",
+    "no_list_append_in_reduce" =>
+      "matches `Enum.reduce(_, [], fn i, acc -> acc ++ [x] end)`; an Enum.reduce + lambda is not part of any DSL expression grammar",
+    "prefer_enum_reverse_two" =>
+      "operates on Enum.reverse/1 + list `++`; `Enum.*` and list-`++` are never DSL-expression constructs (compile errors in Ecto/Nx, never data-layer expressions in Ash)",
+    "prefer_desc_sort_over_negative_take" =>
+      "matches an Enum.sort |> Enum.take(-n) pipeline; `Enum.*` isn't valid in any DSL expression and the `-` is only a literal take/2 argument, never reinterpreted arithmetic",
+    "no_enum_take_negative" =>
+      "rewrites Enum.take(list, -n) to Enum.slice(list, -n..-1//1); `Enum.*` isn't valid in any DSL expression and the `-` is only a literal count/range bound, never reinterpreted arithmetic",
+    "no_explicit_sum_reduce" =>
+      "rewrites `Enum.reduce(list, 0, fn x, acc -> acc + x end)` to Enum.sum/1; the `+` lives in a reduce lambda that no DSL expression grammar can contain",
     # Plain-Elixir pipelines/reduces that cannot appear inside a DSL expression.
     "no_take_while_length_check" => "matches Enum.take_while |> length/count; not expressible in a DSL expression",
     "prefer_comprehension_for_filtered_range" =>
