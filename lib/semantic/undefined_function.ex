@@ -16,6 +16,7 @@ defmodule Credence.Semantic.UndefinedFunction do
       {:literal_with_neg, pos, neg}         — literal, negation-aware
       {:rename_add_arg, mod, fun, arg}      — rename + append extra argument
       {:rename_negate_arg, mod, fun, index} — rename + negate argument at index
+      :capture_to_lambda                     — &Module.fun/arity → &(Module.fun(&1, …))
 
   Local (bare calls):
 
@@ -29,6 +30,11 @@ defmodule Credence.Semantic.UndefinedFunction do
   alias Credence.Issue
 
   @qualified_replacements %{
+    # Macro capture → lambda wrapper
+    # &Integer.is_even/1 is a capture that doesn't work with macros.
+    # Rewrite to &(Integer.is_even(&1)) which correctly invokes the macro.
+    {"Integer", "is_even", 1} => :capture_to_lambda,
+
     # Wrong module for real function
     {"Enum", "last", 1} => {:rename, "List", "last"},
     {"Enum", "last", 0} => {:rename, "List", "last"},
@@ -188,6 +194,10 @@ defmodule Credence.Semantic.UndefinedFunction do
         # Replace Module.fun(...) with new_fun(...) — strips the module prefix
         replace_drop_module(source, line_no, mod, fun, new_fun)
 
+      :capture_to_lambda ->
+        # &Module.fun/arity → &(Module.fun(&1, &2, ..., &N))
+        rewrite_capture_to_lambda(source, line_no, mod, fun, arity)
+
       nil ->
         case Credence.FunctionMatcher.suggest(source, mod, fun, arity, visibility: :public_only) do
           {:ok, suggested} ->
@@ -307,6 +317,23 @@ defmodule Credence.Semantic.UndefinedFunction do
       {line, _} ->
         line
     end)
+  end
+
+  #
+  # &Module.fun/arity → &(Module.fun(&1, &2, ..., &N))
+  # Rewrites a function capture (which doesn't work with macros) to a lambda.
+
+  defp rewrite_capture_to_lambda(source, line_no, mod, fun, arity) do
+    old = "&#{mod}.#{fun}/#{arity}"
+
+    args =
+      if arity == 0,
+        do: "",
+        else: 1..arity |> Enum.map_join(", ", &"&#{&1}")
+
+    new = "&(#{mod}.#{fun}(#{args}))"
+
+    replace_first_on_line(source, line_no, old, new)
   end
 
   defp replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text) do

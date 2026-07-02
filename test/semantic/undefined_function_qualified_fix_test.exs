@@ -796,6 +796,56 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
   end
 
+  # ── macro capture → lambda wrapper ────────────────────────────
+
+  describe "Integer.is_even/1 → &(Integer.is_even(&1))" do
+    test "function capture in Enum.split_with" do
+      confirm_fix(
+        fix(
+          "{evens, odds} = Enum.split_with(list, &Integer.is_even/1)",
+          "Integer.is_even/1 is undefined or private"
+        ),
+        "{evens, odds} = Enum.split_with(list, &(Integer.is_even(&1)))"
+      )
+    end
+
+    test "realistic module context" do
+      input = """
+      defmodule Solution do
+        def rearrange_even_first(integer_list) do
+          {evens, odds} = Enum.split_with(integer_list, &Integer.is_even/1)
+          evens ++ odds
+        end
+      end
+      """
+
+      expected = """
+      defmodule Solution do
+        def rearrange_even_first(integer_list) do
+          {evens, odds} = Enum.split_with(integer_list, &(Integer.is_even(&1)))
+          evens ++ odds
+        end
+      end
+      """
+
+      confirm_fix(fix(input, "Integer.is_even/1 is undefined or private", 3), expected)
+    end
+
+    test "only on reported line" do
+      input = """
+      a = Enum.filter(list, &Integer.is_odd/1)
+      b = Enum.split_with(list, &Integer.is_even/1)
+      c = Enum.filter(list, &Integer.is_even/1)
+      """
+
+      confirm_fix(fix(input, "Integer.is_even/1 is undefined or private", 2), """
+      a = Enum.filter(list, &Integer.is_odd/1)
+      b = Enum.split_with(list, &(Integer.is_even(&1)))
+      c = Enum.filter(list, &Integer.is_even/1)
+      """)
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "qualified: no-ops" do
