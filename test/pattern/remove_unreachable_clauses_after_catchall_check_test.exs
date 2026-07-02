@@ -68,7 +68,6 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchallCheckTest do
       assert issue.rule == :remove_unreachable_clauses_after_catchall
       assert issue.meta.line == 12
     end
-
   end
 
   describe "leaves good code alone" do

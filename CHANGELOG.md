@@ -5,6 +5,34 @@ All notable changes to Credence are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - Unreleased
+
+### Fixed
+
+- **Auto-fixes no longer silently break Ash / Ecto / Nx macro code.** Some macros
+  re-read ordinary Elixir AST with *different meaning*: inside `Ash.Expr.expr/1`,
+  `!x` is not `not x` (it builds a query node the data layer can't translate);
+  inside an `Ecto.Query`, `!`/`&&`/`x == nil` are errors; inside an `Nx` `defn`,
+  arithmetic and `if` are element-wise tensor ops. A Pattern rewrite that is
+  correct in plain Elixir could therefore be silently wrong inside one of these
+  blocks — and it still compiled, so `mix compile` passed and the breakage only
+  surfaced at runtime. Credence now finds those blocks (by call **shape**, so it
+  survives `use MyAppWeb`-style wrappers that hide the import) and stands down
+  inside them for exactly the rules whose fix changes a construct the DSL
+  reinterprets, in exactly the families where it diverges. Findings there are
+  suppressed too, so the "every Pattern rule fixes what it finds" promise still
+  holds. See the `Credence.DslGuard` moduledoc.
+
+### Added
+
+- **`unsafe_in_dsl/0` rule callback.** A Pattern rule declares the macro-DSL
+  families its fix is not behaviour-preserving inside — any of `:ash_expr`,
+  `:ecto_query`, `:nx_defn` (or `:all`). Defaults to `[]`, i.e. safe everywhere,
+  so existing rules are unaffected.
+- **`config :credence, dsl_macros: [...]`.** Names additional macros whose bodies
+  Credence should treat as opaque reinterpreting DSLs, for libraries it doesn't
+  recognise out of the box.
+
 ## [0.7.0] - Unreleased
 
 ### Added

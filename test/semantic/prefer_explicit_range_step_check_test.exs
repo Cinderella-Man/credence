@@ -21,8 +21,7 @@ defmodule Credence.Semantic.PreferExplicitRangeStepCheckTest do
   test "ignores the redefining-module warning (the noise the first attempt fired on)" do
     diag = %{
       severity: :warning,
-      message:
-        "redefining module Config (current version loaded from .../Elixir.Config.beam)",
+      message: "redefining module Config (current version loaded from .../Elixir.Config.beam)",
       position: 1
     }
 

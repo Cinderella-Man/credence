@@ -31,6 +31,12 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
   """
 
   use Credence.Pattern.Rule
+
+  # DSL-unsafe: turns `x |> Kernel.op(y)` into the infix `x op y`; inside Ash.Expr,
+  # Ecto.Query and Nx.Defn those operators are reinterpreted (or `Kernel.*` is
+  # forbidden), so the rewrite changes meaning.
+  @impl true
+  def unsafe_in_dsl, do: :all
   alias Credence.Issue
   alias Credence.RuleHelpers
 
@@ -42,7 +48,8 @@ defmodule Credence.Pattern.NoKernelOpInPipeline do
 
     {_ast, issues} =
       Macro.prewalk(ast, [], fn
-        {:|>, pipe_meta, [lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, meta, [_arg]}]} = node,
+        {:|>, pipe_meta, [lhs, {{:., _, [{:__aliases__, _, [:Kernel]}, op]}, meta, [_arg]}]} =
+            node,
         acc
         when op in @flagged_ops ->
           if unsafe_to_flatten?(node, lhs, pipe_meta, consumed) do

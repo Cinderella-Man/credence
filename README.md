@@ -151,6 +151,47 @@ config :credence, assumptions: :strict
 need (or `Credence.rule_status/1` for the same view across all three rounds).
 Full reference: the `Credence.Assumptions` moduledoc.
 
+## Macro DSLs (Ash, Ecto, Nx)
+
+Some macros re-read ordinary Elixir AST with **different meaning**. Inside
+`Ash.Expr.expr/1`, `!x` is *not* `not x` — it builds a query node the data layer
+can't translate. Inside an `Ecto.Query`, `!`, `&&` and `x == nil` are compile
+errors and only an allowlist of operators is permitted. Inside an `Nx` `defn`,
+`==`/`and`/`if` are element-wise tensor ops, and `case` isn't allowed at all. A
+rewrite that is correct in plain Elixir can therefore be wrong inside one of these
+blocks — and it still compiles, so the breakage is silent at runtime.
+
+Credence finds those blocks and **skips a rule inside them only when that rule's
+fix would change a construct the DSL reinterprets**. A rule that just rearranges
+structure (the large majority) keeps fixing inside `expr`/queries/`defn` as usual;
+only the handful whose fix flips an operator or reshapes control flow stand down,
+and only in the families where it actually diverges. Findings are suppressed there
+too — Credence won't report inside a block what it won't fix, so the "every
+Pattern rule fixes what it finds" promise still holds.
+
+Detection is mostly by call **shape**, not by import, so it works even when the
+macro arrives through a wrapper (`use MyAppWeb, :live_view`) or an alias — this
+holds for `expr`, `from(x in Y, …)`, binding-list queries (`where([p], …)`) and
+`defn`. The exception is Ash's ambiguous names that collide with ordinary
+functions (`filter`, `calculate`, `aggregate`): a bare call to one of these is
+treated as DSL only when the file directly `import`s/`use`s an `Ash.*` module (a
+strong same-file signal). If your Ash macros arrive purely through a wrapper that
+hides the import, name them via `dsl_macros:` below. The qualified forms
+(`Ash.Query.filter/2`) are always covered.
+
+This is a best-effort, known-DSL list (Ash's `expr` family, the `Ecto.Query`
+macros, `Nx` `defn`) — **not** a guarantee. A reinterpreting DSL it doesn't know
+about is not covered; name its macro(s) to have Credence treat their bodies as
+opaque:
+
+```elixir
+config :credence, dsl_macros: [:my_query_macro]
+```
+
+A rule declares which families its fix is unsafe in via `unsafe_in_dsl/0`
+(defaulting to `[]`, i.e. safe everywhere). Full reference: the
+`Credence.DslGuard` moduledoc.
+
 ## Writing your own rules
 
 Start by scaffolding the rule and its tests:
@@ -233,6 +274,16 @@ end
 Way A keeps the surrounding layout intact when several rules change the same
 file, so it's the better default. Way B is fine for a small, self-contained
 rewrite.
+
+If your fix flips an operator, reshapes control flow, or otherwise changes a
+construct that a macro DSL reinterprets (`!`/`&&`/`==`/`is_nil`/`if`/`case`/…),
+declare where it diverges so Credence skips it inside those blocks (see
+[Macro DSLs](#macro-dsls-ash-ecto-nx)):
+
+```elixir
+@impl true
+def unsafe_in_dsl, do: [:ash_expr, :nx_defn]  # or :all; defaults to [] (safe everywhere)
+```
 
 ### Syntax rules (for code that won't parse)
 

@@ -130,7 +130,8 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationCheckTest do
     end
 
     test "still flags a literal-ending capture &(&1 > 0)" do
-      assert [%Issue{}] = check(NoMapKeysOrValuesForIteration, "Enum.all?(Map.keys(m), &(&1 > 0))")
+      assert [%Issue{}] =
+               check(NoMapKeysOrValuesForIteration, "Enum.all?(Map.keys(m), &(&1 > 0))")
     end
   end
 end

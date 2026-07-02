@@ -73,20 +73,18 @@ defmodule Credence.Semantic.PreferKernelMaxOverLocal do
          true <- canonical_pair?(name, defps) do
       removed = remove_defp_arity2(ast, name)
 
-      cond do
-        # Removal must have actually dropped both canonical clauses before we
-        # requalify; otherwise we'd rewrite a surviving defp head.
-        defps_named(removed, name) != [] ->
+      # Removal must have actually dropped both canonical clauses before we
+      # requalify; otherwise we'd rewrite a surviving defp head.
+      if defps_named(removed, name) != [] do
+        source
+      else
+        transformed = qualify_calls(removed, name)
+
+        if transformed != ast and not has_reference?(transformed, name) do
+          Sourceror.to_string(transformed) <> "\n"
+        else
           source
-
-        true ->
-          transformed = qualify_calls(removed, name)
-
-          if transformed != ast and not has_reference?(transformed, name) do
-            Sourceror.to_string(transformed) <> "\n"
-          else
-            source
-          end
+        end
       end
     else
       _ -> source

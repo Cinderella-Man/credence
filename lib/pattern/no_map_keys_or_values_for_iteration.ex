@@ -494,7 +494,7 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
     :<>,
     :in,
     :|>,
-    :"..",
+    :..,
     :not,
     :!,
     :|

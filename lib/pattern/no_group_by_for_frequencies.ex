@@ -65,8 +65,11 @@ defmodule Credence.Pattern.NoGroupByForFrequencies do
           ]}
        ) do
     case count_collector(collector) do
-      {:ok, callback} -> if length_of_group_fn?(callback), do: {:ok, build_issue(meta)}, else: :error
-      :error -> :error
+      {:ok, callback} ->
+        if length_of_group_fn?(callback), do: {:ok, build_issue(meta)}, else: :error
+
+      :error ->
+        :error
     end
   end
 

@@ -68,6 +68,23 @@ defmodule Credence.Pattern.Rule do
   """
   @callback assumptions() :: [atom()]
 
+  @doc """
+  The reinterpreting-DSL families this rule's fix is **not** behaviour-preserving
+  inside. Returns a list of family atoms from `Credence.DslGuard.families/0`
+  (`:ash_expr`, `:ecto_query`, `:nx_defn`) or `:all`; `[]` (the default) means the
+  fix is plain-Elixir-structural and safe inside every DSL.
+
+  A macro DSL re-reads ordinary Elixir AST with different meaning (e.g. inside
+  `Ash.Expr.expr/1`, `!x` is not `not x`). A rule whose rewrite introduces, flips
+  or removes a construct that the DSL reinterprets gives a different runtime answer
+  there — while still compiling. Such a rule lists the families it diverges in, and
+  the engine then skips its findings/fixes inside those blocks (see
+  `Credence.DslGuard`). The classification is empirical: a rule is listed only when
+  its fix is shown to change a reinterpreted construct (comparison/boolean/control-
+  flow/nil form). Defaults to `[]`.
+  """
+  @callback unsafe_in_dsl() :: [atom()] | :all
+
   defmacro __using__(_opts) do
     quote do
       @behaviour Credence.Pattern.Rule
@@ -79,7 +96,10 @@ defmodule Credence.Pattern.Rule do
       @impl true
       def assumptions, do: []
 
-      defoverridable priority: 0, assumptions: 0
+      @impl true
+      def unsafe_in_dsl, do: []
+
+      defoverridable priority: 0, assumptions: 0, unsafe_in_dsl: 0
     end
   end
 end

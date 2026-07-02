@@ -103,8 +103,8 @@ defmodule Credence.Pattern.PreferGuardOverIf do
     case extract_if_else(body) do
       {:ok, condition} ->
         if splittable?(head, body, condition),
-           do: {:ok, meta[:line]},
-           else: :error
+          do: {:ok, meta[:line]},
+          else: :error
 
       :error ->
         :error
@@ -522,17 +522,17 @@ defmodule Credence.Pattern.PreferGuardOverIf do
   end
 
   defp safe_to_underscore?(name, used_names, counts, existing) do
-    not (name in used_names) and
-      # Leave an already-underscore-prefixed name (`_x`, `_`) alone — re-underscoring
-      # it into `__x` is not a conventional unused name.
+    # Leave an already-underscore-prefixed name (`_x`, `_`) alone — re-underscoring
+    # it into `__x` is not a conventional unused name.
+    # Non-linear pattern variable (appears more than once in the head): the
+    # repetition is a join/equality constraint, e.g. `f(x, x)`. Underscoring it
+    # changes the matched domain — leave it (an unused-var warning is harmless).
+    # Collision: `_name` already appears in the head, so underscoring `name`
+    # would create a `{_name, _name}`-style equality constraint that did not
+    # exist. Leave it.
+    name not in used_names and
       not String.starts_with?(Atom.to_string(name), "_") and
-      # Non-linear pattern variable (appears more than once in the head): the
-      # repetition is a join/equality constraint, e.g. `f(x, x)`. Underscoring it
-      # changes the matched domain — leave it (an unused-var warning is harmless).
       Map.get(counts, name, 0) == 1 and
-      # Collision: `_name` already appears in the head, so underscoring `name`
-      # would create a `{_name, _name}`-style equality constraint that did not
-      # exist. Leave it.
       not MapSet.member?(existing, :"_#{name}")
   end
 

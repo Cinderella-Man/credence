@@ -235,7 +235,7 @@ defmodule Credence.Pattern.NoCaseTrueFalse do
          {pat_b, body_b} <- extract_clause(clause_b) do
       ua = unwrap_pattern(pat_a)
       ub = unwrap_pattern(pat_b)
-      # The `->`/pattern of each clause may carry comments (e.g. a `# TODO`
+      # The `->`/pattern of each clause may carry comments (e.g. a note
       # before `false ->`). Rewriting to `if` drops the clause wrappers, so
       # carry those comments onto the body that moves into `do`/`else`.
       da = with_clause_comments(clause_a, body_a)

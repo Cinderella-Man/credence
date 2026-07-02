@@ -46,6 +46,13 @@ defmodule Credence.Pattern.NoCondTwoClauses do
   """
 
   use Credence.Pattern.Rule
+
+  # DSL-unsafe in Ash.Expr only: converting a 2-clause `cond` to `if` drops the
+  # complementary second guard, and under Ash's SQL 3-valued nil logic the two
+  # forms differ when an operand is nil. (Ecto forbids `cond`; in Nx.Defn `if` is
+  # exactly `cond ... true ->`, so it is equivalent there.)
+  @impl true
+  def unsafe_in_dsl, do: [:ash_expr]
   alias Credence.Issue
   alias Credence.RuleHelpers
 

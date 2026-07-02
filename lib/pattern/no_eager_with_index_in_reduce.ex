@@ -322,7 +322,7 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
   defp with_index_has_offset?(
          {:|>, _, [_deeper, {{:., _, [{:__aliases__, _, [:Enum]}, :with_index]}, _, args}]}
        ),
-       do: length(args) >= 1
+       do: args != []
 
   defp with_index_has_offset?({{:., _, [{:__aliases__, _, [:Enum]}, :with_index]}, _, args}),
     do: length(args) >= 2

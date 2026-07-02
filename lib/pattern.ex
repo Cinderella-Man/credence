@@ -2,7 +2,7 @@ defmodule Credence.Pattern do
   @moduledoc """
   Pattern phase — detects and fixes anti-patterns in Elixir code.
 
-  Delegates to the 117 rules implementing `Credence.Pattern.Rule` behaviour.
+  Delegates to the rules implementing the `Credence.Pattern.Rule` behaviour.
   Rules are discovered automatically and run in priority order (lower first),
   with module name as tiebreaker for determinism.
   """
@@ -16,10 +16,27 @@ defmodule Credence.Pattern do
 
     case Sourceror.parse_string(code_string) do
       {:ok, ast} ->
-        Enum.flat_map(rules(opts), & &1.check(ast, opts))
+        Enum.flat_map(rules(opts), fn rule -> reject_dsl_unfixable(rule, ast, opts) end)
 
       {:error, {meta, error_msg, token}} ->
         [parse_error_issue(Keyword.get(meta, :line), error_msg, token)]
+    end
+  end
+
+  # The DSL gate, analyze side. A finding is suppressed exactly when its own fix
+  # would be dropped by the fix-side gate — never report what we will not fix.
+  # Both gates derive from the SAME thing: `RuleHelpers.dsl_dropped_ranges/3`
+  # returns the patch ranges this rule's `fix_patches/2` lands inside an
+  # `unsafe_in_dsl/0` block (the exact patches `apply_rule_fix/3` drops). A
+  # finding inside one of those ranges has no surviving fix, so it is suppressed.
+  # The two gates therefore cannot disagree: same rule, same patches, same blocks.
+  # A rule with no DSL sensitivity returns `[]` and is untouched.
+  defp reject_dsl_unfixable(rule, ast, opts) do
+    issues = rule.check(ast, opts)
+
+    case Credence.RuleHelpers.dsl_dropped_ranges(rule, ast, opts) do
+      [] -> issues
+      dropped -> Enum.reject(issues, &Credence.DslGuard.line_in_ranges?(&1.meta[:line], dropped))
     end
   end
 

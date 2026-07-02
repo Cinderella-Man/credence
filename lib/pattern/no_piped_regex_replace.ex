@@ -25,6 +25,9 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
   def assumptions, do: []
 
   @impl true
+  def unsafe_in_dsl, do: []
+
+  @impl true
   def check(ast, _opts) do
     {_ast, issues} =
       Macro.prewalk(ast, [], fn

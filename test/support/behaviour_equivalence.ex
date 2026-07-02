@@ -225,7 +225,9 @@ defmodule Credence.BehaviourEquivalence do
     # range `0..-1` on a degenerate input) — not a compiler diagnostic, so
     # `with_diagnostics` cannot catch it. Capture and discard `:stderr` around the
     # execution so these expected edge-case warnings don't litter the suite.
-    {outcome, _stderr} = ExUnit.CaptureIO.with_io(:standard_error, fn -> run_outcome(thunk, compare_messages?) end)
+    {outcome, _stderr} =
+      ExUnit.CaptureIO.with_io(:standard_error, fn -> run_outcome(thunk, compare_messages?) end)
+
     outcome
   end
 
