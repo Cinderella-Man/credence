@@ -158,7 +158,9 @@ defmodule Credence.Syntax.FixDivRem do
   # Left operand = everything between `=` (or line start) and the operator.
   # Right operand = everything after the operator to end of expression.
   defp rewrite_infix(line, op) do
-    pattern = ~r/^(\s*(?:\w+\s*=\s*)?)(.+?)\s+#{op}\s+(.+?)(\s*$)/
+    # Right operand: a simple word/token OR a parenthesized expression.
+    # Stops before binary arithmetic operators (e.g. `div 2 - n` → right = `2`).
+    pattern = ~r/^(\s*(?:\w+\s*=\s*)?)(.+?)\s+#{op}\s+(\w+|\([^)]*\))(.*)$/
 
     case Regex.run(pattern, line) do
       [_full, prefix, left, right, trailing] ->
@@ -233,21 +235,23 @@ defmodule Credence.Syntax.FixDivRem do
 
   # Scan forward from after the op to find the end of the right operand.
   # Returns the position after the last char of the right operand.
+  # Stops at `,`, `)`, end-of-string, or a binary arithmetic operator at depth 0.
+  # Tracks `seen_value` to distinguish unary `-`/`+` (e.g. `-2`) from binary ones.
   defp find_right_end(line, start) do
-    do_find_right_end(line, start, byte_size(line), 0, start)
+    do_find_right_end(line, start, byte_size(line), 0, false)
   end
 
-  defp do_find_right_end(_line, pos, len, _depth, _best) when pos >= len, do: pos
+  defp do_find_right_end(_line, pos, len, _depth, _seen_value) when pos >= len, do: pos
 
-  defp do_find_right_end(line, pos, len, depth, _best) do
+  defp do_find_right_end(line, pos, len, depth, seen_value) do
     char = :binary.at(line, pos)
 
     case char do
       ?( ->
-        do_find_right_end(line, pos + 1, len, depth + 1, pos + 1)
+        do_find_right_end(line, pos + 1, len, depth + 1, true)
 
       ?) when depth > 0 ->
-        do_find_right_end(line, pos + 1, len, depth - 1, pos + 1)
+        do_find_right_end(line, pos + 1, len, depth - 1, true)
 
       ?) when depth == 0 ->
         # Unmatched `)` — this ends the arg
@@ -257,8 +261,16 @@ defmodule Credence.Syntax.FixDivRem do
         # Comma at depth 0 — this ends the arg
         pos
 
+      # Binary arithmetic operator at depth 0 — right operand ends here
+      c when depth == 0 and seen_value and (c == ?+ or c == ?- or c == ?* or c == ?/) ->
+        pos
+
+      # Unary +/- before any value — part of the right operand (e.g. -2)
+      c when (c == ?+ or c == ?-) and not seen_value ->
+        do_find_right_end(line, pos + 1, len, depth, false)
+
       _ ->
-        do_find_right_end(line, pos + 1, len, depth, pos + 1)
+        do_find_right_end(line, pos + 1, len, depth, true)
     end
   end
 
