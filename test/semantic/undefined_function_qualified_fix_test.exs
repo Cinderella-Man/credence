@@ -846,6 +846,86 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
   end
 
+  # ── require module hint ────────────────────────────────────────
+
+  @require_msg "Integer.is_even/1 is undefined or private. There is a macro with the same name and arity. Be sure to require Integer"
+
+  describe "Integer.is_even/1 — Be sure to require Integer → insert require" do
+    test "direct call in module" do
+      input = """
+      defmodule Solution do
+        @spec check(integer) :: boolean
+        def check(value) do
+          Integer.is_even(value)
+        end
+      end
+      """
+
+      expected = """
+      defmodule Solution do
+        require Integer
+
+        @spec check(integer) :: boolean
+        def check(value) do
+          Integer.is_even(value)
+        end
+      end
+      """
+
+      confirm_fix(fix(input, @require_msg, 4), expected)
+    end
+
+    test "does not duplicate existing require" do
+      input = """
+      defmodule Solution do
+        require Integer
+
+        def check(value) do
+          Integer.is_even(value)
+        end
+      end
+      """
+
+      confirm_fix(fix(input, @require_msg, 5), input)
+    end
+
+    test "capture form still uses lambda rewrite without require hint" do
+      confirm_fix(
+        fix(
+          "{evens, odds} = Enum.split_with(list, &Integer.is_even/1)",
+          "Integer.is_even/1 is undefined or private"
+        ),
+        "{evens, odds} = Enum.split_with(list, &(Integer.is_even(&1)))"
+      )
+    end
+
+    test "nested module inserts require in innermost" do
+      input = """
+      defmodule Outer do
+        defmodule Inner do
+          def check(value) do
+            Integer.is_even(value)
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule Outer do
+        defmodule Inner do
+          require Integer
+
+          def check(value) do
+            Integer.is_even(value)
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(input, @require_msg, 4), expected)
+    end
+  end
+
   # ── no-ops ─────────────────────────────────────────────────────
 
   describe "qualified: no-ops" do

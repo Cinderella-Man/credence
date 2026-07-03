@@ -151,7 +151,7 @@ defmodule Credence.Semantic.UndefinedFunction do
 
     case parse_diagnostic(msg) do
       {:qualified, {mod, fun, arity}} ->
-        fix_qualified(source, line_no, mod, fun, arity)
+        fix_qualified(source, line_no, mod, fun, arity, msg)
 
       {:local, {name, arity}} ->
         fix_local(source, line_no, name, arity)
@@ -161,7 +161,7 @@ defmodule Credence.Semantic.UndefinedFunction do
     end
   end
 
-  defp fix_qualified(source, line_no, mod, fun, arity) do
+  defp fix_qualified(source, line_no, mod, fun, arity, msg) do
     case Map.get(@qualified_replacements, {mod, fun, arity}) do
       {:rename, new_mod, new_fun} ->
         replace_first_on_line(source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}")
@@ -195,8 +195,17 @@ defmodule Credence.Semantic.UndefinedFunction do
         replace_drop_module(source, line_no, mod, fun, new_fun)
 
       :capture_to_lambda ->
-        # &Module.fun/arity → &(Module.fun(&1, &2, ..., &N))
-        rewrite_capture_to_lambda(source, line_no, mod, fun, arity)
+        # When the diagnostic includes "Be sure to require <Module>", the call is a
+        # direct invocation of a macro (e.g. Integer.is_even(value)), not a capture.
+        # Insert `require <Module>` at the top of the enclosing module body.
+        case parse_require_hint(msg) do
+          {:ok, require_mod} ->
+            insert_require(source, require_mod, line_no)
+
+          nil ->
+            # &Module.fun/arity → &(Module.fun(&1, &2, ..., &N))
+            rewrite_capture_to_lambda(source, line_no, mod, fun, arity)
+        end
 
       nil ->
         case Credence.FunctionMatcher.suggest(source, mod, fun, arity, visibility: :public_only) do
@@ -241,6 +250,13 @@ defmodule Credence.Semantic.UndefinedFunction do
       ref = parse_qualified_ref(msg) -> {:qualified, ref}
       ref = parse_local_ref(msg) -> {:local, ref}
       true -> nil
+    end
+  end
+
+  defp parse_require_hint(msg) do
+    case Regex.run(~r/Be sure to require (\w+)/, msg) do
+      [_, module_name] -> {:ok, module_name}
+      _ -> nil
     end
   end
 
@@ -334,6 +350,52 @@ defmodule Credence.Semantic.UndefinedFunction do
     new = "&(#{mod}.#{fun}(#{args}))"
 
     replace_first_on_line(source, line_no, old, new)
+  end
+
+  #
+  # Insert `require <Module>` at the top of the enclosing defmodule body.
+  # Skips if the source already contains `require <Module>`.
+
+  defp insert_require(source, module_name, line_no) do
+    if String.contains?(source, "require #{module_name}") do
+      source
+    else
+      lines = String.split(source, "\n")
+
+      case find_enclosing_defmodule(lines, line_no) do
+        {:ok, index, indent} ->
+          require_line = "#{indent}  require #{module_name}"
+          {before, rest} = Enum.split(lines, index + 1)
+          new_lines = before ++ [require_line, ""] ++ rest
+          Enum.join(new_lines, "\n")
+
+        :not_found ->
+          source
+      end
+    end
+  end
+
+  defp find_enclosing_defmodule(lines, line_no) do
+    # Scan backwards from line_no to find the nearest defmodule ... do
+    start = max(line_no - 2, 0)
+
+    Enum.reduce_while(start..0//-1, :not_found, fn i, acc ->
+      line = Enum.at(lines, i)
+
+      if line && Regex.match?(~r/^\s*defmodule\s+.*\bdo\s*$/, line) do
+        indent = get_indent(line)
+        {:halt, {:ok, i, indent}}
+      else
+        {:cont, acc}
+      end
+    end)
+  end
+
+  defp get_indent(line) do
+    case Regex.run(~r/^(\s*)/, line) do
+      [_, indent] -> indent
+      _ -> ""
+    end
   end
 
   defp replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text) do
