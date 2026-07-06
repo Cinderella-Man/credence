@@ -97,7 +97,7 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntax do
   defp do_find_close(line, pos, _depth) when pos >= byte_size(line), do: nil
 
   defp do_find_close(line, pos, depth) do
-    <<_::binary-size(pos), char::binary-1, _::binary>> = line
+    <<_::binary-size(^pos), char::binary-1, _::binary>> = line
 
     case char do
       "[" ->
@@ -109,7 +109,7 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntax do
           next_pos = pos + 1
 
           if next_pos < byte_size(line) do
-            <<_::binary-size(next_pos), next_char::binary-1, _::binary>> = line
+            <<_::binary-size(^next_pos), next_char::binary-1, _::binary>> = line
 
             if next_char == ")" do
               pos

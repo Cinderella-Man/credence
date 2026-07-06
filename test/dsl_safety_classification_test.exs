@@ -55,6 +55,8 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "prefer_pattern_match_over_conditional_in_recursive_count" =>
       "matches only a def whose body is recursive list counting",
     "prefer_lookup_for_digit_conversion" => "matches and rewrites only module-level defp clauses",
+    "prefer_stdlib_gcd" =>
+      "removes module-level Euclidean defp gcd/2 clauses and rewrites a call site; never rewrites a rem expression inside a DSL",
     "no_case_on_param_dispatch" =>
       "matches only a def/defp body that is `case param`; splits to clause heads, never inside a DSL expression",
     # Match an EXISTING `case` over a subject (booleans, tuples, Map results,

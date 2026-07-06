@@ -147,7 +147,6 @@ defmodule Credence.Pattern.NoListPopAtForAccess do
   defp unwrap_int(_), do: nil
 
   defp get_meta({:elem, meta, _}), do: meta
-  defp get_meta(_), do: []
 
   defp build_issue(0, meta) do
     %Issue{
