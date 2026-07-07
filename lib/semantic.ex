@@ -24,12 +24,12 @@ defmodule Credence.Semantic do
       {:ok, diagnostics} ->
         diagnostics
         |> Enum.filter(&(&1.severity == :warning))
-        |> Enum.flat_map(&match_rules/1)
+        |> Enum.flat_map(&match_rules(&1, source))
 
       {:error, diagnostics} ->
         diagnostics
         |> Enum.filter(&(&1.severity == :error))
-        |> Enum.flat_map(&match_rules/1)
+        |> Enum.flat_map(&match_rules(&1, source))
     end
   end
 
@@ -165,10 +165,25 @@ defmodule Credence.Semantic do
   defp position_sort_key(%{position: line}) when is_integer(line), do: {line, 0}
   defp position_sort_key(_), do: {0, 0}
 
-  defp match_rules(diagnostic) do
+  defp match_rules(diagnostic, source) do
     case find_matching_rule(diagnostic) do
-      nil -> []
-      rule -> [rule.to_issue(diagnostic)]
+      nil ->
+        []
+
+      rule ->
+        if should_report?(rule, diagnostic, source) do
+          [rule.to_issue(diagnostic)]
+        else
+          []
+        end
+    end
+  end
+
+  defp should_report?(rule, diagnostic, source) do
+    if function_exported?(rule, :should_report?, 2) do
+      rule.should_report?(diagnostic, source)
+    else
+      true
     end
   end
 
