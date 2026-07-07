@@ -5,7 +5,7 @@ defmodule Credence.Semantic.FixNestedModuleShortReferenceFixTest do
 
   alias Credence.Semantic.FixNestedModuleShortReference
 
-  @message "redefining module WorkStealQueue (current version loaded from _build/test/lib/workspace/ebin/Elixir.WorkStealQueue.beam)"
+  @message "redefining module WorkStealQueue"
 
   defp fix(source, message, line \\ 1) do
     FixNestedModuleShortReference.fix(source, %{

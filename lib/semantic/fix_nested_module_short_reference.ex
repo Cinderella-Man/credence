@@ -18,7 +18,9 @@ defmodule Credence.Semantic.FixNestedModuleShortReference do
 
   @impl true
   def match?(%{message: msg}) when is_binary(msg) do
-    String.contains?(msg, "redefining module") and not standard_library_path?(msg)
+    String.contains?(msg, "redefining module") and
+      not standard_library_path?(msg) and
+      not recompilation_artifact?(msg)
   end
 
   def match?(_), do: false
@@ -33,6 +35,14 @@ defmodule Credence.Semantic.FixNestedModuleShortReference do
       String.contains?(msg, "/lib/ex_unit/ebin/") or
       String.contains?(msg, "/lib/eex/ebin/") or
       String.contains?(msg, "/lib/logger/ebin/")
+  end
+
+  # When a module was already compiled in a prior pass, the compiler emits a
+  # "redefining module X (current version loaded from .../ebin/Elixir.X.beam)"
+  # diagnostic. These are normal recompilation artifacts, not actual nested-
+  # module reference problems.
+  defp recompilation_artifact?(msg) do
+    String.contains?(msg, "current version loaded from")
   end
 
   @impl true

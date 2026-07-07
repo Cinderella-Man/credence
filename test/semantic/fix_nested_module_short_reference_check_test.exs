@@ -5,6 +5,16 @@ defmodule Credence.Semantic.FixNestedModuleShortReferenceCheckTest do
 
   @real_diag %{
     severity: :warning,
+    message: "redefining module WorkStealQueue",
+    position: 1,
+    file: "work_steal_queue.ex",
+    stacktrace: [{WorkStealQueue, :__MODULE__, 0, [file: "work_steal_queue.ex", line: 1]}],
+    source: "work_steal_queue.ex",
+    span: nil
+  }
+
+  @recompilation_diag %{
+    severity: :warning,
     message:
       "redefining module WorkStealQueue (current version loaded from _build/test/lib/workspace/ebin/Elixir.WorkStealQueue.beam)",
     position: 1,
@@ -21,6 +31,10 @@ defmodule Credence.Semantic.FixNestedModuleShortReferenceCheckTest do
   test "ignores unrelated diagnostics" do
     diag = %{severity: :warning, message: "unrelated", position: {1, 1}}
     refute FixNestedModuleShortReference.match?(diag)
+  end
+
+  test "ignores recompilation artifacts" do
+    refute FixNestedModuleShortReference.match?(@recompilation_diag)
   end
 
   test "attributes the issue to this rule" do
