@@ -53,4 +53,16 @@ defmodule Credence.Syntax.NoKeywordInsideTupleBraceAnalyzeTest do
 
     assert analyze(input) == []
   end
+
+  test "leaves struct patterns with nested maps alone" do
+    input = ~S"""
+    defmodule PlugTest do
+      def extract_user(%Plug.Conn{assigns: %{user_id: user_id}}) do
+        user_id
+      end
+    end
+    """
+
+    assert analyze(input) == []
+  end
 end

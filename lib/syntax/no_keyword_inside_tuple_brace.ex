@@ -50,11 +50,14 @@ defmodule Credence.Syntax.NoKeywordInsideTupleBrace do
   def fix(source) do
     # Replace `{atom_key: …}` with `%{atom_key: …}`. The regex matches a `{`
     # that is NOT already preceded by `%` (so valid `%{…}` maps are left alone)
-    # and whose first non-whitespace content looks like a keyword pair
-    # (`atom_key:` followed by whitespace).
+    # and is NOT preceded by identifier characters (letters, digits, `_`, `.`),
+    # which would indicate struct syntax `%Module{…}`.
+    #
+    # In Elixir struct patterns like `%Plug.Conn{assigns: %{...}}`, the `{` after
+    # `Conn` must not be touched — it is struct syntax, not a tuple brace.
     #
     # A single `{atom: val}` is also illegal inside Elixir braces, so we do not
     # require a comma — any `{atom_key: …}` qualifies.
-    Regex.replace(~r/(?<!%)\{(\s*[a-z_]\w*:\s)/, source, "%{\\1")
+    Regex.replace(~r/(?<![A-Za-z0-9._%])\{(\s*[a-z_]\w*:\s)/, source, "%{\\1")
   end
 end

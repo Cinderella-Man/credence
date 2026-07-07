@@ -67,4 +67,17 @@ defmodule Credence.Syntax.NoKeywordInsideTupleBraceFixTest do
 
     assert valid_syntax?(fix(input))
   end
+
+  test "fix does not mangle struct patterns with nested maps" do
+    input = ~S"""
+    defmodule PlugTest do
+      def extract_user(%Plug.Conn{assigns: %{user_id: user_id}}) do
+        user_id
+      end
+    end
+    """
+
+    # The fix must not touch struct syntax — applying it to valid code must be a no-op
+    confirm_fix(fix(input), input)
+  end
 end
