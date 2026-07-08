@@ -40,6 +40,18 @@ defmodule Credence.Semantic.UnusedVariableTest do
       diag = %{severity: :warning, message: "some other warning", position: {5, 6}}
       refute UnusedVariable.match?(diag)
     end
+
+    test "matches 'appears more than once in a match' warning" do
+      diag = %{
+        severity: :warning,
+        message:
+          "the underscored variable \"_ref\" appears more than once in a match. " <>
+            "This means the pattern will only match if all \"_ref\" bind to the same value.",
+        position: {266, 51}
+      }
+
+      assert UnusedVariable.match?(diag)
+    end
   end
 
   describe "fix/2 (unit)" do
@@ -126,6 +138,85 @@ defmodule Credence.Semantic.UnusedVariableTest do
 
       confirm_fix(UnusedVariable.fix(source, diag), "_x = 1")
     end
+
+    test "collision: _var already on line → appends numeric suffix" do
+      source = "fn {_ref, {pid, ref, task_ref}} -> is_nil(task_ref) end"
+
+      diag = %{
+        severity: :warning,
+        message: """
+        variable "ref" is unused
+        """,
+        position: {1, 17}
+      }
+
+      expected = "fn {_ref, {pid, _ref_1, task_ref}} -> is_nil(task_ref) end"
+      confirm_fix(UnusedVariable.fix(source, diag), expected)
+    end
+
+    test "collision: _var_1 already on line → appends _var_2" do
+      source = "fn {_ref, {_ref_1, ref}} -> :ok end"
+
+      diag = %{
+        severity: :warning,
+        message: """
+        variable "ref" is unused
+        """,
+        position: {1, 20}
+      }
+
+      expected = "fn {_ref, {_ref_1, _ref_2}} -> :ok end"
+      confirm_fix(UnusedVariable.fix(source, diag), expected)
+    end
+
+    test "no collision: _var not on line → simple underscore prefix" do
+      source = "fn {ref, task_ref} -> is_nil(task_ref) end"
+
+      diag = %{
+        severity: :warning,
+        message: """
+        variable "ref" is unused
+        """,
+        position: {1, 5}
+      }
+
+      expected = "fn {_ref, task_ref} -> is_nil(task_ref) end"
+      confirm_fix(UnusedVariable.fix(source, diag), expected)
+    end
+
+    test "appears more than once: renames one occurrence with suffix" do
+      source = "fn {_ref, {_pid, _ref, task_ref}} -> nil end"
+
+      diag = %{
+        severity: :warning,
+        message:
+          "the underscored variable \"_ref\" appears more than once in a match. " <>
+            "This means the pattern will only match if all \"_ref\" bind to the same value.",
+        position: {1, 18}
+      }
+
+      expected = "fn {_ref, {_pid, _ref_1, task_ref}} -> nil end"
+      confirm_fix(UnusedVariable.fix(source, diag), expected)
+    end
+
+    test "appears more than once: VERBATIM real diagnostic" do
+      source = "fn {_ref, {_pid, _ref, task_ref}} -> nil end"
+
+      diag = %{
+        severity: :warning,
+        message:
+          "the underscored variable \"_ref\" appears more than once in a match. " <>
+            "This means the pattern will only match if all \"_ref\" bind to the same value. " <>
+            "If this is the intended behaviour, please remove the leading underscore from the " <>
+            "variable name, otherwise give the variables different names",
+        position: {1, 18},
+        file: "credence_check.ex",
+        source: "credence_check.ex"
+      }
+
+      expected = "fn {_ref, {_pid, _ref_1, task_ref}} -> nil end"
+      confirm_fix(UnusedVariable.fix(source, diag), expected)
+    end
   end
 
   describe "to_issue/1" do
@@ -142,6 +233,21 @@ defmodule Credence.Semantic.UnusedVariableTest do
       assert issue.rule == :unused_variable
       assert issue.meta.line == 7
       assert issue.message =~ "foo"
+    end
+
+    test "builds issue for 'appears more than once' diagnostic" do
+      diag = %{
+        severity: :warning,
+        message:
+          "the underscored variable \"_ref\" appears more than once in a match. " <>
+            "This means the pattern will only match if all \"_ref\" bind to the same value.",
+        position: {266, 51}
+      }
+
+      issue = UnusedVariable.to_issue(diag)
+      assert issue.rule == :unused_variable
+      assert issue.meta.line == 266
+      assert issue.message =~ "_ref"
     end
   end
 
@@ -213,6 +319,22 @@ defmodule Credence.Semantic.UnusedVariableTest do
       issues = Credence.Semantic.analyze(source)
       unused = Enum.filter(issues, &(&1.rule == :unused_variable))
       assert unused == []
+    end
+
+    test "collision: renames ref to _ref_1 when _ref already exists in pattern" do
+      source = """
+      defmodule CollisionInteg do
+        def f({_ref, ref}), do: :ok
+      end
+      """
+
+      expected = """
+      defmodule CollisionInteg do
+        def f({_ref, _ref_1}), do: :ok
+      end
+      """
+
+      confirm_fix(Credence.Semantic.fix(source), expected)
     end
   end
 

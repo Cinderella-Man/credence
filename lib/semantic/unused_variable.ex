@@ -33,7 +33,8 @@ defmodule Credence.Semantic.UnusedVariable do
 
   @impl true
   def match?(%{severity: :warning, message: msg}) do
-    String.match?(msg, ~r/variable ".*" is unused/)
+    String.match?(msg, ~r/variable ".*" is unused/) or
+      String.match?(msg, ~r/the underscored variable ".*" appears more than once in a match/)
   end
 
   def match?(_), do: false
@@ -50,10 +51,23 @@ defmodule Credence.Semantic.UnusedVariable do
   @impl true
   def fix(source, %{message: msg, position: position}) do
     case extract_variable_name(msg) do
-      nil -> source
-      "_" <> _ -> source
-      var_name -> apply_underscore(source, var_name, position)
+      nil ->
+        source
+
+      "_" <> _ = var_name ->
+        if appears_more_than_once?(msg) do
+          apply_rename_with_suffix(source, var_name, position)
+        else
+          source
+        end
+
+      var_name ->
+        apply_underscore(source, var_name, position)
     end
+  end
+
+  defp appears_more_than_once?(msg) do
+    String.contains?(msg, "appears more than once in a match")
   end
 
   defp extract_line({line, _col}) when is_integer(line), do: line
@@ -63,7 +77,12 @@ defmodule Credence.Semantic.UnusedVariable do
   defp extract_variable_name(msg) do
     case Regex.run(~r/variable "([^"]+)" is unused/, msg) do
       [_, name] -> name
-      _ -> nil
+
+      _ ->
+        case Regex.run(~r/the underscored variable "([^"]+)" appears more than once/, msg) do
+          [_, name] -> name
+          _ -> nil
+        end
     end
   end
 
@@ -74,7 +93,8 @@ defmodule Credence.Semantic.UnusedVariable do
       offset = col - 1
 
       if at_standalone_token?(line, offset, var_name) do
-        insert_underscore_at(line, offset)
+        new_name = unique_underscore_name(line, var_name)
+        replace_token_at(line, offset, var_name, new_name)
       else
         line
       end
@@ -91,6 +111,52 @@ defmodule Credence.Semantic.UnusedVariable do
 
   defp apply_underscore(source, _var_name, _position), do: source
 
+  # "appears more than once" — rename one occurrence with a numeric suffix.
+  defp apply_rename_with_suffix(source, var_name, {line_no, col})
+       when is_integer(line_no) and is_integer(col) do
+    rewrite_line(source, line_no, fn line ->
+      offset = col - 1
+
+      if at_standalone_token?(line, offset, var_name) do
+        "_" <> base = var_name
+        new_name = next_available_name(line, base, 1)
+        replace_token_at(line, offset, var_name, new_name)
+      else
+        line
+      end
+    end)
+  end
+
+  defp apply_rename_with_suffix(source, var_name, {line_no, _}) when is_integer(line_no) do
+    rewrite_line(source, line_no, fn line ->
+      case standalone_offsets(line, var_name) do
+        [first | _] ->
+          "_" <> base = var_name
+          new_name = next_available_name(line, base, 1)
+          replace_token_at(line, first, var_name, new_name)
+
+        _ ->
+          line
+      end
+    end)
+  end
+
+  defp apply_rename_with_suffix(source, var_name, line_no) when is_integer(line_no) do
+    rewrite_line(source, line_no, fn line ->
+      case standalone_offsets(line, var_name) do
+        [first | _] ->
+          "_" <> base = var_name
+          new_name = next_available_name(line, base, 1)
+          replace_token_at(line, first, var_name, new_name)
+
+        _ ->
+          line
+      end
+    end)
+  end
+
+  defp apply_rename_with_suffix(source, _, _), do: source
+
   # Insert `_` only if `var_name` appears exactly once on the line as
   # a standalone identifier — protects against the bug class where
   # the var name is also a substring of a string key, atom key, or
@@ -98,8 +164,12 @@ defmodule Credence.Semantic.UnusedVariable do
   defp rewrite_unambiguous(source, line_no, var_name) do
     rewrite_line(source, line_no, fn line ->
       case standalone_offsets(line, var_name) do
-        [single] -> insert_underscore_at(line, single)
-        _ -> line
+        [single] ->
+          new_name = unique_underscore_name(line, var_name)
+          replace_token_at(line, single, var_name, new_name)
+
+        _ ->
+          line
       end
     end)
   end
@@ -136,10 +206,37 @@ defmodule Credence.Semantic.UnusedVariable do
       not followed_by_word_char?(line, offset + name_size)
   end
 
-  defp insert_underscore_at(line, offset) do
+  # Build a unique underscore-prefixed name that doesn't collide with
+  # existing bindings on the line.
+  defp unique_underscore_name(line, var_name) do
+    target = "_" <> var_name
+
+    if has_standalone_occurrence?(line, target) do
+      next_available_name(line, var_name, 1)
+    else
+      target
+    end
+  end
+
+  defp next_available_name(line, base, n) do
+    candidate = "_#{base}_#{n}"
+
+    if has_standalone_occurrence?(line, candidate) do
+      next_available_name(line, base, n + 1)
+    else
+      candidate
+    end
+  end
+
+  defp has_standalone_occurrence?(line, name) do
+    standalone_offsets(line, name) != []
+  end
+
+  defp replace_token_at(line, offset, old_name, new_name) do
     prefix = binary_part(line, 0, offset)
-    suffix = binary_part(line, offset, byte_size(line) - offset)
-    prefix <> "_" <> suffix
+    suffix_start = offset + byte_size(old_name)
+    suffix = binary_part(line, suffix_start, byte_size(line) - suffix_start)
+    prefix <> new_name <> suffix
   end
 
   defp preceded_by_word_char?(_line, 0), do: false
