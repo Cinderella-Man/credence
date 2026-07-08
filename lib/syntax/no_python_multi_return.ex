@@ -304,10 +304,12 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
             new_depth = max(depth - 1, 0)
             {segs, cur ++ [ch], new_depth, nil, tail}
 
-          # Bare comma at depth 0 — split here unless a keyword key or arrow follows
+          # Bare comma at depth 0 — split here unless a keyword key, arrow,
+          # or function-call-without-parens precedes it.
           ch == ?, and depth == 0 ->
-            if keyword_or_arrow_ahead?(remaining) do
-              # Keep comma with current segment (keyword entry or clause pattern)
+            if keyword_or_arrow_ahead?(remaining) or function_call_before?(cur) do
+              # Keep comma with current segment (keyword entry, clause pattern,
+              # or paren-less function call like `raise ArgumentError, "msg"`)
               {segs, cur ++ [ch], 0, nil, tail}
             else
               {segs ++ [cur], [], 0, nil, tail}
@@ -347,6 +349,35 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
 
       _ ->
         arrow_ahead?(after_ws)
+    end
+  end
+
+  # Returns true when the accumulated text before a depth-zero comma starts
+  # with a lowercase identifier followed by whitespace and then content (not
+  # `=`).  This indicates a paren-less function call, e.g.:
+  #
+  #     raise ArgumentError, "msg"  →  current = 'raise ArgumentError'
+  #     send dest, msg              →  current = 'send dest'
+  #
+  # Without this check the rule would wrap these in a tuple, producing
+  # `{raise ArgumentError, "msg"}` which is a syntax error.
+  defp function_call_before?(current_chars) do
+    case Enum.drop_while(current_chars, &(&1 == ?\s or &1 == ?\t)) do
+      [ch | rest] when ch in ?a..?z or ch == ?_ ->
+        # Consume the identifier (letters, digits, underscores, dots)
+        {_id, after_id} = Enum.split_while([ch | rest], fn c ->
+          c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_ or c == ?.
+        end)
+        # Skip whitespace after the identifier
+        after_ws = Enum.drop_while(after_id, &(&1 == ?\s or &1 == ?\t))
+        # Must have content after the identifier, and it must not be an
+        # assignment (which would indicate `var = expr, ...` not a function call)
+        case after_ws do
+          [] -> false
+          [?= | _] -> false
+          _ -> true
+        end
+      _ -> false
     end
   end
 

@@ -177,4 +177,29 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert [%Issue{rule: :no_python_multi_return, meta: %{line: 6}}] = analyze(code)
   end
+
+  test "does not flag raise with two arguments" do
+    code = """
+    defmodule NoPythonMultiReturnOverFire do
+      use GenServer
+
+      def init(opts) do
+        threshold = Keyword.get(opts, :threshold, 5.0)
+
+        unless is_number(threshold) and threshold > 0 do
+          raise ArgumentError, "threshold must be positive"
+        end
+
+        state = %{
+          threshold: threshold,
+          streams: %{}
+        }
+
+        {:ok, state}
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
 end

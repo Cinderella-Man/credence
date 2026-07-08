@@ -214,4 +214,29 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
     confirm_fix(fix(input), expected)
   end
+
+  test "does not modify raise with two arguments" do
+    input = """
+    defmodule NoPythonMultiReturnOverFire do
+      use GenServer
+
+      def init(opts) do
+        threshold = Keyword.get(opts, :threshold, 5.0)
+
+        unless is_number(threshold) and threshold > 0 do
+          raise ArgumentError, "threshold must be positive"
+        end
+
+        state = %{
+          threshold: threshold,
+          streams: %{}
+        }
+
+        {:ok, state}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end
