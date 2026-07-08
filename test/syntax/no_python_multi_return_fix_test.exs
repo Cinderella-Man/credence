@@ -59,4 +59,44 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
     assert valid_syntax?(fix(input))
   end
+
+  test "does not modify map keyword entries" do
+    input = """
+    defmodule MapKeywords do
+      def build do
+        name = get_name()
+        %{name: name, age: 30}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify line comments" do
+    input = """
+    defmodule Comments do
+      # a, b, c
+      def foo, do: :ok
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify catch-clause arrows" do
+    input = """
+    defmodule CatchClause do
+      def run do
+        try do
+          risky()
+        catch
+          :exit, reason -> {:error, reason}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end

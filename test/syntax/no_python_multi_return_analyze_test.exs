@@ -33,4 +33,44 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert analyze(code) == []
   end
+
+  test "does not flag map keyword entries" do
+    code = """
+    defmodule MapKeywords do
+      def build do
+        name = get_name()
+        %{name: name, age: 30}
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag line comments" do
+    code = """
+    defmodule Comments do
+      # a, b, c
+      def foo, do: :ok
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag catch-clause arrows" do
+    code = """
+    defmodule CatchClause do
+      def run do
+        try do
+          risky()
+        catch
+          :exit, reason -> {:error, reason}
+        end
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
 end
