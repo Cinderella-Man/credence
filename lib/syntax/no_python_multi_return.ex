@@ -24,41 +24,214 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   @impl true
   def analyze(source) do
     source
+    |> find_bare_comma_lines()
+    |> Enum.map(fn line_no ->
+      %Issue{
+        rule: :no_python_multi_return,
+        message:
+          "Bare comma multi-return is not valid Elixir. " <>
+            "Wrap expressions in a tuple `{a, b}` instead.",
+        meta: %{line: line_no}
+      }
+    end)
+  end
+
+  @impl true
+  def fix(source) do
+    flagged = MapSet.new(find_bare_comma_lines(source))
+
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.map_join("\n", fn {line, line_no} ->
+      if MapSet.member?(flagged, line_no) do
+        fix_line(line)
+      else
+        line
+      end
+    end)
+  end
+
+  # Walk the entire source to find lines that have bare commas at global
+  # depth 0.  This avoids the false-positive where a comma inside a
+  # multi-line `%{}`, `[]`, or `()` is treated as depth-0 because each
+  # line was previously analysed in isolation.
+  defp find_bare_comma_lines(source) do
+    line_depths = compute_line_start_depths(source)
+
+    source
     |> String.split("\n")
     |> Enum.with_index(1)
     |> Enum.flat_map(fn {line, line_no} ->
-      if bare_comma_at_depth_zero?(line) do
-        [
-          %Issue{
-            rule: :no_python_multi_return,
-            message:
-              "Bare comma multi-return is not valid Elixir. " <>
-                "Wrap expressions in a tuple `{a, b}` instead.",
-            meta: %{line: line_no}
-          }
-        ]
+      start_depth = Map.get(line_depths, line_no, 0)
+
+      if start_depth == 0 and
+           not comment_line?(line) and
+           not has_left_arrow_at_depth_zero?(line) and
+           has_bare_comma?(line) do
+        [line_no]
       else
         []
       end
     end)
   end
 
-  @impl true
-  def fix(source) do
+  # ── Cross-line depth tracking ──────────────────────────────────────────
+
+  # Returns %{line_no => depth_at_start_of_line} by walking the entire source,
+  # properly accounting for string literals and comments.
+  defp compute_line_start_depths(source) do
     source
-    |> String.split("\n")
-    |> Enum.map_join("\n", &fix_line/1)
+    |> String.to_charlist()
+    |> walk_depths(%{1 => 0}, 0, 1, nil)
   end
 
-  # Returns true when `line` contains a comma at delimiter-nesting depth 0
-  # (outside parens, brackets, braces, strings, and heredocs).
-  defp bare_comma_at_depth_zero?(line) do
-    not comment_line?(line) and
-      (line
-       |> split_at_depth_zero_commas()
-       |> length()
-       |> Kernel.>(1))
+  # EOF
+  defp walk_depths([], depths, _depth, _line, _ctx), do: depths
+
+  # Newline — record depth for the next line
+  defp walk_depths([?\n | rest], depths, depth, line, ctx) do
+    walk_depths(rest, Map.put(depths, line + 1, depth), depth, line + 1, ctx)
   end
+
+  # Inside a comment — skip until newline (handled above)
+  defp walk_depths([_ | rest], depths, depth, line, :comment) do
+    walk_depths(rest, depths, depth, line, :comment)
+  end
+
+  # Escape inside a string — skip the escaped character
+  defp walk_depths([?\\, escaped | rest], depths, depth, line, ctx)
+       when ctx == ?" or ctx == ?' do
+    # If the escaped char is a newline, still track the line
+    {depths, depth, line} =
+      if escaped == ?\n,
+        do: {Map.put(depths, line + 1, depth), depth, line + 1},
+        else: {depths, depth, line}
+
+    walk_depths(rest, depths, depth, line, ctx)
+  end
+
+  # Close string
+  defp walk_depths([q | rest], depths, depth, line, ctx)
+       when (ctx == ?" or ctx == ?') and q == ctx do
+    walk_depths(rest, depths, depth, line, nil)
+  end
+
+  # Inside string — skip
+  defp walk_depths([_ | rest], depths, depth, line, ctx)
+       when ctx == ?" or ctx == ?' do
+    walk_depths(rest, depths, depth, line, ctx)
+  end
+
+  # Start of comment
+  defp walk_depths([?# | rest], depths, depth, line, nil) do
+    walk_depths(rest, depths, depth, line, :comment)
+  end
+
+  # Start of string
+  defp walk_depths([q | rest], depths, depth, line, nil)
+       when q == ?" or q == ?' do
+    walk_depths(rest, depths, depth, line, q)
+  end
+
+  # Open delimiter
+  defp walk_depths([ch | rest], depths, depth, line, nil)
+       when ch == ?( or ch == ?[ or ch == ?{ do
+    walk_depths(rest, depths, depth + 1, line, nil)
+  end
+
+  # Close delimiter
+  defp walk_depths([ch | rest], depths, depth, line, nil)
+       when ch == ?) or ch == ?] or ch == ?} do
+    walk_depths(rest, depths, max(depth - 1, 0), line, nil)
+  end
+
+  # Any other character
+  defp walk_depths([_ | rest], depths, depth, line, ctx) do
+    walk_depths(rest, depths, depth, line, ctx)
+  end
+
+  # ── Bare-comma detection (single-line, starting from depth 0) ─────────
+
+  # Returns true when `line` contains a bare comma at depth 0 that is NOT
+  # a keyword entry separator, catch/rescue arrow, or with/for clause.
+  defp has_bare_comma?(line) do
+    line
+    |> split_at_depth_zero_commas()
+    |> length()
+    |> Kernel.>(1)
+  end
+
+  # Returns true when the line contains `<-` at depth 0, signalling a
+  # `with`/`for` clause whose commas are clause separators, not bare
+  # multi-returns.
+  defp has_left_arrow_at_depth_zero?(line) do
+    check_left_arrow(String.to_charlist(line), 0, nil)
+  end
+
+  # Found `<-` at depth 0 outside a string
+  defp check_left_arrow([?<, ?- | _rest], 0, nil), do: true
+
+  # EOF
+  defp check_left_arrow([], _depth, _ctx), do: false
+
+  # Newline
+  defp check_left_arrow([?\n | rest], depth, _ctx) do
+    check_left_arrow(rest, depth, nil)
+  end
+
+  # Inside comment — skip
+  defp check_left_arrow([_ | rest], depth, :comment) do
+    check_left_arrow(rest, depth, :comment)
+  end
+
+  # Escape inside string — skip escaped character
+  defp check_left_arrow([?\\, _escaped | rest], depth, ctx)
+       when ctx == ?" or ctx == ?' do
+    check_left_arrow(rest, depth, ctx)
+  end
+
+  # Close string
+  defp check_left_arrow([q | rest], depth, ctx)
+       when (ctx == ?" or ctx == ?') and q == ctx do
+    check_left_arrow(rest, depth, nil)
+  end
+
+  # Inside string — skip
+  defp check_left_arrow([_ | rest], depth, ctx)
+       when ctx == ?" or ctx == ?' do
+    check_left_arrow(rest, depth, ctx)
+  end
+
+  # Start of comment
+  defp check_left_arrow([?# | rest], depth, nil) do
+    check_left_arrow(rest, depth, :comment)
+  end
+
+  # Start of string
+  defp check_left_arrow([q | rest], depth, nil)
+       when q == ?" or q == ?' do
+    check_left_arrow(rest, depth, q)
+  end
+
+  # Open delimiter
+  defp check_left_arrow([ch | rest], depth, nil)
+       when ch == ?( or ch == ?[ or ch == ?{ do
+    check_left_arrow(rest, depth + 1, nil)
+  end
+
+  # Close delimiter
+  defp check_left_arrow([ch | rest], depth, nil)
+       when ch == ?) or ch == ?] or ch == ?} do
+    check_left_arrow(rest, max(depth - 1, 0), nil)
+  end
+
+  # Any other character
+  defp check_left_arrow([_ | rest], depth, ctx) do
+    check_left_arrow(rest, depth, ctx)
+  end
+
+  # ── Fix helpers ────────────────────────────────────────────────────────
 
   defp fix_line(line) do
     if comment_line?(line) do

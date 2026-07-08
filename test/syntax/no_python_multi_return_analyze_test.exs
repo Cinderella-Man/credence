@@ -73,4 +73,108 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert analyze(code) == []
   end
+
+  test "does not flag multi-line map literals" do
+    code = """
+    defmodule MultiLineMap do
+      def build do
+        %{
+          name: "foo",
+          age: 30
+        }
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag multi-line map with string keys" do
+    code = """
+    defmodule MultiLineMapStringKeys do
+      def build do
+        %{
+          "name" => "foo",
+          "age" => 30
+        }
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag with-pipeline clauses" do
+    code = """
+    defmodule WithPipeline do
+      def run do
+        with {:ok, a} <- foo(),
+             {:ok, b} <- bar() do
+          {:ok, a, b}
+        end
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag with-pipeline on single line" do
+    code = """
+    defmodule WithSingleLine do
+      def run do
+        with {:ok, a} <- foo(), {:ok, b} <- bar() do
+          {:ok, a, b}
+        end
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag multi-line keyword list" do
+    code = """
+    defmodule MultiLineKeywords do
+      def build do
+        [
+          name: "foo",
+          age: 30
+        ]
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag multi-line function call args" do
+    code = """
+    defmodule MultiLineArgs do
+      def build do
+        some_function(
+          arg1,
+          arg2
+        )
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "flags bare comma even when preceded by multi-line map" do
+    code = """
+    defmodule BareCommaAfterMap do
+      def build do
+        x = %{
+          name: "foo"
+        }
+        a, b
+      end
+    end
+    """
+
+    assert [%Issue{rule: :no_python_multi_return, meta: %{line: 6}}] = analyze(code)
+  end
 end

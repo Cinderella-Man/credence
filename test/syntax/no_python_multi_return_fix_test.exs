@@ -99,4 +99,119 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
     confirm_fix(fix(input), input)
   end
+
+  test "does not modify multi-line map literals" do
+    input = """
+    defmodule MultiLineMap do
+      def build do
+        %{
+          name: "foo",
+          age: 30
+        }
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify multi-line map with string keys" do
+    input = """
+    defmodule MultiLineMapStringKeys do
+      def build do
+        %{
+          "name" => "foo",
+          "age" => 30
+        }
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify with-pipeline clauses" do
+    input = """
+    defmodule WithPipeline do
+      def run do
+        with {:ok, a} <- foo(),
+             {:ok, b} <- bar() do
+          {:ok, a, b}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify with-pipeline on single line" do
+    input = """
+    defmodule WithSingleLine do
+      def run do
+        with {:ok, a} <- foo(), {:ok, b} <- bar() do
+          {:ok, a, b}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify multi-line keyword list" do
+    input = """
+    defmodule MultiLineKeywords do
+      def build do
+        [
+          name: "foo",
+          age: 30
+        ]
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify multi-line function call args" do
+    input = """
+    defmodule MultiLineArgs do
+      def build do
+        some_function(
+          arg1,
+          arg2
+        )
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "fixes bare comma even when preceded by multi-line map" do
+    input = """
+    defmodule BareCommaAfterMap do
+      def build do
+        x = %{
+          name: "foo"
+        }
+        a, b
+      end
+    end
+    """
+
+    expected = """
+    defmodule BareCommaAfterMap do
+      def build do
+        x = %{
+          name: "foo"
+        }
+        {a, b}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
 end
