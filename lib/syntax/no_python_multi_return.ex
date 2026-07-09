@@ -269,55 +269,72 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   # Split `line` at every comma that sits at depth 0. Returns a list of
   # segments — one element means no bare comma was found.
   #
-  # Two lookaheads prevent over-firing:
+  # Three lookaheads prevent over-firing:
   #   1. Keyword syntax — if the next non-space text starts with a keyword key
   #      (`word:` or `:"string":`), the comma is a keyword entry separator, not
   #      a bare multi-return. Keep it with the current segment.
   #   2. Catch/rescue clause — if `->` appears before the next depth-zero comma,
   #      the comma separates patterns in a clause head, not a bare multi-return.
+  #   3. Mismatched delimiters — if a close delimiter doesn't match the last
+  #      open delimiter (e.g. `)` closing a `{`), the line has a different kind
+  #      of syntax error, not a Python multi-return. Skip splitting.
   defp split_at_depth_zero_commas(line) do
     chars = String.to_charlist(line)
-    # Track remaining chars so the lookahead at each comma is accurate
-    {segments, current, _depth, _in_str, _remaining} =
-      Enum.reduce(chars, {[], [], 0, nil, safe_tl(chars)}, fn ch, {segs, cur, depth, in_str, remaining} ->
+    # Track remaining chars so the lookahead at each comma is accurate.
+    # `stack` records the type of each open delimiter so we can detect mismatches.
+    {segments, current, _depth, _in_str, _remaining, _stack, _mismatched} =
+      Enum.reduce(chars, {[], [], 0, nil, safe_tl(chars), [], false}, fn ch, {segs, cur, depth, in_str, remaining, stack, mismatched} ->
         tail = safe_tl(remaining)
 
         cond do
           # Inside a string/char literal — skip until closing quote
           in_str != nil ->
             case ch do
-              ^in_str -> {segs, cur ++ [ch], depth, nil, tail}
-              ?\\ -> {segs, cur ++ [ch], depth, in_str, tail}
-              _ -> {segs, cur ++ [ch], depth, in_str, tail}
+              ^in_str -> {segs, cur ++ [ch], depth, nil, tail, stack, mismatched}
+              ?\\ -> {segs, cur ++ [ch], depth, in_str, tail, stack, mismatched}
+              _ -> {segs, cur ++ [ch], depth, in_str, tail, stack, mismatched}
             end
 
           # Start of a string or char literal
           ch in [?", ?'] ->
-            {segs, cur ++ [ch], depth, ch, tail}
+            {segs, cur ++ [ch], depth, ch, tail, stack, mismatched}
 
-          # Open delimiter — increase depth
+          # Open delimiter — increase depth, record which delimiter opened
           ch in [?(, ?[, ?{] ->
-            {segs, cur ++ [ch], depth + 1, nil, tail}
+            {segs, cur ++ [ch], depth + 1, nil, tail, [ch | stack], mismatched}
 
-          # Close delimiter — decrease depth (guard against underflow)
+          # Close delimiter — check if it matches the last open delimiter
           ch in [?), ?], ?}] ->
-            new_depth = max(depth - 1, 0)
-            {segs, cur ++ [ch], new_depth, nil, tail}
+            {new_depth, new_stack, new_mismatched} =
+              case stack do
+                [opener | rest_stack] when (opener == ?( and ch == ?)) or
+                                            (opener == ?[ and ch == ?]) or
+                                            (opener == ?{ and ch == ?}) ->
+                  {max(depth - 1, 0), rest_stack, mismatched}
+                [_opener | rest_stack] ->
+                  # Mismatched close delimiter (e.g. `)` closing a `{`)
+                  {max(depth - 1, 0), rest_stack, true}
+                [] ->
+                  # Close without open — underflow
+                  {0, [], true}
+              end
+            {segs, cur ++ [ch], new_depth, nil, tail, new_stack, new_mismatched}
 
           # Bare comma at depth 0 — split here unless a keyword key, arrow,
-          # or function-call-without-parens precedes it.
+          # function-call-without-parens, or mismatched delimiter precedes it.
           ch == ?, and depth == 0 ->
-            if keyword_or_arrow_ahead?(remaining) or function_call_before?(cur) do
+            if mismatched or keyword_or_arrow_ahead?(remaining) or function_call_before?(cur) do
               # Keep comma with current segment (keyword entry, clause pattern,
-              # or paren-less function call like `raise ArgumentError, "msg"`)
-              {segs, cur ++ [ch], 0, nil, tail}
+              # paren-less function call like `raise ArgumentError, "msg"`,
+              # or mismatched delimiter where the real fix is the delimiter)
+              {segs, cur ++ [ch], 0, nil, tail, stack, mismatched}
             else
-              {segs ++ [cur], [], 0, nil, tail}
+              {segs ++ [cur], [], 0, nil, tail, stack, mismatched}
             end
 
           # Any other character
           true ->
-            {segs, cur ++ [ch], depth, nil, tail}
+            {segs, cur ++ [ch], depth, nil, tail, stack, mismatched}
         end
       end)
 

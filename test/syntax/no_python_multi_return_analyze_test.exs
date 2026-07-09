@@ -202,4 +202,16 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert analyze(code) == []
   end
+
+  test "does not flag mismatched ) closing a map literal" do
+    code = """
+    defmodule MismatchedDelimiter do
+      def build do
+        %{type: :test, plan: name), extra
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
 end

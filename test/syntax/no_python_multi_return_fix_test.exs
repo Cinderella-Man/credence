@@ -239,4 +239,16 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
     confirm_fix(fix(input), input)
   end
+
+  test "does not modify mismatched ) closing a map literal" do
+    input = """
+    defmodule MismatchedDelimiter do
+      def build do
+        %{type: :test, plan: name), extra
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end
