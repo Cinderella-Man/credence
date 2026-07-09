@@ -1,24 +1,33 @@
 defmodule Credence.Semantic.NoEarlyReturnInUnless do
   @moduledoc """
-  Fixes Python-style `unless cond do return value end` patterns that cause
-  `undefined function return/1` compiler errors.
+  Fixes Python-style early-return patterns that cause `undefined function
+  return/1` compiler errors.
 
-  LLMs frequently write:
+  LLMs frequently write either of:
 
       unless condition do
         return {:error, reason}
       end
       rest_of_body
 
+  or
+
+      if condition do
+        return {:error, reason}
+      end
+      rest_of_body
+
   Since `return/1` does not exist in Elixir, this fails to compile. The fix
-  inverts the guard to `if`, moves the return value into an `else` branch,
-  and puts `rest_of_body` into the `do` branch:
+  restructures the block into a single `if/else`, moving the return value
+  into the `else` branch and `rest_of_body` into the `do` branch:
 
       if condition do
         rest_of_body
       else
         {:error, reason}
       end
+
+  For `unless`, the guard is inverted. For `if`, the guard is kept as-is.
   """
   use Credence.Semantic.Rule
 
@@ -77,19 +86,19 @@ defmodule Credence.Semantic.NoEarlyReturnInUnless do
 
   defp transform_def_body(_), do: :error
 
-  # Multi-statement body: unless/return is the first statement, rest follows
-  defp transform_body({:__block__, _meta, [unless_node | rest]}) when rest != [] do
-    with {:ok, condition, return_value, unless_meta} <- extract_unless_return(unless_node) do
+  # Multi-statement body: unless/return or if/return is the first statement, rest follows
+  defp transform_body({:__block__, _meta, [early_return_node | rest]}) when rest != [] do
+    with {:ok, condition, return_value, meta} <- extract_early_return(early_return_node) do
       do_body =
         case rest do
           [single] -> single
           multiple -> {:__block__, [], multiple}
         end
 
-      # Reuse the unless's metadata (:do/:end/:line/:column) so Sourceror
+      # Reuse the original node's metadata (:do/:end/:line/:column) so Sourceror
       # renders block-style if/end rather than inline do:/else:.
       {:ok,
-       {:if, unless_meta,
+       {:if, meta,
         [
           condition,
           [
@@ -104,16 +113,25 @@ defmodule Credence.Semantic.NoEarlyReturnInUnless do
 
   defp transform_body(_), do: :error
 
-  # Match: unless cond do return value end
+  # Match: unless cond do return value end (inverts the guard)
   # In Sourceror AST: {:unless, meta, [condition, [{{:__block__, _, [:do]}, {:return, _, [value]}}]]}
-  defp extract_unless_return({:unless, unless_meta, [condition, [{{:__block__, _, [:do]}, body}]]}) do
+  defp extract_early_return({:unless, unless_meta, [condition, [{{:__block__, _, [:do]}, body}]]}) do
     case body do
       {:return, _, [value]} -> {:ok, condition, value, unless_meta}
       _ -> :error
     end
   end
 
-  defp extract_unless_return(_), do: :error
+  # Match: if cond do return value end (keeps the guard as-is)
+  # In Sourceror AST: {:if, meta, [condition, [{{:__block__, _, [:do]}, {:return, _, [value]}}]]}
+  defp extract_early_return({:if, if_meta, [condition, [{{:__block__, _, [:do]}, body}]]}) do
+    case body do
+      {:return, _, [value]} -> {:ok, condition, value, if_meta}
+      _ -> :error
+    end
+  end
+
+  defp extract_early_return(_), do: :error
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line

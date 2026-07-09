@@ -135,4 +135,92 @@ defmodule Credence.Semantic.NoEarlyReturnInUnlessFixTest do
 
     confirm_fix(fix(input), input)
   end
+
+  test "restructures if/return to if/else with rest as do-body" do
+    input = ~S"""
+    defmodule ReturnInIfBlock do
+      def compute(series) do
+        if map_size(series) == 0 do
+          return []
+        end
+
+        Enum.to_list(series)
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule ReturnInIfBlock do
+      def compute(series) do
+        if map_size(series) == 0 do
+          Enum.to_list(series)
+        else
+          []
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "restructures simple if/return" do
+    input = ~S"""
+    defmodule SimpleIfReturn do
+      def validate(value) do
+        if is_integer(value) do
+          return {:ok, value}
+        end
+
+        {:error, :not_integer}
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule SimpleIfReturn do
+      def validate(value) do
+        if is_integer(value) do
+          {:error, :not_integer}
+        else
+          {:ok, value}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "if/return fixed output is well-formed (parses)" do
+    input = ~S"""
+    defmodule IfReturnParseCheck do
+      def check(x) do
+        if x > 0 do
+          return {:ok, x}
+        end
+
+        {:error, :bad}
+      end
+    end
+    """
+
+    assert valid_syntax?(fix(input))
+  end
+
+  test "returns source unchanged when if body has no return" do
+    input = ~S"""
+    defmodule IfNoReturn do
+      def check(x) do
+        if x > 0 do
+          IO.puts("good")
+        end
+
+        {:ok, x}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end
