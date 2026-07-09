@@ -40,4 +40,15 @@ defmodule Credence.Semantic.NoBareReturnInUnlessCheckTest do
     diag = %{severity: :warning, message: @real_message, position: {3, 5}}
     refute NoBareReturnInUnless.match?(diag)
   end
+
+  test "must not fire on real captured diagnostic (over-fire regression)" do
+    diag = %{
+      severity: :warning,
+      message:
+        "WorkerCoordinator.start_link/1 is undefined (module WorkerCoordinator is not available or is yet to be defined). Did you mean:\n\n      * WorkStealQueue.WorkerCoordinator.start_link/1\n",
+      position: {25, 44}
+    }
+
+    refute NoBareReturnInUnless.match?(diag)
+  end
 end

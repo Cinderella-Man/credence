@@ -51,6 +51,7 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
     with {:ok, ast} <- Sourceror.parse_string(source) do
       result =
         Macro.prewalk(ast, fn
+          # Handle unless blocks with else: unwrap return in do branch
           {:unless, unless_meta, [condition, kw]} = node when is_list(kw) ->
             if has_else_branch?(kw) do
               new_kw = unwrap_return_in_do(kw)
@@ -62,6 +63,51 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
               end
             else
               node
+            end
+
+          # Handle: if COND, do: return(VALUE)  followed by REST in a block
+          # →  if COND do VALUE else REST end
+          {:__block__, block_meta,
+           [
+             {:if, if_meta,
+              [
+                condition,
+                [{{:__block__, do_meta, [:do]}, {:return, _, [value]}}]
+              ]}
+             | rest
+           ]}
+          when rest != [] and is_list(do_meta) ->
+            if Keyword.get(do_meta, :format) == :keyword do
+              rest_block =
+                case rest do
+                  [single] -> single
+                  multiple -> {:__block__, [], multiple}
+                end
+
+              # Add do:/end: to metadata so Sourceror renders block form
+              block_meta =
+                if_meta
+                |> Keyword.put_new(:do, do_meta |> Keyword.drop([:format]))
+                |> Keyword.put_new(:end, do_meta |> Keyword.drop([:format]))
+
+              {:if, block_meta,
+               [
+                 condition,
+                 [
+                   {{:__block__, [], [:do]}, value},
+                   {{:__block__, [], [:else]}, rest_block}
+                 ]
+               ]}
+            else
+              {:__block__, block_meta,
+               [
+                 {:if, if_meta,
+                  [
+                    condition,
+                    [{{:__block__, do_meta, [:do]}, {:return, [], [value]}}]
+                  ]}
+                 | rest
+               ]}
             end
 
           node ->

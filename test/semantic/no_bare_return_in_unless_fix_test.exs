@@ -120,4 +120,71 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
 
     confirm_fix(fix(input), expected)
   end
+
+  test "restructures if COND, do: return(EXPR); REST into if/else" do
+    input = """
+    defmodule EarlyReturnInIf do
+      def check(n) do
+        if n == 0, do: return(:empty)
+        {:ok, n}
+      end
+    end
+    """
+
+    expected = """
+    defmodule EarlyReturnInIf do
+      def check(n) do
+        if n == 0 do
+          :empty
+        else
+          {:ok, n}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "fixed if early-return output is well-formed (parses)" do
+    input = """
+    defmodule EarlyReturnInIf do
+      def check(n) do
+        if n == 0, do: return(:empty)
+        {:ok, n}
+      end
+    end
+    """
+
+    assert valid_syntax?(fix(input))
+  end
+
+  test "ignores if with block do/end return (not keyword form)" do
+    source = """
+    defmodule Example do
+      def check(n) do
+        if n == 0 do
+          return(:empty)
+        end
+
+        {:ok, n}
+      end
+    end
+    """
+
+    confirm_fix(fix(source), source)
+  end
+
+  test "ignores if keyword do: without return" do
+    source = """
+    defmodule Example do
+      def check(n) do
+        if n == 0, do: :empty
+        {:ok, n}
+      end
+    end
+    """
+
+    confirm_fix(fix(source), source)
+  end
 end
