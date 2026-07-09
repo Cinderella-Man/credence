@@ -1,12 +1,16 @@
 defmodule Credence.Semantic.FixErlangBitwiseBif do
   @moduledoc """
   Fixes undefined bare Erlang bitwise BIF calls (band, bor, bsl, bsr, bxor,
-  bnot) by prefixing them with `Bitwise.`.
+  bnot) by prefixing them with `Bitwise.`, and fixes deprecated Bitwise infix
+  operator forms (|||, &&&, <<<, >>>, ~~~, ^^^) by replacing them with the
+  equivalent `Bitwise.xxx()` function calls.
 
-  LLMs frequently write Erlang-style bare bitwise BIF calls that fail to
-  compile in Elixir with "undefined function". The deterministic fix is to
-  prefix the call with `Bitwise.` — e.g. `bsl(value, n)` becomes
-  `Bitwise.bsl(value, n)`.
+  LLMs frequently write Erlang-style bare bitwise BIF calls or deprecated
+  operator forms that fail to compile in Elixir with "undefined function".
+  The deterministic fix prefixes BIF calls with `Bitwise.` — e.g.
+  `bsl(value, n)` becomes `Bitwise.bsl(value, n)` — and replaces infix
+  operators with their module function equivalents — e.g. `a ||| b` becomes
+  `Bitwise.bor(a, b)`.
   """
   use Credence.Semantic.Rule
 
@@ -15,6 +19,16 @@ defmodule Credence.Semantic.FixErlangBitwiseBif do
   @bitwise_bifs ~w(band bor bsl bsr bxor bnot)
   # Erlang-style infix bitwise operators that `import Bitwise` provides
   @bitwise_ops ~w(||| &&& <<< >>> ~~~ ^^^)
+
+  # Map infix operator names to their Bitwise module function equivalents
+  @op_to_fn %{
+    "|||" => :bor,
+    "&&&" => :band,
+    "<<<" => :bsl,
+    ">>>" => :bsr,
+    "~~~" => :bnot,
+    "^^^" => :bxor
+  }
 
   @impl true
   def match?(%{message: msg}) when is_binary(msg) do
@@ -49,6 +63,9 @@ defmodule Credence.Semantic.FixErlangBitwiseBif do
         line_no = line(diagnostic)
         replace_bare_bif(source, line_no, name)
 
+      {name, _arity} when name in @bitwise_ops ->
+        replace_infix_operator(source, name)
+
       _ ->
         source
     end
@@ -78,6 +95,32 @@ defmodule Credence.Semantic.FixErlangBitwiseBif do
       {text, _} ->
         text
     end)
+  end
+
+  # Replaces deprecated Bitwise infix operators (|||, ^^^, <<<, >>>, &&&, ~~~)
+  # with their Bitwise module function equivalents using AST transformation.
+  defp replace_infix_operator(source, op_name) do
+    op_atom = String.to_atom(op_name)
+    fn_name = Map.fetch!(@op_to_fn, op_name)
+
+    with {:ok, ast} <- Sourceror.parse_string(source) do
+      result =
+        Macro.prewalk(ast, fn
+          {^op_atom, _meta, args} when is_list(args) ->
+            {{:., [], [{:__aliases__, [], [:Bitwise]}, fn_name]}, [], args}
+
+          node ->
+            node
+        end)
+
+      if result == ast do
+        source
+      else
+        Sourceror.to_string(result)
+      end
+    else
+      _ -> source
+    end
   end
 
   defp line(%{position: {line, _col}}), do: line

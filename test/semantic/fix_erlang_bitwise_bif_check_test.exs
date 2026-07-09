@@ -34,6 +34,21 @@ defmodule Credence.Semantic.FixErlangBitwiseBifCheckTest do
     assert FixErlangBitwiseBif.match?(diag)
   end
 
+  test "matches ^^^/2" do
+    diag = %{severity: :error, message: "undefined function ^^^/2", position: {1, 1}}
+    assert FixErlangBitwiseBif.match?(diag)
+  end
+
+  test "matches <<</2" do
+    diag = %{severity: :error, message: "undefined function <<</2", position: {1, 1}}
+    assert FixErlangBitwiseBif.match?(diag)
+  end
+
+  test "matches >>>/2" do
+    diag = %{severity: :error, message: "undefined function >>>/2", position: {1, 1}}
+    assert FixErlangBitwiseBif.match?(diag)
+  end
+
   test "ignores unrelated diagnostics" do
     diag = %{severity: :warning, message: "unrelated", position: {1, 1}}
     refute FixErlangBitwiseBif.match?(diag)
@@ -50,5 +65,9 @@ defmodule Credence.Semantic.FixErlangBitwiseBifCheckTest do
 
   test "issue message mentions the fix" do
     assert FixErlangBitwiseBif.to_issue(@bsl_diag).message =~ "Bitwise.bsl"
+  end
+
+  test "issue message for |||/2 mentions Bitwise" do
+    assert FixErlangBitwiseBif.to_issue(@real_diag).message =~ "Bitwise"
   end
 end

@@ -41,6 +41,38 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
   end
   """
 
+  @or_input """
+  defmodule Test do
+    def combine(a, b) do
+      a ||| b
+    end
+  end
+  """
+
+  @or_expected """
+  defmodule Test do
+    def combine(a, b) do
+      Bitwise.bor(a, b)
+    end
+  end
+  """
+
+  @xor_input """
+  defmodule Test do
+    def diff(a, b) do
+      a ^^^ b
+    end
+  end
+  """
+
+  @xor_expected """
+  defmodule Test do
+    def diff(a, b) do
+      Bitwise.bxor(a, b)
+    end
+  end
+  """
+
   test "fixes bsl to Bitwise.bsl" do
     message = "undefined function bsl/2"
     confirm_fix(fix(@bsl_input, message), @bsl_expected)
@@ -68,5 +100,35 @@ defmodule Credence.Semantic.FixErlangBitwiseBifFixTest do
     message = "undefined function bsl/2"
     # Should not change — already prefixed
     confirm_fix(fix(input, message), input)
+  end
+
+  test "fixes ||| to Bitwise.bor" do
+    message = "undefined function |||/2"
+    confirm_fix(fix(@or_input, message, 3), @or_expected)
+  end
+
+  test "fixes ^^^ to Bitwise.bxor" do
+    message = "undefined function ^^^/2"
+    confirm_fix(fix(@xor_input, message, 3), @xor_expected)
+  end
+
+  test "operator fix produces valid syntax" do
+    message = "undefined function |||/2"
+    assert valid_syntax?(fix(@or_input, message, 3))
+  end
+
+  test "fixes nested ||| and ^^^ operators" do
+    input = """
+    defmodule Test do
+      def combine(a, b, c) do
+        Enum.reduce([], 0, fn {x, y}, acc -> acc ||| (x ^^^ y) end)
+      end
+    end
+    """
+
+    message = "undefined function |||/2"
+    result = fix(input, message, 3)
+    assert valid_syntax?(result)
+    assert result =~ "Bitwise.bor"
   end
 end
