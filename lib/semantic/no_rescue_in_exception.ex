@@ -40,6 +40,7 @@ defmodule Credence.Semantic.NoRescueInException do
       result =
         Macro.prewalk(ast, fn
           {:in, _meta, [{_name, _, nil} = var, {:__aliases__, _, [:Exception]}]} -> var
+          {:in, _meta, [{_name, _, nil} = var, {:__aliases__, _, [Elixir, :Exception]}]} -> var
           other -> other
         end)
 

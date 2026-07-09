@@ -119,6 +119,34 @@ defmodule Credence.Semantic.NoRescueInExceptionFixTest do
     confirm_fix(fix(input, @message), input)
   end
 
+  test "fixes rescue e in Elixir.Exception to rescue e" do
+    input = """
+    defmodule Example do
+      def run(func) do
+        try do
+          func.()
+        rescue
+          e in Elixir.Exception -> {:error, {:exception, e}}
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      def run(func) do
+        try do
+          func.()
+        rescue
+          e -> {:error, {:exception, e}}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @message), expected)
+  end
+
   test "returns source unchanged when rescuing a different exception type" do
     input = """
     defmodule Example do
