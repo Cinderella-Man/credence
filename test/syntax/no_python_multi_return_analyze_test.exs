@@ -203,6 +203,29 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
     assert analyze(code) == []
   end
 
+  test "does not flag struct-update pipe with trailing comma and keyword on next line" do
+    code = """
+    | users: Map.put(m, :k, v),
+      user_ids: Map.put(m2, :k2, v2)
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag struct-update pipe in a module" do
+    code = """
+    defmodule StructUpdate do
+      def update(state) do
+        %{state |
+          users: Map.put(state.users, :key, :val),
+          user_ids: Map.put(state.user_ids, :key, [:val])}
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
   test "does not flag mismatched ) closing a map literal" do
     code = """
     defmodule MismatchedDelimiter do

@@ -240,6 +240,29 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
     confirm_fix(fix(input), input)
   end
 
+  test "does not modify struct-update pipe with trailing comma and keyword on next line" do
+    input = """
+    | users: Map.put(m, :k, v),
+      user_ids: Map.put(m2, :k2, v2)
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify struct-update pipe in a module" do
+    input = """
+    defmodule StructUpdate do
+      def update(state) do
+        %{state |
+          users: Map.put(state.users, :key, :val),
+          user_ids: Map.put(state.user_ids, :key, [:val])}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
   test "does not modify mismatched ) closing a map literal" do
     input = """
     defmodule MismatchedDelimiter do

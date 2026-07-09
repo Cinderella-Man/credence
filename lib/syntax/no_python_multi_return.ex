@@ -68,6 +68,7 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
       if start_depth == 0 and
            not comment_line?(line) and
            not has_left_arrow_at_depth_zero?(line) and
+           not has_struct_pipe_at_depth_zero?(line) and
            has_bare_comma?(line) do
         [line_no]
       else
@@ -229,6 +230,77 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   # Any other character
   defp check_left_arrow([_ | rest], depth, ctx) do
     check_left_arrow(rest, depth, ctx)
+  end
+
+  # Returns true when the line contains `|` at depth 0 that is a struct-update
+  # pipe (not `||` or `|>`).  A bare `|` at depth 0 with keyword entries is
+  # valid `struct | key: val, ...` syntax; the commas are keyword separators,
+  # not bare multi-returns.
+  defp has_struct_pipe_at_depth_zero?(line) do
+    check_struct_pipe(String.to_charlist(line), 0, nil)
+  end
+
+  # Found `|` at depth 0 outside a string — check it is NOT `||` or `|>`
+  defp check_struct_pipe([?| | rest], 0, nil) do
+    case rest do
+      [?| | _] -> false  # `||` — logical OR, not struct-update pipe
+      [?> | _] -> false  # `|>` — pipe operator, not struct-update pipe
+      _ -> true
+    end
+  end
+
+  # EOF
+  defp check_struct_pipe([], _depth, _ctx), do: false
+
+  # Inside comment — skip
+  defp check_struct_pipe([_ | rest], depth, :comment) do
+    check_struct_pipe(rest, depth, :comment)
+  end
+
+  # Escape inside string — skip escaped character
+  defp check_struct_pipe([?\\, _escaped | rest], depth, ctx)
+       when ctx == ?" or ctx == ?' do
+    check_struct_pipe(rest, depth, ctx)
+  end
+
+  # Close string
+  defp check_struct_pipe([q | rest], depth, ctx)
+       when (ctx == ?" or ctx == ?') and q == ctx do
+    check_struct_pipe(rest, depth, nil)
+  end
+
+  # Inside string — skip
+  defp check_struct_pipe([_ | rest], depth, ctx)
+       when ctx == ?" or ctx == ?' do
+    check_struct_pipe(rest, depth, ctx)
+  end
+
+  # Start of comment
+  defp check_struct_pipe([?# | rest], depth, nil) do
+    check_struct_pipe(rest, depth, :comment)
+  end
+
+  # Start of string
+  defp check_struct_pipe([q | rest], depth, nil)
+       when q == ?" or q == ?' do
+    check_struct_pipe(rest, depth, q)
+  end
+
+  # Open delimiter
+  defp check_struct_pipe([ch | rest], depth, nil)
+       when ch == ?( or ch == ?[ or ch == ?{ do
+    check_struct_pipe(rest, depth + 1, nil)
+  end
+
+  # Close delimiter
+  defp check_struct_pipe([ch | rest], depth, nil)
+       when ch == ?) or ch == ?] or ch == ?} do
+    check_struct_pipe(rest, max(depth - 1, 0), nil)
+  end
+
+  # Any other character
+  defp check_struct_pipe([_ | rest], depth, ctx) do
+    check_struct_pipe(rest, depth, ctx)
   end
 
   # ── Fix helpers ────────────────────────────────────────────────────────
