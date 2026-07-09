@@ -15,16 +15,11 @@ defmodule Credence.Semantic.NoPlugBeforeDependencyDefinition do
 
   alias Credence.Issue
 
-  @match_prefix "function "
-  @match_suffix " is undefined (module "
-  @match_trail " is not available)"
+  @match_fragment "atom cannot be followed by an alias"
 
   @impl true
   def match?(%{message: msg}) when is_binary(msg) do
-    String.contains?(msg, @match_suffix) and
-      String.contains?(msg, @match_trail) and
-      String.contains?(msg, @match_prefix) and
-      String.contains?(msg, ".init/1 is undefined")
+    String.contains?(msg, @match_fragment)
   end
 
   def match?(_), do: false
@@ -50,10 +45,11 @@ defmodule Credence.Semantic.NoPlugBeforeDependencyDefinition do
   end
 
   # Extract the module name from the diagnostic message.
-  # "function LifecycleApi.Plugs.ApiVersion.init/1 is undefined (module LifecycleApi.Plugs.ApiVersion is not available)"
+  # The message embeds the offending source line, e.g.:
+  #   plug(:LifecycleApi.Plugs.ApiVersion, default: "v2")
   # -> "LifecycleApi.Plugs.ApiVersion"
   defp extract_module_name(msg) do
-    case Regex.run(~r/function (.+)\.init\/1 is undefined/, msg) do
+    case Regex.run(~r/plug\(\:?([A-Z][\w.]+)/, msg) do
       [_, mod_str] -> {:ok, mod_str}
       _ -> :error
     end
@@ -105,7 +101,7 @@ defmodule Credence.Semantic.NoPlugBeforeDependencyDefinition do
   defp find_using_module_range(lines, module_name) do
     # Convert module name to alias form for matching in `plug` calls
     # e.g. "LifecycleApi.Plugs.ApiVersion" -> "LifecycleApi.Plugs.ApiVersion"
-    plug_pattern = ~r/^\s*plug\s+#{Regex.escape(module_name)}\s*$/
+    plug_pattern = ~r/^\s*plug[\s(]+:?\s*#{Regex.escape(module_name)}\b/
 
     Enum.find_value(Enum.with_index(lines, 1), :error, fn {line, idx} ->
       if Regex.match?(plug_pattern, line) do

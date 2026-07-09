@@ -5,7 +5,7 @@ defmodule Credence.Semantic.NoPlugBeforeDependencyDefinitionFixTest do
 
   alias Credence.Semantic.NoPlugBeforeDependencyDefinition
 
-  @diag_message "function LifecycleApi.Plugs.ApiVersion.init/1 is undefined (module LifecycleApi.Plugs.ApiVersion is not available)"
+  @diag_message "invalid syntax found on credence_check.ex:7:22:\n    error: atom cannot be followed by an alias. If the '.' was meant to be part of the atom's name, the atom name must be quoted. Syntax error before: '.'\n    │\n  7 │   plug(:LifecycleApi.Plugs.ApiVersion, default: \"v2\")\n    │                      ^\n    └─ credence_check.ex:7:22"
 
   defp fix(source, message \\ @diag_message, line \\ 0) do
     NoPlugBeforeDependencyDefinition.fix(source, %{
@@ -132,7 +132,7 @@ defmodule Credence.Semantic.NoPlugBeforeDependencyDefinitionFixTest do
     assert valid_syntax?(
              fix(
                input,
-               "function Foo.Plugs.Bar.init/1 is undefined (module Foo.Plugs.Bar is not available)"
+               "invalid syntax found on test.ex:4:10:\n    error: atom cannot be followed by an alias. If the '.' was meant to be part of the atom's name, the atom name must be quoted. Syntax error before: '.'\n    │\n  4 │   plug(:Foo.Plugs.Bar)\n    │                      ^\n    └─ test.ex:4:10"
              )
            )
   end

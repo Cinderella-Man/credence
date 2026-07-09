@@ -6,8 +6,8 @@ defmodule Credence.Semantic.NoPlugBeforeDependencyDefinitionCheckTest do
   @matching_diag %{
     severity: :error,
     message:
-      "function LifecycleApi.Plugs.ApiVersion.init/1 is undefined (module LifecycleApi.Plugs.ApiVersion is not available)",
-    position: 0,
+      "invalid syntax found on credence_check.ex:7:22:\n    error: atom cannot be followed by an alias. If the '.' was meant to be part of the atom's name, the atom name must be quoted. Syntax error before: '.'\n    │\n  7 │   plug(:LifecycleApi.Plugs.ApiVersion, default: \"v2\")\n    │                      ^\n    └─ credence_check.ex:7:22",
+    position: 7,
     file: "credence_check.ex"
   }
 
