@@ -66,6 +66,77 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuardFixTest do
     assert valid_syntax?(fix(input))
   end
 
+  test "decomposes compound and guard: keeps safe part in when, moves remote call to if" do
+    input = """
+    defmodule MapHasKeyInGuardDemo do
+      def find_cycle(node_id, parent_map, path_set, path_list) do
+        parent = Map.get(parent_map, node_id)
+
+        case parent do
+          nil ->
+            :no_cycle
+
+          pid when not is_nil(pid) and Map.has_key?(parent_map, pid) ->
+            find_cycle(pid, parent_map, path_set, path_list ++ [node_id])
+
+          _ ->
+            :no_cycle
+        end
+      end
+    end
+    """
+
+    expected = """
+    defmodule MapHasKeyInGuardDemo do
+      def find_cycle(node_id, parent_map, path_set, path_list) do
+        parent = Map.get(parent_map, node_id)
+
+        case parent do
+          nil ->
+            :no_cycle
+
+          pid when not is_nil(pid) ->
+            if Map.has_key?(parent_map, pid) do
+              find_cycle(pid, parent_map, path_set, path_list ++ [node_id])
+            else
+              :no_cycle
+            end
+
+          _ ->
+            :no_cycle
+        end
+      end
+    end
+    """
+
+    message = "cannot invoke remote function Map.has_key?/2 inside a guard"
+    confirm_fix(fix(input, message, 9), expected)
+  end
+
+  test "compound guard fix output is well-formed (parses)" do
+    input = """
+    defmodule MapHasKeyInGuardDemo do
+      def find_cycle(node_id, parent_map, path_set, path_list) do
+        parent = Map.get(parent_map, node_id)
+
+        case parent do
+          nil ->
+            :no_cycle
+
+          pid when not is_nil(pid) and Map.has_key?(parent_map, pid) ->
+            find_cycle(pid, parent_map, path_set, path_list ++ [node_id])
+
+          _ ->
+            :no_cycle
+        end
+      end
+    end
+    """
+
+    message = "cannot invoke remote function Map.has_key?/2 inside a guard"
+    assert valid_syntax?(fix(input, message, 9))
+  end
+
   test "returns source unchanged when no remote function in guard" do
     input = """
     defmodule CleanExample do

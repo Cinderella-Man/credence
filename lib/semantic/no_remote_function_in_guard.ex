@@ -73,6 +73,12 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
               :error -> {node, acc}
             end
 
+          {:case, case_meta, [subject, case_body]} = node, acc ->
+            case transform_case(case_body, fn_capture, diag_line) do
+              {:ok, new_body} -> {{:case, case_meta, [subject, new_body]}, true}
+              :error -> {node, acc}
+            end
+
           node, acc ->
             {node, acc}
         end)
@@ -87,7 +93,7 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
   # "cannot invoke remote function System.monotonic_time/1 inside a guard"
   # => {:System, :monotonic_time}
   defp extract_remote_fn(msg) do
-    case Regex.run(~r/cannot invoke remote function (\w+(?:\.\w+)*)\.(\w+)\/\d+ inside a guard/, msg) do
+    case Regex.run(~r/cannot invoke remote function (\w+(?:\.\w+)*)\.(\w+[?!]?)\/\d+ inside a guard/, msg) do
       [_, mod_str, fun_str] ->
         module = mod_str |> String.split(".") |> Enum.map(&String.to_atom/1) |> List.last()
         {:ok, module, String.to_atom(fun_str)}
@@ -96,6 +102,90 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
         :error
     end
   end
+
+  # Transform case clauses: find a `when` guard with the remote function,
+  # decompose the compound guard, and hoist the remote call into an `if`.
+  defp transform_case([{{:__block__, do_meta, [:do]}, clauses}], fn_capture, diag_line) do
+    wildcard_body = find_wildcard_body(clauses)
+
+    case transform_case_clauses(clauses, fn_capture, diag_line, wildcard_body) do
+      {:ok, new_clauses} -> {:ok, [{{:__block__, do_meta, [:do]}, new_clauses}]}
+      :error -> :error
+    end
+  end
+
+  defp transform_case(_, _, _), do: :error
+
+  defp find_wildcard_body([]), do: :error
+
+  defp find_wildcard_body([{:->, _, [[{:_ , _, _}], body]} | _]), do: {:ok, body}
+
+  defp find_wildcard_body([{:->, _, [[{:__block__, _, [{:_ , _, _}]}], body]} | _]),
+    do: {:ok, body}
+
+  defp find_wildcard_body([_ | rest]), do: find_wildcard_body(rest)
+
+  defp transform_case_clauses([], _, _, _), do: :error
+
+  defp transform_case_clauses([clause | rest], fn_capture, diag_line, wildcard_body) do
+    case try_merge_case_clause(clause, fn_capture, diag_line, wildcard_body) do
+      {:ok, new_clause} -> {:ok, [new_clause | rest]}
+
+      :error ->
+        case transform_case_clauses(rest, fn_capture, diag_line, wildcard_body) do
+          {:ok, new_rest} -> {:ok, [clause | new_rest]}
+          :error -> :error
+        end
+    end
+  end
+
+  defp try_merge_case_clause(
+         {:->, clause_meta, [[{:when, when_meta, [pattern, guard]}], body]},
+         fn_capture,
+         diag_line,
+         wildcard_body
+       ) do
+    unless guard_contains?(guard, fn_capture) and on_line?(when_meta, diag_line) do
+      throw(:no_match)
+    end
+
+    case wildcard_body do
+      :error -> throw(:no_match)
+      {:ok, fallback} ->
+        {safe_guard, if_condition} = decompose_guard(guard, fn_capture)
+
+        # Build the `if` around the clause body.
+        # Sourceror needs :do/:end metadata to render block-style (not inline commas).
+        base_meta = Keyword.take(clause_meta, [:line, :column])
+        if_meta =
+          base_meta
+          |> Keyword.put(:do, base_meta)
+          |> Keyword.put(:end, base_meta)
+
+        if_node =
+          {:if,
+           if_meta,
+           [
+             if_condition,
+             [
+               {{:__block__, [], [:do]}, body},
+               {{:__block__, [], [:else]}, fallback}
+             ]
+           ]}
+
+        new_head =
+          case safe_guard do
+            nil -> pattern
+            _ -> {:when, when_meta, [pattern, safe_guard]}
+          end
+
+        {:ok, {:->, clause_meta, [[new_head], if_node]}}
+    end
+  catch
+    :no_match -> :error
+  end
+
+  defp try_merge_case_clause(_, _, _, _), do: :error
 
   # Try to transform a list of sibling statements (def/defp clauses).
   defp transform_stmts(stmts, fn_capture, diag_line) do
@@ -131,7 +221,8 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
 
     case pop_fallback(rest, kind, name, arity) do
       {:ok, fallback_body, remaining} ->
-        merged = build_merged(kind, meta, fn_head, guard, body_kw, fallback_body)
+        {safe_guard, if_condition} = decompose_guard(guard, fn_capture)
+        merged = build_merged(kind, meta, when_meta, fn_head, safe_guard, if_condition, body_kw, fallback_body)
         {:ok, merged, remaining}
 
       :error ->
@@ -174,9 +265,50 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
     end
   end
 
-  # Build the merged clause: defp head with body as `if guard do original else fallback end`
-  # We borrow :do/:end metadata from the defp clause so Sourceror renders block-style.
-  defp build_merged(kind, meta, fn_head, guard, body_kw, fallback_body_kw) do
+  # Decompose a compound guard, separating the safe parts (to stay in `when`)
+  # from the part containing the remote call (to become the `if` condition).
+  #
+  # For `and`: keep the safe side in `when`, extract the remote side to `if`.
+  # For `or`: can't split safely — move the whole guard to `if`.
+  # Leaf with remote call: no safe part remains — move entirely to `if`.
+  defp decompose_guard({:and, meta, [left, right]}, fn_capture) do
+    left_has = guard_contains?(left, fn_capture)
+    right_has = guard_contains?(right, fn_capture)
+
+    cond do
+      left_has and not right_has ->
+        {right, left}
+
+      right_has and not left_has ->
+        {left, right}
+
+      # Both sides have remote calls, or neither (shouldn't happen since
+      # guard_contains? already confirmed the compound has it) — can't split.
+      true ->
+        {nil, {:and, meta, [left, right]}}
+    end
+  end
+
+  defp decompose_guard({:or, meta, [left, right]}, fn_capture) do
+    if guard_contains?(left, fn_capture) or guard_contains?(right, fn_capture) do
+      {nil, {:or, meta, [left, right]}}
+    else
+      {{:or, meta, [left, right]}, nil}
+    end
+  end
+
+  defp decompose_guard(guard, fn_capture) do
+    if guard_contains?(guard, fn_capture) do
+      {nil, guard}
+    else
+      {guard, nil}
+    end
+  end
+
+  # Build the merged clause with decomposed guard.
+  # `safe_guard` stays in the `when` clause (nil if entire guard was extracted).
+  # `if_condition` becomes the `if` condition (the remote call part).
+  defp build_merged(kind, meta, when_meta, fn_head, safe_guard, if_condition, body_kw, fallback_body_kw) do
     original_body = extract_do(body_kw)
     fallback_body = extract_do(fallback_body_kw)
 
@@ -188,7 +320,7 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
     if_node =
       {:if, if_meta,
        [
-         guard,
+         if_condition,
          [
            {{:__block__, [], [:do]}, original_body},
            {{:__block__, [], [:else]}, fallback_body}
@@ -196,8 +328,16 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
        ]}
 
     clean_head = strip_when(fn_head)
+
+    # Re-attach the safe part of the guard if there is one.
+    final_head =
+      case safe_guard do
+        nil -> clean_head
+        _ -> {:when, when_meta, [clean_head, safe_guard]}
+      end
+
     new_body = [{{:__block__, [], [:do]}, if_node}]
-    {kind, meta, [clean_head, new_body]}
+    {kind, meta, [final_head, new_body]}
   end
 
   # Extract the body from a Sourceror keyword list [{{:__block__, _, [:do]}, body}]
