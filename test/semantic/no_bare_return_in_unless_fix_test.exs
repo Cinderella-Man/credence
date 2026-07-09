@@ -65,8 +65,8 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     assert valid_syntax?(fix(@input))
   end
 
-  test "ignores unless without else" do
-    source = """
+  test "strips return from unless without else" do
+    input = """
     defmodule Example do
       def check(value) do
         unless value == :ok do
@@ -78,11 +78,23 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     end
     """
 
-    confirm_fix(fix(source), source)
+    expected = """
+    defmodule Example do
+      def check(value) do
+        unless value == :ok do
+          {:error, :bad}
+        end
+
+        :ok
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
   end
 
-  test "ignores return outside unless" do
-    source = """
+  test "strips bare return outside unless" do
+    input = """
     defmodule Example do
       def check(value) do
         return value
@@ -90,7 +102,15 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     end
     """
 
-    confirm_fix(fix(source), source)
+    expected = """
+    defmodule Example do
+      def check(value) do
+        value
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
   end
 
   test "handles single unless with else" do
@@ -159,8 +179,8 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     assert valid_syntax?(fix(input))
   end
 
-  test "ignores if with block do/end return (not keyword form)" do
-    source = """
+  test "strips return from if with block do/end form" do
+    input = """
     defmodule Example do
       def check(n) do
         if n == 0 do
@@ -172,7 +192,93 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     end
     """
 
-    confirm_fix(fix(source), source)
+    expected = """
+    defmodule Example do
+      def check(n) do
+        if n == 0 do
+          :empty
+        end
+
+        {:ok, n}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "strips return from case branch" do
+    input = """
+    defmodule DBCleaner do
+      def clean() do
+        case get_spec() do
+          nil -> :ok
+          _spec ->
+            case :error do
+              {:ok, ordered_tables} ->
+                Enum.each(ordered_tables, fn table ->
+                  IO.puts("DELETE FROM \#{table}")
+                end)
+                :ok
+
+              {:error, {:cycle, remaining_tables}} ->
+                return {:error, {:cycle, remaining_tables}}
+            end
+        end
+      end
+
+      defp get_spec, do: Process.get(:spec)
+    end
+    """
+
+    expected = """
+    defmodule DBCleaner do
+      def clean() do
+        case get_spec() do
+          nil ->
+            :ok
+
+          _spec ->
+            case :error do
+              {:ok, ordered_tables} ->
+                Enum.each(ordered_tables, fn table ->
+                  IO.puts("DELETE FROM \#{table}")
+                end)
+
+                :ok
+
+              {:error, {:cycle, remaining_tables}} ->
+                {:error, {:cycle, remaining_tables}}
+            end
+        end
+      end
+
+      defp get_spec, do: Process.get(:spec)
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "case branch fix is well-formed (parses)" do
+    input = """
+    defmodule DBCleaner do
+      def clean() do
+        case get_spec() do
+          nil -> :ok
+          _spec ->
+            case :error do
+              {:error, {:cycle, remaining_tables}} ->
+                return {:error, {:cycle, remaining_tables}}
+            end
+        end
+      end
+
+      defp get_spec, do: Process.get(:spec)
+    end
+    """
+
+    assert valid_syntax?(fix(input))
   end
 
   test "ignores if keyword do: without return" do

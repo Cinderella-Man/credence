@@ -1,28 +1,15 @@
 defmodule Credence.Semantic.NoBareReturnInUnless do
   @moduledoc """
-  Removes bare `return` keyword from inside `unless` blocks that have an `else` branch.
+  Removes bare `return` keyword from Elixir code in any context.
 
-  LLMs (trained on Python) frequently write:
+  LLMs (trained on Python) frequently write `return` as an early-exit
+  statement in Elixir blocks. Since `return/1` does not exist in Elixir,
+  this fails to compile. The fix unwraps the `return` call, leaving just
+  the value as the block's last expression in any code context:
 
-      unless condition do
-        return {:error, reason}
-      else
-        ...
-      end
-
-  Since `return/1` does not exist in Elixir, this fails to compile. The fix
-  unwraps the `return` call, leaving just the value as the block's last
-  expression:
-
-      unless condition do
-        {:error, reason}
-      else
-        ...
-      end
-
-  This rule only applies when the `unless` block has an `else` branch. For
-  `unless` blocks without `else` (early-return patterns), see
-  `NoEarlyReturnInUnless`.
+  - `unless` with `else`: unwraps `return` in the `do` branch
+  - `if` keyword early-return: restructures to block `if/else`
+  - `case` branches, bare expressions, any other context: strips `return`
   """
   use Credence.Semantic.Rule
 
@@ -109,6 +96,10 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
                  | rest
                ]}
             end
+
+          # General case: strip bare return in any context (case branches, etc.)
+          {:return, _, [value]} ->
+            value
 
           node ->
             node
