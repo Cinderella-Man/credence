@@ -49,4 +49,8 @@ defmodule Credence.Syntax.NoCaptureAsIdentityFunctionAnalyzeTest do
   test "does not flag the pattern inside a comment line" do
     assert analyze("# Map.update!(m, :key, &new_value)") == []
   end
+
+  test "does not flag &func?/1 (predicate function capture)" do
+    assert analyze("Task.async(fn -> &is_worker_available?/1 end)") == []
+  end
 end

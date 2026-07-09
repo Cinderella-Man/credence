@@ -34,7 +34,8 @@ defmodule Credence.Syntax.NoCaptureAsIdentityFunction do
   #   - NOT followed by `/` and digits (arity: &func/1)
   #   - NOT followed by `(` (capture body: &func(&1))
   #   - NOT followed by `&` (nested capture: &(&1 + 1))
-  @capture_identity_pattern ~r/&([a-zA-Z_][a-zA-Z0-9_]++)(?![.\/(&])/
+  #   - NOT followed by `?` (predicate capture: &func?/1)
+  @capture_identity_pattern ~r/&([a-zA-Z_][a-zA-Z0-9_]++)(?![.\/(&?])/
 
   @impl true
   def analyze(source) do

@@ -87,4 +87,10 @@ defmodule Credence.Syntax.NoCaptureAsIdentityFunctionFixTest do
 
     confirm_fix(fix(source), source)
   end
+
+  test "leaves predicate capture &func?/1 untouched" do
+    source = "Task.async(fn -> &is_worker_available?/1 end)"
+
+    confirm_fix(fix(source), source)
+  end
 end
