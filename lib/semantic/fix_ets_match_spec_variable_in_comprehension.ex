@@ -1,7 +1,7 @@
 defmodule Credence.Semantic.FixEtsMatchSpecVariableInComprehension do
   @moduledoc """
   Fixes `undefined variable` errors caused by using Elixir variables inside
-  `:ets.match` match specs within `for` comprehensions.
+  `:ets.match` match specs.
 
   LLMs frequently write patterns like:
 
@@ -9,13 +9,23 @@ defmodule Credence.Semantic.FixEtsMatchSpecVariableInComprehension do
         {name, value}
       end
 
-  where `name` is used as if it were a bound variable in the match spec,
-  causing `undefined variable "name"` compilation errors. The fix replaces
-  the Elixir variables with match spec variables and restructures the
-  comprehension as an `Enum.map` pipeline:
+  or in plain function bodies:
+
+      [{evicted_key, _}] = :ets.match(data_table, {evicted_key, :"$1"})
+
+  where an Elixir variable is used as if it were a match spec variable,
+  causing `undefined variable "name"` compilation errors.
+
+  For `for` comprehensions, the fix restructures as an `Enum.map` pipeline:
 
       :ets.match(table, {:"$1", :_, :"$2"})
       |> Enum.map(fn [name, value] -> {name, value} end)
+
+  For plain assignments, the fix replaces the Elixir variables with match spec
+  variables and adds extraction assignments:
+
+      [{:"$1", _}] = :ets.match(data_table, {:"$1", :"$1"})
+      evicted_key = :"$1"
   """
   use Credence.Semantic.Rule
 
@@ -31,7 +41,7 @@ defmodule Credence.Semantic.FixEtsMatchSpecVariableInComprehension do
   @doc false
   def should_report?(_diagnostic, source) do
     case Sourceror.parse_string(source) do
-      {:ok, ast} -> has_ets_match_in_for?(ast)
+      {:ok, ast} -> has_ets_match_with_elixir_var?(ast)
       _ -> false
     end
   end
@@ -46,15 +56,29 @@ defmodule Credence.Semantic.FixEtsMatchSpecVariableInComprehension do
   end
 
   @impl true
-  def fix(source, %{message: msg}) do
-    with var_name when is_binary(var_name) <- extract_var_name(msg),
-         {:ok, ast} <- Sourceror.parse_string(source) do
+  def fix(source, %{message: _msg}) do
+    with {:ok, ast} <- Sourceror.parse_string(source) do
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
           {:for, _, [{:<-, _, [pattern, rhs]}, body_kw]} = node, acc ->
             case try_transform_for(pattern, rhs, body_kw) do
               {:ok, result} -> {result, true}
               :error -> {node, acc}
+            end
+
+          {:__block__, meta, stmts} = node, acc when is_list(stmts) ->
+            case transform_block_stmts(stmts) do
+              {:ok, new_stmts} -> {{:__block__, meta, new_stmts}, true}
+              :error -> {node, acc}
+            end
+
+          {:=, assign_meta, [_, _]} = node, acc ->
+            case try_transform_plain_stmt(node) do
+              {:ok, new_stmt, new_assignments} ->
+                {{:__block__, assign_meta, [new_stmt | new_assignments]}, true}
+
+              :error ->
+                {node, acc}
             end
 
           node, acc ->
@@ -69,6 +93,10 @@ defmodule Credence.Semantic.FixEtsMatchSpecVariableInComprehension do
 
   # --- source inspection ---
 
+  defp has_ets_match_with_elixir_var?(ast) do
+    has_ets_match_in_for?(ast) or has_ets_match_in_plain?(ast)
+  end
+
   defp has_ets_match_in_for?(ast) do
     {_, found} =
       Macro.prewalk(ast, false, fn
@@ -82,18 +110,119 @@ defmodule Credence.Semantic.FixEtsMatchSpecVariableInComprehension do
     found
   end
 
+  defp has_ets_match_in_plain?(ast) do
+    {_, found} =
+      Macro.prewalk(ast, false, fn
+        {:=, _, [lhs, rhs]} = node, acc ->
+          if ets_match_call?(rhs) and has_list_pattern?(lhs) do
+            {node, true}
+          else
+            {node, acc}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found
+  end
+
+  defp has_list_pattern?({:__block__, _, [list]}) when is_list(list), do: true
+  defp has_list_pattern?(list) when is_list(list), do: true
+  defp has_list_pattern?(_), do: false
+
   defp ets_match_call?({{:., _, [{:__block__, _, [:ets]}, :match]}, _, _}), do: true
   defp ets_match_call?({{:., _, [{:__aliases__, _, [:ets]}, :match]}, _, _}), do: true
   defp ets_match_call?(_), do: false
 
   # --- fix helpers ---
 
-  defp extract_var_name(msg) do
-    case Regex.run(~r/undefined variable "(\w+)"/, msg) do
-      [_, name] -> name
-      _ -> nil
+  # Transform statements in a block, inserting new assignments after ets.match fixes
+  defp transform_block_stmts(stmts) do
+    {new_stmts, changed?} =
+      Enum.reduce(stmts, {[], false}, fn stmt, {acc, changed} ->
+        case try_transform_plain_stmt(stmt) do
+          {:ok, transformed, new_assignments} ->
+            {acc ++ [transformed | new_assignments], true}
+
+          :error ->
+            {acc ++ [stmt], changed}
+        end
+      end)
+
+    if changed?, do: {:ok, new_stmts}, else: :error
+  end
+
+  # Unwrap single-statement __block__ wrappers (Sourceror wraps each statement)
+  defp try_transform_plain_stmt({:__block__, _meta, [stmt]}) do
+    try_transform_plain_stmt(stmt)
+  end
+
+  defp try_transform_plain_stmt({:=, assign_meta, [lhs, rhs]}) do
+    with true <- ets_match_call?(rhs),
+         list when is_list(list) <- extract_list_contents(lhs),
+         [pattern_tuple_or_block] <- list,
+         pattern_tuple = unwrap_single_block(pattern_tuple_or_block),
+         true <- is_tuple_form?(pattern_tuple),
+         pattern_elems = tuple_elements(pattern_tuple),
+         {:ok, table, raw_match_spec} <- extract_ets_match(rhs),
+         match_spec = unwrap_single_block(raw_match_spec),
+         true <- is_tuple_form?(match_spec),
+         match_elems = tuple_elements(match_spec),
+         true <- length(pattern_elems) == length(match_elems) do
+      {new_match_elems, captured_vars} = process_positions_plain(pattern_elems, match_elems)
+
+      if captured_vars == [] do
+        :error
+      else
+        name_to_dollar = Map.new(captured_vars, fn {num, name} -> {name, num} end)
+
+        new_match_spec = rebuild_tuple(match_spec, new_match_elems)
+        # Re-wrap match spec if original was __block__-wrapped
+        wrapped_match_spec =
+          case raw_match_spec do
+            {:__block__, ms_meta, _} -> {:__block__, ms_meta, [new_match_spec]}
+            _ -> new_match_spec
+          end
+        new_rhs = replace_call_args(rhs, [table, wrapped_match_spec])
+
+        new_pattern_elems =
+          Enum.map(pattern_elems, fn elem ->
+            case extract_var_atom(elem) do
+              nil ->
+                elem
+
+              var_name ->
+                case Map.get(name_to_dollar, var_name) do
+                  nil -> elem
+                  dollar_num -> make_dollar_var(dollar_num)
+                end
+            end
+          end)
+
+        new_pattern_tuple = rebuild_tuple(pattern_tuple, new_pattern_elems)
+        # Re-wrap if original was __block__-wrapped
+        wrapped_pattern_tuple =
+          case pattern_tuple_or_block do
+            {:__block__, meta, _} -> {:__block__, meta, [new_pattern_tuple]}
+            _ -> new_pattern_tuple
+          end
+        new_lhs = replace_list_contents(lhs, [wrapped_pattern_tuple])
+        new_stmt = {:=, assign_meta, [new_lhs, new_rhs]}
+
+        new_assignments =
+          Enum.map(captured_vars, fn {num, var_name} ->
+            {:=, assign_meta, [{var_name, [], nil}, make_dollar_var(num)]}
+          end)
+
+        {:ok, new_stmt, new_assignments}
+      end
+    else
+      _ -> :error
     end
   end
+
+  defp try_transform_plain_stmt(_), do: :error
 
   defp try_transform_for(pattern, rhs, body_kw) do
     with {:ok, table, match_spec} <- extract_ets_match(rhs),
@@ -151,6 +280,20 @@ defmodule Credence.Semantic.FixEtsMatchSpecVariableInComprehension do
     {{:., dot_meta, receiver}, call_meta, args}
   end
 
+  defp extract_list_contents({:__block__, _, [list]}) when is_list(list), do: list
+  defp extract_list_contents(list) when is_list(list), do: list
+  defp extract_list_contents(_), do: nil
+
+  defp replace_list_contents({:__block__, meta, [_list]}, new_list) do
+    {:__block__, meta, [new_list]}
+  end
+
+  defp replace_list_contents(_list, new_list), do: new_list
+
+  defp unwrap_single_block({:__block__, _, [node]}), do: node
+  defp unwrap_single_block(node), do: node
+
+  # For `for` comprehension case: renumber all dollar vars sequentially
   defp process_positions(pattern_elems, match_spec_elems) do
     pairs = Enum.zip(pattern_elems, match_spec_elems)
 
@@ -183,6 +326,40 @@ defmodule Credence.Semantic.FixEtsMatchSpecVariableInComprehension do
 
           :keep_as_is ->
             {[ms | ms_acc], cap_acc, num}
+        end
+      end)
+
+    {Enum.reverse(new_ms), Enum.reverse(captured)}
+  end
+
+  # For plain assignment case: keep existing dollar vars, replace only Elixir vars
+  defp process_positions_plain(pattern_elems, match_spec_elems) do
+    pairs = Enum.zip(pattern_elems, match_spec_elems)
+
+    {new_ms, captured, _next} =
+      Enum.reduce(pairs, {[], [], 1}, fn {pat, ms}, {ms_acc, cap_acc, next} ->
+        pat_var = extract_var_atom(pat)
+        skip = underscore_prefix?(pat_var)
+
+        case classify_match_spec_elem(ms) do
+          :wildcard ->
+            {[ms | ms_acc], cap_acc, next}
+
+          {:dollar_var, _} ->
+            # Keep existing dollar vars as-is in the match spec
+            {[ms | ms_acc], cap_acc, next}
+
+          {:elixir_var, _} ->
+            new_ms = make_dollar_var(next)
+
+            if skip do
+              {[new_ms | ms_acc], cap_acc, next + 1}
+            else
+              {[new_ms | ms_acc], [{next, pat_var} | cap_acc], next + 1}
+            end
+
+          :keep_as_is ->
+            {[ms | ms_acc], cap_acc, next}
         end
       end)
 

@@ -44,6 +44,35 @@ defmodule Credence.Semantic.FixEtsMatchSpecVariableInComprehensionFixTest do
     assert valid_syntax?(fix("foo(bar)"))
   end
 
+  test "fixes the ets-match-spec-variable pattern in plain assignment" do
+    input = """
+    defmodule TestETSMatchSpecVarOutsideComprehension do
+      def evict(data_table, order_table) do
+        min_ts = :ets.first(order_table)
+        [{evicted_key, _}] = :ets.match(data_table, {evicted_key, :"$1"})
+        :ets.delete(order_table, min_ts)
+        :ets.delete(data_table, evicted_key)
+        evicted_key
+      end
+    end
+    """
+
+    expected = """
+    defmodule TestETSMatchSpecVarOutsideComprehension do
+      def evict(data_table, order_table) do
+        min_ts = :ets.first(order_table)
+        [{:"$1", _}] = :ets.match(data_table, {:"$1", :"$1"})
+        evicted_key = :"$1"
+        :ets.delete(order_table, min_ts)
+        :ets.delete(data_table, evicted_key)
+        evicted_key
+      end
+    end
+    """
+
+    confirm_fix(fix(input, "undefined variable \"evicted_key\""), expected)
+  end
+
   test "returns source unchanged when no for-ets-match pattern" do
     source = "x = 1 + 2"
     confirm_fix(fix(source), source)
