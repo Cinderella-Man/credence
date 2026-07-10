@@ -991,4 +991,63 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       )
     end
   end
+
+  describe "Enum.flatten → List.flatten" do
+    test "direct call" do
+      confirm_fix(
+        fix(
+          "Enum.flatten(list)",
+          "Enum.flatten/1 is undefined or private"
+        ),
+        "List.flatten(list)"
+      )
+    end
+
+    test "piped" do
+      confirm_fix(
+        fix(
+          "list |> Enum.flatten()",
+          "Enum.flatten/1 is undefined or private"
+        ),
+        "list |> List.flatten()"
+      )
+    end
+
+    test "only on reported line" do
+      input = """
+      Enum.map(list, &f/1)
+      Enum.flatten(list)
+      Enum.sort(list)
+      """
+
+      confirm_fix(
+        fix(input, "Enum.flatten/1 is undefined or private", 2),
+        """
+        Enum.map(list, &f/1)
+        List.flatten(list)
+        Enum.sort(list)
+        """
+      )
+    end
+
+    test "in module context" do
+      input = """
+      defmodule M do
+        def flat(list) do
+          Enum.flatten(list)
+        end
+      end
+      """
+
+      expected = """
+      defmodule M do
+        def flat(list) do
+          List.flatten(list)
+        end
+      end
+      """
+
+      confirm_fix(fix(input, "Enum.flatten/1 is undefined or private", 3), expected)
+    end
+  end
 end

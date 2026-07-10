@@ -94,7 +94,10 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Map", "size", 1} => {:drop_module, "map_size"},
 
     # Enum.tail/1 does not exist; the head/tail equivalent is Kernel.tl/1
-    {"Enum", "tail", 1} => {:drop_module, "tl"}
+    {"Enum", "tail", 1} => {:drop_module, "tl"},
+
+    # Enum.flatten/1 does not exist; the idiomatic equivalent is List.flatten/1
+    {"Enum", "flatten", 1} => {:rename, "List", "flatten"}
   }
 
   @local_replacements %{

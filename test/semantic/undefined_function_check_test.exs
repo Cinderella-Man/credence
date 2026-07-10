@@ -63,6 +63,10 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     test "Integer.is_even/1" do
       assert UndefinedFunction.match?(warning("Integer.is_even/1 is undefined or private"))
     end
+
+    test "Enum.flatten/1" do
+      assert UndefinedFunction.match?(warning("Enum.flatten/1 is undefined or private"))
+    end
   end
 
   describe "match?/1 – qualified: deprecated" do
