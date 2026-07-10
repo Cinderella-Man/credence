@@ -453,20 +453,54 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   defp function_call_before?(current_chars) do
     case Enum.drop_while(current_chars, &(&1 == ?\s or &1 == ?\t)) do
       [ch | rest] when ch in ?a..?z or ch in ?A..?Z or ch == ?_ ->
-        # Consume the identifier (letters, digits, underscores, dots)
-        {_id, after_id} = Enum.split_while([ch | rest], fn c ->
-          c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_ or c == ?.
-        end)
-        # Skip whitespace after the identifier
-        after_ws = Enum.drop_while(after_id, &(&1 == ?\s or &1 == ?\t))
-        # Must have content after the identifier, and it must not be an
-        # assignment (which would indicate `var = expr, ...` not a function call)
-        case after_ws do
-          [] -> false
-          [?= | _] -> false
-          _ -> true
+        check_call_after_identifier(rest)
+
+      # Atom-prefixed module call like `:ets.new arg1, arg2` or `:timer.tc fun, arg`
+      [?: | rest] ->
+        case Enum.drop_while(rest, &(&1 == ?\s or &1 == ?\t)) do
+          [ch | _] when ch in ?a..?z or ch in ?A..?Z or ch == ?_ ->
+            # Consume the atom name and optional .function
+            {_atom_id, after_atom} =
+              Enum.split_while(rest, fn c ->
+                c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_ or c == ?.
+              end)
+
+            after_ws = Enum.drop_while(after_atom, &(&1 == ?\s or &1 == ?\t))
+
+            case after_ws do
+              [] -> false
+              [?= | _] -> false
+              _ -> true
+            end
+
+          _ ->
+            false
         end
-      _ -> false
+
+      _ ->
+        false
+    end
+  end
+
+  # Shared logic after an identifier has been consumed — check if it looks
+  # like a paren-less function call (identifier followed by whitespace and
+  # then arguments, not an assignment).
+  defp check_call_after_identifier(rest) do
+    # Consume the identifier (letters, digits, underscores, dots)
+    {_id, after_id} =
+      Enum.split_while(rest, fn c ->
+        c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_ or c == ?.
+      end)
+
+    # Skip whitespace after the identifier
+    after_ws = Enum.drop_while(after_id, &(&1 == ?\s or &1 == ?\t))
+
+    # Must have content after the identifier, and it must not be an
+    # assignment (which would indicate `var = expr, ...` not a function call)
+    case after_ws do
+      [] -> false
+      [?= | _] -> false
+      _ -> true
     end
   end
 

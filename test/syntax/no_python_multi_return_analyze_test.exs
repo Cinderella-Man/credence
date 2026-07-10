@@ -261,4 +261,35 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert analyze(code) == []
   end
+
+  test "does not flag paren-less atom-module function call (ETS options)" do
+    code = ":ets.new :metrics, [:named_table, :public, :set]"
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag ETS GenServer init with option list" do
+    code = """
+    defmodule Metrics do
+      use GenServer
+
+      def start_link(opts \\\\ []) do
+        GenServer.start_link(__MODULE__, [], name: __MODULE__)
+      end
+
+      @impl true
+      def init(_state) do
+        :ets.new(:metrics, [
+          :named_table,
+          :public,
+          :set,
+          {:read_concurrency, true}
+        ])
+        {:ok, %{}}
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
 end

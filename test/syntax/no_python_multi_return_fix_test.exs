@@ -298,4 +298,35 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
     confirm_fix(fix(input), input)
   end
+
+  test "does not modify paren-less atom-module function call (ETS options)" do
+    input = ":ets.new :metrics, [:named_table, :public, :set]"
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify ETS GenServer init with option list" do
+    input = """
+    defmodule Metrics do
+      use GenServer
+
+      def start_link(opts \\\\ []) do
+        GenServer.start_link(__MODULE__, [], name: __MODULE__)
+      end
+
+      @impl true
+      def init(_state) do
+        :ets.new(:metrics, [
+          :named_table,
+          :public,
+          :set,
+          {:read_concurrency, true}
+        ])
+        {:ok, %{}}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end
