@@ -7,10 +7,21 @@ defmodule Credence.Semantic.PreferExplicitRangeStep do
 
       1..-2 has a default step of -1, please write 1..-2//-1 instead
 
-  Under `--warnings-as-errors` this blocks compilation. The fix appends `//-1`,
-  which is a **no-op on behaviour**: the warning states that `-1` is already the
-  current default step, so `1..-2` and `1..-2//-1` are the identical `Range`
-  value.
+  Under `--warnings-as-errors` this blocks compilation. The fix appends an
+  explicit step, which is a **no-op on behaviour** for most ranges: the warning
+  states that `-1` is already the current default step, so `1..-2` and
+  `1..-2//-1` are the identical `Range` value.
+
+  ### Special case: "to end" ranges (`first..-1`)
+
+  When the upper bound is `-1` — the idiomatic "to end" range used in
+  `String.slice/2`, `Enum.slice/2`, etc. — the fix appends `//1` (positive
+  step) instead of `//-1`. A negative step on a "to end" range would reverse
+  and truncate the slice, producing wrong results at runtime:
+
+      String.slice(str, 3..-1)     # "from index 3 to end"
+      String.slice(str, 3..-1//-1) # WRONG: reversed/truncated
+      String.slice(str, 3..-1//1)  # correct: same as the original
 
   ## Why the fix is AST-based, not text-based
 
@@ -63,11 +74,13 @@ defmodule Credence.Semantic.PreferExplicitRangeStep do
 
   def fix(source, _diagnostic), do: source
 
-  # Parse the source and append an explicit `//-1` step to every descending
-  # literal range operator node. Patching is range-targeted (Sourceror replaces
-  # only the bytes of each `..` node), so the rest of the source — including any
-  # string/atom/comment that merely contains the same digits — is byte-for-byte
-  # preserved. Unparseable source is left untouched.
+  # Parse the source and append an explicit step to every descending
+  # literal range operator node. When the upper bound is `-1` (the idiomatic
+  # "to end" range), appends `//1`; otherwise appends `//-1`.
+  # Patching is range-targeted (Sourceror replaces only the bytes of each `..`
+  # node), so the rest of the source — including any string/atom/comment that
+  # merely contains the same digits — is byte-for-byte preserved. Unparseable
+  # source is left untouched.
   defp patch_descending_ranges(source) do
     case Sourceror.parse_string(source) do
       {:ok, ast} ->
@@ -81,12 +94,14 @@ defmodule Credence.Semantic.PreferExplicitRangeStep do
     end
   end
 
+  # Collects descending literal range nodes together with their upper-bound
+  # value so patch/1 can decide the correct explicit step.
   defp collect_ranges(ast) do
     {_ast, ranges} =
       Macro.prewalk(ast, [], fn
         {:.., _meta, [lo, hi]} = node, acc ->
           case {literal_int(lo), literal_int(hi)} do
-            {{:ok, a}, {:ok, b}} when a > b -> {node, [node | acc]}
+            {{:ok, a}, {:ok, b}} when a > b -> {node, [{node, b} | acc]}
             _ -> {node, acc}
           end
 
@@ -97,8 +112,12 @@ defmodule Credence.Semantic.PreferExplicitRangeStep do
     ranges
   end
 
-  defp patch(node) do
-    %{range: Sourceror.get_range(node), change: &(&1 <> "//-1")}
+  # When the upper bound is -1 (the "to end" idiom), the correct explicit step
+  # is `//1` (positive). A negative step would reverse and truncate the slice.
+  # For all other descending ranges, the explicit step is `//-1`.
+  defp patch({node, hi_val}) do
+    step = if hi_val == -1, do: "//1", else: "//-1"
+    %{range: Sourceror.get_range(node), change: &(&1 <> step)}
   end
 
   # The endpoints the compiler can fold to a default step of -1: an integer

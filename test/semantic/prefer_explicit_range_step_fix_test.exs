@@ -20,6 +20,23 @@ defmodule Credence.Semantic.PreferExplicitRangeStepFixTest do
     )
   end
 
+  # Regression: when the upper bound is -1 (the "to end" idiom), the correct
+  # explicit step is //1 (positive), not //-1. A negative step on a "to end"
+  # range reverses and truncates the slice.
+  test "appends //1 to a to-end range (upper bound -1)" do
+    confirm_fix(
+      fix("String.slice(str, 3..-1)", "3..-1"),
+      "String.slice(str, 3..-1//1)"
+    )
+  end
+
+  test "appends //1 to a to-end range with zero lower bound" do
+    confirm_fix(
+      fix("Enum.slice(list, 0..-1)", "0..-1"),
+      "Enum.slice(list, 0..-1//1)"
+    )
+  end
+
   test "handles a descending all-positive literal range" do
     confirm_fix(
       fix("for i <- 5..1, do: i"),
