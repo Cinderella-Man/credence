@@ -12,6 +12,6 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThanAnalyzeTest do
   end
 
   test "leaves good code alone" do
-    assert analyze(~S'guards = [{:<=, :"$1", cutoff}]') == []
+    assert analyze(~S'guards = [{:"=<", :"$1", cutoff}]') == []
   end
 end

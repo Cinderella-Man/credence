@@ -10,7 +10,7 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThanFixTest do
 
   test "fixes the syntax error" do
     input = ~S'guards = [{:=<, :"$1", cutoff}]'
-    expected = ~S'guards = [{:<=, :"$1", cutoff}]'
+    expected = ~S'guards = [{:"=<", :"$1", cutoff}]'
 
     confirm_fix(fix(input), expected)
   end

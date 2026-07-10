@@ -1,14 +1,15 @@
 defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThan do
   @moduledoc """
-  Replaces the unparseable Erlang-style `:=<` atom with Elixir's `:<=`.
+  Replaces the unparseable bare atom `:=<` with the quoted `:"=<"` for
+  Erlang-compatible ETS match spec guards.
 
-  LLMs consistently write Erlang-style `:=<` (less-than-or-equal) in ETS match
-  spec guards instead of Elixir's `:<=`.  In Elixir, `:=<` is tokenised as the
-  match operator `=` followed by the less-than operator `<`, which causes a
-  syntax error — the parser cannot make sense of the sequence in an atom
-  position.
+  LLMs frequently write Erlang's less-than-or-equal as the bare atom `:=<` in
+  ETS match spec guards.  In Elixir, `=<` is not a recognised operator, so
+  `:=<` is tokenised as the match operator `=` followed by `<` — a syntax
+  error.  The correct Elixir form is the quoted atom `:"=<"`, which maps to the
+  Erlang `=<` operator that ETS match specs expect.
 
-  A deterministic text-level replacement of `:=<` → `:<=` repairs the error.
+  A deterministic text-level replacement of `:=<` → `:"=<"` repairs the error.
 
   ## Bad (won't parse)
 
@@ -16,7 +17,7 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThan do
 
   ## Good
 
-      guards = [{:<=, :"$1", cutoff}]
+      guards = [{:"=<", :"$1", cutoff}]
   """
   use Credence.Syntax.Rule
 
@@ -35,7 +36,7 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThan do
           %Issue{
             rule: :fix_ets_match_spec_erlang_less_than,
             message:
-              "Erlang-style `:=<` is not valid Elixir. Use `:<=` for less-than-or-equal in ETS match specs.",
+              "Bare atom `:=<` is not valid Elixir. Use `:\"=<\"` for less-than-or-equal in ETS match specs.",
             meta: %{line: line_no}
           }
         ]
@@ -47,6 +48,6 @@ defmodule Credence.Syntax.FixEtsMatchSpecErlangLessThan do
 
   @impl true
   def fix(source) do
-    String.replace(source, @pattern, ":<=")
+    String.replace(source, @pattern, ~s(:"=<"))
   end
 end
