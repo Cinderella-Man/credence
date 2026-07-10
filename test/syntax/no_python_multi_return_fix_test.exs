@@ -274,4 +274,28 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
     confirm_fix(fix(input), input)
   end
+
+  test "does not modify paren-less module function call" do
+    input = """
+    defmodule OverFire do
+      def run do
+        Map.update state.queues, priority, [queue_data]
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify Map.get without parens" do
+    input = """
+    defmodule OverFire do
+      def run do
+        Map.get state.queues, :key, []
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end

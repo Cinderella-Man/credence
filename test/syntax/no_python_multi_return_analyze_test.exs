@@ -237,4 +237,28 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert analyze(code) == []
   end
+
+  test "does not flag paren-less module function call" do
+    code = """
+    defmodule OverFire do
+      def run do
+        Map.update state.queues, priority, [queue_data]
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag Map.get without parens" do
+    code = """
+    defmodule OverFire do
+      def run do
+        Map.get state.queues, :key, []
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
 end

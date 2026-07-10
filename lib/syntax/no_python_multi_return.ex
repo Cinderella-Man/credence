@@ -452,7 +452,7 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   # `{raise ArgumentError, "msg"}` which is a syntax error.
   defp function_call_before?(current_chars) do
     case Enum.drop_while(current_chars, &(&1 == ?\s or &1 == ?\t)) do
-      [ch | rest] when ch in ?a..?z or ch == ?_ ->
+      [ch | rest] when ch in ?a..?z or ch in ?A..?Z or ch == ?_ ->
         # Consume the identifier (letters, digits, underscores, dots)
         {_id, after_id} = Enum.split_while([ch | rest], fn c ->
           c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_ or c == ?.
