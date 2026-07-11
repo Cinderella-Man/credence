@@ -97,7 +97,10 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Enum", "tail", 1} => {:drop_module, "tl"},
 
     # Enum.flatten/1 does not exist; the idiomatic equivalent is List.flatten/1
-    {"Enum", "flatten", 1} => {:rename, "List", "flatten"}
+    {"Enum", "flatten", 1} => {:rename, "List", "flatten"},
+
+    # LLMs hallucinate Process.exit/1; the idiomatic Elixir call is Kernel.exit/1
+    {"Process", "exit", 1} => {:drop_module, "exit"}
   }
 
   @local_replacements %{

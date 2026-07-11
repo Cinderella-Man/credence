@@ -67,6 +67,10 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     test "Enum.flatten/1" do
       assert UndefinedFunction.match?(warning("Enum.flatten/1 is undefined or private"))
     end
+
+    test "Process.exit/1" do
+      assert UndefinedFunction.match?(warning("Process.exit/1 is undefined or private"))
+    end
   end
 
   describe "match?/1 – qualified: deprecated" do

@@ -1108,4 +1108,70 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       confirm_fix(fix(input, "Enum.flatten/1 is undefined or private", 3), expected)
     end
   end
+
+  # ── Process.exit → exit (drop module) ──────────────────────────
+
+  describe "Process.exit → exit" do
+    test "direct call" do
+      confirm_fix(
+        fix(
+          "Process.exit(:normal)",
+          "Process.exit/1 is undefined or private"
+        ),
+        "exit(:normal)"
+      )
+    end
+
+    test "in module context" do
+      input = """
+      defmodule M do
+        def f do
+          Process.exit(:normal)
+        end
+      end
+      """
+
+      expected = """
+      defmodule M do
+        def f do
+          exit(:normal)
+        end
+      end
+      """
+
+      confirm_fix(fix(input, "Process.exit/1 is undefined or private", 3), expected)
+    end
+
+    test "only on reported line" do
+      input = """
+      Process.exit(:normal)
+      Process.exit(:shutdown)
+      """
+
+      confirm_fix(fix(input, "Process.exit/1 is undefined or private", 1), """
+      exit(:normal)
+      Process.exit(:shutdown)
+      """)
+    end
+
+    test "with variable argument" do
+      confirm_fix(
+        fix(
+          "Process.exit(reason)",
+          "Process.exit/1 is undefined or private"
+        ),
+        "exit(reason)"
+      )
+    end
+
+    test "with tuple argument" do
+      confirm_fix(
+        fix(
+          "Process.exit({:shutdown, :normal})",
+          "Process.exit/1 is undefined or private"
+        ),
+        "exit({:shutdown, :normal})"
+      )
+    end
+  end
 end
