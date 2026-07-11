@@ -5,9 +5,19 @@ defmodule Credence.Semantic.FixMultipleDefaultArgsFixTest do
 
   alias Credence.Semantic.FixMultipleDefaultArgs
 
+  @impl_message "module attribute @impl was not set for function monotonic/1 callback (specified in Clock). This either means you forgot to add the \"@impl true\" annotation before the definition or that you are accidentally overriding this callback"
+
   defp fix(source, message, line \\ 1) do
     FixMultipleDefaultArgs.fix(source, %{
       severity: :error,
+      message: message,
+      position: {line, 1}
+    })
+  end
+
+  defp fix_warning(source, message, line \\ 1) do
+    FixMultipleDefaultArgs.fix(source, %{
+      severity: :warning,
       message: message,
       position: {line, 1}
     })
@@ -172,5 +182,49 @@ defmodule Credence.Semantic.FixMultipleDefaultArgsFixTest do
     """
 
     assert valid_syntax?(fix(input, default_msg("foo"), 6))
+  end
+
+  test "splits single callback clause with defaults and adds @impl true" do
+    input = """
+    defmodule FixMultipleDefaultArgsCallbackTest do
+      @callback monotonic(unit :: atom()) :: integer()
+      use GenServer
+
+      def monotonic(server, unit \\\\ :millisecond) when is_pid(server) or is_atom(server) do
+        GenServer.call(server, {:monotonic, unit})
+      end
+    end
+    """
+
+    expected = """
+    defmodule FixMultipleDefaultArgsCallbackTest do
+      @callback monotonic(unit :: atom()) :: integer()
+      use GenServer
+
+      @impl true
+      def monotonic(server, unit \\\\ :millisecond)
+
+      def monotonic(server, unit) when is_pid(server) or is_atom(server) do
+        GenServer.call(server, {:monotonic, unit})
+      end
+    end
+    """
+
+    confirm_fix(fix_warning(input, @impl_message, 6), expected)
+  end
+
+  test "callback fix output is well-formed (parses)" do
+    input = """
+    defmodule ParseCheckCallback do
+      @callback foo(x :: integer()) :: integer()
+      use GenServer
+
+      def foo(server, x \\\\ 1) when is_atom(server) do
+        x
+      end
+    end
+    """
+
+    assert valid_syntax?(fix_warning(input, @impl_message, 6))
   end
 end
