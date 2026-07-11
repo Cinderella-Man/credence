@@ -126,6 +126,43 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
     end
   end
 
+  describe "fix/2 — pipe capture" do
+    test "rewrites bare &N in pipe step to then/2" do
+      source = """
+      defmodule WorkStealQueue do
+        def update_metrics(state, worker_id, count) do
+          state
+          |> Map.put(:steals, Map.put(Map.get(&1, :steals), worker_id, count))
+        end
+      end
+      """
+
+      expected = """
+      defmodule WorkStealQueue do
+        def update_metrics(state, worker_id, count) do
+          state
+          |> then(fn wq1 -> Map.put(wq1, :steals, Map.put(Map.get(wq1, :steals), worker_id, count)) end)
+        end
+      end
+      """
+
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(4, 41)), expected)
+    end
+
+    test "pipe capture fix output is valid syntax" do
+      source = """
+      defmodule WorkStealQueue do
+        def update_metrics(state, worker_id, count) do
+          state
+          |> Map.put(:steals, Map.put(Map.get(&1, :steals), worker_id, count))
+        end
+      end
+      """
+
+      assert valid_syntax?(NoCaptureAsBitwiseAnd.fix(source, diag(4, 41)))
+    end
+  end
+
   describe "fix/2 — no-ops" do
     test "returns source unchanged when position is nil" do
       source = "n & 1"
@@ -192,6 +229,30 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       """
 
       confirm_fix(Credence.Semantic.fix(source), source)
+    end
+
+    test "fixes bare &N in pipe step end-to-end and the result compiles" do
+      source = """
+      defmodule CapturePipeFixInteg1 do
+        def update_metrics(state, worker_id, count) do
+          state
+          |> Map.put(:steals, Map.put(Map.get(&1, :steals), worker_id, count))
+        end
+      end
+      """
+
+      expected = """
+      defmodule CapturePipeFixInteg1 do
+        def update_metrics(state, worker_id, count) do
+          state
+          |> then(fn wq1 -> Map.put(wq1, :steals, Map.put(Map.get(wq1, :steals), worker_id, count)) end)
+        end
+      end
+      """
+
+      fixed = Credence.Semantic.fix(source)
+      confirm_fix(fixed, expected)
+      assert valid_syntax?(fixed)
     end
   end
 end

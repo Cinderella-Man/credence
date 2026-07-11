@@ -46,11 +46,13 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAnd do
 
   @impl true
   def fix(source, %{position: {line, col}}) when is_integer(line) and is_integer(col) do
-    fix_at_column(source, line, col)
+    fixed = fix_at_column(source, line, col)
+    if fixed != source, do: fixed, else: fix_pipe_capture(source)
   end
 
   def fix(source, %{position: line}) when is_integer(line) do
-    update_line(source, line, fn text -> rewrite_first(text) || text end)
+    fixed = update_line(source, line, fn text -> rewrite_first(text) || text end)
+    if fixed != source, do: fixed, else: fix_pipe_capture(source)
   end
 
   def fix(source, _diagnostic), do: source
@@ -95,6 +97,77 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAnd do
     if Regex.match?(@band_regex, text) do
       Regex.replace(@band_regex, text, "Bitwise.band(\\1, \\2)", global: false)
     end
+  end
+
+  # AST-based fix for bare &N in pipe steps. Wraps the pipe step in
+  # then(fn wqN -> ... end) and replaces all bare &N with the bound variable.
+  defp fix_pipe_capture(source) do
+    with {:ok, ast} <- Sourceror.parse_string(source) do
+      {new_ast, counter} = transform_pipes(ast, 0)
+      if counter > 0, do: Sourceror.to_string(new_ast), else: source
+    else
+      _ -> source
+    end
+  end
+
+  defp transform_pipes(ast, counter) do
+    Macro.prewalk(ast, counter, fn
+      {:|>, pipe_meta, [left, right]}, cnt ->
+        if has_bare_capture?(right) do
+          var_name = :"wq#{cnt + 1}"
+          new_right = add_head_and_replace(right, var_name)
+          then_call = build_then_call(var_name, new_right)
+          {{:|>, pipe_meta, [left, then_call]}, cnt + 1}
+        else
+          {{:|>, pipe_meta, [left, right]}, cnt}
+        end
+
+      node, cnt ->
+        {node, cnt}
+    end)
+  end
+
+  defp has_bare_capture?(ast) do
+    {_, found} =
+      Macro.prewalk(ast, false, fn
+        {:&, _, [n]} = node, _acc when is_integer(n) -> {node, true}
+        node, acc -> {node, acc}
+      end)
+
+    found
+  end
+
+  defp replace_bare_captures(ast, var_name) do
+    Macro.prewalk(ast, fn
+      {:&, meta, [n]} when is_integer(n) -> {var_name, meta, nil}
+      node -> node
+    end)
+  end
+
+  # Replace bare &N with var_name AND add var_name as the first argument
+  # (the head, which in a pipe comes from the piped value).
+  defp add_head_and_replace(ast, var_name) do
+    var_ast = {var_name, [], nil}
+    replaced = replace_bare_captures(ast, var_name)
+
+    case replaced do
+      # Remote function call: {{:., meta, [mod, func]}, call_meta, args}
+      {{:., meta, [mod, func]}, call_meta, args} when is_list(args) ->
+        {{:., meta, [mod, func]}, call_meta, [var_ast | args]}
+
+      # Local function call: {func_name, meta, args}
+      {func_name, meta, args} when is_atom(func_name) and is_list(args) ->
+        {func_name, meta, [var_ast | args]}
+
+      # Other — return as-is
+      _ ->
+        replaced
+    end
+  end
+
+  defp build_then_call(var_name, body) do
+    var_ast = {var_name, [], nil}
+    {:then, [], [{:fn, [], [{:->, [], [[var_ast], body]}]}]}
   end
 
   defp update_line(source, line_no, fun) do
