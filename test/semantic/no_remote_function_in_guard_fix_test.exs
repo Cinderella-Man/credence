@@ -147,4 +147,66 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuardFixTest do
 
     confirm_fix(fix(input), input)
   end
+
+  test "replaces Map.get struct identity guard with struct pattern in function head" do
+    input = """
+    defmodule Example do
+      @email_regex ~r/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/
+
+      defp validate_format(value, format) when is_binary(format) or is_atom(format) do
+        case format do
+          :email -> Regex.match?(@email_regex, value)
+          _ ->
+            case Regex.compile(format) do
+              {:ok, regex} -> Regex.match?(regex, value)
+              {:error, _} -> false
+            end
+        end
+      end
+
+      defp validate_format(value, regex) when is_map(regex) and Map.get(regex, :__struct__) == Regex do
+        Regex.match?(regex, value)
+      end
+    end
+    """
+
+    expected = """
+    defmodule Example do
+      @email_regex ~r/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/
+
+      defp validate_format(value, format) when is_binary(format) or is_atom(format) do
+        case format do
+          :email ->
+            Regex.match?(@email_regex, value)
+
+          _ ->
+            case Regex.compile(format) do
+              {:ok, regex} -> Regex.match?(regex, value)
+              {:error, _} -> false
+            end
+        end
+      end
+
+      defp validate_format(value, %Regex{} = regex) do
+        Regex.match?(regex, value)
+      end
+    end
+    """
+
+    message = "cannot invoke remote function Map.get/2 inside a guard"
+    confirm_fix(fix(input, message, 15), expected)
+  end
+
+  test "struct pattern fix output is well-formed (parses)" do
+    input = """
+    defmodule Example do
+      defp validate_format(value, regex) when is_map(regex) and Map.get(regex, :__struct__) == Regex do
+        Regex.match?(regex, value)
+      end
+    end
+    """
+
+    message = "cannot invoke remote function Map.get/2 inside a guard"
+    assert valid_syntax?(fix(input, message, 2))
+  end
 end

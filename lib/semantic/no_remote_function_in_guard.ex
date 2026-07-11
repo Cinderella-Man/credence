@@ -198,14 +198,20 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
   defp do_transform([], _fn_capture, _diag_line), do: :error
 
   defp do_transform([stmt | rest], fn_capture, diag_line) do
-    case try_merge(stmt, rest, fn_capture, diag_line) do
-      {:ok, merged, remaining} ->
-        {:ok, [merged | remaining]}
+    case try_struct_pattern_transform(stmt, fn_capture, diag_line) do
+      {:ok, transformed} ->
+        {:ok, [transformed | rest]}
 
       :error ->
-        case do_transform(rest, fn_capture, diag_line) do
-          {:ok, new_rest} -> {:ok, [stmt | new_rest]}
-          :error -> :error
+        case try_merge(stmt, rest, fn_capture, diag_line) do
+          {:ok, merged, remaining} ->
+            {:ok, [merged | remaining]}
+
+          :error ->
+            case do_transform(rest, fn_capture, diag_line) do
+              {:ok, new_rest} -> {:ok, [stmt | new_rest]}
+              :error -> :error
+            end
         end
     end
   end
@@ -351,6 +357,143 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
   # Get {name, arity} from a function head
   defp fn_name_arity({name, _, args}) when is_list(args), do: {name, length(args)}
   defp fn_name_arity({:when, _, [{name, _, args}, _]}) when is_list(args), do: {name, length(args)}
+
+  # --- Struct pattern rewrite (Map.get(var, :__struct__) == Module → %Module{} = var) ---
+
+  # Try to transform a guarded def/defp clause that uses Map.get/2 for struct
+  # identity checking into one that uses a struct pattern in the function head.
+  # This does NOT require a fallback clause — the guard is removed entirely.
+  defp try_struct_pattern_transform(
+         {kind, meta, [{:when, when_meta, [fn_head, guard]}, body_kw]},
+         fn_capture,
+         diag_line
+       )
+       when kind in [:def, :defp] do
+    unless on_line?(when_meta, diag_line), do: throw(:no_struct_match)
+
+    case fn_capture do
+      {_, _, [{:__aliases__, _, [:Map]}, :get]} ->
+        case extract_struct_pattern_from_guard(guard) do
+          {:ok, var, module, remaining_guard} ->
+            new_fn_head = rewrite_fn_head_with_struct(fn_head, var, module)
+
+            new_clause =
+              case remaining_guard do
+                nil -> {kind, meta, [new_fn_head, body_kw]}
+                _ -> {kind, meta, [{:when, when_meta, [new_fn_head, remaining_guard]}, body_kw]}
+              end
+
+            {:ok, new_clause}
+
+          :error ->
+            :error
+        end
+
+      _ ->
+        :error
+    end
+  catch
+    :no_struct_match -> :error
+  end
+
+  defp try_struct_pattern_transform(_, _, _), do: :error
+
+  # Extract a Map.get(var, :__struct__) == Module identity check from a guard,
+  # returning {var_atom, module_atom, remaining_guard} where remaining_guard has
+  # both the struct equality check and the companion is_map(var) removed.
+  defp extract_struct_pattern_from_guard(guard) do
+    case find_struct_check(guard) do
+      {:ok, var, module} ->
+        remaining = remove_struct_guard_parts(guard, var)
+        {:ok, var, module, remaining}
+
+      :error ->
+        :error
+    end
+  end
+
+  # Walk the guard AST looking for Map.get(var, :__struct__) == Module.
+  defp find_struct_check(guard) do
+    {_guard, result} =
+      Macro.prewalk(guard, :error, fn
+        node, :error ->
+          case match_struct_identity_eq(node) do
+            {:ok, _, _} = found -> {node, found}
+            :error -> {node, :error}
+          end
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    result
+  end
+
+  # Match `Map.get(var, :__struct__) == Module` or `Module == Map.get(var, :__struct__)`.
+  defp match_struct_identity_eq({:==, _, [left, right]}) do
+    case extract_struct_identity(left, right) do
+      {:ok, _, _} = result -> result
+      :error -> extract_struct_identity(right, left)
+    end
+  end
+
+  defp match_struct_identity_eq(_), do: :error
+
+  defp extract_struct_identity(
+         {{:., _, [{:__aliases__, _, [:Map]}, :get]}, _, [{var, _, nil}, struct_key]},
+         {:__aliases__, _, [module]}
+       )
+       when is_atom(var) do
+    case struct_key do
+      {:__block__, _, [:__struct__]} -> {:ok, var, module}
+      :__struct__ -> {:ok, var, module}
+      _ -> :error
+    end
+  end
+
+  defp extract_struct_identity(_, _), do: :error
+
+  # Remove both the Map.get struct check and any companion is_map(var) from the guard.
+  defp remove_struct_guard_parts(guard, var) do
+    guard
+    |> flatten_and()
+    |> Enum.reject(fn part -> is_struct_related_part?(part, var) end)
+    |> reconstruct_and()
+  end
+
+  defp flatten_and({:and, _, [left, right]}), do: flatten_and(left) ++ flatten_and(right)
+  defp flatten_and(other), do: [other]
+
+  defp reconstruct_and([]), do: nil
+  defp reconstruct_and([single]), do: single
+
+  defp reconstruct_and(parts),
+    do: Enum.reduce(parts, fn part, acc -> {:and, [], [acc, part]} end)
+
+  defp is_struct_related_part?({:is_map, _, [{var, _, nil}]}, var) when is_atom(var), do: true
+
+  defp is_struct_related_part?(part, var) do
+    case match_struct_identity_eq(part) do
+      {:ok, ^var, _} -> true
+      _ -> false
+    end
+  end
+
+  # Replace the matching parameter in the function head with a struct pattern.
+  # `var` is the variable atom (e.g. :regex), `module` is the struct module atom.
+  defp rewrite_fn_head_with_struct({name, meta, args}, var, module) do
+    new_args =
+      Enum.map(args, fn
+        {^var, vmeta, nil} ->
+          struct_pattern = {:%, [], [{:__aliases__, [], [module]}, {:%{}, [], []}]}
+          {:=, [], [struct_pattern, {var, vmeta, nil}]}
+
+        other ->
+          other
+      end)
+
+    {name, meta, new_args}
+  end
 
   # Check if a guard expression contains the given remote function call.
   # fn_capture is {:., [], [{:__aliases__, [], [Module]}, :function]}.
