@@ -128,9 +128,10 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   @impl true
   def match?(%{severity: :warning, message: msg}) do
-    (String.contains?(msg, "is undefined or private") or
-       String.contains?(msg, "is deprecated")) and
-      parse_qualified_ref(msg) != nil
+    String.contains?(msg, "single quotes around atoms are deprecated") or
+      ((String.contains?(msg, "is undefined or private") or
+          String.contains?(msg, "is deprecated")) and
+         parse_qualified_ref(msg) != nil)
   end
 
   def match?(%{severity: :error, message: msg}) do
@@ -152,15 +153,23 @@ defmodule Credence.Semantic.UndefinedFunction do
   def fix(source, %{message: msg, position: position}) do
     line_no = extract_line(position)
 
-    case parse_diagnostic(msg) do
-      {:qualified, {mod, fun, arity}} ->
-        fix_qualified(source, line_no, mod, fun, arity, msg)
+    cond do
+      # :ets.insert/3 does not exist — LLMs hallucinate it from Map.put/3.
+      # Wrap the last two args into a single tuple for :ets.insert/2.
+      String.contains?(msg, "single quotes around atoms are deprecated") ->
+        fix_ets_insert_three_args(source, line_no)
 
-      {:local, {name, arity}} ->
-        fix_local(source, line_no, name, arity)
+      true ->
+        case parse_diagnostic(msg) do
+          {:qualified, {mod, fun, arity}} ->
+            fix_qualified(source, line_no, mod, fun, arity, msg)
 
-      nil ->
-        source
+          {:local, {name, arity}} ->
+            fix_local(source, line_no, name, arity)
+
+          nil ->
+            source
+        end
     end
   end
 
@@ -218,6 +227,48 @@ defmodule Credence.Semantic.UndefinedFunction do
           :no_candidates ->
             source
         end
+    end
+  end
+
+  #
+  # :ets.insert/3 → :ets.insert/2 (wrap last two args into a tuple)
+  # LLMs hallucinate :ets.insert(table, key, value) from Map.put/3;
+  # the real API is :ets.insert(table, {key, value}).
+
+  defp fix_ets_insert_three_args(source, line_no) do
+    source
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.map_join("\n", fn
+      {line, ^line_no} -> do_fix_ets_insert_three_args(line)
+      {line, _} -> line
+    end)
+  end
+
+  defp do_fix_ets_insert_three_args(line) do
+    case :binary.match(line, ":ets.insert(") do
+      {match_start, match_len} ->
+        paren_pos = match_start + match_len - 1
+        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
+
+        case find_matching_close(String.to_charlist(after_paren)) do
+          {:ok, inner, rest_after} ->
+            args = split_args(inner)
+
+            if length(args) == 3 do
+              [table, arg2, arg3] = args
+              before = String.slice(line, 0, match_start)
+              "#{before}:ets.insert(#{table}, {#{arg2}, #{arg3}})#{rest_after}"
+            else
+              line
+            end
+
+          :unbalanced ->
+            line
+        end
+
+      :nomatch ->
+        line
     end
   end
 
@@ -637,6 +688,12 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   defp do_split_args([?) | rest], depth, current, args),
     do: do_split_args(rest, depth - 1, [?) | current], args)
+
+  defp do_split_args([?{ | rest], depth, current, args),
+    do: do_split_args(rest, depth + 1, [?{ | current], args)
+
+  defp do_split_args([?} | rest], depth, current, args),
+    do: do_split_args(rest, depth - 1, [?} | current], args)
 
   defp do_split_args([c | rest], depth, current, args),
     do: do_split_args(rest, depth, [c | current], args)

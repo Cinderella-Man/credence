@@ -952,6 +952,64 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
     end
   end
 
+  # ── :ets.insert/3 → :ets.insert/2 ─────────────────────────────
+
+  @ets_diag "single quotes around atoms are deprecated. Use double quotes instead"
+
+  describe ":ets.insert/3 → :ets.insert/2 (wrap last two args into tuple)" do
+    test "basic 3-arg call" do
+      confirm_fix(
+        fix(
+          ":ets.insert(table, {:key}, :value)",
+          @ets_diag
+        ),
+        ":ets.insert(table, {{:key}, :value})"
+      )
+    end
+
+    test "in module context" do
+      input = """
+      defmodule FixEtsInsertThreeArgs do
+        def setup do
+          table = :ets.new(:my_table, [:set, :public])
+          :ets.insert(table, {:key}, :value)
+          table
+        end
+      end
+      """
+
+      expected = """
+      defmodule FixEtsInsertThreeArgs do
+        def setup do
+          table = :ets.new(:my_table, [:set, :public])
+          :ets.insert(table, {{:key}, :value})
+          table
+        end
+      end
+      """
+
+      confirm_fix(fix(input, @ets_diag, 4), expected)
+    end
+
+    test "only on reported line" do
+      input = """
+      :ets.insert(t1, {:a}, 1)
+      :ets.insert(t2, {:b}, 2)
+      """
+
+      confirm_fix(fix(input, @ets_diag, 1), """
+      :ets.insert(t1, {{:a}, 1})
+      :ets.insert(t2, {:b}, 2)
+      """)
+    end
+
+    test "2-arg call is unchanged" do
+      source = ":ets.insert(table, {:key, :value})"
+
+      confirm_fix(fix(source, @ets_diag), source)
+    end
+  end
+
   # Folded from standalone candidate rules (prefer_enum_join,
   # prefer_enum_slice_over_list_slice, prefer_map_size_kernel,
   # prefer_tl_over_enum_tail) — each was a duplicate of this diagnostic matcher.

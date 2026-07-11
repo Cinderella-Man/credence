@@ -77,6 +77,14 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     end
   end
 
+  describe "match?/1 – qualified: :ets.insert/3 hallucination" do
+    test "single quotes around atoms are deprecated" do
+      assert UndefinedFunction.match?(
+               warning("single quotes around atoms are deprecated. Use double quotes instead")
+             )
+    end
+  end
+
   describe "match?/1 – qualified: Float infinity" do
     test "Float.NegInfinity/0" do
       assert UndefinedFunction.match?(warning("Float.NegInfinity/0 is undefined or private"))
