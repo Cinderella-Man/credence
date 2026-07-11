@@ -292,4 +292,35 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert analyze(code) == []
   end
+
+  test "does not flag end keyword before comma in Enum.sort_by closure (paren-less)" do
+    code = """
+    defmodule BugDemo do
+      def sort_list(list) do
+        direction = :asc
+        Enum.sort_by list, fn item ->
+          item.value
+        end, direction
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag end keyword before comma in Enum.sort_by closure (parenthesized)" do
+    code = """
+    defmodule BugDemo do
+      def sort_list(list) do
+        direction = :asc
+
+        Enum.sort_by(list, fn item ->
+          item.value
+        end, direction)
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
 end

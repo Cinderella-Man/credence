@@ -393,9 +393,10 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
             {segs, cur ++ [ch], new_depth, nil, tail, new_stack, new_mismatched}
 
           # Bare comma at depth 0 — split here unless a keyword key, arrow,
-          # function-call-without-parens, or mismatched delimiter precedes it.
+          # function-call-without-parens, block-closing `end`, or mismatched
+          # delimiter precedes it.
           ch == ?, and depth == 0 ->
-            if mismatched or keyword_or_arrow_ahead?(remaining) or function_call_before?(cur) do
+            if mismatched or keyword_or_arrow_ahead?(remaining) or function_call_before?(cur) or block_end_before?(cur) do
               # Keep comma with current segment (keyword entry, clause pattern,
               # paren-less function call like `raise ArgumentError, "msg"`,
               # or mismatched delimiter where the real fix is the delimiter)
@@ -479,6 +480,30 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
 
       _ ->
         false
+    end
+  end
+
+  # Returns true when the accumulated text before a depth-zero comma ends with
+  # the block-closing keyword `end`.  This prevents the rule from misidentifying
+  # `end, arg` inside a paren-less call like:
+  #
+  #     Enum.sort_by list, fn item -> item.value end, direction
+  #
+  # where `end` closes the `fn` block and the comma separates function args,
+  # not a Python multi-return.
+  defp block_end_before?(current_chars) do
+    # Trim trailing whitespace from current_chars
+    trimmed =
+      current_chars
+      |> Enum.reverse()
+      |> Enum.drop_while(&(&1 == ?\s or &1 == ?\t))
+      |> Enum.reverse()
+
+    # Check if trimmed ends with `end` as a standalone keyword
+    case Enum.reverse(trimmed) do
+      [?d, ?n, ?e] -> true
+      [?d, ?n, ?e, ch | _] when ch == ?\s or ch == ?\t -> true
+      _ -> false
     end
   end
 

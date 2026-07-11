@@ -329,4 +329,35 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
     confirm_fix(fix(input), input)
   end
+
+  test "does not modify end keyword before comma in Enum.sort_by closure (paren-less)" do
+    input = """
+    defmodule BugDemo do
+      def sort_list(list) do
+        direction = :asc
+        Enum.sort_by list, fn item ->
+          item.value
+        end, direction
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify end keyword before comma in Enum.sort_by closure (parenthesized)" do
+    input = """
+    defmodule BugDemo do
+      def sort_list(list) do
+        direction = :asc
+
+        Enum.sort_by(list, fn item ->
+          item.value
+        end, direction)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end
