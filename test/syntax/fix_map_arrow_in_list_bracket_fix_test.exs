@@ -66,4 +66,36 @@ defmodule Credence.Syntax.FixMapArrowInListBracketFixTest do
     input = ~S'[{atom(), any()}]'
     confirm_fix(fix(input), input)
   end
+
+  test "fixes arrow inside braces without double-wrapping" do
+    input = """
+    defmodule Repro do
+      def build(key, val) do
+        [{key => val}]
+      end
+    end
+    """
+
+    expected = """
+    defmodule Repro do
+      def build(key, val) do
+        [{key, val}]
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "fixed arrow inside braces no longer flags" do
+    input = """
+    defmodule Repro do
+      def build(key, val) do
+        [{key => val}]
+      end
+    end
+    """
+
+    assert analyze(fix(input)) == []
+  end
 end

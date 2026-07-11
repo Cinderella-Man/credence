@@ -32,4 +32,8 @@ defmodule Credence.Syntax.FixMapArrowInListBracketAnalyzeTest do
   test "leaves valid tuple list alone" do
     assert analyze(~S'[{atom(), any()}]') == []
   end
+
+  test "flags arrow inside braces" do
+    assert [%Issue{rule: :fix_map_arrow_in_list_bracket}] = analyze(~S'[{key => val}]')
+  end
 end

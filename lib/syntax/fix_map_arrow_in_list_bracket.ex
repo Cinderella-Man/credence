@@ -47,7 +47,21 @@ defmodule Credence.Syntax.FixMapArrowInListBracket do
   @impl true
   def fix(source) do
     Regex.replace(~r/\[([^\[\]]*?)\s*=>\s*([^\[\]]*)\]/, source, fn _full, key, value ->
+      {key, value} = strip_outer_braces(key, value)
       "[{#{key}, #{value}}]"
     end, global: true)
   end
+
+  # When the arrow expression is already inside braces — [{k => v}] — the regex
+  # captures "{k" as key and "v}" as value. Strip the outer braces so we don't
+  # double-wrap to [{{k, v}}].
+  defp strip_outer_braces("{" <> rest_key, rest_value) do
+    if String.ends_with?(rest_value, "}") do
+      {String.trim(rest_key), rest_value |> String.trim_trailing("}") |> String.trim()}
+    else
+      {"{" <> rest_key, rest_value}
+    end
+  end
+
+  defp strip_outer_braces(key, value), do: {key, value}
 end
