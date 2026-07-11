@@ -109,7 +109,9 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "no_unless_else" =>
       "unless→if with branches swapped, condition unchanged (same as Kernel.unless)",
     "prefer_cond_for_nested_if" =>
-      "nested if→cond copying every condition/body verbatim; no operator change"
+      "nested if→cond copying every condition/body verbatim; no operator change",
+    "no_defp_already_defined_as_def" =>
+      "renames a defp clause to do_<name> or deletes a duplicate defp; operates only on def/defp definitions and bare call sites, never inside a DSL expression"
   }
 
   test "every rule whose fix changes a reinterpreted construct is classified" do

@@ -41,4 +41,11 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDefCheckTest do
     diag = %{severity: :error, message: @real_message, position: {42, 10}}
     assert NoDefpAlreadyDefinedAsDef.to_issue(diag).meta.line == 42
   end
+
+  @real_captured_message "defp stab_count/2 already defined as def"
+
+  test "matches the real captured diagnostic" do
+    diag = %{severity: :error, message: @real_captured_message, position: {11, 3}}
+    assert NoDefpAlreadyDefinedAsDef.match?(diag)
+  end
 end
