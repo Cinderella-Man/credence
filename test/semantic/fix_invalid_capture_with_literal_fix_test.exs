@@ -109,6 +109,26 @@ defmodule Credence.Semantic.FixInvalidCaptureWithLiteralFixTest do
 
       confirm_fix(fix(input), input)
     end
+
+    test "fixes &System.os_time(:second/0) to fn -> System.os_time(:second) end" do
+      input = """
+      defmodule CaptureBug do
+        def get_clock(opts) do
+          Keyword.get(opts, :clock, &System.os_time(:second/0))
+        end
+      end
+      """
+
+      expected = """
+      defmodule CaptureBug do
+        def get_clock(opts) do
+          Keyword.get(opts, :clock, fn -> System.os_time(:second) end)
+        end
+      end
+      """
+
+      confirm_fix(fix(input), expected)
+    end
   end
 
   describe "fix output is well-formed" do
@@ -126,6 +146,18 @@ defmodule Credence.Semantic.FixInvalidCaptureWithLiteralFixTest do
       input = """
       defmodule M do
         def f, do: Enum.map([1, 2], &false)
+      end
+      """
+
+      assert valid_syntax?(fix(input))
+    end
+
+    test "fixed output parses for &System.os_time(:second/0)" do
+      input = """
+      defmodule CaptureBug do
+        def get_clock(opts) do
+          Keyword.get(opts, :clock, &System.os_time(:second/0))
+        end
       end
       """
 

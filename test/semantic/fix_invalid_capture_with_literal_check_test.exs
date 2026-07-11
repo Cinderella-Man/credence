@@ -42,6 +42,20 @@ defmodule Credence.Semantic.FixInvalidCaptureWithLiteralCheckTest do
 
       refute FixInvalidCaptureWithLiteral.match?(diag)
     end
+
+    test "does not fire on unused module attribute diagnostic" do
+      diag = %{
+        message: "module attribute @timestamp_size was set but never used",
+        position: 8,
+        file: "credence_check.ex",
+        stacktrace: [{SecureToken, :__MODULE__, 0, [file: "credence_check.ex", line: 8]}],
+        source: "credence_check.ex",
+        span: nil,
+        severity: :warning
+      }
+
+      refute FixInvalidCaptureWithLiteral.match?(diag)
+    end
   end
 
   describe "to_issue/1" do
