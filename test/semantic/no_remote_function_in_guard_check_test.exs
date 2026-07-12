@@ -40,4 +40,15 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuardCheckTest do
     diag = %{severity: :error, message: @real_message, position: {42, 10}, file: "credence_check.ex"}
     assert NoRemoteFunctionInGuard.to_issue(diag).meta.line == 42
   end
+
+  test "ignores invalid syntax diagnostic from broken hash-rocket fix output" do
+    diag = %{
+      severity: :error,
+      message: "invalid syntax found on credence_check.ex:98:41:\n    error: syntax error before: '=>'\n    │\n 98 │     do: if(String.length(name) > 0, :do => :ok, :else => {:error, :invalid_name})\n    │                                         ^\n    │\n    └─ credence_check.ex:98:41",
+      position: 98,
+      file: "credence_check.ex"
+    }
+
+    refute NoRemoteFunctionInGuard.match?(diag)
+  end
 end

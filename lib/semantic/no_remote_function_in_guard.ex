@@ -229,7 +229,13 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
       {:ok, fallback_body, remaining} ->
         {safe_guard, if_condition} = decompose_guard(guard, fn_capture)
         merged = build_merged(kind, meta, when_meta, fn_head, safe_guard, if_condition, body_kw, fallback_body)
-        {:ok, merged, remaining}
+        # When the safe guard is non-nil the merged clause still carries a
+        # `when`, so the original fallback clause must remain to catch values
+        # that do not satisfy it.  Only consume the fallback when the entire
+        # guard was extracted (safe_guard == nil) — then the single merged
+        # clause already matches every argument.
+        kept = if safe_guard != nil, do: rest, else: remaining
+        {:ok, merged, kept}
 
       :error ->
         throw(:no_match)
@@ -319,17 +325,19 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
     fallback_body = extract_do(fallback_body_kw)
 
     # Sourceror needs :do and :end on the :if node to emit block layout.
+    base = Keyword.take(meta, [:line, :column])
     if_meta =
-      meta
-      |> Keyword.take([:do, :end, :line, :column])
+      base
+      |> Keyword.put(:do, base)
+      |> Keyword.put(:end, base)
 
     if_node =
       {:if, if_meta,
        [
          if_condition,
          [
-           {{:__block__, [], [:do]}, original_body},
-           {{:__block__, [], [:else]}, fallback_body}
+           {{:__block__, [format: :keyword], [:do]}, original_body},
+           {{:__block__, [format: :keyword], [:else]}, fallback_body}
          ]
        ]}
 
@@ -342,8 +350,17 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuard do
         _ -> {:when, when_meta, [clean_head, safe_guard]}
       end
 
+    # Force block-style function body (not inline `do:` keyword) when the
+    # output contains an `if` block.  Carry over comment metadata.
+    out_meta =
+      base
+      |> Keyword.put(:trailing_comments, Keyword.get(meta, :trailing_comments, []))
+      |> Keyword.put(:leading_comments, Keyword.get(meta, :leading_comments, []))
+      |> Keyword.put(:do, base)
+      |> Keyword.put(:end, base)
+
     new_body = [{{:__block__, [], [:do]}, if_node}]
-    {kind, meta, [final_head, new_body]}
+    {kind, out_meta, [final_head, new_body]}
   end
 
   # Extract the body from a Sourceror keyword list [{{:__block__, _, [:do]}, body}]

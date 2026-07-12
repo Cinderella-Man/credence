@@ -209,4 +209,42 @@ defmodule Credence.Semantic.NoRemoteFunctionInGuardFixTest do
     message = "cannot invoke remote function Map.get/2 inside a guard"
     assert valid_syntax?(fix(input, message, 2))
   end
+
+  test "compound guard with safe remainder preserves fallback clause and uses keyword syntax" do
+    input = """
+    defmodule FixTest do
+      defp validate_name(name) when is_binary(name) and String.length(name) > 0, do: :ok
+      defp validate_name(_), do: {:error, :invalid_name}
+    end
+    """
+
+    expected = """
+    defmodule FixTest do
+      defp validate_name(name) when is_binary(name) do
+        if String.length(name) > 0 do
+          :ok
+        else
+          {:error, :invalid_name}
+        end
+      end
+
+      defp validate_name(_), do: {:error, :invalid_name}
+    end
+    """
+
+    message = "cannot invoke remote function String.length/1 inside a guard"
+    confirm_fix(fix(input, message, 2), expected)
+  end
+
+  test "compound guard with safe remainder produces valid syntax" do
+    input = """
+    defmodule FixTest do
+      defp validate_name(name) when is_binary(name) and String.length(name) > 0, do: :ok
+      defp validate_name(_), do: {:error, :invalid_name}
+    end
+    """
+
+    message = "cannot invoke remote function String.length/1 inside a guard"
+    assert valid_syntax?(fix(input, message, 2))
+  end
 end
