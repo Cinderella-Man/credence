@@ -61,7 +61,29 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinityFixTest do
     assert valid_syntax?(fix(input, @real_message))
   end
 
-  test "returns source unchanged when no Process.send_after with :infinity" do
+  test "wraps Process.send_after with variable timeout in if guard" do
+    input = """
+    defmodule VariableInterval do
+      def schedule_cleanup(interval) do
+        Process.send_after(self(), :tick, interval)
+      end
+    end
+    """
+
+    expected = """
+    defmodule VariableInterval do
+      def schedule_cleanup(interval) do
+        if interval != :infinity do
+          Process.send_after(self(), :tick, interval)
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @real_message), expected)
+  end
+
+  test "wraps Process.send_after with variable timeout in if guard (assignment)" do
     input = """
     defmodule Clean do
       def schedule_cleanup(state) do
@@ -71,7 +93,18 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinityFixTest do
     end
     """
 
-    confirm_fix(fix(input, @real_message), input)
+    expected = """
+    defmodule Clean do
+      def schedule_cleanup(state) do
+        ref = if state.interval != :infinity do
+          Process.send_after(self(), :cleanup, state.interval)
+        end
+        %{state | cleanup_ref: ref}
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @real_message), expected)
   end
 
   test "returns source unchanged for unrelated code" do
