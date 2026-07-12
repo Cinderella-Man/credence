@@ -100,7 +100,10 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Enum", "flatten", 1} => {:rename, "List", "flatten"},
 
     # LLMs hallucinate Process.exit/1; the idiomatic Elixir call is Kernel.exit/1
-    {"Process", "exit", 1} => {:drop_module, "exit"}
+    {"Process", "exit", 1} => {:drop_module, "exit"},
+
+    # Hallucinated :ets.open_table/2 — the real function is :ets.new/2
+    {"ets", "open_table", 2} => {:rename, "ets", "new"}
   }
 
   @local_replacements %{

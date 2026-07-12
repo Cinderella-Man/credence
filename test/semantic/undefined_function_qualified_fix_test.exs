@@ -1174,4 +1174,50 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       )
     end
   end
+
+  # ── :ets.open_table → :ets.new ─────────────────────────────────
+
+  describe ":ets.open_table → :ets.new" do
+    test "direct call" do
+      confirm_fix(
+        fix(
+          ":ets.open_table(name, [:set, :public, :named_table])",
+          ":ets.open_table/2 is undefined or private"
+        ),
+        ":ets.new(name, [:set, :public, :named_table])"
+      )
+    end
+
+    test "in module context" do
+      input = """
+      defmodule HallucinatedEtsOpenTable do
+        def create_table(name) do
+          :ets.open_table(name, [:set, :public, :named_table])
+        end
+      end
+      """
+
+      expected = """
+      defmodule HallucinatedEtsOpenTable do
+        def create_table(name) do
+          :ets.new(name, [:set, :public, :named_table])
+        end
+      end
+      """
+
+      confirm_fix(fix(input, ":ets.open_table/2 is undefined or private", 3), expected)
+    end
+
+    test "only on reported line" do
+      input = """
+      :ets.open_table(t1, [:set])
+      :ets.open_table(t2, [:set])
+      """
+
+      confirm_fix(fix(input, ":ets.open_table/2 is undefined or private", 1), """
+      :ets.new(t1, [:set])
+      :ets.open_table(t2, [:set])
+      """)
+    end
+  end
 end
