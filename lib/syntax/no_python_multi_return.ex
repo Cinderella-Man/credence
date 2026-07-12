@@ -58,9 +58,10 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   # line was previously analysed in isolation.
   defp find_bare_comma_lines(source) do
     line_depths = compute_line_start_depths(source)
+    lines = String.split(source, "\n")
+    clause_lines = for_with_clause_continuation_lines(lines)
 
-    source
-    |> String.split("\n")
+    lines
     |> Enum.with_index(1)
     |> Enum.flat_map(fn {line, line_no} ->
       start_depth = Map.get(line_depths, line_no, 0)
@@ -69,12 +70,125 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
            not comment_line?(line) and
            not has_left_arrow_at_depth_zero?(line) and
            not has_struct_pipe_at_depth_zero?(line) and
+           not MapSet.member?(clause_lines, line_no) and
            has_bare_comma?(line) do
         [line_no]
       else
         []
       end
     end)
+  end
+
+  # Returns a MapSet of line numbers that are part of a multi-line for/with
+  # clause — i.e. continuation lines after the initial `<-` line that have
+  # not yet been terminated by `do:` or a `do` block.
+  #
+  # This prevents false positives where guard lines like
+  #
+  #     for {name, job_data} <- state.jobs,
+  #         job_data.status == :active,     ← bare comma, but a clause separator
+  #         do: {name, job_data}
+  #
+  # are mistakenly flagged as Python multi-returns.
+  defp for_with_clause_continuation_lines(lines) do
+    {_, set} =
+      lines
+      |> Enum.with_index(1)
+      |> Enum.reduce({false, MapSet.new()}, fn {line, line_no}, {in_clause, acc} ->
+        trimmed = String.trim_leading(line)
+
+        has_arrow = has_left_arrow_at_depth_zero?(line)
+        has_do = has_do_keyword_at_depth_zero?(line)
+
+        cond do
+          # Line has `<-` at depth 0 but ALSO has `do:` → the clause ends
+          # on this very line (e.g. `for x <- xs, do: x`). Mark as in-clause
+          # for this line only, then stop.
+          has_arrow and has_do ->
+            {false, MapSet.put(acc, line_no)}
+
+          # Line has `<-` at depth 0 → starts or continues a for/with clause
+          has_arrow ->
+            {true, MapSet.put(acc, line_no)}
+
+          # Inside a clause and line has `do:` at depth 0 → clause ends here
+          # (this line is still part of the clause, but the next won't be)
+          in_clause and has_do ->
+            {false, MapSet.put(acc, line_no)}
+
+          # Inside a clause and line starts with `do` as a standalone keyword
+          # (not `do:` which is handled above) → opens a block; NOT part of clause
+          in_clause and starts_with_standalone_do?(trimmed) ->
+            {false, acc}
+
+          # Inside a clause and line starts with `end` → clause definitely over
+          in_clause and starts_with_standalone_end?(trimmed) ->
+            {false, acc}
+
+          # Inside a clause → continuation line
+          in_clause ->
+            {true, MapSet.put(acc, line_no)}
+
+          # Not inside a clause
+          true ->
+            {false, acc}
+        end
+      end)
+
+    set
+  end
+
+  # Returns true when the line contains `do:` at depth 0 (a keyword option,
+  # not inside parentheses/brackets/strings).
+  defp has_do_keyword_at_depth_zero?(line) do
+    check_do_keyword(String.to_charlist(line), 0, nil)
+  end
+
+  defp check_do_keyword([], _depth, _ctx), do: false
+  defp check_do_keyword([?d, ?o, ?: | _rest], 0, nil), do: true
+
+  # Inside string — skip
+  defp check_do_keyword([q | rest], depth, ctx) when (ctx == ?" or ctx == ?') and q == ctx,
+    do: check_do_keyword(rest, depth, nil)
+
+  defp check_do_keyword([?\\, _ | rest], depth, ctx) when ctx == ?" or ctx == ?',
+    do: check_do_keyword(rest, depth, ctx)
+
+  defp check_do_keyword([_ | rest], depth, ctx) when ctx == ?" or ctx == ?',
+    do: check_do_keyword(rest, depth, ctx)
+
+  defp check_do_keyword([q | rest], depth, nil) when q == ?" or q == ?',
+    do: check_do_keyword(rest, depth, q)
+
+  # Delimiters
+  defp check_do_keyword([ch | rest], depth, nil) when ch == ?( or ch == ?[ or ch == ?{,
+    do: check_do_keyword(rest, depth + 1, nil)
+
+  defp check_do_keyword([ch | rest], depth, nil) when ch == ?) or ch == ?] or ch == ?},
+    do: check_do_keyword(rest, max(depth - 1, 0), nil)
+
+  defp check_do_keyword([_ | rest], depth, ctx), do: check_do_keyword(rest, depth, ctx)
+
+  # True when `trimmed` starts with `do` as a standalone keyword (not `do:`).
+  # `do:` is caught by `has_do_keyword_at_depth_zero?` above; this handles the
+  # multi-line `do ... end` block form.
+  defp starts_with_standalone_do?(trimmed) do
+    case trimmed do
+      "do" -> true
+      "do " <> _ -> true
+      "do\t" <> _ -> true
+      _ -> false
+    end
+  end
+
+  defp starts_with_standalone_end?(trimmed) do
+    case trimmed do
+      "end" -> true
+      "end " <> _ -> true
+      "end\t" <> _ -> true
+      "end\n" <> _ -> true
+      _ -> false
+    end
   end
 
   # ── Cross-line depth tracking ──────────────────────────────────────────

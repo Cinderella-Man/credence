@@ -323,4 +323,61 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert analyze(code) == []
   end
+
+  test "does not flag for comprehension guard on separate line" do
+    code = """
+    defmodule ForGuard do
+      def run(state) do
+        for {name, job_data} <- state.jobs,
+            job_data.status == :active,
+            do: {name, job_data}
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag for comprehension with multiple guards on separate lines" do
+    code = """
+    defmodule ForMultiGuard do
+      def run(state) do
+        for {name, job_data} <- state.jobs,
+            job_data.status == :active,
+            NaiveDateTime.compare(job_data.next_run_at, DateTime.utc_now()) != :gt,
+            do: {name, job_data}
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag for comprehension with do block and guard on separate line" do
+    code = """
+    defmodule ForDoBlock do
+      def run(state) do
+        for {name, job_data} <- state.jobs,
+            job_data.status == :active do
+          {name, job_data}
+        end
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "flags bare comma after for comprehension ends" do
+    code = """
+    defmodule BareCommaAfterFor do
+      def run do
+        for x <- [1,2,3], do: x
+        a, b
+      end
+    end
+    """
+
+    assert [%Issue{rule: :no_python_multi_return, meta: %{line: 4}}] = analyze(code)
+  end
 end

@@ -360,4 +360,70 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
     confirm_fix(fix(input), input)
   end
+
+  test "does not modify for comprehension guard on separate line" do
+    input = """
+    defmodule ForGuard do
+      def run(state) do
+        for {name, job_data} <- state.jobs,
+            job_data.status == :active,
+            do: {name, job_data}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify for comprehension with multiple guards on separate lines" do
+    input = """
+    defmodule ForMultiGuard do
+      def run(state) do
+        for {name, job_data} <- state.jobs,
+            job_data.status == :active,
+            NaiveDateTime.compare(job_data.next_run_at, DateTime.utc_now()) != :gt,
+            do: {name, job_data}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify for comprehension with do block and guard on separate line" do
+    input = """
+    defmodule ForDoBlock do
+      def run(state) do
+        for {name, job_data} <- state.jobs,
+            job_data.status == :active do
+          {name, job_data}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "fixes bare comma after for comprehension ends" do
+    input = """
+    defmodule BareCommaAfterFor do
+      def run do
+        for x <- [1,2,3], do: x
+        a, b
+      end
+    end
+    """
+
+    expected = """
+    defmodule BareCommaAfterFor do
+      def run do
+        for x <- [1,2,3], do: x
+        {a, b}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
 end
