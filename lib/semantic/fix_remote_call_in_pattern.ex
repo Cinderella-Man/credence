@@ -64,6 +64,16 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
       # Walk the AST, find pattern contexts and fix them
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
+          # Handle var.field = expr assignment inside a block
+          {:__block__, block_meta, exprs} = node, acc when is_list(exprs) ->
+            case try_fix_block_assignment(exprs, remote_call_stripped, receiver, field, diag_line) do
+              {:ok, new_exprs} ->
+                {{:__block__, block_meta, new_exprs}, true}
+
+              :error ->
+                {node, acc}
+            end
+
           {:receive, meta, [clauses_kw]} = node, acc when is_list(clauses_kw) ->
             case try_fix_clauses(clauses_kw, remote_call_stripped, field, diag_line) do
               {:ok, new_clauses, binding} ->
@@ -136,6 +146,122 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
       end)
 
     if changed, do: {:ok, new_kw, binding}, else: :error
+  end
+
+  # Fix var.field = expr assignment: rewrite to new_<field> = expr and
+  # replace bare var references in subsequent expressions with %{var | field: new_<field}.
+  defp try_fix_block_assignment(exprs, remote_call_stripped, receiver, field, diag_line) do
+    case find_remote_assignment(exprs, remote_call_stripped) do
+      {:ok, index, rhs} ->
+        new_var_name = String.to_atom("new_#{field}")
+        new_var = {new_var_name, [line: diag_line], nil}
+        new_binding = {:=, [line: diag_line], [new_var, rhs]}
+
+        receiver_ast = build_receiver_ast(receiver)
+        map_update = build_map_update(receiver_ast, field, new_var, diag_line)
+
+        new_exprs =
+          exprs
+          |> Enum.with_index()
+          |> Enum.map(fn
+            {_, ^index} ->
+              new_binding
+
+            {expr, i} when i > index ->
+              replace_bare_receiver(expr, receiver, map_update)
+
+            {expr, _} ->
+              expr
+          end)
+
+        {:ok, new_exprs}
+
+      :error ->
+        :error
+    end
+  end
+
+  # Find the first assignment with a remote-call LHS matching remote_call_stripped.
+  defp find_remote_assignment(exprs, remote_call_stripped) do
+    exprs
+    |> Enum.with_index()
+    |> Enum.find_value(:error, fn
+      {{:=, _meta, [lhs, rhs]}, index} ->
+        if strip_meta(lhs) == remote_call_stripped do
+          {:ok, index, rhs}
+        end
+
+      _ ->
+        nil
+    end)
+  end
+
+  # Replace bare receiver references (not dot-access like receiver.field) with replacement.
+  # Uses a custom walker that skips dot-access children to avoid replacing receiver inside
+  # receiver.field expressions.
+  defp replace_bare_receiver(ast, receiver, replacement) do
+    receiver_stripped = strip_meta(build_receiver_ast(receiver))
+    do_replace_bare(ast, receiver_stripped, replacement)
+  end
+
+  defp do_replace_bare(node, recv, repl) do
+    case node do
+      # 3-tuple with list args (most common AST form)
+      {form, meta, args} when is_list(args) ->
+        if is_dot_call_with_receiver?(form, recv) do
+          # Dot-access call like state.streams — don't recurse into children
+          node
+        else
+          {form, meta, Enum.map(args, &do_replace_bare(&1, recv, repl))}
+        end
+
+      # 3-tuple with non-list arg (leaf like {:state, [], nil})
+      {form, meta, arg} ->
+        if strip_meta(node) == recv do
+          repl
+        else
+          {form, meta, do_replace_bare(arg, recv, repl)}
+        end
+
+      # 2-tuple
+      {left, right} ->
+        {do_replace_bare(left, recv, repl), do_replace_bare(right, recv, repl)}
+
+      # List
+      list when is_list(list) ->
+        Enum.map(list, &do_replace_bare(&1, recv, repl))
+
+      # Leaf
+      _ ->
+        node
+    end
+  end
+
+  # Check if form is {:., _, [recv_ast, _field]} and strip_meta(recv_ast) == recv
+  defp is_dot_call_with_receiver?({:., _, [recv_ast, _field]}, recv) do
+    strip_meta(recv_ast) == recv
+  end
+
+  defp is_dot_call_with_receiver?(_, _), do: false
+
+  # Build the bare receiver AST (e.g. {:state, [], nil} for [:state])
+  defp build_receiver_ast(receiver) do
+    case receiver do
+      [single] -> {single, [], nil}
+      parts -> {:__aliases__, [], parts}
+    end
+  end
+
+  # Build %{receiver | field: new_var} AST
+  defp build_map_update(receiver_ast, field, new_var, line) do
+    {:%{}, [line: line],
+     [
+       {:|, [line: line],
+        [
+          receiver_ast,
+          [{{:__block__, [format: :keyword, line: line], [field]}, new_var}]
+        ]}
+     ]}
   end
 
   # Replace remote call nodes in a pattern with a pinned variable.

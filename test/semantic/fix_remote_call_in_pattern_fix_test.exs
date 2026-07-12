@@ -41,6 +41,49 @@ defmodule Credence.Semantic.FixRemoteCallInPatternFixTest do
     confirm_fix(fix(input, @real_message, 4), expected)
   end
 
+  test "fixes var.field = expr assignment to local variable + map update" do
+    input = ~S"""
+    defmodule ResetStreams do
+      use GenServer
+
+      def init(_), do: {:ok, %{streams: %{}}}
+
+      def handle_call({:reset, name}, _from, state) do
+        state.streams =
+          case Map.get(state.streams, name) do
+            nil -> state.streams
+            _ -> Map.put(state.streams, name, %{})
+          end
+
+        {:reply, :ok, state}
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule ResetStreams do
+      use GenServer
+
+      def init(_), do: {:ok, %{streams: %{}}}
+
+      def handle_call({:reset, name}, _from, state) do
+        new_streams =
+          case Map.get(state.streams, name) do
+            nil -> state.streams
+            _ -> Map.put(state.streams, name, %{})
+          end
+
+        {:reply, :ok, %{state | streams: new_streams}}
+      end
+    end
+    """
+
+    confirm_fix(
+      fix(input, "cannot invoke remote function state.streams/0 inside a match", 7),
+      expected
+    )
+  end
+
   test "fixed output is well-formed (parses)" do
     input = ~S"""
     defmodule Example do
