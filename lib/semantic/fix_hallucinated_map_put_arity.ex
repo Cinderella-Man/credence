@@ -1,9 +1,10 @@
 defmodule Credence.Semantic.FixHallucinatedMapPutArity do
   @moduledoc """
-  Fixes the compile warning caused by LLM-hallucinated `Map.put/5+` calls.
+  Fixes the compile warning caused by LLM-hallucinated `Map.put` calls.
 
-  LLMs frequently hallucinate `Map.put/5` or higher arities (Python-dict style
-  multi-key construction):
+  Two hallucination patterns:
+
+  1. **`Map.put/5+`** (Python-dict style multi-key construction):
 
       # Wrong (hallucinated):
       Map.put(%{}, :type, :missing_required, :path, [:a])
@@ -11,9 +12,17 @@ defmodule Credence.Semantic.FixHallucinatedMapPutArity do
       # Correct (chained Map.put/3):
       Map.put(Map.put(%{}, :type, :missing_required), :path, [:a])
 
-  The compiler emits a warning because `Map.put/5` (or `/4`, `/6`, etc.) is
-  undefined — only `Map.put/3` exists. The fix chains the key-value pairs into
-  nested `Map.put/3` calls deterministically.
+  2. **`Map.put/2`** with a map literal second argument:
+
+      # Wrong (hallucinated):
+      Map.put(state, %{status: :suspended, reason: "payment_failed"})
+
+      # Correct (Map.merge/2):
+      Map.merge(state, %{status: :suspended, reason: "payment_failed"})
+
+  The compiler emits a warning because `Map.put/2` (and `/4`, `/5`, etc.) are
+  undefined — only `Map.put/3` exists. The fix chains pairs into nested
+  `Map.put/3` calls, or rewrites `Map.put/2` to `Map.merge/2`.
   """
   use Credence.Semantic.Rule
 
@@ -43,8 +52,15 @@ defmodule Credence.Semantic.FixHallucinatedMapPutArity do
     with {:ok, ast} <- Sourceror.parse_string(source) do
       {new_ast, changed} =
         Macro.prewalk(ast, false, fn
-          {{:., dot_meta, [{:__aliases__, alias_meta, [:Map]}, :put]}, call_meta, args},
-          _acc
+          # Map.put/2 with a map literal second arg → Map.merge/2
+          {{:., dot_meta, [{:__aliases__, alias_meta, [:Map]}, :put]}, call_meta,
+           [base, {:%{}, _, _} = map_literal]},
+          _acc ->
+            {{{:., dot_meta, [{:__aliases__, alias_meta, [:Map]}, :merge]}, call_meta,
+              [base, map_literal]}, true}
+
+          # Map.put/5+ with odd arg count → chained Map.put/3
+          {{:., dot_meta, [{:__aliases__, alias_meta, [:Map]}, :put]}, call_meta, args}, _acc
           when is_list(args) and length(args) > 3 and rem(length(args), 2) == 1 ->
             [map | rest] = args
             pairs = Enum.chunk_every(rest, 2)

@@ -120,4 +120,40 @@ defmodule Credence.Semantic.FixHallucinatedMapPutArityFixTest do
 
     confirm_fix(fix(input, @real_message, 3), expected)
   end
+
+  @put2_message "Map.put/2 is undefined or private. Did you mean:\n\n    * put/3\n"
+
+  test "fixes Map.put/2 with map literal to Map.merge/2" do
+    input = """
+    defmodule FixMapPutArity2 do
+      def update_state(state) do
+        new_state = Map.put(state, %{status: :suspended, reason: "payment_failed"})
+        new_state
+      end
+    end
+    """
+
+    expected = """
+    defmodule FixMapPutArity2 do
+      def update_state(state) do
+        new_state = Map.merge(state, %{status: :suspended, reason: "payment_failed"})
+        new_state
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @put2_message, 3), expected)
+  end
+
+  test "does not rewrite Map.put/2 with non-map second arg" do
+    input = """
+    defmodule CleanExample do
+      def build do
+        Map.put(%{}, :key)
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @put2_message, 3), input)
+  end
 end
