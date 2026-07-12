@@ -129,6 +129,26 @@ defmodule Credence.Semantic.FixInvalidCaptureWithLiteralFixTest do
 
       confirm_fix(fix(input), expected)
     end
+
+    test "fixes &System.monotonic_time(:millisecond) to fn -> System.monotonic_time(:millisecond) end" do
+      input = """
+      defmodule TestCapture do
+        def get_clock do
+          Map.get(%{}, :clock, &System.monotonic_time(:millisecond))
+        end
+      end
+      """
+
+      expected = """
+      defmodule TestCapture do
+        def get_clock do
+          Map.get(%{}, :clock, fn -> System.monotonic_time(:millisecond) end)
+        end
+      end
+      """
+
+      confirm_fix(fix(input), expected)
+    end
   end
 
   describe "fix output is well-formed" do

@@ -45,7 +45,7 @@ defmodule Credence.Semantic.FixInvalidCaptureWithLiteral do
             fn_node = {:fn, meta, [{:->, [], [[{:_, [], nil}], {:__block__, [], [literal]}]}]}
             {fn_node, true}
 
-          {:&, meta, [{{:., dot_meta, [aliases, fun]}, call_meta, args}]} = node, acc
+          {:&, meta, [{{:., dot_meta, [aliases, fun]}, call_meta, args}]} = _node, _acc
           when is_list(args) ->
             if Enum.any?(args, &match?({:/, _, [_, _]}, &1)) do
               new_args =
@@ -57,7 +57,8 @@ defmodule Credence.Semantic.FixInvalidCaptureWithLiteral do
               fn_node = {:fn, meta, [{:->, [], [[], {{:., dot_meta, [aliases, fun]}, call_meta, new_args}]}]}
               {fn_node, true}
             else
-              {node, acc}
+              fn_node = {:fn, meta, [{:->, [], [[], {{:., dot_meta, [aliases, fun]}, call_meta, args}]}]}
+              {fn_node, true}
             end
 
           node, acc ->
