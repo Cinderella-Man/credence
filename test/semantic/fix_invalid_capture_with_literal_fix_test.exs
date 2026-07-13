@@ -130,6 +130,22 @@ defmodule Credence.Semantic.FixInvalidCaptureWithLiteralFixTest do
       confirm_fix(fix(input), expected)
     end
 
+    test "fixes &fn(_record) -> true end to fn _record -> true end" do
+      input = """
+      defmodule M do
+        def f, do: &fn(_record) -> true end
+      end
+      """
+
+      expected = """
+      defmodule M do
+        def f, do: fn _record -> true end
+      end
+      """
+
+      confirm_fix(fix(input), expected)
+    end
+
     test "fixes &System.monotonic_time(:millisecond) to fn -> System.monotonic_time(:millisecond) end" do
       input = """
       defmodule TestCapture do
@@ -166,6 +182,16 @@ defmodule Credence.Semantic.FixInvalidCaptureWithLiteralFixTest do
       input = """
       defmodule M do
         def f, do: Enum.map([1, 2], &false)
+      end
+      """
+
+      assert valid_syntax?(fix(input))
+    end
+
+    test "fixed output parses for &fn(_record) -> true end" do
+      input = """
+      defmodule M do
+        def f, do: &fn(_record) -> true end
       end
       """
 

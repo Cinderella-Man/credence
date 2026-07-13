@@ -45,6 +45,9 @@ defmodule Credence.Semantic.FixInvalidCaptureWithLiteral do
             fn_node = {:fn, meta, [{:->, [], [[{:_, [], nil}], {:__block__, [], [literal]}]}]}
             {fn_node, true}
 
+          {:&, _meta, [{:fn, _fn_meta, _clauses} = fn_node]}, _acc ->
+            {fn_node, true}
+
           {:&, meta, [{{:., dot_meta, [aliases, fun]}, call_meta, args}]} = _node, _acc
           when is_list(args) ->
             if Enum.any?(args, &match?({:/, _, [_, _]}, &1)) do
