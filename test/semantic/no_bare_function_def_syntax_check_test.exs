@@ -24,4 +24,9 @@ defmodule Credence.Semantic.NoBareFunctionDefSyntaxCheckTest do
     assert issue.rule == :no_bare_function_def_syntax
     assert issue.meta.line == 7
   end
+
+  test "does not match return/1 (hallucinated keyword, not a bare function def)" do
+    diag = %{severity: :error, message: "undefined function return/1", position: {4, 7}}
+    refute NoBareFunctionDefSyntax.match?(diag)
+  end
 end

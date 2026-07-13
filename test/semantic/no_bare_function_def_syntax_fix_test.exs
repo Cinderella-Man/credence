@@ -84,4 +84,21 @@ defmodule Credence.Semantic.NoBareFunctionDefSyntaxFixTest do
     # Line 3 is a call without `do`, not a bare function def
     confirm_fix(fix(call_only, message, 3), call_only)
   end
+
+  test "does not fix return/1 (hallucinated keyword, not a bare function def)" do
+    source = """
+    defmodule M do
+      def f do
+        unless true do
+          return {:error, :bad}
+        end
+        :ok
+      end
+    end
+    """
+
+    message = "undefined function return/1"
+    # Line 4 is `return {:error, :bad}` — not a bare function def, no `do` block
+    confirm_fix(fix(source, message, 4), source)
+  end
 end

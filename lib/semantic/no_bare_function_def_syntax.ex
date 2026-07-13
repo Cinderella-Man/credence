@@ -16,9 +16,18 @@ defmodule Credence.Semantic.NoBareFunctionDefSyntax do
 
   @undefined_fn_re ~r/^undefined function (\w+)\/\d+/
 
+  # Names that produce "undefined function X/N" diagnostics but are NOT bare
+  # function definitions — they are LLM-hallucinated keywords (e.g. Python's
+  # `return`) that other rules handle. Matching them here would claim the
+  # diagnostic with an identical-source no-op fix, blocking those rules.
+  @hallucinated_keywords ~w(return)
+
   @impl true
   def match?(%{severity: :error, message: msg}) when is_binary(msg) do
-    Regex.match?(@undefined_fn_re, msg)
+    case Regex.run(@undefined_fn_re, msg) do
+      [_, name] -> name not in @hallucinated_keywords
+      _ -> false
+    end
   end
 
   def match?(_), do: false
