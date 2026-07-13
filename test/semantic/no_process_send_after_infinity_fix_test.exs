@@ -5,7 +5,7 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinityFixTest do
 
   alias Credence.Semantic.NoProcessSendAfterInfinity
 
-  @real_message "redefining module SessionStore (current version loaded from _build/test/lib/workspace/ebin/Elixir.SessionStore.beam)"
+  @real_message "def start_link/1 has multiple clauses and also declares default values. In such cases, the default values should be defined in a header. Instead of:\n\n    def foo(:first_clause, b \\\\ :default) do ... end\n    def foo(:second_clause, b) do ... end\n\none should write:\n\n    def foo(a, b \\\\ :default)\n    def foo(:first_clause, b) do ... end\n    def foo(:second_clause, b) do ... end\n\nthe previous clause is defined on line 5\n"
 
   defp fix(source, message, line \\ 1) do
     NoProcessSendAfterInfinity.fix(source, %{
@@ -139,6 +139,34 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinityFixTest do
       end
 
       defp get_interval, do: :infinity
+    end
+    """
+
+    confirm_fix(fix(input, @real_message), expected)
+  end
+
+  test "adds when guard and {:noreply, state} catch-all for GenServer handle_info" do
+    input = """
+    defmodule GenServerTicker do
+      use GenServer
+
+      def handle_info(:tick, state) do
+        Process.send_after(self(), :tick, state.interval)
+        {:noreply, %{state | count: state.count + 1}}
+      end
+    end
+    """
+
+    expected = """
+    defmodule GenServerTicker do
+      use GenServer
+
+      def handle_info(:tick, state) when state.interval != :infinity do
+        Process.send_after(self(), :tick, state.interval)
+        {:noreply, %{state | count: state.count + 1}}
+      end
+
+      def handle_info(_, state), do: {:noreply, state}
     end
     """
 

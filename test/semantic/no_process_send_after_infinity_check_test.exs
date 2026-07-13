@@ -3,7 +3,7 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinityCheckTest do
 
   alias Credence.Semantic.NoProcessSendAfterInfinity
 
-  @real_message "redefining module SessionStore (current version loaded from _build/test/lib/workspace/ebin/Elixir.SessionStore.beam)"
+  @real_message "def start_link/1 has multiple clauses and also declares default values. In such cases, the default values should be defined in a header. Instead of:\n\n    def foo(:first_clause, b \\\\ :default) do ... end\n    def foo(:second_clause, b) do ... end\n\none should write:\n\n    def foo(a, b \\\\ :default)\n    def foo(:first_clause, b) do ... end\n    def foo(:second_clause, b) do ... end\n\nthe previous clause is defined on line 5\n"
 
   test "matches the diagnostic" do
     diag = %{severity: :warning, message: @real_message, position: {1, 1}}

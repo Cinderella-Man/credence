@@ -11,7 +11,7 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinity do
 
   alias Credence.Issue
 
-  @match_msg "redefining module"
+  @match_msg "has multiple clauses and also declares default values"
 
   @impl true
   def match?(%{severity: :warning, message: msg}) when is_binary(msg) do
@@ -120,6 +120,9 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinity do
     patches
   end
 
+  # GenServer callbacks that require a proper return tuple, not bare :ok.
+  @genserver_callbacks [:handle_info, :handle_call, :handle_cast, :handle_continue]
+
   # Build a patch that adds a `when` guard to the def head and appends a
   # catch-all clause for Process.send_after with a variable third argument.
   defp build_guard_patch(def_node, head, body) do
@@ -139,16 +142,9 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinity do
       # Render the guarded def as a string
       guarded_str = Sourceror.to_string(guarded_def) |> String.trim_trailing("\n")
 
-      # Build the catch-all as a plain string: def func(_param1, _param2), do: :ok
+      # Build the catch-all clause
       func_name_str = Atom.to_string(func_name)
-
-      catch_all_params_str =
-        Enum.map_join(params, ", ", fn
-          {name, _, nil} when is_atom(name) -> "_" <> Atom.to_string(name)
-          _ -> "_"
-        end)
-
-      catch_all_str = "def #{func_name_str}(#{catch_all_params_str}), do: :ok"
+      catch_all_str = build_catch_all(func_name, func_name_str, params)
 
       replacement = guarded_str <> "\n\n" <> catch_all_str
 
@@ -156,6 +152,62 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinity do
     else
       _ -> :error
     end
+  end
+
+  # Build the catch-all def clause.  For GenServer callbacks the last param is
+  # the state and must appear un-prefixed so it can be returned in the tuple.
+  defp build_catch_all(func_name, func_name_str, params) do
+    if func_name in @genserver_callbacks do
+      build_genserver_catch_all(func_name_str, params)
+    else
+      build_plain_catch_all(func_name_str, params)
+    end
+  end
+
+  defp build_plain_catch_all(func_name_str, params) do
+    params_str =
+      Enum.map_join(params, ", ", fn
+        {name, _, nil} when is_atom(name) -> "_" <> Atom.to_string(name)
+        _ -> "_"
+      end)
+
+    "def #{func_name_str}(#{params_str}), do: :ok"
+  end
+
+  defp build_genserver_catch_all(func_name_str, params) do
+    last_idx = length(params) - 1
+
+    params_str =
+      params
+      |> Enum.with_index()
+      |> Enum.map_join(", ", fn {param, idx} ->
+        if idx == last_idx do
+          # Last param (state) — keep the name so we can reference it
+          case param do
+            {name, _, nil} when is_atom(name) -> Atom.to_string(name)
+            _ -> "state"
+          end
+        else
+          case param do
+            {name, _, nil} when is_atom(name) -> "_" <> Atom.to_string(name)
+            _ -> "_"
+          end
+        end
+      end)
+
+    state_name =
+      case Enum.at(params, last_idx) do
+        {name, _, nil} when is_atom(name) -> Atom.to_string(name)
+        _ -> "state"
+      end
+
+    body =
+      case func_name_str do
+        "handle_call" -> "{:reply, nil, #{state_name}}"
+        _ -> "{:noreply, #{state_name}}"
+      end
+
+    "def #{func_name_str}(#{params_str}), do: #{body}"
   end
 
   # Find the first Process.send_after call in the body with a variable
