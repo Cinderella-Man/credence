@@ -61,7 +61,7 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinityFixTest do
     assert valid_syntax?(fix(input, @real_message))
   end
 
-  test "wraps Process.send_after with variable timeout in if guard" do
+  test "adds when guard and catch-all for variable timeout" do
     input = """
     defmodule VariableInterval do
       def schedule_cleanup(interval) do
@@ -72,18 +72,18 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinityFixTest do
 
     expected = """
     defmodule VariableInterval do
-      def schedule_cleanup(interval) do
-        if interval != :infinity do
-          Process.send_after(self(), :tick, interval)
-        end
+      def schedule_cleanup(interval) when interval != :infinity do
+        Process.send_after(self(), :tick, interval)
       end
+
+      def schedule_cleanup(_interval), do: :ok
     end
     """
 
     confirm_fix(fix(input, @real_message), expected)
   end
 
-  test "wraps Process.send_after with variable timeout in if guard (assignment)" do
+  test "adds when guard and catch-all for variable timeout (dot access)" do
     input = """
     defmodule Clean do
       def schedule_cleanup(state) do
@@ -95,12 +95,50 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinityFixTest do
 
     expected = """
     defmodule Clean do
-      def schedule_cleanup(state) do
-        ref = if state.interval != :infinity do
-          Process.send_after(self(), :cleanup, state.interval)
-        end
+      def schedule_cleanup(state) when state.interval != :infinity do
+        ref = Process.send_after(self(), :cleanup, state.interval)
         %{state | cleanup_ref: ref}
       end
+
+      def schedule_cleanup(_state), do: :ok
+    end
+    """
+
+    confirm_fix(fix(input, @real_message), expected)
+  end
+
+  test "adds when guard and catch-all for variable :infinity via helper" do
+    input = """
+    defmodule TestProcessSendAfterVariableInfinity do
+      def schedule_cleanup(interval_ms) do
+        Process.send_after(self(), :cleanup, interval_ms)
+      end
+
+      def init do
+        interval = get_interval()
+        schedule_cleanup(interval)
+        :ok
+      end
+
+      defp get_interval, do: :infinity
+    end
+    """
+
+    expected = """
+    defmodule TestProcessSendAfterVariableInfinity do
+      def schedule_cleanup(interval_ms) when interval_ms != :infinity do
+        Process.send_after(self(), :cleanup, interval_ms)
+      end
+
+      def schedule_cleanup(_interval_ms), do: :ok
+
+      def init do
+        interval = get_interval()
+        schedule_cleanup(interval)
+        :ok
+      end
+
+      defp get_interval, do: :infinity
     end
     """
 

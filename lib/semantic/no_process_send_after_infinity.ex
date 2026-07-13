@@ -58,7 +58,10 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinity do
 
         _ ->
           Enum.reduce(patches, source, fn patch, acc ->
-            Sourceror.patch_string(acc, [patch])
+            patched = Sourceror.patch_string(acc, [patch])
+            # Sourceror may leave trailing whitespace on blank lines;
+            # strip it to keep output clean.
+            strip_trailing_ws_per_line(patched, acc)
           end)
       end
     else
@@ -66,12 +69,27 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinity do
     end
   end
 
+  # Strip trailing whitespace from lines that the patch introduced,
+  # leaving untouched lines byte-for-byte.
+  defp strip_trailing_ws_per_line(text, original) do
+    original
+    |> String.split("\n")
+    |> List.myers_difference(String.split(text, "\n"))
+    |> Enum.flat_map(fn
+      {:eq, lines} -> lines
+      {:del, _lines} -> []
+      {:ins, lines} ->
+        Enum.map(lines, fn line -> if String.trim(line) == "", do: "", else: line end)
+    end)
+    |> Enum.join("\n")
+  end
+
   # Walk the AST and collect patches for def bodies containing
   # Process.send_after(_, _, :infinity) or Process.send_after(_, _, var).
   defp collect_patches(ast, _source) do
     {_, patches} =
       Macro.prewalk(ast, [], fn
-        {:def, _meta, [_head, kw_list]} = node, acc when is_list(kw_list) ->
+        {:def, _meta, [head, kw_list]} = node, acc when is_list(kw_list) ->
           case find_do_body_and_range(kw_list) do
             {:ok, body, range} ->
               cond do
@@ -81,9 +99,11 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinity do
                   {node, [patch | acc]}
 
                 contains_send_after_variable_arg?(body) ->
-                  # Variable arg — wrap each call in if guard
-                  new_patches = collect_variable_call_patches(body)
-                  {node, new_patches ++ acc}
+                  # Variable arg — split into guarded def + catch-all clause
+                  case build_guard_patch(node, head, body) do
+                    {:ok, patch} -> {node, [patch | acc]}
+                    :error -> {node, acc}
+                  end
 
                 true ->
                   {node, acc}
@@ -100,33 +120,58 @@ defmodule Credence.Semantic.NoProcessSendAfterInfinity do
     patches
   end
 
-  # Walk the body and collect patches for each Process.send_after call with a
-  # variable (non-literal) third argument. Each call is wrapped in an if guard.
-  defp collect_variable_call_patches(body) do
-    {_ast, patches} =
-      Macro.prewalk(body, [], fn
-        {{:., _, [{:__aliases__, _, [:Process]}, :send_after]}, _,
-         [_, _, third_arg]} = node, acc ->
-          if not literal?(third_arg) do
-            case Sourceror.get_range(node) do
-              %Sourceror.Range{} = range ->
-                call_text = Sourceror.to_string(node) |> String.trim_trailing("\n")
-                var_text = Sourceror.to_string(third_arg) |> String.trim_trailing("\n")
-                change = "if #{var_text} != :infinity do\n  #{call_text}\nend"
-                {node, [%{range: range, change: change} | acc]}
+  # Build a patch that adds a `when` guard to the def head and appends a
+  # catch-all clause for Process.send_after with a variable third argument.
+  defp build_guard_patch(def_node, head, body) do
+    with %Sourceror.Range{} = def_range <- Sourceror.get_range(def_node),
+         third_arg when not is_nil(third_arg) <- find_variable_third_arg(body) do
+      {func_name, _head_meta, params} = head
 
-              _ ->
-                {node, acc}
-            end
-          else
-            {node, acc}
-          end
+      # Build the guard expression: third_arg != :infinity
+      guard = {:!=, [], [third_arg, {:__block__, [], [:infinity]}]}
+
+      # Build the guarded head: original_head when guard
+      guarded_head = {:when, [], [head, guard]}
+
+      # Build the guarded def with the original body
+      guarded_def = {:def, [], [guarded_head, [do: body]]}
+
+      # Render the guarded def as a string
+      guarded_str = Sourceror.to_string(guarded_def) |> String.trim_trailing("\n")
+
+      # Build the catch-all as a plain string: def func(_param1, _param2), do: :ok
+      func_name_str = Atom.to_string(func_name)
+
+      catch_all_params_str =
+        Enum.map_join(params, ", ", fn
+          {name, _, nil} when is_atom(name) -> "_" <> Atom.to_string(name)
+          _ -> "_"
+        end)
+
+      catch_all_str = "def #{func_name_str}(#{catch_all_params_str}), do: :ok"
+
+      replacement = guarded_str <> "\n\n" <> catch_all_str
+
+      {:ok, %{range: def_range, change: replacement}}
+    else
+      _ -> :error
+    end
+  end
+
+  # Find the first Process.send_after call in the body with a variable
+  # (non-literal) third argument. Returns the third arg AST node, or nil.
+  defp find_variable_third_arg(body) do
+    {_ast, result} =
+      Macro.prewalk(body, nil, fn
+        {{:., _, [{:__aliases__, _, [:Process]}, :send_after]}, _, [_, _, third_arg]} = node,
+        nil ->
+          if not literal?(third_arg), do: {node, third_arg}, else: {node, nil}
 
         node, acc ->
           {node, acc}
       end)
 
-    patches
+    result
   end
 
   # Find the do body AST node and its source range.
