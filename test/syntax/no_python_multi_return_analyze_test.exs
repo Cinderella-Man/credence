@@ -380,4 +380,45 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert [%Issue{rule: :no_python_multi_return, meta: %{line: 4}}] = analyze(code)
   end
+
+  test "does not flag defstruct with bare atoms in bracket form" do
+    code = """
+    defmodule DefstructExample do
+      defstruct [
+        :field_a,
+        :field_b,
+        :field_c,
+        field_d: %{},
+        field_e: nil
+      ]
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag defstruct with bare atoms without brackets" do
+    code = """
+    defmodule DefstructBare do
+      defstruct :field_a,
+                :field_b,
+                :field_c
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "does not flag defstruct with mixed bare atoms and keywords" do
+    code = """
+    defmodule DefstructMixed do
+      defstruct :field_a,
+                :field_b,
+                field_c: nil,
+                field_d: %{}
+    end
+    """
+
+    assert analyze(code) == []
+  end
 end

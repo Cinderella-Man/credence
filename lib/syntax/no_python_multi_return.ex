@@ -60,6 +60,7 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
     line_depths = compute_line_start_depths(source)
     lines = String.split(source, "\n")
     clause_lines = for_with_clause_continuation_lines(lines)
+    defstruct_lines = defstruct_bare_atom_lines(lines, line_depths)
 
     lines
     |> Enum.with_index(1)
@@ -71,6 +72,7 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
            not has_left_arrow_at_depth_zero?(line) and
            not has_struct_pipe_at_depth_zero?(line) and
            not MapSet.member?(clause_lines, line_no) and
+           not MapSet.member?(defstruct_lines, line_no) and
            has_bare_comma?(line) do
         [line_no]
       else
@@ -78,6 +80,102 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
       end
     end)
   end
+
+  # Returns a MapSet of line numbers that are bare atoms inside a bare-form
+  # `defstruct` declaration (no bracket).  These lines look like bare commas
+  # at depth 0 but are actually struct field definitions.
+  #
+  # Example:
+  #
+  #     defstruct :field_a,
+  #               :field_b,     ← bare comma, but a defstruct field separator
+  #               :field_c
+  #
+  # This also covers the single-line case `defstruct :a, :b, :c` where the
+  # entire line is marked.
+  defp defstruct_bare_atom_lines(lines, line_depths) do
+    lines
+    |> Enum.with_index(1)
+    |> Enum.reduce({false, MapSet.new()}, fn {line, line_no}, {in_defstruct, acc} ->
+      start_depth = Map.get(line_depths, line_no, 0)
+      trimmed = String.trim_leading(line)
+      trailing = String.trim_trailing(trimmed)
+      has_trailing_comma = String.ends_with?(trailing, ",")
+
+      cond do
+        # Enter bare-atom defstruct: starts with `defstruct`, has bare atom
+        # args, no bracket form
+        not in_defstruct and start_depth == 0 and defstruct_bare_atom_start?(trimmed) ->
+          {true, MapSet.put(acc, line_no)}
+
+        # Inside defstruct, depth 0, bare atom continuation
+        in_defstruct and start_depth == 0 and bare_atom_only?(trimmed) ->
+          # Mark for exclusion; stay in context if trailing comma (more fields)
+          {has_trailing_comma, MapSet.put(acc, line_no)}
+
+        # Inside defstruct, depth 0, non-bare-atom (keyword entry, etc.)
+        # Stay in context if trailing comma; exit otherwise
+        in_defstruct and start_depth == 0 ->
+          {has_trailing_comma, acc}
+
+        # Inside defstruct, depth > 0 (multiline default value)
+        in_defstruct ->
+          {true, acc}
+
+        true ->
+          {false, acc}
+      end
+    end)
+    |> elem(1)
+  end
+
+  # Returns true when `trimmed` starts with `defstruct` followed by bare atom
+  # arguments (no bracket).  This detects the bare-form defstruct pattern:
+  # `defstruct :field_a, :field_b, :field_c`
+  defp defstruct_bare_atom_start?(trimmed) do
+    case trimmed do
+      "defstruct " <> rest ->
+        rest_trimmed = String.trim_leading(rest)
+        not String.contains?(trimmed, "[") and match?(":" <> _, rest_trimmed)
+      _ -> false
+    end
+  end
+
+  # Returns true when `line` (after trimming) is just a bare atom like
+  # `:field_b` or `:field_b,`.
+  defp bare_atom_only?(line) do
+    case String.trim(line) do
+      ":" <> rest -> bare_atom_suffix?(rest)
+      _ -> false
+    end
+  end
+
+  defp bare_atom_suffix?(rest) do
+    rest
+    |> String.trim_trailing()
+    |> remove_trailing_comma()
+    |> String.trim_trailing()
+    |> valid_atom_name?()
+  end
+
+  defp remove_trailing_comma(str) do
+    len = byte_size(str)
+    if len > 0 and :binary.at(str, len - 1) == ?, do
+      binary_part(str, 0, len - 1)
+    else
+      str
+    end
+  end
+
+  defp valid_atom_name?(""), do: false
+  defp valid_atom_name?(<<"\"", _::binary>>), do: true
+  defp valid_atom_name?(<<ch, rest::binary>>)
+       when ch in ?a..?z or ch in ?A..?Z or ch == ?_ do
+    rest
+    |> String.to_charlist()
+    |> Enum.all?(fn c -> c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_ end)
+  end
+  defp valid_atom_name?(_), do: false
 
   # Returns a MapSet of line numbers that are part of a multi-line for/with
   # clause — i.e. continuation lines after the initial `<-` line that have

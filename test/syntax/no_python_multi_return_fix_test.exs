@@ -426,4 +426,45 @@ defmodule Credence.Syntax.NoPythonMultiReturnFixTest do
 
     confirm_fix(fix(input), expected)
   end
+
+  test "does not modify defstruct with bare atoms in bracket form" do
+    input = """
+    defmodule DefstructExample do
+      defstruct [
+        :field_a,
+        :field_b,
+        :field_c,
+        field_d: %{},
+        field_e: nil
+      ]
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify defstruct with bare atoms without brackets" do
+    input = """
+    defmodule DefstructBare do
+      defstruct :field_a,
+                :field_b,
+                :field_c
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "does not modify defstruct with mixed bare atoms and keywords" do
+    input = """
+    defmodule DefstructMixed do
+      defstruct :field_a,
+                :field_b,
+                field_c: nil,
+                field_d: %{}
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end
