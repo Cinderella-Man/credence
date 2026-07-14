@@ -93,8 +93,29 @@ defmodule Credence.Semantic.FixPlugDependencyModuleOrder do
 
   # Find the first defmodule that uses the dependency via `plug DependencyModule`
   defp find_using_module_range(lines, module_name) do
-    plug_pattern = ~r/^\s*plug[\s(]+:?\s*#{Regex.escape(module_name)}\b/
+    # Try full module name first, then short alias (last segment).
+    # After `alias Foo.Bar.Baz`, a `plug Baz` call resolves to `Foo.Bar.Baz`.
+    short_name = module_name |> String.split(".") |> List.last()
 
+    patterns =
+      if short_name == module_name do
+        [~r/^\s*plug[\s(]+:?\s*#{Regex.escape(module_name)}\b/]
+      else
+        [
+          ~r/^\s*plug[\s(]+:?\s*#{Regex.escape(module_name)}\b/,
+          ~r/^\s*plug[\s(]+:?\s*#{Regex.escape(short_name)}\b/
+        ]
+      end
+
+    Enum.find_value(patterns, :error, fn plug_pattern ->
+      case find_plug_caller(lines, plug_pattern) do
+        {:ok, _, _} = result -> result
+        :error -> nil
+      end
+    end)
+  end
+
+  defp find_plug_caller(lines, plug_pattern) do
     Enum.find_value(Enum.with_index(lines, 1), :error, fn {line, idx} ->
       if Regex.match?(plug_pattern, line) do
         case find_enclosing_defmodule(lines, idx) do

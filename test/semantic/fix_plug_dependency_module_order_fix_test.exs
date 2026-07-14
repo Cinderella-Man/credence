@@ -129,4 +129,65 @@ defmodule Credence.Semantic.FixPlugDependencyModuleOrderFixTest do
 
     confirm_fix(fix(input, "some unrelated error"), input)
   end
+
+  test "reorders modules when plug uses short alias after alias declaration" do
+    input = ~S"""
+    defmodule LifecycleApi.Router do
+      use Plug.Router
+
+      import Plug.Conn
+
+      alias LifecycleApi.Plugs.ApiVersion
+
+      plug :match
+      plug :fetch_query_params
+      plug :fetch_headers
+      plug(ApiVersion, default: "v2")
+      plug :dispatch
+
+      get "/api/users/:id" do
+        conn |> send_resp(200, "ok")
+      end
+    end
+
+    defmodule LifecycleApi.Plugs.ApiVersion do
+      @moduledoc false
+      def init(opts), do: opts
+
+      def call(conn, _opts), do: conn
+    end
+    """
+
+    expected = ~S"""
+    defmodule LifecycleApi.Plugs.ApiVersion do
+      @moduledoc false
+      def init(opts), do: opts
+
+      def call(conn, _opts), do: conn
+    end
+
+    defmodule LifecycleApi.Router do
+      use Plug.Router
+
+      import Plug.Conn
+
+      alias LifecycleApi.Plugs.ApiVersion
+
+      plug :match
+      plug :fetch_query_params
+      plug :fetch_headers
+      plug(ApiVersion, default: "v2")
+      plug :dispatch
+
+      get "/api/users/:id" do
+        conn |> send_resp(200, "ok")
+      end
+    end
+    """
+
+    message =
+      "function LifecycleApi.Plugs.ApiVersion.init/1 is undefined (module LifecycleApi.Plugs.ApiVersion is not available)"
+
+    confirm_fix(fix(input, message), expected)
+  end
 end
