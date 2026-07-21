@@ -69,7 +69,7 @@ Pass 5 is mid-flight: 125/230 done.
 | 0 | Restore/unblock the machinery | — | hours | **done** 2026-07-21 (`e4b343e`, `6581528`, `3e8c4d1`, `f178e26`) |
 | 1 | Land the execution-verified defect fixes | 0 | hours | **done** 2026-07-21 (`69aa2ec`) |
 | 2 | Apply shared-file deltas by hand | 1 | hours | **done** 2026-07-21 (`3a64b6f`; two hunks deferred by design) |
-| 3 | Make the full suite cheap (P1+P2) | 1 | 1–2 days | — |
+| 3 | Make the full suite cheap (P1+P2) | 1 | 1–2 days | **done** 2026-07-22 (`1e6e8c6`; 516 s → 251 s, targets recalibrated) |
 | 4 | Drain the candidate queue (stages 1→2→3) | 0–3 | days (mostly unattended) | — |
 | 5 | Triage the harness escalations | 0 (parallel with 4) | ~1 day | — |
 | 6 | Credence improvement program (C-items) | 4 | ongoing, ordered | — |
@@ -238,6 +238,24 @@ days against ~30 saved wall-hours plus every future run.
 
 **Definition of done:** `time mix test` ≤ ~1.5 min on this box, verdicts
 A/B-identical, committed.
+
+**Executed 2026-07-22.** Commit `1e6e8c6`. A/B verdict parity confirmed
+(1501 tests green, both sides). Measured on this box — **24 schedulers /
+~12 physical cores, not the research box's 32** — the full corpus suite went
+**516 s / 336% CPU → 251 s / 983% CPU** (2.06×). The ≤ 1.5-min DoD was
+mis-calibrated (docs/13 §6 required re-measuring on the real box, and the
+projection also underestimated scope-parity's inherent per-file cost);
+**~4 min is the honest recalibrated full-suite cost here** — the drain's
+per-row gate cost drops accordingly (~9 min → ~4.5 min incl. the corpus-free
+phase). Implementation landed as: flat full-corpus `Task.async_stream`
+sweeps in `setup_all` with per-entry tests reduced to slice assertions
+(docs/14 E4's shape), a run-wide shared analysis cache
+(`Credence.Corpus.AnalysisCache`), opposite-direction sweeps instead of
+claim/wait (a killed claimant strands waiters — observed), ETS (not
+`:persistent_term` — per-put area copies stalled all schedulers) for the
+glob memo, and `:infinity` sweep-task timeouts (serial semantics). Further
+Gate-facing speed (P3 scoped scans ~seconds, P4 AST cache) stays in
+Phase 7.
 
 ## Phase 4 — Drain the candidate queue
 
