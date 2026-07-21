@@ -1,11 +1,3 @@
-docs/12-improvement-proposals.md
-docs/13-test-suite-performance.md
-docs/14-proposal-scrutiny.md
-docs/15-handoff-index.md
-docs/research/README.md
-docs/research/credence-internals.md
-docs/research/prior-art.md
-docs/research/rule-quality-audit.md
 lib/dsl_guard.ex
 lib/pattern/fix_map_fetch_case_match.ex
 lib/pattern/fix_regex_match_swapped_args.ex
