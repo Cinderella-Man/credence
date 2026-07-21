@@ -1,4 +1,3 @@
-lib/dsl_guard.ex
 lib/pattern/fix_map_fetch_case_match.ex
 lib/pattern/fix_regex_match_swapped_args.ex
 lib/pattern/fix_string_replace_multi_arity_fn.ex
@@ -16,8 +15,6 @@ lib/pattern/prefer_head_pattern_over_tail_destructure.ex
 lib/pattern/prefer_reduce_while_with_halt_value.ex
 lib/pattern/prefer_stdlib_gcd.ex
 lib/pattern/prefer_zip_with_over_zip_then_count.ex
-lib/rule_helpers.ex
-lib/semantic.ex
 lib/semantic/fix_after_or_rescue_in_case.ex
 lib/semantic/fix_apply_arity_one.ex
 lib/semantic/fix_apply_on_function_reference.ex
@@ -261,9 +258,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/credence_test.exs
-test/dsl_safety_classification_test.exs
-test/fix_showcase_test.exs
 test/pattern/fix_map_fetch_case_match_check_test.exs
 test/pattern/fix_map_fetch_case_match_equivalence_test.exs
 test/pattern/fix_map_fetch_case_match_fix_test.exs
