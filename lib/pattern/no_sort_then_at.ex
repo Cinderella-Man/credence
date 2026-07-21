@@ -11,6 +11,15 @@ defmodule Credence.Pattern.NoSortThenAt do
   preserves the original `nil`-on-empty behaviour for every input (incl. `[]`,
   `%{}`, empty ranges/MapSets), so the rewrite needs no assumption.
 
+  The **max** directions additionally pass the strict sorter `&>/2`:
+  `Enum.max/2`'s default `&>=/2` returns the *first* maximal element, while a
+  stable ascending sort puts the *last*-seen maximal at the end — for tied
+  elements that are `==`-equal but `===`-distinct (`1` vs `1.0`, the only such
+  class in Elixir) the two diverge (`Enum.sort([1, 1.0]) |> Enum.at(-1)` is
+  `1.0`; default `Enum.max` gives `1`). With `&>/2` the max keeps the
+  last-seen maximal, `===`-identical to the sort form on every input. The min
+  directions already agree (first-minimal on both sides), so they stay 2-arity.
+
   ## Recognised direction forms
 
       Enum.sort(nums)                        # default :asc
@@ -204,8 +213,13 @@ defmodule Credence.Pattern.NoSortThenAt do
   defp extract_sort_args(_), do: nil
 
   defp replacement_call(:asc, :first, c), do: make_remote(:Enum, :min, [c, empty_fallback()])
-  defp replacement_call(:asc, :last, c), do: make_remote(:Enum, :max, [c, empty_fallback()])
-  defp replacement_call(:desc, :first, c), do: make_remote(:Enum, :max, [c, empty_fallback()])
+
+  defp replacement_call(:asc, :last, c),
+    do: make_remote(:Enum, :max, [c, strict_gt(), empty_fallback()])
+
+  defp replacement_call(:desc, :first, c),
+    do: make_remote(:Enum, :max, [c, strict_gt(), empty_fallback()])
+
   defp replacement_call(:desc, :last, c), do: make_remote(:Enum, :min, [c, empty_fallback()])
 
   # `Enum.sort(c) |> Enum.at(0 | -1)` returns `nil` on an empty collection, but
@@ -214,6 +228,12 @@ defmodule Credence.Pattern.NoSortThenAt do
   # rewrite is behaviour-preserving for every input (incl. `[]`, `%{}`, empty
   # ranges/MapSets) with no assumption required.
   defp empty_fallback, do: {:fn, [], [{:->, [], [[], nil]}]}
+
+  # Strict sorter for the max directions: default `Enum.max/2` (`&>=/2`) picks
+  # the FIRST maximal element; `sort |> at(-1)` / `sort(:desc) |> at(0)` yield
+  # the LAST. `&>/2` makes max keep the last-seen maximal — `===`-identical to
+  # the sort form across the whole int/float tie divergence class (docs/14 B.11).
+  defp strict_gt, do: Sourceror.parse_string!("&>/2")
 
   defp make_remote(mod, fun, args) do
     {{:., [], [{:__aliases__, [], [mod]}, fun]}, [], args}

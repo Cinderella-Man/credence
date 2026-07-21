@@ -25,6 +25,11 @@ defmodule Credence.EquivalenceInputs do
       ["x", "x", "y"],
       # value-kind trap: 1 and 1.0 are distinct as keys, equal-not-identical in <
       [1, 1.0, 1, 1.0, 2],
+      # value-kind trap at the MAX: the entry above ties only at the minimum,
+      # which hides first-vs-last-maximal divergences (sort|>at(-1) vs Enum.max
+      # — the docs/14 E1 hole that shipped two live bugs). Keep both shapes.
+      [1.0, 1],
+      [1, 2, 2.0],
       # nil / false / true as elements
       [nil, false, nil, true, false],
       Enum.map(1..200, fn i -> rem(i, 7) end)
@@ -110,6 +115,10 @@ defmodule Credence.EquivalenceInputs do
       [2, 2, 1, 1, 3, 3],
       [5, 4, 3, 2, 1],
       [1, 2, 3, 4, 5],
+      # ==-equal but ===-distinct ties (int vs float): a rewrite that reorders
+      # a tie group is invisible to all-integer lists
+      [1, 1.0, 1],
+      [2.0, 2],
       Enum.map(1..50, fn i -> rem(i, 3) end)
     ]
   end

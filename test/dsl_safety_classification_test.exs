@@ -76,6 +76,10 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     # The flagged `/` is function-capture arity (`&fun/N`), not the division operator.
     "no_identity_enum_map" => "the `/` is capture arity in an identity-fn matcher, not division",
     "no_redundant_local_capture" => "the `/` is capture arity (`&fn/arity`), not division",
+    "no_sort_then_at" =>
+      "the `/` is capture arity in the strict max sorter `&>/2`, not division; the Enum.sort |> Enum.at pipeline isn't valid DSL-expression code",
+    "no_sort_for_top_k" =>
+      "the `/` is capture arity in the strict max sorter `&>/2`, not division; the Enum.sort |> reverse |> Enum.at pipeline isn't valid DSL-expression code",
     "no_map_then_aggregate" =>
       "matches an Enum.map |> Enum.sum fusion; the `/` is capture arity and the introduced `+`/`*` — like all Enum.* here — never lands in a DSL expression",
     "unnecessary_grapheme_chunking" =>

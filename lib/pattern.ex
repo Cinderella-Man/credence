@@ -31,12 +31,22 @@ defmodule Credence.Pattern do
   # finding inside one of those ranges has no surviving fix, so it is suppressed.
   # The two gates therefore cannot disagree: same rule, same patches, same blocks.
   # A rule with no DSL sensitivity returns `[]` and is untouched.
+  # No findings means nothing to suppress, so the (fix_patches-priced)
+  # dropped-ranges computation is skipped — on clean files it would otherwise
+  # run for every `unsafe_in_dsl` rule.
   defp reject_dsl_unfixable(rule, ast, opts) do
-    issues = rule.check(ast, opts)
+    case rule.check(ast, opts) do
+      [] ->
+        []
 
-    case Credence.RuleHelpers.dsl_dropped_ranges(rule, ast, opts) do
-      [] -> issues
-      dropped -> Enum.reject(issues, &Credence.DslGuard.line_in_ranges?(&1.meta[:line], dropped))
+      issues ->
+        case Credence.RuleHelpers.dsl_dropped_ranges(rule, ast, opts) do
+          [] ->
+            issues
+
+          dropped ->
+            Enum.reject(issues, &Credence.DslGuard.line_in_ranges?(&1.meta[:line], dropped))
+        end
     end
   end
 
