@@ -64,18 +64,18 @@ Pass 5 is mid-flight: 125/230 done.
 
 ## 1. The plan at a glance
 
-| Phase | What | Depends on | Rough size |
-|---|---|---|---|
-| 0 | Restore/unblock the machinery | — | hours |
-| 1 | Land the execution-verified defect fixes | 0 | hours |
-| 2 | Apply shared-file deltas by hand | 1 | hours |
-| 3 | Make the full suite cheap (P1+P2) | 1 | 1–2 days |
-| 4 | Drain the candidate queue (stages 1→2→3) | 0–3 | days (mostly unattended) |
-| 5 | Triage the harness escalations | 0 (parallel with 4) | ~1 day |
-| 6 | Credence improvement program (C-items) | 4 | ongoing, ordered |
-| 7 | Remaining performance items (P3–P6) | 3 | days |
-| 8 | Harness improvement program (H-items + log-derived) | 5 | ongoing, ordered |
-| 9 | Next evolution run | 4, 7, 8 (order-1/2 items) | continuous |
+| Phase | What | Depends on | Rough size | Status |
+|---|---|---|---|---|
+| 0 | Restore/unblock the machinery | — | hours | **done** 2026-07-21 (`e4b343e`, `6581528`, `3e8c4d1`, `f178e26`) |
+| 1 | Land the execution-verified defect fixes | 0 | hours | **done** 2026-07-21 (`69aa2ec`) |
+| 2 | Apply shared-file deltas by hand | 1 | hours | — |
+| 3 | Make the full suite cheap (P1+P2) | 1 | 1–2 days | — |
+| 4 | Drain the candidate queue (stages 1→2→3) | 0–3 | days (mostly unattended) | — |
+| 5 | Triage the harness escalations | 0 (parallel with 4) | ~1 day | — |
+| 6 | Credence improvement program (C-items) | 4 | ongoing, ordered | — |
+| 7 | Remaining performance items (P3–P6) | 3 | days | — |
+| 8 | Harness improvement program (H-items + log-derived) | 5 | ongoing, ordered | — |
+| 9 | Next evolution run | 4, 7, 8 (order-1/2 items) | continuous | — |
 
 ---
 
@@ -129,6 +129,12 @@ Everything here is mechanical; nothing needs review judgment.
 **Definition of done:** `review_loop.sh 0` *would* start cleanly (verify with a
 cap-1 pilot in Phase 4); all four stage data files exist; harness docs restored.
 
+**Executed 2026-07-21.** Commits `e4b343e` (gitignore + untrack), `6581528`
+(stage data files), `3e8c4d1` (queue contract + `shared_deltas.md` + orphan
+log), `f178e26` (sanity findings). The harness docs were already on the
+harness remote (`d3c426c`) — only the local clone was stale; fast-forwarded,
+and its origin switched from HTTPS (hung on auth) to SSH.
+
 ## Phase 1 — Land the execution-verified defect fixes
 
 One commit/PR on `evolution_accepted`. Every item has an executable proof in
@@ -158,6 +164,16 @@ entries turn the two rule bugs red:
 **Definition of done:** full equivalence suite green (~180 tests, <2 s);
 `elixir -e` brute-force snippets from docs/14 B.11 still print `0, 0`;
 commit pushed.
+
+**Executed 2026-07-21.** Commit `69aa2ec` — all five items. 179 equivalence
+tests green (no rule beyond the two fixed ones diverged on the new entries);
+full corpus-free suite 5,269 tests green; brute force 0/65 + 0 on the
+`:desc` form. Two additions beyond the letter of the plan: both rules joined
+`@verified_dsl_safe` (the DSL meta-gate flags the new `&>/2`'s `/` as a
+construct delta — it is capture arity, not division, the gate's documented
+exemption), and the sentinel test also pins that `:desc` *reverses* tie
+groups rather than keeping them stable. Corpus layers provably unaffected
+(check sides unchanged; zero whitelist entries for either rule).
 
 ## Phase 2 — Apply the shared-file deltas (by hand, not by the loop)
 
