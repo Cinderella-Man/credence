@@ -80,18 +80,24 @@ defmodule Credence.Corpus.OverFiringTest do
 
     Progress.start(:analyze, total_files, @progress_step, "Validated", "files")
     on_exit(fn -> Progress.stop(:analyze) end)
-    :ok
+
+    # The whole corpus is analyzed here, in ONE flat parallel sweep (docs/13
+    # P1) — per-entry file lists are too uneven for per-entry parallelism to
+    # fill the machine. The per-entry tests below just assert their slice.
+    {:ok, findings: Findings.all_by_package()}
   end
 
   for {pkg, version} <- Credence.Corpus.entries() do
-    test "corpus findings on #{pkg} v#{version} match the accepted snapshot" do
+    test "corpus findings on #{pkg} v#{version} match the accepted snapshot", %{
+      findings: findings
+    } do
       pkg = unquote(pkg)
       version = unquote(version)
 
       files = Credence.Corpus.lib_files(pkg)
       assert files != [], "no lib/*.ex found for #{pkg} — corpus fetch may have failed"
 
-      actual = Findings.for_package(pkg)
+      actual = Map.get(findings, pkg, [])
 
       expected =
         Findings.snapshot_lines()

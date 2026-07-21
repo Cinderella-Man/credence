@@ -39,16 +39,45 @@ defmodule Credence.Corpus.Findings do
   def for_package(pkg) do
     pkg
     |> Corpus.lib_files()
-    |> Enum.flat_map(&raw_findings/1)
+    |> Task.async_stream(&raw_findings/1,
+      max_concurrency: System.schedulers_online(),
+      timeout: :infinity
+    )
+    |> Enum.flat_map(fn {:ok, findings} -> findings end)
     |> format()
   end
 
   @doc "Sorted finding-identity lines across every pinned corpus entry."
   @spec all() :: [String.t()]
   def all do
-    Corpus.entries()
-    |> Enum.flat_map(fn {name, _label} -> for_package(name) end)
+    all_by_package()
+    |> Map.values()
+    |> List.flatten()
     |> Enum.sort()
+  end
+
+  @doc """
+  Sorted finding-identity lines for every corpus entry, as
+  `%{package => lines}`. One flat parallel sweep over the whole corpus — the
+  shape the over-firing suite consumes (docs/13 P1): the per-entry file lists
+  are far too uneven for per-entry parallelism to fill the machine, so the
+  sweep goes wide over all files at once and the per-entry assertions read
+  their slice. Entries with no findings are absent from the map.
+  """
+  @spec all_by_package() :: %{atom() => [String.t()]}
+  def all_by_package do
+    Corpus.entries()
+    |> Enum.flat_map(fn {name, _label} ->
+      for path <- Corpus.lib_files(name), do: {name, path}
+    end)
+    |> Task.async_stream(fn {name, path} -> {name, raw_findings(path)} end,
+      max_concurrency: System.schedulers_online(),
+      timeout: :infinity
+    )
+    |> Enum.reduce(%{}, fn {:ok, {name, findings}}, acc ->
+      Map.update(acc, name, findings, &(findings ++ &1))
+    end)
+    |> Map.new(fn {name, raw} -> {name, format(raw)} end)
   end
 
   @doc """
@@ -86,11 +115,10 @@ defmodule Credence.Corpus.Findings do
   end
 
   defp raw_findings(path) do
-    source = File.read!(path)
     rel = Path.relative_to(path, Corpus.root())
 
     findings =
-      for issue <- Credence.Pattern.analyze(source), issue.rule != :parse_error do
+      for issue <- Corpus.AnalysisCache.analyze(path), issue.rule != :parse_error do
         {rel, issue.meta[:line], issue.rule}
       end
 

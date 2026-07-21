@@ -52,32 +52,52 @@ defmodule Credence.Corpus.ScopeParityTest do
 
     Progress.start(:scope, total_files, @progress_step, "Scope-checked", "files")
     on_exit(fn -> Progress.stop(:scope) end)
-    :ok
+
+    # The whole layer's work happens here, in ONE flat parallel sweep over the
+    # entire corpus (docs/13 P1) — per-entry file lists are too uneven for
+    # per-entry parallelism to fill the machine. The per-entry tests below
+    # just assert their slice.
+    {:ok, violations: violations_by_package()}
   end
 
   for {pkg, version} <- Corpus.entries() do
-    test "fixes on #{pkg} v#{version} fire only where the check flags" do
-      violations = scope_violations(unquote(pkg))
-      assert violations == [], report(unquote(pkg), unquote(version), violations)
+    test "fixes on #{pkg} v#{version} fire only where the check flags", %{
+      violations: violations
+    } do
+      pkg = unquote(pkg)
+      violations = Map.get(violations, pkg, [])
+      assert violations == [], report(pkg, unquote(version), violations)
     end
   end
 
-  # Every (file, rule) where the check is clean yet the fix nets a change.
-  defp scope_violations(pkg) do
-    pkg
-    |> Corpus.lib_files()
-    |> Enum.flat_map(fn path ->
-      src = File.read!(path)
-
-      violations =
-        case Sourceror.parse_string(src) do
-          {:ok, ast} -> Enum.flat_map(@rules, &rule_violation(&1, ast, src, path))
-          _ -> []
-        end
-
-      Progress.tick(:scope)
-      violations
+  # Every (file, rule) where the check is clean yet the fix nets a change,
+  # grouped per package for the per-entry assertions.
+  defp violations_by_package do
+    Corpus.entries()
+    |> Enum.flat_map(fn {name, _label} ->
+      for path <- Corpus.lib_files(name), do: {name, path}
     end)
+    |> Task.async_stream(fn {pkg, path} -> {pkg, file_violations(path)} end,
+      max_concurrency: System.schedulers_online(),
+      timeout: :infinity
+    )
+    |> Enum.reduce(%{}, fn
+      {:ok, {_pkg, []}}, acc -> acc
+      {:ok, {pkg, violations}}, acc -> Map.update(acc, pkg, violations, &(&1 ++ violations))
+    end)
+  end
+
+  defp file_violations(path) do
+    src = File.read!(path)
+
+    violations =
+      case Sourceror.parse_string(src) do
+        {:ok, ast} -> Enum.flat_map(@rules, &rule_violation(&1, ast, src, path))
+        _ -> []
+      end
+
+    Progress.tick(:scope)
+    violations
   end
 
   defp rule_violation(rule, ast, src, path) do
