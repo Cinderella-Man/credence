@@ -68,7 +68,7 @@ Pass 5 is mid-flight: 125/230 done.
 |---|---|---|---|---|
 | 0 | Restore/unblock the machinery | — | hours | **done** 2026-07-21 (`e4b343e`, `6581528`, `3e8c4d1`, `f178e26`) |
 | 1 | Land the execution-verified defect fixes | 0 | hours | **done** 2026-07-21 (`69aa2ec`) |
-| 2 | Apply shared-file deltas by hand | 1 | hours | — |
+| 2 | Apply shared-file deltas by hand | 1 | hours | **done** 2026-07-21 (`3a64b6f`; two hunks deferred by design) |
 | 3 | Make the full suite cheap (P1+P2) | 1 | 1–2 days | — |
 | 4 | Drain the candidate queue (stages 1→2→3) | 0–3 | days (mostly unattended) | — |
 | 5 | Triage the harness escalations | 0 (parallel with 4) | ~1 day | — |
@@ -206,6 +206,11 @@ These are the 6 files moved out of the queue in Phase 0.3. Sequencing matters:
 **Definition of done:** `mix test --exclude corpus` green on
 `evolution_accepted` with items 1–3 committed; `shared_deltas.md` records the
 deferred pair with its trigger condition.
+
+**Executed 2026-07-21.** Commit `3a64b6f` — items 1–3 (lib files copied
+wholesale from the sister after re-verifying the diffs matched recon; the two
+allowlist entries inserted by hand). Suite green (5,269). Item 4 remains
+deferred with its trigger in `shared_deltas.md`.
 
 ## Phase 3 — Make the full suite cheap before the drain (docs/13 P1+P2)
 

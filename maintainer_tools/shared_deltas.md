@@ -9,18 +9,18 @@ lands.
 
 ## Apply now — before any semantic candidate is reviewed
 
-- [ ] `lib/semantic.ex` — sister commit `5fac292` (row 36): `match_rules/1` →
+- [x] (`3a64b6f`) `lib/semantic.ex` — sister commit `5fac292` (row 36): `match_rules/1` →
   `match_rules/2` (receives `source`) + optional per-rule
   `should_report?(diagnostic, source)` callback (via `function_exported?/2`,
   defaulting to true). **Must land before stage 1 reaches the semantic rows** —
   new semantic rules depend on the extension point; without it their tests fail
   and produce spurious FOLLOWUPs.
-- [ ] `lib/dsl_guard.ex` — sister commit `42866b8`: deletes an unreachable
+- [x] (`3a64b6f`) `lib/dsl_guard.ex` — sister commit `42866b8`: deletes an unreachable
   `from_query?` fallback; simplifies an `is_atom(ctx) or is_nil(ctx)` guard
   (nil is an atom — dead branch); one `do:` reformat. No behaviour change.
-- [ ] `lib/rule_helpers.ex` — sister commit `42866b8`: deletes the unreachable
+- [x] (`3a64b6f`) `lib/rule_helpers.ex` — sister commit `42866b8`: deletes the unreachable
   `dsl_partition/4` fallback clause. No behaviour change.
-- [ ] `test/dsl_safety_classification_test.exs` — adds `@verified_dsl_safe`
+- [x] (`3a64b6f`) `test/dsl_safety_classification_test.exs` — adds `@verified_dsl_safe`
   entries for `prefer_stdlib_gcd` and `no_defp_already_defined_as_def`.
   Safe to pre-apply: the stale-entry check only fires for rules whose fixtures
   were exercised, so entries for not-yet-accepted rules are inert.
