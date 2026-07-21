@@ -116,10 +116,13 @@ Everything here is mechanical; nothing needs review judgment.
 5. Delete the orphan `maintainer_tools/.review_loops_run.log` (tracked, empty,
    referenced by nothing).
 6. **Sanity-check the loop preconditions:** `claude` CLI on PATH; `$SISTER`
-   resolves; `LIST=1 ./stage_3_resurrect_followups/resurrect_loop.sh` prints
-   nothing (empty followup.md); `./stage_1_promote_fixable_rules/generate_candidates.sh --dry-run`
-   agrees with the staged queue (it should — but it proves the resolved-base
-   subtraction logic works against the new history).
+   resolves; stage-3's startup guard refuses while upstream queues are
+   non-empty (by design); `./stage_1_promote_fixable_rules/generate_candidates.sh --dry-run`
+   compared against the staged queue. **Executed 2026-07-21 — finding:** the
+   generator would drop the 11 re-review bases (cycle-1-accepted rules with new
+   sister deltas) because its resolved-base subtraction keys on "ever decided";
+   the staged queue is authoritative — do not regenerate it this cycle (see
+   `maintainer_tools/shared_deltas.md` §Queue provenance).
 7. Commit all of the above as one `maintainer_tools: reset for the evolution
    acceptance cycle` commit.
 

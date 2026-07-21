@@ -25,6 +25,19 @@ lands.
   Safe to pre-apply: the stale-entry check only fires for rules whose fixtures
   were exercised, so entries for not-yet-accepted rules are inert.
 
+## Queue provenance — do NOT regenerate candidates.md this cycle
+
+The staged `candidates.md` (from `b3d7abd`, minus the six files above) is
+**authoritative**. `generate_candidates.sh` would rebuild it 15 lines short: its
+resolved-base subtraction keys on "base ever had a decision commit", so the
+**11 re-review bases** — cycle-1-accepted rules that received new sister deltas
+since (`no_destructure_reconstruct`, `no_list_pop_at_for_access`,
+`prefer_function_clauses_for_list_patterns`, `prefer_reduce_while_with_halt_value`,
+`no_capture_as_bitwise_and`, `no_underscore_in_expression`,
+`prefer_explicit_range_step`, `require_defmodule_wrapper`, `undefined_function`,
+`unused_variable`, `fix_div_rem`) — would be silently dropped. Verified by
+`--dry-run` set-comparison on 2026-07-21. Use `--dry-run` only.
+
 ## Deferred — companion commit at rule acceptance
 
 - [ ] `test/credence_test.exs` + `test/fix_showcase_test.exs` — both relax an
