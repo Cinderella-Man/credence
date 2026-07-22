@@ -49,3 +49,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_apply_on_function_reference_fix_test.exs`
 - Reason: matches a fabricated diagnostic — Code.with_diagnostics emits nothing for apply(fun_ref, :call, []) (compiles clean; runtime-only ArgumentError whose message also lacks "apply(:call, [])"), so match? can never fire on real input and the rule is unreachable dead code; the fix is also broken independently (rebuilds receiver with [] args so apply(s.get_clock(x), :call, []) drops x; MatchError on single-element dot receivers like apply(f.(), :call, []); whole-file rewrite ignoring the diagnostic line; misrewrites module-valued fields where apply(cfg.mod, :call, []) validly calls cfg.mod.call/0)
 
+## fix_bitwise_infix_operator — 2026-07-22
+- Files:
+  - `lib/semantic/fix_bitwise_infix_operator.ex`
+  - `test/semantic/fix_bitwise_infix_operator_check_test.exs`
+  - `test/semantic/fix_bitwise_infix_operator_fix_test.exs`
+- Reason: matches a fabricated diagnostic — bare bitwise infix operators (|||, &&&, <<<, >>>, ~~~, ^^^) all parse fine without import Bitwise (verified on Elixir 1.20: they emit "undefined function |||/2"-style errors, never "syntax error"), so match? can only fire on unrelated syntax errors whose quoted snippet happens to contain the token (the test's own @real_diag is really a <-> error); the rule is also internally contradictory — any genuine syntax-error diagnostic means Sourceror.parse_string fails, so fix is a guaranteed no-op on every input match? admits (flag-without-fix), and the claimed companion FixErlangBitwiseBif does not exist; retargeting to the real undefined-function diagnostic would be a redesign, not a narrowing
+
