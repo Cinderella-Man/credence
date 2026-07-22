@@ -15,7 +15,7 @@
 #
 # Usage:   review_loop.sh [cap] [wait_min]
 #   cap        max iterations (0 = run until candidates.md empty; default 0)
-#   wait_min   minutes to sleep between iterations (default 15)
+#   wait_min   minutes to sleep between iterations (default 1)
 # Env:
 #   SISTER=/path     sister checkout (default ../credence_evolution)
 #   CLAUDE_MODEL     optional --model for the session
@@ -35,7 +35,7 @@ SISTER="${SISTER:-$(cd "$REPO/.." && pwd)/credence_evolution}"
 CLAUDE_MODEL="${CLAUDE_MODEL:-}"
 
 CAP="${1:-0}"
-WAIT_MIN="${2:-15}"
+WAIT_MIN="${2:-1}"
 
 ALLOWED_TOOLS="Read Edit Write Grep Glob Bash(mix test:*) Bash(mix format:*) Bash(elixir:*)"
 
@@ -468,10 +468,10 @@ main() {
       *)
         # No usable verdict → TRANSIENT agent error (crash, token limit, killed
         # mid-run), NOT a real decision. Do NOT followup. Revert the in-set files
-        # and STAY on this row, retrying with backoff (15/30/45/60, then hourly)
+        # and STAY on this row, retrying with backoff (2/4/6/8/10 min)
         # until Claude recovers. The candidate is left untouched in candidates.md.
         retry=$((retry + 1))
-        local mins=$(( retry * 15 )); (( mins > 60 )) && mins=60
+        local mins=$(( retry * 2 )); (( mins > 10 )) && mins=10
         local secs=$(( mins * 60 ))
         # test hook: REVIEW_RETRY_STEP_S shortens the backoff (seconds per step).
         [[ -n "${REVIEW_RETRY_STEP_S:-}" ]] && secs=$(( retry * REVIEW_RETRY_STEP_S ))
