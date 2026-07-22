@@ -26,3 +26,11 @@ so a future scan won't re-flag it.
   - `test/pattern/fix_string_replace_multi_arity_fn_fix_test.exs`
 - Reason: false premise — String.replace/3 is /4 with default [], so removing [] leaves the flagged arity-2 crash fully intact (verified: both raise identical FunctionClauseError); fix does not repair what check flags and the message/moduledoc assert wrong Elixir semantics
 
+## prefer_head_pattern_over_tail_destructure — 2026-07-22
+- Files:
+  - `lib/pattern/prefer_head_pattern_over_tail_destructure.ex`
+  - `test/pattern/prefer_head_pattern_over_tail_destructure_check_test.exs`
+  - `test/pattern/prefer_head_pattern_over_tail_destructure_equivalence_test.exs`
+  - `test/pattern/prefer_head_pattern_over_tail_destructure_fix_test.exs`
+- Reason: every firing case changes MatchError to FunctionClauseError on a 1-element/improper list (accepted rules treat a different exception as a different answer; no assumptions declared), so the safe core is empty without a guard-rewrite redesign; also unfixed collision bugs: inner-head name reused (e.g. [a|b] with [a|_]=b yields unifying [a, a | _rest]), repeated _rest unifies across two fixed params, and rescue blocks referencing the tail var are not checked.
+

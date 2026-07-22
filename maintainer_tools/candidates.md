@@ -1,4 +1,3 @@
-lib/pattern/prefer_head_pattern_over_tail_destructure.ex
 lib/pattern/prefer_reduce_while_with_halt_value.ex
 lib/pattern/prefer_stdlib_gcd.ex
 lib/pattern/prefer_zip_with_over_zip_then_count.ex
@@ -245,9 +244,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/pattern/prefer_head_pattern_over_tail_destructure_check_test.exs
-test/pattern/prefer_head_pattern_over_tail_destructure_equivalence_test.exs
-test/pattern/prefer_head_pattern_over_tail_destructure_fix_test.exs
 test/pattern/prefer_stdlib_gcd_check_test.exs
 test/pattern/prefer_stdlib_gcd_equivalence_test.exs
 test/pattern/prefer_stdlib_gcd_fix_test.exs
