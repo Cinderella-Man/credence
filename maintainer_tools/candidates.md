@@ -1,4 +1,3 @@
-lib/pattern/prefer_reduce_while_with_halt_value.ex
 lib/pattern/prefer_stdlib_gcd.ex
 lib/pattern/prefer_zip_with_over_zip_then_count.ex
 lib/semantic/fix_after_or_rescue_in_case.ex

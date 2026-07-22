@@ -110,8 +110,6 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
     boolean_literal?(last) and unwrap_boolean(last) == false
   end
 
-  defp false_flag_acc?(_), do: false
-
   defp boolean_literal?({:__block__, _, [bool]}) when is_boolean(bool), do: true
   defp boolean_literal?(bool) when is_boolean(bool), do: true
   defp boolean_literal?(_), do: false
@@ -184,8 +182,6 @@ defmodule Credence.Pattern.PreferReduceWhileWithHaltValue do
   defp tuple_with_boolean_last?({:{}, _, elems}, expected_bool) when is_list(elems) do
     unwrap_boolean(List.last(elems)) == expected_bool
   end
-
-  defp tuple_with_boolean_last?(_, _), do: false
 
   # ── AST transformation ─────────────────────────────────────────────
 
