@@ -18,3 +18,11 @@ stays filtered" path). Kept. Optional tidy: move to test/ level (alongside
 assumptions_test.exs / credence_test.exs) and rename the module off `.Pattern`
 so a future scan won't re-flag it.
 -->
+## fix_string_replace_multi_arity_fn — 2026-07-22
+- Files:
+  - `lib/pattern/fix_string_replace_multi_arity_fn.ex`
+  - `test/pattern/fix_string_replace_multi_arity_fn_check_test.exs`
+  - `test/pattern/fix_string_replace_multi_arity_fn_equivalence_test.exs`
+  - `test/pattern/fix_string_replace_multi_arity_fn_fix_test.exs`
+- Reason: false premise — String.replace/3 is /4 with default [], so removing [] leaves the flagged arity-2 crash fully intact (verified: both raise identical FunctionClauseError); fix does not repair what check flags and the message/moduledoc assert wrong Elixir semantics
+
