@@ -34,3 +34,11 @@ so a future scan won't re-flag it.
   - `test/pattern/prefer_head_pattern_over_tail_destructure_fix_test.exs`
 - Reason: every firing case changes MatchError to FunctionClauseError on a 1-element/improper list (accepted rules treat a different exception as a different answer; no assumptions declared), so the safe core is empty without a guard-rewrite redesign; also unfixed collision bugs: inner-head name reused (e.g. [a|b] with [a|_]=b yields unifying [a, a | _rest]), repeated _rest unifies across two fixed params, and rescue blocks referencing the tail var are not checked.
 
+## prefer_stdlib_gcd — 2026-07-22
+- Files:
+  - `lib/pattern/prefer_stdlib_gcd.ex`
+  - `test/pattern/prefer_stdlib_gcd_check_test.exs`
+  - `test/pattern/prefer_stdlib_gcd_equivalence_test.exs`
+  - `test/pattern/prefer_stdlib_gcd_fix_test.exs`
+- Reason: every firing case diverges under :strict — hand-rolled gcd returns sign-carrying results (gcd(-4,0)=-4 vs Integer.gcd=4; verified for all negative pairs) and raises ArithmeticError vs FunctionClauseError on non-integers, with no assumptions declared and no applicable switch (negative ints are a plain-value gap, not rare text), so the safe core is empty without a caller-guard-analysis redesign; the fix is also unsound on its own terms: it deletes the defp pair but only rewrites calls whose args are both bare vars, leaving calls like gcd(a * b, b) (or &gcd/2 captures, or extra gcd clauses outside the consecutive pair) dangling against a now-undefined function.
+
