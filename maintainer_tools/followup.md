@@ -63,3 +63,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_cond_branch_assignment_in_guard_fix_test.exs`
 - Reason: unreachable in production — match? requires reading diag.file, but the pipeline compiles in-memory (file: "credence_check.ex", nonexistent, File.read fails → match? always false; tests pass only via fabricated tmp-file diagnostics); and even a message-only match? is shadowed by FixCaseBranchAssignmentScope, which claims every `undefined variable "…"` diagnostic and sorts first at equal priority 500 in the single-rule-per-diagnostic dispatch — making it reachable needs folding into that accepted rule or a phase change, both outside this set; fix also silently deletes cond branches other than the assign/guard/true trio
 
+## fix_cond_branch_assignment_scope — 2026-07-23
+- Files:
+  - `lib/semantic/fix_cond_branch_assignment_scope.ex`
+  - `test/semantic/fix_cond_branch_assignment_scope_check_test.exs`
+  - `test/semantic/fix_cond_branch_assignment_scope_fix_test.exs`
+- Reason: unreachable in production — match? needs File.read(diag.file) but the pipeline compiles in-memory (file "credence_check.ex" never exists, so match? is always false; tests fabricate tmp-file diagnostics), and a message-only match? is shadowed by accepted FixCaseBranchAssignmentScope, which claims every `undefined variable` diagnostic and sorts first at equal priority 500 in single-rule dispatch; winning priority would instead shadow/regress that accepted rule since identical messages make the shapes indistinguishable at match? time — reachability requires folding into FixCase or a phase change, both outside this set
+
