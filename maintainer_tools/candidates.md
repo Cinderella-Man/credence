@@ -1,4 +1,3 @@
-lib/pattern/prefer_function_clauses_for_list_patterns.ex
 lib/pattern/prefer_head_pattern_over_tail_destructure.ex
 lib/pattern/prefer_reduce_while_with_halt_value.ex
 lib/pattern/prefer_stdlib_gcd.ex
