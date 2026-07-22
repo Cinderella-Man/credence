@@ -1,4 +1,3 @@
-lib/pattern/no_list_pop_at_for_access.ex
 lib/pattern/no_multi_arity_fn_in_string_replace.ex
 lib/pattern/no_nested_enum_on_same_enumerable.ex
 lib/pattern/prefer_function_clauses_for_list_patterns.ex
