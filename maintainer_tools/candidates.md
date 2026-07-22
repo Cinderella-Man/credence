@@ -1,4 +1,3 @@
-lib/semantic/fix_apply_on_function_reference.ex
 lib/semantic/fix_bitwise_infix_operator.ex
 lib/semantic/fix_case_branch_assignment_scope.ex
 lib/semantic/fix_cond_branch_assignment_in_guard.ex
@@ -239,8 +238,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_apply_on_function_reference_check_test.exs
-test/semantic/fix_apply_on_function_reference_fix_test.exs
 test/semantic/fix_bitwise_infix_operator_check_test.exs
 test/semantic/fix_bitwise_infix_operator_fix_test.exs
 test/semantic/fix_case_branch_assignment_scope_check_test.exs

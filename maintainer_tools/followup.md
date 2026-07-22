@@ -42,3 +42,10 @@ so a future scan won't re-flag it.
   - `test/pattern/prefer_stdlib_gcd_fix_test.exs`
 - Reason: every firing case diverges under :strict — hand-rolled gcd returns sign-carrying results (gcd(-4,0)=-4 vs Integer.gcd=4; verified for all negative pairs) and raises ArithmeticError vs FunctionClauseError on non-integers, with no assumptions declared and no applicable switch (negative ints are a plain-value gap, not rare text), so the safe core is empty without a caller-guard-analysis redesign; the fix is also unsound on its own terms: it deletes the defp pair but only rewrites calls whose args are both bare vars, leaving calls like gcd(a * b, b) (or &gcd/2 captures, or extra gcd clauses outside the consecutive pair) dangling against a now-undefined function.
 
+## fix_apply_on_function_reference — 2026-07-22
+- Files:
+  - `lib/semantic/fix_apply_on_function_reference.ex`
+  - `test/semantic/fix_apply_on_function_reference_check_test.exs`
+  - `test/semantic/fix_apply_on_function_reference_fix_test.exs`
+- Reason: matches a fabricated diagnostic — Code.with_diagnostics emits nothing for apply(fun_ref, :call, []) (compiles clean; runtime-only ArgumentError whose message also lacks "apply(:call, [])"), so match? can never fire on real input and the rule is unreachable dead code; the fix is also broken independently (rebuilds receiver with [] args so apply(s.get_clock(x), :call, []) drops x; MatchError on single-element dot receivers like apply(f.(), :call, []); whole-file rewrite ignoring the diagnostic line; misrewrites module-valued fields where apply(cfg.mod, :call, []) validly calls cfg.mod.call/0)
+
