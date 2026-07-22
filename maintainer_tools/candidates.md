@@ -1,4 +1,3 @@
-lib/pattern/no_length_on_mapset_new.ex
 lib/pattern/no_list_pop_at_for_access.ex
 lib/pattern/no_multi_arity_fn_in_string_replace.ex
 lib/pattern/no_nested_enum_on_same_enumerable.ex
@@ -250,9 +249,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/pattern/no_length_on_mapset_new_check_test.exs
-test/pattern/no_length_on_mapset_new_equivalence_test.exs
-test/pattern/no_length_on_mapset_new_fix_test.exs
 test/pattern/no_multi_arity_fn_in_string_replace_check_test.exs
 test/pattern/no_multi_arity_fn_in_string_replace_equivalence_test.exs
 test/pattern/no_multi_arity_fn_in_string_replace_fix_test.exs
