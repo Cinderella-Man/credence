@@ -1,4 +1,3 @@
-lib/pattern/fix_map_fetch_case_match.ex
 lib/pattern/fix_regex_match_swapped_args.ex
 lib/pattern/fix_string_replace_multi_arity_fn.ex
 lib/pattern/fix_task_shutdown_brutal_kill.ex
@@ -258,9 +257,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/pattern/fix_map_fetch_case_match_check_test.exs
-test/pattern/fix_map_fetch_case_match_equivalence_test.exs
-test/pattern/fix_map_fetch_case_match_fix_test.exs
 test/pattern/fix_regex_match_swapped_args_check_test.exs
 test/pattern/fix_regex_match_swapped_args_equivalence_test.exs
 test/pattern/fix_regex_match_swapped_args_fix_test.exs
