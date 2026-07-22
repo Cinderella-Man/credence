@@ -1,4 +1,3 @@
-lib/pattern/no_destructure_reconstruct.ex
 lib/pattern/no_keyword_get_keyword_key.ex
 lib/pattern/no_keyword_get_with_atom_first_arg.ex
 lib/pattern/no_length_on_mapset_new.ex

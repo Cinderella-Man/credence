@@ -292,8 +292,6 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
     if Enum.any?(names, &(&1 == :skip)), do: :error, else: {:ok, names}
   end
 
-  defp extract_names_from_elements(_), do: :error
-
   defp build_issue(var_names, meta) do
     vars_str = Enum.map_join(var_names, ", ", &to_string/1)
     count = length(var_names)
