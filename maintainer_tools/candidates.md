@@ -1,4 +1,3 @@
-lib/pattern/fix_task_shutdown_brutal_kill.ex
 lib/pattern/no_agent_get_and_modify.ex
 lib/pattern/no_destructure_reconstruct.ex
 lib/pattern/no_keyword_get_keyword_key.ex
@@ -255,9 +254,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/pattern/fix_task_shutdown_brutal_kill_check_test.exs
-test/pattern/fix_task_shutdown_brutal_kill_equivalence_test.exs
-test/pattern/fix_task_shutdown_brutal_kill_fix_test.exs
 test/pattern/no_agent_get_and_modify_check_test.exs
 test/pattern/no_agent_get_and_modify_equivalence_test.exs
 test/pattern/no_agent_get_and_modify_fix_test.exs
