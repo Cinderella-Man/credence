@@ -357,3 +357,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_genserver_reply_in_handle_cast_fix_test.exs`
 - Reason: dead rule — match?/1 keys on a fabricated diagnostic ("GenServer.reply/2 called inside handle_cast/2 …") the Elixir compiler never emits; GenServer.reply(bare_pid,_) in handle_cast is valid code (runtime FunctionClauseError, no compile diagnostic — verified Code.with_diagnostics returns 0), so no message-keyed semantic rule can ever match it. Same class as no_genserver_reply_in_handle_call (6374a54); belongs to a pattern/AST rule, out of set scope.
 
+## no_genserver_tuple_piped_to_state_fn — 2026-07-23
+- Files:
+  - `lib/semantic/no_genserver_tuple_piped_to_state_fn.ex`
+  - `test/semantic/no_genserver_tuple_piped_to_state_fn_check_test.exs`
+  - `test/semantic/no_genserver_tuple_piped_to_state_fn_fix_test.exs`
+- Reason: dead rule — match?/1 keys on a fabricated message ("GenServer reply tuple piped into helper function") the Elixir compiler never emits; piping a reply tuple into a helper is valid code (runtime BadMapError, Code.with_diagnostics returns only an unrelated @impl warning), so no message-keyed semantic rule can match it. Same class as 6374a54/1ab7d66/282488a; belongs to a pattern/AST rule, out of set scope.
+
