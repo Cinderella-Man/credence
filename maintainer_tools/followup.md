@@ -154,3 +154,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_undefined_params_in_plug_router_fix_test.exs`
 - Reason: dead in production — accepted FixCaseBranchAssignmentScope also matches `undefined variable "params"` and sorts first, so Enum.find (first-wins, no fall-through) routes every such diagnostic to it and this rule never fires; deconflicting needs a shared lib/semantic.ex change. (Also the fix is an unsafe whole-file regex that corrupts strings/comments/legit `params` bindings and adds undefined `conn` outside routers.)
 
+## fix_undefined_struct_in_pattern — 2026-07-23
+- Files:
+  - `lib/semantic/fix_undefined_struct_in_pattern.ex`
+  - `test/semantic/fix_undefined_struct_in_pattern_check_test.exs`
+  - `test/semantic/fix_undefined_struct_in_pattern_fix_test.exs`
+- Reason: dead in production — accepted fix_cyclic_struct_reference's match? ("__struct__/1 is undefined") is a strict superset and sorts first (C<U, both priority 500), so Enum.find (first-wins) routes every such diagnostic to it and this rule never fires; deconflicting needs a shared lib/semantic.ex change. (Also the fix discards the struct wrapper — %Exit{reason: reason} → reason — changing behavior, vs the accepted rule's compile-verified reorder.)
+
