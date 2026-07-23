@@ -1,4 +1,3 @@
-lib/semantic/fix_pin_in_ets_match_spec.ex
 lib/semantic/fix_plug_dependency_module_order.ex
 lib/semantic/fix_python_style_struct_definition.ex
 lib/semantic/fix_raise_in_keyword_value.ex
@@ -202,8 +201,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_pin_in_ets_match_spec_check_test.exs
-test/semantic/fix_pin_in_ets_match_spec_fix_test.exs
 test/semantic/fix_plug_dependency_module_order_check_test.exs
 test/semantic/fix_plug_dependency_module_order_fix_test.exs
 test/semantic/fix_python_style_struct_definition_check_test.exs
