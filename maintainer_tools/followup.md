@@ -511,3 +511,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_in_guard_with_variable_rhs_fix_test.exs`
 - Reason: fix is heuristic intent-reconstruction overfit to the demo — on an in-only guard (no `or`) it emits `[first|rest] -> true` matching any non-empty list unconditionally (wrong answer for `[?a,?b]`); it hardcodes Enum.member? ignoring the real body and duplicates the body into `[?| | _] -> body` leaving pattern vars unbound (compile error / wrong return type); and it no-ops on function-head guards, so match? fires without a resolving fix. Not narrowable via match? (diagnostic message carries none of the distinguishing shape info); no generalizable safe core.
 
+## no_list_keystore_three_args — 2026-07-23
+- Files:
+  - `lib/semantic/no_list_keystore_three_args.ex`
+  - `test/semantic/no_list_keystore_three_args_check_test.exs`
+  - `test/semantic/no_list_keystore_three_args_fix_test.exs`
+- Reason: fix inserts 0 in the wrong slot (keystore signature is (list,key,position,new_tuple)) so shipped output raises `no function clause matching in List.keystore/4` at runtime; even re-aimed to the correct slot it speculatively invents position=0 unconditionally, and the provably-safe core (new_tuple first element == key) can't be isolated since match? only sees the diagnostic — firing on all keystore/3 turns a compile error into a silent wrong-position logic bug and narrowing only the fix breaks check/fix agreement.
+
