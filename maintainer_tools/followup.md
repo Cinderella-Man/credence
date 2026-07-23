@@ -280,3 +280,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_date_utc_today_with_arg_fix_test.exs`
 - Reason: check/fix mismatch — match? fires on the redundant-function-clause warning ("previous clause always matches"), which never corresponds to Date.utc_today(arg); fix no-ops on every real such diagnostic while claiming it from the rules that actually own it. Not narrowable; correct diagnostic would be the unrelated "undefined or private" message.
 
+## no_define_to_string — 2026-07-23
+- Files:
+  - `lib/semantic/no_define_to_string.ex`
+  - `test/semantic/no_define_to_string_check_test.exs`
+  - `test/semantic/no_define_to_string_fix_test.exs`
+- Reason: file-wide prewalk rename over-applies (renames Kernel.to_string in other modules → undefined function) and misses call forms (no-paren pipe, &to_string/1 capture) → silent behavior change; needs scope-aware rewrite, not narrowable.
+
