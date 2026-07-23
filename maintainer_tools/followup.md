@@ -343,3 +343,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_genserver_cast_with_raise_fix_test.exs`
 - Reason: check/fix mismatch — match?/1 keys on the "@impl true ... no behaviour was declared" warning (missing `use GenServer`), but the fix only rewrites handle_cast→handle_call and GenServer.cast→.call and never adds `use GenServer`/@behaviour, so the flagged diagnostic remains unresolved after the fix; the real target (a cast handler that raises) emits no compiler diagnostic, so no message-keyed semantic rule can key on it. Not narrowable.
 
+## no_genserver_reply_in_handle_call — 2026-07-23
+- Files:
+  - `lib/semantic/no_genserver_reply_in_handle_call.ex`
+  - `test/semantic/no_genserver_reply_in_handle_call_check_test.exs`
+  - `test/semantic/no_genserver_reply_in_handle_call_fix_test.exs`
+- Reason: dead rule — match? keys on a fabricated message ("send/2 used to reply from handle_call/3 …") the Elixir compiler never emits; send-in-handle_call is valid code (runtime caller-timeout bug, no compile diagnostic), so no message-keyed semantic rule can ever match it. Not narrowable; belongs to a pattern/AST rule (out of set scope).
+
