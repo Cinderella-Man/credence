@@ -1,4 +1,3 @@
-lib/semantic/no_map_get_on_keyword_list_opts.ex
 lib/semantic/no_map_has.ex
 lib/semantic/no_map_update_missing_key.ex
 lib/semantic/no_map_update_zero_default_with_subtraction.ex
@@ -120,8 +119,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_map_get_on_keyword_list_opts_check_test.exs
-test/semantic/no_map_get_on_keyword_list_opts_fix_test.exs
 test/semantic/no_map_has_check_test.exs
 test/semantic/no_map_has_fix_test.exs
 test/semantic/no_map_update_missing_key_check_test.exs
