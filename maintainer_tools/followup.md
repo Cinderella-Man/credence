@@ -329,3 +329,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_exit_two_args_fix_test.exs`
 - Reason: duplicate dispatch — live UndefinedFunction already matches "undefined function exit/2" and its @local_replacements is the home for exactly this Python-idiom rename ({"exit",2} => {:rename,"Process","exit"}, reusing its word-boundary-safe replacer); this standalone rule shadows it with an unsafe naive String.replace("exit(",…) that mangles Process.exit(/Foo.exit(/string-literal lines. Clean fold requires editing undefined_function.ex — out of set scope.
 
+## no_function_in_module_attribute — 2026-07-23
+- Files:
+  - `lib/semantic/no_function_in_module_attribute.ex`
+  - `test/semantic/no_function_in_module_attribute_check_test.exs`
+  - `test/semantic/no_function_in_module_attribute_fix_test.exs`
+- Reason: duplicate — identical match?/1 (same "cannot inject attribute" + "cannot escape #Function" diagnostic) as live Semantic.FixFunctionInModuleAttributeInlineUsages, which already fixes this safely; new rule also unsafely removes the @attr def while leaving bare @attr value refs dangling. Drop/fold needs the other set's file, out of scope.
+
