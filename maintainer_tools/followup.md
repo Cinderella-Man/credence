@@ -252,3 +252,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_bare_return_keyword_fix_test.exs`
 - Reason: dead in production — fix_case_branch_assignment_scope's regex also claims `undefined variable "return"` and sorts first at equal priority 500 (Enum.find first-wins), no-ops on bare-return input, so this rule's fix never runs (verified: Credence.Semantic.fix leaves the return in place). Deconflicting needs a shared-file routing/priority change.
 
+## no_capture_as_bitwise_and — 2026-07-23
+- Files:
+  - `lib/semantic/no_capture_as_bitwise_and.ex`
+  - `test/semantic/no_capture_as_bitwise_and_check_test.exs`
+  - `test/semantic/no_capture_as_bitwise_and_fix_test.exs`
+- Reason: fix_pipe_capture rewrites the whole file and has_bare_capture? can't distinguish a bare &1 from a &1 inside a valid &(...), so a valid `list |> Enum.map(&(&1 + 1))` elsewhere in the file is mangled into `&(wq1 + 1)` (capture without argument = compile error), while the actually-flagged bare `foo(&1)` stays unfixed; valid_syntax? only parses so it hides this.
+

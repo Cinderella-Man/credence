@@ -1,4 +1,3 @@
-lib/semantic/no_capture_as_bitwise_and.ex
 lib/semantic/no_compile_warn_undefined_module.ex
 lib/semantic/no_cond_variable_assignment_in_inner_branch.ex
 lib/semantic/no_conflicting_default_args.ex
@@ -171,8 +170,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_capture_as_bitwise_and_check_test.exs
-test/semantic/no_capture_as_bitwise_and_fix_test.exs
 test/semantic/no_compile_warn_undefined_module_check_test.exs
 test/semantic/no_compile_warn_undefined_module_fix_test.exs
 test/semantic/no_cond_variable_assignment_in_inner_branch_check_test.exs
