@@ -147,3 +147,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_undefined_nested_module_struct_fix_test.exs`
 - Reason: duplicate of accepted fix_cyclic_struct_reference — its match? ("__struct__/1 is undefined") is a strict superset of this rule's diagnostic and its AST-based, compile-verified reorder already produces the exact output this set's tests expect; keeping both would double-attribute the same diagnostic, and this line-based variant is strictly weaker (fragile do/end depth counting, no compile check) — drop.
 
+## fix_undefined_params_in_plug_router — 2026-07-23
+- Files:
+  - `lib/semantic/fix_undefined_params_in_plug_router.ex`
+  - `test/semantic/fix_undefined_params_in_plug_router_check_test.exs`
+  - `test/semantic/fix_undefined_params_in_plug_router_fix_test.exs`
+- Reason: dead in production — accepted FixCaseBranchAssignmentScope also matches `undefined variable "params"` and sorts first, so Enum.find (first-wins, no fall-through) routes every such diagnostic to it and this rule never fires; deconflicting needs a shared lib/semantic.ex change. (Also the fix is an unsafe whole-file regex that corrupts strings/comments/legit `params` bindings and adds undefined `conn` outside routers.)
+

@@ -1,4 +1,3 @@
-lib/semantic/fix_undefined_params_in_plug_router.ex
 lib/semantic/fix_undefined_struct_in_pattern.ex
 lib/semantic/fix_undefined_type_t_in_spec.ex
 lib/semantic/fix_undefined_underscored_binding.ex
@@ -188,8 +187,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_undefined_params_in_plug_router_check_test.exs
-test/semantic/fix_undefined_params_in_plug_router_fix_test.exs
 test/semantic/fix_undefined_struct_in_pattern_check_test.exs
 test/semantic/fix_undefined_struct_in_pattern_fix_test.exs
 test/semantic/fix_undefined_type_t_in_spec_check_test.exs
