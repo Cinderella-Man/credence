@@ -595,3 +595,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_process_send_after_infinity_fix_test.exs`
 - Reason: check/fix disagree — match? fires on the unrelated "multiple clauses and also declares default values" warning (whose correct fix is a header default), but fix/2 rewrites Process.send_after(...,:infinity) calls and returns such warning-producing code unchanged, so the flagged diagnostic is never resolved; meanwhile the fix's real target (send_after with :infinity) emits zero compile diagnostics (verified), so match? can never legitimately fire on it. Matched diagnostic and fix domain are disjoint — no safe narrow core.
 
+## no_process_send_after_literal_infinity — 2026-07-23
+- Files:
+  - `lib/semantic/no_process_send_after_literal_infinity.ex`
+  - `test/semantic/no_process_send_after_literal_infinity_check_test.exs`
+  - `test/semantic/no_process_send_after_literal_infinity_fix_test.exs`
+- Reason: check/fix disjoint — match? fires on the unrelated "variable X in code block has no effect as it is never returned" dead-variable warning (correct fix: remove var or bind to _), but fix/2 rewrites Process.send_after(...,variable) calls, which emit zero compile diagnostics (verified). The flagged diagnostic is never resolved and the fix's real target can never legitimately trigger match?. Same disjoint-domain defect already rejected for sibling no_process_send_after_infinity (2217cb1); no safe narrow core.
+
