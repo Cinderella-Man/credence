@@ -1,4 +1,3 @@
-lib/semantic/no_hallucinated_crypto_hex.ex
 lib/semantic/no_hallucinated_datetime_info.ex
 lib/semantic/no_hallucinated_datetime_zone.ex
 lib/semantic/no_hallucinated_defpstruct.ex
@@ -146,8 +145,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_hallucinated_crypto_hex_check_test.exs
-test/semantic/no_hallucinated_crypto_hex_fix_test.exs
 test/semantic/no_hallucinated_datetime_info_check_test.exs
 test/semantic/no_hallucinated_datetime_info_fix_test.exs
 test/semantic/no_hallucinated_datetime_zone_check_test.exs

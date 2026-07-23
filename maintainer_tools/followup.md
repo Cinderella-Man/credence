@@ -392,3 +392,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_crypto_compare_fix_test.exs`
 - Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on ":crypto.compare/2 is undefined or private" (parse_qualified_ref → {"crypto","compare",2}), so both rules claim the same diagnostic; correct fold is a @qualified_replacements entry {"crypto","compare",2} => {:rename,"crypto","hash_equals"} in lib/semantic/undefined_function.ex, a shared-file change out of scope.
 
+## no_hallucinated_crypto_hex — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_crypto_hex.ex`
+  - `test/semantic/no_hallucinated_crypto_hex_check_test.exs`
+  - `test/semantic/no_hallucinated_crypto_hex_fix_test.exs`
+- Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on ":crypto.hex/1 is undefined or private" (parse_qualified_ref → {"crypto","hex",1}), so both rules claim the same diagnostic; correct fold is a @qualified_replacements entry {"crypto","hex",1} in lib/semantic/undefined_function.ex, a shared-file change out of scope.
+
