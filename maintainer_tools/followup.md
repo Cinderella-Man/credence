@@ -371,3 +371,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_guard_before_validation_fix_test.exs`
 - Reason: dead rule — match?/1 keys on a fabricated message ("guard duplicates body validation") the Elixir compiler never emits; a comparison guard alongside a body `unless … raise` is valid code (Code.with_diagnostics returns 0 diagnostics), so no message-keyed semantic rule can ever match it. Same class as 6374a54/1ab7d66/282488a; the smell belongs to a pattern/AST rule, out of set scope.
 
+## no_hallucinated_agent_update_and — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_agent_update_and.ex`
+  - `test/semantic/no_hallucinated_agent_update_and_check_test.exs`
+  - `test/semantic/no_hallucinated_agent_update_and_fix_test.exs`
+- Reason: duplicate of generic Credence.Semantic.UndefinedFunction — its match? already fires on "Agent.update_and/2 is undefined or private" (parse_qualified_ref → {"Agent","update_and",2}), so both rules claim the same diagnostic; the correct fold is a one-line @qualified_replacements entry {"Agent","update_and",2} => {:rename,"Agent","get_and_update"} in lib/semantic/undefined_function.ex, a shared-file change that is out of scope.
+
