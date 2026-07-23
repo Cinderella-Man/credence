@@ -406,3 +406,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_erlang_warn_fix_test.exs`
 - Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on ":erlang.warn/1 is undefined or private" (parse_qualified_ref → {"erlang","warn",1}), so both rules claim the same diagnostic; correct fold is a @qualified_replacements entry {"erlang","warn",1} in lib/semantic/undefined_function.ex, a shared-file change out of scope.
 
+## no_hallucinated_fetch_part — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_fetch_part.ex`
+  - `test/semantic/no_hallucinated_fetch_part_check_test.exs`
+  - `test/semantic/no_hallucinated_fetch_part_fix_test.exs`
+- Reason: match? keys on the "init/1 implemented as defp" Plug warning but fix rewrites an unrelated Plug.Conn.fetch_part case and never touches init/1, so the flagged diagnostic is never resolved; re-keying to the "fetch_part/2 is undefined or private" message would duplicate Credence.Semantic.UndefinedFunction (a shared-file fold, out of scope).
+

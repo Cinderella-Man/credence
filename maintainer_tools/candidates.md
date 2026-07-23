@@ -1,4 +1,3 @@
-lib/semantic/no_hallucinated_fetch_part.ex
 lib/semantic/no_hallucinated_guard_fn.ex
 lib/semantic/no_hallucinated_map_reduce.ex
 lib/semantic/no_hallucinated_math_fn.ex
@@ -140,8 +139,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_hallucinated_fetch_part_check_test.exs
-test/semantic/no_hallucinated_fetch_part_fix_test.exs
 test/semantic/no_hallucinated_guard_fn_check_test.exs
 test/semantic/no_hallucinated_guard_fn_fix_test.exs
 test/semantic/no_hallucinated_map_reduce_check_test.exs
