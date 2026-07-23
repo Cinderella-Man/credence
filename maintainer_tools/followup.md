@@ -714,3 +714,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_unreachable_duplicate_function_clause_fix_test.exs`
 - Reason: duplicate of the accepted Pattern rule NoDuplicateFunctionClauses, and unsafe — clause_key keys only on {def|defp, name, arity} with no pattern comparison, so fix/2 deletes every later clause of any ordinary multi-clause function (verified: `def fact(0), do: 1` / `def fact(n), do: n * fact(n - 1)` is rewritten to just the base case); the trigger is also wrong (match? fires on the unrelated MatchError family "no match of right hand side value" — nothing to do with unreachable clauses; the real diagnostic is "this clause cannot match because a previous clause…"), the fix ignores the diagnostic entirely and re-renders the whole file via Sourceror.to_string, and even the flagship test's own fix orphans `defp ensure_registry_started/0` into an unused-function warning.
 
+## no_unreachable_function_clause — 2026-07-24
+- Files:
+  - `lib/semantic/no_unreachable_function_clause.ex`
+  - `test/semantic/no_unreachable_function_clause_check_test.exs`
+  - `test/semantic/no_unreachable_function_clause_fix_test.exs`
+- Reason: dead in production — the "cannot match because a previous clause at line N matches the same pattern" diagnostic family is already claimed at priority 500 by the accepted NoUnreachableCatchAfterRescue (Enum.find first-match-wins, and "Catch" sorts before "Function"), so on the rule's own flagship fixture Semantic.analyze returns [] and Semantic.fix leaves the source unchanged; match? can't be narrowed to win the race (the diagnostic text is identical for both shapes), so re-aiming needs a lib/semantic.ex fallthrough — out of scope. Also overlaps the accepted Pattern rule NoDuplicateFunctionClauses, which deliberately declines the same-head/different-body case this fix deletes, and fix/2 never validates the message (any diagnostic with a {line, col} position deletes whatever def/defp sits on that line) and re-renders the whole file via Sourceror.to_string.
+
