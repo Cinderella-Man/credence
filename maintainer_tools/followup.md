@@ -448,3 +448,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_naive_datetime_to_unix_fix_test.exs`
 - Reason: fabricated premise — NaiveDateTime has no to_unix at any arity, so stripping the arg yields NaiveDateTime.to_unix/1 which is itself undefined; the fix doesn't resolve the diagnostic and there's no safe narrow core (real conversion needs a timezone assumption / NaiveDateTime.diff).
 
+## no_hallucinated_persistent_term_fn — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_persistent_term_fn.ex`
+  - `test/semantic/no_hallucinated_persistent_term_fn_check_test.exs`
+  - `test/semantic/no_hallucinated_persistent_term_fn_fix_test.exs`
+- Reason: fabricated premise — rule keys on "clauses with the same name and arity ... should be grouped together" (function-clause grouping), which is never the diagnostic its target :persistent_term.get_keys() produces (":persistent_term.get_keys/0 is undefined or private"), so it never fires on its own target; and that real diagnostic is already owned by Credence.Semantic.UndefinedFunction (match? on "is undefined or private" + parse_qualified_ref -> {"persistent_term","get_keys",0}). Correct fold is a @qualified_replacements entry in lib/semantic/undefined_function.ex (shared-file, out of scope), and the get_keys->get callback restructuring (fn key -> fn {key,_value}) isn't expressible via the rename machinery anyway.
+
