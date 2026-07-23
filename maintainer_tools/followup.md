@@ -266,3 +266,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_compile_warn_undefined_module_fix_test.exs`
 - Reason: rule is live/safe but firing on real undefined-module warnings regresses 6 sibling rules' "resolves-elsewhere-via-alias left untouched" e2e tests (aliased-module warning is indistinguishable from its own target, so no narrowing saves it); deconflicting needs shared-file changes (those 6 test fixtures or pipeline routing) which are out of scope.
 
+## no_cond_variable_assignment_in_inner_branch — 2026-07-23
+- Files:
+  - `lib/semantic/no_cond_variable_assignment_in_inner_branch.ex`
+  - `test/semantic/no_cond_variable_assignment_in_inner_branch_check_test.exs`
+  - `test/semantic/no_cond_variable_assignment_in_inner_branch_fix_test.exs`
+- Reason: dead in production — FixCaseBranchAssignmentScope.match? claims every `undefined variable` diagnostic and sorts first (equal priority 500, name F<N), no-ops on if/else, pipeline stops so this rule's fix never runs (verified via real Credence.Semantic.fix: unchanged); also fix ignores position and over-applies file-wide, changing otherwise-valid code's return value. Deconflicting needs a shared-file routing/priority change.
+

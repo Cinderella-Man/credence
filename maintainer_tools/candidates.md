@@ -1,4 +1,3 @@
-lib/semantic/no_cond_variable_assignment_in_inner_branch.ex
 lib/semantic/no_conflicting_default_args.ex
 lib/semantic/no_crypto_hash_pipe_swapped_args.ex
 lib/semantic/no_date_utc_today_with_arg.ex
@@ -169,8 +168,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_cond_variable_assignment_in_inner_branch_check_test.exs
-test/semantic/no_cond_variable_assignment_in_inner_branch_fix_test.exs
 test/semantic/no_conflicting_default_args_check_test.exs
 test/semantic/no_conflicting_default_args_fix_test.exs
 test/semantic/no_crypto_hash_pipe_swapped_args_check_test.exs
