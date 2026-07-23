@@ -168,3 +168,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_undefined_type_t_in_spec_fix_test.exs`
 - Reason: dead in production — match string "type t/0 is undefined" never occurs (real Elixir msg is "type t/0 undefined", no "is"); fixing the typo would make it match "type t/0 undefined" which accepted no_bare_names_in_spec already handles, and this rule sorts first (F<N, both prio 500) so Enum.find first-wins would hijack/regress that rule for bare-name-`t` specs — deconflicting needs a shared lib/semantic.ex change.
 
+## fix_undefined_underscored_binding — 2026-07-23
+- Files:
+  - `lib/semantic/fix_undefined_underscored_binding.ex`
+  - `test/semantic/fix_undefined_underscored_binding_check_test.exs`
+  - `test/semantic/fix_undefined_underscored_binding_fix_test.exs`
+- Reason: dead in production — accepted FixCaseBranchAssignmentScope.match? claims every `undefined variable "name"` error and sorts first (C<U, both priority 500), so Enum.find (first-wins, no fall-through) routes this diagnostic to it (empirically confirmed) and this rule never fires; its no-op fix leaves the underscore bug unfixed. Deconflicting needs a shared lib/semantic.ex change.
+
