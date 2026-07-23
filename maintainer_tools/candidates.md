@@ -1,4 +1,3 @@
-lib/semantic/no_hallucinated_stream_data_string.ex
 lib/semantic/no_hallucinated_struct.ex
 lib/semantic/no_hallucinated_struct_field_in_pattern.ex
 lib/semantic/no_hallucinated_task_timeout_error_struct.ex
@@ -130,8 +129,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_hallucinated_stream_data_string_check_test.exs
-test/semantic/no_hallucinated_stream_data_string_fix_test.exs
 test/semantic/no_hallucinated_struct_check_test.exs
 test/semantic/no_hallucinated_struct_field_in_pattern_check_test.exs
 test/semantic/no_hallucinated_struct_field_in_pattern_fix_test.exs

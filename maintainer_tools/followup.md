@@ -462,3 +462,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_queue_empty_fix_test.exs`
 - Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on ":queue.empty/0 is undefined or private" (parse_qualified_ref → {"queue","empty",0}), so both rules claim the same diagnostic; correct fold is a {"queue","empty",0} => {:rename,"queue","new"} entry in lib/semantic/undefined_function.ex, a shared-file change out of scope.
 
+## no_hallucinated_stream_data_string — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_stream_data_string.ex`
+  - `test/semantic/no_hallucinated_stream_data_string_check_test.exs`
+  - `test/semantic/no_hallucinated_stream_data_string_fix_test.exs`
+- Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on both ":warning" diagnostics ("StreamData.alpha_string/0 is undefined or private", "StreamData.string_of_length/2 is undefined or private") via parse_qualified_ref, so both rules claim the same diagnostic; correct fold is into lib/semantic/undefined_function.ex (alpha_string -> {:rename_add_arg,"StreamData","string",":alphanumeric"}; string_of_length needs new range->keyword machinery there), a shared-file change out of scope.
+
