@@ -217,3 +217,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_unmatchable_tuple_destructure_fix_test.exs`
 - Reason: hallucinated premise (integer-as-tuple destructure raises runtime MatchError, never emits "misplaced operator |/2") and the fix {var,_}=expr -> var=expr changes the answer on valid partial-destructures like {v,_}=Integer.parse(x); no safe core.
 
+## no_agent_update_tuple_wrapper — 2026-07-23
+- Files:
+  - `lib/semantic/no_agent_update_tuple_wrapper.ex`
+  - `test/semantic/no_agent_update_tuple_wrapper_check_test.exs`
+  - `test/semantic/no_agent_update_tuple_wrapper_fix_test.exs`
+- Reason: dead in production — keys on fabricated message "Agent.update callback should return new state, not {:ok, state}" that the Elixir compiler never emits (verified: 0 diagnostics), so semantic phase (compile_and_capture/with_diagnostics only) never routes a real diagnostic to match?; making it live needs a shared-file custom-analyzer change.
+
