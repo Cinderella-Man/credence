@@ -1,4 +1,3 @@
-lib/semantic/no_or_in_case_pattern.ex
 lib/semantic/no_pin_in_after_clause.ex
 lib/semantic/no_pipe_into_in_expression.ex
 lib/semantic/no_plug_before_dependency_definition.ex
@@ -111,8 +110,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_or_in_case_pattern_check_test.exs
-test/semantic/no_or_in_case_pattern_fix_test.exs
 test/semantic/no_pin_in_after_clause_check_test.exs
 test/semantic/no_pin_in_after_clause_fix_test.exs
 test/semantic/no_pipe_into_in_expression_check_test.exs
@@ -315,8 +312,6 @@ test/syntax/no_mixed_script_identifier_analyze_test.exs
 test/syntax/no_mixed_script_identifier_fix_test.exs
 test/syntax/no_nested_capture_analyze_test.exs
 test/syntax/no_nested_capture_fix_test.exs
-test/syntax/no_or_in_case_pattern_analyze_test.exs
-test/syntax/no_or_in_case_pattern_fix_test.exs
 test/syntax/no_pipe_into_arithmetic_operator_analyze_test.exs
 test/syntax/no_pipe_into_arithmetic_operator_fix_test.exs
 test/syntax/no_postfix_if_expression_analyze_test.exs
