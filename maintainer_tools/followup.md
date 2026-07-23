@@ -112,3 +112,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_invalid_capture_with_literal_fix_test.exs`
 - Reason: dead in production — duplicate match? of accepted FixInvalidCaptureWithArguments (identical "invalid args for &" + :error, same priority 500, Arguments sorts first) which claims every such diagnostic first-match-wins in both analyze and fix with no fallback; making Literal live means re-prioritizing over Arguments (killing that accepted rule, since Literal no-ops on the &call(args)/0 shape) or folding the two rules — out of scope for this set. Its fix also mangles valid captures (&String.upcase(&1) → fn -> String.upcase(&1) end, no capture-ref guard in the dot-call clause).
 
+## fix_nested_module_short_reference — 2026-07-23
+- Files:
+  - `lib/semantic/fix_nested_module_short_reference.ex`
+  - `test/semantic/fix_nested_module_short_reference_check_test.exs`
+  - `test/semantic/fix_nested_module_short_reference_fix_test.exs`
+- Reason: rule targets the wrong diagnostic — nested-module short references emit "X is undefined" warnings, never "redefining module"; the diagnostics match? does admit (real redefinitions) are unfixable by prefix-qualifying references, so no safe core exists
+
