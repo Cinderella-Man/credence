@@ -1,4 +1,3 @@
-lib/semantic/no_unreachable_duplicate_function_clause.ex
 lib/semantic/no_unreachable_function_clause.ex
 lib/semantic/no_unused_private_function.ex
 lib/semantic/no_unused_type_declaration.ex
@@ -74,8 +73,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_unreachable_duplicate_function_clause_check_test.exs
-test/semantic/no_unreachable_duplicate_function_clause_fix_test.exs
 test/semantic/no_unreachable_function_clause_check_test.exs
 test/semantic/no_unreachable_function_clause_fix_test.exs
 test/semantic/no_unused_private_function_check_test.exs

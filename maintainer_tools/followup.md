@@ -707,3 +707,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_underscore_pattern_binding_with_bare_body_use_fix_test.exs`
 - Reason: dead in production — Elixir never emits `variable "_x" is unused` (verified on the rule's own example and across def-head/assignment/map-pattern/comprehension/fn/case-tuple probes; the real diagnostics there are the `undefined variable "old_name"` error plus `variable "value" is unused`), so match? can never fire; the only real hook is the `undefined variable` family already claimed at priority 500 by FixCaseBranchAssignmentScope (first match wins), so re-aiming needs a lib/semantic.ex fallthrough — out of scope. Separately the fix is unsafe: has_standalone_occurrence? scans the whole source rather than the clause, and replace_in_clause rewrites every `_x` occurrence between the enclosing def and its `end`, including other clauses, string literals and comments; and one fix test's input does not parse (`def handle({:update, _value}), do` -> "unexpected reserved word: do").
 
+## no_unreachable_duplicate_function_clause — 2026-07-24
+- Files:
+  - `lib/semantic/no_unreachable_duplicate_function_clause.ex`
+  - `test/semantic/no_unreachable_duplicate_function_clause_check_test.exs`
+  - `test/semantic/no_unreachable_duplicate_function_clause_fix_test.exs`
+- Reason: duplicate of the accepted Pattern rule NoDuplicateFunctionClauses, and unsafe — clause_key keys only on {def|defp, name, arity} with no pattern comparison, so fix/2 deletes every later clause of any ordinary multi-clause function (verified: `def fact(0), do: 1` / `def fact(n), do: n * fact(n - 1)` is rewritten to just the base case); the trigger is also wrong (match? fires on the unrelated MatchError family "no match of right hand side value" — nothing to do with unreachable clauses; the real diagnostic is "this clause cannot match because a previous clause…"), the fix ignores the diagnostic entirely and re-renders the whole file via Sourceror.to_string, and even the flagship test's own fix orphans `defp ensure_registry_started/0` into an unused-function warning.
+
