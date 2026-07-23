@@ -560,3 +560,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_plug_before_dependency_definition_fix_test.exs`
 - Reason: check/fix disagree — match? fires on the syntax error "atom cannot be followed by an alias" (from a stray colon, e.g. plug(:Foo.Bar)), whose only correct fix is removing that colon, but fix/2 instead reorders module definitions and never removes the colon, so the flagged diagnostic is never resolved (verified: reorder output still contains plug(:Foo.Bar)); the moduledoc describes an unrelated init/1-undefined compile error match? never matches; tests pass only because the fix inputs use colon-free plug calls that would never emit the matched diagnostic. No safe core of the reorder behavior exists.
 
+## no_plug_upload_size_field — 2026-07-23
+- Files:
+  - `lib/semantic/no_plug_upload_size_field.ex`
+  - `test/semantic/no_plug_upload_size_field_check_test.exs`
+  - `test/semantic/no_plug_upload_size_field_fix_test.exs`
+- Reason: unsafe — fix hardcodes a `path` var (undefined-var compile error when absent), leaves expression-use of `size` undefined, mangles multiline patterns and changes tuple arity, and inserts File.stat! at module level; needs ground-up Sourceror rewrite, not narrowing.
+
