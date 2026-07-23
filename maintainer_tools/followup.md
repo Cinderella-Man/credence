@@ -231,3 +231,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_atom_position_in_list_key_functions_fix_test.exs`
 - Reason: dead in production — match? keys on "redefining module" but the atom-position bug emits "incompatible types given to List.keytake/3" (verified), so the rule never fires on its target; and the fix diverges anyway (Enum.reject removes ALL matches / t.field map access vs keytake removing the FIRST via tuple position), so there is no safe same-answer core to re-aim it to.
 
+## no_bare_function_def_syntax — 2026-07-23
+- Files:
+  - `lib/semantic/no_bare_function_def_syntax.ex`
+  - `test/semantic/no_bare_function_def_syntax_check_test.exs`
+  - `test/semantic/no_bare_function_def_syntax_fix_test.exs`
+- Reason: broad match? claims every "undefined function X/N" error and sorts before UndefinedFunction (N<U, both priority 500), so Enum.find first-wins routes those diagnostics to this rule, whose fix no-ops on non-`def` lines — empirically starving UndefinedFunction's live local replacements (sorted->Enum.sort, len->length, max/min/sum, range->literal, reversed, infinity), a regression. match? can't see source so it can't be narrowed to bare-def lines; deconflicting needs a shared lib/semantic.ex fall-through change.
+
