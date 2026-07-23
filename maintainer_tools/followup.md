@@ -238,3 +238,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_bare_function_def_syntax_fix_test.exs`
 - Reason: broad match? claims every "undefined function X/N" error and sorts before UndefinedFunction (N<U, both priority 500), so Enum.find first-wins routes those diagnostics to this rule, whose fix no-ops on non-`def` lines — empirically starving UndefinedFunction's live local replacements (sorted->Enum.sort, len->length, max/min/sum, range->literal, reversed, infinity), a regression. match? can't see source so it can't be narrowed to bare-def lines; deconflicting needs a shared lib/semantic.ex fall-through change.
 
+## no_bare_return_in_genserver_init — 2026-07-23
+- Files:
+  - `lib/semantic/no_bare_return_in_genserver_init.ex`
+  - `test/semantic/no_bare_return_in_genserver_init_check_test.exs`
+  - `test/semantic/no_bare_return_in_genserver_init_fix_test.exs`
+- Reason: dead in production — keys on fabricated message "init/1 must return {:ok, state}" that the Elixir compiler never emits (verified: bare init/1 return yields 0 diagnostics; it's a runtime {:bad_return_value} error, not a compile warning), so the semantic phase never routes a real diagnostic to match?; making it live needs a shared-file custom-analyzer change.
+
