@@ -1,4 +1,3 @@
-lib/semantic/no_hallucinated_task_timeout_error_struct.ex
 lib/semantic/no_hardcoded_genserver_name_in_api.ex
 lib/semantic/no_if_assignment_as_statement.ex
 lib/semantic/no_impl_true_for_undeclared_callback.ex
@@ -127,8 +126,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_hallucinated_task_timeout_error_struct_check_test.exs
-test/semantic/no_hallucinated_task_timeout_error_struct_fix_test.exs
 test/semantic/no_hardcoded_genserver_name_in_api_check_test.exs
 test/semantic/no_hardcoded_genserver_name_in_api_fix_test.exs
 test/semantic/no_if_assignment_as_statement_check_test.exs
