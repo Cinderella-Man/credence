@@ -483,3 +483,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_struct_field_in_pattern_fix_test.exs`
 - Reason: fabricated premise — real hallucinated-struct-field diagnostic is "unknown key :size for struct X", but match? keys on the runtime KeyError message "key :size not found" (confirmed via Exception.message(%KeyError{key: :size})), so it never fires on its documented target; and the fix hardcodes `var = File.stat!(path).size`, unsafe/nonsensical for any struct+field other than Plug.Upload/size — a removed pattern binding's value can't be recovered in general, so there is no narrow safe core.
 
+## no_hardcoded_genserver_name_in_api — 2026-07-23
+- Files:
+  - `lib/semantic/no_hardcoded_genserver_name_in_api.ex`
+  - `test/semantic/no_hardcoded_genserver_name_in_api_check_test.exs`
+  - `test/semantic/no_hardcoded_genserver_name_in_api_fix_test.exs`
+- Reason: fabricated premise — match? keys on the unrelated ":catch in case" compile diagnostic while fix rewrites GenServer.call(__MODULE__)/ETS-atom code, so check and fix never agree and the fix never resolves the flagged diagnostic; fix is also hardcoded to :feature_flags/:feature_flags_history atoms and fabricated state.table_name/hist_name fields, unsafe for any real module. No narrow safe core.
+
