@@ -434,3 +434,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_math_round_fix_test.exs`
 - Reason: fabricated premise — :math.round(x) parses as a normal call and errors ":math.round/1 is undefined or private" (verified), NOT "misplaced operator ::/2"; the rule keys on the latter so it never fires on its target, and the real diagnostic is already owned by Credence.Semantic.UndefinedFunction (parse_qualified_ref → {"math","round",1}); correct fold is a {"math","round",1} => {:drop_module,"round"} entry in lib/semantic/undefined_function.ex, a shared-file change out of scope.
 
+## no_hallucinated_math_round2 — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_math_round2.ex`
+  - `test/semantic/no_hallucinated_math_round2_check_test.exs`
+  - `test/semantic/no_hallucinated_math_round2_fix_test.exs`
+- Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on ":math.round/1 is undefined or private" (parse_qualified_ref → {"math","round",1}), so both rules claim the same diagnostic; correct fold is a {"math","round",1} => {:drop_module,"round"} entry in lib/semantic/undefined_function.ex, a shared-file change out of scope.
+
