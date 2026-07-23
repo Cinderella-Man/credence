@@ -336,3 +336,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_function_in_module_attribute_fix_test.exs`
 - Reason: duplicate — identical match?/1 (same "cannot inject attribute" + "cannot escape #Function" diagnostic) as live Semantic.FixFunctionInModuleAttributeInlineUsages, which already fixes this safely; new rule also unsafely removes the @attr def while leaving bare @attr value refs dangling. Drop/fold needs the other set's file, out of scope.
 
+## no_genserver_cast_with_raise — 2026-07-23
+- Files:
+  - `lib/semantic/no_genserver_cast_with_raise.ex`
+  - `test/semantic/no_genserver_cast_with_raise_check_test.exs`
+  - `test/semantic/no_genserver_cast_with_raise_fix_test.exs`
+- Reason: check/fix mismatch — match?/1 keys on the "@impl true ... no behaviour was declared" warning (missing `use GenServer`), but the fix only rewrites handle_cast→handle_call and GenServer.cast→.call and never adds `use GenServer`/@behaviour, so the flagged diagnostic remains unresolved after the fix; the real target (a cast handler that raises) emits no compiler diagnostic, so no message-keyed semantic rule can key on it. Not narrowable.
+
