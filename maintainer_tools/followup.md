@@ -413,3 +413,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_fetch_part_fix_test.exs`
 - Reason: match? keys on the "init/1 implemented as defp" Plug warning but fix rewrites an unrelated Plug.Conn.fetch_part case and never touches init/1, so the flagged diagnostic is never resolved; re-keying to the "fetch_part/2 is undefined or private" message would duplicate Credence.Semantic.UndefinedFunction (a shared-file fold, out of scope).
 
+## no_hallucinated_map_reduce — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_map_reduce.ex`
+  - `test/semantic/no_hallucinated_map_reduce_check_test.exs`
+  - `test/semantic/no_hallucinated_map_reduce_fix_test.exs`
+- Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on "Map.reduce/3 is undefined or private" (parse_qualified_ref → {"Map","reduce",3}), so both rules claim the same diagnostic; correct fold is a @qualified_replacements entry in lib/semantic/undefined_function.ex, a shared-file change out of scope (and the Map.reduce→Enum.reduce callback restructuring isn't expressible via the existing rename machinery anyway).
+
