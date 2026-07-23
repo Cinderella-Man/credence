@@ -476,3 +476,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_struct_fix_test.exs`
 - Reason: duplicate matcher — match? is byte-identical to Credence.Semantic.FixCyclicStructReference ("__struct__/1 is undefined", :error), same priority 500, and Semantic.find_matching_rule/Enum.find returns FixCyclicStructReference first (F<N), so NoHallucinatedStruct.fix never runs in production (confirmed empirically). Correct fold is a shared-file change into fix_cyclic_struct_reference.ex (add the undefined-anywhere→tuple fallback), out of scope. (Also the fix over-rewrites: it converts EVERY struct literal not locally defstruct'd — incl. valid stdlib structs like %DateTime{}/%URI{} anywhere in the file — into tuples, ignoring the diagnostic's named module.)
 
+## no_hallucinated_struct_field_in_pattern — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_struct_field_in_pattern.ex`
+  - `test/semantic/no_hallucinated_struct_field_in_pattern_check_test.exs`
+  - `test/semantic/no_hallucinated_struct_field_in_pattern_fix_test.exs`
+- Reason: fabricated premise — real hallucinated-struct-field diagnostic is "unknown key :size for struct X", but match? keys on the runtime KeyError message "key :size not found" (confirmed via Exception.message(%KeyError{key: :size})), so it never fires on its documented target; and the fix hardcodes `var = File.stat!(path).size`, unsafe/nonsensical for any struct+field other than Plug.Upload/size — a removed pattern binding's value can't be recovered in general, so there is no narrow safe core.
+
