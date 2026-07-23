@@ -203,3 +203,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_underscored_fn_param_binding_for_body_use_fix_test.exs`
 - Reason: dead in production — FixCaseBranchAssignmentScope.match? claims every `undefined variable "name"` error and sorts first (C<U, both priority 500), so Enum.find (first-wins, no fall-through) routes the diagnostic to it and its no-op fix leaves the underscored-fn-param bug unfixed; this rule never fires. Deconflicting needs a shared lib/semantic.ex change.
 
+## fix_underscored_pattern_binding_for_body_use — 2026-07-23
+- Files:
+  - `lib/semantic/fix_underscored_pattern_binding_for_body_use.ex`
+  - `test/semantic/fix_underscored_pattern_binding_for_body_use_check_test.exs`
+  - `test/semantic/fix_underscored_pattern_binding_for_body_use_fix_test.exs`
+- Reason: dead in production — FixCaseBranchAssignmentScope.match? claims every `undefined variable "name"` error and sorts first (C<U, both priority 500), so Enum.find (first-wins, no fall-through) routes the diagnostic to it (empirically confirmed: winner = FixCaseBranchAssignmentScope, Credence.Semantic.fix returns CHANGED? false) and this rule never fires. Deconflicting needs a shared lib/semantic.ex change.
+
