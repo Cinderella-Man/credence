@@ -1,4 +1,3 @@
-lib/semantic/fix_fn_arity_in_keyword_value.ex
 lib/semantic/fix_fn_guard_position.ex
 lib/semantic/fix_function_in_module_attribute_inline_usages.ex
 lib/semantic/fix_hallucinated_calendar_iso_accessor.ex
@@ -228,8 +227,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_fn_arity_in_keyword_value_check_test.exs
-test/semantic/fix_fn_arity_in_keyword_value_fix_test.exs
 test/semantic/fix_fn_guard_position_check_test.exs
 test/semantic/fix_fn_guard_position_fix_test.exs
 test/semantic/fix_function_in_module_attribute_inline_usages_check_test.exs
