@@ -679,3 +679,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_split_function_definition_fix_test.exs`
 - Reason: fabricated diagnostic ("has multiple clauses and they are not adjacent" is never emitted; real Elixir 1.20.2 message is "clauses with the same name and arity (number of arguments) should be grouped together, \"def handle_call/3\" was previously defined (file:3)") so match?/1 is never true and the rule is dead; and repairing it would only duplicate the live, better-guarded Pattern.NoNonGroupedClauses (Credence.Pattern.NonGroupedClauses), which already regroups these exact inputs while skipping strays preceded by @impl/@doc and unsafe-to-move bodies — guards this semantic version lacks, and Semantic runs before Pattern so it would preempt the safer rule.
 
+## no_stream_data_constant_with_range — 2026-07-23
+- Files:
+  - `lib/semantic/no_stream_data_constant_with_range.ex`
+  - `test/semantic/no_stream_data_constant_with_range_check_test.exs`
+  - `test/semantic/no_stream_data_constant_with_range_fix_test.exs`
+- Reason: fabricated diagnostic — `StreamData.constant(?a..?z)` emits no diagnostic at all (verified: Code.with_diagnostics returns [] on Elixir 1.20.2, since `constant(a) :: t(a) when a: var` accepts any term), so the fix path is dead for its stated target; the only real message satisfying match?/1 is the *different* bug `StreamData.integer({min,max})` ("incompatible types given to StreamData.integer/1 … but expected one of: %Range{}", verified — and note the test's @real_message is that one, not a constant/1 message), where no `StreamData.constant` call exists and fix/2 is a guaranteed no-op, so check and fix disagree; and even if it fired, the prewalk rewrites EVERY one-arg `StreamData.constant` regardless of the argument (verified: `StreamData.constant(:foo)` → `StreamData.member_of(:foo)`, which raises on a non-enumerable, and `constant([1,2,3])` → `member_of([1,2,3])`, which generates 1|2|3 instead of the constant list) — making it fire needs a new diagnostic source outside the set.
+
