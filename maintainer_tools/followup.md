@@ -490,3 +490,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hardcoded_genserver_name_in_api_fix_test.exs`
 - Reason: fabricated premise — match? keys on the unrelated ":catch in case" compile diagnostic while fix rewrites GenServer.call(__MODULE__)/ETS-atom code, so check and fix never agree and the fix never resolves the flagged diagnostic; fix is also hardcoded to :feature_flags/:feature_flags_history atoms and fabricated state.table_name/hist_name fields, unsafe for any real module. No narrow safe core.
 
+## no_if_assignment_as_statement — 2026-07-23
+- Files:
+  - `lib/semantic/no_if_assignment_as_statement.ex`
+  - `test/semantic/no_if_assignment_as_statement_check_test.exs`
+  - `test/semantic/no_if_assignment_as_statement_fix_test.exs`
+- Reason: duplicate matcher — shadowed by Credence.Semantic.FixCaseBranchAssignmentScope, whose match?/1 claims EVERY `undefined variable "x"` diagnostic (never reads source) and sorts alphabetically before this rule at equal priority 500, so find_matching_rule (Enum.find) returns it first; it no-ops on the if-pattern (no case) and there is no fallthrough, so Credence.Semantic.fix leaves the code unchanged and NoIfAssignmentAsStatement.match?/fix never run in production (confirmed empirically: FIRST_MATCH=FixCaseBranchAssignmentScope, PIPELINE_CHANGED=false). Correct fold is into fix_case_branch_assignment_scope.ex (extend it to also hoist the two-branch if-assignment shape), a shared-file change out of scope.
+

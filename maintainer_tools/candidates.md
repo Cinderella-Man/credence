@@ -1,4 +1,3 @@
-lib/semantic/no_if_assignment_as_statement.ex
 lib/semantic/no_impl_true_for_undeclared_callback.ex
 lib/semantic/no_import_local_function_conflict.ex
 lib/semantic/no_in_guard_with_variable_rhs.ex
@@ -125,8 +124,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_if_assignment_as_statement_check_test.exs
-test/semantic/no_if_assignment_as_statement_fix_test.exs
 test/semantic/no_impl_true_for_undeclared_callback_check_test.exs
 test/semantic/no_impl_true_for_undeclared_callback_fix_test.exs
 test/semantic/no_import_local_function_conflict_check_test.exs
