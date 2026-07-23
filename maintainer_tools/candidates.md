@@ -1,4 +1,3 @@
-lib/semantic/fix_hallucinated_calendar_iso_accessor.ex
 lib/semantic/fix_hallucinated_enum_range.ex
 lib/semantic/fix_hallucinated_enum_take_drop_right.ex
 lib/semantic/fix_hallucinated_map_put_arity.ex
@@ -225,8 +224,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_hallucinated_calendar_iso_accessor_check_test.exs
-test/semantic/fix_hallucinated_calendar_iso_accessor_fix_test.exs
 test/semantic/fix_hallucinated_enum_range_check_test.exs
 test/semantic/fix_hallucinated_enum_range_fix_test.exs
 test/semantic/fix_hallucinated_enum_take_drop_right_check_test.exs
