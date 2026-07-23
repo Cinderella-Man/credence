@@ -70,3 +70,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_cond_branch_assignment_scope_fix_test.exs`
 - Reason: unreachable in production — match? needs File.read(diag.file) but the pipeline compiles in-memory (file "credence_check.ex" never exists, so match? is always false; tests fabricate tmp-file diagnostics), and a message-only match? is shadowed by accepted FixCaseBranchAssignmentScope, which claims every `undefined variable` diagnostic and sorts first at equal priority 500 in single-rule dispatch; winning priority would instead shadow/regress that accepted rule since identical messages make the shapes indistinguishable at match? time — reachability requires folding into FixCase or a phase change, both outside this set
 
+## fix_deprecated_map_map — 2026-07-23
+- Files:
+  - `lib/semantic/fix_deprecated_map_map.ex`
+  - `test/semantic/fix_deprecated_map_map_check_test.exs`
+  - `test/semantic/fix_deprecated_map_map_fix_test.exs`
+- Reason: fix changes the answer on every input it rewrites — Map.map/2's callback returns the new value while Map.new/2's must return a {k, v} pair, so the rename-only rewrite is wrong even on its own test case (verified: Map.map gives %{a: {:a, [3,2,1]}}, Map.new gives %{a: [3,2,1]}); the correct wrapped rewrite (Map.new(m, fn {k, v} -> {k, body} end)) still breaks struct receivers (Map.map(%URI{}, f) works, Map.new raises Protocol.UndefinedError — verified) and the exact :maps.map alternative changes exception class on non-maps; moreover the diagnostic is already claimed by accepted UndefinedFunction (its regex matches every "Mod.fun/arity is deprecated" warning; at equal priority 500 this rule sorts first — FixDeprecatedMapMap < UndefinedFunction — and would steal the diagnostic, suppressing/renaming that rule's reported issue), so the proper home is a new wrap-callback replacement type in UndefinedFunction's @qualified_replacements — an out-of-set change; the only bulletproof standalone core (plain map-literal receiver, literal non-__struct__ keys, single-clause fn with plain-var key) is too narrow to justify the dispatch takeover.
+

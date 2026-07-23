@@ -1,4 +1,3 @@
-lib/semantic/fix_deprecated_map_map.ex
 lib/semantic/fix_erlang_bitwise_bif.ex
 lib/semantic/fix_ets_match_spec_atom_variables.ex
 lib/semantic/fix_ets_match_spec_variable_in_comprehension.ex
@@ -233,8 +232,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_deprecated_map_map_check_test.exs
-test/semantic/fix_deprecated_map_map_fix_test.exs
 test/semantic/fix_erlang_bitwise_bif_check_test.exs
 test/semantic/fix_erlang_bitwise_bif_fix_test.exs
 test/semantic/fix_ets_match_spec_atom_variables_check_test.exs
