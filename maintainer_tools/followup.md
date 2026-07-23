@@ -525,3 +525,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_map_get_on_keyword_list_opts_fix_test.exs`
 - Reason: match? keys on a phantom message ("Map.get/2 called on keyword list opts") the compiler never emits, so the rule never fires; the real diagnostic ("incompatible types given to Map.get/2") is identical for string/integer/atom first-args where Keyword.get raises, and the fix blanket-rewrites every Map.get in the file (position-ignorant), breaking legitimate Map.get(real_map, k) calls — not narrowable to a safe core in-scope.
 
+## no_map_update_zero_default_with_subtraction — 2026-07-23
+- Files:
+  - `lib/semantic/no_map_update_zero_default_with_subtraction.ex`
+  - `test/semantic/no_map_update_zero_default_with_subtraction_check_test.exs`
+  - `test/semantic/no_map_update_zero_default_with_subtraction_fix_test.exs`
+- Reason: fix rewrites the callback to `existing + amount` (unconditionally additive), so every debit on an existing key becomes `existing + amount` instead of `existing - amount` — verified {500 vs 1500} — a real answer change, not preservation; the moduledoc premise is also false (Map.update inserts the default verbatim on key-absent and never calls the callback, so the described `0 - amount` bug doesn't exist), and match? fires on a phantom message the compiler never emits. Not narrowable: match? carries no shape info and even a corrected callback still changes the original's key-absent result.
+
