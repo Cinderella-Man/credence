@@ -658,3 +658,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_send_self_in_task_fix_test.exs`
 - Reason: fabricated diagnostic — Code.with_diagnostics emits nothing for send(self()) in a Task callback, so match?/1 is never true and the rule is dead in production; and the fix is unsafe anyway (inline `def f, do: Task.async(...)` yields module-level `parent = self()` + "undefined variable parent"; shadows an existing `parent` binding; rewrites every self() in the fn, not just the send target).
 
+## no_send_to_from_in_handle_call — 2026-07-23
+- Files:
+  - `lib/semantic/no_send_to_from_in_handle_call.ex`
+  - `test/semantic/no_send_to_from_in_handle_call_check_test.exs`
+  - `test/semantic/no_send_to_from_in_handle_call_fix_test.exs`
+- Reason: fabricated diagnostic — Code.with_diagnostics emits nothing for send(from, msg) in handle_call (verified: [] on Elixir 1.20.2), so match?/1 is never true and the rule is dead in production; and the fix is unsafe anyway (it keys purely on the variable name `from`, rewriting plain `def notify(from, msg), do: send(from, msg)` in a non-GenServer module into GenServer.reply/2, and Macro.to_string on the message arg silently drops comments inside it). Making it fire needs a new diagnostic source outside the set.
+
