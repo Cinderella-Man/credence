@@ -91,3 +91,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_ets_match_spec_variable_in_comprehension_fix_test.exs`
 - Reason: unreachable in production — its target diagnostic is exactly `undefined variable "name"`, which accepted FixCaseBranchAssignmentScope claims first (both priority 500, C sorts before E, single-rule dispatch has no fall-through; verified: find_matching_rule returns FixCaseBranchAssignmentScope for this rule's own flagship input), and winning priority would shadow/regress that accepted rule since the messages are indistinguishable at match? time (same dead-end as fix_cond_branch_assignment_scope, f09370d); additionally the plain-assignment fix emits compiling-but-broken code (verified: `{:"$1", :"$1"}` forces key==value and returns [] where `{:"$1", :"$2"}` returns [[:k, 1]]; the rewritten LHS `[{:"$1", _}]` raises MatchError because :ets.match returns lists of binding lists, not tuples; and `evicted_key = :"$1"` binds the literal atom, so the later :ets.delete removes the wrong key) — reachability requires folding into FixCaseBranchAssignmentScope or a dispatch/phase change, both outside this set
 
+## fix_ets_new_string_name — 2026-07-23
+- Files:
+  - `lib/semantic/fix_ets_new_string_name.ex`
+  - `test/semantic/fix_ets_new_string_name_check_test.exs`
+  - `test/semantic/fix_ets_new_string_name_fix_test.exs`
+- Reason: unreachable in production — matches a fabricated diagnostic ("table name to :ets.new/2 — use atom interpolation") that the Elixir compiler never emits; verified the flagship input compiles with zero diagnostics (:ets.new arg misuse is runtime-only ArgumentError), so no match? anchor exists and a pattern-phase rewrite would be a different kind outside this set; fix regex also converts any `"#`-prefixed string literal on the flagged line to an atom (type change)
+
