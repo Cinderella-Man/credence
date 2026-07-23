@@ -133,3 +133,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_regex_in_guard_fix_test.exs`
 - Reason: dead in production — match? keys on "escaped Regex structs..." (emitted only by @attr-regex in guards/patterns, where fix no-ops: no sigil_r in AST), while the sigil-in-guard shape the fix rewrites emits "invalid expression in guard, the ~r sigil is not allowed in guards" which match? never matches; fix also deletes non-regex clauses (catch-all) breaking dispatch intent — needs retarget + transform rewrite
 
+## fix_struct_update_on_dynamic_variable — 2026-07-23
+- Files:
+  - `lib/semantic/fix_struct_update_on_dynamic_variable.ex`
+  - `test/semantic/fix_struct_update_on_dynamic_variable_check_test.exs`
+  - `test/semantic/fix_struct_update_on_dynamic_variable_fix_test.exs`
+- Reason: fix asserts a struct type the checker explicitly could not prove — no safe core: wrapping the binding with a struct pattern raises MatchError on valid runs where the value is legitimately non-struct on a path that skips the update (diagnostic fires precisely when type is unproven); additionally %__MODULE__{} is wrong when the warning fires outside the struct's module (verified on 1.20: fires in Consumer for %AutocompleteTrie{} update → fix inserts %Consumer{} → __struct__ undefined compile error), prewalk wraps every same-named assignment file-wide instead of the from:-position the message provides, and the parameter-variant message ("trie" repro) matches but is unfixable → whole-file Sourceror reformat with no fix
+
