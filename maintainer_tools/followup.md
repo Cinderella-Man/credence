@@ -665,3 +665,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_send_to_from_in_handle_call_fix_test.exs`
 - Reason: fabricated diagnostic — Code.with_diagnostics emits nothing for send(from, msg) in handle_call (verified: [] on Elixir 1.20.2), so match?/1 is never true and the rule is dead in production; and the fix is unsafe anyway (it keys purely on the variable name `from`, rewriting plain `def notify(from, msg), do: send(from, msg)` in a non-GenServer module into GenServer.reply/2, and Macro.to_string on the message arg silently drops comments inside it). Making it fire needs a new diagnostic source outside the set.
 
+## no_shadowed_function_redefinition — 2026-07-23
+- Files:
+  - `lib/semantic/no_shadowed_function_redefinition.ex`
+  - `test/semantic/no_shadowed_function_redefinition_check_test.exs`
+  - `test/semantic/no_shadowed_function_redefinition_fix_test.exs`
+- Reason: fabricated diagnostic + backwards fix — the real Elixir 1.20.2 message for a shadowed def/defp is "this clause for process/1 cannot match because a previous clause at line 2 always matches" (verified via Code.with_diagnostics for def, defp and arity-2), so match?/1's prefix "this clause cannot match because a previous clause at line " is never true and the rule is dead for its stated target; the only real message that does satisfy match?/1 is the case/cond form (no "for f/a"), where no def/defp sits on the target line and fix/2 is a guaranteed no-op, so check and fix disagree; and even if match?/1 were repaired, the fix removes the EARLIER (live) clause — in Elixir the first clause wins — changing the answer on every input (verified: Bef.process(21) == {:draft, 21} vs Aft.process(21) == {:ok, 42}), while the safe direction (delete the later dead clause) is already live as Pattern.RemoveUnreachableClausesAfterCatchall / Pattern.NoDuplicateFunctionClauses.
+
