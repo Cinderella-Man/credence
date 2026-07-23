@@ -119,3 +119,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_nested_module_short_reference_fix_test.exs`
 - Reason: rule targets the wrong diagnostic — nested-module short references emit "X is undefined" warnings, never "redefining module"; the diagnostics match? does admit (real redefinitions) are unfixable by prefix-qualifying references, so no safe core exists
 
+## fix_python_style_struct_definition — 2026-07-23
+- Files:
+  - `lib/semantic/fix_python_style_struct_definition.ex`
+  - `test/semantic/fix_python_style_struct_definition_check_test.exs`
+  - `test/semantic/fix_python_style_struct_definition_fix_test.exs`
+- Reason: collides with accepted fix_cyclic_struct_reference — both match the byte-identical "__struct__/1 is undefined" diagnostic, dispatch is winner-take-all by priority with no source access in match?, so at priority 400 this rule steals cyclic-reference diagnostics and breaks that rule's e2e test (priority >500 would make it permanently dead instead); coexistence needs a shared dispatch change or folding into the existing rule
+
