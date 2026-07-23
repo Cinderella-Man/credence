@@ -126,3 +126,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_python_style_struct_definition_fix_test.exs`
 - Reason: collides with accepted fix_cyclic_struct_reference — both match the byte-identical "__struct__/1 is undefined" diagnostic, dispatch is winner-take-all by priority with no source access in match?, so at priority 400 this rule steals cyclic-reference diagnostics and breaks that rule's e2e test (priority >500 would make it permanently dead instead); coexistence needs a shared dispatch change or folding into the existing rule
 
+## fix_regex_in_guard — 2026-07-23
+- Files:
+  - `lib/semantic/fix_regex_in_guard.ex`
+  - `test/semantic/fix_regex_in_guard_check_test.exs`
+  - `test/semantic/fix_regex_in_guard_fix_test.exs`
+- Reason: dead in production — match? keys on "escaped Regex structs..." (emitted only by @attr-regex in guards/patterns, where fix no-ops: no sigil_r in AST), while the sigil-in-guard shape the fix rewrites emits "invalid expression in guard, the ~r sigil is not allowed in guards" which match? never matches; fix also deletes non-regex clauses (catch-all) breaking dispatch intent — needs retarget + transform rewrite
+
