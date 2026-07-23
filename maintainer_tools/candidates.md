@@ -1,4 +1,3 @@
-lib/semantic/fix_negated_capture_with_arity.ex
 lib/semantic/fix_negation_in_guard.ex
 lib/semantic/fix_nested_module_short_reference.ex
 lib/semantic/fix_nimble_csv_direct_parse.ex
@@ -207,8 +206,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_negated_capture_with_arity_check_test.exs
-test/semantic/fix_negated_capture_with_arity_fix_test.exs
 test/semantic/fix_negation_in_guard_check_test.exs
 test/semantic/fix_negation_in_guard_fix_test.exs
 test/semantic/fix_nested_module_short_reference_check_test.exs
