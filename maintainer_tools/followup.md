@@ -644,3 +644,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_remote_function_in_guard_fix_test.exs`
 - Reason: fix is not behaviour-preserving — pop_fallback/find_wildcard_body treat the first no-guard clause / first `_` clause as a catch-all and splice its body into the generated `else`, silently dropping specific-pattern clauses and skipping intervening reachable ones (verified: `loop(a,b) when <remote>` + `loop(0,b)` + `loop(a,b)` merges the literal-pattern `loop(0,b)` and returns `:zero` for every non-zero `a`, leaving an unreachable clause; `pid when Map.has_key?(m,pid)` + `{:special,x}` + `_` makes `{:special,x}` unreachable, returning `:c` where the original returns `{:special_b,y}`). Same defect recurs on the compound-`and` path, and the merged head reuses the guarded clause's params while the `else` body keeps the fallback's, so mismatched param names produce unbound vars. Safe core would require rewriting fallback/wildcard selection across the def-merge, case-merge and compound-and paths to demand a genuine adjacent catch-all with identical bindings — a substantive rewrite, not a narrow carve-out.
 
+## no_return_fn_in_conditional — 2026-07-23
+- Files:
+  - `lib/semantic/no_return_fn_in_conditional.ex`
+  - `test/semantic/no_return_fn_in_conditional_check_test.exs`
+  - `test/semantic/no_return_fn_in_conditional_fix_test.exs`
+- Reason: duplicate of the live no_bare_return_in_unless — byte-identical match?/@match_msg ("undefined function return/", severity :error); Semantic.find_matching_rule uses Enum.find over rules sorted by {priority, module} and both are priority 500, so NoBareReturnInUnless (alphabetically first) always wins and this rule's fix/2 is unreachable in production (verified end-to-end: the incumbent handles the chained unless/return input). Making it reachable needs a shared-file change (fold the guard-chain restructuring into no_bare_return_in_unless, or add dispatch/priority in lib/semantic.ex) — out of scope. Separately, its fix leaves any unless/return guard not directly adjacent to the final expression in place, so the output still contains return/1 and still fails to compile.
+
