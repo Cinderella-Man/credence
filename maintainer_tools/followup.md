@@ -210,3 +210,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_underscored_pattern_binding_for_body_use_fix_test.exs`
 - Reason: dead in production — FixCaseBranchAssignmentScope.match? claims every `undefined variable "name"` error and sorts first (C<U, both priority 500), so Enum.find (first-wins, no fall-through) routes the diagnostic to it (empirically confirmed: winner = FixCaseBranchAssignmentScope, Credence.Semantic.fix returns CHANGED? false) and this rule never fires. Deconflicting needs a shared lib/semantic.ex change.
 
+## fix_unmatchable_tuple_destructure — 2026-07-23
+- Files:
+  - `lib/semantic/fix_unmatchable_tuple_destructure.ex`
+  - `test/semantic/fix_unmatchable_tuple_destructure_check_test.exs`
+  - `test/semantic/fix_unmatchable_tuple_destructure_fix_test.exs`
+- Reason: hallucinated premise (integer-as-tuple destructure raises runtime MatchError, never emits "misplaced operator |/2") and the fix {var,_}=expr -> var=expr changes the answer on valid partial-destructures like {v,_}=Integer.parse(x); no safe core.
+

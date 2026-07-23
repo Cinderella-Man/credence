@@ -1,4 +1,3 @@
-lib/semantic/fix_unmatchable_tuple_destructure.ex
 lib/semantic/fix_with_else_bare_value.ex
 lib/semantic/no_agent_update_tuple_wrapper.ex
 lib/semantic/no_atom_position_in_list_key_functions.ex
@@ -179,8 +178,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_unmatchable_tuple_destructure_check_test.exs
-test/semantic/fix_unmatchable_tuple_destructure_fix_test.exs
 test/semantic/fix_with_else_bare_value_check_test.exs
 test/semantic/fix_with_else_bare_value_fix_test.exs
 test/semantic/no_agent_update_tuple_wrapper_check_test.exs
