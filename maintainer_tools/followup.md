@@ -245,3 +245,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_bare_return_in_genserver_init_fix_test.exs`
 - Reason: dead in production — keys on fabricated message "init/1 must return {:ok, state}" that the Elixir compiler never emits (verified: bare init/1 return yields 0 diagnostics; it's a runtime {:bad_return_value} error, not a compile warning), so the semantic phase never routes a real diagnostic to match?; making it live needs a shared-file custom-analyzer change.
 
+## no_bare_return_keyword — 2026-07-23
+- Files:
+  - `lib/semantic/no_bare_return_keyword.ex`
+  - `test/semantic/no_bare_return_keyword_check_test.exs`
+  - `test/semantic/no_bare_return_keyword_fix_test.exs`
+- Reason: dead in production — fix_case_branch_assignment_scope's regex also claims `undefined variable "return"` and sorts first at equal priority 500 (Enum.find first-wins), no-ops on bare-return input, so this rule's fix never runs (verified: Credence.Semantic.fix leaves the return in place). Deconflicting needs a shared-file routing/priority change.
+
