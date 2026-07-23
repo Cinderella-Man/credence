@@ -616,3 +616,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_process_send_two_args_fix_test.exs`
 - Reason: check/fix disjoint (match? claims unrelated "expected a map or struct" type warning via first-match while fix rewrites Process.send/2→send/2; flagged diagnostic never resolved) — same family as rejected 2217cb1/e88a273; the genuine "Process.send/2 is undefined or private" diagnostic is already claimed by the general UndefinedFunction rule, whose @qualified_replacements is the correct home ({"Process","send",2}=>{:drop_module,"send"}) — a shared-file change out of scope. No safe narrow core within the set.
 
+## no_process_whereis_with_pid_arg — 2026-07-23
+- Files:
+  - `lib/semantic/no_process_whereis_with_pid_arg.ex`
+  - `test/semantic/no_process_whereis_with_pid_arg_check_test.exs`
+  - `test/semantic/no_process_whereis_with_pid_arg_fix_test.exs`
+- Reason: check/fix disjoint — match? fires only on the generic "cannot compile module (errors have been logged)" wrapper, but the target `case Process.whereis(self())` guard compiles fine (verified) and emits zero compile diagnostics, so match? can never legitimately fire on it; the rule only triggers on unrelated compile failures where the fix (stripping the guard) never resolves the flagged diagnostic. Same family defect as rejected 2217cb1/e88a273/c35d48e/8374476/1cc8203; no safe narrow core.
+
