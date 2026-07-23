@@ -306,9 +306,15 @@ gate_accept() {
   dirty_confined_to "$base" || { gate_fail "changes outside the set"; return 1; }
   rlog GATE "(c) confined diff: PASS ✓ — changed: $(dirty_code | sed 's/^...//' | tr '\n' ' ')"
 
-  # (d) full suite green (last — the expensive check).
-  rlog GATE "(d) mix test: running full suite…"
-  ( cd "$REPO" && mix test >"$MIXLOG" 2>&1 ) \
+  # (d) full suite green (last — the expensive check). The corpus layer
+  # exercises ONLY the Pattern round (over_firing/fix_safety/scope_parity all
+  # drive Pattern.analyze; verified no Semantic/Syntax/Credence.fix reference
+  # in test/corpus/), so semantic/syntax rows skip it — verdict-preserving,
+  # saves ~3.5 min/row.
+  local -a mix_args=()
+  [[ "$kind" != "pattern" ]] && mix_args=(--exclude corpus)
+  rlog GATE "(d) mix test ${mix_args[*]:-'(full incl. corpus)'}: running…"
+  ( cd "$REPO" && mix test "${mix_args[@]}" >"$MIXLOG" 2>&1 ) \
     || { gate_fail "mix test failed (suite $(suite_summary))"; return 1; }
   rlog GATE "(d) mix test: PASS ✓ — $(suite_summary)"
   rlog GATE "RESULT: ACCEPT (all checks pass)"

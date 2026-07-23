@@ -29,10 +29,13 @@ not that it is safe. This is the bar you are defending.
 - **Foreground only — never background a command.** You run in one-shot print
   mode: the moment you end your turn the session is dead, and no "background
   task notification" will ever arrive. Run `mix test` in the foreground with an
-  adequate timeout (the full suite takes ~4–5 min) and wait for it to finish.
-  A session that ends without having written `maintainer_tools/_verdict` is a
-  wasted attempt: everything you did is reverted and the row is retried from
-  scratch.
+  adequate timeout and wait for it to finish. A session that ends without
+  having written `maintainer_tools/_verdict` is a wasted attempt: everything
+  you did is reverted and the row is retried from scratch.
+- **Semantic/syntax sets: always `mix test --exclude corpus`** (~1 min). The
+  corpus layer exercises only the Pattern round, so your rule cannot affect it;
+  the wrapper's gate excludes it the same way. Pattern sets run the plain full
+  `mix test` (~4–5 min, corpus included).
 - Rules auto-register (the phase discovers any compiled module implementing its
   `Rule` behaviour) — you never edit a registry.
 
