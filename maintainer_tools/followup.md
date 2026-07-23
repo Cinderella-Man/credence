@@ -637,3 +637,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_raw_send_in_genserver_handle_call_fix_test.exs`
 - Reason: fabricated diagnostic — match? requires exact-string equality with the invented message "send/2 spawned from handle_call/3 — use GenServer.reply/2 instead", which the Elixir compiler never emits (verified: raw send/2 inside spawn in handle_call/3 compiles cleanly, emitting only the unrelated init/1 GenServer behaviour diagnostic). Semantic diagnostics come from Code.with_diagnostics, so the rule can never fire in production; the target shape produces zero compile diagnostics and there is no real diagnostic to hook onto — no safe narrow core. Same family as rejected e30768f/6910899/8374476.
 
+## no_remote_function_in_guard — 2026-07-23
+- Files:
+  - `lib/semantic/no_remote_function_in_guard.ex`
+  - `test/semantic/no_remote_function_in_guard_check_test.exs`
+  - `test/semantic/no_remote_function_in_guard_fix_test.exs`
+- Reason: fix is not behaviour-preserving — pop_fallback/find_wildcard_body treat the first no-guard clause / first `_` clause as a catch-all and splice its body into the generated `else`, silently dropping specific-pattern clauses and skipping intervening reachable ones (verified: `loop(a,b) when <remote>` + `loop(0,b)` + `loop(a,b)` merges the literal-pattern `loop(0,b)` and returns `:zero` for every non-zero `a`, leaving an unreachable clause; `pid when Map.has_key?(m,pid)` + `{:special,x}` + `_` makes `{:special,x}` unreachable, returning `:c` where the original returns `{:special_b,y}`). Same defect recurs on the compound-`and` path, and the merged head reuses the guarded clause's params while the `else` body keeps the fallback's, so mismatched param names produce unbound vars. Safe core would require rewriting fallback/wildcard selection across the def-merge, case-merge and compound-and paths to demand a genuine adjacent catch-all with identical bindings — a substantive rewrite, not a narrow carve-out.
+
