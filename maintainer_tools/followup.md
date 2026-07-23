@@ -504,3 +504,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_import_local_function_conflict_fix_test.exs`
 - Reason: catch-all shadows accepted PreferKernelMaxOverLocal — its regex matches "imported Kernel.max/2 conflicts with local function" (func=max != to_string), and at priority 400 (< the sibling's 500) it wins find_matching_rule (Enum.find over {priority,module}-sorted rules), applying its blunt generate_max rename instead of that dedicated rule's Kernel.max requalification (confirmed empirically). Narrowing/fold touches other rule files, out of scope.
 
+## no_in_guard_with_variable_rhs — 2026-07-23
+- Files:
+  - `lib/semantic/no_in_guard_with_variable_rhs.ex`
+  - `test/semantic/no_in_guard_with_variable_rhs_check_test.exs`
+  - `test/semantic/no_in_guard_with_variable_rhs_fix_test.exs`
+- Reason: fix is heuristic intent-reconstruction overfit to the demo — on an in-only guard (no `or`) it emits `[first|rest] -> true` matching any non-empty list unconditionally (wrong answer for `[?a,?b]`); it hardcodes Enum.member? ignoring the real body and duplicates the body into `[?| | _] -> body` leaving pattern vars unbound (compile error / wrong return type); and it no-ops on function-head guards, so match? fires without a resolving fix. Not narrowable via match? (diagnostic message carries none of the distinguishing shape info); no generalizable safe core.
+
