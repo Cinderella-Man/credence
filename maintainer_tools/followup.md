@@ -308,3 +308,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_early_return_in_unless_fix_test.exs`
 - Reason: duplicate of live NoBareReturnInUnless (identical "undefined function return/" + :error match, same unless/if early-return coverage); new rule adds nothing safe — its if/return fix is inverted (puts rest in do, value in else, returning the wrong branch for every if-early-return). Drop/fold requires touching the other rule, out of set scope.
 
+## no_enum_sort_then_map_values — 2026-07-23
+- Files:
+  - `lib/semantic/no_enum_sort_then_map_values.ex`
+  - `test/semantic/no_enum_sort_then_map_values_check_test.exs`
+  - `test/semantic/no_enum_sort_then_map_values_fix_test.exs`
+- Reason: check/fix mismatch — match? keys on the unrelated "operator '+'/2 is ignored" (unused-arithmetic) warning while fix rewrites sort_by→Map.values pipes, so the flagged diagnostic is never resolved and unrelated pipes may be corrupted; the intended target raises a runtime BadMapError, not a diagnostic, so no message-keyed semantic rule can match it. Not narrowable.
+
