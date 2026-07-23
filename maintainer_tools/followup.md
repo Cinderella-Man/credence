@@ -728,3 +728,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_unused_private_function_fix_test.exs`
 - Reason: breaks 3 accepted end-to-end tests it can't be narrowed away from (test/credence_test.exs:1059 and the two fix_showcase/multi-rule showcase tests deliberately keep unused defps — normalize_words/2 is exactly this rule's flagship shape), and getting the suite green would need edits to those shared test files; the fix also orphans preceding attributes (the credence_test case yields `defmodule Foo do @doc false end`), and check/fix disagree whenever a @spec is present or the module body isn't a __block__ — call_exists? counts the defp head and the `@spec helper(integer())` node as calls, so the rule reports the issue and then silently no-ops.
 
+## no_validation_rejects_infinity_for_timeout — 2026-07-24
+- Files:
+  - `lib/semantic/no_validation_rejects_infinity_for_timeout.ex`
+  - `test/semantic/no_validation_rejects_infinity_for_timeout_check_test.exs`
+  - `test/semantic/no_validation_rejects_infinity_for_timeout_fix_test.exs`
+- Reason: dead in production and behaviour-changing — "must be a positive integer" is a user raise-message string, never an Elixir compiler diagnostic, so on the rule's own flagship fixture compile_and_capture returns {:ok, []}, Semantic.analyze returns [] and Semantic.fix leaves the source unchanged (verified); the tests only pass because they hand-fabricate a diagnostic map and call match?/fix directly, bypassing the phase. Even if it fired, the fix rewrites the user's validation policy rather than resolving a diagnostic: for timeout == :infinity before raises ArgumentError and after returns :ok, and for 0/-1/nil/"5000" the raised message changes (verified before/after in elixir) — a different answer on admitted inputs. fix/2 also ignores the diagnostic entirely (_diagnostic), postwalking the whole file so any `unless is_integer(x) and x > 0` block anywhere is rewritten regardless of the reported line, and mutates every string literal containing the phrase inside that block's do-body.
+
