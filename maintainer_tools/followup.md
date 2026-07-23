@@ -567,3 +567,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_plug_upload_size_field_fix_test.exs`
 - Reason: unsafe — fix hardcodes a `path` var (undefined-var compile error when absent), leaves expression-use of `size` undefined, mangles multiline patterns and changes tuple arity, and inserts File.stat! at module level; needs ground-up Sourceror rewrite, not narrowing.
 
+## no_private_fn_called_from_macro_quote — 2026-07-23
+- Files:
+  - `lib/semantic/no_private_fn_called_from_macro_quote.ex`
+  - `test/semantic/no_private_fn_called_from_macro_quote_check_test.exs`
+  - `test/semantic/no_private_fn_called_from_macro_quote_fix_test.exs`
+- Reason: fix premise is false — promoting defp→def does not make the quote-called helper resolve in the idiomatic `require M`/`M.macro` expansion (verified: undefined function check_order/1); it only helps `import M` callers and is a public-API change, while match?/to_issue claim EVERY "function/N is unused" warning (dead code included) and fix no-ops all non-quote cases (no should_report?/2), monopolizing those diagnostics via first-match. Correct remediation (qualify the call in the quote) is a redesign, not a narrowing.
+

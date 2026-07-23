@@ -1,4 +1,3 @@
-lib/semantic/no_private_fn_called_from_macro_quote.ex
 lib/semantic/no_private_fn_in_timer_mfa.ex
 lib/semantic/no_private_named_ets_readable_externally.ex
 lib/semantic/no_process_send_after_infinity.ex
@@ -106,8 +105,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_private_fn_called_from_macro_quote_check_test.exs
-test/semantic/no_private_fn_called_from_macro_quote_fix_test.exs
 test/semantic/no_private_fn_in_timer_mfa_check_test.exs
 test/semantic/no_private_fn_in_timer_mfa_fix_test.exs
 test/semantic/no_private_named_ets_readable_externally_check_test.exs
