@@ -1,4 +1,3 @@
-lib/semantic/no_module_level_init.ex
 lib/semantic/no_naive_datetime_new_with_tuple.ex
 lib/semantic/no_or_in_case_pattern.ex
 lib/semantic/no_pin_in_after_clause.ex
@@ -113,8 +112,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_module_level_init_check_test.exs
-test/semantic/no_module_level_init_fix_test.exs
 test/semantic/no_naive_datetime_new_with_tuple_check_test.exs
 test/semantic/no_naive_datetime_new_with_tuple_fix_test.exs
 test/semantic/no_or_in_case_pattern_check_test.exs
