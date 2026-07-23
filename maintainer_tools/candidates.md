@@ -1,4 +1,3 @@
-lib/semantic/no_hallucinated_math_round.ex
 lib/semantic/no_hallucinated_math_round2.ex
 lib/semantic/no_hallucinated_naive_datetime_to_unix.ex
 lib/semantic/no_hallucinated_persistent_term_fn.ex
@@ -138,8 +137,6 @@ lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
 test/semantic/no_hallucinated_math_round2_check_test.exs
 test/semantic/no_hallucinated_math_round2_fix_test.exs
-test/semantic/no_hallucinated_math_round_check_test.exs
-test/semantic/no_hallucinated_math_round_fix_test.exs
 test/semantic/no_hallucinated_naive_datetime_to_unix_check_test.exs
 test/semantic/no_hallucinated_naive_datetime_to_unix_fix_test.exs
 test/semantic/no_hallucinated_persistent_term_fn_check_test.exs
