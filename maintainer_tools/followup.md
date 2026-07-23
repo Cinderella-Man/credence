@@ -140,3 +140,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_struct_update_on_dynamic_variable_fix_test.exs`
 - Reason: fix asserts a struct type the checker explicitly could not prove — no safe core: wrapping the binding with a struct pattern raises MatchError on valid runs where the value is legitimately non-struct on a path that skips the update (diagnostic fires precisely when type is unproven); additionally %__MODULE__{} is wrong when the warning fires outside the struct's module (verified on 1.20: fires in Consumer for %AutocompleteTrie{} update → fix inserts %Consumer{} → __struct__ undefined compile error), prewalk wraps every same-named assignment file-wide instead of the from:-position the message provides, and the parameter-variant message ("trie" repro) matches but is unfixable → whole-file Sourceror reformat with no fix
 
+## fix_undefined_nested_module_struct — 2026-07-23
+- Files:
+  - `lib/semantic/fix_undefined_nested_module_struct.ex`
+  - `test/semantic/fix_undefined_nested_module_struct_check_test.exs`
+  - `test/semantic/fix_undefined_nested_module_struct_fix_test.exs`
+- Reason: duplicate of accepted fix_cyclic_struct_reference — its match? ("__struct__/1 is undefined") is a strict superset of this rule's diagnostic and its AST-based, compile-verified reorder already produces the exact output this set's tests expect; keeping both would double-attribute the same diagnostic, and this line-based variant is strictly weaker (fragile do/end depth counting, no compile check) — drop.
+
