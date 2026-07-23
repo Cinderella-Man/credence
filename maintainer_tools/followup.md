@@ -651,3 +651,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_return_fn_in_conditional_fix_test.exs`
 - Reason: duplicate of the live no_bare_return_in_unless — byte-identical match?/@match_msg ("undefined function return/", severity :error); Semantic.find_matching_rule uses Enum.find over rules sorted by {priority, module} and both are priority 500, so NoBareReturnInUnless (alphabetically first) always wins and this rule's fix/2 is unreachable in production (verified end-to-end: the incumbent handles the chained unless/return input). Making it reachable needs a shared-file change (fold the guard-chain restructuring into no_bare_return_in_unless, or add dispatch/priority in lib/semantic.ex) — out of scope. Separately, its fix leaves any unless/return guard not directly adjacent to the final expression in place, so the output still contains return/1 and still fails to compile.
 
+## no_send_self_in_task — 2026-07-23
+- Files:
+  - `lib/semantic/no_send_self_in_task.ex`
+  - `test/semantic/no_send_self_in_task_check_test.exs`
+  - `test/semantic/no_send_self_in_task_fix_test.exs`
+- Reason: fabricated diagnostic — Code.with_diagnostics emits nothing for send(self()) in a Task callback, so match?/1 is never true and the rule is dead in production; and the fix is unsafe anyway (inline `def f, do: Task.async(...)` yields module-level `parent = self()` + "undefined variable parent"; shadows an existing `parent` binding; rewrites every self() in the fn, not just the send target).
+

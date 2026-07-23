@@ -1,4 +1,3 @@
-lib/semantic/no_send_self_in_task.ex
 lib/semantic/no_send_to_from_in_handle_call.ex
 lib/semantic/no_shadowed_function_redefinition.ex
 lib/semantic/no_split_function_definition.ex
@@ -90,8 +89,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_send_self_in_task_check_test.exs
-test/semantic/no_send_self_in_task_fix_test.exs
 test/semantic/no_send_to_from_in_handle_call_check_test.exs
 test/semantic/no_send_to_from_in_handle_call_fix_test.exs
 test/semantic/no_shadowed_function_redefinition_check_test.exs
