@@ -1,4 +1,3 @@
-lib/semantic/fix_raise_in_keyword_value.ex
 lib/semantic/fix_regex_in_guard.ex
 lib/semantic/fix_remote_call_in_pattern.ex
 lib/semantic/fix_reraise_keyword_in_catch.ex
@@ -199,8 +198,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_raise_in_keyword_value_check_test.exs
-test/semantic/fix_raise_in_keyword_value_fix_test.exs
 test/semantic/fix_regex_in_guard_check_test.exs
 test/semantic/fix_regex_in_guard_fix_test.exs
 test/semantic/fix_remote_call_in_pattern_check_test.exs
