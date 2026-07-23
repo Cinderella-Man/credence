@@ -385,3 +385,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_base_hex_encode_fix_test.exs`
 - Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on "Base.hex_encode/1 is undefined or private" (parse_qualified_ref → {"Base","hex_encode",1}), so both rules claim the same diagnostic; the correct fold is @qualified_replacements entries {"Base","hex_encode",2}=>{:rename,"Base","encode16"} and {"Base","hex_encode",0/1}=>{:rename_add_arg,"Base","encode16","case: :lower"} in lib/semantic/undefined_function.ex, a shared-file change out of scope.
 
+## no_hallucinated_crypto_compare — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_crypto_compare.ex`
+  - `test/semantic/no_hallucinated_crypto_compare_check_test.exs`
+  - `test/semantic/no_hallucinated_crypto_compare_fix_test.exs`
+- Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on ":crypto.compare/2 is undefined or private" (parse_qualified_ref → {"crypto","compare",2}), so both rules claim the same diagnostic; correct fold is a @qualified_replacements entry {"crypto","compare",2} => {:rename,"crypto","hash_equals"} in lib/semantic/undefined_function.ex, a shared-file change out of scope.
+
