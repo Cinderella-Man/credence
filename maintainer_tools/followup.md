@@ -588,3 +588,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_private_named_ets_readable_externally_fix_test.exs`
 - Reason: check/fix disagree — match? fires on the general "incompatible types in binary construction" type warning (from String.to_atom(to_string(name))::binary), but the fix only changes :ets.new :private→:protected, which is orthogonal: verified the identical warning persists after the change, so the flagged diagnostic is never resolved (and :private→:protected is itself a runtime access-control change). The rule also monopolizes an unrelated general diagnostic via first-match; correct remediation (fix the binary construction) is a redesign, not a narrowing.
 
+## no_process_send_after_infinity — 2026-07-23
+- Files:
+  - `lib/semantic/no_process_send_after_infinity.ex`
+  - `test/semantic/no_process_send_after_infinity_check_test.exs`
+  - `test/semantic/no_process_send_after_infinity_fix_test.exs`
+- Reason: check/fix disagree — match? fires on the unrelated "multiple clauses and also declares default values" warning (whose correct fix is a header default), but fix/2 rewrites Process.send_after(...,:infinity) calls and returns such warning-producing code unchanged, so the flagged diagnostic is never resolved; meanwhile the fix's real target (send_after with :infinity) emits zero compile diagnostics (verified), so match? can never legitimately fire on it. Matched diagnostic and fix domain are disjoint — no safe narrow core.
+
