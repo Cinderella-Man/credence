@@ -609,3 +609,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_process_send_after_with_variable_infinity_fix_test.exs`
 - Reason: check/fix disjoint (same family as rejected 2217cb1/e88a273) — match? fires on the unrelated "invalid args for &" capture CompileError (correct fix: fix the & capture syntax), but fix/2 rewrites Process.send_after(...,variable) calls, which emit zero compile diagnostics (verified); so the flagged error is never resolved and the fix's real target can never legitimately trigger match?. match? also monopolizes every genuine &-capture error via first-match (no should_report?/2). A semantic rule needs a diagnostic to hook onto and the target produces none — no safe narrow core.
 
+## no_process_send_two_args — 2026-07-23
+- Files:
+  - `lib/semantic/no_process_send_two_args.ex`
+  - `test/semantic/no_process_send_two_args_check_test.exs`
+  - `test/semantic/no_process_send_two_args_fix_test.exs`
+- Reason: check/fix disjoint (match? claims unrelated "expected a map or struct" type warning via first-match while fix rewrites Process.send/2→send/2; flagged diagnostic never resolved) — same family as rejected 2217cb1/e88a273; the genuine "Process.send/2 is undefined or private" diagnostic is already claimed by the general UndefinedFunction rule, whose @qualified_replacements is the correct home ({"Process","send",2}=>{:drop_module,"send"}) — a shared-file change out of scope. No safe narrow core within the set.
+
