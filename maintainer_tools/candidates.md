@@ -1,4 +1,3 @@
-lib/semantic/fix_ets_match_spec_variable_in_comprehension.ex
 lib/semantic/fix_ets_new_string_name.ex
 lib/semantic/fix_fn_arity_in_keyword_value.ex
 lib/semantic/fix_fn_guard_position.ex
@@ -230,8 +229,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_ets_match_spec_variable_in_comprehension_check_test.exs
-test/semantic/fix_ets_match_spec_variable_in_comprehension_fix_test.exs
 test/semantic/fix_ets_new_string_name_check_test.exs
 test/semantic/fix_ets_new_string_name_fix_test.exs
 test/semantic/fix_fn_arity_in_keyword_value_check_test.exs

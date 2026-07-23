@@ -84,3 +84,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_ets_match_spec_atom_variables_fix_test.exs`
 - Reason: premise inverted — :'$1' is a valid Elixir atom and the CORRECT ETS match spec variable (≡ :"$1"), while ~c"$1" is the literal charlist [36,49]; verified the fix breaks working selects (atom spec returns [true], charlist spec returns [] on the same table) and is an atom→charlist type change; the fix-test input already parses (rule rewrites never-broken code) and :'$N' cannot produce the "unexpected token: $" diagnostic it claims to fix, so no safe core exists under this rule's design
 
+## fix_ets_match_spec_variable_in_comprehension — 2026-07-23
+- Files:
+  - `lib/semantic/fix_ets_match_spec_variable_in_comprehension.ex`
+  - `test/semantic/fix_ets_match_spec_variable_in_comprehension_check_test.exs`
+  - `test/semantic/fix_ets_match_spec_variable_in_comprehension_fix_test.exs`
+- Reason: unreachable in production — its target diagnostic is exactly `undefined variable "name"`, which accepted FixCaseBranchAssignmentScope claims first (both priority 500, C sorts before E, single-rule dispatch has no fall-through; verified: find_matching_rule returns FixCaseBranchAssignmentScope for this rule's own flagship input), and winning priority would shadow/regress that accepted rule since the messages are indistinguishable at match? time (same dead-end as fix_cond_branch_assignment_scope, f09370d); additionally the plain-assignment fix emits compiling-but-broken code (verified: `{:"$1", :"$1"}` forces key==value and returns [] where `{:"$1", :"$2"}` returns [[:k, 1]]; the rewritten LHS `[{:"$1", _}]` raises MatchError because :ets.match returns lists of binding lists, not tuples; and `evicted_key = :"$1"` binds the literal atom, so the later :ets.delete removes the wrong key) — reachability requires folding into FixCaseBranchAssignmentScope or a dispatch/phase change, both outside this set
+
