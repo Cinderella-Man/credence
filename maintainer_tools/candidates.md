@@ -1,4 +1,3 @@
-lib/semantic/no_discarded_unless_value.ex
 lib/semantic/no_duplicate_defstruct.ex
 lib/semantic/no_early_return_in_unless.ex
 lib/semantic/no_enum_sort_then_map_values.ex
@@ -161,8 +160,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_discarded_unless_value_check_test.exs
-test/semantic/no_discarded_unless_value_fix_test.exs
 test/semantic/no_duplicate_defstruct_check_test.exs
 test/semantic/no_duplicate_defstruct_fix_test.exs
 test/semantic/no_early_return_in_unless_check_test.exs

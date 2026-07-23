@@ -294,3 +294,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_deprecated_not_in_fix_test.exs`
 - Reason: line-level global regex rewrite changes semantics on flagged inputs — `not (a in b) in c` (nested/parenthesized `in`) mis-captures into the parens, and `not … in` inside string literals/comments on the flagged line is corrupted; not narrowable since semantic match? keys only on the message, so a correct fix needs a paren/string-aware parse using the column, not a regex shrink.
 
+## no_discarded_unless_value — 2026-07-23
+- Files:
+  - `lib/semantic/no_discarded_unless_value.ex`
+  - `test/semantic/no_discarded_unless_value_check_test.exs`
+  - `test/semantic/no_discarded_unless_value_fix_test.exs`
+- Reason: check/fix mismatch — Elixir emits no "unless expression result is unused" diagnostic (real msg is "code block contains unused literal"; discarded unless value warns not at all), so match? never fires; and the if/else rewrite changes behavior (returns the unless body instead of the always-returned trailing expression). Not narrowable.
+
