@@ -469,3 +469,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_stream_data_string_fix_test.exs`
 - Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on both ":warning" diagnostics ("StreamData.alpha_string/0 is undefined or private", "StreamData.string_of_length/2 is undefined or private") via parse_qualified_ref, so both rules claim the same diagnostic; correct fold is into lib/semantic/undefined_function.ex (alpha_string -> {:rename_add_arg,"StreamData","string",":alphanumeric"}; string_of_length needs new range->keyword machinery there), a shared-file change out of scope.
 
+## no_hallucinated_struct — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_struct.ex`
+  - `test/semantic/no_hallucinated_struct_check_test.exs`
+  - `test/semantic/no_hallucinated_struct_fix_test.exs`
+- Reason: duplicate matcher — match? is byte-identical to Credence.Semantic.FixCyclicStructReference ("__struct__/1 is undefined", :error), same priority 500, and Semantic.find_matching_rule/Enum.find returns FixCyclicStructReference first (F<N), so NoHallucinatedStruct.fix never runs in production (confirmed empirically). Correct fold is a shared-file change into fix_cyclic_struct_reference.ex (add the undefined-anywhere→tuple fallback), out of scope. (Also the fix over-rewrites: it converts EVERY struct literal not locally defstruct'd — incl. valid stdlib structs like %DateTime{}/%URI{} anywhere in the file — into tuples, ignoring the diagnostic's named module.)
+
