@@ -350,3 +350,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_genserver_reply_in_handle_call_fix_test.exs`
 - Reason: dead rule — match? keys on a fabricated message ("send/2 used to reply from handle_call/3 …") the Elixir compiler never emits; send-in-handle_call is valid code (runtime caller-timeout bug, no compile diagnostic), so no message-keyed semantic rule can ever match it. Not narrowable; belongs to a pattern/AST rule (out of set scope).
 
+## no_genserver_reply_in_handle_cast — 2026-07-23
+- Files:
+  - `lib/semantic/no_genserver_reply_in_handle_cast.ex`
+  - `test/semantic/no_genserver_reply_in_handle_cast_check_test.exs`
+  - `test/semantic/no_genserver_reply_in_handle_cast_fix_test.exs`
+- Reason: dead rule — match?/1 keys on a fabricated diagnostic ("GenServer.reply/2 called inside handle_cast/2 …") the Elixir compiler never emits; GenServer.reply(bare_pid,_) in handle_cast is valid code (runtime FunctionClauseError, no compile diagnostic — verified Code.with_diagnostics returns 0), so no message-keyed semantic rule can ever match it. Same class as no_genserver_reply_in_handle_call (6374a54); belongs to a pattern/AST rule, out of set scope.
+
