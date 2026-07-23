@@ -420,3 +420,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_map_reduce_fix_test.exs`
 - Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on "Map.reduce/3 is undefined or private" (parse_qualified_ref → {"Map","reduce",3}), so both rules claim the same diagnostic; correct fold is a @qualified_replacements entry in lib/semantic/undefined_function.ex, a shared-file change out of scope (and the Map.reduce→Enum.reduce callback restructuring isn't expressible via the existing rename machinery anyway).
 
+## no_hallucinated_math_fn — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_math_fn.ex`
+  - `test/semantic/no_hallucinated_math_fn_check_test.exs`
+  - `test/semantic/no_hallucinated_math_fn_fix_test.exs`
+- Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on ":math.min/2 is undefined or private" (parse_qualified_ref → {"math","min",2}), so both rules claim the same diagnostic; correct fold is @qualified_replacements entries {"math","min",2}/{"math","max",2} in lib/semantic/undefined_function.ex, a shared-file change out of scope.
+
