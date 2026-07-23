@@ -1,4 +1,3 @@
-lib/semantic/no_stream_data_integer_two_args.ex
 lib/semantic/no_stream_data_tuple_with_list.ex
 lib/semantic/no_string_replace_arity_mismatch.ex
 lib/semantic/no_struct_update_on_untyped_variable.ex
@@ -85,8 +84,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_stream_data_integer_two_args_check_test.exs
-test/semantic/no_stream_data_integer_two_args_fix_test.exs
 test/semantic/no_stream_data_tuple_with_list_check_test.exs
 test/semantic/no_stream_data_tuple_with_list_fix_test.exs
 test/semantic/no_string_replace_arity_mismatch_check_test.exs
