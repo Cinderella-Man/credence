@@ -1,4 +1,3 @@
-lib/semantic/no_mapset_member_in_guard.ex
 lib/semantic/no_match_with_method_string_in_plug_router.ex
 lib/semantic/no_message_access_on_rescue_variable.ex
 lib/semantic/no_module_level_init.ex
@@ -116,8 +115,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_mapset_member_in_guard_check_test.exs
-test/semantic/no_mapset_member_in_guard_fix_test.exs
 test/semantic/no_match_with_method_string_in_plug_router_check_test.exs
 test/semantic/no_match_with_method_string_in_plug_router_fix_test.exs
 test/semantic/no_message_access_on_rescue_variable_check_test.exs
