@@ -630,3 +630,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_raise_in_handle_call_fix_test.exs`
 - Reason: fabricated diagnostic — match? fires only on the invented message "raise in handle_call — use {:reply, {:error, msg}, state} instead" which the Elixir compiler never emits (verified: raise in handle_call compiles cleanly, only unused-var + missing-init/1 diagnostics appear); rule is dead in production, no real diagnostic to hook onto, no safe narrow core. Same family as rejected disjoint/fabricated-diagnostic rules.
 
+## no_raw_send_in_genserver_handle_call — 2026-07-23
+- Files:
+  - `lib/semantic/no_raw_send_in_genserver_handle_call.ex`
+  - `test/semantic/no_raw_send_in_genserver_handle_call_check_test.exs`
+  - `test/semantic/no_raw_send_in_genserver_handle_call_fix_test.exs`
+- Reason: fabricated diagnostic — match? requires exact-string equality with the invented message "send/2 spawned from handle_call/3 — use GenServer.reply/2 instead", which the Elixir compiler never emits (verified: raw send/2 inside spawn in handle_call/3 compiles cleanly, emitting only the unrelated init/1 GenServer behaviour diagnostic). Semantic diagnostics come from Code.with_diagnostics, so the rule can never fire in production; the target shape produces zero compile diagnostics and there is no real diagnostic to hook onto — no safe narrow core. Same family as rejected e30768f/6910899/8374476.
+

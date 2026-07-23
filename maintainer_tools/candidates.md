@@ -1,4 +1,3 @@
-lib/semantic/no_raw_send_in_genserver_handle_call.ex
 lib/semantic/no_redefine_builtin_type.ex
 lib/semantic/no_remote_function_in_guard.ex
 lib/semantic/no_rescue_in_cond.ex
@@ -97,8 +96,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_raw_send_in_genserver_handle_call_check_test.exs
-test/semantic/no_raw_send_in_genserver_handle_call_fix_test.exs
 test/semantic/no_redefine_builtin_type_check_test.exs
 test/semantic/no_redefine_builtin_type_fix_test.exs
 test/semantic/no_remote_function_in_guard_check_test.exs
