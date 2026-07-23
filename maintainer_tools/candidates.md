@@ -1,4 +1,3 @@
-lib/semantic/no_pin_in_after_clause.ex
 lib/semantic/no_pipe_into_in_expression.ex
 lib/semantic/no_plug_before_dependency_definition.ex
 lib/semantic/no_plug_upload_size_field.ex
@@ -110,8 +109,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_pin_in_after_clause_check_test.exs
-test/semantic/no_pin_in_after_clause_fix_test.exs
 test/semantic/no_pipe_into_in_expression_check_test.exs
 test/semantic/no_pipe_into_in_expression_fix_test.exs
 test/semantic/no_plug_before_dependency_definition_check_test.exs

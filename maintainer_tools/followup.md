@@ -539,3 +539,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_mapset_member_in_guard_fix_test.exs`
 - Reason: fix reuses the guarded clause head and discards the fallback clause's head/patterns, so it emits undefined-variable/broken output on different param names, makes later clauses unreachable (silently wrong answer) with ≥3 clauses, and FunctionClauseErrors when the guarded head is narrower; the diagnostic-only check carries no shape info to narrow safe from unsafe, and narrowing only the fix breaks check/fix agreement.
 
+## no_pin_in_after_clause — 2026-07-23
+- Files:
+  - `lib/semantic/no_pin_in_after_clause.ex`
+  - `test/semantic/no_pin_in_after_clause_check_test.exs`
+  - `test/semantic/no_pin_in_after_clause_fix_test.exs`
+- Reason: duplicate of already-accepted fix_pin_in_ets_match_spec (identical match? on "misplaced operator ^" prefix; that rule already strips misplaced pins in any non-match context incl. after clauses, with a more precise line+column+var-name match and a should_report?/2 hook this candidate lacks).
+
