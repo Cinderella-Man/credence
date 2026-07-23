@@ -581,3 +581,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_private_fn_in_timer_mfa_fix_test.exs`
 - Reason: same family as already-rejected no_private_fn_called_from_macro_quote — match? claims EVERY "function/N is unused" warning (genuine dead code included) with no should_report?/2, and the defp→def promotion fix over-reaches on both dimensions: referenced_via_timer_mfa? matches the target atom module-agnostically (PROBE A: MFA points at OtherMod, yet the local genuinely-dead do_cleanup/0 is made public) and find_defp_lines matches name-only arity-agnostically (PROBE B: only /1 flagged, but the unrelated private do_cleanup/2 is also promoted). Making both detections precise (verify MFA module == __MODULE__/self, match the flagged arity from source) plus adding should_report?/2 is a ground-up redesign, not a narrowing; and defp→def is itself a public-API change the maintainer flagged when rejecting the sibling rule.
 
+## no_private_named_ets_readable_externally — 2026-07-23
+- Files:
+  - `lib/semantic/no_private_named_ets_readable_externally.ex`
+  - `test/semantic/no_private_named_ets_readable_externally_check_test.exs`
+  - `test/semantic/no_private_named_ets_readable_externally_fix_test.exs`
+- Reason: check/fix disagree — match? fires on the general "incompatible types in binary construction" type warning (from String.to_atom(to_string(name))::binary), but the fix only changes :ets.new :private→:protected, which is orthogonal: verified the identical warning persists after the change, so the flagged diagnostic is never resolved (and :private→:protected is itself a runtime access-control change). The rule also monopolizes an unrelated general diagnostic via first-match; correct remediation (fix the binary construction) is a redesign, not a narrowing.
+
