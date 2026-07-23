@@ -273,3 +273,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_cond_variable_assignment_in_inner_branch_fix_test.exs`
 - Reason: dead in production — FixCaseBranchAssignmentScope.match? claims every `undefined variable` diagnostic and sorts first (equal priority 500, name F<N), no-ops on if/else, pipeline stops so this rule's fix never runs (verified via real Credence.Semantic.fix: unchanged); also fix ignores position and over-applies file-wide, changing otherwise-valid code's return value. Deconflicting needs a shared-file routing/priority change.
 
+## no_date_utc_today_with_arg — 2026-07-23
+- Files:
+  - `lib/semantic/no_date_utc_today_with_arg.ex`
+  - `test/semantic/no_date_utc_today_with_arg_check_test.exs`
+  - `test/semantic/no_date_utc_today_with_arg_fix_test.exs`
+- Reason: check/fix mismatch — match? fires on the redundant-function-clause warning ("previous clause always matches"), which never corresponds to Date.utc_today(arg); fix no-ops on every real such diagnostic while claiming it from the rules that actually own it. Not narrowable; correct diagnostic would be the unrelated "undefined or private" message.
+
