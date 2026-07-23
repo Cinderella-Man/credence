@@ -1,0 +1,107 @@
+defmodule Credence.Semantic.NoRedefineBuiltinType do
+  @moduledoc """
+  Fixes redefinitions of built-in Erlang/Elixir types.
+
+  LLMs frequently define `@type node` when building tree/trie structures, but
+  `node/0` is a built-in Erlang type (the Erlang node name). The compiler
+  rejects it with a hard error:
+
+      type node/0 is a built-in type and it cannot be redefined
+
+  The fix renames the offending `@type` (and `@typep`) definition and all
+  references to that type within other type definitions. For example,
+  `@type node` becomes `@type trie_node`, and `@type t :: node` becomes
+  `@type t :: trie_node`.  Variable bindings and function parameters with
+  the same name are left untouched.
+  """
+  use Credence.Semantic.Rule
+
+  alias Credence.Issue
+
+  @match_substring "is a built-in type and it cannot be redefined"
+
+  @impl true
+  def match?(%{severity: :error, message: msg}) when is_binary(msg) do
+    String.contains?(msg, @match_substring)
+  end
+
+  def match?(_), do: false
+
+  @impl true
+  def to_issue(diagnostic) do
+    %Issue{
+      rule: :no_redefine_builtin_type,
+      message: diagnostic.message,
+      meta: %{line: line(diagnostic)}
+    }
+  end
+
+  @impl true
+  def fix(source, %{message: msg}) when is_binary(msg) do
+    with type_name when is_binary(type_name) <- extract_type_name(msg),
+         {:ok, ast} <- Sourceror.parse_string(source),
+         atom_name = String.to_atom(type_name),
+         replacement = String.to_atom("trie_#{type_name}"),
+         new_ast <- rename_type_in_ast(ast, atom_name, replacement),
+         true <- new_ast != ast do
+      Sourceror.to_string(new_ast)
+    else
+      _ -> source
+    end
+  end
+
+  def fix(source, _diagnostic), do: source
+
+  # Extract the type name from a diagnostic message like
+  # "file.ex:2: type node/0 is a built-in type and it cannot be redefined"
+  defp extract_type_name(msg) do
+    case Regex.run(~r/type (\w+)\/\d+ is a built-in type/, msg) do
+      [_, name] -> name
+      _ -> nil
+    end
+  end
+
+  # Walk the AST and rename the built-in type inside @type / @typep definitions
+  # and references to it in other type definitions.
+  defp rename_type_in_ast(ast, type_name, replacement) do
+    rename_rhs = fn rhs ->
+      Macro.prewalk(rhs, fn
+        {^type_name, meta, nil} -> {replacement, meta, nil}
+        node -> node
+      end)
+    end
+
+    Macro.prewalk(ast, fn
+      # @type builtin :: rhs  — rename LHS and RHS
+      {:@, attr_meta, [{:type, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, nil}, rhs]}]}]} ->
+        {:@, attr_meta, [{:type, type_meta, [{:"::", op_meta, [{replacement, lhs_meta, nil}, rename_rhs.(rhs)]}]}]}
+
+      # @typep builtin :: rhs — rename LHS and RHS
+      {:@, attr_meta, [{:typep, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, nil}, rhs]}]}]} ->
+        {:@, attr_meta, [{:typep, type_meta, [{:"::", op_meta, [{replacement, lhs_meta, nil}, rename_rhs.(rhs)]}]}]}
+
+      # @type other :: rhs — rename references in RHS if the builtin is referenced
+      {:@, attr_meta, [{:type, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, rhs]}]}]} = node ->
+        new_rhs = rename_rhs.(rhs)
+        if new_rhs != rhs do
+          {:@, attr_meta, [{:type, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, new_rhs]}]}]}
+        else
+          node
+        end
+
+      # @typep other :: rhs — rename references in RHS if the builtin is referenced
+      {:@, attr_meta, [{:typep, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, rhs]}]}]} = node ->
+        new_rhs = rename_rhs.(rhs)
+        if new_rhs != rhs do
+          {:@, attr_meta, [{:typep, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, new_rhs]}]}]}
+        else
+          node
+        end
+
+      node -> node
+    end)
+  end
+
+  defp line(%{position: {line, _col}}), do: line
+  defp line(%{position: line}) when is_integer(line), do: line
+end
