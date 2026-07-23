@@ -1,4 +1,3 @@
-lib/semantic/fix_undefined_variable_in_with_else.ex
 lib/semantic/fix_underscored_fn_param_binding_for_body_use.ex
 lib/semantic/fix_underscored_pattern_binding_for_body_use.ex
 lib/semantic/fix_unmatchable_tuple_destructure.ex
@@ -182,8 +181,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_undefined_variable_in_with_else_check_test.exs
-test/semantic/fix_undefined_variable_in_with_else_fix_test.exs
 test/semantic/fix_underscored_fn_param_binding_for_body_use_check_test.exs
 test/semantic/fix_underscored_fn_param_binding_for_body_use_fix_test.exs
 test/semantic/fix_underscored_pattern_binding_for_body_use_check_test.exs
