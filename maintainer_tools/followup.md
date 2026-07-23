@@ -322,3 +322,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_ets_info_bare_size_fix_test.exs`
 - Reason: dead rule — at default priority 500 it's shadowed by FixCaseBranchAssignmentScope (also 500, sorts first, claims whole `undefined variable "name"` family and no-ops on ets.info sources), so `:ets.info(t, size)` is never fixed end-to-end; lowering to 450 would steal the common `size` variable diagnostic from that live rule and regress its case-branch-scope fix. Resolving needs a shared-file change (coordinate the two rules / phase fallthrough), out of set scope.
 
+## no_exit_two_args — 2026-07-23
+- Files:
+  - `lib/semantic/no_exit_two_args.ex`
+  - `test/semantic/no_exit_two_args_check_test.exs`
+  - `test/semantic/no_exit_two_args_fix_test.exs`
+- Reason: duplicate dispatch — live UndefinedFunction already matches "undefined function exit/2" and its @local_replacements is the home for exactly this Python-idiom rename ({"exit",2} => {:rename,"Process","exit"}, reusing its word-boundary-safe replacer); this standalone rule shadows it with an unsafe naive String.replace("exit(",…) that mangles Process.exit(/Foo.exit(/string-literal lines. Clean fold requires editing undefined_function.ex — out of set scope.
+
