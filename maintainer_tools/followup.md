@@ -259,3 +259,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_capture_as_bitwise_and_fix_test.exs`
 - Reason: fix_pipe_capture rewrites the whole file and has_bare_capture? can't distinguish a bare &1 from a &1 inside a valid &(...), so a valid `list |> Enum.map(&(&1 + 1))` elsewhere in the file is mangled into `&(wq1 + 1)` (capture without argument = compile error), while the actually-flagged bare `foo(&1)` stays unfixed; valid_syntax? only parses so it hides this.
 
+## no_compile_warn_undefined_module — 2026-07-23
+- Files:
+  - `lib/semantic/no_compile_warn_undefined_module.ex`
+  - `test/semantic/no_compile_warn_undefined_module_check_test.exs`
+  - `test/semantic/no_compile_warn_undefined_module_fix_test.exs`
+- Reason: rule is live/safe but firing on real undefined-module warnings regresses 6 sibling rules' "resolves-elsewhere-via-alias left untouched" e2e tests (aliased-module warning is indistinguishable from its own target, so no narrowing saves it); deconflicting needs shared-file changes (those 6 test fixtures or pipeline routing) which are out of scope.
+
