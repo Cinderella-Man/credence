@@ -1,4 +1,3 @@
-lib/semantic/fix_negation_in_guard.ex
 lib/semantic/fix_nested_module_short_reference.ex
 lib/semantic/fix_nimble_csv_direct_parse.ex
 lib/semantic/fix_pin_atom_in_exception_case.ex
@@ -206,8 +205,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_negation_in_guard_check_test.exs
-test/semantic/fix_negation_in_guard_fix_test.exs
 test/semantic/fix_nested_module_short_reference_check_test.exs
 test/semantic/fix_nested_module_short_reference_fix_test.exs
 test/semantic/fix_nimble_csv_direct_parse_check_test.exs
