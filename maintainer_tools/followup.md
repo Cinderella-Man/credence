@@ -672,3 +672,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_shadowed_function_redefinition_fix_test.exs`
 - Reason: fabricated diagnostic + backwards fix — the real Elixir 1.20.2 message for a shadowed def/defp is "this clause for process/1 cannot match because a previous clause at line 2 always matches" (verified via Code.with_diagnostics for def, defp and arity-2), so match?/1's prefix "this clause cannot match because a previous clause at line " is never true and the rule is dead for its stated target; the only real message that does satisfy match?/1 is the case/cond form (no "for f/a"), where no def/defp sits on the target line and fix/2 is a guaranteed no-op, so check and fix disagree; and even if match?/1 were repaired, the fix removes the EARLIER (live) clause — in Elixir the first clause wins — changing the answer on every input (verified: Bef.process(21) == {:draft, 21} vs Aft.process(21) == {:ok, 42}), while the safe direction (delete the later dead clause) is already live as Pattern.RemoveUnreachableClausesAfterCatchall / Pattern.NoDuplicateFunctionClauses.
 
+## no_split_function_definition — 2026-07-23
+- Files:
+  - `lib/semantic/no_split_function_definition.ex`
+  - `test/semantic/no_split_function_definition_check_test.exs`
+  - `test/semantic/no_split_function_definition_fix_test.exs`
+- Reason: fabricated diagnostic ("has multiple clauses and they are not adjacent" is never emitted; real Elixir 1.20.2 message is "clauses with the same name and arity (number of arguments) should be grouped together, \"def handle_call/3\" was previously defined (file:3)") so match?/1 is never true and the rule is dead; and repairing it would only duplicate the live, better-guarded Pattern.NoNonGroupedClauses (Credence.Pattern.NonGroupedClauses), which already regroups these exact inputs while skipping strays preceded by @impl/@doc and unsafe-to-move bodies — guards this semantic version lacks, and Semantic runs before Pattern so it would preempt the safer rule.
+
