@@ -546,3 +546,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_pin_in_after_clause_fix_test.exs`
 - Reason: duplicate of already-accepted fix_pin_in_ets_match_spec (identical match? on "misplaced operator ^" prefix; that rule already strips misplaced pins in any non-match context incl. after clauses, with a more precise line+column+var-name match and a should_report?/2 hook this candidate lacks).
 
+## no_pipe_into_in_expression — 2026-07-23
+- Files:
+  - `lib/semantic/no_pipe_into_in_expression.ex`
+  - `test/semantic/no_pipe_into_in_expression_check_test.exs`
+  - `test/semantic/no_pipe_into_in_expression_fix_test.exs`
+- Reason: fix wraps from line-start not the `in` left-operand boundary — silently changes semantics on valid code (`is_admin = user |> get_role() in roles` → assigns role not boolean) and breaks syntax on `def/when/do:/assert`; needs precedence-aware AST parsing, not a line regex; no safe narrow core.
+
