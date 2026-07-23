@@ -315,3 +315,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_enum_sort_then_map_values_fix_test.exs`
 - Reason: check/fix mismatch — match? keys on the unrelated "operator '+'/2 is ignored" (unused-arithmetic) warning while fix rewrites sort_by→Map.values pipes, so the flagged diagnostic is never resolved and unrelated pipes may be corrupted; the intended target raises a runtime BadMapError, not a diagnostic, so no message-keyed semantic rule can match it. Not narrowable.
 
+## no_ets_info_bare_size — 2026-07-23
+- Files:
+  - `lib/semantic/no_ets_info_bare_size.ex`
+  - `test/semantic/no_ets_info_bare_size_check_test.exs`
+  - `test/semantic/no_ets_info_bare_size_fix_test.exs`
+- Reason: dead rule — at default priority 500 it's shadowed by FixCaseBranchAssignmentScope (also 500, sorts first, claims whole `undefined variable "name"` family and no-ops on ets.info sources), so `:ets.info(t, size)` is never fixed end-to-end; lowering to 450 would steal the common `size` variable diagnostic from that live rule and regress its case-branch-scope fix. Resolving needs a shared-file change (coordinate the two rules / phase fallthrough), out of set scope.
+
