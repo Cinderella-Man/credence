@@ -455,3 +455,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_persistent_term_fn_fix_test.exs`
 - Reason: fabricated premise — rule keys on "clauses with the same name and arity ... should be grouped together" (function-clause grouping), which is never the diagnostic its target :persistent_term.get_keys() produces (":persistent_term.get_keys/0 is undefined or private"), so it never fires on its own target; and that real diagnostic is already owned by Credence.Semantic.UndefinedFunction (match? on "is undefined or private" + parse_qualified_ref -> {"persistent_term","get_keys",0}). Correct fold is a @qualified_replacements entry in lib/semantic/undefined_function.ex (shared-file, out of scope), and the get_keys->get callback restructuring (fn key -> fn {key,_value}) isn't expressible via the rename machinery anyway.
 
+## no_hallucinated_queue_empty — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_queue_empty.ex`
+  - `test/semantic/no_hallucinated_queue_empty_check_test.exs`
+  - `test/semantic/no_hallucinated_queue_empty_fix_test.exs`
+- Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on ":queue.empty/0 is undefined or private" (parse_qualified_ref → {"queue","empty",0}), so both rules claim the same diagnostic; correct fold is a {"queue","empty",0} => {:rename,"queue","new"} entry in lib/semantic/undefined_function.ex, a shared-file change out of scope.
+
