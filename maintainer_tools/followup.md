@@ -287,3 +287,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_define_to_string_fix_test.exs`
 - Reason: file-wide prewalk rename over-applies (renames Kernel.to_string in other modules → undefined function) and misses call forms (no-paren pipe, &to_string/1 capture) → silent behavior change; needs scope-aware rewrite, not narrowable.
 
+## no_deprecated_not_in — 2026-07-23
+- Files:
+  - `lib/semantic/no_deprecated_not_in.ex`
+  - `test/semantic/no_deprecated_not_in_check_test.exs`
+  - `test/semantic/no_deprecated_not_in_fix_test.exs`
+- Reason: line-level global regex rewrite changes semantics on flagged inputs — `not (a in b) in c` (nested/parenthesized `in`) mis-captures into the parens, and `not … in` inside string literals/comments on the flagged line is corrupted; not narrowable since semantic match? keys only on the message, so a correct fix needs a paren/string-aware parse using the column, not a regex shrink.
+
