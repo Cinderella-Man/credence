@@ -1,4 +1,3 @@
-lib/semantic/fix_if_branch_assignment_scope.ex
 lib/semantic/fix_invalid_capture_with_arguments.ex
 lib/semantic/fix_invalid_capture_with_literal.ex
 lib/semantic/fix_invalid_list_typespec_syntax.ex
@@ -217,8 +216,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_if_branch_assignment_scope_check_test.exs
-test/semantic/fix_if_branch_assignment_scope_fix_test.exs
 test/semantic/fix_invalid_capture_with_arguments_check_test.exs
 test/semantic/fix_invalid_capture_with_arguments_fix_test.exs
 test/semantic/fix_invalid_capture_with_literal_check_test.exs

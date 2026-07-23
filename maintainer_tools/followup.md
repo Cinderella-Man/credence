@@ -98,3 +98,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_ets_new_string_name_fix_test.exs`
 - Reason: unreachable in production — matches a fabricated diagnostic ("table name to :ets.new/2 — use atom interpolation") that the Elixir compiler never emits; verified the flagship input compiles with zero diagnostics (:ets.new arg misuse is runtime-only ArgumentError), so no match? anchor exists and a pattern-phase rewrite would be a different kind outside this set; fix regex also converts any `"#`-prefixed string literal on the flagged line to an atom (type change)
 
+## fix_if_branch_assignment_scope — 2026-07-23
+- Files:
+  - `lib/semantic/fix_if_branch_assignment_scope.ex`
+  - `test/semantic/fix_if_branch_assignment_scope_check_test.exs`
+  - `test/semantic/fix_if_branch_assignment_scope_fix_test.exs`
+- Reason: dead in production — pipeline diagnostics carry file "credence_check.ex" (nonexistent, so match?'s File.read always fails) and FixCaseBranchAssignmentScope (same priority 500, sorts first, message-only match?) claims every undefined-variable diagnostic first-match-wins; fixing requires folding if-hoisting into the case rule or a phase change, both outside this set
+
