@@ -161,3 +161,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_undefined_struct_in_pattern_fix_test.exs`
 - Reason: dead in production — accepted fix_cyclic_struct_reference's match? ("__struct__/1 is undefined") is a strict superset and sorts first (C<U, both priority 500), so Enum.find (first-wins) routes every such diagnostic to it and this rule never fires; deconflicting needs a shared lib/semantic.ex change. (Also the fix discards the struct wrapper — %Exit{reason: reason} → reason — changing behavior, vs the accepted rule's compile-verified reorder.)
 
+## fix_undefined_type_t_in_spec — 2026-07-23
+- Files:
+  - `lib/semantic/fix_undefined_type_t_in_spec.ex`
+  - `test/semantic/fix_undefined_type_t_in_spec_check_test.exs`
+  - `test/semantic/fix_undefined_type_t_in_spec_fix_test.exs`
+- Reason: dead in production — match string "type t/0 is undefined" never occurs (real Elixir msg is "type t/0 undefined", no "is"); fixing the typo would make it match "type t/0 undefined" which accepted no_bare_names_in_spec already handles, and this rule sorts first (F<N, both prio 500) so Enum.find first-wins would hijack/regress that rule for bare-name-`t` specs — deconflicting needs a shared lib/semantic.ex change.
+
