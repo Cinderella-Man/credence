@@ -693,3 +693,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_undefined_guard_equality_in_case_fix_test.exs`
 - Reason: check and fix disagree — match?/1 only fires on the `:ets:info` "syntax error before: info" diagnostic, which the guard-equality regex rewrite never resolves (verified: fixed source still fails to parse), while valid `x when x == :atom` emits no diagnostic at all so no safe semantic hook exists; the unanchored global regex also breaks working code (`x when x == :ok and is_atom(x)` -> `:ok and is_atom(x)`, "and is not allowed in patterns"; `undefined when undefined == :undefined -> {:got, undefined}` -> unbound variable, cannot compile) and rewrites string literals/comments (`s = "x when x == :ok"` -> `s = ":ok"`).
 
+## no_undefined_options_in_plug_router_block — 2026-07-24
+- Files:
+  - `lib/semantic/no_undefined_options_in_plug_router_block.ex`
+  - `test/semantic/no_undefined_options_in_plug_router_block_check_test.exs`
+  - `test/semantic/no_undefined_options_in_plug_router_block_fix_test.exs`
+- Reason: dead in production — FixCaseBranchAssignmentScope (same priority 500, sorts first) already claims every `undefined variable "options"` diagnostic and Semantic.find_matching_rule takes only the first match, so this rule never fires; raising its priority would instead steal those diagnostics and silently break the accepted rule (fallthrough would need a lib/semantic.ex change, out of scope), and the fix itself inserts the undocumented `conn.private[:plug_router_opts]` (copy_opts_to_assign writes to conn.assigns, not private; plug is not a dep so it can't be verified), which yields nil and turns the compile error into a runtime FunctionClauseError, plus it never checks the module is a Plug.Router so `conn` may be unbound.
+
