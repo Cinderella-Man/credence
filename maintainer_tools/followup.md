@@ -301,3 +301,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_discarded_unless_value_fix_test.exs`
 - Reason: check/fix mismatch — Elixir emits no "unless expression result is unused" diagnostic (real msg is "code block contains unused literal"; discarded unless value warns not at all), so match? never fires; and the if/else rewrite changes behavior (returns the unless body instead of the always-returned trailing expression). Not narrowable.
 
+## no_early_return_in_unless — 2026-07-23
+- Files:
+  - `lib/semantic/no_early_return_in_unless.ex`
+  - `test/semantic/no_early_return_in_unless_check_test.exs`
+  - `test/semantic/no_early_return_in_unless_fix_test.exs`
+- Reason: duplicate of live NoBareReturnInUnless (identical "undefined function return/" + :error match, same unless/if early-return coverage); new rule adds nothing safe — its if/return fix is inverted (puts rest in do, value in else, returning the wrong branch for every if-early-return). Drop/fold requires touching the other rule, out of set scope.
+
