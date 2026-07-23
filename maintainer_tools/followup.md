@@ -441,3 +441,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_hallucinated_math_round2_fix_test.exs`
 - Reason: duplicate of Credence.Semantic.UndefinedFunction — its match? already fires on ":math.round/1 is undefined or private" (parse_qualified_ref → {"math","round",1}), so both rules claim the same diagnostic; correct fold is a {"math","round",1} => {:drop_module,"round"} entry in lib/semantic/undefined_function.ex, a shared-file change out of scope.
 
+## no_hallucinated_naive_datetime_to_unix — 2026-07-23
+- Files:
+  - `lib/semantic/no_hallucinated_naive_datetime_to_unix.ex`
+  - `test/semantic/no_hallucinated_naive_datetime_to_unix_check_test.exs`
+  - `test/semantic/no_hallucinated_naive_datetime_to_unix_fix_test.exs`
+- Reason: fabricated premise — NaiveDateTime has no to_unix at any arity, so stripping the arg yields NaiveDateTime.to_unix/1 which is itself undefined; the fix doesn't resolve the diagnostic and there's no safe narrow core (real conversion needs a timezone assumption / NaiveDateTime.diff).
+
