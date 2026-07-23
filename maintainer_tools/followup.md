@@ -553,3 +553,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_pipe_into_in_expression_fix_test.exs`
 - Reason: fix wraps from line-start not the `in` left-operand boundary — silently changes semantics on valid code (`is_admin = user |> get_role() in roles` → assigns role not boolean) and breaks syntax on `def/when/do:/assert`; needs precedence-aware AST parsing, not a line regex; no safe narrow core.
 
+## no_plug_before_dependency_definition — 2026-07-23
+- Files:
+  - `lib/semantic/no_plug_before_dependency_definition.ex`
+  - `test/semantic/no_plug_before_dependency_definition_check_test.exs`
+  - `test/semantic/no_plug_before_dependency_definition_fix_test.exs`
+- Reason: check/fix disagree — match? fires on the syntax error "atom cannot be followed by an alias" (from a stray colon, e.g. plug(:Foo.Bar)), whose only correct fix is removing that colon, but fix/2 instead reorders module definitions and never removes the colon, so the flagged diagnostic is never resolved (verified: reorder output still contains plug(:Foo.Bar)); the moduledoc describes an unrelated init/1-undefined compile error match? never matches; tests pass only because the fix inputs use colon-free plug calls that would never emit the matched diagnostic. No safe core of the reorder behavior exists.
+
