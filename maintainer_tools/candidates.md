@@ -1,4 +1,3 @@
-lib/semantic/fix_invalid_capture_with_literal.ex
 lib/semantic/fix_invalid_list_typespec_syntax.ex
 lib/semantic/fix_jason_decode_error_message_field.ex
 lib/semantic/fix_keyword_double_colon.ex
@@ -215,8 +214,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_invalid_capture_with_literal_check_test.exs
-test/semantic/fix_invalid_capture_with_literal_fix_test.exs
 test/semantic/fix_invalid_list_typespec_syntax_check_test.exs
 test/semantic/fix_invalid_list_typespec_syntax_fix_test.exs
 test/semantic/fix_jason_decode_error_message_field_check_test.exs

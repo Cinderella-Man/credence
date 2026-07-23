@@ -105,3 +105,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_if_branch_assignment_scope_fix_test.exs`
 - Reason: dead in production — pipeline diagnostics carry file "credence_check.ex" (nonexistent, so match?'s File.read always fails) and FixCaseBranchAssignmentScope (same priority 500, sorts first, message-only match?) claims every undefined-variable diagnostic first-match-wins; fixing requires folding if-hoisting into the case rule or a phase change, both outside this set
 
+## fix_invalid_capture_with_literal — 2026-07-23
+- Files:
+  - `lib/semantic/fix_invalid_capture_with_literal.ex`
+  - `test/semantic/fix_invalid_capture_with_literal_check_test.exs`
+  - `test/semantic/fix_invalid_capture_with_literal_fix_test.exs`
+- Reason: dead in production — duplicate match? of accepted FixInvalidCaptureWithArguments (identical "invalid args for &" + :error, same priority 500, Arguments sorts first) which claims every such diagnostic first-match-wins in both analyze and fix with no fallback; making Literal live means re-prioritizing over Arguments (killing that accepted rule, since Literal no-ops on the &call(args)/0 shape) or folding the two rules — out of scope for this set. Its fix also mangles valid captures (&String.upcase(&1) → fn -> String.upcase(&1) end, no capture-ref guard in the dot-call clause).
+
