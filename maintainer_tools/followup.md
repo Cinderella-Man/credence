@@ -686,3 +686,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_stream_data_constant_with_range_fix_test.exs`
 - Reason: fabricated diagnostic — `StreamData.constant(?a..?z)` emits no diagnostic at all (verified: Code.with_diagnostics returns [] on Elixir 1.20.2, since `constant(a) :: t(a) when a: var` accepts any term), so the fix path is dead for its stated target; the only real message satisfying match?/1 is the *different* bug `StreamData.integer({min,max})` ("incompatible types given to StreamData.integer/1 … but expected one of: %Range{}", verified — and note the test's @real_message is that one, not a constant/1 message), where no `StreamData.constant` call exists and fix/2 is a guaranteed no-op, so check and fix disagree; and even if it fired, the prewalk rewrites EVERY one-arg `StreamData.constant` regardless of the argument (verified: `StreamData.constant(:foo)` → `StreamData.member_of(:foo)`, which raises on a non-enumerable, and `constant([1,2,3])` → `member_of([1,2,3])`, which generates 1|2|3 instead of the constant list) — making it fire needs a new diagnostic source outside the set.
 
+## no_undefined_guard_equality_in_case — 2026-07-24
+- Files:
+  - `lib/semantic/no_undefined_guard_equality_in_case.ex`
+  - `test/semantic/no_undefined_guard_equality_in_case_check_test.exs`
+  - `test/semantic/no_undefined_guard_equality_in_case_fix_test.exs`
+- Reason: check and fix disagree — match?/1 only fires on the `:ets:info` "syntax error before: info" diagnostic, which the guard-equality regex rewrite never resolves (verified: fixed source still fails to parse), while valid `x when x == :atom` emits no diagnostic at all so no safe semantic hook exists; the unanchored global regex also breaks working code (`x when x == :ok and is_atom(x)` -> `:ok and is_atom(x)`, "and is not allowed in patterns"; `undefined when undefined == :undefined -> {:got, undefined}` -> unbound variable, cannot compile) and rewrites string literals/comments (`s = "x when x == :ok"` -> `s = ":ok"`).
+
