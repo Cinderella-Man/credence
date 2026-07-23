@@ -1,4 +1,3 @@
-lib/semantic/no_import_local_function_conflict.ex
 lib/semantic/no_in_guard_with_variable_rhs.ex
 lib/semantic/no_list_keystore_three_args.ex
 lib/semantic/no_map_get_on_keyword_list_opts.ex
@@ -123,8 +122,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_import_local_function_conflict_check_test.exs
-test/semantic/no_import_local_function_conflict_fix_test.exs
 test/semantic/no_in_guard_with_variable_rhs_check_test.exs
 test/semantic/no_in_guard_with_variable_rhs_fix_test.exs
 test/semantic/no_list_keystore_three_args_check_test.exs

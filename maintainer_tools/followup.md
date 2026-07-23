@@ -497,3 +497,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_if_assignment_as_statement_fix_test.exs`
 - Reason: duplicate matcher — shadowed by Credence.Semantic.FixCaseBranchAssignmentScope, whose match?/1 claims EVERY `undefined variable "x"` diagnostic (never reads source) and sorts alphabetically before this rule at equal priority 500, so find_matching_rule (Enum.find) returns it first; it no-ops on the if-pattern (no case) and there is no fallthrough, so Credence.Semantic.fix leaves the code unchanged and NoIfAssignmentAsStatement.match?/fix never run in production (confirmed empirically: FIRST_MATCH=FixCaseBranchAssignmentScope, PIPELINE_CHANGED=false). Correct fold is into fix_case_branch_assignment_scope.ex (extend it to also hoist the two-branch if-assignment shape), a shared-file change out of scope.
 
+## no_import_local_function_conflict — 2026-07-23
+- Files:
+  - `lib/semantic/no_import_local_function_conflict.ex`
+  - `test/semantic/no_import_local_function_conflict_check_test.exs`
+  - `test/semantic/no_import_local_function_conflict_fix_test.exs`
+- Reason: catch-all shadows accepted PreferKernelMaxOverLocal — its regex matches "imported Kernel.max/2 conflicts with local function" (func=max != to_string), and at priority 400 (< the sibling's 500) it wins find_matching_rule (Enum.find over {priority,module}-sorted rules), applying its blunt generate_max rename instead of that dedicated rule's Kernel.max requalification (confirmed empirically). Narrowing/fold touches other rule files, out of scope.
+
