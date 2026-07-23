@@ -1,4 +1,3 @@
-lib/semantic/no_define_match_fn.ex
 lib/semantic/no_define_to_string.ex
 lib/semantic/no_defp_already_defined_as_def.ex
 lib/semantic/no_deprecated_not_in.ex
@@ -165,8 +164,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_define_match_fn_check_test.exs
-test/semantic/no_define_match_fn_fix_test.exs
 test/semantic/no_define_to_string_check_test.exs
 test/semantic/no_define_to_string_fix_test.exs
 test/semantic/no_defp_already_defined_as_def_check_test.exs
