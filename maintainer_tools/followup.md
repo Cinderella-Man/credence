@@ -721,3 +721,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_unreachable_function_clause_fix_test.exs`
 - Reason: dead in production — the "cannot match because a previous clause at line N matches the same pattern" diagnostic family is already claimed at priority 500 by the accepted NoUnreachableCatchAfterRescue (Enum.find first-match-wins, and "Catch" sorts before "Function"), so on the rule's own flagship fixture Semantic.analyze returns [] and Semantic.fix leaves the source unchanged; match? can't be narrowed to win the race (the diagnostic text is identical for both shapes), so re-aiming needs a lib/semantic.ex fallthrough — out of scope. Also overlaps the accepted Pattern rule NoDuplicateFunctionClauses, which deliberately declines the same-head/different-body case this fix deletes, and fix/2 never validates the message (any diagnostic with a {line, col} position deletes whatever def/defp sits on that line) and re-renders the whole file via Sourceror.to_string.
 
+## no_unused_private_function — 2026-07-24
+- Files:
+  - `lib/semantic/no_unused_private_function.ex`
+  - `test/semantic/no_unused_private_function_check_test.exs`
+  - `test/semantic/no_unused_private_function_fix_test.exs`
+- Reason: breaks 3 accepted end-to-end tests it can't be narrowed away from (test/credence_test.exs:1059 and the two fix_showcase/multi-rule showcase tests deliberately keep unused defps — normalize_words/2 is exactly this rule's flagship shape), and getting the suite green would need edits to those shared test files; the fix also orphans preceding attributes (the credence_test case yields `defmodule Foo do @doc false end`), and check/fix disagree whenever a @spec is present or the module body isn't a __block__ — call_exists? counts the defp head and the `@spec helper(integer())` node as calls, so the rule reports the issue and then silently no-ops.
+
