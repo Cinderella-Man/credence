@@ -623,3 +623,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_process_whereis_with_pid_arg_fix_test.exs`
 - Reason: check/fix disjoint — match? fires only on the generic "cannot compile module (errors have been logged)" wrapper, but the target `case Process.whereis(self())` guard compiles fine (verified) and emits zero compile diagnostics, so match? can never legitimately fire on it; the rule only triggers on unrelated compile failures where the fix (stripping the guard) never resolves the flagged diagnostic. Same family defect as rejected 2217cb1/e88a273/c35d48e/8374476/1cc8203; no safe narrow core.
 
+## no_raise_in_handle_call — 2026-07-23
+- Files:
+  - `lib/semantic/no_raise_in_handle_call.ex`
+  - `test/semantic/no_raise_in_handle_call_check_test.exs`
+  - `test/semantic/no_raise_in_handle_call_fix_test.exs`
+- Reason: fabricated diagnostic — match? fires only on the invented message "raise in handle_call — use {:reply, {:error, msg}, state} instead" which the Elixir compiler never emits (verified: raise in handle_call compiles cleanly, only unused-var + missing-init/1 diagnostics appear); rule is dead in production, no real diagnostic to hook onto, no safe narrow core. Same family as rejected disjoint/fabricated-diagnostic rules.
+
