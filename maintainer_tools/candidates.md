@@ -1,4 +1,3 @@
-lib/semantic/no_guard_before_validation.ex
 lib/semantic/no_hallucinated_agent_update_and.ex
 lib/semantic/no_hallucinated_base_hex_encode.ex
 lib/semantic/no_hallucinated_crypto_compare.ex
@@ -150,8 +149,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_guard_before_validation_check_test.exs
-test/semantic/no_guard_before_validation_fix_test.exs
 test/semantic/no_hallucinated_agent_update_and_check_test.exs
 test/semantic/no_hallucinated_agent_update_and_fix_test.exs
 test/semantic/no_hallucinated_base_hex_encode_check_test.exs

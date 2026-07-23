@@ -364,3 +364,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_genserver_tuple_piped_to_state_fn_fix_test.exs`
 - Reason: dead rule — match?/1 keys on a fabricated message ("GenServer reply tuple piped into helper function") the Elixir compiler never emits; piping a reply tuple into a helper is valid code (runtime BadMapError, Code.with_diagnostics returns only an unrelated @impl warning), so no message-keyed semantic rule can match it. Same class as 6374a54/1ab7d66/282488a; belongs to a pattern/AST rule, out of set scope.
 
+## no_guard_before_validation — 2026-07-23
+- Files:
+  - `lib/semantic/no_guard_before_validation.ex`
+  - `test/semantic/no_guard_before_validation_check_test.exs`
+  - `test/semantic/no_guard_before_validation_fix_test.exs`
+- Reason: dead rule — match?/1 keys on a fabricated message ("guard duplicates body validation") the Elixir compiler never emits; a comparison guard alongside a body `unless … raise` is valid code (Code.with_diagnostics returns 0 diagnostics), so no message-keyed semantic rule can ever match it. Same class as 6374a54/1ab7d66/282488a; the smell belongs to a pattern/AST rule, out of set scope.
+
