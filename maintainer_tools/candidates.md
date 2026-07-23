@@ -1,4 +1,3 @@
-lib/semantic/fix_keyword_double_colon.ex
 lib/semantic/fix_local_function_in_guard.ex
 lib/semantic/fix_map_fetch_none_clause.ex
 lib/semantic/fix_mixed_arities_in_anon_fn.ex
@@ -212,8 +211,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_keyword_double_colon_check_test.exs
-test/semantic/fix_keyword_double_colon_fix_test.exs
 test/semantic/fix_local_function_in_guard_check_test.exs
 test/semantic/fix_local_function_in_guard_fix_test.exs
 test/semantic/fix_map_fetch_none_clause_check_test.exs
