@@ -175,3 +175,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_undefined_underscored_binding_fix_test.exs`
 - Reason: dead in production — accepted FixCaseBranchAssignmentScope.match? claims every `undefined variable "name"` error and sorts first (C<U, both priority 500), so Enum.find (first-wins, no fall-through) routes this diagnostic to it (empirically confirmed) and this rule never fires; its no-op fix leaves the underscore bug unfixed. Deconflicting needs a shared lib/semantic.ex change.
 
+## fix_undefined_variable_in_equality — 2026-07-23
+- Files:
+  - `lib/semantic/fix_undefined_variable_in_equality.ex`
+  - `test/semantic/fix_undefined_variable_in_equality_check_test.exs`
+  - `test/semantic/fix_undefined_variable_in_equality_fix_test.exs`
+- Reason: dead in production — FixCaseBranchAssignmentScope.match? claims every `undefined variable "name"` and sorts first (C<U, both priority 500), so Enum.find (first-wins) routes the diagnostic to it and this rule never fires; its no-op fix leaves the equality bug unfixed. Deconflicting needs a shared lib/semantic.ex change.
+
