@@ -602,3 +602,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_process_send_after_literal_infinity_fix_test.exs`
 - Reason: check/fix disjoint — match? fires on the unrelated "variable X in code block has no effect as it is never returned" dead-variable warning (correct fix: remove var or bind to _), but fix/2 rewrites Process.send_after(...,variable) calls, which emit zero compile diagnostics (verified). The flagged diagnostic is never resolved and the fix's real target can never legitimately trigger match?. Same disjoint-domain defect already rejected for sibling no_process_send_after_infinity (2217cb1); no safe narrow core.
 
+## no_process_send_after_with_variable_infinity — 2026-07-23
+- Files:
+  - `lib/semantic/no_process_send_after_with_variable_infinity.ex`
+  - `test/semantic/no_process_send_after_with_variable_infinity_check_test.exs`
+  - `test/semantic/no_process_send_after_with_variable_infinity_fix_test.exs`
+- Reason: check/fix disjoint (same family as rejected 2217cb1/e88a273) — match? fires on the unrelated "invalid args for &" capture CompileError (correct fix: fix the & capture syntax), but fix/2 rewrites Process.send_after(...,variable) calls, which emit zero compile diagnostics (verified); so the flagged error is never resolved and the fix's real target can never legitimately trigger match?. match? also monopolizes every genuine &-capture error via first-match (no should_report?/2). A semantic rule needs a diagnostic to hook onto and the target produces none — no safe narrow core.
+
