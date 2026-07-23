@@ -224,3 +224,10 @@ so a future scan won't re-flag it.
   - `test/semantic/no_agent_update_tuple_wrapper_fix_test.exs`
 - Reason: dead in production — keys on fabricated message "Agent.update callback should return new state, not {:ok, state}" that the Elixir compiler never emits (verified: 0 diagnostics), so semantic phase (compile_and_capture/with_diagnostics only) never routes a real diagnostic to match?; making it live needs a shared-file custom-analyzer change.
 
+## no_atom_position_in_list_key_functions — 2026-07-23
+- Files:
+  - `lib/semantic/no_atom_position_in_list_key_functions.ex`
+  - `test/semantic/no_atom_position_in_list_key_functions_check_test.exs`
+  - `test/semantic/no_atom_position_in_list_key_functions_fix_test.exs`
+- Reason: dead in production — match? keys on "redefining module" but the atom-position bug emits "incompatible types given to List.keytake/3" (verified), so the rule never fires on its target; and the fix diverges anyway (Enum.reject removes ALL matches / t.field map access vs keytake removing the FIRST via tuple position), so there is no safe same-answer core to re-aim it to.
+

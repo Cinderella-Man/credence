@@ -1,4 +1,3 @@
-lib/semantic/no_atom_position_in_list_key_functions.ex
 lib/semantic/no_bare_function_def_syntax.ex
 lib/semantic/no_bare_return_in_genserver_init.ex
 lib/semantic/no_bare_return_in_unless.ex
@@ -176,8 +175,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/no_atom_position_in_list_key_functions_check_test.exs
-test/semantic/no_atom_position_in_list_key_functions_fix_test.exs
 test/semantic/no_bare_function_def_syntax_check_test.exs
 test/semantic/no_bare_function_def_syntax_fix_test.exs
 test/semantic/no_bare_return_in_genserver_init_check_test.exs
