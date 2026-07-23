@@ -77,3 +77,10 @@ so a future scan won't re-flag it.
   - `test/semantic/fix_deprecated_map_map_fix_test.exs`
 - Reason: fix changes the answer on every input it rewrites — Map.map/2's callback returns the new value while Map.new/2's must return a {k, v} pair, so the rename-only rewrite is wrong even on its own test case (verified: Map.map gives %{a: {:a, [3,2,1]}}, Map.new gives %{a: [3,2,1]}); the correct wrapped rewrite (Map.new(m, fn {k, v} -> {k, body} end)) still breaks struct receivers (Map.map(%URI{}, f) works, Map.new raises Protocol.UndefinedError — verified) and the exact :maps.map alternative changes exception class on non-maps; moreover the diagnostic is already claimed by accepted UndefinedFunction (its regex matches every "Mod.fun/arity is deprecated" warning; at equal priority 500 this rule sorts first — FixDeprecatedMapMap < UndefinedFunction — and would steal the diagnostic, suppressing/renaming that rule's reported issue), so the proper home is a new wrap-callback replacement type in UndefinedFunction's @qualified_replacements — an out-of-set change; the only bulletproof standalone core (plain map-literal receiver, literal non-__struct__ keys, single-clause fn with plain-var key) is too narrow to justify the dispatch takeover.
 
+## fix_ets_match_spec_atom_variables — 2026-07-23
+- Files:
+  - `lib/semantic/fix_ets_match_spec_atom_variables.ex`
+  - `test/semantic/fix_ets_match_spec_atom_variables_check_test.exs`
+  - `test/semantic/fix_ets_match_spec_atom_variables_fix_test.exs`
+- Reason: premise inverted — :'$1' is a valid Elixir atom and the CORRECT ETS match spec variable (≡ :"$1"), while ~c"$1" is the literal charlist [36,49]; verified the fix breaks working selects (atom spec returns [true], charlist spec returns [] on the same table) and is an atom→charlist type change; the fix-test input already parses (rule rewrites never-broken code) and :'$N' cannot produce the "unexpected token: $" diagnostic it claims to fix, so no safe core exists under this rule's design
+
