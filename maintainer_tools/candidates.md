@@ -1,4 +1,3 @@
-lib/semantic/fix_task_ref_field_access.ex
 lib/semantic/fix_truncated_special_form.ex
 lib/semantic/fix_undefined_nested_module_struct.ex
 lib/semantic/fix_undefined_params_in_plug_router.ex
@@ -191,8 +190,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/fix_task_ref_field_access_check_test.exs
-test/semantic/fix_task_ref_field_access_fix_test.exs
 test/semantic/fix_truncated_special_form_check_test.exs
 test/semantic/fix_truncated_special_form_fix_test.exs
 test/semantic/fix_undefined_nested_module_struct_check_test.exs
