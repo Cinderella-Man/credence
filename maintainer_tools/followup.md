@@ -782,3 +782,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_div_rem_test.exs`
 - Reason: right-operand regex `(\w+|\([^)]*\))` regresses call/dotted right operands — `x = total div length(list)` now yields `div(total, length)(list)` (and `a div b.c` → `div(a, b).c`), which the accepted rest-of-line version got right; nested calls like `div a, f(g(b))` can't be covered by that alternation either.
 
+## fix_do_equals_keyword_syntax — 2026-07-24
+- Files:
+  - `lib/syntax/fix_do_equals_keyword_syntax.ex`
+  - `test/syntax/fix_do_equals_keyword_syntax_analyze_test.exs`
+  - `test/syntax/fix_do_equals_keyword_syntax_fix_test.exs`
+- Reason: duplicate/dead — accepted FixDoBlockFusion's `@comma_do_midline` already claims `, do <expr>` and runs first (same priority 500, "FixDoB" < "FixDoE"), rewriting `def f(x), do = x + 1` to `, do: = x + 1` so this rule's regex never matches in the pipeline; the correct fold is into FixDoBlockFusion (out of set). Its own compound branch is also unsafe: `for x <- l, do = x + 1 do\n  result\nend` silently DELETES the block body `result`, and the branch is exclusive — a file with both forms leaves the plain `, do = x - 1` unfixed yet still flagged (check/fix disagree, output still doesn't parse).
+
