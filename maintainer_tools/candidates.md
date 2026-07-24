@@ -1,4 +1,3 @@
-lib/syntax/fix_oop_style_method_call_syntax.ex
 lib/syntax/fix_pin_on_non_variable.ex
 lib/syntax/fix_python_format_in_string_interpolation.ex
 lib/syntax/fix_python_spread_in_map.ex
@@ -40,8 +39,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/fix_oop_style_method_call_syntax_analyze_test.exs
-test/syntax/fix_oop_style_method_call_syntax_fix_test.exs
 test/syntax/fix_pin_on_non_variable_analyze_test.exs
 test/syntax/fix_pin_on_non_variable_fix_test.exs
 test/syntax/fix_python_format_in_string_interpolation_analyze_test.exs

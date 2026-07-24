@@ -817,3 +817,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_mixed_required_optional_map_keys_fix_test.exs`
 - Reason: fix/1 regex `%\{.*?optional\(/s` runs on every unparseable file (no analyze gate) and spans from the first `%{` to the first `optional(` across the whole file — corrupts earlier valid maps, `optional()` function calls, and string/comment/heredoc contents (all confirmed). Same class as sibling fix_map_arrow_in_list_bracket; needs a re-author with string/comment/heredoc discipline and single-map boundary detection, not a narrow.
 
+## fix_oop_style_method_call_syntax — 2026-07-24
+- Files:
+  - `lib/syntax/fix_oop_style_method_call_syntax.ex`
+  - `test/syntax/fix_oop_style_method_call_syntax_analyze_test.exs`
+  - `test/syntax/fix_oop_style_method_call_syntax_fix_test.exs`
+- Reason: false premise — `foo.bar?(foo)` is valid parseable Elixir (1-arg call `foo.bar?/1`), not a syntax error; the "fix" to `foo.bar?` drops the arg → 0-arg access, never the same answer, so no safe narrow core; also same unguarded global-regex class as sibling syntax rules — fix/1 corrupts valid `foo.bar?(foo)` occurrences in any file that fails to parse for an unrelated reason (demonstrated).
+
