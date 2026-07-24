@@ -1,4 +1,3 @@
-lib/semantic/require_defmodule_wrapper.ex
 lib/semantic/undefined_function.ex
 lib/semantic/unused_variable.ex
 lib/syntax/close_unclosed_brace.ex

@@ -100,7 +100,6 @@ defmodule Credence.Semantic.RequireDefmoduleWrapper do
   end
 
   defp block_meta({:__block__, meta, _}), do: meta
-  defp block_meta(_), do: []
 
   # Finds the contiguous run of movable attrs immediately preceding the first
   # top-level `defmodule`. Returns {:ok, attrs, kept_before, defmodule, rest}.
