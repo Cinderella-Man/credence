@@ -852,3 +852,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_rescue_struct_pattern_fix_test.exs`
 - Reason: unguarded global-regex fix/1 runs on the whole source of every unparseable file (syntax.ex has no analyze gate) — the regex %([A-Za-z_]\w*)\s*-> rewrites `%Foo ->` text inside valid string literals/comments/sigils (e.g. "in Python you write %ValueError -> handler" → "...e in ValueError -> handler"), changing runtime value (confirmed). Same class as sibling syntax rules; distinguishing a real rescue-clause pattern from string/comment/sigil text on unparseable input (no AST) needs full lexing — a re-author, not a narrow.
 
+## fix_stray_comma_before_when_guard — 2026-07-24
+- Files:
+  - `lib/syntax/fix_stray_comma_before_when_guard.ex`
+  - `test/syntax/fix_stray_comma_before_when_guard_analyze_test.exs`
+  - `test/syntax/fix_stray_comma_before_when_guard_fix_test.exs`
+- Reason: unguarded global-regex fix/1 runs on the whole source of every unparseable file (syntax.ex has no analyze gate) and rewrites `),\s*when` inside valid string literals and comments — e.g. `@msg "call foo(x), when ready"` becomes `"call foo(x) when ready"`, changing the string's runtime value (confirmed). Same class as sibling syntax rules; safely distinguishing a real function-clause when-guard from `), when` inside a string/sigil/heredoc/comment on unparseable input (no AST) needs full lexing — a re-author, not a narrow.
+
