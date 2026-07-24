@@ -762,3 +762,10 @@ so a future scan won't re-flag it.
   - `test/semantic/undefined_function_qualified_fix_test.exs`
 - Reason: the delta hijacks the unrelated "single quotes around atoms are deprecated" warning (Elixir 1.20 emits it for `:'hello'`, verified) to drive an :ets.insert/3 rewrite, so match?/1 now returns true on that deprecation while fix/2 is a verified no-op on it (check/fix disagree on a real diagnostic), and on a line carrying both the deprecated atom and a 3-arg call it silently rewrites `:ets.insert(t, :'k', 1)` → `:ets.insert(t, {:'k', 1})` (verified through the rule's own fix/2) — a different call — while leaving the reported deprecation unfixed; meanwhile the genuine `:ets.insert/3` diagnostic is ":ets.insert/3 is undefined or private" (verified), which never reaches that code path. The Integer.is_even/1 addition is likewise mis-aimed: the compiler always appends "Be sure to require Integer" (verified for both `&Integer.is_even/1` and `Integer.is_even(n)`), so parse_require_hint always wins and the :capture_to_lambda branch is dead code — its three flagship tests pin a message the compiler never emits — while the live insert_require path no-ops whenever any other module in the file already contains `require Integer` (verified), disagreeing with check again.
 
+## fix_after_clause_pattern_arrow — 2026-07-24
+- Files:
+  - `lib/syntax/fix_after_clause_pattern_arrow.ex`
+  - `test/syntax/fix_after_clause_pattern_arrow_analyze_test.exs`
+  - `test/syntax/fix_after_clause_pattern_arrow_fix_test.exs`
+- Reason: wrong phase (target parses, so Syntax never runs it — Credence.analyze returns no issues on its own flagship input); fix output still fails to compile (undefined pattern vars), check/fix disagree on single-line `pat -> body`, and the blind first-`after`-line scan strips the timeout clause from a valid multiline `receive ... after 1000 ->` in the same file.
+
