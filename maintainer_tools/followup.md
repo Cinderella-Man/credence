@@ -824,3 +824,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_oop_style_method_call_syntax_fix_test.exs`
 - Reason: false premise — `foo.bar?(foo)` is valid parseable Elixir (1-arg call `foo.bar?/1`), not a syntax error; the "fix" to `foo.bar?` drops the arg → 0-arg access, never the same answer, so no safe narrow core; also same unguarded global-regex class as sibling syntax rules — fix/1 corrupts valid `foo.bar?(foo)` occurrences in any file that fails to parse for an unrelated reason (demonstrated).
 
+## fix_pin_on_non_variable — 2026-07-24
+- Files:
+  - `lib/syntax/fix_pin_on_non_variable.ex`
+  - `test/syntax/fix_pin_on_non_variable_analyze_test.exs`
+  - `test/syntax/fix_pin_on_non_variable_fix_test.exs`
+- Reason: False premise / wrong phase — `^{key}` parses fine (compile-time semantic error, not a parse error). The syntax phase (lib/syntax.ex) only runs rule analyze/fix when Sourceror.parse_string FAILS, but this rule's analyze/fix only produce output when it SUCCEEDS — mutually exclusive, so the rule is inert in the pipeline. Belongs in the semantic phase (out-of-scope shared change); green tests only pass by calling analyze/fix directly, bypassing the phase gate.
+
