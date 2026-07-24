@@ -1,4 +1,3 @@
-lib/syntax/fix_mismatched_closing_brace.ex
 lib/syntax/fix_mixed_required_optional_map_keys.ex
 lib/syntax/fix_oop_style_method_call_syntax.ex
 lib/syntax/fix_pin_on_non_variable.ex
@@ -42,8 +41,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/fix_mismatched_closing_brace_analyze_test.exs
-test/syntax/fix_mismatched_closing_brace_fix_test.exs
 test/syntax/fix_mixed_required_optional_map_keys_analyze_test.exs
 test/syntax/fix_mixed_required_optional_map_keys_fix_test.exs
 test/syntax/fix_oop_style_method_call_syntax_analyze_test.exs
