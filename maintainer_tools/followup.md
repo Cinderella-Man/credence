@@ -810,3 +810,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_map_arrow_in_list_bracket_fix_test.exs`
 - Reason: unguarded global regex fix/1 runs on every unparseable file (syntax.ex has no analyze gate) and corrupts valid code — e.g. `[%{atom() => any()}]` (list-of-maps spec) -> `[{%{atom(), any()}}]`, `[x, %{a => b}]` -> `[{x, %{a, b}}]`, rewrites comments/strings/heredocs, and the multi-pair `[a => b, c => d]` -> invalid `[{a, b, c => d}]`; needs the sibling's heredoc/comment/string discipline plus map-brace disambiguation (re-author, not a narrow).
 
+## fix_mixed_required_optional_map_keys — 2026-07-24
+- Files:
+  - `lib/syntax/fix_mixed_required_optional_map_keys.ex`
+  - `test/syntax/fix_mixed_required_optional_map_keys_analyze_test.exs`
+  - `test/syntax/fix_mixed_required_optional_map_keys_fix_test.exs`
+- Reason: fix/1 regex `%\{.*?optional\(/s` runs on every unparseable file (no analyze gate) and spans from the first `%{` to the first `optional(` across the whole file — corrupts earlier valid maps, `optional()` function calls, and string/comment/heredoc contents (all confirmed). Same class as sibling fix_map_arrow_in_list_bracket; needs a re-author with string/comment/heredoc discipline and single-map boundary detection, not a narrow.
+
