@@ -1,4 +1,3 @@
-lib/syntax/fix_extra_brace_in_ets_match.ex
 lib/syntax/fix_for_comprehension_in_keyword_value.ex
 lib/syntax/fix_if_inline_else_case_block.ex
 lib/syntax/fix_inline_keyword_if_in_with_clause.ex
@@ -50,8 +49,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/fix_extra_brace_in_ets_match_analyze_test.exs
-test/syntax/fix_extra_brace_in_ets_match_fix_test.exs
 test/syntax/fix_for_comprehension_in_keyword_value_analyze_test.exs
 test/syntax/fix_for_comprehension_in_keyword_value_fix_test.exs
 test/syntax/fix_if_inline_else_case_block_analyze_test.exs
