@@ -880,3 +880,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_when_guard_in_for_comprehension_fix_test.exs`
 - Reason: unguarded fix/1 runs on whole source of every unparseable file — new-line regex ^(\s+)when\s+ strips `when` from VALID multi-line function guards whenever any preceding line has a `for ... <-` (confirmed: `def b(x)\n  when x>0` -> `x>0`, guard broken), and same-line `, when` rewrites string-literal/moduledoc content containing a for-comprehension example; same class as accepted siblings, needs full lexing (re-author).
 
+## no_after_or_rescue_in_case — 2026-07-24
+- Files:
+  - `lib/syntax/no_after_or_rescue_in_case.ex`
+  - `test/syntax/no_after_or_rescue_in_case_analyze_test.exs`
+  - `test/syntax/no_after_or_rescue_in_case_fix_test.exs`
+- Reason: Wrong phase + inert — target `case … after … rescue … end` PARSES fine (compile-time "unexpected option :after in case" semantic error, not a parse error), so the syntax phase (which only runs rules on parse failure) never invokes it; probe confirmed Syntax.analyze=[] and Syntax.fix is a no-op. Green tests pass only by calling analyze/fix directly. Belongs in the semantic phase (shared/out-of-scope change); same class as fix_struct_field_assignment_syntax.
+
