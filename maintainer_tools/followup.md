@@ -776,3 +776,9 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_block_expression_as_pipe_left_fix_test.exs`
 - Reason: wrong phase — the flagship input parses, so Syntax never runs it (Credence.analyze returns valid: true, no issues) and Syntax.fix skips the pipeline; also check/fix disagree, as the `~r/\|>.*&\d/` line scan flags valid `xs |> Enum.map(&(&1 * 2))` that fix correctly refuses to touch.
 
+## fix_div_rem — 2026-07-24
+- Files:
+  - `lib/syntax/fix_div_rem.ex`
+  - `test/syntax/fix_div_rem_test.exs`
+- Reason: right-operand regex `(\w+|\([^)]*\))` regresses call/dotted right operands — `x = total div length(list)` now yields `div(total, length)(list)` (and `a div b.c` → `div(a, b).c`), which the accepted rest-of-line version got right; nested calls like `div a, f(g(b))` can't be covered by that alternation either.
+
