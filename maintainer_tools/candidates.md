@@ -1,4 +1,3 @@
-lib/syntax/no_atom_as_function_name.ex
 lib/syntax/no_bare_atom_in_genserver_start_link.ex
 lib/syntax/no_bare_case_in_map.ex
 lib/syntax/no_capture_as_identity_function.ex
@@ -28,8 +27,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/no_atom_as_function_name_analyze_test.exs
-test/syntax/no_atom_as_function_name_fix_test.exs
 test/syntax/no_bare_atom_in_genserver_start_link_analyze_test.exs
 test/syntax/no_bare_atom_in_genserver_start_link_fix_test.exs
 test/syntax/no_bare_case_in_map_analyze_test.exs
