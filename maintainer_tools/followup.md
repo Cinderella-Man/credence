@@ -873,3 +873,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_truncated_module_reference_fix_test.exs`
 - Reason: unguarded global-regex fix/1 runs on the whole source of every unparseable file (syntax.ex has no analyze gate) and rewrites the literal `__MODULE%` inside valid string literals/comments — e.g. `@template "render __MODULE% placeholder"` becomes `"render __MODULE__ placeholder"`, changing the string's runtime value (confirmed) without repairing the real parse error. Same class as sibling syntax rules; distinguishing a real code `__MODULE%` from string/comment/sigil text on unparseable input (no AST) needs full lexing — a re-author, not a narrow.
 
+## fix_when_guard_in_for_comprehension — 2026-07-24
+- Files:
+  - `lib/syntax/fix_when_guard_in_for_comprehension.ex`
+  - `test/syntax/fix_when_guard_in_for_comprehension_analyze_test.exs`
+  - `test/syntax/fix_when_guard_in_for_comprehension_fix_test.exs`
+- Reason: unguarded fix/1 runs on whole source of every unparseable file — new-line regex ^(\s+)when\s+ strips `when` from VALID multi-line function guards whenever any preceding line has a `for ... <-` (confirmed: `def b(x)\n  when x>0` -> `x>0`, guard broken), and same-line `, when` rewrites string-literal/moduledoc content containing a for-comprehension example; same class as accepted siblings, needs full lexing (re-author).
+
