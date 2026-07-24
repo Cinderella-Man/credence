@@ -1,4 +1,3 @@
-lib/syntax/close_unclosed_brace.ex
 lib/syntax/fix_after_clause_pattern_arrow.ex
 lib/syntax/fix_assignment_dot_syntax.ex
 lib/syntax/fix_bare_tuple_zero_in_type.ex
@@ -61,8 +60,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/close_unclosed_brace_analyze_test.exs
-test/syntax/close_unclosed_brace_fix_test.exs
 test/syntax/fix_after_clause_pattern_arrow_analyze_test.exs
 test/syntax/fix_after_clause_pattern_arrow_fix_test.exs
 test/syntax/fix_assignment_dot_syntax_analyze_test.exs
