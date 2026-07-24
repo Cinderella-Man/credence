@@ -831,3 +831,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_pin_on_non_variable_fix_test.exs`
 - Reason: False premise / wrong phase — `^{key}` parses fine (compile-time semantic error, not a parse error). The syntax phase (lib/syntax.ex) only runs rule analyze/fix when Sourceror.parse_string FAILS, but this rule's analyze/fix only produce output when it SUCCEEDS — mutually exclusive, so the rule is inert in the pipeline. Belongs in the semantic phase (out-of-scope shared change); green tests only pass by calling analyze/fix directly, bypassing the phase gate.
 
+## fix_python_format_in_string_interpolation — 2026-07-24
+- Files:
+  - `lib/syntax/fix_python_format_in_string_interpolation.ex`
+  - `test/syntax/fix_python_format_in_string_interpolation_analyze_test.exs`
+  - `test/syntax/fix_python_format_in_string_interpolation_fix_test.exs`
+- Reason: unguarded global-regex fix/1 runs on every unparseable file (syntax.ex has no analyze gate) and corrupts valid code — the literal `#{name:02}` inside a non-interpolating `~S` sigil (and inside `#` comments) is rewritten, changing the string's runtime value (confirmed). Same class as sibling syntax rules; distinguishing real `"..."` interpolation from literal sigil/comment text needs string/heredoc/sigil lexing on unparseable input (no AST) — a re-author, not a narrow.
+
