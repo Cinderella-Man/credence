@@ -859,3 +859,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_stray_comma_before_when_guard_fix_test.exs`
 - Reason: unguarded global-regex fix/1 runs on the whole source of every unparseable file (syntax.ex has no analyze gate) and rewrites `),\s*when` inside valid string literals and comments — e.g. `@msg "call foo(x), when ready"` becomes `"call foo(x) when ready"`, changing the string's runtime value (confirmed). Same class as sibling syntax rules; safely distinguishing a real function-clause when-guard from `), when` inside a string/sigil/heredoc/comment on unparseable input (no AST) needs full lexing — a re-author, not a narrow.
 
+## fix_struct_field_assignment_syntax — 2026-07-24
+- Files:
+  - `lib/syntax/fix_struct_field_assignment_syntax.ex`
+  - `test/syntax/fix_struct_field_assignment_syntax_analyze_test.exs`
+  - `test/syntax/fix_struct_field_assignment_syntax_fix_test.exs`
+- Reason: Wrong phase + inert — target `left.right = node` PARSES fine (compile-time semantic error, not a parse error), so the syntax phase (which only runs on parse failure) never invokes it; green tests only pass by calling analyze/fix directly. When it does run on files unparseable for other reasons, the unguarded global regex rewrites `var.field = expr` inside string literals/heredocs (`server.host = localhost` → `server = %{server | host: localhost}`), changing runtime values. Moving to the semantic phase is a shared/out-of-scope change; safe text/code separation needs full lexing (re-author).
+
