@@ -803,3 +803,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_if_inline_else_case_block_fix_test.exs`
 - Reason: wrong phase — `if c, do: v, else:` + multi-line `case` parses fine (Sourceror :ok), so the Syntax round (only runs when parsing fails) never reaches it; verified `Credence.Syntax.analyze/fix` are no-ops on the rule's own test input. On a file broken elsewhere the line regexes rewrite non-code text (confirmed: it rewrote the bad-shape example inside a `@moduledoc` heredoc). Belongs in the Pattern round as an AST rule on the broken `if/3` node (new file, outside this set).
 
+## fix_map_arrow_in_list_bracket — 2026-07-24
+- Files:
+  - `lib/syntax/fix_map_arrow_in_list_bracket.ex`
+  - `test/syntax/fix_map_arrow_in_list_bracket_analyze_test.exs`
+  - `test/syntax/fix_map_arrow_in_list_bracket_fix_test.exs`
+- Reason: unguarded global regex fix/1 runs on every unparseable file (syntax.ex has no analyze gate) and corrupts valid code — e.g. `[%{atom() => any()}]` (list-of-maps spec) -> `[{%{atom(), any()}}]`, `[x, %{a => b}]` -> `[{x, %{a, b}}]`, rewrites comments/strings/heredocs, and the multi-pair `[a => b, c => d]` -> invalid `[{a, b, c => d}]`; needs the sibling's heredoc/comment/string discipline plus map-brace disambiguation (re-author, not a narrow).
+
