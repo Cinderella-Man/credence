@@ -1,4 +1,3 @@
-lib/syntax/fix_inline_keyword_if_in_with_clause.ex
 lib/syntax/fix_keyword_before_positional_argument.ex
 lib/syntax/fix_keyword_block_as_function_arg.ex
 lib/syntax/fix_keyword_list_colon_syntax.ex
@@ -47,8 +46,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/fix_inline_keyword_if_in_with_clause_analyze_test.exs
-test/syntax/fix_inline_keyword_if_in_with_clause_fix_test.exs
 test/syntax/fix_keyword_before_positional_argument_analyze_test.exs
 test/syntax/fix_keyword_before_positional_argument_fix_test.exs
 test/syntax/fix_keyword_block_as_function_arg_analyze_test.exs
