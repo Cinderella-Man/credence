@@ -1,4 +1,3 @@
-lib/syntax/fix_block_expression_as_pipe_left.ex
 lib/syntax/fix_capture_operator_syntax.ex
 lib/syntax/fix_div_rem.ex
 lib/syntax/fix_do_equals_keyword_syntax.ex
@@ -57,8 +56,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/fix_block_expression_as_pipe_left_analyze_test.exs
-test/syntax/fix_block_expression_as_pipe_left_fix_test.exs
 test/syntax/fix_capture_operator_syntax_analyze_test.exs
 test/syntax/fix_capture_operator_syntax_fix_test.exs
 test/syntax/fix_div_rem_test.exs

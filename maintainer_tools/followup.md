@@ -769,3 +769,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_after_clause_pattern_arrow_fix_test.exs`
 - Reason: wrong phase (target parses, so Syntax never runs it — Credence.analyze returns no issues on its own flagship input); fix output still fails to compile (undefined pattern vars), check/fix disagree on single-line `pat -> body`, and the blind first-`after`-line scan strips the timeout clause from a valid multiline `receive ... after 1000 ->` in the same file.
 
+## fix_block_expression_as_pipe_left — 2026-07-24
+- Files:
+  - `lib/syntax/fix_block_expression_as_pipe_left.ex`
+  - `test/syntax/fix_block_expression_as_pipe_left_analyze_test.exs`
+  - `test/syntax/fix_block_expression_as_pipe_left_fix_test.exs`
+- Reason: wrong phase — the flagship input parses, so Syntax never runs it (Credence.analyze returns valid: true, no issues) and Syntax.fix skips the pipeline; also check/fix disagree, as the `~r/\|>.*&\d/` line scan flags valid `xs |> Enum.map(&(&1 * 2))` that fix correctly refuses to touch.
+
