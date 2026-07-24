@@ -1,4 +1,3 @@
-lib/semantic/unused_variable.ex
 lib/syntax/close_unclosed_brace.ex
 lib/syntax/fix_after_clause_pattern_arrow.ex
 lib/syntax/fix_assignment_dot_syntax.ex
@@ -62,7 +61,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/unused_variable_test.exs
 test/syntax/close_unclosed_brace_analyze_test.exs
 test/syntax/close_unclosed_brace_fix_test.exs
 test/syntax/fix_after_clause_pattern_arrow_analyze_test.exs
