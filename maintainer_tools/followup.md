@@ -789,3 +789,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_do_equals_keyword_syntax_fix_test.exs`
 - Reason: duplicate/dead — accepted FixDoBlockFusion's `@comma_do_midline` already claims `, do <expr>` and runs first (same priority 500, "FixDoB" < "FixDoE"), rewriting `def f(x), do = x + 1` to `, do: = x + 1` so this rule's regex never matches in the pipeline; the correct fold is into FixDoBlockFusion (out of set). Its own compound branch is also unsafe: `for x <- l, do = x + 1 do\n  result\nend` silently DELETES the block body `result`, and the branch is exclusive — a file with both forms leaves the plain `, do = x - 1` unfixed yet still flagged (check/fix disagree, output still doesn't parse).
 
+## fix_ets_options_bare_keypos — 2026-07-24
+- Files:
+  - `lib/syntax/fix_ets_options_bare_keypos.ex`
+  - `test/syntax/fix_ets_options_bare_keypos_analyze_test.exs`
+  - `test/syntax/fix_ets_options_bare_keypos_fix_test.exs`
+- Reason: wrong phase + silently corrupts valid code — `:ets.new(t, [:set, :keypos, 1])` parses fine so the Syntax round (only runs when Sourceror fails) never reaches it; on a file broken elsewhere the line regex rewrites valid `Keyword.get(opts, :keypos, 1)`/`Map.get(m, :keypos, 0)` into 2-arg tuple calls, `def handle(:keypos, 1)` into arity-1, and `{ :keypos, 1}` (space) into `{ {:keypos, 1}}` — all still parse, so the damage is silent; belongs in the Pattern round as an AST rule on `:ets.new/2` args (new file, outside this set).
+
