@@ -887,3 +887,10 @@ so a future scan won't re-flag it.
   - `test/syntax/no_after_or_rescue_in_case_fix_test.exs`
 - Reason: Wrong phase + inert — target `case … after … rescue … end` PARSES fine (compile-time "unexpected option :after in case" semantic error, not a parse error), so the syntax phase (which only runs rules on parse failure) never invokes it; probe confirmed Syntax.analyze=[] and Syntax.fix is a no-op. Green tests pass only by calling analyze/fix directly. Belongs in the semantic phase (shared/out-of-scope change); same class as fix_struct_field_assignment_syntax.
 
+## no_arrow_operator_outside_comprehension — 2026-07-24
+- Files:
+  - `lib/syntax/no_arrow_operator_outside_comprehension.ex`
+  - `test/syntax/no_arrow_operator_outside_comprehension_analyze_test.exs`
+  - `test/syntax/no_arrow_operator_outside_comprehension_fix_test.exs`
+- Reason: Wrong phase + inert — `<-` outside for/with PARSES fine (compile-time "undefined function <-/2" semantic error, not a parse error), so the syntax phase (runs rules only on parse failure) never invokes it; confirmed test input parses_ok=true so Syntax.analyze=[]/Syntax.fix is a no-op. Compounding: the rule's own find_standalone_arrows needs Sourceror.parse_string to SUCCEED, so on the unparseable inputs the phase does run it on, it's a no-op. Green tests pass only by calling analyze/fix directly. Belongs in the semantic phase (shared/out-of-scope change); same class as no_after_or_rescue_in_case and fix_struct_field_assignment_syntax.
+
