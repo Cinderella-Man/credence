@@ -1,4 +1,3 @@
-lib/syntax/no_after_in_anon_fn.ex
 lib/syntax/no_after_or_rescue_in_case.ex
 lib/syntax/no_arrow_operator_outside_comprehension.ex
 lib/syntax/no_atom_as_function_name.ex
@@ -31,8 +30,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/no_after_in_anon_fn_analyze_test.exs
-test/syntax/no_after_in_anon_fn_fix_test.exs
 test/syntax/no_after_or_rescue_in_case_analyze_test.exs
 test/syntax/no_after_or_rescue_in_case_fix_test.exs
 test/syntax/no_arrow_operator_outside_comprehension_analyze_test.exs
