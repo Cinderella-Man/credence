@@ -901,3 +901,10 @@ so a future scan won't re-flag it.
   - `test/syntax/no_atom_as_function_name_fix_test.exs`
 - Reason: unguarded global-regex fix/1 (no parse gate, no error-location targeting) runs on the whole source of every unparseable file and rewrites `:word(` inside valid string literals/comments — confirmed `"see :setup(opts)"` -> `"see setup(opts)"`, changing the string's runtime value; target is a real parse error (correct phase, unlike recent siblings) but a safe version needs parser-error-location targeting/lexing to tell code from string/comment on unparseable input — a re-author, not a narrow.
 
+## no_bare_atom_in_genserver_start_link — 2026-07-24
+- Files:
+  - `lib/syntax/no_bare_atom_in_genserver_start_link.ex`
+  - `test/syntax/no_bare_atom_in_genserver_start_link_analyze_test.exs`
+  - `test/syntax/no_bare_atom_in_genserver_start_link_fix_test.exs`
+- Reason: Wrong phase + inert — target GenServer.start_link with bare-atom/`||` third arg PARSES fine (runtime FunctionClauseError, not a parse error), so the syntax phase (runs rules only on parse failure) never invokes it; Credence.Syntax.analyze=[]/fix is a no-op on the target. Rule's own analyze/fix also require parse success, so it's doubly inert. Green tests pass only by calling the module directly. Belongs in the semantic phase (shared/out-of-scope re-author); same class as no_arrow_operator_outside_comprehension / no_after_or_rescue_in_case.
+
