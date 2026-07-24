@@ -748,3 +748,10 @@ so a future scan won't re-flag it.
   - `test/semantic/prefer_explicit_range_step_fix_test.exs`
 - Reason: the //1 special case inverts the fix's safety — `3..-1` already IS `3..-1//-1` (verified `3..-1 === 3..-1//-1` is true, struct step: -1, and the compiler itself says "please write 3..-1//-1"), so `//-1` was the byte-identical no-op and `//1` is the value change; the rule patches every descending literal range in the file with no notion of context, so verified through the real Credence.Semantic.fix `def f, do: Enum.sum(3..-1)` becomes `Enum.sum(3..-1//1)`, changing the answer from 5 to 0 (`Enum.to_list`: `[3,2,1,0,-1]` → `[]`) — the delta's own tests miss this because String.slice/Enum.slice back-compat makes all three step forms coincide there, the only context where its premise holds.
 
+## prefer_pattern_match_for_non_empty_list — 2026-07-24
+- Files:
+  - `lib/semantic/prefer_pattern_match_for_non_empty_list.ex`
+  - `test/semantic/prefer_pattern_match_for_non_empty_list_check_test.exs`
+  - `test/semantic/prefer_pattern_match_for_non_empty_list_fix_test.exs`
+- Reason: no same-answer fix exists (`[_ | _] = items` matches improper lists that `length(items) > 0` rejects — verified `case [1 | 2]` flips :other -> {:nonempty, [1|2]}), and the fix discards the clause pattern entirely, so `{a, items} when length(items) > 0 -> {a, items}` is rewritten to `[_ | _] = items -> {a, items}` (verified via the rule's own fix/2), which no longer matches a tuple and leaves `a` undefined; check/fix also disagree by construction since match?/1 sees only the message and flags `def f(x) when length(x) > 0` and `is_list(x) and length(x) > 0`, both of which fix/2 leaves untouched (verified).
+
