@@ -1,4 +1,3 @@
-lib/syntax/no_bare_case_in_map.ex
 lib/syntax/no_capture_as_identity_function.ex
 lib/syntax/no_case_closed_with_brace.ex
 lib/syntax/no_catch_after_anon_fn.ex
@@ -26,8 +25,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/no_bare_case_in_map_analyze_test.exs
-test/syntax/no_bare_case_in_map_fix_test.exs
 test/syntax/no_capture_as_identity_function_analyze_test.exs
 test/syntax/no_capture_as_identity_function_fix_test.exs
 test/syntax/no_case_closed_with_brace_analyze_test.exs
