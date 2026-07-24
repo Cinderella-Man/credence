@@ -915,3 +915,10 @@ so a future scan won't re-flag it.
   - `test/syntax/no_bare_case_in_map_fix_test.exs`
 - Reason: Wrong phase + inert — bare `case` in a map literal PARSES fine (syntactically valid, non-idiomatic only), so the syntax phase (runs rules only on parse failure) never invokes it; probe confirms Credence.Syntax.analyze=[]/fix is a no-op on the target. Rule's own analyze/fix also require parse success, so it's doubly inert. Green tests pass only by calling the module directly. Belongs in the semantic/pattern phase (shared/out-of-scope re-author); same class as no_arrow_operator_outside_comprehension / no_after_or_rescue_in_case.
 
+## no_capture_as_identity_function — 2026-07-24
+- Files:
+  - `lib/syntax/no_capture_as_identity_function.ex`
+  - `test/syntax/no_capture_as_identity_function_analyze_test.exs`
+  - `test/syntax/no_capture_as_identity_function_fix_test.exs`
+- Reason: Wrong phase + inert — bare `&identifier` PARSES fine (compile-time "invalid args for &", not a parse error), so the syntax phase (runs rules only on parse failure) never invokes it; probe confirms Sourceror.parse_string={:ok,_}, Credence.Syntax.analyze=[] and Syntax.fix is a no-op on the target. Docstring's "always fails to parse" claim is false. Green tests pass only by calling analyze/fix directly. Belongs in the semantic phase; same class as no_arrow_operator_outside_comprehension / no_after_or_rescue_in_case.
+
