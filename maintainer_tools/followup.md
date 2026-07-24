@@ -755,3 +755,10 @@ so a future scan won't re-flag it.
   - `test/semantic/prefer_pattern_match_for_non_empty_list_fix_test.exs`
 - Reason: no same-answer fix exists (`[_ | _] = items` matches improper lists that `length(items) > 0` rejects — verified `case [1 | 2]` flips :other -> {:nonempty, [1|2]}), and the fix discards the clause pattern entirely, so `{a, items} when length(items) > 0 -> {a, items}` is rewritten to `[_ | _] = items -> {a, items}` (verified via the rule's own fix/2), which no longer matches a tuple and leaves `a` undefined; check/fix also disagree by construction since match?/1 sees only the message and flags `def f(x) when length(x) > 0` and `is_list(x) and length(x) > 0`, both of which fix/2 leaves untouched (verified).
 
+## undefined_function — 2026-07-24
+- Files:
+  - `lib/semantic/undefined_function.ex`
+  - `test/semantic/undefined_function_check_test.exs`
+  - `test/semantic/undefined_function_qualified_fix_test.exs`
+- Reason: the delta hijacks the unrelated "single quotes around atoms are deprecated" warning (Elixir 1.20 emits it for `:'hello'`, verified) to drive an :ets.insert/3 rewrite, so match?/1 now returns true on that deprecation while fix/2 is a verified no-op on it (check/fix disagree on a real diagnostic), and on a line carrying both the deprecated atom and a 3-arg call it silently rewrites `:ets.insert(t, :'k', 1)` → `:ets.insert(t, {:'k', 1})` (verified through the rule's own fix/2) — a different call — while leaving the reported deprecation unfixed; meanwhile the genuine `:ets.insert/3` diagnostic is ":ets.insert/3 is undefined or private" (verified), which never reaches that code path. The Integer.is_even/1 addition is likewise mis-aimed: the compiler always appends "Be sure to require Integer" (verified for both `&Integer.is_even/1` and `Integer.is_even(n)`), so parse_require_hint always wins and the :capture_to_lambda branch is dead code — its three flagship tests pin a message the compiler never emits — while the live insert_require path no-ops whenever any other module in the file already contains `require Integer` (verified), disagreeing with check again.
+
