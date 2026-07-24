@@ -1,4 +1,3 @@
-lib/semantic/prefer_explicit_range_step.ex
 lib/semantic/prefer_pattern_match_for_non_empty_list.ex
 lib/semantic/prefer_rescue_before_catch.ex
 lib/semantic/require_defmodule_wrapper.ex
@@ -67,7 +66,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/semantic/prefer_explicit_range_step_fix_test.exs
 test/semantic/prefer_pattern_match_for_non_empty_list_check_test.exs
 test/semantic/prefer_pattern_match_for_non_empty_list_fix_test.exs
 test/semantic/prefer_rescue_before_catch_check_test.exs
