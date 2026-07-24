@@ -838,3 +838,10 @@ so a future scan won't re-flag it.
   - `test/syntax/fix_python_format_in_string_interpolation_fix_test.exs`
 - Reason: unguarded global-regex fix/1 runs on every unparseable file (syntax.ex has no analyze gate) and corrupts valid code — the literal `#{name:02}` inside a non-interpolating `~S` sigil (and inside `#` comments) is rewritten, changing the string's runtime value (confirmed). Same class as sibling syntax rules; distinguishing real `"..."` interpolation from literal sigil/comment text needs string/heredoc/sigil lexing on unparseable input (no AST) — a re-author, not a narrow.
 
+## fix_python_spread_in_map — 2026-07-24
+- Files:
+  - `lib/syntax/fix_python_spread_in_map.ex`
+  - `test/syntax/fix_python_spread_in_map_analyze_test.exs`
+  - `test/syntax/fix_python_spread_in_map_fix_test.exs`
+- Reason: unguarded global-regex fix/1 runs on the whole source of every unparseable file (syntax.ex has no analyze gate) and rewrites the `%{..**var..}` pattern inside valid string literals and inline comments — e.g. `"Python uses %{a: 1, **rest}"` becomes `"Python uses Map.merge(%{a: 1}, rest)"`, changing the string's runtime value (confirmed). Same class as sibling syntax rules; safely distinguishing a real `**` spread from one inside a string/sigil/heredoc/inline-comment needs full lexing of unparseable input (no AST), a re-author not a narrow.
+

@@ -1,4 +1,3 @@
-lib/syntax/fix_python_spread_in_map.ex
 lib/syntax/fix_rescue_struct_pattern.ex
 lib/syntax/fix_stray_comma_before_when_guard.ex
 lib/syntax/fix_struct_field_assignment_syntax.ex
@@ -37,8 +36,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/fix_python_spread_in_map_analyze_test.exs
-test/syntax/fix_python_spread_in_map_fix_test.exs
 test/syntax/fix_rescue_struct_pattern_analyze_test.exs
 test/syntax/fix_rescue_struct_pattern_fix_test.exs
 test/syntax/fix_stray_comma_before_when_guard_analyze_test.exs
