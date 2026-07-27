@@ -1,4 +1,3 @@
-lib/syntax/no_or_in_case_pattern.ex
 lib/syntax/no_pipe_into_arithmetic_operator.ex
 lib/syntax/no_postfix_if_expression.ex
 lib/syntax/no_python_multi_return.ex
