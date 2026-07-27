@@ -26,7 +26,8 @@ here; nothing of substance lives outside these files.
 | 10 | [`docs/16-evolution-acceptance-and-improvement-plan.md`](16-evolution-acceptance-and-improvement-plan.md) | **The single execution plan** (Phases 0–9). Has a `START HERE` block at the top with the current next actions — read that first |
 | 11 | [`docs/17-failure-mode-catalogue.md`](17-failure-mode-catalogue.md) | **What the 143 rejected rules taught us.** 137/140 encode a real defect, verified by execution; 56 failure modes nothing catches; ranked "what is worth building" list |
 | 12 | [`docs/18-final-143-disposition.md`](18-final-143-disposition.md) | **Per-rule verdict for all 143 rejected rules** + cross-rule reconciliation (deferral chains, contested dispatch slots, corrections) |
-| 13 | This file | Map + actionable state |
+| 13 | [`docs/18-per-rule-verdicts.json`](18-per-rule-verdicts.json) | Machine-readable source of truth behind docs/18 — 143 records, full `failure_mode` + `action` per rule. **docs/18's prose is generated from this**; if the two disagree, the JSON wins |
+| 14 | This file | Map + actionable state |
 
 Related but separate: the dataset repo's own `STATUS.md` + `docs/12` (its
 Quality Standard S1–S12 and improvement-round protocol) — the template for
@@ -119,6 +120,15 @@ docs/14 appendix C):
    audit's §5.1/§5.3 in particular must not be acted on (refuted).
 6. Where numbers differ between docs/13 §1 and docs/14 C.4 (8 vs 19 ms/file
    single-rule), that is measured VM-warmth variance — plan with the range.
+7. **Never put load-bearing prose in a Markdown table cell.** The first revision
+   of docs/18 did, and every one of its 143 `action` cells was silently
+   truncated at ~200 characters (~67k characters lost), while the per-rule
+   `failure_mode` field — another ~95k characters — was dropped entirely
+   because the table had no column for it. Recovered 2026-07-27 from the
+   generating session's scratchpad, which had not yet been cleaned. Both
+   sections of docs/18 are now generated from
+   `docs/18-per-rule-verdicts.json`, which is committed. The near-miss is the
+   lesson: a scratchpad is not storage.
 
 ## 5. Suggested first moves (smallest-risk, highest-certainty first)
 
