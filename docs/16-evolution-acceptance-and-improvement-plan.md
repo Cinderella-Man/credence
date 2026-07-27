@@ -604,9 +604,34 @@ damage on review and has not been rewritten.
 4.6a–4.6d applied; the cycle summary is in the CHANGELOG.
 
 
-## Phase 5 — Triage the harness escalations (parallel with Phase 4)
+## Phase 5 — Triage the harness escalations ✅ COMPLETE 2026-07-27
 
-The full per-file analysis is in **Appendix A**. Record every decision in a new
+**Done. `maintainer_tools/escalation_ledger.md` is the output** — 95 decisions
+(48 DROP / 26 RE-QUEUE / 11 FIX-CREDENCE / 9 FIX-HARNESS / 1 ACCEPT), every log
+read end to end and its claims re-executed.
+
+**Read the ledger, not Appendix A.** 78 of the 95 rows disagree with Appendix A
+on mechanism, verdict or both. Its arithmetic was right; its causal stories
+mostly were not. The three that change what to do next:
+
+1. **Row 105 is a true positive**, not part of the vacuous diverged class —
+   its fix rewrites `File.stream!/1` to the non-existent `File.stream/1`.
+   Re-queueing all 13 as prescribed below would push a compile-breaking rule
+   back in. Re-queue 12.
+2. **LD1's cause is log truncation, not closed-set construction.** The validator
+   logged the whole credence-fix stdout as one `Logger.debug`, Elixir's 8096-byte
+   default cut it, and `APPLIED_RULES:` prints last so it went first — 336 of
+   1416 fix invocations (23.7%) lost it. **Already fixed** by H12's sidecar
+   (harness `60ce2c4`), which writes from the validator's own binding.
+3. **A credence defect, now fixed** (`f4d08a8`): `compile_and_capture/1` emitted
+   a phantom `redefining module` diagnostic whenever the module was already
+   loaded in the calling VM — the harness's normal condition. It was offered to
+   every Semantic rule and at least one generated rule keyed on it.
+
+The 9 FIX-HARNESS rows feed Phase 8; the 11 FIX-CREDENCE rows feed Phase 6.5's
+worklist. Both lists are in the ledger with per-row evidence.
+
+*Original plan below, kept for the next cycle.* The full per-file analysis is in **Appendix A**. Record every decision in a new
 `maintainer_tools/escalation_ledger.md` (one section per cluster, DROP/ACCEPT/
 RE-QUEUE per row). Actions by cluster:
 
