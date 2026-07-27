@@ -407,4 +407,122 @@ defmodule Credence.Syntax.FixPythonModuloFixTest do
       assert valid_syntax?(fix("year % 4"))
     end
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LITERALS — a `%` inside a string is prose, not an operator
+  #
+  # Every case below shipped corrupted. The outputs parsed AND compiled,
+  # so nothing downstream noticed the program had started printing
+  # something the author never wrote.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — string literals are not code" do
+    test "leaves a percentage inside a string alone" do
+      confirm_fix(fix(~S'IO.puts("100% done")'), ~S'IO.puts("100% done")')
+    end
+
+    test "leaves the string alone while still fixing real code on the same line" do
+      confirm_fix(
+        fix(~S'IO.puts("50% left"); x = n % 2'),
+        ~S'IO.puts("50% left"); x = rem(n, 2)'
+      )
+    end
+
+    test "fixes inside interpolation — that IS code" do
+      source = ~S'IO.puts("#{n % 2}")'
+      expected = ~S'IO.puts("#{rem(n, 2)}")'
+      confirm_fix(fix(source), expected)
+    end
+
+    test "leaves an uppercase sigil alone — it does not interpolate" do
+      source = "IO.puts(~S(\#{n % 2}))"
+      confirm_fix(fix(source), source)
+    end
+
+    test "leaves a trailing comment alone while fixing the code before it" do
+      confirm_fix(fix("n % 2 # 50% note"), "rem(n, 2) # 50% note")
+    end
+
+    test "leaves a character-literal escape alone" do
+      confirm_fix(fix("x = ?\\x41 % 2"), "x = ?\\x41 % 2")
+    end
+
+    test "does not report a string-only percent" do
+      assert analyze(~S'IO.puts("100% done")') == []
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # STRUCT LITERALS — `%Name{}` in argument position
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — struct literals are not modulo" do
+    test "leaves a struct literal in argument position alone" do
+      confirm_fix(fix("assert %Issue{} = issue"), "assert %Issue{} = issue")
+    end
+
+    test "leaves a struct literal after a bare call alone" do
+      confirm_fix(fix("x = foo %Bar{a: 1}"), "x = foo %Bar{a: 1}")
+    end
+
+    test "does not report a struct literal" do
+      assert analyze("assert %Issue{} = issue") == []
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PRECEDENCE — Python's `%` shares precedence with `*` and `/`
+  #
+  # `a * b % 2` means `(a * b) % 2`. Emitting `a * rem(b, 2)` parses,
+  # compiles, and computes a different number — so those lines are
+  # declined and the parse error is left in place.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — precedence hazards are declined" do
+    test "declines when the left operand follows `*`" do
+      confirm_fix(fix("x = a * b % 2"), "x = a * b % 2")
+    end
+
+    test "declines when the left operand follows `/`" do
+      confirm_fix(fix("x = a / b % 2"), "x = a / b % 2")
+    end
+
+    test "still fixes after `+`, which binds looser than `%` in Python" do
+      confirm_fix(fix("x = a + b % 2"), "x = a + rem(b, 2)")
+    end
+
+    test "does not report a declined precedence hazard" do
+      assert analyze("x = a * b % 2") == []
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # END-TO-END through the syntax phase
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "integration through Credence.Syntax" do
+    test "repairs the modulo without touching the percent strings" do
+      source = """
+      defmodule ModuloInteg do
+        def render(n) do
+          IO.puts("100% done")
+          n % 2
+        end
+      end
+      """
+
+      expected = """
+      defmodule ModuloInteg do
+        def render(n) do
+          IO.puts("100% done")
+          rem(n, 2)
+        end
+      end
+      """
+
+      fixed = Credence.Syntax.fix(source)
+      confirm_fix(fixed, expected)
+      assert valid_syntax?(fixed)
+    end
+  end
 end
