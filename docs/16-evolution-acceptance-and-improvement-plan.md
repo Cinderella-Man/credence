@@ -1,6 +1,8 @@
 # 16 — Forward plan: accepting the evolution and executing the improvement program
 
-**Status:** plan · **Date:** 2026-07-21 · **Owner:** maintainer + Claude sessions
+**Status:** plan · **Date:** 2026-07-21, updated 2026-07-27 · **Owner:** maintainer + Claude sessions
+**Companions:** `docs/17-failure-mode-catalogue.md` (what the rejected rules taught us),
+`docs/18-final-143-disposition.md` (per-rule verdicts + cross-rule reconciliation)
 **Inputs:** `docs/12` (C1–C18), `docs/13` (P1–P7), `docs/14` (scrutiny E1–E9),
 `docs/15` (hand-off index), `credence-evolution-harness/docs/IMPROVEMENTS.md`
 (H1–H19 + addenda — currently only in the `-backup` copy, restored in Phase 0),
@@ -14,7 +16,60 @@ running, but nothing may skip Phase 0.
 
 ---
 
-## 0. State of the world (verified 2026-07-21)
+## START HERE (updated 2026-07-27)
+
+**Phases 0–4.2 are DONE. The candidate queue is empty.** 259 rows decided
+(116 accepts / 143 followups), suite **8058 green**, tree clean, all pushed.
+
+Every one of the 143 rejected rules has since been re-evaluated one-by-one with
+executed probes, cross-reconciled, and adversarially verified. Two companion
+documents hold the results and are **required reading before touching the backlog**:
+
+- **`docs/17-failure-mode-catalogue.md`** — what each rejected rule *taught us*.
+  137/140 encode a real defect. Ranked "what is worth building" list at the end.
+- **`docs/18-final-143-disposition.md`** — the per-rule verdict table (all 143),
+  the cross-rule reconciliation findings, and the 56 uncaught failure modes.
+
+### Do these first, in this order
+
+1. **Fix three live shipped bugs** (Phase 4.6a). All verified by execution; each
+   corrupts user source today. This outranks everything else in this document.
+2. **Fix the three deferral chains** (Phase 4.6b) *before* any bulk deletion —
+   deleting in the obvious order silently drops coverage to zero.
+3. **Delete the 115 dead rules** (Phase 4.6c) — safe once step 2 is done.
+4. **Apply the 9 salvages as table entries, not as modules** (Phase 4.6d) — as
+   standalone modules 11 of them would pre-empt a live rule and make things worse.
+5. Then resume the original sequence: Phase 4.3 (stage 2) → 4.4 (stage 3) → 4.5.
+
+### Three findings that will mislead you if you don't know them
+
+- **Do NOT "rehome" a rejected semantic rule to the pattern phase.** It is the
+  obvious remedy and it is wrong: adversarial testing overturned **17 of 17**.
+  Semantic gets the compiler as a free correctness *oracle* (it already proved the
+  code broken, so a repair cannot destroy a working program). Pattern has no
+  oracle — `apply_or_revert` reverts only when output fails to *compile*, so
+  broken-but-compiling output ships. See docs/18 §Reconciliation.
+- **Green tests are not evidence.** A fabricated diagnostic appears in three
+  mutually-consistent files (the rule's `@match_msg`, the check test, the fix
+  test), so the rule agrees with itself and passes. Always compile the target.
+- **`lib/semantic.ex:191` is `Enum.find` — first match wins, no fall-through.**
+  One rule per diagnostic. If the winner's `fix/2` no-ops, every other matching
+  rule is silently dead. 12 dispatch slots are contested; `undefined variable
+  "<name>"` alone is claimed by 17 rejected rules.
+
+---
+
+## 0. State of the world (verified 2026-07-21; Phase-4 outcome appended 2026-07-27)
+
+> **2026-07-27 update.** The drain is finished. `credence` on `evolution_accepted`
+> now holds **294 live rules** (156 pattern, 91 semantic, 46 syntax) and a
+> **8058-test** green suite. The sister `credence_evolution` still holds all 143
+> rejected rule sources and their tests — **nothing has been deleted yet**, so the
+> evidence is fully recoverable. Five rejected names also exist live as
+> different-phase siblings (`fix_div_rem`, `no_capture_as_bitwise_and`,
+> `no_or_in_case_pattern`, `prefer_explicit_range_step`, `undefined_function`);
+> check which one you mean before acting on those. The numbers in the table below
+> are the *pre-drain* snapshot and are kept for history.
 
 **Branch topology.** `credence` is on `evolution_accepted` = `main` (`fb6473c`)
 + the setup commit + the research docs. `credence_evolution` (the sister
@@ -70,7 +125,7 @@ Pass 5 is mid-flight: 125/230 done.
 | 1 | Land the execution-verified defect fixes | 0 | hours | **done** 2026-07-21 (`69aa2ec`) |
 | 2 | Apply shared-file deltas by hand | 1 | hours | **done** 2026-07-21 (`3a64b6f`; two hunks deferred by design) |
 | 3 | Make the full suite cheap (P1+P2) | 1 | 1–2 days | **done** 2026-07-22 (`1e6e8c6`; 516 s → 251 s, targets recalibrated) |
-| 4 | Drain the candidate queue (stages 1→2→3) | 0–3 | days (mostly unattended) | — |
+| 4 | Drain the candidate queue (stages 1→2→3) | 0–3 | days (mostly unattended) | **4.1–4.2 done** 2026-07-27 (259 rows: 116 accept / 143 followup); 4.3–4.6 open |
 | 5 | Triage the harness escalations | 0 (parallel with 4) | ~1 day | — |
 | 6 | Credence improvement program (C-items) | 4 | ongoing, ordered | — |
 | 7 | Remaining performance items (P3–P6) | 3 | days | — |
@@ -270,7 +325,26 @@ DRY_RUN=1 ./move_unfixable_out.sh   # inspect
 ./move_unfixable_out.sh             # strips provable check-only stubs → unfixable_unreviewed.md
 ```
 
-**4.2 Stage 1 — pilot, then batches.**
+**4.2 Stage 1 — pilot, then batches. ✅ COMPLETE 2026-07-27 16:14.**
+
+Final: **259 rows = 116 accepts / 143 followups / 0 orphans.** `candidates.md`
+empty, suite **8058 green**, tree clean, 0 unpushed commits, loop exited on its
+own (`done — candidates.md empty`). One console throughout:
+`.review_logs/console.log` (append on relaunch — keep it that way).
+
+Operational notes worth keeping for the next cycle:
+- The loop passes `--model` to the inner `claude -p` **only** when `CLAUDE_MODEL`
+  is set (`review_loop.sh:246`); unset, inner sessions silently inherit the
+  launching session's model. Always relaunch as
+  `CLAUDE_MODEL=opus setsid nohup ./review_loop.sh 0 >> .review_logs/console.log 2>&1 &`.
+- A **weekly account limit** (distinct from a per-model limit) stalls the loop
+  with `exit=1` and no verdict; it retries forever and no model switch helps.
+  Symptom in the row log: `You've hit your weekly limit`. Only waiting clears it.
+- `copy_next_candidate.sh` groups tests by basename, so a same-named rule in
+  another phase has its test lines swept into the wrong set (hit once:
+  `no_or_in_case_pattern`). Harmless here, but check for same-name pairs first.
+
+*Historical instructions for running the loop (kept for the next cycle):*
 ```bash
 ./review_loop.sh 1                          # pilot row; read .review_logs/<base>.log end-to-end
 nohup ./review_loop.sh 25 > .review_logs/console_$(date +%F_%H%M).log 2>&1 &
@@ -329,9 +403,105 @@ decision batch.
   notable rejects).
 - Full `mix test` green; merge `evolution_accepted` → `main` via PR.
 
+**4.6 Work the followup backlog (143 rules).** ← *this is the live work*
+
+Full evidence: **`docs/18-final-143-disposition.md`** (per-rule table) and
+**`docs/17-failure-mode-catalogue.md`** (what each rule taught us). Verdict split:
+
+| disposition | n |
+|---|---|
+| delete — implementation dead | 85 |
+| delete — duplicate of a live rule | 20 |
+| delete — premise false | 10 |
+| rebuild later from catalogue | 18 |
+| salvage — small fix | 9 |
+| already live (never belonged on the list) | 1 |
+
+135/143 encode a **real** failure mode; **56 are caught by nothing** — not the
+compiler, not Credo, not Dialyzer. Those 56 are the actual product of the
+evolution cycle. 44 of 61 work-creating verdicts were overturned on adversarial
+review, so treat any "this is salvageable" instinct with suspicion.
+
+---
+
+**4.6a — Fix three LIVE shipped rules that corrupt source. Do this first.**
+
+These are accepted, in `lib/`, and wrong today. The first two are verified by
+executed probe.
+
+1. `Credence.Semantic.NoCaptureAsBitwiseAnd` — `@band_regex`
+   (`lib/semantic/no_capture_as_bitwise_and.ex:28`) captures the right operand as
+   `(\d+)`, which stops at the `0` of `0xFF`:
+   ```
+   flags & 0xFF  ->  Bitwise.band(flags, 0)xFF   *** DOES NOT PARSE ***
+   mask & 0b1010 ->  Bitwise.band(mask, 0)b1010  *** DOES NOT PARSE ***
+   x & 0o17      ->  Bitwise.band(x, 0)o17       *** DOES NOT PARSE ***
+   flags & 255   ->  Bitwise.band(flags, 255)    parses
+   ```
+   Hex, binary and octal all break; bitmask code is overwhelmingly hex. Fix: widen
+   to `(0[xXbBoO][0-9a-fA-F_]+|\d[\d_]*)`. Add all three literal forms as tests.
+2. `Credence.Syntax.FixDivRem` — the operand pattern at
+   `lib/syntax/fix_div_rem.ex:161` is `^(\s*(?:\w+\s*=\s*)?)(.+?)\s+#{op}\s+(.+?)(\s*$)`;
+   the lazy `(.+?)` swallows a whole `def` head:
+   ```
+   def f(n), do: n * (n + 1) / 2  ->  div(def f(n), do: n * (n + 1), 2)  *** DOES NOT PARSE ***
+   total = sum / count            ->  total = div(sum, count)            parses
+   ```
+   Fix: reject lines whose left operand contains a `def`/`defp` head, or anchor to
+   the AST rather than the line. Note the irony — this accepted rule carries the
+   exact defect that got a dozen of its rejected siblings thrown out.
+3. `Credence.Semantic.NoBareReturnInUnless` — reported to strip `return` so the
+   code compiles and then **executes the branch it was meant to skip**
+   (`{:ok, -5}` where `{:error, :neg}` was intended). ⚠️ **Not independently
+   confirmed — verify before acting.** If it reproduces, make the rule
+   report-only until it can restructure into `if/else`.
+
+**4.6b — Fix three deferral chains BEFORE deleting anything.**
+
+No literal duplicate cycle exists (all 35 `dup_of` edges resolve to live files),
+but three chains defer coverage to somewhere that does not actually provide it.
+Applying the deletes in the obvious order loses the coverage **silently**.
+
+1. **Nested-module structs → zero.** `fix_undefined_nested_module_struct` is
+   deleted as a duplicate of live `FixCyclicStructReference`, while
+   `fix_undefined_struct_in_pattern` is deleted *because* that same live rule
+   claims the diagnostic and then **no-ops** on nested-module sources. Correction
+   in docs/18: `fix_undefined_nested_module_struct` → `delete-implementation-dead`
+   (its `match?/1` keys on a fabricated message), and **promote**
+   `fix_undefined_struct_in_pattern` instead of deleting it.
+2. **return-in-unless → a known-harmful rule.** Coverage defers to
+   `NoBareReturnInUnless`, i.e. bug #3 in 4.6a. Fix 4.6a first, then re-decide
+   `no_early_return_in_unless` and `no_return_fn_in_conditional`.
+3. **`elif` → zero.** `no_elif_keyword` is deleted with `caught_by=nothing`, and
+   live `FixElsifInIfChain` was verified to contain only two regexes, both
+   `elsif` (`lib/syntax/fix_elsif_in_if_chain.ex:54` and `:305`) — it does not fire
+   on `elif` at all. Either extend that live rule's regexes to `els?if` or keep a
+   dedicated `elif` rule. (`no_elsif_keyword` really is a byte-identical duplicate
+   and should just be deleted.)
+
+**4.6c — Delete the 115 dead rules.** Safe once 4.6b is done. Per-rule
+justification in docs/18. Record each failure mode in docs/17 *before* deleting —
+the module is the fossil, the observation is the asset.
+
+**4.6d — Apply the 9 salvages as TABLE ENTRIES, not as modules.** Under
+first-match-wins dispatch, **11 of the proposed standalone salvages would each
+pre-empt live `Credence.Semantic.UndefinedFunction`** and disable a working rule —
+a net regression. The reconciliation pass rewrote them as additive rows in
+`lib/semantic/undefined_function.ex` `@qualified_replacements`; use those specs
+verbatim from docs/18 §Corrections. Two known-good examples:
+`{":math","round",1} => {:drop_erlang_module,"round"}` and widening
+`parse_qualified_ref`'s module capture at `undefined_function.ex:238` from
+`(\w+)` to `(:?\w+)` so Erlang module atoms keep their leading colon.
+
+**4.6e — The 18 rebuild-later + 56 uncaught modes** feed Phase 6. Ranked build
+list at the end of docs/17; top entries are `Map.*` applied to an `Enum.*` result
+(silent, unconditional `BadMapError`), `send(self(), …)` inside a `Task` closure
+(completely silent, one-line repair), and the `handle_call` reply protocol
+(**report-only** — the repair is safe but the surrounding restructure is not).
+
 **Definition of done:** `candidates.md`, `unfixable_unreviewed.md`, and
-`followup.md` all drained; every base has a decision commit; PR to main open
-with the cycle summary.
+`followup.md` all drained; every base has a decision commit; 4.6a–4.6d applied;
+PR to main open with the cycle summary.
 
 ## Phase 5 — Triage the harness escalations (parallel with Phase 4)
 

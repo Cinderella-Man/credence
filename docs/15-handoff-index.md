@@ -23,7 +23,10 @@ here; nothing of substance lives outside these files.
 | 7 | [`docs/13-test-suite-performance.md`](13-test-suite-performance.md) | **Performance investigation P1–P7**: measured cost structure of the ~20k-file corpus suite; parallelization, sweep-sharing, rule-scoped Gate scans, AST cache; Gate ~8.5 min → ~20–40 s end state |
 | 8 | [`../../credence-evolution-harness/docs/IMPROVEMENTS.md`](../../credence-evolution-harness/docs/IMPROVEMENTS.md) | **Harness proposals H1–H19** + two addenda (dataset-repo adoptions; Gate-latency cross-ref): executable oracles, Gate rigor, novelty/memory, measurement/provenance, ops hygiene |
 | 9 | [`docs/14-proposal-scrutiny.md`](14-proposal-scrutiny.md) | **Adversarial validation** of 6–8: ten experiments (E1–E9), per-proposal verdicts (upheld/revised/refuted), and **Appendices A–C with full reproduction detail** — environment, every script verbatim, every raw output |
-| 10 | This file | Map + actionable state |
+| 10 | [`docs/16-evolution-acceptance-and-improvement-plan.md`](16-evolution-acceptance-and-improvement-plan.md) | **The single execution plan** (Phases 0–9). Has a `START HERE` block at the top with the current next actions — read that first |
+| 11 | [`docs/17-failure-mode-catalogue.md`](17-failure-mode-catalogue.md) | **What the 143 rejected rules taught us.** 137/140 encode a real defect, verified by execution; 56 failure modes nothing catches; ranked "what is worth building" list |
+| 12 | [`docs/18-final-143-disposition.md`](18-final-143-disposition.md) | **Per-rule verdict for all 143 rejected rules** + cross-rule reconciliation (deferral chains, contested dispatch slots, corrections) |
+| 13 | This file | Map + actionable state |
 
 Related but separate: the dataset repo's own `STATUS.md` + `docs/12` (its
 Quality Standard S1–S12 and improvement-round protocol) — the template for
