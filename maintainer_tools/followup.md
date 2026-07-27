@@ -943,3 +943,10 @@ so a future scan won't re-flag it.
   - `test/syntax/no_elif_keyword_fix_test.exs`
 - Reason: Duplicate of accepted fix_elsif_in_if_chain (same bad habit, its moduledoc already names Python `elif`) but is the pre-hardening copy — corrupts heredoc doc text, mangles chains with no `end` at header indent, re-indents multi-line strings, and analyze flags every `elif` while fix bails; fold `elif` into fix_elsif_in_if_chain's regexes (shared-file change, out of scope).
 
+## no_else_in_for_comprehension — 2026-07-27
+- Files:
+  - `lib/syntax/no_else_in_for_comprehension.ex`
+  - `test/syntax/no_else_in_for_comprehension_analyze_test.exs`
+  - `test/syntax/no_else_in_for_comprehension_fix_test.exs`
+- Reason: Wrong phase + inert, and fix crashes — `for ... do ... else ... end` PARSES fine (compile-time "unsupported option :else given to for", not a parse error), so the syntax phase (runs rules only on parse failure) never invokes it; probe: Sourceror.parse_string=:ok, Credence.Syntax.analyze=[], Syntax.fix logs "source already parses, skipping" (no-op) even though the rule IS discovered. Its own analyze/fix also require parse success, so it's doubly inert; green tests pass only by calling the module directly. Separately, the line-range fix is broken on the keyword form `for x <- l, do: x, else: (_ -> [])`: analyze flags it but for_meta[:end] is nil → fix raises ArithmeticError (nil - 2). Belongs in the semantic phase (out-of-scope shared/new-file change); same class as no_catch_in_receive / no_defp_qualified_name.
+
