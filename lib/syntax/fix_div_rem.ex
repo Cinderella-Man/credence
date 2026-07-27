@@ -13,20 +13,49 @@ defmodule Credence.Syntax.FixDivRem do
   ## Good
 
       expected_sum = div(n * (n + 1), 2)
+
+  ## Only real code is rewritten
+
+  Matching runs against a `Credence.SourceMask` shadow, so `div`/`rem` appearing
+  inside a string literal or comment is invisible. Without that this rule
+  mangled prose that merely mentioned the operator:
+
+      IO.puts("use a div b")  ->  IO.puts("use Kernel.div(a, b")
+
+  ## Function heads
+
+  The left operand is bounded by an assignment (`x = …`) or a function head
+  ending in `, do:`. Without the second of those, the lazy left-operand group
+  swallowed the whole head:
+
+      def f(n), do: n * (n + 1) div 2  ->  div(def f(n), do: n * (n + 1), 2)
+
+  which is not merely broken — a later rule in the same reduce reshaped it into
+  `div(def f(n), 2, do: n * (n + 1))`, which *parses*, so the phase declared
+  success and shipped an entirely different program. Anything still carrying a
+  `def`/`defp` head, a `when` guard or a `->` in the extracted left operand is
+  declined outright.
   """
   use Credence.Syntax.Rule
   alias Credence.Issue
+  alias Credence.SourceMask
 
   @operators ~w(div rem)
+
+  # Tokens that must never survive inside an extracted left operand: each one
+  # means the match reached past the start of the expression. `;` catches the
+  # multi-statement line (`IO.puts("x"); n div 2`), where the lazy group would
+  # otherwise swallow the earlier statement whole.
+  @not_an_operand ~r/(?:^|\W)(?:def|defp|when|fn)(?:\W|$)|->|;/
 
   @impl true
   def analyze(source) do
     source
-    |> String.split("\n")
+    |> SourceMask.lines()
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, line_no} ->
+    |> Enum.flat_map(fn {{_line, shadow}, line_no} ->
       Enum.flat_map(@operators, fn op ->
-        if infix_use?(line, op) do
+        if infix_use?(shadow, op) do
           [build_issue(op, line_no)]
         else
           []
@@ -55,13 +84,17 @@ defmodule Credence.Syntax.FixDivRem do
     ~r"(?<![|>.])\b\S+\)\s+#{op}\s+\w|(?<![|>.])\b\w+\s+#{op}\s+\w"
   end
 
+  # The shadow is recomputed per operator because the previous rewrite shifts
+  # every byte offset after it.
   defp fix_line(line) do
     Enum.reduce(@operators, line, fn op, current ->
-      if infix_use?(current, op) and not infix_in_capture?(current, op) do
-        if infix_in_function_args?(current, op) do
-          rewrite_infix_in_function_args(current, op)
+      shadow = SourceMask.mask(current)
+
+      if infix_use?(shadow, op) and not infix_in_capture?(shadow, op) do
+        if infix_in_function_args?(shadow, op) do
+          rewrite_infix_in_function_args(current, shadow, op)
         else
-          rewrite_infix(current, op)
+          rewrite_infix(current, shadow, op)
         end
       else
         current
@@ -130,7 +163,7 @@ defmodule Credence.Syntax.FixDivRem do
   defp infix_in_capture?(line, op) do
     case Regex.run(~r/\s+#{op}\s+/, line, return: :index) do
       [{pos, _len}] ->
-        prefix = String.slice(line, 0, pos)
+        prefix = binary_part(line, 0, pos)
         in_capture?(prefix)
 
       _ ->
@@ -157,12 +190,20 @@ defmodule Credence.Syntax.FixDivRem do
   # Strategy: find the assignment prefix (if any), then split on ` div `.
   # Left operand = everything between `=` (or line start) and the operator.
   # Right operand = everything after the operator to end of expression.
-  defp rewrite_infix(line, op) do
-    pattern = ~r/^(\s*(?:\w+\s*=\s*)?)(.+?)\s+#{op}\s+(.+?)(\s*$)/
+  defp rewrite_infix(line, shadow, op) do
+    pattern = ~r/^(\s*(?:\w+\s*=\s*|defp?\s+.*?,\s*do:\s*)?)(.+?)\s+#{op}\s+(.+?)(\s*$)/
 
-    case Regex.run(pattern, line) do
-      [_full, prefix, left, right, trailing] ->
-        "#{prefix}#{op}(#{String.trim(left)}, #{String.trim(right)})#{trailing}"
+    case Regex.run(pattern, shadow, return: :index) do
+      [_full, _prefix, {ls, ll}, {rs, rl}, _trailing] ->
+        if declined?(binary_part(shadow, ls, ll)) do
+          line
+        else
+          stop = rs + rl
+
+          binary_part(line, 0, ls) <>
+            "#{op}(#{binary_part(line, ls, ll)}, #{binary_part(line, rs, rl)})" <>
+            binary_part(line, stop, byte_size(line) - stop)
+        end
 
       nil ->
         line
@@ -171,22 +212,28 @@ defmodule Credence.Syntax.FixDivRem do
 
   # Rewrites infix `op` inside a function call's arguments to `Kernel.op(left, right)`.
   # E.g. `do_minto1((n - 1) div 2, 0)` → `do_minto1(Kernel.div(n - 1, 2), 0)`
-  defp rewrite_infix_in_function_args(line, op) do
-    case Regex.run(~r/\s+#{op}\s+/, line, return: :index) do
+  defp rewrite_infix_in_function_args(line, shadow, op) do
+    case Regex.run(~r/\s+#{op}\s+/, shadow, return: :index) do
       [{op_pos, op_len}] ->
         # Find left operand: scan backwards to find the start of the expression
-        # at the current paren depth
-        left_start = find_left_start(line, op_pos)
-        left = String.trim(String.slice(line, left_start, op_pos - left_start))
+        # at the current paren depth. Scanning runs on the shadow so a paren or
+        # comma inside a string literal cannot be mistaken for a delimiter;
+        # the operands themselves are sliced out of the real line.
+        left_start = find_left_start(shadow, op_pos)
+        left = String.trim(binary_part(line, left_start, op_pos - left_start))
 
         # Find right operand: scan forward from after the op to find end
         right_start = op_pos + op_len
-        right_end = find_right_end(line, right_start)
-        right = String.trim(String.slice(line, right_start, right_end - right_start))
+        right_end = find_right_end(shadow, right_start)
+        right = String.trim(binary_part(line, right_start, right_end - right_start))
 
-        prefix = binary_part(line, 0, left_start)
-        suffix = String.slice(line, right_end..-1//1)
-        "#{prefix}Kernel.#{op}(#{left}, #{right})#{suffix}"
+        if declined?(binary_part(shadow, left_start, op_pos - left_start)) do
+          line
+        else
+          prefix = binary_part(line, 0, left_start)
+          suffix = binary_part(line, right_end, byte_size(line) - right_end)
+          "#{prefix}Kernel.#{op}(#{left}, #{right})#{suffix}"
+        end
 
       _ ->
         line
@@ -225,6 +272,26 @@ defmodule Credence.Syntax.FixDivRem do
       _ ->
         do_find_left_start(line, pos - 1, depth, best)
     end
+  end
+
+  # An extracted left operand is only usable if it is a self-contained
+  # expression: no keyword that starts a larger construct, and balanced
+  # delimiters. Unbalanced ones mean the lazy group started inside a call that
+  # opened earlier on the line.
+  defp declined?(operand) do
+    Regex.match?(@not_an_operand, operand) or not balanced?(operand)
+  end
+
+  defp balanced?(operand) do
+    operand
+    |> :binary.bin_to_list()
+    |> Enum.reduce_while(0, fn
+      c, depth when c in [?(, ?[, ?{] -> {:cont, depth + 1}
+      c, depth when c in [?), ?], ?}] and depth == 0 -> {:halt, :unbalanced}
+      c, depth when c in [?), ?], ?}] -> {:cont, depth - 1}
+      _, depth -> {:cont, depth}
+    end)
+    |> Kernel.==(0)
   end
 
   defp word_char?(c) do

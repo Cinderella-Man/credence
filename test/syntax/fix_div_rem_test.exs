@@ -284,4 +284,100 @@ defmodule Credence.Syntax.FixDivRemTest do
       assert valid_syntax?(fixed)
     end
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # FUNCTION HEADS
+  #
+  # `def f(n), do: <expr> div 2` used to have its entire head swallowed
+  # by the lazy left-operand group. The result was not merely broken:
+  # FixKeywordBeforePositionalArgument, later in the same reduce,
+  # reshaped it into something that PARSED, so the phase logged success
+  # and shipped a completely different program.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — keyword-body function heads" do
+    test "fixes a def head with a compound left operand" do
+      confirm_fix(
+        FixDivRem.fix("def f(n), do: n * (n + 1) div 2"),
+        "def f(n), do: div(n * (n + 1), 2)"
+      )
+    end
+
+    test "fixes a defp head" do
+      confirm_fix(FixDivRem.fix("defp f(n), do: n div 2"), "defp f(n), do: div(n, 2)")
+    end
+
+    test "fixes a head with several arguments" do
+      confirm_fix(FixDivRem.fix("def f(n, m), do: n div m"), "def f(n, m), do: div(n, m)")
+    end
+
+    test "fixes a head carrying a when guard" do
+      confirm_fix(
+        FixDivRem.fix("def f(n) when n > 0, do: n div 2"),
+        "def f(n) when n > 0, do: div(n, 2)"
+      )
+    end
+
+    test "the def-head repair survives the whole syntax phase" do
+      source = "def f(n), do: n * (n + 1) div 2"
+      fixed = Credence.Syntax.fix(source)
+
+      confirm_fix(fixed, "def f(n), do: div(n * (n + 1), 2)")
+      assert valid_syntax?(fixed)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LITERALS — `div`/`rem` named in prose is not an operator
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — string literals are not code" do
+    test "leaves a string that mentions the operator alone" do
+      source = ~S'IO.puts("use a div b now")'
+      confirm_fix(FixDivRem.fix(source), source)
+    end
+
+    test "does not report a string that mentions the operator" do
+      assert FixDivRem.analyze(~s|IO.puts("use a div b now")|) == []
+    end
+
+    test "leaves the string alone end-to-end while fixing real code" do
+      source = """
+      defmodule Report do
+        def render(pct) do
+          IO.puts("use a div b for integer division")
+          n = 10 div 2
+          {pct, n}
+        end
+      end
+      """
+
+      expected = """
+      defmodule Report do
+        def render(pct) do
+          IO.puts("use a div b for integer division")
+          n = div(10, 2)
+          {pct, n}
+        end
+      end
+      """
+
+      confirm_fix(Credence.Syntax.fix(source), expected)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # DECLINED — an operand the lazy group cannot bound safely
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — declines unbounded left operands" do
+    test "declines a multi-statement line rather than swallowing the first statement" do
+      source = ~S'IO.puts("a div b"); x = n div 2'
+      confirm_fix(FixDivRem.fix(source), source)
+    end
+
+    test "declines an anonymous function body" do
+      confirm_fix(FixDivRem.fix("fn n -> n div 2 end"), "fn n -> n div 2 end")
+    end
+  end
 end
