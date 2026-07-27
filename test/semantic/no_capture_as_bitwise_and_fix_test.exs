@@ -194,4 +194,111 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndFixTest do
       confirm_fix(Credence.Semantic.fix(source), source)
     end
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # INTEGER LITERAL FORMS
+  #
+  # Only bare decimal digits used to be accepted, so the right operand
+  # was cut at the `0` of every non-decimal literal — i.e. exactly the
+  # literals bitmask code is normally written with.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/2 — every integer literal form" do
+    test "hex" do
+      confirm_fix(
+        NoCaptureAsBitwiseAnd.fix("flags & 0xFF", diag(1, 7)),
+        "Bitwise.band(flags, 0xFF)"
+      )
+    end
+
+    test "lowercase hex" do
+      confirm_fix(
+        NoCaptureAsBitwiseAnd.fix("flags & 0xff", diag(1, 7)),
+        "Bitwise.band(flags, 0xff)"
+      )
+    end
+
+    test "binary" do
+      confirm_fix(
+        NoCaptureAsBitwiseAnd.fix("mask & 0b1010", diag(1, 6)),
+        "Bitwise.band(mask, 0b1010)"
+      )
+    end
+
+    test "octal" do
+      confirm_fix(NoCaptureAsBitwiseAnd.fix("x & 0o17", diag(1, 3)), "Bitwise.band(x, 0o17)")
+    end
+
+    test "underscore-separated decimal" do
+      confirm_fix(
+        NoCaptureAsBitwiseAnd.fix("flags & 1_000", diag(1, 7)),
+        "Bitwise.band(flags, 1_000)"
+      )
+    end
+
+    test "every form produces output that parses" do
+      for {src, col} <- [{"flags & 0xFF", 7}, {"mask & 0b1010", 6}, {"x & 0o17", 3}] do
+        assert valid_syntax?(NoCaptureAsBitwiseAnd.fix(src, diag(1, col)))
+      end
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # DECLINED SHAPES
+  #
+  # Python's `&` binds looser than every arithmetic operator, so these
+  # operands are whole expressions. Rewriting them yields code that
+  # COMPILES and returns a different number — strictly worse than the
+  # compile error the source already has.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/2 — declines what it cannot group correctly" do
+    test "declines an arithmetic left operand (the Python hash idiom)" do
+      source = "h * 31 + c & 0xFFFFFFFF"
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(1, 12)), source)
+    end
+
+    test "declines a multiplicative left operand" do
+      confirm_fix(NoCaptureAsBitwiseAnd.fix("a * b & 0xFF", diag(1, 7)), "a * b & 0xFF")
+    end
+
+    test "declines an arithmetic right operand" do
+      confirm_fix(NoCaptureAsBitwiseAnd.fix("flags & 0xFF + 1", diag(1, 7)), "flags & 0xFF + 1")
+    end
+
+    test "declines a dotted chain" do
+      confirm_fix(NoCaptureAsBitwiseAnd.fix("m.flags & 0xFF", diag(1, 9)), "m.flags & 0xFF")
+    end
+
+    test "declines a module attribute chain" do
+      confirm_fix(
+        NoCaptureAsBitwiseAnd.fix("@state.flags & 0xFF", diag(1, 14)),
+        "@state.flags & 0xFF"
+      )
+    end
+
+    test "declines an Erlang remote call" do
+      source = ":erlang.system_time & 0xFF"
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(1, 21)), source)
+    end
+
+    test "declines a unary minus on a chain" do
+      confirm_fix(NoCaptureAsBitwiseAnd.fix("-m.flags & 0xFF", diag(1, 10)), "-m.flags & 0xFF")
+    end
+
+    test "declines a non-ASCII identifier rather than splicing into it" do
+      confirm_fix(NoCaptureAsBitwiseAnd.fix("naïve & 0xFF", diag(1, 8)), "naïve & 0xFF")
+    end
+
+    test "declines a float right operand" do
+      confirm_fix(NoCaptureAsBitwiseAnd.fix("n & 2.0", diag(1, 3)), "n & 2.0")
+    end
+  end
+
+  describe "fix/2 — string literals are not code" do
+    test "leaves an `&` inside a string alone" do
+      source = ~S'IO.puts("mask & 1") && g(m)'
+      confirm_fix(NoCaptureAsBitwiseAnd.fix(source, diag(1, 15)), source)
+    end
+  end
 end
