@@ -181,7 +181,73 @@ defmodule Credence.RuleHelpers do
 
       modules when is_list(modules) ->
         safe_cleanup_modules(modules)
-        {:ok, diagnostics}
+        {:ok, drop_phantom_redefinitions(diagnostics, source)}
+    end
+  end
+
+  # `Code.compile_string/2` warns "redefining module M" whenever M is already
+  # loaded in the calling VM. That is a property of the HOST PROCESS, not of the
+  # source under analysis: the same source returns `{:ok, []}` on a cold VM and
+  # a warning on a warm one.
+  #
+  # It matters because credence is normally called from a warm VM. The evolution
+  # harness runs it via `mix run --no-compile` inside a persistent, already
+  # compiled workspace, so this fired on essentially every row — and the
+  # diagnostic was then offered to every Semantic rule's `match?/1`. At least one
+  # evolved rule keyed on it, which is to say it was generated to repair a
+  # "defect" that only exists inside the harness. It also produced findings on
+  # clean files, which is how `credence check` came to exit 1 on the phantom
+  # alone.
+  #
+  # It is not always phantom: source that genuinely defines the same module
+  # twice earns the warning. The discriminator is the source rather than the
+  # message — a module defined ONCE here cannot be redefining itself — so the
+  # drop is conservative: if the source cannot be parsed, or the module name
+  # cannot be resolved, the diagnostic is kept.
+  defp drop_phantom_redefinitions(diagnostics, source) do
+    if Enum.any?(diagnostics, &redefined_module/1) do
+      counts = module_definition_counts(source)
+
+      Enum.reject(diagnostics, fn d ->
+        case redefined_module(d) do
+          nil -> false
+          name -> Map.get(counts, name, 0) == 1
+        end
+      end)
+    else
+      diagnostics
+    end
+  end
+
+  @redefining_re ~r/redefining module ([A-Za-z_][A-Za-z0-9_.]*)/
+
+  defp redefined_module(%{message: msg}) when is_binary(msg) do
+    case Regex.run(@redefining_re, msg) do
+      [_, name] -> name
+      nil -> nil
+    end
+  end
+
+  defp redefined_module(_), do: nil
+
+  # How many times each module is defined in `source`, by written name. Returns
+  # an empty map when the source does not parse, so nothing is dropped.
+  defp module_definition_counts(source) do
+    case Code.string_to_quoted(source) do
+      {:ok, ast} ->
+        ast
+        |> Macro.prewalk([], fn
+          {:defmodule, _, [{:__aliases__, _, parts} | _]} = node, acc ->
+            {node, [Enum.map_join(parts, ".", &Atom.to_string/1) | acc]}
+
+          node, acc ->
+            {node, acc}
+        end)
+        |> elem(1)
+        |> Enum.frequencies()
+
+      {:error, _} ->
+        %{}
     end
   end
 
