@@ -1,6 +1,3 @@
-lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/prefer_comma_in_tuple_literal_analyze_test.exs
-test/syntax/prefer_comma_in_tuple_literal_fix_test.exs
 test/syntax/prefer_div_function_over_infix_analyze_test.exs
 test/syntax/prefer_div_function_over_infix_fix_test.exs
