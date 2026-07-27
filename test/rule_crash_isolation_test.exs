@@ -1,0 +1,145 @@
+defmodule Credence.RuleCrashIsolationTest do
+  use ExUnit.Case, async: true
+
+  import ExUnit.CaptureLog
+
+  alias Credence.Issue
+
+  # C6. `check/2` and `fix_patches/2` run on AI-generated input by definition.
+  # A rule that raises on one shape used to take the whole `analyze`/`fix` call
+  # down with it — every other rule's findings lost, the caller seeing an
+  # exception from a library whose job is to be robust to bad input. docs/09
+  # records a shipped rule raising `:erlang.length(nil)` on 36 corpus files.
+  #
+  # A crashing rule is a bug in that rule. It should cost that rule's findings,
+  # not the run.
+
+  defmodule CrashingCheckRule do
+    @moduledoc false
+    use Credence.Pattern.Rule
+
+    @impl true
+    def priority, do: 100
+
+    @impl true
+    # opaque to the type checker: the crash must happen at runtime, not be
+    # flagged at compile time (that would be the compiler doing our job for us)
+    def check(_ast, opts), do: :erlang.length(Keyword.get(opts, :never_set))
+
+    @impl true
+    def fix_patches(_ast, _opts), do: []
+  end
+
+  defmodule CrashingFixRule do
+    @moduledoc false
+    use Credence.Pattern.Rule
+
+    @impl true
+    def priority, do: 100
+
+    @impl true
+    def check(_ast, _opts), do: [%Issue{rule: :crashing_fix, message: "x", meta: %{line: 1}}]
+
+    @impl true
+    def fix_patches(_ast, _opts), do: raise(ArgumentError, "boom from fix_patches")
+  end
+
+  defmodule ThrowingRule do
+    @moduledoc false
+    use Credence.Pattern.Rule
+
+    @impl true
+    def priority, do: 100
+
+    @impl true
+    def check(_ast, _opts), do: throw(:not_an_exception)
+
+    @impl true
+    def fix_patches(_ast, _opts), do: []
+  end
+
+  defmodule HealthyRule do
+    @moduledoc false
+    use Credence.Pattern.Rule
+
+    @impl true
+    def priority, do: 900
+
+    @impl true
+    def check(_ast, _opts), do: [%Issue{rule: :healthy, message: "found", meta: %{line: 2}}]
+
+    @impl true
+    def fix_patches(_ast, opts) do
+      source = Keyword.fetch!(opts, :source)
+      lines = String.split(source, "\n")
+      target = Enum.find_index(lines, &String.contains?(&1, "y = 1")) + 1
+      len = lines |> Enum.at(target - 1) |> String.length()
+
+      [
+        %{
+          range: %{start: [line: target, column: 1], end: [line: target, column: len + 1]},
+          change: "  y = 2"
+        }
+      ]
+    end
+  end
+
+  @source """
+  defmodule Sample do
+    y = 1
+    def go, do: :ok
+  end
+  """
+
+  describe "analyze/2" do
+    test "a crashing rule costs its own findings, not the call" do
+      log =
+        capture_log(fn ->
+          issues = Credence.Pattern.analyze(@source, rules: [CrashingCheckRule, HealthyRule])
+
+          # The healthy rule's finding survives — that is the whole point.
+          assert Enum.map(issues, & &1.rule) == [:healthy]
+        end)
+
+      assert log =~ "CrashingCheckRule.check CRASHED"
+      assert log =~ "defect in the rule"
+    end
+
+    test "a rule that throws a non-exception is isolated too" do
+      log =
+        capture_log(fn ->
+          issues = Credence.Pattern.analyze(@source, rules: [ThrowingRule, HealthyRule])
+          assert Enum.map(issues, & &1.rule) == [:healthy]
+        end)
+
+      assert log =~ "threw throw :not_an_exception"
+    end
+  end
+
+  describe "fix_with_trace/2" do
+    test "a rule crashing in fix_patches is recorded as {rule, :crashed}" do
+      capture_log(fn ->
+        {code, applied} =
+          Credence.Pattern.fix_with_trace(@source, rules: [CrashingFixRule, HealthyRule])
+
+        # The crash is visible in the trace, distinct from :reverted and
+        # :patch_rejected, so the harness bugfix lane can consume it.
+        assert {CrashingFixRule, :crashed} in applied
+
+        # And the healthy rule still did its work on the same call.
+        assert {HealthyRule, 1} in applied
+        assert code =~ "y = 2"
+      end)
+    end
+
+    test "the crash is logged at :error, not swallowed" do
+      log =
+        capture_log(fn ->
+          Credence.Pattern.fix_with_trace(@source, rules: [CrashingFixRule])
+        end)
+
+      assert log =~ "[error]"
+      assert log =~ "boom from fix_patches"
+    end
+  end
+end

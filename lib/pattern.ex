@@ -35,7 +35,7 @@ defmodule Credence.Pattern do
   # dropped-ranges computation is skipped — on clean files it would otherwise
   # run for every `unsafe_in_dsl` rule.
   defp reject_dsl_unfixable(rule, ast, opts) do
-    case rule.check(ast, opts) do
+    case isolate(rule, :check, [], fn -> rule.check(ast, opts) end) do
       [] ->
         []
 
@@ -70,7 +70,7 @@ defmodule Credence.Pattern do
   risks introducing new errors and wasting an LLM retry attempt.
   """
   @spec fix_with_trace(String.t(), keyword()) ::
-          {String.t(), [{module(), non_neg_integer() | :reverted | :patch_rejected}]}
+          {String.t(), [{module(), non_neg_integer() | :reverted | :patch_rejected | :crashed}]}
   def fix_with_trace(code_string, opts \\ []) do
     all_rules = rules(opts)
 
@@ -100,8 +100,15 @@ defmodule Credence.Pattern do
                 "[credence_fix] #{name}: check found #{length(issues)} issue(s), running fix..."
               )
 
-              {status, fixed} = invoke_fix(rule, source, check_opts)
-              apply_or_revert(rule, name, source, fixed, status, issues, applied)
+              case isolate(rule, :fix_patches, :crashed, fn ->
+                     invoke_fix(rule, source, check_opts)
+                   end) do
+                :crashed ->
+                  {source, [{rule, :crashed} | applied]}
+
+                {status, fixed} ->
+                  apply_or_revert(rule, name, source, fixed, status, issues, applied)
+              end
             else
               {source, applied}
             end
@@ -123,6 +130,40 @@ defmodule Credence.Pattern do
     Logger.debug("[credence_fix] done. Applied: [#{summary}]")
 
     {code, applied}
+  end
+
+  # C6. A rule's `check/2` and `fix_patches/2` run on AI-generated input, and a
+  # rule that raises on one shape takes down the whole `analyze`/`fix` call with
+  # it — every other rule's findings included. docs/09 records a shipped rule
+  # raising `:erlang.length(nil)` on 36 corpus files.
+  #
+  # A crashing rule is a bug to fix, not a reason to lose the other 154 rules'
+  # work. It is logged at `:error` with the stacktrace (this is never routine),
+  # recorded as `{rule, :crashed}` in the trace so the harness's bugfix lane can
+  # consume it alongside `:reverted` and `:patch_rejected`, and skipped.
+  #
+  # `Exception.blame/3` is deliberately not used: it is expensive and this path
+  # is already the abnormal one, but more importantly it can itself raise on a
+  # malformed stacktrace, which would defeat the isolation.
+  defp isolate(rule, callback, on_crash, fun) do
+    fun.()
+  rescue
+    e ->
+      Logger.error(
+        "[credence] #{RuleHelpers.rule_name(rule)}.#{callback} CRASHED — rule skipped for " <>
+          "this source. This is a defect in the rule: #{Exception.message(e)}\n" <>
+          Exception.format_stacktrace(__STACKTRACE__)
+      )
+
+      on_crash
+  catch
+    kind, value ->
+      Logger.error(
+        "[credence] #{RuleHelpers.rule_name(rule)}.#{callback} threw #{kind} #{inspect(value)} — " <>
+          "rule skipped for this source. This is a defect in the rule."
+      )
+
+      on_crash
   end
 
   # Apply the rule's `fix_patches/2` to the source. See
