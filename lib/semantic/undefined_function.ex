@@ -16,7 +16,6 @@ defmodule Credence.Semantic.UndefinedFunction do
       {:literal_with_neg, pos, neg}         — literal, negation-aware
       {:rename_add_arg, mod, fun, arg}      — rename + append extra argument
       {:rename_negate_arg, mod, fun, index} — rename + negate argument at index
-      :capture_to_lambda                     — &Module.fun/arity → &(Module.fun(&1, …))
 
   Local (bare calls):
 
@@ -30,11 +29,6 @@ defmodule Credence.Semantic.UndefinedFunction do
   alias Credence.Issue
 
   @qualified_replacements %{
-    # Macro capture → lambda wrapper
-    # &Integer.is_even/1 is a capture that doesn't work with macros.
-    # Rewrite to &(Integer.is_even(&1)) which correctly invokes the macro.
-    {"Integer", "is_even", 1} => :capture_to_lambda,
-
     # Wrong module for real function
     {"Enum", "last", 1} => {:rename, "List", "last"},
     {"Enum", "last", 0} => {:rename, "List", "last"},
@@ -94,16 +88,7 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Map", "size", 1} => {:drop_module, "map_size"},
 
     # Enum.tail/1 does not exist; the head/tail equivalent is Kernel.tl/1
-    {"Enum", "tail", 1} => {:drop_module, "tl"},
-
-    # Enum.flatten/1 does not exist; the idiomatic equivalent is List.flatten/1
-    {"Enum", "flatten", 1} => {:rename, "List", "flatten"},
-
-    # LLMs hallucinate Process.exit/1; the idiomatic Elixir call is Kernel.exit/1
-    {"Process", "exit", 1} => {:drop_module, "exit"},
-
-    # Hallucinated :ets.open_table/2 — the real function is :ets.new/2
-    {"ets", "open_table", 2} => {:rename, "ets", "new"}
+    {"Enum", "tail", 1} => {:drop_module, "tl"}
   }
 
   @local_replacements %{
@@ -134,10 +119,9 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   @impl true
   def match?(%{severity: :warning, message: msg}) do
-    String.contains?(msg, "single quotes around atoms are deprecated") or
-      ((String.contains?(msg, "is undefined or private") or
-          String.contains?(msg, "is deprecated")) and
-         parse_qualified_ref(msg) != nil)
+    (String.contains?(msg, "is undefined or private") or
+       String.contains?(msg, "is deprecated")) and
+      parse_qualified_ref(msg) != nil
   end
 
   def match?(%{severity: :error, message: msg}) do
@@ -159,27 +143,19 @@ defmodule Credence.Semantic.UndefinedFunction do
   def fix(source, %{message: msg, position: position}) do
     line_no = extract_line(position)
 
-    cond do
-      # :ets.insert/3 does not exist — LLMs hallucinate it from Map.put/3.
-      # Wrap the last two args into a single tuple for :ets.insert/2.
-      String.contains?(msg, "single quotes around atoms are deprecated") ->
-        fix_ets_insert_three_args(source, line_no)
+    case parse_diagnostic(msg) do
+      {:qualified, {mod, fun, arity}} ->
+        fix_qualified(source, line_no, mod, fun, arity)
 
-      true ->
-        case parse_diagnostic(msg) do
-          {:qualified, {mod, fun, arity}} ->
-            fix_qualified(source, line_no, mod, fun, arity, msg)
+      {:local, {name, arity}} ->
+        fix_local(source, line_no, name, arity)
 
-          {:local, {name, arity}} ->
-            fix_local(source, line_no, name, arity)
-
-          nil ->
-            source
-        end
+      nil ->
+        source
     end
   end
 
-  defp fix_qualified(source, line_no, mod, fun, arity, msg) do
+  defp fix_qualified(source, line_no, mod, fun, arity) do
     case Map.get(@qualified_replacements, {mod, fun, arity}) do
       {:rename, new_mod, new_fun} ->
         replace_first_on_line(source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}")
@@ -212,19 +188,6 @@ defmodule Credence.Semantic.UndefinedFunction do
         # Replace Module.fun(...) with new_fun(...) — strips the module prefix
         replace_drop_module(source, line_no, mod, fun, new_fun)
 
-      :capture_to_lambda ->
-        # When the diagnostic includes "Be sure to require <Module>", the call is a
-        # direct invocation of a macro (e.g. Integer.is_even(value)), not a capture.
-        # Insert `require <Module>` at the top of the enclosing module body.
-        case parse_require_hint(msg) do
-          {:ok, require_mod} ->
-            insert_require(source, require_mod, line_no)
-
-          nil ->
-            # &Module.fun/arity → &(Module.fun(&1, &2, ..., &N))
-            rewrite_capture_to_lambda(source, line_no, mod, fun, arity)
-        end
-
       nil ->
         case Credence.FunctionMatcher.suggest(source, mod, fun, arity, visibility: :public_only) do
           {:ok, suggested} ->
@@ -233,48 +196,6 @@ defmodule Credence.Semantic.UndefinedFunction do
           :no_candidates ->
             source
         end
-    end
-  end
-
-  #
-  # :ets.insert/3 → :ets.insert/2 (wrap last two args into a tuple)
-  # LLMs hallucinate :ets.insert(table, key, value) from Map.put/3;
-  # the real API is :ets.insert(table, {key, value}).
-
-  defp fix_ets_insert_three_args(source, line_no) do
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn
-      {line, ^line_no} -> do_fix_ets_insert_three_args(line)
-      {line, _} -> line
-    end)
-  end
-
-  defp do_fix_ets_insert_three_args(line) do
-    case :binary.match(line, ":ets.insert(") do
-      {match_start, match_len} ->
-        paren_pos = match_start + match_len - 1
-        after_paren = String.slice(line, (paren_pos + 1)..-1//1)
-
-        case find_matching_close(String.to_charlist(after_paren)) do
-          {:ok, inner, rest_after} ->
-            args = split_args(inner)
-
-            if length(args) == 3 do
-              [table, arg2, arg3] = args
-              before = String.slice(line, 0, match_start)
-              "#{before}:ets.insert(#{table}, {#{arg2}, #{arg3}})#{rest_after}"
-            else
-              line
-            end
-
-          :unbalanced ->
-            line
-        end
-
-      :nomatch ->
-        line
     end
   end
 
@@ -310,13 +231,6 @@ defmodule Credence.Semantic.UndefinedFunction do
       ref = parse_qualified_ref(msg) -> {:qualified, ref}
       ref = parse_local_ref(msg) -> {:local, ref}
       true -> nil
-    end
-  end
-
-  defp parse_require_hint(msg) do
-    case Regex.run(~r/Be sure to require (\w+)/, msg) do
-      [_, module_name] -> {:ok, module_name}
-      _ -> nil
     end
   end
 
@@ -393,69 +307,6 @@ defmodule Credence.Semantic.UndefinedFunction do
       {line, _} ->
         line
     end)
-  end
-
-  #
-  # &Module.fun/arity → &(Module.fun(&1, &2, ..., &N))
-  # Rewrites a function capture (which doesn't work with macros) to a lambda.
-
-  defp rewrite_capture_to_lambda(source, line_no, mod, fun, arity) do
-    old = "&#{mod}.#{fun}/#{arity}"
-
-    args =
-      if arity == 0,
-        do: "",
-        else: 1..arity |> Enum.map_join(", ", &"&#{&1}")
-
-    new = "&(#{mod}.#{fun}(#{args}))"
-
-    replace_first_on_line(source, line_no, old, new)
-  end
-
-  #
-  # Insert `require <Module>` at the top of the enclosing defmodule body.
-  # Skips if the source already contains `require <Module>`.
-
-  defp insert_require(source, module_name, line_no) do
-    if String.contains?(source, "require #{module_name}") do
-      source
-    else
-      lines = String.split(source, "\n")
-
-      case find_enclosing_defmodule(lines, line_no) do
-        {:ok, index, indent} ->
-          require_line = "#{indent}  require #{module_name}"
-          {before, rest} = Enum.split(lines, index + 1)
-          new_lines = before ++ [require_line, ""] ++ rest
-          Enum.join(new_lines, "\n")
-
-        :not_found ->
-          source
-      end
-    end
-  end
-
-  defp find_enclosing_defmodule(lines, line_no) do
-    # Scan backwards from line_no to find the nearest defmodule ... do
-    start = max(line_no - 2, 0)
-
-    Enum.reduce_while(start..0//-1, :not_found, fn i, acc ->
-      line = Enum.at(lines, i)
-
-      if line && Regex.match?(~r/^\s*defmodule\s+.*\bdo\s*$/, line) do
-        indent = get_indent(line)
-        {:halt, {:ok, i, indent}}
-      else
-        {:cont, acc}
-      end
-    end)
-  end
-
-  defp get_indent(line) do
-    case Regex.run(~r/^(\s*)/, line) do
-      [_, indent] -> indent
-      _ -> ""
-    end
   end
 
   defp replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text) do
@@ -694,12 +545,6 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   defp do_split_args([?) | rest], depth, current, args),
     do: do_split_args(rest, depth - 1, [?) | current], args)
-
-  defp do_split_args([?{ | rest], depth, current, args),
-    do: do_split_args(rest, depth + 1, [?{ | current], args)
-
-  defp do_split_args([?} | rest], depth, current, args),
-    do: do_split_args(rest, depth - 1, [?} | current], args)
 
   defp do_split_args([c | rest], depth, current, args),
     do: do_split_args(rest, depth, [c | current], args)

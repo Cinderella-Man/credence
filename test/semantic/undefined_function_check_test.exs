@@ -59,36 +59,12 @@ defmodule Credence.Semantic.UndefinedFunctionCheckTest do
     test "List.product/1" do
       assert UndefinedFunction.match?(warning("List.product/1 is undefined or private"))
     end
-
-    test "Integer.is_even/1" do
-      assert UndefinedFunction.match?(warning("Integer.is_even/1 is undefined or private"))
-    end
-
-    test "Enum.flatten/1" do
-      assert UndefinedFunction.match?(warning("Enum.flatten/1 is undefined or private"))
-    end
-
-    test "Process.exit/1" do
-      assert UndefinedFunction.match?(warning("Process.exit/1 is undefined or private"))
-    end
-
-    test ":ets.open_table/2" do
-      assert UndefinedFunction.match?(warning(":ets.open_table/2 is undefined or private"))
-    end
   end
 
   describe "match?/1 – qualified: deprecated" do
     test "Enum.partition/2" do
       assert UndefinedFunction.match?(
                warning("Enum.partition/2 is deprecated. Use Enum.split_with/2 instead")
-             )
-    end
-  end
-
-  describe "match?/1 – qualified: :ets.insert/3 hallucination" do
-    test "single quotes around atoms are deprecated" do
-      assert UndefinedFunction.match?(
-               warning("single quotes around atoms are deprecated. Use double quotes instead")
              )
     end
   end

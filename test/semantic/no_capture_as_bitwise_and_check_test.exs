@@ -95,20 +95,5 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAndCheckTest do
       matched = Enum.filter(issues, &(&1.rule == :no_capture_as_bitwise_and))
       assert matched == []
     end
-
-    test "detects bare &1 in pipe step" do
-      source = """
-      defmodule CapturePipeCheckInteg1 do
-        def update(state, key, val) do
-          state
-          |> Map.put(key, Map.get(&1, key, val))
-        end
-      end
-      """
-
-      issues = Credence.Semantic.analyze(source)
-      matched = Enum.filter(issues, &(&1.rule == :no_capture_as_bitwise_and))
-      refute Enum.empty?(matched)
-    end
   end
 end

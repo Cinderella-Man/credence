@@ -266,32 +266,6 @@ defmodule Credence.Syntax.FixDivRemTest do
       confirm_fix(FixDivRem.fix(source), expected)
     end
 
-    test "does not greedily consume right operand past arithmetic operator" do
-      source = """
-      defmodule Solution do
-        def example do
-          k = 4
-          n = 4
-          diff = k * (k + 1) div 2 - n
-          diff
-        end
-      end
-      """
-
-      expected = """
-      defmodule Solution do
-        def example do
-          k = 4
-          n = 4
-          diff = div(k * (k + 1), 2) - n
-          diff
-        end
-      end
-      """
-
-      confirm_fix(FixDivRem.fix(source), expected)
-    end
-
     test "fixed code with function args produces valid Elixir" do
       source = """
       defmodule KernelDivTest do

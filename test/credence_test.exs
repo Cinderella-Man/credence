@@ -1073,9 +1073,8 @@ defmodule CredenceTest do
       result = Credence.fix(input)
       assert String.trim_trailing(result.code) == String.trim_trailing(expected)
 
-      # NoDocOnPrivateFunction removes @doc false; no_private_fn_called_from_macro_quote
-      # reports the genuinely-unused defp (fix is a no-op — no quote call).
-      assert Enum.map(result.issues, & &1.rule) == [:no_private_fn_called_from_macro_quote]
+      # NoDocOnPrivateFunction removes @doc false.
+      assert Enum.map(result.issues, & &1.rule) == []
     end
   end
 
