@@ -88,7 +88,26 @@ defmodule Credence.Semantic.UndefinedFunction do
     {"Map", "size", 1} => {:drop_module, "map_size"},
 
     # Enum.tail/1 does not exist; the head/tail equivalent is Kernel.tl/1
-    {"Enum", "tail", 1} => {:drop_module, "tl"}
+    {"Enum", "tail", 1} => {:drop_module, "tl"},
+
+    # Erlang modules. These keys carry the leading colon because that is what
+    # the compiler emits (`:math.round/1 is undefined or private`) and what
+    # `parse_qualified_ref/1` now captures.
+    #
+    # :crypto has no hex encoder at all — Base.encode16/1 is the real one.
+    # Note it returns UPPERCASE hex, where a digest is conventionally lower;
+    # add `case: :lower` if that matters to the caller.
+    {":crypto", "hex", 1} => {:rename, "Base", "encode16"},
+    # :erlang.warn/1 does not exist; the Elixir equivalent is IO.warn/1.
+    {":erlang", "warn", 1} => {:rename, "IO", "warn"},
+    # :queue.empty/0 does not exist — :queue.new/0 builds the empty queue.
+    # (:queue.is_empty/1 is the predicate, a different function.)
+    {":queue", "empty", 0} => {:rename, ":queue", "new"},
+    # :math has no min/max — those are Kernel guards.
+    {":math", "min", 2} => {:rename, "Kernel", "min"},
+    {":math", "max", 2} => {:rename, "Kernel", "max"},
+    # :math has no round either; Kernel.round/1 is auto-imported.
+    {":math", "round", 1} => {:drop_module, "round"}
   }
 
   @local_replacements %{
@@ -156,6 +175,38 @@ defmodule Credence.Semantic.UndefinedFunction do
   end
 
   defp fix_qualified(source, line_no, mod, fun, arity) do
+    if anchored_call?(source, line_no, mod, fun) do
+      apply_qualified_replacement(source, line_no, mod, fun, arity)
+    else
+      source
+    end
+  end
+
+  # A diagnostic names only the LAST segment of an alias, so
+  # `MyApp.Input.List.reverse/1` and `List.reverse/1` arrive identical. Without
+  # a boundary check the first gets rewritten as if it were the second, turning
+  # a user's own nested module into one that does not exist:
+  #
+  #     Input.List.reverse(l)  ->  Input.Enum.reverse(l)
+  #
+  # (verified against the live rule). A replacement therefore only applies when
+  # the call actually starts at a module boundary on the flagged line.
+  defp anchored_call?(_source, nil, _mod, _fun), do: false
+
+  defp anchored_call?(source, line_no, mod, fun) do
+    case Enum.at(String.split(source, "\n"), line_no - 1) do
+      nil ->
+        false
+
+      line ->
+        Regex.match?(
+          ~r/(?<![.\w])#{Regex.escape(mod)}\.#{Regex.escape(fun)}\b/,
+          line
+        )
+    end
+  end
+
+  defp apply_qualified_replacement(source, line_no, mod, fun, arity) do
     case Map.get(@qualified_replacements, {mod, fun, arity}) do
       {:rename, new_mod, new_fun} ->
         replace_first_on_line(source, line_no, "#{mod}.#{fun}", "#{new_mod}.#{new_fun}")
@@ -234,8 +285,15 @@ defmodule Credence.Semantic.UndefinedFunction do
     end
   end
 
+  # The module capture allows a leading `:` so Erlang module atoms survive.
+  # `\w` cannot match `:`, so the old pattern started at the letter and silently
+  # dropped it — `:math.round/1` came back as `{"math", "round", 1}`, and a
+  # `{:drop_module, "round"}` keyed on that emitted `:round(x)`, which does not
+  # parse. Verified safe for all 27 pre-existing rows: none of their keys begins
+  # with `:`, and the optional colon cannot latch onto the one in
+  # `warning: Enum.last/1 …` because a space follows it.
   defp parse_qualified_ref(msg) do
-    case Regex.run(~r/(\w+)\.(\w+)\/(\d+) is (undefined or private|deprecated)/, msg) do
+    case Regex.run(~r/(:?\w+)\.(\w+)\/(\d+) is (undefined or private|deprecated)/, msg) do
       [_, mod, fun, arity, _] -> {mod, fun, String.to_integer(arity)}
       _ -> nil
     end

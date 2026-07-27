@@ -861,4 +861,86 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       )
     end
   end
+
+  # ── Erlang modules ─────────────────────────────────────────────
+  #
+  # The compiler writes these with the leading colon (`:math.round/1 is
+  # undefined or private`), which `\w` cannot match — so the module capture
+  # used to come back as `"math"` and a `{:drop_module, "round"}` keyed on it
+  # emitted `:round(x)`, which does not parse.
+
+  describe "Erlang module keys keep their leading colon" do
+    test ":crypto.hex → Base.encode16" do
+      confirm_fix(
+        fix(":crypto.hex(data)", ":crypto.hex/1 is undefined or private"),
+        "Base.encode16(data)"
+      )
+    end
+
+    test ":erlang.warn → IO.warn" do
+      confirm_fix(
+        fix(":erlang.warn(msg)", ":erlang.warn/1 is undefined or private"),
+        "IO.warn(msg)"
+      )
+    end
+
+    test ":queue.empty → :queue.new" do
+      confirm_fix(
+        fix(":queue.empty()", ":queue.empty/0 is undefined or private"),
+        ":queue.new()"
+      )
+    end
+
+    test ":math.min → Kernel.min" do
+      confirm_fix(
+        fix(":math.min(a, b)", ":math.min/2 is undefined or private"),
+        "Kernel.min(a, b)"
+      )
+    end
+
+    test ":math.max → Kernel.max" do
+      confirm_fix(
+        fix(":math.max(a, b)", ":math.max/2 is undefined or private"),
+        "Kernel.max(a, b)"
+      )
+    end
+
+    test ":math.round drops the module" do
+      confirm_fix(
+        fix(":math.round(x)", ":math.round/1 is undefined or private"),
+        "round(x)"
+      )
+    end
+  end
+
+  # ── alias boundaries ───────────────────────────────────────────
+  #
+  # A diagnostic names only the LAST segment of an alias, so a user's own
+  # `MyApp.Input.List.reverse/1` is indistinguishable from stdlib
+  # `List.reverse/1` in the message. Rewriting the first as if it were the
+  # second invents a module that does not exist.
+
+  describe "nested aliases are left alone" do
+    test "does not rewrite a user's own nested module" do
+      source = "Input.List.reverse(l)"
+      confirm_fix(fix(source, "MyApp.Input.List.reverse/1 is undefined or private"), source)
+    end
+
+    test "does not rewrite a fully-qualified user module" do
+      source = "MyApp.Input.List.reverse(l)"
+      confirm_fix(fix(source, "MyApp.Input.List.reverse/1 is undefined or private"), source)
+    end
+
+    test "does not rewrite a module whose name merely ends with a table key" do
+      source = "MyList.reverse(l)"
+      confirm_fix(fix(source, "MyList.reverse/1 is undefined or private"), source)
+    end
+
+    test "still rewrites the unqualified stdlib call" do
+      confirm_fix(
+        fix("List.reverse(l)", "List.reverse/1 is undefined or private"),
+        "Enum.reverse(l)"
+      )
+    end
+  end
 end
