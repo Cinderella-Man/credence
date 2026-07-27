@@ -16,32 +16,33 @@ running, but nothing may skip Phase 0.
 
 ---
 
-## START HERE (updated 2026-07-27)
+## START HERE (updated 2026-07-27, Phase 4 CLOSED)
 
-**Phases 0–4.2 are DONE. The candidate queue is empty.** 259 rows decided
-(116 accepts / 143 followups), suite **8058 green**, tree clean, all pushed.
+**Phase 4 is COMPLETE.** All queues drained, all 143 rejected rules
+dispositioned and applied, **nine live shipped defects across seven rules
+repaired**. Suite 8058 → 8114 green in `credence`; 6842 green in the sister
+after the deletion. Next: **Phase 5** (harness escalations) and **Phase 6**
+(the C-items + the rebuild backlog below).
 
-Every one of the 143 rejected rules has since been re-evaluated one-by-one with
-executed probes, cross-reconciled, and adversarially verified. Two companion
-documents hold the results and are **required reading before touching the backlog**:
+The evidence is in two companion documents, both **required reading before
+touching the backlog**:
 
 - **`docs/17-failure-mode-catalogue.md`** — what each rejected rule *taught us*.
   137/140 encode a real defect. Ranked "what is worth building" list at the end.
-- **`docs/18-final-143-disposition.md`** — the per-rule verdict table (all 143),
-  the cross-rule reconciliation findings, and the 56 uncaught failure modes.
+- **`docs/18-final-143-disposition.md`** — per-rule verdicts for all 143, with
+  full failure-mode and action text, the cross-rule reconciliation, and the 56
+  uncaught failure modes. Generated from **`docs/18-per-rule-verdicts.json`**,
+  which is the source of truth; if the prose and the JSON disagree, the JSON wins.
 
-### Do these first, in this order
+### What is left, in order
 
-1. **Fix three live shipped bugs** (Phase 4.6a). All verified by execution; each
-   corrupts user source today. This outranks everything else in this document.
-2. **Fix the three deferral chains** (Phase 4.6b) *before* any bulk deletion —
-   deleting in the obvious order silently drops coverage to zero.
-3. **Delete the 115 dead rules** (Phase 4.6c) — safe once step 2 is done.
-4. **Apply the 9 salvages as table entries, not as modules** (Phase 4.6d) — as
-   standalone modules 11 of them would pre-empt a live rule and make things worse.
-5. Then resume the original sequence: Phase 4.3 (stage 2) → 4.4 (stage 3) → 4.5.
+1. **Phase 5** — triage the harness escalations (Appendix A). Untouched.
+2. **Phase 6** — the 17 rebuild-later rules and the 56 uncaught modes. Ranked
+   build list at the end of docs/17, but read §5.3 of docs/18 first: that list
+   took heavy damage on review and has not been rewritten.
+3. **Phases 7–9** — performance tail, harness improvements, next run.
 
-### Three findings that will mislead you if you don't know them
+### Five findings that will mislead you if you don't know them
 
 - **Do NOT "rehome" a rejected semantic rule to the pattern phase.** It is the
   obvious remedy and it is wrong: adversarial testing overturned **17 of 17**.
@@ -52,24 +53,41 @@ documents hold the results and are **required reading before touching the backlo
 - **Green tests are not evidence.** A fabricated diagnostic appears in three
   mutually-consistent files (the rule's `@match_msg`, the check test, the fix
   test), so the rule agrees with itself and passes. Always compile the target.
+  Two tests in this repo asserted a *silent branch deletion* as correct output
+  and passed for as long as the defect shipped — see 4.6a. When a fix's meaning
+  matters, assert behaviour with `Credence.RuleCase.call_fixed/4`, not text.
 - **`lib/semantic.ex:191` is `Enum.find` — first match wins, no fall-through.**
   One rule per diagnostic. If the winner's `fix/2` no-ops, every other matching
   rule is silently dead. 12 dispatch slots are contested; `undefined variable
   "<name>"` alone is claimed by 17 rejected rules.
+- **A wider rule is often strictly worse than a narrow one.** Twice during 4.6a
+  a designed widening was rejected because it converted a *loud* failure into a
+  *silent wrong answer* — the Python operators `&` and `%` bind more loosely
+  than Elixir's, so rewriting only the immediate operands regroups the
+  expression. Declining leaves a compile error, which names the file and line.
+- **Never put load-bearing prose in a Markdown table cell.** docs/18's first
+  revision lost ~162k characters that way, silently. See docs/15 gotcha 7.
 
 ---
 
 ## 0. State of the world (verified 2026-07-21; Phase-4 outcome appended 2026-07-27)
 
-> **2026-07-27 update.** The drain is finished. `credence` on `evolution_accepted`
-> now holds **294 live rules** (156 pattern, 91 semantic, 46 syntax) and a
-> **8058-test** green suite. The sister `credence_evolution` still holds all 143
-> rejected rule sources and their tests — **nothing has been deleted yet**, so the
-> evidence is fully recoverable. Five rejected names also exist live as
-> different-phase siblings (`fix_div_rem`, `no_capture_as_bitwise_and`,
-> `no_or_in_case_pattern`, `prefer_explicit_range_step`, `undefined_function`);
-> check which one you mean before acting on those. The numbers in the table below
-> are the *pre-drain* snapshot and are kept for history.
+> **2026-07-27 update.** Phase 4 is closed. `credence` on `evolution_accepted`
+> holds **295 live rules** (156 pattern, 92 semantic, 47 syntax — the new
+> `lib/source_mask.ex` is a shared helper, not a rule) and an **8114-test** green
+> suite. The sister `credence_evolution` has had the 112 dead rejected modules
+> and their 227 tests removed (commit `b83d623`); it is on branch `evolution`,
+> **pushed to `origin/evolution`**, so every deleted file remains recoverable and
+> every verdict reversible. The 27 kept rules (17 rebuild + 9 salvage + 1
+> already-live) are still there.
+>
+> Five rejected names also exist live as same-name siblings (`fix_div_rem`,
+> `no_capture_as_bitwise_and`, `no_or_in_case_pattern`, `prefer_explicit_range_step`,
+> `undefined_function`). Check which one you mean before acting on those — and
+> note the trap 4.6c hit: in the *sister* these are deltas of files that exist on
+> `main`, so rejecting the delta means restoring `main`'s version, not deleting
+> the file. The numbers in the table below are the *pre-drain* snapshot and are
+> kept for history.
 
 **Branch topology.** `credence` is on `evolution_accepted` = `main` (`fb6473c`)
 + the setup commit + the research docs. `credence_evolution` (the sister
@@ -125,7 +143,7 @@ Pass 5 is mid-flight: 125/230 done.
 | 1 | Land the execution-verified defect fixes | 0 | hours | **done** 2026-07-21 (`69aa2ec`) |
 | 2 | Apply shared-file deltas by hand | 1 | hours | **done** 2026-07-21 (`3a64b6f`; two hunks deferred by design) |
 | 3 | Make the full suite cheap (P1+P2) | 1 | 1–2 days | **done** 2026-07-22 (`1e6e8c6`; 516 s → 251 s, targets recalibrated) |
-| 4 | Drain the candidate queue (stages 1→2→3) | 0–3 | days (mostly unattended) | **4.1–4.2 done** 2026-07-27 (259 rows: 116 accept / 143 followup); 4.3–4.6 open |
+| 4 | Drain the candidate queue (stages 1→2→3) | 0–3 | days (mostly unattended) | **done** 2026-07-27 (259 rows: 116 accept / 143 followup; 4.3–4.6 closed) |
 | 5 | Triage the harness escalations | 0 (parallel with 4) | ~1 day | — |
 | 6 | Credence improvement program (C-items) | 4 | ongoing, ordered | — |
 | 7 | Remaining performance items (P3–P6) | 3 | days | — |
@@ -378,13 +396,44 @@ nohup ./review_loop.sh 25 > .review_logs/console_$(date +%F_%H%M).log 2>&1 &
 - Companion commit for the two deferred global-test hunks when
   `no_private_fn_called_from_macro_quote` is decided (see Phase 2.4).
 
-**4.3 Stage 2 — promote/confirm the non-fixable stubs.**
+**4.3 Stage 2 — promote/confirm the non-fixable stubs. ✅ COMPLETE (vacuous).**
+The stage-2 queue is empty and always was: `unfixable_unreviewed.md` is 0 bytes,
+because the 4.1 stub pre-pass moved **zero** rules into it — every candidate
+carried a real `fix/1`, so none was a provable check-only stub. There is nothing
+to promote or confirm, and `unfixable_confirmed.md` correctly holds only its
+header. Re-run the pre-pass at the start of the next cycle rather than assuming
+the same result.
+
+*Original instructions, kept for that next cycle:*
 `./stage_2_promote_non_fixable/promote_loop.sh` (guard requires `candidates.md`
 empty). Verdicts land in `unfixable_confirmed.md`; afterwards distill the
 confirmed reasons into `CONTEXT.md` / the harness prompts (that distillation is
 explicitly a human step).
 
-**4.4 Stage 3 — resurrect followups.**
+**4.4 Stage 3 — resurrect followups. ✅ COMPLETE, by hand rather than by loop.**
+
+The loop was deliberately **not** run. Its job — re-examine each rejected
+followup and decide whether a safety switch would rescue it — had already been
+done for all 143, one agent per rule with executed probes, cross-reconciled and
+adversarially verified. Re-running it would have spawned ~143 fresh sessions to
+re-litigate a more rigorous answer. The outputs it would have produced are
+instead recorded as:
+
+- **17 rebuild-later** and **9 salvage** rules (docs/18) — the resurrections.
+- **`stage3_unfixable.md`, `proposed_assumptions.md` and
+  `proposed_rules_requiring_assumptions.md` stay empty**, and that is a finding,
+  not an omission: **no rejected rule was blocked on a missing safety switch**.
+  The rejections were implementation-dead (82), duplicates (25) or false
+  premises (9) — none of them "correct but needs an assumption to be safe".
+- **The dangling `fix_process_send_after_infinity` switch proposal
+  (`switch_proposals/2`, `default: true`) is DECLINED.** It was filed to rescue
+  a rule that cannot exist: all three `Process.send_after(:infinity)` rules key
+  on *fabricated* diagnostics, and the real failure mode emits **zero** compiler
+  output, so no semantic rule can ever reach it. A switch that gates an
+  unreachable rule buys nothing. The failure mode survives as a report-only
+  **pattern**-phase rebuild item (docs/18 §Corrections).
+
+*Original instructions, kept for the next cycle:*
 `LIST=1 ./stage_3_resurrect_followups/resurrect_loop.sh` to preview, then run.
 Switch proposals it emits go to `proposed_assumptions.md` +
 `proposed_rules_requiring_assumptions.md`; landing a switch is manual
@@ -403,105 +452,129 @@ decision batch.
   notable rejects).
 - Full `mix test` green; merge `evolution_accepted` → `main` via PR.
 
-**4.6 Work the followup backlog (143 rules).** ← *this is the live work*
+**4.6 Work the followup backlog (143 rules). ✅ COMPLETE 2026-07-27.**
 
-Full evidence: **`docs/18-final-143-disposition.md`** (per-rule table) and
-**`docs/17-failure-mode-catalogue.md`** (what each rule taught us). Verdict split:
+Full evidence: **`docs/18-per-rule-verdicts.json`** (source of truth),
+**`docs/18-final-143-disposition.md`** (generated prose) and
+**`docs/17-failure-mode-catalogue.md`** (what each rule taught us).
+
+Reconciled verdict split — eight rules were relabelled to settle the cases where
+the overturn pass and the cross-rule pass disagreed (per-rule reasoning is in
+docs/18's `Reconciled / resolved` callouts):
 
 | disposition | n |
 |---|---|
-| delete — implementation dead | 85 |
-| delete — duplicate of a live rule | 20 |
-| delete — premise false | 10 |
-| rebuild later from catalogue | 18 |
+| delete — implementation dead | 82 |
+| delete — duplicate of a live rule | 25 |
+| delete — premise false | 9 |
+| rebuild later from catalogue | 17 |
 | salvage — small fix | 9 |
 | already live (never belonged on the list) | 1 |
 
 135/143 encode a **real** failure mode; **56 are caught by nothing** — not the
 compiler, not Credo, not Dialyzer. Those 56 are the actual product of the
-evolution cycle. 44 of 61 work-creating verdicts were overturned on adversarial
-review, so treat any "this is salvageable" instinct with suspicion.
+evolution cycle. 43 of 143 verdicts were overturned on adversarial review, so
+treat any "this is salvageable" instinct with suspicion.
 
 ---
 
-**4.6a — Fix three LIVE shipped rules that corrupt source. Do this first.**
+**4.6a — Repair the live shipped defects. ✅ DONE.**
 
-These are accepted, in `lib/`, and wrong today. The first two are verified by
-executed probe.
+Scoped as three bugs. It was **nine defects across seven rules**, every one
+verified by executed probe through the real pipeline before and after:
 
-1. `Credence.Semantic.NoCaptureAsBitwiseAnd` — `@band_regex`
-   (`lib/semantic/no_capture_as_bitwise_and.ex:28`) captures the right operand as
-   `(\d+)`, which stops at the `0` of `0xFF`:
-   ```
-   flags & 0xFF  ->  Bitwise.band(flags, 0)xFF   *** DOES NOT PARSE ***
-   mask & 0b1010 ->  Bitwise.band(mask, 0)b1010  *** DOES NOT PARSE ***
-   x & 0o17      ->  Bitwise.band(x, 0)o17       *** DOES NOT PARSE ***
-   flags & 255   ->  Bitwise.band(flags, 255)    parses
-   ```
-   Hex, binary and octal all break; bitmask code is overwhelmingly hex. Fix: widen
-   to `(0[xXbBoO][0-9a-fA-F_]+|\d[\d_]*)`. Add all three literal forms as tests.
-2. `Credence.Syntax.FixDivRem` — the operand pattern at
-   `lib/syntax/fix_div_rem.ex:161` is `^(\s*(?:\w+\s*=\s*)?)(.+?)\s+#{op}\s+(.+?)(\s*$)`;
-   the lazy `(.+?)` swallows a whole `def` head:
-   ```
-   def f(n), do: n * (n + 1) / 2  ->  div(def f(n), do: n * (n + 1), 2)  *** DOES NOT PARSE ***
-   total = sum / count            ->  total = div(sum, count)            parses
-   ```
-   Fix: reject lines whose left operand contains a `def`/`defp` head, or anchor to
-   the AST rather than the line. Note the irony — this accepted rule carries the
-   exact defect that got a dozen of its rejected siblings thrown out.
-3. `Credence.Semantic.NoBareReturnInUnless` — reported to strip `return` so the
-   code compiles and then **executes the branch it was meant to skip**
-   (`{:ok, -5}` where `{:error, :neg}` was intended). ⚠️ **Not independently
-   confirmed — verify before acting.** If it reproduces, make the rule
-   report-only until it can restructure into `if/else`.
+| rule | defect | commit |
+|---|---|---|
+| `Semantic.NoCaptureAsBitwiseAnd` | `flags & 0xFF` → `Bitwise.band(flags, 0)xFF`; same for `0b`, `0o` and `1_000` | `4abafed` |
+| `Syntax.FixDivRem` | a `def` head swallowed into the left operand | `2964ab4` |
+| `Syntax.FixDivRem` | rewrote inside string literals | `2964ab4` |
+| `Semantic.NoBareReturnInUnless` | early exit deleted, not restructured — silent wrong answer | `86ee66b` |
+| `Syntax.FixPythonModulo` | rewrote inside string literals | `9fc30a3` |
+| `Syntax.FixPythonModulo` | read `%Name{}` struct literals as modulo | `9fc30a3` |
+| `Syntax.FixPythonModulo` | `a * b % 2` regrouped — silent wrong answer | `9fc30a3` |
+| `Syntax.FixPythonFloorDiv` / `FixScientificNotation` | rewrote inside string literals | `9fc30a3` (via `SourceMask`) |
+| `Semantic.UndefinedFunction` | rewrote a user's own nested-alias call | `891a05c` |
 
-**4.6b — Fix three deferral chains BEFORE deleting anything.**
+Three findings worth carrying forward:
 
-No literal duplicate cycle exists (all 35 `dup_of` edges resolve to live files),
-but three chains defer coverage to somewhere that does not actually provide it.
-Applying the deletes in the obvious order loses the coverage **silently**.
+1. **The string-literal defect was systemic, not local.** Four line-based syntax
+   rules regexed over raw bytes with no notion of literals. The fix is
+   **`lib/source_mask.ex`** — a same-length shadow with literals, sigils,
+   heredocs, char literals and comments blanked. Rules match the shadow and
+   splice into the real line at the matched offsets. It is a hand-rolled byte
+   scanner rather than `:elixir_tokenizer` *on purpose*: these rules only run on
+   source that does not parse, so a tokenizer is exactly what you cannot rely
+   on, and this scanner degrades to a missed fix instead of a corrupted string.
+2. **Two designed widenings were rejected on adversarial review**, both because
+   they converted a loud failure into a silent one. `h * 31 + c & 0xFFFFFFFF`
+   became `h * 31 + Bitwise.band(c, 0xFFFFFFFF)` — compiles, returns
+   4294967306356 instead of 10356. Python's `&` and `%` bind more loosely than
+   Elixir's, so any repair that wraps only the immediate operands regroups the
+   expression. Both rules now decline those shapes.
+3. **Two existing tests asserted the bug.** `NoBareReturnInUnless`'s discarded
+   -branch output was written into the fix tests as the expected result, and
+   passed for as long as the defect shipped. `Credence.RuleCase.call_fixed/4`
+   now exists so a test can assert what a fix *means*.
 
-1. **Nested-module structs → zero.** `fix_undefined_nested_module_struct` is
-   deleted as a duplicate of live `FixCyclicStructReference`, while
-   `fix_undefined_struct_in_pattern` is deleted *because* that same live rule
-   claims the diagnostic and then **no-ops** on nested-module sources. Correction
-   in docs/18: `fix_undefined_nested_module_struct` → `delete-implementation-dead`
-   (its `match?/1` keys on a fabricated message), and **promote**
-   `fix_undefined_struct_in_pattern` instead of deleting it.
-2. **return-in-unless → a known-harmful rule.** Coverage defers to
-   `NoBareReturnInUnless`, i.e. bug #3 in 4.6a. Fix 4.6a first, then re-decide
-   `no_early_return_in_unless` and `no_return_fn_in_conditional`.
-3. **`elif` → zero.** `no_elif_keyword` is deleted with `caught_by=nothing`, and
-   live `FixElsifInIfChain` was verified to contain only two regexes, both
-   `elsif` (`lib/syntax/fix_elsif_in_if_chain.ex:54` and `:305`) — it does not fire
-   on `elif` at all. Either extend that live rule's regexes to `els?if` or keep a
-   dedicated `elif` rule. (`no_elsif_keyword` really is a byte-identical duplicate
-   and should just be deleted.)
+**4.6b — The three deferral chains. ✅ DONE.**
 
-**4.6c — Delete the 115 dead rules.** Safe once 4.6b is done. Per-rule
-justification in docs/18. Record each failure mode in docs/17 *before* deleting —
-the module is the fossil, the observation is the asset.
+1. *Nested-module structs.* `fix_undefined_nested_module_struct` → delete
+   (its `match?/1` keys a fabricated message, so it never fires);
+   `fix_undefined_struct_in_pattern` **promoted** to rebuild-later. Deleting
+   both would have dropped the mode to zero while live
+   `FixCyclicStructReference` kept the slot and no-opped on it.
+2. *return-in-unless.* Resolved by repairing the live rule (`86ee66b`).
+3. *`elif`.* Resolved by widening the live `FixElsifInIfChain` regexes to
+   `els?if` (`fe6c2f7`). Verified `elif` was `analyze == []` and a no-op fix
+   before, and `elsif` output is byte-identical after.
 
-**4.6d — Apply the 9 salvages as TABLE ENTRIES, not as modules.** Under
-first-match-wins dispatch, **11 of the proposed standalone salvages would each
-pre-empt live `Credence.Semantic.UndefinedFunction`** and disable a working rule —
-a net regression. The reconciliation pass rewrote them as additive rows in
-`lib/semantic/undefined_function.ex` `@qualified_replacements`; use those specs
-verbatim from docs/18 §Corrections. Two known-good examples:
-`{":math","round",1} => {:drop_erlang_module,"round"}` and widening
-`parse_qualified_ref`'s module capture at `undefined_function.ex:238` from
-`(\w+)` to `(:?\w+)` so Erlang module atoms keep their leading colon.
+**4.6c — Delete the dead rules. ✅ DONE** (sister commit `b83d623`): 112
+modules + 227 tests, 339 files.
 
-**4.6e — The 18 rebuild-later + 56 uncaught modes** feed Phase 6. Ranked build
-list at the end of docs/17; top entries are `Map.*` applied to an `Enum.*` result
-(silent, unconditional `BadMapError`), `send(self(), …)` inside a `Task` closure
-(completely silent, one-line repair), and the `handle_call` reply protocol
-(**report-only** — the repair is safe but the surrounding restructure is not).
+One trap worth recording. **Four of the 116 delete verdicts are not standalone
+rules** — `fix_div_rem`, `no_capture_as_bitwise_and`, `prefer_explicit_range_step`
+and `undefined_function` are *deltas of modules that already exist on `main`*.
+"Reject the delta" means **restore `main`'s version**, not remove the file.
+Deleting them outright stripped capability `main` has, and the sister's suite
+caught it — four pipeline-integration failures on `n * (n + 1) div 2`, which no
+longer had any rule to repair it. docs/18 flags these five same-name pairs, but
+only for the reassurance that deleting them cannot harm the *live* repo; the
+harm is to the sister.
 
-**Definition of done:** `candidates.md`, `unfixable_unreviewed.md`, and
-`followup.md` all drained; every base has a decision commit; 4.6a–4.6d applied;
-PR to main open with the cycle summary.
+**4.6d — Fold the salvages into `@qualified_replacements`. ✅ PARTIAL, by design**
+(`891a05c`).
+
+Landed: the `parse_qualified_ref` widening `(\w+)` → `(:?\w+)` — load-bearing,
+because the compiler writes `:math.round/1` *with* the colon and `\w` cannot
+match it — plus six Erlang rows (`:crypto.hex`, `:erlang.warn`, `:queue.empty`,
+`:math.min`, `:math.max`, `:math.round`). Verified safe for all 27 pre-existing
+rows across 146 message shapes and 213 assertions.
+
+**Not landed, and the reason matters more than the rows do.** The integrator
+overturned docs/18's verdicts on two rules and docs/18 was right both times:
+
+- `:persistent_term.get_keys` — the proposed repair emits
+  `Enum.map(:persistent_term.get(), &elem(&1, 0))`. That call is **VM-global**
+  (27 OTP-internal keys on a stock VM), so paired with its erase loop it
+  terminates the BEAM — and the pipeline reports a clean success with zero
+  residual diagnostics.
+- `Base.hex_encode` — `replace_first_on_line/4` is a substring search and
+  `hex_encode` is a prefix of the real `Base.hex_encode32`, which the compiler
+  lists in that very diagnostic's did-you-mean block. One broken call became two.
+
+The `Agent`, `NaiveDateTime`, `List.keystore` and `exit/2` rows are **deferred,
+not dropped** — sound in themselves, but each needs the call-boundary anchoring
+to have settled first, and `exit/2` additionally needs an arity check
+`replace_call_on_line/4` does not do. Also refuted: docs/16's proposed
+`:drop_erlang_module` handler is unnecessary once the regex is widened.
+
+**4.6e — The 17 rebuild-later + 56 uncaught modes** feed Phase 6. Ranked build
+list at the end of docs/17 — but read docs/18 §5.3 first: that list took heavy
+damage on review and has not been rewritten.
+
+**Definition of done:** ✅ all queues drained; every base has a decision commit;
+4.6a–4.6d applied; the cycle summary is in the CHANGELOG.
+
 
 ## Phase 5 — Triage the harness escalations (parallel with Phase 4)
 

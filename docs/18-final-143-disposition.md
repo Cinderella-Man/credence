@@ -56,6 +56,7 @@ Evaluated one-by-one (one agent per rule, executed probes), cross-reconciled, an
 - no_capture_as_bitwise_and: keep delete-duplicate, but the verdict must carry two live-rule actions it currently only narrates. (1) The bare-&N-as-pipe-placeholder shape is REAL and uncaught, and live NoCaptureAsBitwiseAnd permanently blocks any successor by claiming the diagnostic — so record it as a rebuild INSIDE the live rule, not as lost coverage. (2) Confirmed by execution: NoCaptureAsBitwiseAnd's @band_regex ~r/([A-Za-z_]\w*)\s*&\s*(\d+)/ turns `flags & 0xFF` into `Bitwise.band(flags, 0)xFF`, which does not parse. Widen the right operand to 0[xXbBoO][0-9A-Fa-f_]+|\d[\d_]* or gate on a decimal-only literal.
 
 
+
 ## Per-rule table
 
 Index only — **the `action` and `failure mode` text lives in **Per-rule detail** below**,
@@ -63,7 +64,9 @@ in full. Do not read a verdict from this table alone; every disposition here is 
 one-word summary of a paragraph of executed evidence.
 
 `⚠` in the *ovr* column = the verdict was **overturned** on adversarial review, i.e. the
-first-pass disposition was wrong. 43 of 143 were.
+first-pass disposition was wrong. 43 of 143 were. `↻` = **relabelled during the
+2026-07-27 reconciliation**, which settled the eight rules where the overturn pass and
+the cross-rule pass disagreed; the per-rule detail carries the reasoning.
 
 | # | rule | disposition | ovr | FM real | conf | caught by | dup of |
 |---|---|---|---|---|---|---|---|
@@ -88,9 +91,9 @@ first-pass disposition was wrong. 43 of 143 were.
 | 19 | `no_genserver_reply_in_handle_call` | rebuild-later-from-catalogue |  | yes | high | nothing | — |
 | 20 | `no_hallucinated_crypto_compare` | rebuild-later-from-catalogue | ⚠ | yes | high | elixir-compiler (detection only — warning, code still compiles; Credence.Semantic.UndefinedFunction matches the diagnostic but its fix/2 no-ops, so nothing repairs it) | — |
 | 21 | `no_keyword_if_in_tuple` | rebuild-later-from-catalogue | ⚠ | yes | high | nothing | — |
-| 22 | `no_mapset_member_in_guard` | rebuild-later-from-catalogue | ⚠ | yes | high | nothing | — |
+| 22 | `no_mapset_member_in_guard` | delete-duplicate | ⚠↻ | yes | high | nothing | — |
 | 23 | `no_pipe_into_arithmetic_operator` | rebuild-later-from-catalogue |  | yes | high | nothing | — |
-| 24 | `no_private_fn_in_timer_mfa` | rebuild-later-from-catalogue | ⚠ | yes | high | nothing (the elixir compiler emits a *misdescribing* warning — "function f/N is unused" — but 0 of 90 live semantic rules match that diagnostic, and no live rule mentions :timer/apply_after/MFA at all) | — |
+| 24 | `no_private_fn_in_timer_mfa` | delete-duplicate | ⚠↻ | yes | high | nothing (the elixir compiler emits a *misdescribing* warning — "function f/N is unused" — but 0 of 90 live semantic rules match that diagnostic, and no live rule mentions :timer/apply_after/MFA at all) | — |
 | 25 | `no_process_send_after_infinity` | rebuild-later-from-catalogue | ⚠ | yes | high | nothing | — |
 | 26 | `no_raw_send_in_genserver_handle_call` | rebuild-later-from-catalogue |  | yes | high | nothing | — |
 | 27 | `no_remote_function_in_guard` | rebuild-later-from-catalogue | ⚠ | yes | high | elixir-compiler (hard, build-blocking error) — but no live credence rule: 0 of 90 live semantic rules match the diagnostic | — |
@@ -99,7 +102,7 @@ first-pass disposition was wrong. 43 of 143 were.
 | 30 | `fix_div_rem (syntax)` | delete-duplicate |  | yes | high | Credence.Syntax.FixDivRem — the LIVE rule of the identical name at /home/kamil/projects/credence/lib/syntax/fix_div_rem.ex (it fires, but its fix is itself incorrect; see evidence) | Credence.Syntax.FixDivRem |
 | 31 | `fix_do_equals_keyword_syntax` | delete-duplicate |  | yes | high | Credence.Syntax.FixDoBlockFusion (detection only — it flags the line but its repair is wrong; see evidence) | Credence.Syntax.FixDoBlockFusion |
 | 32 | `fix_struct_field_assignment_syntax` | delete-duplicate |  | yes | high | Credence.Semantic.FixRemoteCallInPattern (live, /home/kamil/projects/credence/lib/semantic/fix_remote_call_in_pattern.ex) — it has a dedicated `try_fix_block_assignment/5` branch (line 164) for exactly `var.field = expr` | Credence.Semantic.FixRemoteCallInPattern |
-| 33 | `fix_undefined_nested_module_struct` | delete-duplicate |  | yes | high | Credence.Semantic.FixCyclicStructReference (live) | Credence.Semantic.FixCyclicStructReference |
+| 33 | `fix_undefined_nested_module_struct` | delete-implementation-dead | ↻ | yes | high | Credence.Semantic.FixCyclicStructReference (live) | Credence.Semantic.FixCyclicStructReference |
 | 34 | `no_after_or_rescue_in_case` | delete-duplicate |  | yes | high | Credence.Semantic.FixAfterOrRescueInCase (live) | Credence.Semantic.FixAfterOrRescueInCase |
 | 35 | `no_capture_as_bitwise_and` | delete-duplicate |  | yes | high | elixir-compiler (emits the error verbatim) + LIVE Credence.Semantic.NoCaptureAsBitwiseAnd for the `IDENT & INTEGER` shape only; the pipe-placeholder `&N` shape is caught by NOTHING (live rule matches the diagnostic and no-ops, blocking any successor) | Credence.Semantic.NoCaptureAsBitwiseAnd (/home/kamil/projects/credence/lib/semantic/no_capture_as_bitwise_and.ex) |
 | 36 | `no_early_return_in_unless` | delete-duplicate |  | yes | high | elixir-compiler (hard CompileError, so nothing ships silently) — but the live repair rule Credence.Semantic.NoBareReturnInUnless consumes the diagnostic and emits a silently wrong fix | Credence.Semantic.NoBareReturnInUnless |
@@ -122,7 +125,7 @@ first-pass disposition was wrong. 43 of 143 were.
 | 53 | `no_date_utc_today_with_arg` | delete-premise-false |  | yes | high | elixir-compiler | — |
 | 54 | `no_rescue_or_catch_outside_try` | delete-premise-false |  | **NO** | high | nothing (and nothing should — the "defect" is the preferred form; the *inverse* readability check is already shipped by the project's own dependency, Credo EX3017 PreferImplicitTry) | — |
 | 55 | `no_undefined_guard_equality_in_case` | delete-premise-false |  | **NO** | high | Credence.Pattern.NoGuardEqualityForPatternMatch (live) — for the def/defp-head form of the same idiom; nothing covers the case-clause form, and nothing needs to (it is not a defect). The adjacent real defect `:ets:info(t)` is caught by nothing. | — |
-| 56 | `prefer_explicit_range_step` | delete-premise-false |  | yes | high | Credence.Semantic.PreferExplicitRangeStep (LIVE, /home/kamil/projects/credence/lib/semantic/prefer_explicit_range_step.ex) | Credence.Semantic.PreferExplicitRangeStep |
+| 56 | `prefer_explicit_range_step` | delete-duplicate | ↻ | yes | high | Credence.Semantic.PreferExplicitRangeStep (LIVE, /home/kamil/projects/credence/lib/semantic/prefer_explicit_range_step.ex) | Credence.Semantic.PreferExplicitRangeStep |
 | 57 | `prefer_head_pattern_over_tail_destructure` | delete-premise-false |  | **NO** | high | nothing | — |
 | 58 | `prefer_stdlib_gcd` | delete-premise-false |  | **NO** | high | nothing | — |
 | 59 | `fix_after_clause_pattern_arrow` | delete-implementation-dead |  | yes | high | nothing | — |
@@ -146,7 +149,7 @@ first-pass disposition was wrong. 43 of 143 were.
 | 77 | `fix_string_replace_multi_arity_fn` | delete-implementation-dead |  | yes | high | Credence.Pattern.NoMultiArityFnInStringReplace (LIVE) for the 3-arg form, plus Credence.Semantic.NoStringReplaceArityMismatch (LIVE) for the compile-time-evaluated case. NOTHING catches the 4-arg-with-literal-`[]` form this rule targets. | Credence.Pattern.NoMultiArityFnInStringReplace (partial — same construct and same intended repair, but its head requires exactly 3 args, so it does not cover this rule's 4-arg target) |
 | 78 | `fix_struct_update_on_dynamic_variable` | delete-implementation-dead |  | yes | high | Credence.Semantic.NoStructUpdateOnUntypedVariable (live) — same diagnostic, but only the bare-function-parameter shape; it explicitly declines the tuple/local-binding shape this rule targets (should_report? == false), so that slice is currently unreported. | Credence.Semantic.NoStructUpdateOnUntypedVariable |
 | 79 | `fix_undefined_params_in_plug_router` | delete-implementation-dead | ⚠ | yes | high | nothing | — |
-| 80 | `fix_undefined_struct_in_pattern` | delete-implementation-dead |  | yes | high | nothing | — |
+| 80 | `fix_undefined_struct_in_pattern` | rebuild-later-from-catalogue | ↻ | yes | high | nothing | — |
 | 81 | `fix_undefined_underscored_binding` | delete-implementation-dead |  | yes | high | nothing | — |
 | 82 | `fix_undefined_variable_in_equality` | delete-implementation-dead |  | yes | high | elixir-compiler | — |
 | 83 | `fix_undefined_variable_in_helper_scope` | delete-implementation-dead |  | yes | high | nothing | — |
@@ -175,7 +178,7 @@ first-pass disposition was wrong. 43 of 143 were.
 | 106 | `no_genserver_tuple_piped_to_state_fn` | delete-implementation-dead | ⚠ | yes | medium | elixir-compiler | — |
 | 107 | `no_guard_before_validation` | delete-implementation-dead |  | yes | high | nothing | — |
 | 108 | `no_hallucinated_fetch_part` | delete-implementation-dead |  | yes | high | elixir-compiler (warning) + LIVE Credence.Semantic.UndefinedFunction — it match?es the real diagnostic and reports `%Credence.Issue{rule: :undefined_function, meta: %{line: 3}}`, but its fix/2 no-ops on this call (no @qualified_replacements entry). Detection is covered; repair is not. | — |
-| 109 | `no_hallucinated_math_round` | delete-implementation-dead |  | yes | high | Credence.Semantic.UndefinedFunction — DETECTION only (emits %Issue{rule: :undefined_function}); its fix/2 is a verified no-op on this target, so the repair is uncaught. | Credence.Semantic.UndefinedFunction (matcher overlap on the real diagnostic; repair not covered) |
+| 109 | `no_hallucinated_math_round` | delete-duplicate | ↻ | yes | high | Credence.Semantic.UndefinedFunction — DETECTION only (emits %Issue{rule: :undefined_function}); its fix/2 is a verified no-op on this target, so the repair is uncaught. | Credence.Semantic.UndefinedFunction (matcher overlap on the real diagnostic; repair not covered) |
 | 110 | `no_hallucinated_naive_datetime_to_unix` | delete-implementation-dead |  | yes | high | Credence.Semantic.UndefinedFunction (detects/reports only; its fix/2 no-ops on this diagnostic) | — |
 | 111 | `no_hallucinated_persistent_term_fn` | delete-implementation-dead |  | yes | high | Credence.Semantic.UndefinedFunction — DETECTION ONLY. It is the sole live matcher for the real diagnostic and reports `%Credence.Issue{rule: :undefined_function, meta: %{line: 3}}`, but its `fix/2` returns the source byte-identical (no `{"persistent_term","get_keys",0}` entry in `@qualified_replacements`, FunctionMatcher fallback finds nothing). So the warning is reported and never repaired; nothing in the live set fixes it. | — |
 | 112 | `no_hallucinated_struct` | delete-implementation-dead |  | yes | high | elixir-compiler | — |
@@ -204,8 +207,8 @@ first-pass disposition was wrong. 43 of 143 were.
 | 135 | `no_stream_data_constant_with_range` | delete-implementation-dead |  | yes | high | nothing | — |
 | 136 | `no_undefined_options_in_plug_router_block` | delete-implementation-dead |  | yes | high | elixir-compiler | — |
 | 137 | `no_underscore_pattern_binding_with_bare_body_use` | delete-implementation-dead |  | yes | high | nothing | — |
-| 138 | `no_unreachable_duplicate_function_clause` | delete-implementation-dead |  | yes | high | elixir-compiler (3 warnings, incl. "this clause for start_link/1 cannot match because a previous clause at line 4 always matches"); also reported — not repaired — by LIVE Credence.Pattern.NonGroupedClauses | Credence.Pattern.NoDuplicateFunctionClauses (exact-duplicate slice only — it deliberately declines the same-head/different-body flagship shape); Credence.Pattern.NonGroupedClauses covers the flagship at report level |
-| 139 | `no_unreachable_function_clause` | delete-implementation-dead |  | yes | high | elixir-compiler (warns verbatim and fails a `warnings_as_errors` build); no live Credence rule fixes the same-head/different-body variant | Credence.Pattern.NoDuplicateFunctionClauses (identical-body variant only; declines same-head/different-body by design) |
+| 138 | `no_unreachable_duplicate_function_clause` | delete-duplicate | ↻ | yes | high | elixir-compiler (3 warnings, incl. "this clause for start_link/1 cannot match because a previous clause at line 4 always matches"); also reported — not repaired — by LIVE Credence.Pattern.NonGroupedClauses | Credence.Pattern.NoDuplicateFunctionClauses (exact-duplicate slice only — it deliberately declines the same-head/different-body flagship shape); Credence.Pattern.NonGroupedClauses covers the flagship at report level |
+| 139 | `no_unreachable_function_clause` | delete-duplicate | ↻ | yes | high | elixir-compiler (warns verbatim and fails a `warnings_as_errors` build); no live Credence rule fixes the same-head/different-body variant | Credence.Pattern.NoDuplicateFunctionClauses (identical-body variant only; declines same-head/different-body by design) |
 | 140 | `no_unused_private_function` | delete-implementation-dead |  | yes | high | elixir-compiler | — |
 | 141 | `no_validation_rejects_infinity_for_timeout` | delete-implementation-dead |  | yes | high | nothing | — |
 | 142 | `prefer_double_quoted_atom` | delete-implementation-dead |  | yes | high | elixir-compiler | — |
@@ -242,6 +245,8 @@ section the earlier revision of this document lost: every `action` was truncated
 
 *Duplicate of:* Credence.Semantic.UndefinedFunction — detection only; its fix is a verified no-op on this diagnostic
 
+> **Reconciled / resolved.** NOT folded into @qualified_replacements. Adversarial probe confirmed docs/18's own preference for the AST-scoped module: replace_first_on_line/4 is a substring search and `hex_encode` is a prefix of the real Base.hex_encode32, which the compiler lists in this very diagnostic's did-you-mean block — the fold turned one broken call into two (Base.hex_encode32(salt) -> Base.encode1632(salt)). Keep as an AST-scoped rule with a word-boundary match?/1.
+
 **Failure mode.** LLM-generated Elixir calls a non-existent hex helper `Base.hex_encode/0..2` (the real API is `Base.encode16/1,2`). The compiler emits only a *warning* — the module compiles and ships — and the call raises `UndefinedFunctionError` the first time that code path executes. Observable consequence: a hashing/encoding path that passes compilation and crashes in production at runtime.
 
 **Action.** Adopt /home/kamil/projects/credence_evolution/lib/semantic/no_hallucinated_base_hex_encode.ex into credence with ONE bounded edit in that same file: replace the `String.contains?(msg, @match_msg)` guard with a word-boundary regex, e.g. `msg =~ ~r/(?:^|[^\w.])Base\.hex_encode\/\d/ and String.contains?(msg, "is undefined or private")`, so it stops swallowing `MyBase.hex_encode/N` and leaving UndefinedFunction's FunctionMatcher repair unapplied; keep the AST-scoped fix as written (prefer it over the followup note's suggested @qualified_replacements fold in lib/semantic/undefined_function.ex, whose replace_first_on_line/rename_add_arg_on_line path is line-regex and would rewrite matching text in string literals on the same line).
@@ -250,6 +255,8 @@ section the earlier revision of this document lost: every `action` was truncated
 
 *Caught by:* Credence.Semantic.UndefinedFunction (LIVE) — it DETECTS the diagnostic but its fix/2 is a verified no-op on this target, so nothing is repaired.
 
+> **Reconciled / resolved.** LANDED 2026-07-27 as a table row in lib/semantic/undefined_function.ex, not a module: {":crypto","hex",1} => {:rename,"Base","encode16"} (commit 891a05c).
+
 **Failure mode.** LLM-hallucinated `:crypto.hex/1` as the hex-encoding BIF. No such export exists in OTP (`:crypto.module_info(:exports)` contains no `:hex`). The compiler emits only a WARNING (`:crypto.hex/1 is undefined or private`), so the module compiles and ships; the call then raises `UndefinedFunctionError: function :crypto.hex/1 is undefined or private` at runtime. Correct construct is `Base.encode16/1`. Observable consequence: latent runtime crash on any hex-encoding path.
 
 **Action.** Reinstate /home/kamil/projects/credence_evolution/lib/semantic/no_hallucinated_crypto_hex.ex (plus its two tests) into /home/kamil/projects/credence/lib/semantic/ unmodified — zero code change is required; it compiles against the live tree, wins its dispatch slot from UndefinedFunction (whose fix no-ops here), and its fix is verified to produce compiling, runtime-correct, string-literal-safe output. Do NOT apply the rejection note's suggested @qualified_replacements fold: it emits `:Base.encode16(data)` and still raises at runtime.
@@ -257,6 +264,8 @@ section the earlier revision of this document lost: every `action` was truncated
 ### 5. `no_hallucinated_erlang_warn` — salvage-small-fix
 
 *Caught by:* elixir-compiler (warning only, build still succeeds) — plus the LIVE rule Credence.Semantic.UndefinedFunction, which REPORTS it as `:undefined_function` but whose `fix/2` is a verified no-op on it, so no repair exists today
+
+> **Reconciled / resolved.** LANDED 2026-07-27 as a table row: {":erlang","warn",1} => {:rename,"IO","warn"} (commit 891a05c).
 
 **Failure mode.** LLM-generated Elixir calls `:erlang.warn(msg)` as a logging call. `:erlang.warn/1` does not exist in OTP. Because it is a remote call to an existing module, the compiler emits only a WARNING (`:erlang.warn/1 is undefined or private`) — the module compiles and ships. The failure surfaces at runtime as `** (UndefinedFunctionError) function :erlang.warn/1 is undefined or private`, and it surfaces precisely on the error/degradation path the author was trying to log, i.e. it converts a recoverable branch into a crash.
 
@@ -273,6 +282,8 @@ section the earlier revision of this document lost: every `action` was truncated
 ### 7. `no_hallucinated_queue_empty` — salvage-small-fix
 
 *Caught by:* nothing (for repair). Credence.Semantic.UndefinedFunction REPORTS the diagnostic but its fix/2 is a verified no-op on it.
+
+> **Reconciled / resolved.** LANDED 2026-07-27 as a table row: {":queue","empty",0} => {:rename,":queue","new"} (commit 891a05c).
 
 **Failure mode.** LLM-generated Elixir calls `:queue.empty()` as the empty-queue constructor. `:queue.empty/0` does not exist in Erlang's `:queue` module (the real constructor is `:queue.new/0`; `empty` was misremembered from the `is_empty/1` predicate). The module still compiles — the compiler emits only a warning (":queue.empty/0 is undefined or private. Did you mean: * is_empty/1") — so the defect ships and blows up at runtime with `UndefinedFunctionError: function :queue.empty/0 is undefined or private` the first time the constructor is called. Classic Erlang-transcription hallucination (catalogue cluster at FAILURE_MODE_CATALOGUE.md:122/:154).
 
@@ -390,9 +401,11 @@ section the earlier revision of this document lost: every `action` was truncated
 
 **Action.** Delete /home/kamil/projects/credence_evolution/lib/syntax/no_keyword_if_in_tuple.ex and its two tests, and file the failure mode as a follow-up on the live /home/kamil/projects/credence/lib/syntax/no_keyword_if_bare_in_tuple.ex: add the "unexpected expression after keyword list" fragment (both the "last argument" and "last in lists and maps" variants) as a second entry point whose opening-paren anchor is NOT the blamed column (which points at the trailing comma) but the `if`/`unless` at the start of the offending container element, then reuse that rule's existing parser-validated longest-span find_close/3 for the closing paren — never the rejected rule's character walk or backward regex.
 
-### 22. `no_mapset_member_in_guard` — rebuild-later-from-catalogue — **overturned on review**
+### 22. `no_mapset_member_in_guard` — delete-duplicate — **overturned on review**, **relabelled from rebuild-later-from-catalogue**
 
 *Caught by:* nothing
+
+> **Reconciled / resolved.** Reconciled 2026-07-27 (was rebuild-later-from-catalogue). Same collision, same resolution: its @match_msg is an exact-string subset of no_remote_function_in_guard's prefix/suffix matcher, and it sorts first, so keeping both means the superset never runs. Its safety gate AND the def/defp-head shape it alone handles are folded into no_remote_function_in_guard, which is the survivor.
 
 **Failure mode.** LLM-generated Elixir puts a remote call — `MapSet.member?(set, x)` — in a `when` guard. Elixir guards admit only BIFs/macros, so the compiler hard-errors "cannot invoke remote function MapSet.member?/2 inside a guard" and the module does not compile. Observable consequence: total compile failure of the file; the generated recursive/lookup helper (cycle detection, membership dispatch) never runs. Real, reproduced by execution, and currently caught by nothing in the live set.
 
@@ -406,9 +419,11 @@ section the earlier revision of this document lost: every `action` was truncated
 
 **Action.** Delete lib/syntax/no_pipe_into_arithmetic_operator.ex and its two tests from credence_evolution, and file a NEW semantic-phase rule in the rebuild queue: match?/1 on an :error diagnostic whose message contains "cannot pipe " AND " operator can only take two arguments" (RuleHelpers.compile_and_capture already synthesizes this diagnostic from the raised ArgumentError, lib/rule_helpers.ex:179-193); fix/2 re-parses the source (it always parses), rewrites `{:|>, _, [v, {op, _, [call, rhs]}]}` for op in +,-,*,/,<>,++,--,..,in to `{op, _, [prepend(v, call), rhs]}` ONLY when `call` is a genuine call node (atom fun name or dot-call) that is not itself an operator and not a unary node, skipping nested/chained cases, and re-parses its own output before emitting the patch.
 
-### 24. `no_private_fn_in_timer_mfa` — rebuild-later-from-catalogue — **overturned on review**
+### 24. `no_private_fn_in_timer_mfa` — delete-duplicate — **overturned on review**, **relabelled from rebuild-later-from-catalogue**
 
 *Caught by:* nothing (the elixir compiler emits a *misdescribing* warning — "function f/N is unused" — but 0 of 90 live semantic rules match that diagnostic, and no live rule mentions :timer/apply_after/MFA at all)
+
+> **Reconciled / resolved.** Reconciled 2026-07-27 (was rebuild-later-from-catalogue). The overturn pass said 'restore with three bounded edits'; the reconciliation pass said 'dead on arrival'. Both are right about the substance and the reconciliation wins on dispatch: no_private_fn_called_from_macro_quote has a byte-identical match?/1, the same priority 500, sorts first under Enum.find, and no-ops on the timer-MFA shape — so a restored module could never run. Its three edits are folded into the single 'function f/N is unused' rebuild spec instead.
 
 **Failure mode.** A `defp` scheduled by name through an MFA tuple — `:timer.apply_after(ms, __MODULE__, :do_cleanup, [pid])` / `:timer.apply_interval/4`. `apply/3` can only reach EXPORTED functions, so the scheduling call succeeds and returns `{:ok, ref}`, then at fire time the unlinked `:timer` worker raises `UndefinedFunctionError: function TimerPrivateFn.do_cleanup/1 is undefined or private`. The scheduled work (here: killing a pid) silently never happens; nothing propagates to the caller, only a stray `[error] Process ... raised an exception` in the log. The compiler's only signal — `function do_cleanup/1 is unused` — actively misdescribes the defect, labelling a live-but-unreachable function as dead code, which invites the wrong repair (delete it). Same trap applies to `spawn/3`, `Task.start/3`, `apply/3` and `{M,F,A}` child specs.
 
@@ -464,6 +479,8 @@ section the earlier revision of this document lost: every `action` was truncated
 
 *Duplicate of:* Credence.Syntax.FixDivRem
 
+> **Reconciled / resolved.** The live-rule defect this verdict raised is repaired — commit 2964ab4: FixDivRem no longer swallows def/defp heads and no longer rewrites inside string literals.
+
 **Failure mode.** LLM-generated Elixir writes integer division/modulo as a Python-style infix word operator — `expected_sum = n * (n + 1) div 2`, `x = a rem 2 == 0`. `div`/`rem` are ordinary functions, not operators. Consequence is bimodal, and BOTH modes are real: (a) when the left operand ends in `)` or a literal, the file is a hard parse error — `Code.string_to_quoted("x = n * (n + 1) div 2")` => `{:error, {[line: 1, column: 17], "syntax error before: ", "'div'"}}`; (b) when the left operand is a bare identifier, it PARSES SILENTLY as a parenless call chain — `def half(n), do: n div 2` parses to `{:def, _, [{:half,...}, [do: {:n, _, [{:div, _, [2]}]}]]}`, i.e. `n(div(2))`, which then fails at compile/run time as an undefined function, not as a syntax error. Mode (b) means the syntax phase never even sees a large share of real occurrences.
 
 **Action.** Delete /home/kamil/projects/credence_evolution/lib/syntax/fix_div_rem.ex and test/syntax/fix_div_rem_test.exs — it is the live Credence.Syntax.FixDivRem minus two hunks, and swapping it in trades correct call/dotted right operands for broken ones; then file a SEPARATE P1 bug against the LIVE /home/kamil/projects/credence/lib/syntax/fix_div_rem.ex, whose regex fix silently changes program values (`low + (high - low) div 2` -> `div(low + (high - low), 2)`, mid(10,20)=10 not 15) and mangles tuples/`if`/`fn` lines; the real remedy for both is a token-level rewrite anchored to the parser-reported column that re-parses its own output, plus dropping the line-regex analyze (which cannot see that `n div 2` parses as `n(div(2))`).
@@ -488,11 +505,13 @@ section the earlier revision of this document lost: every `action` was truncated
 
 **Action.** Delete /home/kamil/projects/credence_evolution/lib/syntax/fix_struct_field_assignment_syntax.ex and its two test files; no catalogue entry needed — the failure mode is real but already covered live by Credence.Semantic.FixRemoteCallInPattern, which fires on the rule's own test fixture and produces compiling output.
 
-### 33. `fix_undefined_nested_module_struct` — delete-duplicate
+### 33. `fix_undefined_nested_module_struct` — delete-implementation-dead — **relabelled from delete-duplicate**
 
 *Caught by:* Credence.Semantic.FixCyclicStructReference (live)
 
 *Duplicate of:* Credence.Semantic.FixCyclicStructReference
+
+> **Reconciled / resolved.** Reconciled 2026-07-27 (was delete-duplicate). Its match?/1 keys on the fabricated 'is undefined (module … is not available)'; the real message is '…__struct__/1 is undefined, cannot expand struct …'. It never fires, so it cannot be a duplicate of anything. DEFERRAL CHAIN 1.
 
 **Failure mode.** Compile-time struct expansion ordering: a module that writes `%Parent.Child{}` is compiled before `Parent.Child`'s `defstruct` exists (same file, child defmodule placed after the parent). Struct expansion happens at compile time, so the parent module fails to compile with "`Parent.Child.__struct__/1` is undefined, cannot expand struct". Observable consequence: the whole file fails to compile (`** (CompileError) cannot compile module AutocompleteTrie`). Real and reproducible, independent of this implementation.
 
@@ -514,6 +533,8 @@ section the earlier revision of this document lost: every `action` was truncated
 
 *Duplicate of:* Credence.Semantic.NoCaptureAsBitwiseAnd (/home/kamil/projects/credence/lib/semantic/no_capture_as_bitwise_and.ex)
 
+> **Reconciled / resolved.** The two live-rule actions this verdict narrated are done — commit 4abafed: NoCaptureAsBitwiseAnd now accepts hex/binary/octal/underscore literals and declines the shapes it cannot group correctly.
+
 **Failure mode.** Two distinct modes. (1) SHIPPED/COVERED: Python-to-Elixir transliteration writes `x & 1` for bitwise AND; Elixir parses it as `x(&1)` and the compiler emits the :error `capture argument &1 must be used within the capture operator &` at the `&` column. Real, and already owned by the live rule. (2) THE DELTA'S TARGET, REAL AND UNCAUGHT: generated code uses a bare `&N` as a pipe placeholder — `state |> Map.put(:n, Map.get(&1, :n))` — believing `&1` denotes the piped value. Same diagnostic, but the shape is `f(&1` not `IDENT & DIGITS`, so the live rule's regex path no-ops and the file stays uncompilable. The live rule nonetheless claims the diagnostic (semantic dispatch is first-match-only), so nothing else can ever pick it up. Correct repair is `|> then(fn v -> ... end)`.
 
 **Action.** Delete /home/kamil/projects/credence_evolution/lib/semantic/no_capture_as_bitwise_and.ex and its two tests — it is the live rule plus a whole-file pipe rewriter that corrupts valid `&(&1 + 1)` captures elsewhere in the file and silently changes call arity; then file two separate follow-ups against the LIVE rule: (a) BUG — widen @band_regex's right operand from `(\d+)` to `(0[xXbBoO][0-9A-Fa-f_]+|\d[\d_]*)` so `flags & 0xFF` stops producing the non-parsing `Bitwise.band(flags, 0)xFF`; (b) FEATURE — add a position-anchored branch to the live rule for the uncaught pipe-placeholder shape (`&N` bare inside a `|>` step): parse with Sourceror, locate the single pipe step containing the diagnostic's {line, col}, confirm no enclosing `{:&, _, [expr]}` ancestor, rewrite only that step to `then(fn v -> ... end)` substituting &N with v and inserting v as head ONLY when the step has no other head argument, and re-parse the output before returning.
@@ -523,6 +544,8 @@ section the earlier revision of this document lost: every `action` was truncated
 *Caught by:* elixir-compiler (hard CompileError, so nothing ships silently) — but the live repair rule Credence.Semantic.NoBareReturnInUnless consumes the diagnostic and emits a silently wrong fix
 
 *Duplicate of:* Credence.Semantic.NoBareReturnInUnless
+
+> **Reconciled / resolved.** Its dup target (live NoBareReturnInUnless) was proven harmful and has since been repaired — commit 86ee66b. DEFERRAL CHAIN 2 closed.
 
 **Failure mode.** Python-style early exit written into Elixir: `unless COND do return VALUE end` (or the `if` form) followed by the rest of the function body. Elixir has no early-exit construct and no `return/1`, so the file is a hard compile error (`undefined function return/1`). REAL, and verified. The dangerous part is the repair, not the detection: the naive repair — strip the `return` — compiles with zero diagnostics and then executes exactly the code the author meant to skip, silently changing the function's return value. The only correct repair restructures the body into `if/else` (inverting the branch for `unless`) or `with`. This is catalogue cluster 23.
 
@@ -562,6 +585,8 @@ section the earlier revision of this document lost: every `action` was truncated
 
 *Caught by:* nothing (detection only: Credence.Semantic.UndefinedFunction reports it as :undefined_function, but its fix/2 is a verified no-op on this diagnostic)
 
+> **Reconciled / resolved.** LANDED 2026-07-27 as table rows: {":math","min",2} and {":math","max",2} => {:rename,"Kernel",…} (commit 891a05c).
+
 **Failure mode.** LLM-generated Elixir calls `:math.min/2` / `:math.max/2`, transliterating Python's `math` module. Erlang's `:math` exports neither (`:math.module_info(:exports)` has no min/max). The module still COMPILES — the compiler only warns `":math.min/2 is undefined or private"` — so the defect survives compilation and detonates at runtime as `UndefinedFunctionError: :math.min/2`. Typical field shape (from the fix test, a GenServer token bucket): `new_tokens = :math.min(capacity, old_tokens + elapsed_ms * refill_rate / 1000)`. Correct repair is `Kernel.min/2` / `Kernel.max/2`.
 
 **Action.** Adopt /home/kamil/projects/credence_evolution/lib/semantic/no_hallucinated_math_fn.ex into /home/kamil/projects/credence/lib/semantic/ essentially as-is (single new file, no shared-file edit, tests move with it), applying two one-line hardenings inside that same file: (a) tighten the prewalk clause guard to `when fun in [:min, :max] and length(args) == 2` so off-arity `:math.min/1` / `:math.max/3` are left alone, and (b) change line 52 to `Sourceror.to_string(new_ast) <> "\n"` to preserve the trailing newline, matching lib/semantic/fix_apply_arity_one.ex:68. Do NOT take the rejection note's advice to fold {"math","min",2}/{"math","max",2} into undefined_function.ex — parse_qualified_ref strips the leading `:`, so that fold emits `:min(v, cap)` (unparseable) or `:Kernel.min(v, cap)` (runtime UndefinedFunctionError), both verified.
@@ -569,6 +594,8 @@ section the earlier revision of this document lost: every `action` was truncated
 ### 41. `no_hallucinated_math_round2` — delete-duplicate — **overturned on review**
 
 *Caught by:* nothing (detection only — Credence.Semantic.UndefinedFunction reports the diagnostic, but its fix/2 is a verified no-op for this case)
+
+> **Reconciled / resolved.** LANDED 2026-07-27 as a table row: {":math","round",1} => {:drop_module,"round"} (commit 891a05c).
 
 **Failure mode.** LLM-generated Elixir calls `:math.round(x)`, borrowing from Python's `math` module. Erlang's `:math` has `ceil/1`, `floor/1`, `fmod/2`, `pow/2`… but no `round/1`. The file COMPILES (remote-call arity checks are warnings, not errors), so the defect is invisible until the line executes, where it raises `UndefinedFunctionError: function :math.round/1 is undefined or private`. Observable consequence: a latent runtime crash on a happy-path arithmetic line. The correct construct is the auto-imported `Kernel.round/1`.
 
@@ -629,6 +656,8 @@ section the earlier revision of this document lost: every `action` was truncated
 *Caught by:* Credence.Syntax.FixDivRem (live, syntax, priority 500)
 
 *Duplicate of:* Credence.Syntax.FixDivRem
+
+> **Reconciled / resolved.** The 'fully owned by the live FixDivRem' finding is struck per docs/18 Corrections; the live rule's own defects are repaired in commit 2964ab4.
 
 **Failure mode.** LLM writes Elixir's `div`/`rem` as infix operators (Python `//`/`%`, Haskell `div` habit): `expected_sum = n * (n + 1) div 2`. Mechanism: `div`/`rem` are functions, not operators. Two distinct observable consequences, confirmed by execution: (1) when the left operand ends in `)` or is a call/expression, it is a hard PARSE error — `{[line: 1, column: 28], "syntax error before: ", "'div'"}`; (2) when both operands are bare identifiers (`a div b`), it PARSES as the unparenthesized call `a(div(b))` and instead dies at compile time with `undefined function a/1` + `undefined function div/1`. The failure mode is real. Case (1) is fully owned by the live Credence.Syntax.FixDivRem; case (2) is out of scope for any syntax-phase rule and is at least detected today by live Credence.Semantic.UndefinedFunction.
 
@@ -704,11 +733,13 @@ section the earlier revision of this document lost: every `action` was truncated
 
 **Action.** Delete /home/kamil/projects/credence_evolution/lib/semantic/no_undefined_guard_equality_in_case.ex and both test files outright — no catalogue entry needed for its premise; separately note (already catalogued at FAILURE_MODE_CATALOGUE.md:152/156) that Erlang `Mod:fun` colon-call syntax (`:ets:info(t)`) is a real, unparseable, currently-uncaught defect owned by the tokenizer/parse-error cluster, needing a syntax-phase rule anchored to the parser's reported column, not this module.
 
-### 56. `prefer_explicit_range_step` — delete-premise-false
+### 56. `prefer_explicit_range_step` — delete-duplicate — **relabelled from delete-premise-false**
 
 *Caught by:* Credence.Semantic.PreferExplicitRangeStep (LIVE, /home/kamil/projects/credence/lib/semantic/prefer_explicit_range_step.ex)
 
 *Duplicate of:* Credence.Semantic.PreferExplicitRangeStep
+
+> **Reconciled / resolved.** Reconciled 2026-07-27 (was delete-premise-false). Relabel only: the verdict's own body says 'FM(real=true) … already fully caught by the live rule', which is delete-duplicate by definition. dup_of = Credence.Semantic.PreferExplicitRangeStep.
 
 **Failure mode.** Elixir 1.19+ emits a deprecation warning for any fully-literal range whose endpoints imply the default step -1 (`first > last`): "1..-2 has a default step of -1, please write 1..-2//-1 instead". Under --warnings-as-errors this blocks compilation. Verified real: compiling `def f(s), do: String.slice(s, 3..-1)` / `Enum.slice(l, 1..-2)` / `Enum.take(l, 5..1)` yields exactly three such :warning diagnostics from Code.with_diagnostics (position 0, no line/col). Appending the compiler-stated `//-1` is a byte-scoped, value-identical repair. This failure mode is real AND already fully caught by the live rule.
 
@@ -904,9 +935,11 @@ section the earlier revision of this document lost: every `action` was truncated
 
 **Action.** Delete /home/kamil/projects/credence_evolution/lib/semantic/fix_undefined_params_in_plug_router.ex and its two tests, and file the verified failure mode for a fresh SEMANTIC rule: match `\Aundefined variable "params"\z` at priority 450 (probe 3 shows no other live rule below 500 touches it), gate fix/2 on the source containing `use Plug.Router`, and splice `conn.` in front of the single occurrence at the diagnostic's {line, col} — never a whole-file regex — re-parsing the output; also decide first whether the 450 claim should fall through to FixCaseBranchAssignmentScope when the router gate fails, since today a no-op winner blocks it (that is the only part touching lib/semantic.ex).
 
-### 80. `fix_undefined_struct_in_pattern` — delete-implementation-dead
+### 80. `fix_undefined_struct_in_pattern` — rebuild-later-from-catalogue — **relabelled from delete-implementation-dead**
 
 *Caught by:* nothing
+
+> **Reconciled / resolved.** Reconciled 2026-07-27 (was delete-implementation-dead). PROMOTED: live FixCyclicStructReference claims the '__struct__/1 is undefined' slot and then no-ops on nested-module sources (probe: match? true, fix byte-identical), because extract_top_level_modules/2 requires the whole file to be a __block__ of top-level named defmodules. Deleting both this and fix_undefined_nested_module_struct would drop the failure mode to zero with the slot still occupied. DEFERRAL CHAIN 1 — this is the member that must survive.
 
 **Failure mode.** Definition-order error on a *nested* struct module. Inside `defmodule Parent`, a `%Child{field: var}` literal (here in a `try/catch` clause body) is written above the `defmodule Child do defstruct ... end` that defines it. Elixir expands struct literals at compile time even inside a `def` body, and nested-module aliases are lexical/positional, so the reference resolves to top-level `Elixir.Child` (undefined) and the build hard-fails with `Child.__struct__/1 is undefined, cannot expand struct Child`. Observable consequence: the module does not compile at all. The rule's name is a misnomer — the struct is in the clause BODY, not a pattern.
 
@@ -1068,6 +1101,8 @@ section the earlier revision of this document lost: every `action` was truncated
 
 *Caught by:* nothing
 
+> **Reconciled / resolved.** The aftermath it documented — NoBareReturnInUnless manufacturing a silent bug — was repaired in commit 86ee66b. DEFERRAL CHAIN 2 closed.
+
 **Failure mode.** Elixir has no early exit, so LLM code writes `return v` inside `unless cond do ... end` followed by a trailing expression. The LIVE rule Credence.Semantic.NoBareReturnInUnless repairs the `undefined function return/1` error by simply unwrapping `return`, leaving `unless cond do {:error, ...} end` whose value is discarded — the trailing expression is always the function's return value. Result: the program compiles with ZERO diagnostics and silently executes the path it was written to skip (validation bypassed, error tuple computed and thrown away). Observable consequence: `sort_and_check("drop_table", [])` returns `{:ok, %{sort: "drop_table", ...}}` instead of `{:error, :invalid_sort_field}`. The failure mode is real, uncaught, and — critically — is MANUFACTURED BY CREDENCE ITSELF one hop upstream, not by the LLM.
 
 **Action.** Delete lib/semantic/no_discarded_unless_value.ex and its two test files; instead file a defect against the LIVE Credence.Semantic.NoBareReturnInUnless (/home/kamil/projects/credence/lib/semantic/no_bare_return_in_unless.ex) — make it report-only for the no-else `unless` case until it can restructure the unless plus its trailing expressions into `if/else` in one step (inverting the condition with `!`/`==` semantics, never `not`, and only when the discarded body is a value-producing early return), since that rule is what creates this silently-wrong code.
@@ -1077,6 +1112,8 @@ section the earlier revision of this document lost: every `action` was truncated
 *Caught by:* nothing
 
 *Duplicate of:* Credence.Syntax.FixElsifInIfChain (structural fork — same algorithm, but its regexes are `elsif`-only and it does NOT fire on `elif`)
+
+> **Reconciled / resolved.** RESOLVED 2026-07-27 by commit fe6c2f7: lib/syntax/fix_elsif_in_if_chain.ex regexes widened elsif -> els?if. Verified elif was analyze=[] / fix=no-op before, and rewrites to a parsing cond after, with elsif output byte-identical. DEFERRAL CHAIN 3 closed.
 
 **Failure mode.** Python-to-Elixir translation emits an `if` / `elif` / `else` chain. `elif` is not an Elixir keyword, so `elif <cond> do ... end` is parsed as a call to an undefined function `elif/2` with a do-block, which consumes the `if`'s block boundary. The parser therefore reports a misleading `missing terminator: end` at the module's `do` (not at the `elif`), and if the terminator is supplied the module fails to compile with `undefined function elif/2`. Real, common, and correctly filed in the syntax phase — the target genuinely fails to parse.
 
@@ -1138,11 +1175,13 @@ section the earlier revision of this document lost: every `action` was truncated
 
 **Action.** Delete lib/semantic/no_hallucinated_fetch_part.ex and its two test files from credence_evolution; the module is unreachable (keyed on a real-but-unrelated `defp init/1` behaviour warning the fetch_part target never emits) and its fix repairs only one literal clause shape. Record in the failure-mode catalogue that hallucinated `Plug.Conn.fetch_part/2` is DETECTED by live Credence.Semantic.UndefinedFunction but not repaired (its fix no-ops) — a future repair would need a dedicated `case`-restructuring rule keyed on "Plug.Conn.fetch_part/2 is undefined", which would cleanly win the dispatch slot, but is low value until a shape-general transform (not the two-clause fossil) exists.
 
-### 109. `no_hallucinated_math_round` — delete-implementation-dead
+### 109. `no_hallucinated_math_round` — delete-duplicate — **relabelled from delete-implementation-dead**
 
 *Caught by:* Credence.Semantic.UndefinedFunction — DETECTION only (emits %Issue{rule: :undefined_function}); its fix/2 is a verified no-op on this target, so the repair is uncaught.
 
 *Duplicate of:* Credence.Semantic.UndefinedFunction (matcher overlap on the real diagnostic; repair not covered)
+
+> **Reconciled / resolved.** Reconciled 2026-07-27 (was delete-implementation-dead). dup_of no_hallucinated_math_round2 — same :math.round/1 target, byte-identical fix bodies; this one keys on the fabricated 'misplaced operator ::/2'. Superseded in full by the {":math","round",1} => {:drop_module,"round"} row landed in lib/semantic/undefined_function.ex.
 
 **Failure mode.** Generated code calls `:math.round/1`, which does not exist in Erlang's `:math` module (exports are pi/tau/fmod/ceil/floor/pow/atan2/sqrt/log*/exp/erf*/trig only). The call PARSES and COMPILES — the compiler emits only a :warning — so the module ships and then dies at runtime with `** (UndefinedFunctionError) function :math.round/1 is undefined or private` on the first invocation. Correct construct is `Kernel.round/1`, which returns the same integer the hallucinated function would.
 
@@ -1159,6 +1198,8 @@ section the earlier revision of this document lost: every `action` was truncated
 ### 111. `no_hallucinated_persistent_term_fn` — delete-implementation-dead
 
 *Caught by:* Credence.Semantic.UndefinedFunction — DETECTION ONLY. It is the sole live matcher for the real diagnostic and reports `%Credence.Issue{rule: :undefined_function, meta: %{line: 3}}`, but its `fix/2` returns the source byte-identical (no `{"persistent_term","get_keys",0}` entry in `@qualified_replacements`, FunctionMatcher fallback finds nothing). So the warning is reported and never repaired; nothing in the live set fixes it.
+
+> **Reconciled / resolved.** Delete verdict UPHELD against an overturn attempt. The proposed repair emits Enum.map(:persistent_term.get(), &elem(&1,0)); :persistent_term.get/0 is VM-global (27 OTP-internal keys on a stock VM), so paired with its erase loop it terminates the BEAM — and the pipeline reports it as a clean success with zero residual diagnostics.
 
 **Failure mode.** Confabulated stdlib API: generated code calls `:persistent_term.get_keys()` (usually as `keys = :persistent_term.get_keys(); Enum.each(keys, fn key -> :persistent_term.erase(key) end)`). Erlang's `persistent_term` has no `get_keys/0` — only `get/0|1|2`, `put/2`, `erase/1`, `info/0`. Because it is a qualified remote call, the compiler emits only a WARNING and the module builds and ships; the line raises `UndefinedFunctionError` the first time it runs ("function :persistent_term.get_keys/0 is undefined or private" — executed). The correct repair is `:persistent_term.get()`, which returns `[{key, value}]`, so it also requires re-shaping the callback head from `fn key ->` to `fn {key, _value} ->` — a restructuring the live rename machinery cannot express. Cluster 6 of the catalogue ("API surface confabulated by plausibility"); detection is free, repair is the value.
 
@@ -1334,6 +1375,8 @@ section the earlier revision of this document lost: every `action` was truncated
 
 *Duplicate of:* Credence.Semantic.NoBareReturnInUnless
 
+> **Reconciled / resolved.** RESOLVED 2026-07-27 by commit 86ee66b: live NoBareReturnInUnless now restructures an early-exit guard into if/else instead of stripping the return and letting execution fall through. DEFERRAL CHAIN 2 closed.
+
 **Failure mode.** Python/Ruby-style early exit written as `unless cond do return value end` followed by more statements. Elixir has no early exit and no `return/1`, so the file fails to compile with `undefined function return/1`. The construct's INTENT is "abort the function with this value"; the naive repair (delete the `return`) makes the file compile and then execute exactly the code that was meant to be skipped, discarding the guard's value silently — zero warnings. Observable consequence: a validation function returns `{:ok, attrs}` for input it was written to reject. The only correct repair restructures the body into `if not(cond) do value else rest end` (or `with`).
 
 **Action.** Delete lib/semantic/no_return_fn_in_conditional.ex and its two tests, but file a bug against the LIVE Credence.Semantic.NoBareReturnInUnless: its catch-all `{:return, _, [value]} -> value` clause (lib/semantic/no_bare_return_in_unless.ex) must not apply when the `return` is in a non-tail `unless`/`if` block with statements after it — gate the strip to tail positions and, for the early-exit shape, restructure into `if not(cond) do value else rest end`, reusing this module's build_guard_chain/2 + collect_from_list/1 as the reference implementation (they produce verified-correct output on the canonical chained case); until that lands, make the strip report-only for the non-tail `unless` shape.
@@ -1378,21 +1421,25 @@ section the earlier revision of this document lost: every `action` was truncated
 
 **Action.** Delete lib/semantic/no_underscore_pattern_binding_with_bare_body_use.ex and both of its tests from credence_evolution; record the failure mode (underscore drift → `undefined variable "X"` where `_X` is bound in the same clause's pattern) as real and uncaught, and if it is ever rebuilt start from a sibling that already keys on the REAL error rather than this module — a narrow matcher (error severity, `undefined variable "X"`, gated on `_X` being bound in the enclosing clause pattern) at priority < 500 so it outranks FixCaseBranchAssignmentScope, using the existing coexistence template (fix_truncated_special_form and fix_reraise_keyword_in_catch both claim subsets of this same family at priority 450); no lib/semantic.ex fall-through is needed, which corrects the "out of scope" claim in the rule's rejection note.
 
-### 138. `no_unreachable_duplicate_function_clause` — delete-implementation-dead
+### 138. `no_unreachable_duplicate_function_clause` — delete-duplicate — **relabelled from delete-implementation-dead**
 
 *Caught by:* elixir-compiler (3 warnings, incl. "this clause for start_link/1 cannot match because a previous clause at line 4 always matches"); also reported — not repaired — by LIVE Credence.Pattern.NonGroupedClauses
 
 *Duplicate of:* Credence.Pattern.NoDuplicateFunctionClauses (exact-duplicate slice only — it deliberately declines the same-head/different-body flagship shape); Credence.Pattern.NonGroupedClauses covers the flagship at report level
 
+> **Reconciled / resolved.** Reconciled 2026-07-27 (was delete-implementation-dead). dup_of the LIVE pair Credence.Pattern.NonGroupedClauses + Credence.Pattern.RemoveUnreachableClausesAfterCatchall, which probe shows repairs the same-head/different-body flagship end-to-end. The verdict's 'no live rule fixes it' claim is struck.
+
 **Failure mode.** Generation-by-append clause shadowing: an LLM re-emits an already-defined `def start_link/1` (or any name/arity) further down the module with a *corrected* body instead of editing the original. Elixir dispatches in source order, so the first, stale clause always matches and the intended later one is dead code. Mechanism: source-order clause dispatch, not last-write-wins. Observable consequence: compiler emits three warnings ("clauses with the same name and arity … should be grouped together", "this clause for start_link/1 cannot match because a previous clause at line 4 always matches", "the following clause is redundant"), which under --warnings-as-errors blocks the build; under plain `mix compile` the build is green and the program silently runs the stale clause (probe: `Shadowed.which([]) == :first_clause_ran`, the side-effecting second clause never runs).
 
 **Action.** Delete /home/kamil/projects/credence_evolution/lib/semantic/no_unreachable_duplicate_function_clause.ex and its two tests; do NOT rebuild it — the uncovered slice (non-adjacent same-name/arity clauses with different bodies) is already reported by the live Pattern rule NonGroupedClauses and auto-deletion of the shadowed clause is exactly what the live NoDuplicateFunctionClauses deliberately refuses because the later clause is usually the intended implementation.
 
-### 139. `no_unreachable_function_clause` — delete-implementation-dead
+### 139. `no_unreachable_function_clause` — delete-duplicate — **relabelled from delete-implementation-dead**
 
 *Caught by:* elixir-compiler (warns verbatim and fails a `warnings_as_errors` build); no live Credence rule fixes the same-head/different-body variant
 
 *Duplicate of:* Credence.Pattern.NoDuplicateFunctionClauses (identical-body variant only; declines same-head/different-body by design)
+
+> **Reconciled / resolved.** Reconciled 2026-07-27 (was delete-implementation-dead). Same live pair as no_unreachable_duplicate_function_clause; same struck claim.
 
 **Failure mode.** Generation-by-append clause shadowing: an LLM re-emits a function clause with a corrected body instead of editing the original, so two `def`/`defp` clauses share an identical head. Elixir dispatches in source order, so the later (usually intended) clause is dead code. The compiler emits `this clause cannot match because a previous clause at line N matches the same pattern as this clause` plus a type-based `the following clause is redundant:` warning; under `--warnings-as-errors` the build fails, and under a plain build the program silently runs the stale first clause's behaviour.
 
