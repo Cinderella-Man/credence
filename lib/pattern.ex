@@ -70,7 +70,7 @@ defmodule Credence.Pattern do
   risks introducing new errors and wasting an LLM retry attempt.
   """
   @spec fix_with_trace(String.t(), keyword()) ::
-          {String.t(), [{module(), non_neg_integer() | :reverted}]}
+          {String.t(), [{module(), non_neg_integer() | :reverted | :patch_rejected}]}
   def fix_with_trace(code_string, opts \\ []) do
     all_rules = rules(opts)
 
@@ -100,8 +100,8 @@ defmodule Credence.Pattern do
                 "[credence_fix] #{name}: check found #{length(issues)} issue(s), running fix..."
               )
 
-              fixed = invoke_fix(rule, source, check_opts)
-              apply_or_revert(rule, name, source, fixed, issues, applied)
+              {status, fixed} = invoke_fix(rule, source, check_opts)
+              apply_or_revert(rule, name, source, fixed, status, issues, applied)
             else
               {source, applied}
             end
@@ -127,7 +127,8 @@ defmodule Credence.Pattern do
 
   # Apply the rule's `fix_patches/2` to the source. See
   # `Credence.RuleHelpers.apply_rule_fix/3`.
-  defp invoke_fix(rule, source, opts), do: RuleHelpers.apply_rule_fix(rule, source, opts)
+  defp invoke_fix(rule, source, opts),
+    do: RuleHelpers.apply_rule_fix_with_status(rule, source, opts)
 
   # Compile-output gate. A rule whose `fix/2` returns source that no
   # longer compiles would otherwise:
@@ -136,8 +137,23 @@ defmodule Credence.Pattern do
   #   - be returned silently to the caller as a "successful" fix.
   # Instead we revert to the pre-fix source for that rule and mark
   # it as `:reverted` in the trace so the offending rule is visible.
-  defp apply_or_revert(rule, name, source, fixed, issues, applied) do
+  defp apply_or_revert(rule, name, source, fixed, status, issues, applied) do
     cond do
+      # C5. Patches WERE produced and then discarded by the safety invariants in
+      # `apply_rule_fix_with_status/3` (output did not parse, or the comment
+      # multiset changed). The finding stands but goes unfixed — the one
+      # exception to "every Pattern rule fixes what it finds". Without this
+      # branch it is indistinguishable from a rule that had nothing to do:
+      # `fixed == source` either way, nothing in the trace, nothing in the log.
+      status == :patch_rejected ->
+        Logger.warning(
+          "[credence_fix] #{name}: patches produced but REJECTED by the safety " <>
+            "invariants (non-parsing output or perturbed comments) — " <>
+            "#{length(issues)} finding(s) reported and left unfixed"
+        )
+
+        {source, [{rule, :patch_rejected} | applied]}
+
       fixed == source ->
         Logger.debug("[credence_fix] #{name}: fix returned IDENTICAL source (no change)")
         {source, applied}

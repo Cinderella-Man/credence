@@ -252,12 +252,38 @@ defmodule Credence.RuleHelpers do
   """
   @spec apply_rule_fix(module(), String.t(), keyword()) :: String.t()
   def apply_rule_fix(rule, source, opts \\ []) do
+    {_status, code} = apply_rule_fix_with_status(rule, source, opts)
+    code
+  end
+
+  @doc """
+  Like `apply_rule_fix/3`, but says *why* the source came back unchanged.
+
+    * `{:ok, fixed}`             — patches applied and kept
+    * `{:no_patches, source}`    — the rule produced no patches for this source
+    * `{:patch_rejected, source}` — patches were produced and then **discarded**
+      by the safety invariants below
+
+  That third case is the one worth naming (C5). It is the single undocumented
+  exception to "every Pattern rule fixes what it finds": the finding is
+  reported, the fix is dropped, and the caller sees `fixed == source` — exactly
+  what a rule that simply had nothing to do looks like. The DSL gate avoids this
+  by suppressing the finding whose fix it drops; this path had no such
+  counterpart, so a rule could report an issue it silently never fixed and
+  nothing downstream could tell.
+
+  `Credence.Pattern.fix_with_trace/2` records it as `{rule, :patch_rejected}`,
+  the sibling of `:reverted`, so the harness's bugfix lane can consume it.
+  """
+  @spec apply_rule_fix_with_status(module(), String.t(), keyword()) ::
+          {:ok | :no_patches | :patch_rejected, String.t()}
+  def apply_rule_fix_with_status(rule, source, opts \\ []) do
     opts = Keyword.put(opts, :source, source)
     ast = Sourceror.parse_string!(source)
 
     case drop_dsl_patches(rule.fix_patches(ast, opts), rule, ast, opts) do
       [] ->
-        source
+        {:no_patches, source}
 
       patches when is_list(patches) ->
         fixed =
@@ -276,7 +302,11 @@ defmodule Credence.RuleHelpers do
         # the fix rather than emit broken, lossy, or doubled output — the finding
         # is still reported, it just goes unfixed. Rules that carry comments
         # through the rewrite faithfully (multiset unchanged) keep their fix.
-        if parses?(fixed) and not comments_changed?(source, fixed), do: fixed, else: source
+        if parses?(fixed) and not comments_changed?(source, fixed) do
+          {:ok, fixed}
+        else
+          {:patch_rejected, source}
+        end
     end
   end
 
