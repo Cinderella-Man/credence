@@ -950,3 +950,10 @@ so a future scan won't re-flag it.
   - `test/syntax/no_else_in_for_comprehension_fix_test.exs`
 - Reason: Wrong phase + inert, and fix crashes — `for ... do ... else ... end` PARSES fine (compile-time "unsupported option :else given to for", not a parse error), so the syntax phase (runs rules only on parse failure) never invokes it; probe: Sourceror.parse_string=:ok, Credence.Syntax.analyze=[], Syntax.fix logs "source already parses, skipping" (no-op) even though the rule IS discovered. Its own analyze/fix also require parse success, so it's doubly inert; green tests pass only by calling the module directly. Separately, the line-range fix is broken on the keyword form `for x <- l, do: x, else: (_ -> [])`: analyze flags it but for_meta[:end] is nil → fix raises ArithmeticError (nil - 2). Belongs in the semantic phase (out-of-scope shared/new-file change); same class as no_catch_in_receive / no_defp_qualified_name.
 
+## no_elsif_keyword — 2026-07-27
+- Files:
+  - `lib/syntax/no_elsif_keyword.ex`
+  - `test/syntax/no_elsif_keyword_analyze_test.exs`
+  - `test/syntax/no_elsif_keyword_fix_test.exs`
+- Reason: Duplicate of accepted fix_elsif_in_if_chain (same `elsif`-in-`if` habit, byte-identical `cond` output) and is the pre-hardening copy — corrupts heredoc doc text and emits garbage when the chain has no terminator at header indent; analyze flags every `elsif` while fix bails. Folding it in would mean editing the accepted rule (shared/other-set file, out of scope).
+
