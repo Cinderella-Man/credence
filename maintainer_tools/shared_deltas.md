@@ -38,9 +38,24 @@ since (`no_destructure_reconstruct`, `no_list_pop_at_for_access`,
 `unused_variable`, `fix_div_rem`) — would be silently dropped. Verified by
 `--dry-run` set-comparison on 2026-07-21. Use `--dry-run` only.
 
-## Deferred — companion commit at rule acceptance
+## Deferred — companion commit at rule acceptance ✅ RESOLVED 2026-07-27
 
-- [ ] `test/credence_test.exs` + `test/fix_showcase_test.exs` — both relax an
+- [x] **DROPPED, not applied — the rule was rejected.**
+  `no_private_fn_called_from_macro_quote` is dispositioned
+  **delete-implementation-dead** (docs/18), so per the trigger's own rejection
+  branch the two hunks below are dropped. `credence` keeps `issues == []` and
+  was never touched.
+
+  The half the trigger did not anticipate: the **sister** still carried the
+  relaxation, and it only held while the rule existed — so deleting the rule in
+  Phase 4.6c turned six of the sister's tests red. Both files are reverted to
+  `[]` there in commit `b83d623`. Worth generalising: **a rejection can require
+  a shared-file edit just as an acceptance can**, in the opposite direction, and
+  only the sister's suite will tell you.
+
+  Original entry, kept for the record:
+
+- ~~[ ]~~ `test/credence_test.exs` + `test/fix_showcase_test.exs` — both relax an
   `issues == []` assertion to
   `issues == [:no_private_fn_called_from_macro_quote]` (the new rule reports a
   genuinely-unused defp whose fix is a no-op). **Pre-applying fails the suite**

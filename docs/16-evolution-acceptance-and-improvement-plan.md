@@ -1,18 +1,19 @@
 # 16 — Forward plan: accepting the evolution and executing the improvement program
 
-**Status:** plan · **Date:** 2026-07-21, updated 2026-07-27 · **Owner:** maintainer + Claude sessions
+**Status:** **Phases 0–4 EXECUTED; 5–9 open** · **Date:** 2026-07-21, updated 2026-07-27 · **Owner:** maintainer + Claude sessions
 **Companions:** `docs/17-failure-mode-catalogue.md` (what the rejected rules taught us),
-`docs/18-final-143-disposition.md` (per-rule verdicts + cross-rule reconciliation)
+`docs/18-final-143-disposition.md` (per-rule verdicts + cross-rule reconciliation),
+`docs/18-per-rule-verdicts.json` (the source of truth those verdicts are generated from)
 **Inputs:** `docs/12` (C1–C18), `docs/13` (P1–P7), `docs/14` (scrutiny E1–E9),
 `docs/15` (hand-off index), `credence-evolution-harness/docs/IMPROVEMENTS.md`
-(H1–H19 + addenda — currently only in the `-backup` copy, restored in Phase 0),
-`maintainer_tools/candidates.md` (782 entries today; 776 after Phase 0.3), and a full read of the
-evolution run's logs (`credence-evolution-harness/var/run/logs/`, summarized in
-Appendix A).
+(H1–H19 + addenda — restored into the live harness repo by Phase 0),
+`maintainer_tools/candidates.md` (782 entries when this was written; **empty since
+Phase 4.2**), and a full read of the evolution run's logs
+(`credence-evolution-harness/var/run/logs/`, summarized in Appendix A).
 
 This document is the single execution plan. Work top to bottom; each phase has
-a **Definition of done**. Phases 5 and later can interleave once Phase 4 is
-running, but nothing may skip Phase 0.
+a **Definition of done**. Phases 0–4 are done and their sections now record what
+happened rather than what to do — start at `START HERE`, then Phase 5.
 
 ---
 
@@ -282,8 +283,18 @@ deferred pair with its trigger condition.
 
 **Executed 2026-07-21.** Commit `3a64b6f` — items 1–3 (lib files copied
 wholesale from the sister after re-verifying the diffs matched recon; the two
-allowlist entries inserted by hand). Suite green (5,269). Item 4 remains
-deferred with its trigger in `shared_deltas.md`.
+allowlist entries inserted by hand). Suite green (5,269).
+
+**Item 4 resolved 2026-07-27 (Phase 4.6c), via the rejection branch.**
+`no_private_fn_called_from_macro_quote` was dispositioned
+**delete-implementation-dead**, so per the trigger condition above the two hunks
+are **dropped, not applied** — `credence` keeps `issues == []` and never needed
+touching. The sister was the other half of it: its copies of
+`test/credence_test.exs` and `test/fix_showcase_test.exs` still carried the
+relaxation, which only held while that rule existed, so deleting the rule turned
+them red. Both are reverted to `[]` in sister commit `b83d623`. This is worth
+remembering as a shape: a *rejection* can require a shared-file edit just as an
+acceptance can, and only the sister's suite will tell you.
 
 ## Phase 3 — Make the full suite cheap before the drain (docs/13 P1+P2)
 
@@ -336,7 +347,10 @@ The machinery is proven (250 decision commits in the first cycle). Scale:
 ~260 rule bases — 12 new + 5 modified pattern, 174 new + 6 modified semantic,
 62 new + 1 modified syntax.
 
-**4.1 Stub pre-pass.**
+**4.1 Stub pre-pass. ✅ COMPLETE — a genuine no-op.** Zero provable check-only
+stubs found (the predicate's positive control was verified, so this is a real
+result, not a broken script; cycle 1 had already drained the 51). That is why
+4.3 has nothing to do.
 ```bash
 cd maintainer_tools/stage_1_promote_fixable_rules
 DRY_RUN=1 ./move_unfixable_out.sh   # inspect
@@ -443,14 +457,28 @@ re-feed those bases through stage 1. Fold the harness's own pending proposal
 `default: true`, documented no-`:cleanup`-message divergence) into this same
 decision batch.
 
-**4.5 Close the cycle.**
-- Re-run the corpus whitelist validator if any accepted pattern rule added
-  whitelist entries; execute the outstanding action item in
-  `maintainer_tools/corpus_whitelist_validator/FIX_LOG.md` (*regenerate
-  `accepted_findings.txt`* to drop stale entries).
-- CHANGELOG entry summarizing the acceptance cycle (counts per round,
-  notable rejects).
-- Full `mix test` green; merge `evolution_accepted` → `main` via PR.
+**4.5 Close the cycle. ✅ COMPLETE 2026-07-27.**
+
+- **Corpus whitelist — nothing to do; the FIX_LOG action item is already
+  satisfied.** No accepted rule this cycle was a *pattern* rule, and the corpus
+  layer is Pattern-only, so no whitelist entry was added. The FIX_LOG's
+  outstanding item (*regenerate `accepted_findings.txt` to drop stale entries*)
+  is closed by proof rather than by re-running: `test/corpus/over_firing_test.exs`
+  asserts `actual == expected` **exactly**, so a pinned-but-no-longer-firing
+  entry fails it with a `GONE` report. The full corpus scan is green, therefore
+  the snapshot has no stale entries. Marked resolved in the FIX_LOG.
+- **CHANGELOG** entry written — the cycle's user-visible content is the nine
+  repaired defects and `Credence.SourceMask`, not the rule counts.
+- **Full `mix test` green: 9,615 tests, 0 failures**, including the
+  20,076-file corpus scan (234 s). Getting there needed one real fix: the nine
+  meta gates that parse the whole tree had no timeout tag, and under a full run
+  the corpus scan starves them past ExUnit's 60 s default — a spurious
+  `ExUnit.TimeoutError` in `SemanticMetaTest`, which passes in 106 s for the
+  whole module alone. All nine now carry `@moduletag timeout:`.
+- **PR to `main`:** body prepared at `docs/PR_BODY_phase4.md`; both branches
+  pushed. It must be opened by hand — **`gh` is not installed on this machine.**
+  Compare URL:
+  `https://github.com/Cinderella-Man/credence/compare/main...evolution_accepted`
 
 **4.6 Work the followup backlog (143 rules). ✅ COMPLETE 2026-07-27.**
 

@@ -2,7 +2,11 @@
 
 *Distilled from 140 rejected Credence rules. Verified on Elixir 1.20.2 / Erlang OTP 29.*
 
-The rules were rejected as code. Each still encodes an observation about how LLM-generated Elixir fails, and every observation below was re-checked by executing it — parse, compile, run — not by reading the rule's docstring. Docstrings turned out to be the least reliable artefact in the set. With this document written, the 140 rule files under `/home/kamil/projects/credence_evolution/lib/{syntax,semantic,pattern}/` and their tests can be deleted.
+The rules were rejected as code. Each still encodes an observation about how LLM-generated Elixir fails, and every observation below was re-checked by executing it — parse, compile, run — not by reading the rule's docstring. Docstrings turned out to be the least reliable artefact in the set.
+
+> **Status 2026-07-27.** The deletion this document was written to authorise has happened: 112 modules and 227 tests were removed from `credence_evolution` in commit `b83d623`, which is pushed to `origin/evolution` and therefore recoverable. 27 rules were **kept** (17 rebuild-later, 9 salvage, 1 already-live) — see `docs/18-per-rule-verdicts.json` for which. Four of the delete verdicts turned out not to be standalone rules at all but deltas of files that exist on `main`, and were restored rather than deleted.
+>
+> **Read `docs/18` §5.3 before using the "What is worth building" list at the end of this file.** That list took heavy damage on adversarial review and has *not* been rewritten: item 2's two headline grounds were both falsified (corpus precision 0/1 in 28,303 files), item 6 found 0 true positives on the maintainer's own corpus, item 7's supervisor-restart story is false, and items 3, 5 and 11 prescribe a deliverable the Pattern phase bans. The per-mode executed evidence in this document is sound; the *rankings* and the cluster narratives are not.
 
 ## Headline numbers
 

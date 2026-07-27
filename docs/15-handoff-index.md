@@ -33,7 +33,11 @@ Related but separate: the dataset repo's own `STATUS.md` + `docs/12` (its
 Quality Standard S1–S12 and improvement-round protocol) — the template for
 credence's proposed C17.
 
-## 2. Verified defects and confirmed facts (actionable now)
+## 2. Verified defects and confirmed facts
+
+> **Items 1–4 and 7 are DONE** — landed in Phase 1 (`69aa2ec`), 2026-07-21.
+> Items 5, 6, 8, 9, 10 are standing *facts*, not tasks, and remain accurate.
+> The section title used to say "actionable now"; it no longer is.
 
 Everything here was **confirmed by execution**, not reasoning (details:
 docs/14 appendix C):
@@ -86,6 +90,13 @@ docs/14 appendix C):
 
 ## 3. State of the working tree(s) left behind
 
+> **Historical — this is the 2026-07-11 snapshot and is now wrong in every
+> particular.** Kept because the corpus-cache and harness-preflight notes are
+> still useful. Current state: `credence` is on `evolution_accepted` (286
+> commits ahead of `main`, pushed); `credence_evolution` is on `evolution` with
+> the 112 dead rejected rules deleted (`b83d623`, pushed). For live state read
+> docs/16's `START HERE`.
+
 - **credence:** clean except these untracked docs
   (`docs/12,13,14,15`, `docs/research/*`). Deps fetched, `MIX_ENV=test`
   compiled. `corpus/` (gitignored) holds a warm 6-package sample
@@ -131,6 +142,13 @@ docs/14 appendix C):
    lesson: a scratchpad is not storage.
 
 ## 5. Suggested first moves (smallest-risk, highest-certainty first)
+
+> **All four are DONE — do not re-do them.** Items 1–3 landed in Phases 0–3
+> (2026-07-21/22); the `NoSortThenAt`/`NoSortForTopK` strict-sorter repairs, the
+> two battery entries, the stdlib sentinel test and the E9 one-liner are all in
+> `69aa2ec`. Item 4's sequencing is superseded by docs/16, which is the single
+> execution plan. **Start at docs/16's `START HERE` instead.** Kept for the
+> record of what was recommended and why.
 
 1. Commit these docs (also unblocks harness preflight's clean-tree check).
 2. Land the verified fixes as one PR: `NoSortThenAt` + `NoSortForTopK`
