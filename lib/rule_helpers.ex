@@ -341,8 +341,6 @@ defmodule Credence.RuleHelpers do
     end
   end
 
-  defp dsl_partition(_rule, patches, _ast, _opts), do: {patches, []}
-
   defp dsl_unsafe_families(rule) do
     if function_exported?(rule, :unsafe_in_dsl, 0), do: rule.unsafe_in_dsl(), else: []
   end

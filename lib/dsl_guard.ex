@@ -312,7 +312,8 @@ defmodule Credence.DslGuard do
 
   defp qualified_family(mod, name)
        when mod in [[:Ash, :Expr], [:Ash, :Query]] and
-              name in [:expr, :filter, :calculate, :aggregate], do: :ash_expr
+              name in [:expr, :filter, :calculate, :aggregate],
+       do: :ash_expr
 
   defp qualified_family([:Nx, :Defn], name) when name in @defn_names, do: :nx_defn
   defp qualified_family(_mod, _name), do: nil
@@ -321,8 +322,6 @@ defmodule Credence.DslGuard do
   defp from_query?([first | _]) do
     match?({:in, _, [_, _]}, first) or match?({:__block__, _, [{:in, _, [_, _]}]}, first)
   end
-
-  defp from_query?(_), do: false
 
   # An Ecto pipe call is recognised by one of two signals:
   #
@@ -393,7 +392,7 @@ defmodule Credence.DslGuard do
         list = unwrap_list(arg),
         is_list(list),
         {name, _meta, ctx} <- list,
-        is_atom(name) and name != :_ and (is_atom(ctx) or is_nil(ctx)),
+        is_atom(name) and name != :_ and is_atom(ctx),
         into: MapSet.new(),
         do: name
   end

@@ -276,7 +276,6 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
     Enum.all?(elements, fn
       {:|, _, _} -> true
       {name, _, ctx} when is_atom(name) and is_atom(ctx) -> true
-      {name, _, nil} when is_atom(name) -> true
       {:_, _, _} -> true
       _ -> false
     end)

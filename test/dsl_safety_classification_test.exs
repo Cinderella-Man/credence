@@ -55,6 +55,8 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "prefer_pattern_match_over_conditional_in_recursive_count" =>
       "matches only a def whose body is recursive list counting",
     "prefer_lookup_for_digit_conversion" => "matches and rewrites only module-level defp clauses",
+    "prefer_stdlib_gcd" =>
+      "removes module-level Euclidean defp gcd/2 clauses and rewrites a call site; never rewrites a rem expression inside a DSL",
     "no_case_on_param_dispatch" =>
       "matches only a def/defp body that is `case param`; splits to clause heads, never inside a DSL expression",
     # Match an EXISTING `case` over a subject (booleans, tuples, Map results,
@@ -107,7 +109,9 @@ defmodule Credence.Pattern.DslSafetyClassificationTest do
     "no_unless_else" =>
       "unless→if with branches swapped, condition unchanged (same as Kernel.unless)",
     "prefer_cond_for_nested_if" =>
-      "nested if→cond copying every condition/body verbatim; no operator change"
+      "nested if→cond copying every condition/body verbatim; no operator change",
+    "no_defp_already_defined_as_def" =>
+      "renames a defp clause to do_<name> or deletes a duplicate defp; operates only on def/defp definitions and bare call sites, never inside a DSL expression"
   }
 
   test "every rule whose fix changes a reinterpreted construct is classified" do

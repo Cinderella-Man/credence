@@ -1072,7 +1072,9 @@ defmodule CredenceTest do
 
       result = Credence.fix(input)
       assert String.trim_trailing(result.code) == String.trim_trailing(expected)
-      assert result.issues == []
+
+      # NoDocOnPrivateFunction removes @doc false.
+      assert Enum.map(result.issues, & &1.rule) == []
     end
   end
 

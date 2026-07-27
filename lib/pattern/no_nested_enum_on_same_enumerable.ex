@@ -153,27 +153,6 @@ defmodule Credence.Pattern.NoNestedEnumOnSameEnumerable do
     """
   end
 
-  defp build_message(:filter, var) do
-    """
-    Enum.filter/2 is nested inside another traversal of `#{var}`, causing O(n²) complexity.
-    Avoid filtering the same list repeatedly. Consider:
-    • Precomputing results once
-    • Sorting and using indexed access
-    • Combining logic into a single Enum.reduce/3 pass
-    """
-  end
-
-  defp build_message(func, var) do
-    """
-    Nested Enum.#{func} call on `#{var}` detected.
-    This results in O(n²) complexity due to repeated full traversals.
-    Consider:
-    • Precomputing reusable data outside the loop
-    • Using a single Enum.reduce/3 pass
-    • Avoiding repeated scans of the same list
-    """
-  end
-
   defp extract_enum_call({{:., _, [{:__aliases__, _, [:Enum]}, func]}, meta, [arg | _]})
        when func in @enum_funcs do
     case var_name(arg) do

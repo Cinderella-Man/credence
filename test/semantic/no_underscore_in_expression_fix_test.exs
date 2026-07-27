@@ -208,4 +208,82 @@ defmodule Credence.Semantic.NoUnderscoreInExpressionFixTest do
     input = "defmodule M do def f("
     confirm_fix(fix(input), input)
   end
+
+  # --- New: == with tuple containing underscore → match? ---
+
+  test "converts == with tuple containing underscore to match?" do
+    input = """
+    defmodule UnderscoreInExpression do
+      def count_busy(workers) do
+        Enum.count(workers, fn {_, s} -> s == {:busy, _} end)
+      end
+    end
+    """
+
+    expected = """
+    defmodule UnderscoreInExpression do
+      def count_busy(workers) do
+        Enum.count(workers, fn {_, s} -> match?({:busy, _}, s) end)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "converts reversed == with tuple containing underscore to match?" do
+    input = """
+    defmodule M do
+      def f(s) do
+        {:busy, _} == s
+      end
+    end
+    """
+
+    expected = """
+    defmodule M do
+      def f(s) do
+        match?({:busy, _}, s)
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  test "fixed == to match? output is well-formed (parses)" do
+    input = """
+    defmodule UnderscoreInExpression do
+      def count_busy(workers) do
+        Enum.count(workers, fn {_, s} -> s == {:busy, _} end)
+      end
+    end
+    """
+
+    assert valid_syntax?(fix(input))
+  end
+
+  test "no-op when both sides of == contain underscore" do
+    input = """
+    defmodule M do
+      def f do
+        {:busy, _} == {:idle, _}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
+
+  test "no-op when == has no underscore in tuple" do
+    input = """
+    defmodule M do
+      def f(s) do
+        s == {:busy, :idle}
+      end
+    end
+    """
+
+    confirm_fix(fix(input), input)
+  end
 end

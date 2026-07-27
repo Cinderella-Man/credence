@@ -1,7 +1,8 @@
 defmodule Credence.Semantic.NoUnderscoreInExpression do
   @moduledoc """
   Fixes compiler errors caused by using `_` in expression position,
-  such as a tuple key in a for-comprehension body.
+  such as a tuple key in a for-comprehension body or a comparison
+  against a tuple containing wildcards.
 
   The Elixir compiler rejects `_` in expression position:
 
@@ -15,6 +16,16 @@ defmodule Credence.Semantic.NoUnderscoreInExpression do
       for idx <- 0..(n - 1), into: %{} do
         {idx, :infinity}
       end
+
+  A second common pattern is comparing a value against a tuple
+  containing wildcards:
+
+      s == {:busy, _}    # ← error: invalid use of _
+
+  The fix converts this to a `match?` call where `_` is in
+  pattern position:
+
+      match?({:busy, _}, s)
   """
   use Credence.Semantic.Rule
 
@@ -93,12 +104,27 @@ defmodule Credence.Semantic.NoUnderscoreInExpression do
 
   defp transform_underscores(ast) do
     Macro.postwalk(ast, fn
+      # Existing: for comprehension with underscore generator
       {:for, meta, args} = node when is_list(args) ->
         if fixable?(args) do
           fresh = fresh_var_name(args)
           {:for, meta, rename_underscore_in_for_args(args, fresh)}
         else
           node
+        end
+
+      # New: == comparison where one side is a tuple/literal containing _.
+      # Convert `value == {:atom, _}` to `match?({:atom, _}, value)`.
+      {:==, eq_meta, [left, right]} ->
+        cond do
+          tuple_with_underscore?(right) and not deep_contains_underscore?(left) ->
+            {:match?, eq_meta, [right, left]}
+
+          tuple_with_underscore?(left) and not deep_contains_underscore?(right) ->
+            {:match?, eq_meta, [left, right]}
+
+          true ->
+            {:==, eq_meta, [left, right]}
         end
 
       node ->
@@ -153,6 +179,33 @@ defmodule Credence.Semantic.NoUnderscoreInExpression do
 
     found
   end
+
+  # True when `node` is a tuple literal (2-tuple or n-tuple) that contains at
+  # least one `_` wildcard.  Covers the common LLM pattern `value == {:busy, _}`.
+  defp tuple_with_underscore?({:__block__, _, [inner]}), do: tuple_with_underscore?(inner)
+
+  defp tuple_with_underscore?({left, right}),
+    do: underscore_in_tuple_element?(left) or underscore_in_tuple_element?(right)
+
+  defp tuple_with_underscore?({:{}, _, args}) when is_list(args),
+    do: Enum.any?(args, &underscore_in_tuple_element?/1)
+
+  defp tuple_with_underscore?(_), do: false
+
+  defp underscore_in_tuple_element?({:_, _, ctx}) when is_atom(ctx), do: true
+  defp underscore_in_tuple_element?(_), do: false
+
+  # Recurse into 2-tuples (which Macro.prewalk treats as leaves) so we can
+  # detect `_` anywhere inside a value-side expression.
+  defp deep_contains_underscore?({:_, _, ctx}) when is_atom(ctx), do: true
+
+  defp deep_contains_underscore?({left, right}),
+    do: deep_contains_underscore?(left) or deep_contains_underscore?(right)
+
+  defp deep_contains_underscore?({_, _, args}) when is_list(args),
+    do: Enum.any?(args, &deep_contains_underscore?/1)
+
+  defp deep_contains_underscore?(_), do: false
 
   # A variable name not used anywhere in the comprehension, so the renamed
   # generator cannot collide with (or shadow) anything the body references.
