@@ -35,7 +35,8 @@ defmodule Mix.Tasks.Credence.Equiv do
     * `--vars a,b` — ordered free-var names of the expression (required).
     * `--dim d1,d2` — `EquivalenceInputs` dimension(s) to run (default: all that
       fit the var count). Names: term_lists, signed_integers, unicode_strings,
-      single_codepoint_strings, multi_codepoint_strings, stability_lists.
+      single_codepoint_strings, multi_codepoint_strings, stability_lists, maps,
+      keyword_lists, tuples, mixed_numeric.
     * `--inputs-file FILE` — an Elixir term (a list) overriding the battery; for
       multi-var, each element is a tuple/list of positional args. (The escape
       hatch for the unresolved multi-var input-set question.)
@@ -63,7 +64,13 @@ defmodule Mix.Tasks.Credence.Equiv do
   # domain when `single_codepoint_graphemes` is promised.
   @multi_codepoint_dims [:multi_codepoint_strings, :unicode_strings]
   @all_string_dims [:unicode_strings, :single_codepoint_strings, :multi_codepoint_strings]
-  @all_dims [:term_lists, :signed_integers, :stability_lists | @all_string_dims]
+  # C2.1. `maps`/`keyword_lists`/`tuples`/`mixed_numeric` close the gaps the
+  # original battery left: the Map-vs-Keyword duplicate-key divergence, tuple
+  # arity, and the int/float traps that survive `==`. C2.2's dimension-mapping
+  # meta-test keys on this list, and H3's `--dim` inference reads it.
+  @collection_dims [:maps, :keyword_lists, :tuples, :mixed_numeric]
+  @all_dims [:term_lists, :signed_integers, :stability_lists] ++
+              @all_string_dims ++ @collection_dims
 
   @impl Mix.Task
   def run(argv) do

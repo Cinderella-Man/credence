@@ -122,4 +122,105 @@ defmodule Credence.EquivalenceInputs do
       Enum.map(1..50, fn i -> rem(i, 3) end)
     ]
   end
+
+  @doc """
+  Maps. Witnesses: **key identity** — `1` and `1.0` are DISTINCT map keys even
+  though `1 == 1.0`, so a rewrite that routes a lookup through a different
+  equality (`Enum.find` on `==`, say) diverges only on a map that holds both.
+  Also: empty/single, atom-vs-string keys, a nested value, and a map large
+  enough to leave the small-map representation (>32 keys), where iteration
+  order stops matching term order.
+  """
+  def maps do
+    [
+      %{},
+      %{a: 1},
+      %{a: 1, b: 2, c: 3},
+      # key-identity trap: two keys that are `==` but not `===`
+      %{1 => :int, 1.0 => :float},
+      # mixed key types — anything that assumes atom keys breaks here
+      %{:a => 1, "a" => 2, 1 => 3},
+      # nested value: a fix that rebuilds the map must not flatten it
+      %{outer: %{inner: [1, 2, 3]}},
+      %{a: nil, b: false},
+      # >32 keys: leaves the flatmap representation, iteration order changes
+      Map.new(1..40, fn i -> {i, rem(i, 5)} end)
+    ]
+  end
+
+  @doc """
+  Keyword lists. Witnesses: **duplicate keys**, which a keyword list keeps and a
+  map silently collapses — the classic divergence when a fix rewrites
+  `Keyword.get/2` as `Map.get/2` or pipes a keyword list through `Map.new/1`.
+  `Keyword.get` returns the FIRST duplicate; `Map.new` keeps the LAST. Also:
+  order significance, empty/single, and a value that is itself a keyword list.
+  """
+  def keyword_lists do
+    [
+      [],
+      [a: 1],
+      [a: 1, b: 2],
+      [a: 1, b: 2, c: 3],
+      # duplicate keys: Keyword.get -> 1, Map.new |> Map.get -> 3
+      [a: 1, b: 2, a: 3],
+      [a: 1, a: 2, a: 3],
+      # order significance: same pairs, different order
+      [b: 2, a: 1],
+      [a: nil, b: false],
+      [opts: [nested: true], timeout: 5000]
+    ]
+  end
+
+  @doc """
+  Tuples. Witnesses: **arity dependence** — `elem/2` and pattern matches are
+  arity-exact, so a fix that reshapes a tuple breaks on every other arity. Also:
+  the empty tuple, the 1-tuple (easy to confuse with a bare value), the
+  `{:ok, _}` / `{:error, _}` result idiom, and nesting.
+  """
+  def tuples do
+    [
+      {},
+      {1},
+      {1, 2},
+      {1, 2, 3},
+      {:ok, :value},
+      {:error, :reason},
+      # nested: a rewrite that flattens changes the shape a caller matches on
+      {:ok, {1, [2, 3]}},
+      {nil, false},
+      List.to_tuple(Enum.to_list(1..20))
+    ]
+  end
+
+  @doc """
+  Mixed integers and floats. Witnesses: the int/float divergences that survive
+  `==` — `div/2` truncates toward zero while `Float.floor/1` does not, `rem/2`
+  takes the sign of the DIVIDEND (unlike Python's `%`, the transplant several
+  rules exist to repair), `0.0` and `-0.0` are `==` but not `===`, and integers
+  are arbitrary-precision while floats are not, so a large integer survives a
+  round trip that a float does not.
+  """
+  def mixed_numeric do
+    [
+      0,
+      1,
+      -1,
+      # == but not ===; also 1/1 is 1.0, not 1
+      1.0,
+      -1.0,
+      # -0.0 == 0.0 is true, -0.0 === 0.0 is false
+      0.0,
+      -0.0,
+      7,
+      -7,
+      2.5,
+      -2.5,
+      # rem/div sign behaviour: rem(-7, 3) is -1 in Elixir, 2 in Python
+      -7.5,
+      # beyond float precision: an integer that cannot round-trip through float
+      9_007_199_254_740_993,
+      1.0e308,
+      1.0e-308
+    ]
+  end
 end
