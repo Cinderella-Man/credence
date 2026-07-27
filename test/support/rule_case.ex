@@ -117,4 +117,26 @@ defmodule Credence.RuleCase do
   rescue
     _ -> false
   end
+
+  @doc """
+  Compiles `code`, calls `module.fun(args)`, and returns the result. The module
+  is purged afterwards so repeated fixtures do not leak between tests.
+
+  Use this to assert what a fix *means*, not just what it looks like. A repair
+  that drops a branch — emitting a discarded expression where an early exit was
+  written — still compiles, still parses, and still satisfies every string
+  comparison in a test file. Only running the result catches it. That is not
+  hypothetical: two tests in this suite asserted exactly such an output as
+  correct, and passed for as long as the defect shipped.
+
+  The fixture module name must be unique across the suite, since compiling it
+  redefines any module of the same name.
+  """
+  def call_fixed(code, module, fun, args) do
+    Code.with_diagnostics(fn -> Code.compile_string(code) end)
+    apply(module, fun, args)
+  after
+    :code.purge(module)
+    :code.delete(module)
+  end
 end

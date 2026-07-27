@@ -65,7 +65,13 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     assert valid_syntax?(fix(@input))
   end
 
-  test "strips return from unless without else" do
+  # This test used to assert the *bug*: it expected the `return` to be stripped
+  # in place, leaving `unless … do {:error, :bad} end` as a discarded expression
+  # with `:ok` still running afterwards. That output compiles clean and returns
+  # `:ok` for every input, so the validation silently stopped happening — and
+  # the test passed the whole time, because the expectation was written from the
+  # implementation rather than from the program's meaning.
+  test "restructures an unless early-exit guard into if/else" do
     input = """
     defmodule Example do
       def check(value) do
@@ -81,11 +87,11 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     expected = """
     defmodule Example do
       def check(value) do
-        unless value == :ok do
+        if value == :ok do
+          :ok
+        else
           {:error, :bad}
         end
-
-        :ok
       end
     end
     """
@@ -179,7 +185,9 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     assert valid_syntax?(fix(input))
   end
 
-  test "strips return from if with block do/end form" do
+  # Same story as the `unless` case above — the old expectation discarded the
+  # `:empty` branch and let `{:ok, n}` run unconditionally.
+  test "restructures an if early-exit guard into if/else" do
     input = """
     defmodule Example do
       def check(n) do
@@ -197,6 +205,25 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
       def check(n) do
         if n == 0 do
           :empty
+        else
+          {:ok, n}
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input), expected)
+  end
+
+  # The output above is asserted as text; this asserts what it MEANS. A future
+  # change that makes the rule emit a discarded expression again would keep the
+  # file compiling and would slip past every string comparison in this file.
+  test "the repaired guard actually still guards" do
+    input = """
+    defmodule EarlyExitBehaviour do
+      def check(n) do
+        unless n >= 0 do
+          return({:error, :neg})
         end
 
         {:ok, n}
@@ -204,7 +231,12 @@ defmodule Credence.Semantic.NoBareReturnInUnlessFixTest do
     end
     """
 
-    confirm_fix(fix(input), expected)
+    fixed = fix(input)
+
+    assert Credence.RuleCase.call_fixed(fixed, EarlyExitBehaviour, :check, [-5]) ==
+             {:error, :neg}
+
+    assert Credence.RuleCase.call_fixed(fixed, EarlyExitBehaviour, :check, [5]) == {:ok, 5}
   end
 
   test "strips return from case branch" do
