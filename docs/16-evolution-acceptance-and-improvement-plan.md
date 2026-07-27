@@ -17,13 +17,13 @@ happened rather than what to do — start at `START HERE`, then Phase 5.
 
 ---
 
-## START HERE (updated 2026-07-27, Phase 4 CLOSED)
+## START HERE (updated 2026-07-27; Phases 0–5 CLOSED, 6–8 in progress)
 
 **Phase 4 is COMPLETE.** All queues drained, all 143 rejected rules
 dispositioned and applied, **nine live shipped defects across seven rules
 repaired**. Suite 8058 → 8114 green in `credence`; 6842 green in the sister
-after the deletion. Next: **Phase 5** (harness escalations) and **Phase 6**
-(the C-items + the rebuild backlog below).
+after the deletion. **Phase 5 is also complete** — see
+`maintainer_tools/escalation_ledger.md`, 95 decisions. Phases 6–8 are underway.
 
 The evidence is in two companion documents, both **required reading before
 touching the backlog**:
@@ -37,11 +37,18 @@ touching the backlog**:
 
 ### What is left, in order
 
-1. **Phase 5** — triage the harness escalations (Appendix A). Untouched.
-2. **Phase 6** — the 17 rebuild-later rules and the 56 uncaught modes. Ranked
-   build list at the end of docs/17, but read §5.3 of docs/18 first: that list
-   took heavy damage on review and has not been rewritten.
-3. **Phases 7–9** — performance tail, harness improvements, next run.
+1. **Phase 6** — C-items. 6.1 (C5) and half of 6.2 (C2.1) are landed; C6, C2.2
+   and 6.3 onward are open. Separately, the 17 rebuild-later rules and the 56
+   uncaught modes — ranked build list at the end of docs/17, but read §5.3 of
+   docs/18 first: that list took heavy damage on review and has not been
+   rewritten.
+2. **Phase 7** — P5 landed (harness `96865e7`); P3 and P4 open.
+3. **Phase 8** — H13 and H12 landed (harness `96865e7`, `60ce2c4`); LD1's real
+   cause turned out to be log truncation, which H12 already fixes. The 9
+   FIX-HARNESS rows in the escalation ledger are the rest of the input.
+4. **Phase 9** — the next run. BLOCKED, and not only on work: it needs the PR to
+   `main` merged, Mimo secrets, a local solve endpoint, and a decision about
+   spend. Do not start it unattended.
 
 ### Five findings that will mislead you if you don't know them
 
