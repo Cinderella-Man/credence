@@ -1,4 +1,3 @@
-lib/syntax/no_catch_after_anon_fn.ex
 lib/syntax/no_catch_in_receive.ex
 lib/syntax/no_defp_qualified_name.ex
 lib/syntax/no_elif_keyword.ex
@@ -23,8 +22,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/no_catch_after_anon_fn_analyze_test.exs
-test/syntax/no_catch_after_anon_fn_fix_test.exs
 test/syntax/no_catch_in_receive_analyze_test.exs
 test/syntax/no_catch_in_receive_fix_test.exs
 test/syntax/no_defp_qualified_name_analyze_test.exs
