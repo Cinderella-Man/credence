@@ -1,4 +1,3 @@
-lib/syntax/no_extra_bracket_after_end.ex
 lib/syntax/no_fn_as_variable.ex
 lib/syntax/no_hash_quantifier_in_regex_sigil.ex
 lib/syntax/no_if_else_in_receive_after.ex
@@ -17,8 +16,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/no_extra_bracket_after_end_analyze_test.exs
-test/syntax/no_extra_bracket_after_end_fix_test.exs
 test/syntax/no_fn_as_variable_analyze_test.exs
 test/syntax/no_fn_as_variable_fix_test.exs
 test/syntax/no_hash_quantifier_in_regex_sigil_analyze_test.exs
