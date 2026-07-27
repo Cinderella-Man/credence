@@ -2,8 +2,12 @@ defmodule Credence.Syntax.FixElsifInIfChain do
   @moduledoc """
   Detects and rewrites Ruby/Python-style `if`/`elsif`/`else` chains to idiomatic `cond`.
 
-  LLMs translating from Ruby (`elsif`) or Python (`elif`) emit `elsif` inside
-  `if` blocks, which is not valid Elixir syntax. The parser misinterprets the
+  LLMs translating from Ruby (`elsif`) or Python (`elif`) emit that keyword
+  inside `if` blocks, which is not valid Elixir syntax. Both spellings are
+  handled — for a long time this rule advertised `elif` in its documentation
+  while both its regexes matched `elsif` only, so the Python spelling parsed
+  as a call to an undefined `elif/2` and was never repaired at all.
+  The parser misinterprets the
   code, often emitting misleading errors like "cannot invoke defp/2 inside
   function/macro" rather than a clear parse failure. Converting these chains to
   `cond` is behaviour-preserving and idiomatic.
@@ -51,7 +55,7 @@ defmodule Credence.Syntax.FixElsifInIfChain do
   use Credence.Syntax.Rule
   alias Credence.Issue
 
-  @elsif_re ~r/^\s*elsif\b/
+  @elsif_re ~r/^\s*els?if\b/
   @if_do_re ~r/^\s*if\s+.+?\s+do\s*$/
   # A branch boundary only has to *start* with `else`; `find_else_at_indent/3`
   # then insists on a bare `else`, so `else # note` stops the scan and bails
@@ -69,7 +73,7 @@ defmodule Credence.Syntax.FixElsifInIfChain do
       [
         %Issue{
           rule: :fix_elsif_in_if_chain,
-          message: "Use `cond` instead of `elsif` inside `if`",
+          message: "Use `cond` instead of `elsif`/`elif` inside `if`",
           meta: %{line: idx + 1}
         }
       ]
@@ -302,7 +306,7 @@ defmodule Credence.Syntax.FixElsifInIfChain do
   end
 
   defp extract_condition_from_elsif(line) do
-    case Regex.run(~r/^\s*elsif\s+(.+?)\s+do\s*$/, line) do
+    case Regex.run(~r/^\s*els?if\s+(.+?)\s+do\s*$/, line) do
       [_, cond] -> {:ok, cond}
       _ -> :bail
     end

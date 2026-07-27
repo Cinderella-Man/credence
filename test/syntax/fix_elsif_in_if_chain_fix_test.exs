@@ -391,4 +391,94 @@ defmodule Credence.Syntax.FixElsifInIfChainFixTest do
 
     confirm_fix(fix(code), code)
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # `elif` — the Python spelling
+  #
+  # The moduledoc advertised Python support from the start, but both
+  # regexes matched `elsif` only, so `elif` was reported by nothing and
+  # repaired by nothing.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "elif (Python spelling)" do
+    test "rewrites an elif chain to cond" do
+      code = """
+      defmodule Grade do
+        def letter(score) do
+          if score >= 90 do
+            :a
+          elif score >= 80 do
+            :b
+          else
+            :c
+          end
+        end
+      end
+      """
+
+      expected = """
+      defmodule Grade do
+        def letter(score) do
+          cond do
+            score >= 90 -> :a
+            score >= 80 -> :b
+            true -> :c
+          end
+        end
+      end
+      """
+
+      confirm_fix(fix(code), expected)
+      assert valid_syntax?(fix(code))
+    end
+
+    test "reports an elif chain" do
+      code = """
+      if a do
+        1
+      elif b do
+        2
+      else
+        3
+      end
+      """
+
+      assert [issue] = analyze(code)
+      assert issue.rule == :fix_elsif_in_if_chain
+      assert issue.message =~ "elif"
+    end
+
+    test "elsif and elif produce the same output" do
+      elif_code = """
+      if a do
+        1
+      elif b do
+        2
+      else
+        3
+      end
+      """
+
+      elsif_code = String.replace(elif_code, "elif ", "elsif ")
+
+      confirm_fix(fix(elif_code), fix(elsif_code))
+    end
+
+    test "does not touch `else if`, which is valid Elixir" do
+      code = """
+      if a do
+        1
+      else
+        if b do
+          2
+        else
+          3
+        end
+      end
+      """
+
+      confirm_fix(fix(code), code)
+      assert analyze(code) == []
+    end
+  end
 end
