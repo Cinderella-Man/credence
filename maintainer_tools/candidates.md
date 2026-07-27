@@ -1,3 +1,1 @@
-lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/prefer_div_function_over_infix_analyze_test.exs
-test/syntax/prefer_div_function_over_infix_fix_test.exs
+
