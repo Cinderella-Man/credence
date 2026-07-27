@@ -957,3 +957,10 @@ so a future scan won't re-flag it.
   - `test/syntax/no_elsif_keyword_fix_test.exs`
 - Reason: Duplicate of accepted fix_elsif_in_if_chain (same `elsif`-in-`if` habit, byte-identical `cond` output) and is the pre-hardening copy — corrupts heredoc doc text and emits garbage when the chain has no terminator at header indent; analyze flags every `elsif` while fix bails. Folding it in would mean editing the accepted rule (shared/other-set file, out of scope).
 
+## no_if_else_in_receive_after — 2026-07-27
+- Files:
+  - `lib/syntax/no_if_else_in_receive_after.ex`
+  - `test/syntax/no_if_else_in_receive_after_analyze_test.exs`
+  - `test/syntax/no_if_else_in_receive_after_fix_test.exs`
+- Reason: Wrong phase + inert, and check/fix disagree — `receive do ... after if true do ... end end` PARSES fine (`Code.string_to_quoted` = :ok; failure is the compile-time "expected a single -> clause for :after in \"receive\""), so the syntax phase (lib/syntax.ex runs rules only on `Sourceror.parse_string` = {:error,_}) never invokes it; the rule's own analyze/fix also require parse success, so it is doubly inert and its green tests pass only by calling the module directly. Separately, `render_receive_fix`/`find_receive` always patch the FIRST `receive` node in the file while the prewalk fixes the first receive with a bare `after`: with a valid `receive` ahead of the offending one, analyze flags the issue but fix returns the source byte-identical (verified via the real test file). Belongs in the semantic phase (new shared/out-of-scope file); same class as the accepted-followup no_else_in_for_comprehension.
+

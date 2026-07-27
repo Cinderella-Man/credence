@@ -1,4 +1,3 @@
-lib/syntax/no_if_else_in_receive_after.ex
 lib/syntax/no_keyword_if_bare_in_tuple.ex
 lib/syntax/no_keyword_if_in_tuple.ex
 lib/syntax/no_keyword_inside_tuple_brace.ex
@@ -14,8 +13,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/no_if_else_in_receive_after_analyze_test.exs
-test/syntax/no_if_else_in_receive_after_fix_test.exs
 test/syntax/no_keyword_if_bare_in_tuple_analyze_test.exs
 test/syntax/no_keyword_if_bare_in_tuple_fix_test.exs
 test/syntax/no_keyword_if_in_tuple_analyze_test.exs
