@@ -936,3 +936,10 @@ so a future scan won't re-flag it.
   - `test/syntax/no_defp_qualified_name_fix_test.exs`
 - Reason: Wrong phase + inert — `defp Macro.expand(...)` PARSES fine (probe: Sourceror.parse_string=:ok, Credence.Syntax.analyze=[], Syntax.fix no-op), so the syntax phase never invokes it; docstring's "invalid Elixir syntax" claim is false (it's a compile error). Fix is also unsafe even if re-phased: the call-site regex is unanchored, so it rewrites EVERY `Mod.fun(` in the file including genuine calls to the real module (used-elsewhere trap), and `Macro.underscore("Foo.Bar") = "foo/bar"` yields `foo/bar_baz(` — unparseable output for the dotted modules its own regex admits. Same class as no_catch_in_receive / no_capture_as_identity_function.
 
+## no_elif_keyword — 2026-07-27
+- Files:
+  - `lib/syntax/no_elif_keyword.ex`
+  - `test/syntax/no_elif_keyword_analyze_test.exs`
+  - `test/syntax/no_elif_keyword_fix_test.exs`
+- Reason: Duplicate of accepted fix_elsif_in_if_chain (same bad habit, its moduledoc already names Python `elif`) but is the pre-hardening copy — corrupts heredoc doc text, mangles chains with no `end` at header indent, re-indents multi-line strings, and analyze flags every `elif` while fix bails; fold `elif` into fix_elsif_in_if_chain's regexes (shared-file change, out of scope).
+

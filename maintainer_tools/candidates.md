@@ -1,4 +1,3 @@
-lib/syntax/no_elif_keyword.ex
 lib/syntax/no_else_in_for_comprehension.ex
 lib/syntax/no_elsif_keyword.ex
 lib/syntax/no_extra_bracket_after_end.ex
@@ -20,8 +19,6 @@ lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/no_elif_keyword_analyze_test.exs
-test/syntax/no_elif_keyword_fix_test.exs
 test/syntax/no_else_in_for_comprehension_analyze_test.exs
 test/syntax/no_else_in_for_comprehension_fix_test.exs
 test/syntax/no_elsif_keyword_analyze_test.exs
