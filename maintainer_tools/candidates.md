@@ -1,12 +1,9 @@
-lib/syntax/no_pipe_into_arithmetic_operator.ex
 lib/syntax/no_postfix_if_expression.ex
 lib/syntax/no_python_multi_return.ex
 lib/syntax/no_rescue_option_in_case.ex
 lib/syntax/no_rescue_or_catch_outside_try.ex
 lib/syntax/prefer_comma_in_tuple_literal.ex
 lib/syntax/prefer_div_function_over_infix.ex
-test/syntax/no_pipe_into_arithmetic_operator_analyze_test.exs
-test/syntax/no_pipe_into_arithmetic_operator_fix_test.exs
 test/syntax/no_postfix_if_expression_analyze_test.exs
 test/syntax/no_postfix_if_expression_fix_test.exs
 test/syntax/no_python_multi_return_analyze_test.exs
