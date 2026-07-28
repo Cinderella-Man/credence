@@ -987,7 +987,19 @@ its own tests run under real `mix test`.
   so). Add a static check in `Cev.Preflight` reading the *accepting* repo's
   `STATUS.md` (path decision needed — not the sister clone's copy), failing
   while `MODE: CATCHING UP`. Until then the interlock is prose.
-- [ ] **T4.2 [H] BUGFIX-lane evidence gates** (the single biggest weak-model
+- [ ] **T4.2 [H] BUGFIX-lane evidence gates — (a), (b) and (e) DONE (`c07fb57`,
+  `1f62e16`); (c) and (d) remain.** (a) rejects a BUGFIX whose BEFORE equals its
+  AFTER; (b) treats an all-rule-character body (`===`, `---`) as blank — one
+  instance burned an 80-turn session, and the emptiness test is deliberately
+  `\\A[-=_*\\s]+\\z` because the looser forms start eating real code; (e) is
+  `Cev.Premise`, one compile that refutes a premise before an implementer run is
+  spent on it. (e) checks the mechanical statement rather than the prose:
+  a Semantic BEFORE with no diagnostic has nothing to key on, a Syntax BEFORE
+  that parses is inert by construction. Pattern is exempt — no diagnostic is its
+  normal state — and inconclusive always passes, because this gate exists to
+  catch a *refuted* premise. It compiles model source, so it is bounded like
+  credence's T3.11, and its test feeds it the very expression that OOMed the box.
+  Original (the single biggest weak-model
   lever after T1; ledger clusters H-A/H-B): (a) reject `:bugfix_rule` when
   `before == after`; (b) treat an all-`=` section body as blank
   (`parser.ex:121-122` passes `"==="` through — burned an 80-turn session);
