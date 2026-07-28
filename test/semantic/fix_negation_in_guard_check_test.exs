@@ -6,7 +6,13 @@ defmodule Credence.Semantic.FixNegationInGuardCheckTest do
   @real_message "invalid expression in guard, ! is not allowed in guards. To learn more about guards, visit: https://hexdocs.pm/elixir/patterns-and-guards.html"
 
   test "matches the diagnostic" do
-    diag = %{severity: :error, message: @real_message, position: {2, 42}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: @real_message,
+      position: {2, 42},
+      file: "credence_check.ex"
+    }
+
     assert FixNegationInGuard.match?(diag)
   end
 
@@ -27,12 +33,24 @@ defmodule Credence.Semantic.FixNegationInGuardCheckTest do
   end
 
   test "attributes the issue to this rule" do
-    diag = %{severity: :error, message: @real_message, position: {2, 42}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: @real_message,
+      position: {2, 42},
+      file: "credence_check.ex"
+    }
+
     assert FixNegationInGuard.to_issue(diag).rule == :fix_negation_in_guard
   end
 
   test "sets the line in issue meta" do
-    diag = %{severity: :error, message: @real_message, position: {42, 10}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: @real_message,
+      position: {42, 10},
+      file: "credence_check.ex"
+    }
+
     assert FixNegationInGuard.to_issue(diag).meta.line == 42
   end
 end

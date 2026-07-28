@@ -154,8 +154,11 @@ defmodule Credence.Semantic.FixCaseBranchAssignmentScope do
   # where ALL branches assign to var_atom.
   defp case_with_all_branches_assigning?({:case, _, [_, branches_kw]}, var_atom) do
     case extract_do_branches(branches_kw) do
-      {:ok, branches} -> branches != [] and Enum.all?(branches, &branch_assigns_var?(&1, var_atom))
-      _ -> false
+      {:ok, branches} ->
+        branches != [] and Enum.all?(branches, &branch_assigns_var?(&1, var_atom))
+
+      _ ->
+        false
     end
   end
 

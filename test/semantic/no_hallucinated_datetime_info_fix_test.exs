@@ -8,7 +8,11 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeInfoFixTest do
   @real_message "DateTime.info?/1 is undefined or private"
 
   defp fix(source, message, line \\ 1) do
-    NoHallucinatedDatetimeInfo.fix(source, %{severity: :warning, message: message, position: {line, 1}})
+    NoHallucinatedDatetimeInfo.fix(source, %{
+      severity: :warning,
+      message: message,
+      position: {line, 1}
+    })
   end
 
   test "replaces DateTime.info? with match? in do block" do

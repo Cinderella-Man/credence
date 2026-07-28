@@ -63,7 +63,10 @@ defmodule Credence.Semantic.FixRaiseInKeywordValue do
               case Sourceror.get_range({:raise, raise_meta, args}) do
                 %Sourceror.Range{end: end_pos} ->
                   new_meta =
-                    Keyword.put(raise_meta, :closing, line: end_pos[:line], column: end_pos[:column])
+                    Keyword.put(raise_meta, :closing,
+                      line: end_pos[:line],
+                      column: end_pos[:column]
+                    )
 
                   {{{:__block__, kw_meta, [:do]}, {:raise, new_meta, args}}, true}
 

@@ -50,8 +50,7 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStruct do
                 [
                   {:__aliases__, _, [:Task, :TimeoutError]},
                   {:%{}, _, _}
-                ]},
-               {_, _, _}}
+                ]}, {_, _, _}}
             ]}},
           _acc ->
             {{{:__block__, exit_meta, [:exit]}, {:__block__, val_meta, [:timeout]}}, true}

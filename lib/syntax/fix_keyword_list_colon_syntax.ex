@@ -152,8 +152,7 @@ defmodule Credence.Syntax.FixKeywordListColonSyntax do
   defp build_issue(line, identifier) do
     %Issue{
       rule: :fix_keyword_list_colon_syntax,
-      message:
-        "LLM colon-on-wrong-side keyword `:#{identifier}:` should be `#{identifier}:`.",
+      message: "LLM colon-on-wrong-side keyword `:#{identifier}:` should be `#{identifier}:`.",
       meta: %{line: line}
     }
   end

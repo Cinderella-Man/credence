@@ -234,12 +234,17 @@ defmodule Credence.FixTestsTaskTest do
       assert match?({:ok, _}, Sourceror.parse_string(out))
 
       decoded_input = "defmodule Example do\n  def f, do: 'a\\nb'\nend\n"
-      real = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferSigilCharlist, decoded_input)
+
+      real =
+        Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferSigilCharlist, decoded_input)
 
       # Guard against the test passing for the wrong reason: the two inputs really
       # do drive the rule to different output.
       raw_input = "defmodule Example do\n  def f, do: 'a\\\\nb'\nend\n"
-      on_raw = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferSigilCharlist, raw_input)
+
+      on_raw =
+        Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferSigilCharlist, raw_input)
+
       refute on_raw == real, "raw and decoded input no longer diverge — this test is vacuous"
 
       assert expected_runtime_value(out) == real,

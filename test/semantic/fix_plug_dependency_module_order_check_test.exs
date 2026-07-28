@@ -50,8 +50,7 @@ defmodule Credence.Semantic.FixPlugDependencyModuleOrderCheckTest do
   test "ignores the warning-severity yet-to-be-defined form" do
     diag = %{
       severity: :warning,
-      message:
-        "Foo.init/1 is undefined (module Foo is not available or is yet to be defined)",
+      message: "Foo.init/1 is undefined (module Foo is not available or is yet to be defined)",
       position: {1, 1}
     }
 

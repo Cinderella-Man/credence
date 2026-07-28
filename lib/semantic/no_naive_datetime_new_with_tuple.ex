@@ -52,8 +52,8 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTuple do
                  tuple_args}
 
               new_node =
-                {{:., dot_meta, [{:__aliases__, alias_meta, [:NaiveDateTime]}, :new!]},
-                 call_meta, [first_arg, time_call]}
+                {{:., dot_meta, [{:__aliases__, alias_meta, [:NaiveDateTime]}, :new!]}, call_meta,
+                 [first_arg, time_call]}
 
               {new_node, true}
 

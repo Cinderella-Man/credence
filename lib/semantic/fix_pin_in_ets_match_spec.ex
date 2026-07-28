@@ -67,7 +67,7 @@ defmodule Credence.Semantic.FixPinInEtsMatchSpec do
 
       result =
         Macro.prewalk(ast, fn
-          {:"^", meta, [{^pinned, _, ctx} = inner]} = node when is_atom(ctx) ->
+          {:^, meta, [{^pinned, _, ctx} = inner]} = node when is_atom(ctx) ->
             if Keyword.get(meta, :line) == target_line and
                  Keyword.get(meta, :column) == target_col do
               inner

@@ -39,7 +39,8 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
 
     %Issue{
       rule: :no_map_update_missing_key,
-      message: "map update uses key :#{key_name} but the original map literal does not include it",
+      message:
+        "map update uses key :#{key_name} but the original map literal does not include it",
       meta: %{line: line(diagnostic)}
     }
   end
@@ -67,7 +68,9 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
 
               true ->
                 new_pair = build_keyword_pair(key_atom)
-                {{:=, meta, [{var_atom, vmeta, nil}, {:%{}, map_meta, pairs ++ [new_pair]}]}, true}
+
+                {{:=, meta, [{var_atom, vmeta, nil}, {:%{}, map_meta, pairs ++ [new_pair]}]},
+                 true}
             end
 
           node, acc ->

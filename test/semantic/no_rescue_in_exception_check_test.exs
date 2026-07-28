@@ -15,11 +15,19 @@ defmodule Credence.Semantic.NoRescueInExceptionCheckTest do
   end
 
   test "ignores unrelated diagnostics" do
-    refute NoRescueInException.match?(%{severity: :warning, message: "unrelated", position: {1, 1}})
+    refute NoRescueInException.match?(%{
+             severity: :warning,
+             message: "unrelated",
+             position: {1, 1}
+           })
   end
 
   test "ignores error severity" do
-    refute NoRescueInException.match?(%{severity: :error, message: @real_message, position: {6, 9}})
+    refute NoRescueInException.match?(%{
+             severity: :error,
+             message: @real_message,
+             position: {6, 9}
+           })
   end
 
   test "attributes the issue to this rule" do

@@ -93,8 +93,7 @@ defmodule Credence.Pattern.PreferZipWithOverZipThenCount do
   # consecutive step-pair exactly once, so a flagged pipeline produces
   # exactly one issue even when more steps follow the count.
   defp match_node(
-         {:|>, _,
-          [left, {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [fn_ast]}]},
+         {:|>, _, [left, {{:., _, [{:__aliases__, _, [:Enum]}, :count]}, _, [fn_ast]}]},
          _skip
        ) do
     with {:ok, x, y, body} <- tuple_vars_fn(fn_ast),

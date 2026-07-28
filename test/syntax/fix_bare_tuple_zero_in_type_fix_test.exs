@@ -252,7 +252,16 @@ defmodule Credence.Syntax.FixBareTupleZeroInTypeFixTest do
     end
 
     test "across generated lines, a line is flagged exactly when it is rewritten, and every rewrite parses" do
-      attrs = ["@type t", "@typep t", "@opaque t", "@spec f()", "@callback f(x)", "@typedoc", "def f"]
+      attrs = [
+        "@type t",
+        "@typep t",
+        "@opaque t",
+        "@spec f()",
+        "@callback f(x)",
+        "@typedoc",
+        "def f"
+      ]
+
       separators = [" :: ", "::", "  ::  "]
 
       right_hand_sides = [

@@ -84,8 +84,7 @@ defmodule Credence.Semantic.FixMultipleDefaultArgs do
       header_args = build_header_args(arity, pos_defaults)
 
       header =
-        {kind, [line: 0, end_of_expression: [newlines: 2]],
-         [{func_name, [line: 0], header_args}]}
+        {kind, [line: 0, end_of_expression: [newlines: 2]], [{func_name, [line: 0], header_args}]}
 
       first = hd(func_defs)
 

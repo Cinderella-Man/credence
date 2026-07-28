@@ -36,11 +36,13 @@ defmodule Credence.Semantic.NoDuplicateDefstruct do
   def fix(source, _diagnostic) do
     with {:ok, ast} <- Sourceror.parse_string(source) do
       case ast do
-        {:defmodule, m_meta, [alias_node, [{{:__block__, do_meta, [:do]}, {:__block__, b_meta, body}}]]} ->
-          defstruct_nodes = Enum.filter(body, fn
-            {:defstruct, _, _} -> true
-            _ -> false
-          end)
+        {:defmodule, m_meta,
+         [alias_node, [{{:__block__, do_meta, [:do]}, {:__block__, b_meta, body}}]]} ->
+          defstruct_nodes =
+            Enum.filter(body, fn
+              {:defstruct, _, _} -> true
+              _ -> false
+            end)
 
           if length(defstruct_nodes) <= 1 do
             source
@@ -53,7 +55,10 @@ defmodule Credence.Semantic.NoDuplicateDefstruct do
               end)
 
             new_body = {:__block__, b_meta, cleaned}
-            new_ast = {:defmodule, m_meta, [alias_node, [{{:__block__, do_meta, [:do]}, new_body}]]}
+
+            new_ast =
+              {:defmodule, m_meta, [alias_node, [{{:__block__, do_meta, [:do]}, new_body}]]}
+
             Sourceror.to_string(new_ast)
           end
 

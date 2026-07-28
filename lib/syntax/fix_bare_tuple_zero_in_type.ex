@@ -163,9 +163,15 @@ defmodule Credence.Syntax.FixBareTupleZeroInType do
   end
 
   defp do_split([?:, ?: | rest], depth, acc), do: do_split(rest, depth, [?:, ?: | acc])
-  defp do_split([c | rest], depth, acc) when c in ~c"([{", do: do_split(rest, depth + 1, [c | acc])
+
+  defp do_split([c | rest], depth, acc) when c in ~c"([{",
+    do: do_split(rest, depth + 1, [c | acc])
+
   defp do_split([c | _rest], 0, _acc) when c in ~c")]}", do: :none
-  defp do_split([c | rest], depth, acc) when c in ~c")]}", do: do_split(rest, depth - 1, [c | acc])
+
+  defp do_split([c | rest], depth, acc) when c in ~c")]}",
+    do: do_split(rest, depth - 1, [c | acc])
+
   defp do_split([c | rest], depth, acc), do: do_split(rest, depth, [c | acc])
 
   defp balanced?(tail) do

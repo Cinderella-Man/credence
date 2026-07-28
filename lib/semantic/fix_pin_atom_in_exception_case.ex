@@ -80,13 +80,12 @@ defmodule Credence.Semantic.FixPinAtomInExceptionCase do
         Macro.prewalk(ast, fn
           # A clause whose whole pattern is the bare pin of the flagged
           # variable, on the diagnostic line: rewrite `^var ->` to `%^var{}`.
-          {:"->", arrow_meta, [[{:"^", pin_meta, [{^pinned, _, nil}]}], body]} = node ->
+          {:->, arrow_meta, [[{:^, pin_meta, [{^pinned, _, nil}]}], body]} = node ->
             if Keyword.get(arrow_meta, :line) == target_line do
               new_pattern =
-                {:%, pin_meta,
-                 [{:"^", pin_meta, [{pinned, pin_meta, nil}]}, {:%{}, pin_meta, []}]}
+                {:%, pin_meta, [{:^, pin_meta, [{pinned, pin_meta, nil}]}, {:%{}, pin_meta, []}]}
 
-              {:"->", arrow_meta, [[new_pattern], body]}
+              {:->, arrow_meta, [[new_pattern], body]}
             else
               node
             end

@@ -37,7 +37,12 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeInfoCheckTest do
   end
 
   test "ignores other undefined DateTime functions" do
-    diag = %{severity: :warning, message: "DateTime.parse/2 is undefined or private", position: {1, 1}}
+    diag = %{
+      severity: :warning,
+      message: "DateTime.parse/2 is undefined or private",
+      position: {1, 1}
+    }
+
     refute NoHallucinatedDatetimeInfo.match?(diag)
   end
 

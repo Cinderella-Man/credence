@@ -452,7 +452,9 @@ defmodule Credence.DslStaticScan do
       called =
         clauses
         |> Enum.flat_map(fn {head, body} -> local_calls([head, body], names) end)
-        |> Enum.flat_map(fn n -> for {m, a} = k <- Map.keys(defs), m == n, is_integer(a), do: k end)
+        |> Enum.flat_map(fn n ->
+          for {m, a} = k <- Map.keys(defs), m == n, is_integer(a), do: k
+        end)
 
       referenced =
         clauses
@@ -733,7 +735,9 @@ defmodule Credence.DslStaticScan do
           Macro.prewalk(ast, [], fn
             {form, m, args} = n, a when is_atom(form) and is_list(args) ->
               if form in @constructs and not capture_slash?(form, args),
-                do: {n, [occurrence(form, string_kind(mode), where, Keyword.put(m, :line, line)) | a]},
+                do:
+                  {n,
+                   [occurrence(form, string_kind(mode), where, Keyword.put(m, :line, line)) | a]},
                 else: {n, a}
 
             n, a ->

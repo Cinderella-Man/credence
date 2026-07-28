@@ -158,7 +158,10 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDef do
        )
        when is_atom(n) and n == name do
     {:defp, meta,
-     [{:when, wmeta, [{new_name, fmeta, args} | guards]}, walk_body_kw(body_kw, name, arity, new_name)]}
+     [
+       {:when, wmeta, [{new_name, fmeta, args} | guards]},
+       walk_body_kw(body_kw, name, arity, new_name)
+     ]}
   end
 
   # def: walk body only, skip head

@@ -229,8 +229,11 @@ defmodule Credence.Corpus.BudgetTest do
       graduated_policy = [cap: 100, grandfathered: Map.delete(@ledger, "medium")]
       refile = %{@counts | "medium" => 120}
 
-      assert {:over_cap, "medium", 120, 100} in
-               Budget.violations(refile, refile, graduated_policy)
+      assert {:over_cap, "medium", 120, 100} in Budget.violations(
+               refile,
+               refile,
+               graduated_policy
+             )
     end
   end
 

@@ -261,7 +261,9 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
       "defstruct " <> rest ->
         rest_trimmed = String.trim_leading(rest)
         not String.contains?(trimmed, "[") and match?(":" <> _, rest_trimmed)
-      _ -> false
+
+      _ ->
+        false
     end
   end
 
@@ -284,6 +286,7 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
 
   defp remove_trailing_comma(str) do
     len = byte_size(str)
+
     if len > 0 and :binary.at(str, len - 1) == ?, do
       binary_part(str, 0, len - 1)
     else
@@ -293,12 +296,14 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
 
   defp valid_atom_name?(""), do: false
   defp valid_atom_name?(<<"\"", _::binary>>), do: true
+
   defp valid_atom_name?(<<ch, rest::binary>>)
        when ch in ?a..?z or ch in ?A..?Z or ch == ?_ do
     rest
     |> String.to_charlist()
     |> Enum.all?(fn c -> c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_ end)
   end
+
   defp valid_atom_name?(_), do: false
 
   # Returns a MapSet of line numbers that are part of a multi-line for/with
@@ -440,7 +445,14 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   # the newline; a string or heredoc keeps running.
   defp walk_depths([?\n | rest], depths, depth, line, ctx) do
     next_ctx = if ctx == :comment, do: nil, else: ctx
-    walk_depths(rest, Map.put(depths, line + 1, {depth, literal?(next_ctx)}), depth, line + 1, next_ctx)
+
+    walk_depths(
+      rest,
+      Map.put(depths, line + 1, {depth, literal?(next_ctx)}),
+      depth,
+      line + 1,
+      next_ctx
+    )
   end
 
   # Inside a comment — skip until newline (handled above)
@@ -602,8 +614,10 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   # Found `|` at depth 0 outside a string — check it is NOT `||` or `|>`
   defp check_struct_pipe([?| | rest], 0, nil) do
     case rest do
-      [?| | _] -> false  # `||` — logical OR, not struct-update pipe
-      [?> | _] -> false  # `|>` — pipe operator, not struct-update pipe
+      # `||` — logical OR, not struct-update pipe
+      [?| | _] -> false
+      # `|>` — pipe operator, not struct-update pipe
+      [?> | _] -> false
       _ -> true
     end
   end
@@ -703,7 +717,10 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
     # Track remaining chars so the lookahead at each comma is accurate.
     # `stack` records the type of each open delimiter so we can detect mismatches.
     {segments, current, _depth, _in_str, _remaining, _stack, _mismatched} =
-      Enum.reduce(chars, {[], [], 0, nil, safe_tl(chars), [], false}, fn ch, {segs, cur, depth, in_str, remaining, stack, mismatched} ->
+      Enum.reduce(chars, {[], [], 0, nil, safe_tl(chars), [], false}, fn ch,
+                                                                         {segs, cur, depth,
+                                                                          in_str, remaining,
+                                                                          stack, mismatched} ->
         tail = safe_tl(remaining)
 
         cond do
@@ -727,24 +744,29 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
           ch in [?), ?], ?}] ->
             {new_depth, new_stack, new_mismatched} =
               case stack do
-                [opener | rest_stack] when (opener == ?( and ch == ?)) or
-                                            (opener == ?[ and ch == ?]) or
-                                            (opener == ?{ and ch == ?}) ->
+                [opener | rest_stack]
+                when (opener == ?( and ch == ?)) or
+                       (opener == ?[ and ch == ?]) or
+                       (opener == ?{ and ch == ?}) ->
                   {max(depth - 1, 0), rest_stack, mismatched}
+
                 [_opener | rest_stack] ->
                   # Mismatched close delimiter (e.g. `)` closing a `{`)
                   {max(depth - 1, 0), rest_stack, true}
+
                 [] ->
                   # Close without open — underflow
                   {0, [], true}
               end
+
             {segs, cur ++ [ch], new_depth, nil, tail, new_stack, new_mismatched}
 
           # Bare comma at depth 0 — split here unless a keyword key, arrow,
           # function-call-without-parens, block-closing `end`, or mismatched
           # delimiter precedes it.
           ch == ?, and depth == 0 ->
-            if mismatched or keyword_or_arrow_ahead?(remaining) or function_call_before?(cur) or block_end_before?(cur) do
+            if mismatched or keyword_or_arrow_ahead?(remaining) or function_call_before?(cur) or
+                 block_end_before?(cur) do
               # Keep comma with current segment (keyword entry, clause pattern,
               # paren-less function call like `raise ArgumentError, "msg"`,
               # or mismatched delimiter where the real fix is the delimiter)
@@ -880,9 +902,10 @@ defmodule Credence.Syntax.NoPythonMultiReturn do
   # Check if `chars` starts with a keyword key pattern: word+ `:` or `:"` string `":`
   defp keyword_ahead?(chars) do
     # Consume word characters
-    {word, rest} = Enum.split_while(chars, fn ch ->
-      ch in ?a..?z or ch in ?A..?Z or ch in ?0..?9 or ch == ?_
-    end)
+    {word, rest} =
+      Enum.split_while(chars, fn ch ->
+        ch in ?a..?z or ch in ?A..?Z or ch in ?0..?9 or ch == ?_
+      end)
 
     case rest do
       [?: | _] when word != [] -> true

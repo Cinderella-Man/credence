@@ -82,7 +82,9 @@ defmodule Credence.Semantic.NoRescueInException do
       {rewritten, changed?} =
         Macro.prewalk(ast, false, fn
           {{:__block__, _, [:rescue]} = key, clauses}, acc when is_list(clauses) ->
-            {fixed, touched?} = Enum.map_reduce(clauses, acc, &drop_exception_head(&1, &2, shadowed?))
+            {fixed, touched?} =
+              Enum.map_reduce(clauses, acc, &drop_exception_head(&1, &2, shadowed?))
+
             {{key, fixed}, touched?}
 
           node, acc ->
@@ -103,7 +105,8 @@ defmodule Credence.Semantic.NoRescueInException do
   # (`e in Exception`) is rewritten. `e in Exception when ...`, a pinned or
   # destructured head, or a multi-element head all fall through untouched.
   defp drop_exception_head(
-         {:->, meta, [[{:in, in_meta, [{_name, _, nil} = var, {:__aliases__, _, segments}]}], body]} =
+         {:->, meta,
+          [[{:in, in_meta, [{_name, _, nil} = var, {:__aliases__, _, segments}]}], body]} =
            clause,
          acc,
          shadowed?

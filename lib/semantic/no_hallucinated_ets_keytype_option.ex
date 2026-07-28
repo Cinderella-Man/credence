@@ -83,9 +83,7 @@ defmodule Credence.Semantic.NoHallucinatedEtsKeytypeOption do
   end
 
   # Match a keyword pair: keytype: :term
-  defp keytype_option?(
-         {{:__block__, meta, [:keytype]}, {:__block__, _, [:term]}}
-       )
+  defp keytype_option?({{:__block__, meta, [:keytype]}, {:__block__, _, [:term]}})
        when is_list(meta) do
     Keyword.get(meta, :format) == :keyword
   end

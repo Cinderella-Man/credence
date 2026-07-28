@@ -18,7 +18,8 @@ defmodule Credence.Semantic.NoBareReturnInUnlessCheckTest do
   test "ignores generic compile error wrapper" do
     diag = %{
       severity: :error,
-      message: "credence_check.ex: cannot compile module Catalog.Faceted (errors have been logged)",
+      message:
+        "credence_check.ex: cannot compile module Catalog.Faceted (errors have been logged)",
       position: 0,
       file: "credence_check.ex"
     }

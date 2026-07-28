@@ -6,7 +6,13 @@ defmodule Credence.Semantic.FixLocalFunctionInGuardCheckTest do
   @real_message "cannot find or invoke local is_range/1 inside a guard. Only macros can be invoked inside a guard and they must be defined before their invocation. Called as: is_range(length_range)"
 
   test "matches the diagnostic" do
-    diag = %{severity: :error, message: @real_message, position: {93, 47}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: @real_message,
+      position: {93, 47},
+      file: "credence_check.ex"
+    }
+
     assert FixLocalFunctionInGuard.match?(diag)
   end
 
@@ -38,12 +44,24 @@ defmodule Credence.Semantic.FixLocalFunctionInGuardCheckTest do
   end
 
   test "attributes the issue to this rule" do
-    diag = %{severity: :error, message: @real_message, position: {93, 47}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: @real_message,
+      position: {93, 47},
+      file: "credence_check.ex"
+    }
+
     assert FixLocalFunctionInGuard.to_issue(diag).rule == :fix_local_function_in_guard
   end
 
   test "sets the line in issue meta" do
-    diag = %{severity: :error, message: @real_message, position: {42, 10}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: @real_message,
+      position: {42, 10},
+      file: "credence_check.ex"
+    }
+
     assert FixLocalFunctionInGuard.to_issue(diag).meta.line == 42
   end
 end

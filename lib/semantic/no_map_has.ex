@@ -43,8 +43,11 @@ defmodule Credence.Semantic.NoMapHas do
     |> Enum.map_join("\n", fn
       # Rewrite only a real `Map.has?` token — the boundary capture keeps a
       # `SomeMap.has?` sharing the flagged line untouched (check/fix agree).
-      {l, ^line_no} -> Regex.replace(~r/(^|[^\w.])Map\.has\?/, l, "\\1Map.has_key?", global: false)
-      {l, _} -> l
+      {l, ^line_no} ->
+        Regex.replace(~r/(^|[^\w.])Map\.has\?/, l, "\\1Map.has_key?", global: false)
+
+      {l, _} ->
+        l
     end)
   end
 

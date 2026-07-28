@@ -35,8 +35,7 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariable do
   def to_issue(diagnostic) do
     %Issue{
       rule: :no_message_access_on_rescue_variable,
-      message:
-        "accessing .message on a bare-rescue variable is unsafe; use Exception.message/1",
+      message: "accessing .message on a bare-rescue variable is unsafe; use Exception.message/1",
       meta: %{line: line(diagnostic)}
     }
   end
@@ -98,9 +97,8 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariable do
     Macro.prewalk(body, fn
       {{:., meta_dot, [{^var, var_meta, var_ctx}, :message]}, meta_call, []}
       when is_atom(var_ctx) ->
-        {{:., meta_dot,
-          [{:__aliases__, [line: meta_dot[:line] || 0], [:Exception]}, :message]}, meta_call,
-         [{var, var_meta, var_ctx}]}
+        {{:., meta_dot, [{:__aliases__, [line: meta_dot[:line] || 0], [:Exception]}, :message]},
+         meta_call, [{var, var_meta, var_ctx}]}
 
       other ->
         other

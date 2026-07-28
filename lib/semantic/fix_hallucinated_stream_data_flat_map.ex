@@ -113,8 +113,7 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMap do
 
     {_, found} =
       Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:StreamData]} = alias_node, :flat_map]}, _, args} = node,
-        acc
+        {{:., _, [{:__aliases__, _, [:StreamData]} = alias_node, :flat_map]}, _, args} = node, acc
         when is_list(args) and length(args) <= 2 ->
           case Sourceror.get_range(alias_node) do
             %{start: start} ->

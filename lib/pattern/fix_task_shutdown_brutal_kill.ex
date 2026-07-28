@@ -28,8 +28,7 @@ defmodule Credence.Pattern.FixTaskShutdownBrutalKill do
         acc ->
           issue = %Issue{
             rule: :fix_task_shutdown_brutal_kill,
-            message:
-              "Task.shutdown/2 does not accept :brutal — use :brutal_kill instead.",
+            message: "Task.shutdown/2 does not accept :brutal — use :brutal_kill instead.",
             meta: %{line: Keyword.get(meta, :line)}
           }
 

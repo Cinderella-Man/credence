@@ -86,10 +86,8 @@ defmodule Credence.Pattern.FixMapFetchCaseMatch do
   # --- Detection helpers ---
 
   # True when `subject` is `Map.fetch(map, key)`.
-  defp map_fetch_call?(
-         {{:., _, [{:__aliases__, _, [:Map]}, :fetch]}, _, [_map, _key]}
-       ),
-       do: true
+  defp map_fetch_call?({{:., _, [{:__aliases__, _, [:Map]}, :fetch]}, _, [_map, _key]}),
+    do: true
 
   defp map_fetch_call?(_), do: false
 

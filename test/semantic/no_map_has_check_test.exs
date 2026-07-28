@@ -18,12 +18,22 @@ defmodule Credence.Semantic.NoMapHasCheckTest do
   test "does not fire for another module whose name ends in Map" do
     # `SomeMap.has?/2` is undefined too, but `has_key?` is not the known
     # intended fix for an arbitrary user module — this rule is Map-only.
-    diag = %{severity: :warning, message: "SomeMap.has?/2 is undefined or private", position: {1, 1}}
+    diag = %{
+      severity: :warning,
+      message: "SomeMap.has?/2 is undefined or private",
+      position: {1, 1}
+    }
+
     refute NoMapHas.match?(diag)
   end
 
   test "does not fire for a nested Map submodule" do
-    diag = %{severity: :warning, message: "A.Map.has?/2 is undefined or private", position: {1, 1}}
+    diag = %{
+      severity: :warning,
+      message: "A.Map.has?/2 is undefined or private",
+      position: {1, 1}
+    }
+
     refute NoMapHas.match?(diag)
   end
 

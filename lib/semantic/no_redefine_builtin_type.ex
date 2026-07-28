@@ -73,32 +73,49 @@ defmodule Credence.Semantic.NoRedefineBuiltinType do
 
     Macro.prewalk(ast, fn
       # @type builtin :: rhs  — rename LHS and RHS
-      {:@, attr_meta, [{:type, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, nil}, rhs]}]}]} ->
-        {:@, attr_meta, [{:type, type_meta, [{:"::", op_meta, [{replacement, lhs_meta, nil}, rename_rhs.(rhs)]}]}]}
+      {:@, attr_meta,
+       [{:type, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, nil}, rhs]}]}]} ->
+        {:@, attr_meta,
+         [
+           {:type, type_meta,
+            [{:"::", op_meta, [{replacement, lhs_meta, nil}, rename_rhs.(rhs)]}]}
+         ]}
 
       # @typep builtin :: rhs — rename LHS and RHS
-      {:@, attr_meta, [{:typep, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, nil}, rhs]}]}]} ->
-        {:@, attr_meta, [{:typep, type_meta, [{:"::", op_meta, [{replacement, lhs_meta, nil}, rename_rhs.(rhs)]}]}]}
+      {:@, attr_meta,
+       [{:typep, type_meta, [{:"::", op_meta, [{^type_name, lhs_meta, nil}, rhs]}]}]} ->
+        {:@, attr_meta,
+         [
+           {:typep, type_meta,
+            [{:"::", op_meta, [{replacement, lhs_meta, nil}, rename_rhs.(rhs)]}]}
+         ]}
 
       # @type other :: rhs — rename references in RHS if the builtin is referenced
-      {:@, attr_meta, [{:type, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, rhs]}]}]} = node ->
+      {:@, attr_meta, [{:type, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, rhs]}]}]} =
+          node ->
         new_rhs = rename_rhs.(rhs)
+
         if new_rhs != rhs do
-          {:@, attr_meta, [{:type, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, new_rhs]}]}]}
+          {:@, attr_meta,
+           [{:type, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, new_rhs]}]}]}
         else
           node
         end
 
       # @typep other :: rhs — rename references in RHS if the builtin is referenced
-      {:@, attr_meta, [{:typep, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, rhs]}]}]} = node ->
+      {:@, attr_meta, [{:typep, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, rhs]}]}]} =
+          node ->
         new_rhs = rename_rhs.(rhs)
+
         if new_rhs != rhs do
-          {:@, attr_meta, [{:typep, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, new_rhs]}]}]}
+          {:@, attr_meta,
+           [{:typep, type_meta, [{:"::", op_meta, [{other, lhs_meta, nil}, new_rhs]}]}]}
         else
           node
         end
 
-      node -> node
+      node ->
+        node
     end)
   end
 

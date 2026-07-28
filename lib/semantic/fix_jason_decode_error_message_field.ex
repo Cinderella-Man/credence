@@ -193,7 +193,8 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
 
   defp rewrite_struct(pats, bind?) do
     Macro.prewalk(pats, fn
-      {:%, meta, [{:__aliases__, _, [:Jason, :DecodeError]} = alias_node, {:%{}, map_meta, entries}]} = node ->
+      {:%, meta,
+       [{:__aliases__, _, [:Jason, :DecodeError]} = alias_node, {:%{}, map_meta, entries}]} = node ->
         if find_message_entry(entries) do
           bare = {:%, meta, [alias_node, {:%{}, map_meta, []}]}
           if bind?, do: {:=, [], [bare, {@new_var, [], nil}]}, else: bare

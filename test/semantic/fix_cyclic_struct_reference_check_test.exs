@@ -6,12 +6,24 @@ defmodule Credence.Semantic.FixCyclicStructReferenceCheckTest do
   @real_message "MyApp.User.__struct__/1 is undefined, cannot expand struct MyApp.User. Make sure the struct name is correct. If the struct name exists and is correct but it still cannot be found, you likely have cyclic module usage in your code"
 
   test "matches the diagnostic" do
-    diag = %{severity: :error, message: @real_message, position: {3, 5}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: @real_message,
+      position: {3, 5},
+      file: "credence_check.ex"
+    }
+
     assert FixCyclicStructReference.match?(diag)
   end
 
   test "ignores unrelated diagnostics" do
-    diag = %{severity: :error, message: "unrelated error", position: {1, 1}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: "unrelated error",
+      position: {1, 1},
+      file: "credence_check.ex"
+    }
+
     refute FixCyclicStructReference.match?(diag)
   end
 
@@ -27,17 +39,35 @@ defmodule Credence.Semantic.FixCyclicStructReferenceCheckTest do
   end
 
   test "attributes the issue to this rule" do
-    diag = %{severity: :error, message: @real_message, position: {3, 5}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: @real_message,
+      position: {3, 5},
+      file: "credence_check.ex"
+    }
+
     assert FixCyclicStructReference.to_issue(diag).rule == :fix_cyclic_struct_reference
   end
 
   test "sets the line in issue meta" do
-    diag = %{severity: :error, message: @real_message, position: {42, 5}, file: "credence_check.ex"}
+    diag = %{
+      severity: :error,
+      message: @real_message,
+      position: {42, 5},
+      file: "credence_check.ex"
+    }
+
     assert FixCyclicStructReference.to_issue(diag).meta.line == 42
   end
 
   test "ignores warning severity" do
-    diag = %{severity: :warning, message: @real_message, position: {3, 5}, file: "credence_check.ex"}
+    diag = %{
+      severity: :warning,
+      message: @real_message,
+      position: {3, 5},
+      file: "credence_check.ex"
+    }
+
     refute FixCyclicStructReference.match?(diag)
   end
 end

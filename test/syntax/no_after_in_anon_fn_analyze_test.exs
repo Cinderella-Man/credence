@@ -25,20 +25,20 @@ defmodule Credence.Syntax.NoAfterInAnonFnAnalyzeTest do
 
     # try with after (valid)
     assert analyze("""
-    try do
-      x
-    after
-      y
-    end
-    """) == []
+           try do
+             x
+           after
+             y
+           end
+           """) == []
 
     # receive with after (valid)
     assert analyze("""
-    receive do
-      :ok -> :ok
-    after
-      5000 -> :timeout
-    end
-    """) == []
+           receive do
+             :ok -> :ok
+           after
+             5000 -> :timeout
+           end
+           """) == []
   end
 end

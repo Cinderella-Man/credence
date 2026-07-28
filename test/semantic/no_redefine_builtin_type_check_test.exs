@@ -11,7 +11,12 @@ defmodule Credence.Semantic.NoRedefineBuiltinTypeCheckTest do
   end
 
   test "matches for different type names" do
-    diag = %{severity: :error, message: "file.ex:1: type atom/0 is a built-in type and it cannot be redefined", position: {1, 1}}
+    diag = %{
+      severity: :error,
+      message: "file.ex:1: type atom/0 is a built-in type and it cannot be redefined",
+      position: {1, 1}
+    }
+
     assert NoRedefineBuiltinType.match?(diag)
   end
 

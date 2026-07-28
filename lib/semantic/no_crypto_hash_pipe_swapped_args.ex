@@ -83,8 +83,7 @@ defmodule Credence.Semantic.NoCryptoHashPipeSwappedArgs do
 
   # Build `:crypto.hash(algorithm, piped_value)` preserving metadata from the original call.
   defp build_crypto_hash_call(
-         {{:., dot_meta, [{:__block__, crypto_meta, [:crypto]}, :hash]}, call_meta,
-          [algo_node]},
+         {{:., dot_meta, [{:__block__, crypto_meta, [:crypto]}, :hash]}, call_meta, [algo_node]},
          _algo_node,
          piped_value
        ) do

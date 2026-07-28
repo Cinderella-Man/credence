@@ -57,8 +57,7 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatch do
             ref_name = if var_name == :_ref, do: :_monitor_ref, else: :_ref
 
             new_lhs =
-              {:__block__, block_meta,
-               [{{var_name, var_meta, nil}, {ref_name, ok_meta, nil}}]}
+              {:__block__, block_meta, [{{var_name, var_meta, nil}, {ref_name, ok_meta, nil}}]}
 
             {{:=, assign_meta, [new_lhs, {:spawn_monitor, call_meta, call_args}]}, true}
 

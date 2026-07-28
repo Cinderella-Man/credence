@@ -147,7 +147,8 @@ defmodule Credence.Semantic.NoBareNamesInSpecFixTest do
          "parse(twice :: any(), [twice :: any()]) :: map", 2}
       ] do
     test "annotates a bare name in #{label}" do
-      head = if unquote(arity) == 2, do: "def parse(x, y), do: {x, y}", else: "def parse(x), do: x"
+      head =
+        if unquote(arity) == 2, do: "def parse(x, y), do: {x, y}", else: "def parse(x), do: x"
 
       input = """
       defmodule Solution do
@@ -164,7 +165,8 @@ defmodule Credence.Semantic.NoBareNamesInSpecFixTest do
       """
 
       diagnostic = %{
-        message: "credence_check.ex:2: type #{unquote(name)}/0 undefined (no such type in Solution)",
+        message:
+          "credence_check.ex:2: type #{unquote(name)}/0 undefined (no such type in Solution)",
         position: 2,
         file: "credence_check.ex",
         severity: :error

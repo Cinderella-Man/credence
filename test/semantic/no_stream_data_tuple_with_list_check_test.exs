@@ -85,13 +85,15 @@ defmodule Credence.Semantic.NoStreamDataTupleWithListCheckTest do
   test "ignores incompatible types given to a different function" do
     refute NoStreamDataTupleWithList.match?(%{
              severity: :warning,
-             message: "incompatible types given to StreamData.integer/1:\n\n    StreamData.integer({1, 2})\n",
+             message:
+               "incompatible types given to StreamData.integer/1:\n\n    StreamData.integer({1, 2})\n",
              position: {3, 16}
            })
 
     refute NoStreamDataTupleWithList.match?(%{
              severity: :warning,
-             message: "incompatible types given to NaiveDateTime.new!/2:\n\n    NaiveDateTime.new!(d, {1, 2})\n",
+             message:
+               "incompatible types given to NaiveDateTime.new!/2:\n\n    NaiveDateTime.new!(d, {1, 2})\n",
              position: {3, 16}
            })
   end
@@ -99,7 +101,8 @@ defmodule Credence.Semantic.NoStreamDataTupleWithListCheckTest do
   test "ignores a different arity of StreamData.tuple" do
     refute NoStreamDataTupleWithList.match?(%{
              severity: :warning,
-             message: "incompatible types given to StreamData.tuple/2:\n\n    StreamData.tuple([a], [b])\n",
+             message:
+               "incompatible types given to StreamData.tuple/2:\n\n    StreamData.tuple([a], [b])\n",
              position: {3, 16}
            })
   end

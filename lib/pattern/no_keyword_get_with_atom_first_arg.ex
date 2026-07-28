@@ -93,8 +93,7 @@ defmodule Credence.Pattern.NoKeywordGetWithAtomFirstArg do
 
   # Piped call where pipe LHS is an atom literal
   defp detect(
-         {:|>, _,
-          [pipe_lhs, {{:., meta, [{:__aliases__, _, [:Keyword]}, :get]}, _, args}]},
+         {:|>, _, [pipe_lhs, {{:., meta, [{:__aliases__, _, [:Keyword]}, :get]}, _, args}]},
          _piped
        ) do
     if atom_literal?(pipe_lhs) and length(args) in 1..2 do
@@ -110,8 +109,7 @@ defmodule Credence.Pattern.NoKeywordGetWithAtomFirstArg do
   defp piped_get_positions(ast) do
     {_ast, set} =
       Macro.prewalk(ast, MapSet.new(), fn
-        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, _}]} = node,
-        acc ->
+        {:|>, _, [_lhs, {{:., _, [{:__aliases__, _, [:Keyword]}, :get]}, meta, _}]} = node, acc ->
           {node, MapSet.put(acc, position(meta))}
 
         node, acc ->

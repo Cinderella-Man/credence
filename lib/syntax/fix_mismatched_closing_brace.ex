@@ -33,8 +33,7 @@ defmodule Credence.Syntax.FixMismatchedClosingBrace do
         [
           %Issue{
             rule: :fix_mismatched_closing_brace,
-            message:
-              "Mismatched `}` closing a `[` — replace the `}` with `]`.",
+            message: "Mismatched `}` closing a `[` — replace the `}` with `]`.",
             meta: %{line: line}
           }
         ]

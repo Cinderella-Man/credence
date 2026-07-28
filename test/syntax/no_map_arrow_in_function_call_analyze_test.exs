@@ -13,7 +13,8 @@ defmodule Credence.Syntax.NoMapArrowInFunctionCallAnalyzeTest do
     end
 
     test "with an atom key" do
-      assert [%Issue{rule: :no_map_arrow_in_function_call}] = analyze("Map.put(%{}, :key => value)")
+      assert [%Issue{rule: :no_map_arrow_in_function_call}] =
+               analyze("Map.put(%{}, :key => value)")
     end
 
     test "with a string key" do

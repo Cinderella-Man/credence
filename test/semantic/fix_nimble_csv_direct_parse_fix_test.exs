@@ -8,7 +8,11 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParseFixTest do
   @match_msg "NimbleCSV.parse_string/2 is undefined or private"
 
   defp fix(source, message \\ @match_msg, line \\ 7) do
-    FixNimbleCsvDirectParse.fix(source, %{severity: :warning, message: message, position: {line, 1}})
+    FixNimbleCsvDirectParse.fix(source, %{
+      severity: :warning,
+      message: message,
+      position: {line, 1}
+    })
   end
 
   test "replaces NimbleCSV.parse_string with defined parser module" do

@@ -134,7 +134,7 @@ defmodule Credence.Syntax.NoFnAsVariable do
       # `fn` mismatched with `]` or `}` — `fn` used as a variable inside a list
       # or tuple. The parser pins the opening `fn` itself.
       Keyword.get(meta, :error_type) == :mismatched_delimiter and
-          Keyword.get(meta, :opening_delimiter) == :fn and
+        Keyword.get(meta, :opening_delimiter) == :fn and
           Keyword.get(meta, :closing_delimiter) in [:"]", :"}"] ->
         {:ok, Keyword.get(meta, :line), Keyword.get(meta, :column)}
 
@@ -142,7 +142,7 @@ defmodule Credence.Syntax.NoFnAsVariable do
       # (`x = fn`, `fn = 1`). An `fn` closed by `)` belongs to
       # `NoUnclosedFnDelimiter`, so require the absence of a closing delimiter.
       Keyword.get(meta, :opening_delimiter) == :fn and
-          Keyword.get(meta, :expected_delimiter) == :end and
+        Keyword.get(meta, :expected_delimiter) == :end and
           Keyword.get(meta, :closing_delimiter) == nil ->
         {:ok, Keyword.get(meta, :line), Keyword.get(meta, :column)}
 

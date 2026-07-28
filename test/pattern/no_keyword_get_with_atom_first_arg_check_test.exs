@@ -43,7 +43,10 @@ defmodule Credence.Pattern.NoKeywordGetWithAtomFirstArgCheckTest do
   describe "flags in various contexts" do
     test "in assignment" do
       assert [%Issue{}] =
-               check(NoKeywordGetWithAtomFirstArg, "clock = Keyword.get(:clock, fn -> :default end)")
+               check(
+                 NoKeywordGetWithAtomFirstArg,
+                 "clock = Keyword.get(:clock, fn -> :default end)"
+               )
     end
 
     test "as function argument" do
