@@ -1024,8 +1024,13 @@ its own tests run under real `mix test`.
   (H12 rescued the closed set, not the evidence), and `extract_diagnostic/1`
   (`router.ex:407-414`) should read the sidecar, not the truncated log, and
   hand over *all* unmatched diagnostics, not the last one.
-- [ ] **T4.4 [H] Seed teaching gaps — six, each a gate the model currently
-  learns about only by failing** (grep-verified against
+- [x] ~~**T4.4 [H] Seed teaching gaps — six, each a gate the model currently
+  learns about only by failing**~~ **DONE `993c367`** — all six stated up front,
+  with the C2.2 entry carrying the *mechanical trigger* (an integer and a float
+  that are `==` inside the same input) rather than "use a dimension", and the
+  leaf-token line quoted verbatim from the ledger. Also adds the seed's first
+  positive exemplar: it taught entirely by prohibition before.
+  Original: (grep-verified against
   `lib/cev/implement/seed.ex`): (1) C2.2 operation→dimension mapping (the
   seed names "a Credence.EquivalenceInputs dimension" generically; a
   Map-rewriting rule picking `term_lists` fails the meta-gate with no prior
@@ -1044,7 +1049,15 @@ its own tests run under real `mix test`.
   `implement.ex:55-71,82-89`, `router.ex:260-266`, `claude_code.ex` step
   accounting. Also `implement.ex:65` reports only `String.slice(failures, 0,
   400)` with no exit code and no leg attribution — the rows-100/119 mechanism.
-- [ ] **T4.6 [H] H5 — Gate contract tests + wall-clock timeouts.**
+- [x] ~~**T4.6 [H] H5 — Gate contract tests + wall-clock timeouts.**~~ **DONE
+  `7922767`.** `Cev.MixTest` caps every shelled-out `mix test` (coreutils
+  `timeout`, not a Task — killing the Elixir process that owns a port does not
+  kill the OS process on the other end). A fired cap routes as **environmental**,
+  not red, so the candidate's patch is preserved rather than judged on a suite
+  that never finished. The external contract it rests on — that `timeout` exits
+  124 — is executed, not assumed. Contract tests for the three diff-only rejects
+  plus the mutation snapshot/restore round-trip, which matters because a wrong
+  restore destroys the candidate being judged. Original:
   `gate.ex:461-473` and `implement.ex:248-253` run `mix test` with **no
   timeout**; one hung suite hangs the run. Contract tests for the five reject
   paths + mutation snapshot/restore + scratch sweep, each with a fixture
