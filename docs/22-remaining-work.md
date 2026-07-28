@@ -522,13 +522,30 @@ its own tests run under real `mix test`.
   "we cannot lose a member of it". `reverted/1` is deliberately unchanged —
   widening the bugfix lane is a routing decision on its own evidence.
 
-- [ ] **T3.3 [C] `mix credence.equiv` vacuous EQUIVALENT (C2.4).** Still live:
-  multi-var functions with no `--dim` yield `[]` admitted inputs
-  (`lib/mix/tasks/credence.equiv.ex:185`) and `classify`'s `Enum.all?` over
-  empty pairs returns `:equivalent` (`:119`). Spec (docs/12 C2.4): 0 admitted
-  inputs ⇒ error or SKIPPED, never EQUIVALENT. Mirror case from the ledger:
-  both sides raising the *same* exception class on every input also currently
-  passes. Pairs with H3 (T5.4).
+- [x] ~~**T3.3 [C] `mix credence.equiv` vacuous EQUIVALENT (C2.4).**~~ **DONE
+  `PENDING`.** Both shapes now return `{:vacuous, reason}` and render as
+  **SKIPPED**, never EQUIVALENT: an empty battery (`:no_admitted_inputs`) and
+  every input raising identically on both sides (`:all_raised`).
+
+  Worth stating why it mattered: `Enum.all?/2` over an empty list is `true`, so
+  the task answered with its **strongest** verdict from having compared nothing
+  — and since the default battery is empty for *every* multi-var snippet without
+  `--dim`, that was the ordinary outcome for a whole class of rewrite, not a
+  corner case. Pinned by feeding it `a - b` vs `b - a`, which is not equivalent
+  by any reading and was called EQUIVALENT.
+
+  **A second live instance fell out of the fix.** In `--minimal-set`, a switch
+  whose assumption filter shrank the battery to nothing returned `:equivalent`,
+  so the task reported `EQUIVALENT minimal_set=[that switch]` — naming a switch
+  as the thing that makes two expressions agree, on evidence of zero inputs.
+  Same root cause, same fix.
+
+  **And the `:all_raised` clause is deliberately narrower than it first was.**
+  The obvious form — "every input raised on both sides" — would reclassify a
+  genuine DIVERGES (different exception classes on every input) as SKIPPED, i.e.
+  hide a real behaviour change behind a vacuity guard. It now fires only where
+  `ob === oa` already held, so it can only intercept verdicts that would have
+  been EQUIVALENT. That narrowing has its own control. Pairs with H3 (T5.4).
 - [ ] **T3.4 [C] Equivalence probe upgrades that unblock 3 diverged re-queues**
   (ledger H-A/H-B/H-C, replacing docs/16's original LD2 framing):
   (a) battery structs + `MapSet` dimensions (`%Date{}`/`%DateTime{}`/

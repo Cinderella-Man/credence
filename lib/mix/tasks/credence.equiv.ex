@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Credence.Equiv do
-  @shortdoc "Classify a before/after rewrite: EQUIVALENT | REPAIR | DIVERGES"
+  @shortdoc "Classify a before/after rewrite: EQUIVALENT | REPAIR | DIVERGES | SKIPPED"
 
   @moduledoc """
   Classify-time behavioural-equivalence pre-check (Tunex `07` §3.11, `08` T1.4).
@@ -20,6 +20,10 @@ defmodule Mix.Tasks.Credence.Equiv do
       exception class + `N/N raised` for the implementer's reason string.
     * **DIVERGES** — `before` produced a valid value on some input that `after`
       disagrees with (a real behaviour change), or `after` does not compile.
+    * **SKIPPED** — nothing was compared, so no verdict was reached: the battery
+      admitted no inputs (every multi-var snippet without `--dim`), or every
+      input made both sides raise. Both used to report EQUIVALENT, which is the
+      strongest verdict this task can give, from having compared nothing (C2.4).
 
   ## Run env
 
@@ -104,6 +108,7 @@ defmodule Mix.Tasks.Credence.Equiv do
   #   {:repair, exc_module, n_raised, n_total}
   #   {:diverges, input, before_outcome, after_outcome}
   #   {:diverges_compile, reason}
+  #   {:vacuous, :no_admitted_inputs | :all_raised}
   defp classify(before, after_src, vars, inputs, compare_messages?) do
     with {:ok, before_fn} <- compile_fn(vars, before),
          {:ok, after_fn} <- compile_fn(vars, after_src) do
@@ -116,6 +121,29 @@ defmodule Mix.Tasks.Credence.Equiv do
         end
 
       cond do
+        # C2.4. `Enum.all?/2` over an empty list is `true`, so a run that
+        # admitted no inputs at all used to report EQUIVALENT — the strongest
+        # verdict this task can give, from having compared nothing. The default
+        # battery is empty for every multi-var snippet without `--dim`
+        # (`base_inputs/2`), so this was not a corner case: it was the ordinary
+        # outcome for a whole class of rewrite, and it read as a pass.
+        pairs == [] ->
+          {:vacuous, :no_admitted_inputs}
+
+        # The same hole one level in: if every input made both sides raise the
+        # SAME way, the battery never reached the behaviour under test. `ob ===
+        # oa` is true of two identical `{:raise, ArgumentError}` outcomes, so
+        # this passed as EQUIVALENT while proving only that the inputs are wrong
+        # for this function.
+        #
+        # Deliberately narrower than "every input raised on both sides": when the
+        # two sides raise *different* classes on every input, that is a real
+        # behaviour change and must stay DIVERGES. This clause only intercepts
+        # the cases that would otherwise have been called EQUIVALENT, so it can
+        # never hide a divergence.
+        Enum.all?(pairs, fn {_i, ob, oa} -> raised?(ob) and ob === oa end) ->
+          {:vacuous, :all_raised}
+
         Enum.all?(pairs, fn {_i, ob, oa} -> ob === oa end) ->
           :equivalent
 
@@ -139,6 +167,8 @@ defmodule Mix.Tasks.Credence.Equiv do
     Enum.all?(pairs, fn {_i, ob, _oa} -> match?({:raise, _}, ob) end) and
       Enum.any?(pairs, fn {_i, _ob, oa} -> match?({:ok, _}, oa) end)
   end
+
+  defp raised?(outcome), do: match?({:raise, _}, outcome)
 
   # ── Minimal switch set ──────────────────────────────────────────────────
 
@@ -288,6 +318,19 @@ defmodule Mix.Tasks.Credence.Equiv do
     do: "DIVERGES input=#{inspect(input)} before=#{inspect(ob)} after=#{inspect(oa)}"
 
   defp format({:diverges_compile, reason}), do: "DIVERGES after-#{reason}"
+
+  # Deliberately not EQUIVALENT and deliberately not DIVERGES: nothing was
+  # compared, so the honest verdict is that no verdict was reached. The guidance
+  # names the repair, because both causes are fixed by choosing inputs.
+  defp format({:vacuous, :no_admitted_inputs}),
+    do:
+      "SKIPPED no_admitted_inputs — nothing was compared. A multi-var snippet " <>
+        "has no default battery; pass --dim or --inputs-file."
+
+  defp format({:vacuous, :all_raised}),
+    do:
+      "SKIPPED all_raised — every input made BOTH sides raise, so the battery " <>
+        "never reached the behaviour under test. Choose inputs in the admitted domain."
 
   # ── Helpers ─────────────────────────────────────────────────────────────
 
