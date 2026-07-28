@@ -27,7 +27,9 @@ here; nothing of substance lives outside these files.
 | 11 | [`docs/17-failure-mode-catalogue.md`](17-failure-mode-catalogue.md) | **What the 143 rejected rules taught us.** 137/140 encode a real defect, verified by execution; 56 failure modes nothing catches; ranked "what is worth building" list |
 | 12 | [`docs/18-final-143-disposition.md`](18-final-143-disposition.md) | **Per-rule verdict for all 143 rejected rules** + cross-rule reconciliation (deferral chains, contested dispatch slots, corrections) |
 | 13 | [`docs/18-per-rule-verdicts.json`](18-per-rule-verdicts.json) | Machine-readable source of truth behind docs/18 — 143 records, full `failure_mode` + `action` per rule. **docs/18's prose is generated from this**; if the two disagree, the JSON wins |
-| 14 | This file | Map + actionable state |
+| 14 | [`docs/19-rule-standard.md`](19-rule-standard.md) | **Rule Standard v1** + the stratification audit: which bar each era of rules was accepted under, and the three populations that are out of line |
+| 15 | [`STATUS.md`](../STATUS.md) | The mode file — PRODUCING or CATCHING UP. Answers "can rules be generated right now?" as a fact rather than a judgement call |
+| 16 | This file | Map + actionable state |
 
 Related but separate: the dataset repo's own `STATUS.md` + `docs/12` (its
 Quality Standard S1–S12 and improvement-round protocol) — the template for
