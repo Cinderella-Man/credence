@@ -1042,8 +1042,13 @@ its own tests run under real `mix test`.
   worked filled-rule exemplar (H8's seed half — the seed currently teaches
   only by prohibition); (6) first-match-wins dispatch semantics (an
   over-broad `match?/1` starves every other rule).
-- [ ] **T4.5 [H] H9 implementer half — environmental kills booked as merit
-  failures:** zero-write null runs (row 6: 25 read-only steps, scaffold
+- [x] ~~**T4.5 [H] H9 implementer half — environmental kills booked as merit
+  failures:**~~ **DONE `98bcddf`.** All three shapes plus the reporting gap. The
+  framing worth keeping: the cost of misbooking these is not a lost row, it is a
+  wrong entry in decisions.md, which then teaches the next pass that a good idea
+  is a dead end. Also: `retries_exhausted` reported the first 400 bytes of the
+  output, and ExUnit prints its failure detail last — so the report was reliably
+  the least informative 400 bytes available. Original: zero-write null runs (row 6: 25 read-only steps, scaffold
   placeholders untouched, booked `cc_tests_red`), 429 quota kills (row 55),
   provider refusals (row 169 — key on the refusal string). Files:
   `implement.ex:55-71,82-89`, `router.ex:260-266`, `claude_code.ex` step
