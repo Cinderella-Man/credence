@@ -72,7 +72,10 @@ untouched.
 | ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | `8b870b5` |
 | ✅ | **T3.11 — `compile_and_capture/1` executes what it analyses, unbounded** — the seven OOM kills of 2026-07-28, diagnosed and fixed | `1ddbfe6` |
 | ✅ | **T1.2 — the dispatch-simulation gate** — every contended pair was ordered correctly *by accident*; two priorities now say so | `aea4f7c` |
-| ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
+| ✅ | **T2.1 [H] — Gate corpus dispatch**, plus the anchors probe that had never been run | `11a3d0e` |
+| ✅ | **T2.2 [H] — H8 verdict memory + rejected-mechanism exemplars**, all six controls re-run red | `be31904` |
+| ✅ | **T4.1 [H] — the STATUS.md interlock**, which until now described itself | `24f2dee` |
+| ⬜ | everything else | see the tiers below — **Tiers 0 and 1 are closed** |
 
 **Next by value:** **T2.1–T2.3**, which remain the prerequisites for any Phase-9
 run, and **T4.1–T4.3** for the harness half. Tier 1 is now closed: T1, T1.2 and
@@ -407,7 +410,7 @@ Order per the salvage assessment (dependency- and completeness-driven). All in
 verification is listed in `docs/21`. Treat every artifact as unverified until
 its own tests run under real `mix test`.
 
-- [ ] **T2.1 [H] Gate corpus dispatch (Addendum 2 / Phase 8.7)** — ~90% done in
+- [x] ~~**T2.1 [H] Gate corpus dispatch (Addendum 2 / Phase 8.7)**~~ **DONE `11a3d0e`** — was ~90% done in
   `b2-gatedispatch/`. `Cev.Evolve.CorpusDispatch` plans `{:skip|:scoped|:full}`
   from staged paths; scoped scan is a **fail-fast pre-gate, never a
   substitute** (scope-parity is NOT answered by a clean `--only-rule` scan —
@@ -418,7 +421,7 @@ its own tests run under real `mix test`.
   anchors-vs-`credence.corpus.ex` probe (RESULT lines already verified),
   real `mix test`, formatter. Data point worth keeping: 150 of 155 committed
   candidates were syntax/semantic-only — this saves ~234 s × most rows.
-- [ ] **T2.2 [H] H8 verdict memory + rejected-mechanism exemplars** — ~95%
+- [x] ~~**T2.2 [H] H8 verdict memory + rejected-mechanism exemplars**~~ **DONE `be31904`** — was ~95%
   done in `b2-h8/`. `Cev.Classify.Verdicts` (cache-scoped, hash-keyed,
   advisory-only), R1–R7 mechanism list (each led by MECHANISM, rule name only
   as provenance — the ledger's hard requirement), three worked exemplars
@@ -911,8 +914,8 @@ its own tests run under real `mix test`.
 
 ### Tier 4 — harness correctness (make the loop trustworthy for weak models)
 
-- [ ] **T4.1 [H] Implement the STATUS.md interlock — it is documented but does
-  not exist.** `STATUS.md` and docs/21 describe `mix cev.preflight` refusing
+- [x] ~~**T4.1 [H] Implement the STATUS.md interlock — it is documented but does
+  not exist.**~~ **DONE `24f2dee`.** `STATUS.md` and docs/21 describe `mix cev.preflight` refusing
   to run while the mode file says CATCHING UP; **no code in the harness reads
   STATUS.md at all** (grep-verified; both docs corrected this session to say
   so). Add a static check in `Cev.Preflight` reading the *accepting* repo's

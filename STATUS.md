@@ -6,14 +6,19 @@ The mode file (docs/19 §4). One question: **can rules be generated right now?**
 MODE: CATCHING UP
 ```
 
-Shared with `credence-evolution-harness`. `mix cev.preflight` should refuse to
-start a generation run while the mode is `CATCHING UP`, so a standard bump
-cannot be outrun by new rules born under the old bar.
+Shared with `credence-evolution-harness`. `mix cev.preflight` refuses to start a
+generation run while the mode is `CATCHING UP`, so a standard bump cannot be
+outrun by new rules born under the old bar.
 
-> ⚠️ **The interlock is not implemented yet.** Nothing in the harness reads
-> this file today (verified 2026-07-28 — zero references in `lib/` or
-> `config/`). Until docs/22 task **T4.1** lands, this mode line is a statement
-> of intent enforced by people, not by `cev.preflight`.
+> ✅ **The interlock is implemented** (docs/22 **T4.1**, harness `24f2dee`).
+> `Cev.Preflight` reads this file through `Cev.Status` and halts the run while
+> the mode is anything other than `PRODUCING`. It reads the **accepting** repo's
+> copy — `CEV_ACCEPTING_REPO` / `:accepting_repo`, falling back to the Gate's
+> clone — because the clone sits on `evolution` and its copy can trail this one
+> by a whole standard revision.
+>
+> Note the polarity: `PRODUCING` permits, and *everything else* blocks. A typo
+> here does not accidentally open the gate.
 
 ## Why CATCHING UP
 
