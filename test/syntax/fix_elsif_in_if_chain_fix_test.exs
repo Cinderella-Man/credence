@@ -464,7 +464,11 @@ defmodule Credence.Syntax.FixElsifInIfChainFixTest do
       confirm_fix(fix(elif_code), fix(elsif_code))
     end
 
-    test "does not touch `else if`, which is valid Elixir" do
+    # Renamed for accuracy when the rule was widened to also match same-line
+    # `else if` (docs/22 T3.10a). What is untouched here is `else` and `if` on
+    # SEPARATE lines with the nested `if` properly closed — a shape the
+    # line-based `@elsif_re` cannot match at all, and valid Elixir besides.
+    test "does not touch a properly nested `else` + `if` on separate lines" do
       code = """
       if a do
         1
@@ -479,6 +483,239 @@ defmodule Credence.Syntax.FixElsifInIfChainFixTest do
 
       confirm_fix(fix(code), code)
       assert analyze(code) == []
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # `else if` — the third spelling, and the terminator count
+  #
+  # docs/22 T3.10a, steps 1-3. `no_else_if` is this rule's pre-hardening
+  # twin: same failure mode, different spelling, one hardened
+  # implementation. These are its seven scenarios re-run against this
+  # rule, followed by the four corruption modes it was confirmed to have.
+  #
+  # The spellings are NOT interchangeable. `elsif`/`elif` are not Elixir,
+  # so every occurrence is the mistake. `else if` is legal — `else` plus a
+  # nested `if` opening its own block — so a chain of N headers is the
+  # broken Python transplant with ONE terminator and valid code with N+1.
+  # The count is the entire difference, which is why it is checked only
+  # for this spelling.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "else if (Python transplant) — the scenarios no_else_if covers" do
+    test "rewrites a basic else-if chain to cond" do
+      input = """
+      if n == 0 do
+        list
+      else if n >= length(list) do
+        []
+      else
+        List.take(list, length(list) - n)
+      end
+      """
+
+      expected = """
+      cond do
+        n == 0 -> list
+        n >= length(list) -> []
+        true -> List.take(list, length(list) - n)
+      end
+      """
+
+      confirm_fix(fix(input), expected)
+    end
+
+    test "the rewrite parses and no longer flags" do
+      input = """
+      if n == 0 do
+        list
+      else if n >= length(list) do
+        []
+      else
+        List.take(list, length(list) - n)
+      end
+      """
+
+      assert valid_syntax?(fix(input))
+      assert analyze(fix(input)) == []
+    end
+
+    test "a comment-only else body keeps the comment and supplies nil" do
+      input = """
+      if n == 0 do
+        [1]
+      else if n == 1 do
+        [1, 1]
+      else
+        # comment only, no expression
+      end
+      """
+
+      expected = """
+      cond do
+        n == 0 -> [1]
+        n == 1 -> [1, 1]
+        true ->
+          # comment only, no expression
+          nil
+      end
+      """
+
+      confirm_fix(fix(input), expected)
+      assert valid_syntax?(fix(input))
+    end
+
+    test "no trailing else: appends true -> nil to preserve the nil result" do
+      input = """
+      if a do
+        p
+      else if b do
+        q
+      end
+      """
+
+      expected = """
+      cond do
+        a -> p
+        b -> q
+        true -> nil
+      end
+      """
+
+      confirm_fix(fix(input), expected)
+    end
+
+    test "leaves a multi-line if condition untouched" do
+      input = """
+      if a and
+           b do
+        list
+      else if c do
+        []
+      else
+        other
+      end
+      """
+
+      confirm_fix(fix(input), input)
+      assert analyze(input) == []
+    end
+
+    test "leaves a multi-line else-if condition untouched" do
+      input = """
+      if a do
+        p
+      else if b and
+           c do
+        q
+      else
+        r
+      end
+      """
+
+      confirm_fix(fix(input), input)
+    end
+
+    test "leaves an if line with a trailing comment after do untouched" do
+      input = """
+      if a do # note
+        p
+      else if b do
+        q
+      else
+        r
+      end
+      """
+
+      confirm_fix(fix(input), input)
+    end
+
+    test "leaves a one-liner else-if (`, do:`) untouched" do
+      input = """
+      if a do
+        p
+      else if b, do: q
+      else
+        r
+      end
+      """
+
+      confirm_fix(fix(input), input)
+    end
+  end
+
+  describe "else if — the four modes no_else_if gets wrong" do
+    # THE one that matters: this source PARSES. `else if` is `else` plus a
+    # nested `if` that closes itself, so both terminators are real and the
+    # code means what it says. Rewriting it emits a `cond` plus a stray
+    # `end` — output that does not parse, produced from input that did.
+    test "declines a valid nested if — two terminators, not one" do
+      code = """
+      if a do
+        1
+      else if b do
+        2
+      else
+        3
+      end
+      end
+      """
+
+      assert valid_syntax?(code), "the premise of this test is that the input is VALID Elixir"
+
+      confirm_fix(fix(code), code)
+      assert analyze(code) == []
+    end
+
+    test "declines a chain with no terminator at all" do
+      # Without an `end` there is nothing to bound the rewrite, so a
+      # line-based fix swallows the rest of the file.
+      code = """
+      if a do
+        1
+      else if b do
+        2
+      """
+
+      confirm_fix(fix(code), code)
+      assert analyze(code) == []
+    end
+
+    test "declines `else # note` rather than folding the body into the previous branch" do
+      code = """
+      if a do
+        1
+      else if b do
+        2
+      else # note
+        3
+      end
+      """
+
+      confirm_fix(fix(code), code)
+      assert analyze(code) == []
+    end
+
+    test "an empty branch body becomes an explicit nil, not a bodyless clause" do
+      code = """
+      if a do
+      else if b do
+        2
+      else
+        3
+      end
+      """
+
+      expected = """
+      cond do
+        a -> nil
+        b -> 2
+        true -> 3
+      end
+      """
+
+      confirm_fix(fix(code), expected)
+      assert valid_syntax?(fix(code))
     end
   end
 end

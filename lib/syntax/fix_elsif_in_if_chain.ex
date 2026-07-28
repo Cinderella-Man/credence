@@ -12,6 +12,25 @@ defmodule Credence.Syntax.FixElsifInIfChain do
   function/macro" rather than a clear parse failure. Converting these chains to
   `cond` is behaviour-preserving and idiomatic.
 
+  ## The third spelling: `else if`, and why it is not like the other two
+
+  A model translating Python's `elif` also writes it as **`else if`** on one
+  line. Same mistake, same repair — but not the same risk, because unlike
+  `elsif` and `elif` this one is *legal Elixir*: `else` followed by a nested `if`
+  that opens its own block.
+
+  So a chain of N `else if` headers needs **N+1** terminators. The model writing
+  Python supplies **one**, which is exactly why the file will not parse, and why
+  the parser reports it at the outermost unclosed `do` — often tens of lines
+  above, naming neither `else` nor `if`. A chain that carries N+1 terminators is
+  not a mistake at all; it is working code that happens to be spelled this way.
+
+  **The terminator count is the entire difference between the two, and this rule
+  checks it** (`one_terminator/4`). Rewriting the valid form would take source
+  that parses and emit a `cond` followed by a stray `end` — output that does not.
+  The count is consulted only for `else if`: for `elsif`/`elif` no valid reading
+  exists, so their behaviour is unaffected by it.
+
   ## Bad (won't parse)
 
       if data.valid_from && DateTime.compare(now, data.valid_from) == :lt do
@@ -47,7 +66,9 @@ defmodule Credence.Syntax.FixElsifInIfChain do
       terminator the rewrite would swallow whatever follows;
     * a branch body holding a multi-line string literal (a heredoc, or a `"`
       string spanning lines), whose *value* would change when the body is
-      re-indented.
+      re-indented;
+    * an `else if` chain carrying more than one terminator at the header's
+      indentation — that is valid nested code, not the Python transplant.
 
   `analyze/1` reports exactly what `fix/1` will rewrite — the shapes above are
   left unflagged rather than reported as a problem the fix refuses to solve.
@@ -55,7 +76,12 @@ defmodule Credence.Syntax.FixElsifInIfChain do
   use Credence.Syntax.Rule
   alias Credence.Issue
 
-  @elsif_re ~r/^\s*els?if\b/
+  # Three spellings of one mistake. `elsif` (Ruby) and `elif` (Python) are not
+  # Elixir at all. `else if` is — it is `else` followed by a nested `if` that
+  # opens its own block — which is why it needs the terminator count below and
+  # the other two do not.
+  @elsif_re ~r/^\s*(?:els?if|else\s+if)\b/
+  @else_if_re ~r/^\s*else\s+if\b/
   @if_do_re ~r/^\s*if\s+.+?\s+do\s*$/
   # A branch boundary only has to *start* with `else`; `find_else_at_indent/3`
   # then insists on a bare `else`, so `else # note` stops the scan and bails
@@ -124,17 +150,61 @@ defmodule Credence.Syntax.FixElsifInIfChain do
     with {:ok, if_idx} <- scan_back_for_if(lines, elsif_idx - 1, elsif_indent),
          {:ok, branches, end_idx, else_branches} <-
            collect_branches(lines, if_idx, elsif_idx, elsif_indent),
-         :ok <- reindentable(branches ++ else_branches) do
+         :ok <- reindentable(branches ++ else_branches),
+         :ok <- one_terminator(lines, elsif_idx, end_idx, elsif_indent) do
       cond_lines = build_cond(branches, else_branches, get_indent(Enum.at(lines, if_idx)))
       Enum.take(lines, if_idx) ++ cond_lines ++ Enum.drop(lines, end_idx + 1)
     else
       # `:not_found` (no matching `if`), `:bail` (a condition or the chain's
-      # terminator could not be read off cleanly) or `:unsafe` (a body holds a
-      # multi-line string literal). Emitting a guessed clause there would
-      # silently change behaviour, so leave the source untouched — `analyze/1`
-      # asks the same question, so nothing gets flagged that this refuses.
+      # terminator could not be read off cleanly), `:unsafe` (a body holds a
+      # multi-line string literal) or `:nested_if` (an `else if` chain that
+      # carries enough terminators to be valid nested code). Emitting a guessed
+      # clause there would silently change behaviour, so leave the source
+      # untouched — `analyze/1` asks the same question, so nothing gets flagged
+      # that this refuses.
       _ -> lines
     end
+  end
+
+  # The discriminator that makes the `else if` spelling safe to touch at all.
+  #
+  # `elsif` and `elif` are not Elixir, so any occurrence is the mistake. `else
+  # if` is legal: it reads as `else` plus a nested `if` opening its own block, so
+  # a chain of N such headers needs **N+1** terminators. The LLM writing Python's
+  # `elif` supplies **one** — which is precisely why the file does not parse and
+  # why the parser reports it at the outermost unclosed `do`, tens of lines above
+  # and naming neither `else` nor `if`.
+  #
+  # So the terminator count is the whole difference between a chain that must be
+  # rewritten and one that must not be touched. Getting it wrong in the
+  # permissive direction takes source that *parses* and emits a `cond` plus a
+  # stray `end` that does not — the defect this rule's unhardened twin still has
+  # (docs/22 T3.10a).
+  #
+  # Deliberately scoped to the `else if` spelling: for `elsif`/`elif` no valid
+  # reading exists, so this cannot change their behaviour by construction.
+  defp one_terminator(lines, elsif_idx, end_idx, indent) do
+    if else_if_spelling?(Enum.at(lines, elsif_idx)) and
+         terminator_run(lines, end_idx, indent) > 1 do
+      :nested_if
+    else
+      :ok
+    end
+  end
+
+  defp else_if_spelling?(line), do: Regex.match?(@else_if_re, line)
+
+  # How many `end` lines sit consecutively at `indent` from `idx` on, ignoring
+  # blank lines. One is the broken transplant; more than one means the nested
+  # `if`s were closed and the source is valid as written.
+  defp terminator_run(lines, idx, indent) do
+    lines
+    |> Enum.drop(idx)
+    |> Enum.reject(&blank?/1)
+    |> Enum.take_while(fn line ->
+      get_indent(line) == indent and Regex.match?(@end_re, line)
+    end)
+    |> length()
   end
 
   defp scan_back_for_if(lines, idx, target_indent) when idx >= 0 do
@@ -306,7 +376,7 @@ defmodule Credence.Syntax.FixElsifInIfChain do
   end
 
   defp extract_condition_from_elsif(line) do
-    case Regex.run(~r/^\s*els?if\s+(.+?)\s+do\s*$/, line) do
+    case Regex.run(~r/^\s*(?:els?if|else\s+if)\s+(.+?)\s+do\s*$/, line) do
       [_, cond] -> {:ok, cond}
       _ -> :bail
     end

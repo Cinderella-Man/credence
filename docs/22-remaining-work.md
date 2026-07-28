@@ -66,17 +66,16 @@ untouched.
 | ✅ | **T3.7 — the last two raw-byte syntax fixes**, + the `FixDivRem` half-conversion behind them | `e81985e` · `8169601` |
 | ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
 | ✅ | **T3.10 — pay down the self-corruption ledger** — 10 of 11 done; the only entry left is the deliberate one | `becd59b` · `643435a` · `e549bd0` · this commit |
-| ⬜ | **T3.10a — `no_else_if` corrupts valid parsing code** (found while paying down T3.10; do *not* convert it) | — |
+| 🔄 | **T3.10a — `no_else_if` corrupts valid parsing code** — steps 1–3 done: the sibling now absorbs `else if` behind a terminator-count discriminator. **Step 4 (retiring the live rule) is the maintainer's** | this commit |
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · `3cdbe14` |
 | ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · this commit |
 | ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | this commit |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
-**Next by value:** **T3.10a** — it is the only item on this file known to corrupt
-*valid, parsing* source, and the only entry left on the self-corruption ledger.
-Its final step needs a maintainer decision (retire a live rule into its hardened
-sibling) rather than a conversion, so steps 1–3 can be built out first and step 4
-left on the desk. Then **T1.2**, the G3 residue T1 does not cover — and T5.9
+**Next by value:** **T3.10a step 4** — the one decision left on this file, and it
+is a maintainer's: retire `no_else_if` into its now-widened sibling. Steps 1–3
+are done and the evidence is executed, so the remaining work is a judgement call,
+not a conversion. Then **T1.2**, the G3 residue T1 does not cover — and T5.9
 handed it a starting point, an executed contention list. T2.1–T2.3 remain the
 prerequisites for any Phase-9 run.
 
@@ -761,6 +760,55 @@ its own tests run under real `mix test`.
   the sibling against 14 for `no_else_if`, and *none* of `no_else_if`'s 14
   involves a string, a heredoc, a comment on the `else` line, a missing
   terminator, or surrounding code.
+
+  **Steps 1–3 are DONE. Step 4 is untouched and is still the maintainer's
+  call — `no_else_if` is live, unchanged, and still on the self-corruption
+  ledger.**
+
+  * **The widen (step 2) is in.** `@elsif_re` and the condition extractor now
+    match all three spellings. `elsif`/`elif` output was proved **byte-identical
+    before and after** — not inferred from the green suite but measured, by
+    running an 18-case corpus through the rule with the change applied and again
+    with it stashed, and diffing. Zero bytes differ.
+  * **The discriminator is in, and scoped.** `one_terminator/4` declines an
+    `else if` chain carrying more than one terminator at the header's
+    indentation. It is consulted *only* for the `else if` spelling, which is what
+    makes the byte-identity above true by construction rather than by luck:
+    `elsif`/`elif` are not Elixir, so no valid reading of them exists to
+    discriminate against.
+  * **Step 3 was run, and the sibling covers all seven of `no_else_if`'s
+    scenarios** — identically on six, and on the seventh (comment-only `else`
+    body) it differs only in where the comment sits relative to the `nil`. Both
+    parse; the sibling puts the comment above the value.
+  * **All four corruption modes were re-run side by side, and the sibling is
+    correct on every one.** Valid nested `if` (input **parses**): `no_else_if`
+    emits a `cond` plus a stray `end` that does not parse — the sibling declines.
+    Missing terminator: `no_else_if` swallows to EOF — the sibling declines.
+    `else # note`: `no_else_if` emits non-parsing output — the sibling declines.
+    Empty branch body: `no_else_if` emits a bodyless `a ->` clause that does not
+    parse *and* raises the `Range.new/2` negative-range warning from
+    `no_else_if.ex:109` — the sibling emits `a -> nil`, which parses.
+  * **Two positive controls, deliberately separate**, because one perturbation
+    could not have proved both halves: reverting the widen reddens **5** tests
+    (the rewrites) while every "declines" test stays green — those pass vacuously
+    against a rule that never matched `else if`. Keeping the widen and disabling
+    only the discriminator reddens **exactly one**: the valid-nested-`if`
+    decline. The discriminator is isolated and load-bearing.
+
+  One thing this work corrected in the existing tests: a test named *"does not
+  touch `else if`, which is valid Elixir"* — whose body is the properly nested
+  multi-line form, still untouched, but whose name asserted a general claim the
+  widen makes false. Renamed to say what it actually pins.
+
+  **What step 4 still needs from a human.** Retiring a live rule is not a code
+  change this session should make. The evidence is now in place: the sibling
+  handles every shape `no_else_if` handles and four it corrupts, so `no_else_if`
+  is strictly dominated. Because the sibling runs first (index 8 vs 28 in
+  `default_rules/0`) and the Syntax phase is a cascade rather than
+  first-match-wins, `else if` chains are already being repaired by the hardened
+  rule today — `no_else_if` now only sees what the sibling declined, which is
+  precisely the set it gets wrong. That bounds the exposure but does not remove
+  it, and the ledger entry stays until the rule does.
 
   **The failure mode, written out first so retiring the rule cannot lose it —
   FM-ELSE-IF.** An LLM translating Python emits `else if <expr> do` at branch
