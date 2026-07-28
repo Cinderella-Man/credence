@@ -229,9 +229,15 @@ T1 (`2f34640`). Tracker updated in the same pass; open work is docs/22 only.
 
 **Concurrency held, and it worked.** Two research workflows ran, both at **4
 read-only agents**, both explicitly forbidden from running `mix`/`elixir`/`iex`
-— all compiling stayed in the single foreground shell. No OOM, no crash dump.
+— all compiling stayed in the single foreground shell. ~~No OOM, no crash dump.~~
 The 8-agent incident above was 8 agents *each compiling*; the rule that came out
 of it ("max 3–4, never two compiling in one tree") is the one that was followed.
+
+> **CORRECTED 2026-07-28 (night).** "No OOM" is false, and was false when
+> written. `journalctl -k` records a kill at **15:32:51** — `beam.smp`,
+> 61.6 GB — five minutes after this session ran `mix test
+> test/zz_contention_test.exs`. The session did not observe the kill because
+> the kill was not of *this* session's shell. See the final section.
 
 **The methodological finding worth carrying forward.** Read-only agents produced
 excellent evidence and two *wrong verdicts*: `NoCryptoHashPipeSwappedArgs` and
@@ -276,7 +282,12 @@ a cleverer gate.
 
 **Concurrency held again.** One workflow, 4 read-only agents (3 miners + 1
 adversarial verifier), all forbidden `mix`/`elixir`/`iex`; every compile and
-every probe ran in the single foreground shell. No OOM.
+every probe ran in the single foreground shell. ~~No OOM.~~
+
+> **CORRECTED 2026-07-28 (night).** Also false: kills at **17:46:00** and
+> **18:05:06**, both `beam.smp` at ~62 GB. The 17:46 one is 5m34s after this
+> session re-copied `t1_2_contention_probe.exs` over `zz_contention_test.exs`
+> and ran it. Concurrency was never the variable.
 
 **And the read-only agents were right to be doubted, in both directions.** The
 family sweep *refuted* docs/22's "exactly two rules" scope — correctly, and it is
@@ -330,9 +341,15 @@ Landed and pushed: **T5.10** (`8b870b5`), **T3.10** 6-rule paydown (`a9ad691`),
 properties, 0 failures**, run in full before each of the three commits.
 
 **Zero agents, zero workflows, one shell.** Every compile, probe and suite run
-was in the single foreground shell. No OOM, no crash dump. The three full-suite
+was in the single foreground shell. ~~No OOM, no crash dump.~~ The three full-suite
 runs cost ~4m10s each and ~38 minutes of CPU — that is the thing that must not be
 run concurrently with anything.
+
+> **CORRECTED 2026-07-28 (night).** False again — a kill at **18:50:38**,
+> `beam.smp` at 63.0 GB, 5m56s after this session ran `mix run t510_shapes.exs`.
+> And the closing sentence has it backwards: the full suite is the *safe* thing
+> here. Measured under a memory-capped scope, it peaks at **1.2 GB**. The
+> dangerous thing was the one-line ad-hoc probe.
 
 **The finding worth carrying: a conversion is a reading nobody has done before,
 so budget for it surfacing unrelated bugs.** T3.10 was scoped as "make six rules
@@ -409,3 +426,108 @@ out of date: five `this commit` self-references in docs/22 were resolved to real
 ids (they are meaningless once committed), the four newest landings were added to
 the state-of-record table, and H14/H15 stopped being labelled unpushed — they
 were pushed in the same session that wrote the label.
+
+---
+
+## Session 2026-07-28 (night, second) — the OOMs, diagnosed and fixed
+
+**Cost of the seventh crash: nothing.** Clean tree, level with the remote at
+`4884365`. Third crash in a row that cost nothing, same reason each time.
+
+Landed: **`1ddbfe6`** — a heap ceiling and a deadline on
+`RuleHelpers.compile_and_capture/1`. Suite **9,917 tests + 6 properties, 0
+failures**.
+
+### The cause was never agent concurrency
+
+The rule this file has carried since 10:36 — *max 3–4 agents, never two
+compiling in one tree* — was **followed** in every session after the first, and
+the box kept dying. Three sessions wrote "No OOM" and all three were wrong; the
+corrections are inline above. The reason nobody caught it is that a session sees
+its own shell, and the kill lands on a BEAM the session has already stopped
+watching.
+
+`journalctl -k` settles it in one command. **Seven kills on 2026-07-28, every
+one `beam.smp`, every one at 60–63 GB on a 64 GB box:**
+
+| time | anon-RSS | what launched it |
+|---|---|---|
+| 10:42:06 | 60.2 GB | the 8-agent batch (the incident above) |
+| 15:32:51 | 61.6 GB | `mix test test/zz_contention_test.exs`, 5m44s earlier |
+| 17:46:00 | 62.6 GB | same probe, re-copied, 5m34s earlier |
+| 18:05:06 | 62.9 GB | same window |
+| 18:50:38 | 63.0 GB | `mix run t510_shapes.exs`, 5m56s earlier |
+| 20:09:10 | 62.7 GB | `mix run t12_probe.exs`, 6m06s earlier |
+| 20:22:18 | 62.9 GB | `mix run t12_probe.exs`, 7m27s earlier |
+
+Joining the kernel log against the session transcripts (which record every
+`Bash` invocation with a timestamp) names the launcher of five of the seven, at
+a consistent 5.5–7.5 minutes from launch to kill. That consistency is the tell:
+a runaway allocation, not a load problem.
+
+**And the suite is innocent.** Measured under a memory-capped scope: full suite
+**1.2 GB** peak, non-corpus half 600 MB, the heaviest single corpus layer
+924 MB, `mix compile` 119 MB. The thing this file warned must never run
+concurrently with anything is the cheap thing.
+
+### The defect: compiling is running
+
+`Code.compile_string/2` evaluates every top-level expression in its input. So
+`compile_and_capture/1` — reached from `lib/semantic.ex:134` (`analyze/2`),
+`:190` (fix) and `:393` (`health/1`), i.e. the live pipeline, not just the
+gates — **executes whatever it is handed**. Verified directly: feeding it a
+`File.write!/2` writes the file.
+
+What it was handed is the good part. `Enum.flat_map(1..10, &Stream.cycle([&1]))`
+is the **expected output** of one of `UndefinedFunction`'s own fix tests
+(`test/semantic/undefined_function_qualified_fix_test.exs:258`) — the *repaired*
+form of `Enum.cycle/1`. The test string-compares it and never runs it. But the
+pipeline-witness index harvests string literals out of test files as candidate
+sources, and T1.2's probe compiles all 357 of that rule's candidates. Compiled,
+it materialises an infinite stream. One fixture: 200 MB → 3.6 GB in 8 seconds,
+and it does not stop.
+
+**The trap is structural, which is why it recurred.** docs/22 says *"Next by
+value: T1.2"*. Every fresh session opened the tracker, went at T1.2, wrote
+essentially the same contention probe, and killed the box about six minutes
+later. Four different sessions rediscovered it independently and none of them
+diagnosed it, because each one died before it could.
+
+### The fix, and what it is not
+
+The compile now runs in a monitored child with a **512 MB heap ceiling** and a
+**30 s deadline**; a runaway costs one process. A top-level `exit/1` — which
+previously killed whichever process was running the pipeline — is contained too.
+Aborts come back as `{:error, [diagnostic]}`, so `compiles?/1` says false and the
+Pattern round skips the file rather than guessing.
+
+This bounds catastrophe; it does not make analysing hostile source safe.
+`System.halt/0` in analysed source still stops the VM and nothing in-process can
+prevent that. The honest statement is that credence executes what it analyses,
+and now fails loudly instead of fatally when that goes wrong.
+
+### Findings worth carrying
+
+**A claim about your own environment is still a claim.** Six sessions asserted
+"No OOM" from *not having seen one*. The kernel had recorded all seven the whole
+time, and one `journalctl -k` refutes the lot. This is the file's own recurring
+lesson — an unexecuted claim is a hypothesis — pointed at the machine rather
+than at the code, which is where nobody thought to point it.
+
+**The mitigation that gets adopted after an incident is the one the incident
+suggests, not the one the evidence supports.** "Eight agents OOMed the box" is a
+true sentence, and the rule drawn from it was followed faithfully for eleven
+hours while the same kill repeated six more times under one agent, then zero.
+The 8-agent run was the only one where the *count* mattered at all — every other
+kill needed exactly one probe. When a mitigation is in place and the symptom
+persists, that is evidence about the diagnosis, not a reason to tighten the
+mitigation.
+
+**Run the dangerous thing inside a cap and it stops being dangerous to
+diagnose.** Every measurement in this section came from `systemd-run --user
+--scope -p MemoryMax=…G -p MemorySwapMax=0`. The 62 GB runaway reproduces in
+**8 seconds** under a 4 GB cap instead of six minutes under none, kills only
+itself, and leaves the editor alone. Seven crashes were spent on a bug that was
+one bounded reproduction away. `MemorySwapMax=0` matters as much as the ceiling:
+the swap thrash on the way up is what made the desktop unusable before the kill
+even landed.

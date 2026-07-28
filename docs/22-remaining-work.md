@@ -70,10 +70,12 @@ untouched.
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · `3cdbe14` |
 | ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · `6d72130` |
 | ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | `8b870b5` |
+| ✅ | **T3.11 — `compile_and_capture/1` executes what it analyses, unbounded** — the seven OOM kills of 2026-07-28, diagnosed and fixed | `1ddbfe6` |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T1.2**, the G3 residue T1 does not cover — and T5.9 handed it
-a starting point, an executed contention list. Then **T2.1–T2.3**, which remain
+a starting point, an executed contention list. **Its probe is now safe to run**
+(T3.11): it used to take the box down about six minutes in, five separate times. Then **T2.1–T2.3**, which remain
 the prerequisites for any Phase-9 run, and **T4.1–T4.3** for the harness half.
 The whole self-corruption line of work (T3.7 → T3.10 → T3.10a) is now closed: the
 ledger is empty and the gate that measured it has been rebuilt so that being
@@ -329,6 +331,23 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
   single-rule probe is exact there. **Semantic is never narrowed** — that would
   hand every rule an uncontested slot and delete the G3 class. Most of the rest
   was an accidental quadratic (155 rules x 472 files = 73,000 re-parses).
+
+- [x] ~~**T3.11 [C] `compile_and_capture/1` executes what it analyses, with no
+  bound.**~~ **DONE `1ddbfe6`.** `Code.compile_string/2` evaluates top-level
+  expressions, so analysing source runs it — on the live pipeline
+  (`lib/semantic.ex:134`, `:190`, `:393`), not only in the gates. Verified by
+  handing it a `File.write!/2` and finding the file. The input that mattered was
+  already in the tree: `Enum.flat_map(1..10, &Stream.cycle([&1]))`, the *expected
+  output* of an `UndefinedFunction` fix test, harvested as a witness candidate.
+  It materialises an infinite stream — one fixture, 200 MB → 3.6 GB in 8 s, and
+  it was the direct cause of **seven kernel OOM kills on 2026-07-28**, each a
+  `beam.smp` at 60–63 GB. Now bounded by a 512 MB heap ceiling and a 30 s
+  deadline in a monitored child; aborts return `{:error, [diagnostic]}` so
+  `compiles?/1` says false. Controls: each bound perturbed to a value nothing
+  compiles under. Full incident, timings and the two methodological findings are
+  in docs/21's final section — including that **the suite was never the cause**
+  (1.2 GB peak) and that the agent-concurrency rule adopted after the first crash
+  was followed faithfully while six more kills happened under it.
 
 - [ ] **T1.2 [C] Dispatch-simulation gate (the G3 residue T1 doesn't cover).**
   For every *pair* of semantic rules whose `match?/1` accept the same captured
