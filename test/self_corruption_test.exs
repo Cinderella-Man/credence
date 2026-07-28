@@ -61,16 +61,25 @@ defmodule Credence.SelfCorruptionTest do
   count, because the count is a fair proxy for how little the rule knows about
   literals.
 
-  Four are paid down so far (7 rules / 246 lines remain), and all four needed
-  *different* repairs — see the note under `@self_corrupting`. That is the useful
-  early lesson from this ledger: a hit says the rule edited bytes that are not
+  Ten are paid down (one rule / 226 lines remain), and they needed *seven*
+  different repairs — see the note under `@self_corrupting`. That is the lesson
+  this ledger actually taught: a hit says the rule edited bytes that are not
   code, and nothing more. It does not say the repair is `SourceMask`. Assuming it
   does produces either a masked rule that is still wrong, or — worse, and this
   nearly happened to `no_doc_with_do_block` — a rule whose pattern keys on the
   very delimiters masking blanks, which then matches nothing at all and retires
-  itself while every test stays green. One of the four was not a masking bug at
-  all: `fix_malformed_spec` was a rule that could never fire, and converting it
-  would have been polish on a corpse.
+  itself while every test stays green. One was not a masking bug at all:
+  `fix_malformed_spec` was a rule that could never fire, and converting it would
+  have been polish on a corpse.
+
+  Even inside the six that *were* masking bugs the mechanism differed: one had to
+  keep its rewrite reading the raw line because it rebuilds rather than splices,
+  one had to thread the shadow through a five-stage cascade, and one turned out
+  to have a second, unrelated defect underneath — a right-hand side that ran to
+  end of line and swallowed trailing comments into the expression, emitting
+  source that did not parse.
+
+  The single entry that remains is deliberate. See docs/22 T3.10a.
   """
   use ExUnit.Case, async: true
 
@@ -98,13 +107,7 @@ defmodule Credence.SelfCorruptionTest do
   # so the entry stays until the design question in T3.10a is answered. A ledger
   # entry is allowed to be load-bearing.
   @self_corrupting %{
-    "no_else_if" => 226,
-    "fix_do_block_fusion" => 6,
-    "fix_python_augmented_assignment" => 4,
-    "no_fn_with_capture" => 4,
-    "fix_stale_access_modifier" => 3,
-    "fix_assignment_dot_syntax" => 2,
-    "prefer_spec_arrow_operator" => 1
+    "no_else_if" => 226
   }
 
   # Paid down since adoption, kept here as the record of what the ratchet has
@@ -137,6 +140,36 @@ defmodule Credence.SelfCorruptionTest do
   #                                   re-homed to `Credence.Semantic` and off
   #                                   this ledger by leaving the phase. docs/22
   #                                   T3.8.
+  #   prefer_spec_arrow_operator (1)  `SourceMask`, decision-only. This rule
+  #                                   REBUILDS the line from its parts rather
+  #                                   than splicing byte ranges, so the shadow
+  #                                   answers "is this line code?" and the
+  #                                   rewrite reads the real line. Masking the
+  #                                   rebuild would have emitted blanked
+  #                                   literals.
+  #   fix_assignment_dot_syntax (2)   `SourceMask`, the family default — and it
+  #                                   retired a hand-written whole-line `#`
+  #                                   guard that the shadow strictly subsumes.
+  #   fix_stale_access_modifier (3)   `SourceMask`, the family default.
+  #   no_fn_with_capture (4)          `SourceMask`, replacing a `#`-only guard
+  #                                   whose own comment said rewriting non-code
+  #                                   "would corrupt" — the author had the right
+  #                                   model and the wrong reach. Knowing about
+  #                                   the class is not being guarded against it.
+  #   fix_python_augmented_assignment `SourceMask`, PLUS a second defect the
+  #     (4)                           conversion exposed: the right-hand side ran
+  #                                   to end of line, so `count += 1  # note`
+  #                                   became `count = count + (1  # note)` and
+  #                                   did not parse. The shadow settles it — a
+  #                                   comment is blanked to the line's end, and
+  #                                   the raw byte at the run's start separates a
+  #                                   comment from a trailing string.
+  #   fix_do_block_fusion (6)         `SourceMask`, threaded. Five stages that
+  #                                   feed each other and change byte length, so
+  #                                   neither the splice-once idiom nor
+  #                                   re-masking between stages is available. The
+  #                                   `{line, shadow}` pair is carried through
+  #                                   and both receive the identical splice.
 
   setup_all do
     entries = SelfCorruption.scan()

@@ -32,6 +32,23 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   the rule requires the character after the dot to start an identifier
   (`a-z`, `A-Z`, `_`). Python-style float literals are a separate problem for
   a separate rule.
+
+  ## Only real code is rewritten
+
+  Matching runs against a `Credence.SourceMask` shadow, not the raw line, so
+  comments, string literals, sigils, charlists and heredoc bodies are invisible
+  to the pattern.
+
+  The "Not flagged" list above used to be true only by accident. The pattern is
+  anchored at `^`, so a literal like `msg = "=.not_a_dot"` was missed because the
+  `=` is followed by a quote rather than a dot — not because the rule knew it was
+  looking at a string. Inside a *heredoc* the accident runs out: the two
+  `→` examples in this very moduledoc sit at the start of their lines, and this
+  rule rewrote both of them (docs/22 T3.10). The shadow is what actually knows.
+
+  The shadow also subsumes the whole-line comment guard this rule used to carry
+  by hand: masking blanks a `#` comment to its last byte, so a commented-out
+  assignment cannot match in the first place.
   """
 
   use Credence.Syntax.Rule
@@ -47,34 +64,35 @@ defmodule Credence.Syntax.FixAssignmentDotSyntax do
   @impl true
   def analyze(source) do
     source
-    |> String.split("\n")
+    |> Credence.SourceMask.lines()
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, line_no} ->
-      if comment_line?(line) do
-        []
-      else
-        case Regex.run(@bad_pattern, line) do
-          [_match, _capture] -> [build_issue(line_no)]
-          nil -> []
-        end
-      end
+    |> Enum.flat_map(fn {{_line, shadow}, line_no} ->
+      if Regex.match?(@bad_pattern, shadow), do: [build_issue(line_no)], else: []
     end)
   end
 
   @impl true
   def fix(source) do
     source
-    |> String.split("\n")
-    |> Enum.map_join("\n", fn line ->
-      if comment_line?(line) do
-        line
-      else
-        Regex.replace(@bad_pattern, line, fn _match, prefix -> "#{prefix} " end)
-      end
-    end)
+    |> Credence.SourceMask.lines()
+    |> Enum.map_join("\n", fn {line, shadow} -> fix_line(line, shadow) end)
   end
 
-  defp comment_line?(line), do: Regex.match?(~r/^\s*#/, line)
+  # The match is found in the shadow and the bytes are taken from the real line.
+  # Both are the same byte length and every code byte is identical, so the
+  # offsets are valid in either — and the emitted text is always the author's,
+  # never a blanked literal. The pattern is `^`-anchored, so there is at most one
+  # match per line and the replacement is a prefix rewrite.
+  defp fix_line(line, shadow) do
+    case Regex.run(@bad_pattern, shadow, return: :index) do
+      [{_match_start, match_len}, {prefix_start, prefix_len}] ->
+        binary_part(line, prefix_start, prefix_len) <>
+          " " <> binary_part(line, match_len, byte_size(line) - match_len)
+
+      nil ->
+        line
+    end
+  end
 
   defp build_issue(line_no) do
     %Issue{

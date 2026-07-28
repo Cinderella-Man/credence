@@ -159,4 +159,72 @@ defmodule Credence.Syntax.FixAssignmentDotSyntaxFixTest do
       assert analyze(fixed) == []
     end
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LITERALS — the spurious dot named in documentation is not a dot
+  #
+  # The moduledoc's "Not flagged" list claimed string literals were safe
+  # because the `op=` is never the line's leading token. Inside a heredoc
+  # that accident runs out: a documentation line may begin with exactly
+  # the shape this rule matches, and both of this rule's own `→`
+  # examples did (docs/22 T3.10). The decision now runs against a
+  # `Credence.SourceMask` shadow.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — only real code is rewritten" do
+    test "leaves an assignment inside a moduledoc heredoc alone" do
+      code = ~S'''
+      defmodule Documented do
+        @moduledoc """
+            ref =.make_ref()        →  ref = make_ref()
+        """
+      end
+      '''
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves an assignment inside a comment alone" do
+      code = "# ref =.make_ref()"
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "does not report an assignment that only appears in prose" do
+      code = ~S'''
+      @moduledoc """
+      x =.some_function(a)
+      """
+      '''
+
+      assert analyze(code) == []
+    end
+
+    test "still fixes real code in a file that also documents the broken form" do
+      code = ~S'''
+      defmodule Both do
+        @moduledoc """
+      doc =.example()
+        """
+
+        def go do
+          ref =.make_ref()
+          ref
+        end
+      end
+      '''
+
+      fixed = fix(code)
+
+      assert fixed =~ "    ref = make_ref()"
+      assert fixed =~ "doc =.example()"
+      assert valid_syntax?(fixed)
+    end
+
+    test "the rule does not rewrite its own source file" do
+      source = File.read!("lib/syntax/fix_assignment_dot_syntax.ex")
+
+      confirm_fix(fix(source), source)
+    end
+  end
 end

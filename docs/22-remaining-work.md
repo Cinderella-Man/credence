@@ -65,7 +65,7 @@ untouched.
 | ✅ | T0.2 — Phase-4 PR | `1cb7bff` — **superseded**, a PR for the whole 3rd evolution already exists |
 | ✅ | **T3.7 — the last two raw-byte syntax fixes**, + the `FixDivRem` half-conversion behind them | `e81985e` · `8169601` |
 | ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
-| 🔄 | **T3.10 — pay down the self-corruption ledger** — 4 of 11 done, 7 left | `becd59b` · `643435a` · `e549bd0` |
+| ✅ | **T3.10 — pay down the self-corruption ledger** — 10 of 11 done; the only entry left is the deliberate one | `becd59b` · `643435a` · `e549bd0` · this commit |
 | ⬜ | **T3.10a — `no_else_if` corrupts valid parsing code** (found while paying down T3.10; do *not* convert it) | — |
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · `3cdbe14` |
 | ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · this commit |
@@ -73,9 +73,10 @@ untouched.
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T3.10a** — it is the only item on this file known to corrupt
-*valid, parsing* source, and it needs a maintainer decision (retire a live rule
-into its hardened sibling) rather than a conversion. Then the rest of **T3.10**
-(7 rules left of 11). Then **T1.2**, the G3 residue T1 does not cover — and T5.9
+*valid, parsing* source, and the only entry left on the self-corruption ledger.
+Its final step needs a maintainer decision (retire a live rule into its hardened
+sibling) rather than a conversion, so steps 1–3 can be built out first and step 4
+left on the desk. Then **T1.2**, the G3 residue T1 does not cover — and T5.9
 handed it a starting point, an executed contention list. T2.1–T2.3 remain the
 prerequisites for any Phase-9 run.
 
@@ -590,7 +591,9 @@ its own tests run under real `mix test`.
     not compile, assert no second rule claims the message (first-match-wins
     dispatch would otherwise decide which one is dead), and assert the end-to-end
     repair through real dispatch.
-- [ ] 🔄 **T3.10 [C] Pay down the self-corruption ledger — 4 of 11 done, 7 left.**
+- [x] ~~**T3.10 [C] Pay down the self-corruption ledger.**~~ **DONE — 10 of 11;
+  the 11th is T3.10a and stays on purpose. See the resolution at the end of this
+  item.**
   The gate is in (`b41af7b`, `test/self_corruption_test.exs` +
   `test/support/self_corruption.ex`); the debt is being worked down against it.
   Run every Syntax rule's `fix/1` over its own `.ex` file — a rule's moduledoc is
@@ -602,14 +605,14 @@ its own tests run under real `mix test`.
   | rule | lines | status |
   |---|---|---|
   | `no_else_if` | 226 | ⬜ **deliberately not converted** — see T3.10a |
-  | `fix_do_block_fusion` | 6 | ⬜ |
-  | `fix_python_augmented_assignment` | 4 | ⬜ |
+  | `fix_do_block_fusion` | 6 | ✅ masking, **threaded through the cascade** |
+  | `fix_python_augmented_assignment` | 4 | ✅ masking — **plus a second defect underneath** |
   | `fix_truncated_binary_close` | 4 | ✅ `becd59b` — masking, the family default |
-  | `no_fn_with_capture` | 4 | ⬜ |
-  | `fix_stale_access_modifier` | 3 | ⬜ |
-  | `fix_assignment_dot_syntax` | 2 | ⬜ |
+  | `no_fn_with_capture` | 4 | ✅ masking, replacing a `#`-only guard |
+  | `fix_stale_access_modifier` | 3 | ✅ masking, the family default |
+  | `fix_assignment_dot_syntax` | 2 | ✅ masking; retired a guard it subsumes |
   | `fix_malformed_spec` | 1 | ✅ **not a repair** — the rule was dead; re-homed to Semantic (T3.8) |
-  | `prefer_spec_arrow_operator` | 1 | ⬜ |
+  | `prefer_spec_arrow_operator` | 1 | ✅ masking **for the decision only** — it rebuilds, not splices |
   | `no_doc_with_do_block` | 1 | ✅ `643435a` — **not** the shadow; `self_contained?/2` |
   | `prefer_cond_do_keyword` | 1 | ✅ `becd59b` — **not** masking; a parse guard |
 
@@ -642,6 +645,65 @@ its own tests run under real `mix test`.
   collect-all-matches-then-splice-once idiom, and it must not re-mask between
   stages, since masking a line alone is the `FixDivRem` defect. The shadow has to
   be carried through the cascade, receiving the identical splice at each stage.
+
+  **Resolution — the ledger is down to its one deliberate entry.** All six
+  remaining convertible rules are paid down and off it; the scan now returns
+  `%{"no_else_if" => 226}` and nothing else. The read-only pass's warning about
+  `fix_do_block_fusion` was accurate and was implemented as stated: the
+  `{line, shadow}` pair is threaded through all five stages, each splicing the
+  identical bytes into both, which keeps the pair valid (same byte length, same
+  code bytes) for the stage that follows.
+
+  **"It is not one repair" held all the way to the end.** Six masking bugs still
+  needed three distinct mechanisms:
+
+  * `prefer_spec_arrow_operator` **rebuilds** its line from parsed parts rather
+    than splicing byte ranges. Masking the rebuild would have emitted blanked
+    literals, so the shadow answers only *is this line code?* and the rewrite
+    reads the real line.
+  * `fix_do_block_fusion` needed the threaded shadow above.
+  * the other four are the family default — locate in the shadow, splice from the
+    line — and two of them retired hand-written guards the shadow strictly
+    subsumes.
+
+  **The finding worth carrying: knowing about the class is not being guarded
+  against it.** `no_fn_with_capture` already carried a guard *and* a comment
+  saying that rewriting non-code content "would corrupt" it. The guard skipped
+  lines starting with `#`. So it protected comments and missed heredocs entirely,
+  and the rule rewrote three sentences of its own moduledoc prose from naming the
+  broken form to naming the fixed one — leaving documentation that no longer said
+  what the rule repairs. `fix_assignment_dot_syntax` and
+  `fix_python_augmented_assignment` both went further and *argued in their
+  moduledocs* that literals were safe, on reasoning that was true only by
+  accident of `^`-anchoring — an accident that runs out inside a heredoc, where a
+  documentation line may begin with exactly the matched shape.
+
+  **And one rule had a second defect underneath the first.** Converting
+  `fix_python_augmented_assignment` exposed that its right-hand side ran to the
+  end of the line, so a trailing comment was captured as part of the expression:
+  `count += 1  # total` became `count = count + (1  # total)`, putting the
+  closing paren inside the comment. **The output did not parse at all** — run,
+  not read, on six inputs, three of which failed. This is T3.7's "trailing
+  comment nobody guarded" in a fifth rule. The shadow settles it: a comment is
+  blanked to the line's end, and the raw byte at the start of that blank run
+  separates a comment from a trailing *string*, which is part of the expression.
+  The comment is now preserved after the rewritten statement instead of being
+  swallowed by it. Worth stating plainly: **converting a rule for the ledger's
+  reason found a live defect the ledger was not looking for.**
+
+  Left unrepaired and recorded here rather than fixed: the same rule swallows a
+  second statement when one line holds two (`count += 1 ; total += 2` →
+  `count = count + (1 ; total += 2)`, which does not parse). That is not a
+  literal-awareness bug and the rule's documented contract is "a standalone
+  statement", so it is out of this item's scope — but it is executed, real, and
+  now written down.
+
+  Each of the six gained a `LITERALS` test block ending in the same pin — `fix/1`
+  over the rule's own source file must be a no-op — so the oracle's finding is
+  now a unit test per rule and not only a tree-wide gate. Positive control: with
+  the six rules reverted and the tests kept, **32 of 163 go red** across all six
+  plus the gate itself, while the 131 pre-existing tests stay green. Full suite:
+  **9,911 tests + 6 properties, 0 failures.**
 
 - [ ] **T3.10a [C] `no_else_if` — do NOT convert it. It has four confirmed
   defects that masking does not touch, and its ledger entry is the only thing

@@ -41,6 +41,32 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignment do
   `+=`, `-=`, `*=`, and `/=` are not substrings of any valid Elixir operator,
   so an anchored, leading-identifier match cannot fire on legitimate code.
 
+  ## Only real code is rewritten
+
+  Matching runs against a `Credence.SourceMask` shadow, not the raw line, so
+  comments, strings, sigils and heredoc bodies are invisible to the pattern, and
+  the bytes emitted are always read back out of the real line.
+
+  The "Not flagged" list above was true only by accident, and the accident had
+  already run out. Its first bullet argues that a literal is safe because `op=`
+  is "not the line's leading token" — true of `x = "a += b"`, and irrelevant
+  inside a heredoc, where a documentation line may begin with exactly the shape
+  this rule matches. The `## Detected patterns` and `## Bad` blocks below are
+  such lines, and this rule rewrote all four of them (docs/22 T3.10), turning its
+  own examples of the input into examples of the output.
+
+  ## Where the right-hand side stops
+
+  The right-hand side runs to the end of the line, which means a trailing comment
+  used to be captured as part of the expression: `count += 1  # total` became
+  `count = count + (1  # total)`, putting the closing paren inside the comment so
+  the output did not parse at all. The shadow answers this too — a `#` comment is
+  blanked to the end of the line, so the expression ends where the trailing run of
+  blanked bytes begins, provided the raw line really has a `#` there. A trailing
+  *string* is blanked the same way but is part of the expression, and the byte in
+  the raw line is what tells the two apart. The comment is preserved after the
+  rewritten statement rather than swallowed by it.
+
   ## Bad
 
       count += Map.get(freq, key, 0)
@@ -66,14 +92,17 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignment do
   #   group 4: right-hand side expression
   @augmented_pattern ~r/^(\s*)([A-Za-z_]\w*)\s*([-+*\/])=\s*(\S.*?)\s*$/
 
+  # `Credence.SourceMask` blanks every non-code byte to this one.
+  @blank 0x01
+
   @impl true
   def analyze(source) do
     source
-    |> String.split("\n")
+    |> Credence.SourceMask.lines()
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, line_no} ->
-      case captures(line) do
-        [_indent, _var, op, _rhs] -> [build_issue(line_no, op)]
+    |> Enum.flat_map(fn {{line, shadow}, line_no} ->
+      case captures(line, shadow) do
+        {_indent, _var, op, _rhs, _tail} -> [build_issue(line_no, op)]
         nil -> []
       end
     end)
@@ -82,31 +111,83 @@ defmodule Credence.Syntax.FixPythonAugmentedAssignment do
   @impl true
   def fix(source) do
     source
-    |> String.split("\n")
-    |> Enum.map_join("\n", &fix_line/1)
+    |> Credence.SourceMask.lines()
+    |> Enum.map_join("\n", fn {line, shadow} -> fix_line(line, shadow) end)
   end
 
-  defp fix_line(line) do
-    case captures(line) do
-      [indent, var, op, rhs] -> "#{indent}#{var} = #{var} #{op} (#{rhs})"
+  defp fix_line(line, shadow) do
+    case captures(line, shadow) do
+      {indent, var, op, rhs, tail} -> "#{indent}#{var} = #{var} #{op} (#{rhs})#{tail}"
       nil -> line
     end
   end
 
-  # Returns `[indent, var, op, rhs]` for a fixable line, or `nil`.
-  # Comment lines never match.
-  defp captures(line) do
-    if comment_line?(line) do
-      nil
-    else
-      case Regex.run(@augmented_pattern, line, capture: :all_but_first) do
-        [indent, var, op, rhs] -> [indent, var, op, rhs]
-        nil -> nil
-      end
+  # `{indent, var, op, rhs, tail}` for a fixable line, or `nil`. The match is
+  # located in the shadow and every returned byte is read out of the real line at
+  # those offsets — same byte length, same code bytes, so the offsets hold in
+  # either. `analyze` and `fix` both come through here, so they cannot disagree.
+  #
+  # A whole-line comment needs no special case any more: masking blanks it to its
+  # last byte, and a run of blanks does not match `[A-Za-z_]\w*`.
+  defp captures(line, shadow) do
+    case Regex.run(@augmented_pattern, shadow, return: :index, capture: :all_but_first) do
+      [indent, var, op, {rhs_start, rhs_len}] ->
+        {rhs, tail} = split_expression_from_comment(line, shadow, rhs_start, rhs_len)
+
+        if rhs == "" do
+          nil
+        else
+          {slice(line, indent), slice(line, var), slice(line, op), rhs, tail}
+        end
+
+      nil ->
+        nil
     end
   end
 
-  defp comment_line?(line), do: Regex.match?(~r/^\s*#/, line)
+  defp slice(line, {start, len}), do: binary_part(line, start, len)
+
+  # Splits the captured right-hand side into the expression and whatever trailing
+  # comment follows it. With no trailing comment the expression is the capture
+  # unchanged and the tail is empty, which is exactly what this rule did before.
+  defp split_expression_from_comment(line, shadow, rhs_start, rhs_len) do
+    case comment_start(line, shadow) do
+      nil ->
+        {binary_part(line, rhs_start, rhs_len), ""}
+
+      c when c > rhs_start ->
+        code = binary_part(line, rhs_start, c - rhs_start)
+        rhs = String.trim_trailing(code)
+        kept = byte_size(rhs)
+        {rhs, binary_part(line, rhs_start + kept, byte_size(line) - rhs_start - kept)}
+
+      _ ->
+        {"", ""}
+    end
+  end
+
+  # Where a trailing `#` comment begins, or `nil`. A comment is blanked to the
+  # end of the line, so it is a run of blanks reaching the line's end — but so is
+  # a trailing string literal, and that one is part of the expression. The raw
+  # line's byte at the run's first offset is what separates them: `#` opens a
+  # comment, a quote or a sigil opens a literal.
+  defp comment_start(line, shadow) do
+    trimmed_end = byte_size(String.trim_trailing(shadow))
+    run_start = blank_run_start(shadow, trimmed_end)
+
+    if run_start < trimmed_end and binary_part(line, run_start, 1) == "#" do
+      run_start
+    end
+  end
+
+  defp blank_run_start(_shadow, 0), do: 0
+
+  defp blank_run_start(shadow, index) do
+    case binary_part(shadow, index - 1, 1) do
+      <<@blank>> -> blank_run_start(shadow, index - 1)
+      _ -> index
+    end
+  end
 
   defp build_issue(line_no, op) do
     %Issue{

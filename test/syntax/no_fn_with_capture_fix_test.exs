@@ -85,4 +85,65 @@ defmodule Credence.Syntax.NoFnWithCaptureFixTest do
              """)
            )
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # LITERALS — knowing about the class is not being guarded against it
+  #
+  # This rule already carried a guard, and a comment saying that
+  # rewriting non-code content "would corrupt" it. The guard only skipped
+  # lines starting with `#`, so it protected comments and missed heredocs
+  # entirely: three sentences of this rule's own moduledoc prose were
+  # rewritten from naming the broken form to naming the fixed one
+  # (docs/22 T3.10). Matching now runs against a `Credence.SourceMask`
+  # shadow, which covers the whole class the original comment described.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — only real code is rewritten" do
+    test "leaves the malformed form named in moduledoc prose alone" do
+      code = ~S'''
+      defmodule Documented do
+        @moduledoc """
+        LLMs repeatedly emit `fn(&1 > 0)`, gluing the `fn` keyword onto a capture.
+        """
+      end
+      '''
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves the malformed form inside a comment alone" do
+      code = "# LLMs emit fn(&1 > 0) here"
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "leaves the malformed form inside a string alone" do
+      code = ~S'IO.puts("the bug looks like fn(&1 > 0)")'
+
+      confirm_fix(fix(code), code)
+    end
+
+    test "does not report a mention that only appears in prose" do
+      code = ~S'''
+      @moduledoc """
+      so `fn(&1 ...)` never parses
+      """
+      '''
+
+      assert analyze(code) == []
+    end
+
+    test "leaves the string alone while still fixing real code on the same line" do
+      confirm_fix(
+        fix(~S'IO.puts("bug: fn(&1 > 0)"); Enum.filter(l, fn(&1 > 0))'),
+        ~S'IO.puts("bug: fn(&1 > 0)"); Enum.filter(l, &(&1 > 0))'
+      )
+    end
+
+    test "the rule does not rewrite its own source file" do
+      source = File.read!("lib/syntax/no_fn_with_capture.ex")
+
+      confirm_fix(fix(source), source)
+    end
+  end
 end
