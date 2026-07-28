@@ -5,7 +5,11 @@ set it could not safely promote: no safe fix, duplicate, needs a shared-file
 change, type change, or inconclusive. Each entry lists the set's files and the
 one-line reason. Work these by hand later.
 
-_No open items._
+_No open items **awaiting the loop**. The 143 sections below are the historical
+record of the 2026-07 drain — every one has since been dispositioned; the
+verdicts live in `docs/18-per-rule-verdicts.json` (source of truth) and
+`docs/18-final-143-disposition.md`. Nothing here is a to-do; open work is
+tracked in `docs/22-remaining-work.md`._
 
 <!--
 Resolved 2026-06-17 — test/pattern/assumptions_filtering_test.exs: NOT an orphan.

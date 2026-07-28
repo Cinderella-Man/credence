@@ -1,7 +1,9 @@
 # 19 — Rule Standard v1, and the stratification it has to catch up on
 
 **Status:** v1, adopted 2026-07-28 · **Implements:** docs/12 C17
-**Companions:** `STATUS.md` (which mode the repo is in right now)
+**Companions:** `STATUS.md` (which mode the repo is in right now) ·
+`docs/22-remaining-work.md` (the single tracker — the §2 audit rows' "cost to
+fix" items are tracked THERE, not here)
 
 Credence's rule set is **era-stratified**. Every past quality upgrade was
 applied unevenly, and until this document nothing recorded which bar a given

@@ -192,29 +192,26 @@ defect (cf. docs/16 §4.6a finding 3); the rule now declines that shape.
 generator and the harness seed. All three legs are in place (the harness seed
 already taught self-classification, `lib/cev/implement/seed.ex:244`).
 
-**The mode file is deliberately still `CATCHING UP`.** `mix cev.preflight` refuses
-to start a generation run while it says so, and that interlock should come out on
-purpose rather than as a side effect of the last gate landing. It is the
-maintainer's call.
+**The mode file is deliberately still `CATCHING UP`.** The intended mechanism is
+that `mix cev.preflight` refuses to start a generation run while it says so —
+**note (corrected 2026-07-28): that interlock is documented but not implemented;
+nothing in the harness reads STATUS.md yet.** Building it is docs/22 task T4.1.
+Either way the flip is the maintainer's call, made on purpose rather than as a
+side effect of the last gate landing.
 
 ---
 
 ## Currently in flight
 
-*(nothing — update this section when a batch is launched)*
+*(nothing — update this section when work starts, clear it when the work lands)*
 
-**Next, in order** (one at a time, per the concurrency limit above):
+**Everything else that remains — for both repos — is tracked in one place:
+[`docs/22-remaining-work.md`](22-remaining-work.md).** The "Next, in order" list
+that used to live here moved there (Tiers 0–6); this file stays the incident
+record and the in-flight ledger only.
 
-1. **P5 bugs** — the three credence defects from the escalation ledger. Salvage is
-   the least trustworthy of the batch: the agent had just found that
-   `heredoc_value/1` returns raw source bytes, which changed its fix.
-2. **The harness trio** (H8, LD3+LD4, Gate staged-path dispatch) — all three
-   rewrite the same classifier `prompt.ex`/`classify.ex`, so they need a merge
-   decision, not three parallel integrations. Push the harness's three unpushed
-   commits first.
-3. **C7** and **C18** — the two that barely started. Their salvage is scaffolding,
-   not an implementation; treat it as a head start on reading, not as code.
-
-Also open, and now unblocked by C14's gate: the **sweep over the 40 ledgered
-rules** (docs/19 §2 row B). It runs behind a ratchet now, so it can be done in
-batches without the set refilling behind it.
+Completed since the salvage table above was written: the deep-evaluation
+research pass (`wf_e7db30ca-1fc`, 2026-07-28 — 4 read-only miners + 2
+adversarial verifiers, ≤4 concurrent, zero compiles; its findings are docs/22
+Part I). The P5-bugs, C13 and C14 rows were landed earlier the same day
+(`958f241`, `19f9631`, `8b5280e`).

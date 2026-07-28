@@ -10,6 +10,11 @@ Shared with `credence-evolution-harness`. `mix cev.preflight` should refuse to
 start a generation run while the mode is `CATCHING UP`, so a standard bump
 cannot be outrun by new rules born under the old bar.
 
+> ⚠️ **The interlock is not implemented yet.** Nothing in the harness reads
+> this file today (verified 2026-07-28 — zero references in `lib/` or
+> `config/`). Until docs/22 task **T4.1** lands, this mode line is a statement
+> of intent enforced by people, not by `cev.preflight`.
+
 ## Why CATCHING UP
 
 Rule Standard v1 was written on 2026-07-28 (`docs/19-rule-standard.md`). Its
@@ -54,6 +59,9 @@ amendment. **The bar is met; the flip is the maintainer's call.** Note that Phas
 9 is separately blocked on the PR to `main`, Mimo secrets, a local solve endpoint
 and a spend decision (docs/16 §START HERE), so flipping this file does not by
 itself start anything.
+
+Remaining work of every kind is tracked in **`docs/22-remaining-work.md`** —
+the single tracker.
 
 ## History
 

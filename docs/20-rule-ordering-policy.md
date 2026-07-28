@@ -107,7 +107,9 @@ a rule sequence, so the alphabetical tiebreak can shift under a rename with the
 suite staying green. That is a gap this document records rather than closes;
 closing it needs the feeds-into pairs identified first, because a gate that pins
 all 290 positions would fail on every rule addition and teach people to
-regenerate it without reading.
+regenerate it without reading. *(Tracked as `docs/22-remaining-work.md` T1.2 —
+the dispatch-simulation gate, which closes the Semantic half of this without
+pinning all 290 positions.)*
 
 ## Round history
 

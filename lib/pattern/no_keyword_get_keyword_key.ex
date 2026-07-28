@@ -148,8 +148,11 @@ defmodule Credence.Pattern.NoKeywordGetKeywordKey do
 
   defp extract_keyword_pair(_), do: :error
 
+  # Sole caller is extract_keyword_pair/1, which only reaches here after matching
+  # `{:__block__, meta, _}` — so the input is always a block node, never a bare
+  # atom. (A bare-atom clause used to sit below this one; the compiler proved it
+  # dead and warned on every build.)
   defp extract_atom({:__block__, _, [atom]}) when is_atom(atom), do: atom
-  defp extract_atom(atom) when is_atom(atom), do: atom
 
   defp render(node) do
     node

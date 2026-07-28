@@ -37,6 +37,14 @@ touching the backlog**:
 
 ### What is left, in order
 
+> **⛔ SUPERSEDED (2026-07-28). Do not work from this list or from the Phase
+> 6/7/8/9 sections below — open work for BOTH repos is tracked in one place:
+> [`docs/22-remaining-work.md`](22-remaining-work.md).** That file also holds
+> the deep evaluation of why 143 harness-accepted rules died at review (the
+> gate-gap tally) and the ledger-corrected Phase 9 runbook. The phase sections
+> below remain as the original plan and specs, kept for provenance; their
+> per-item status is NOT maintained any more.
+
 1. **Phase 6** — C-items. 6.1 (C5) and half of 6.2 (C2.1) are landed; C6, C2.2
    and 6.3 onward are open. Separately, the 17 rebuild-later rules and the 56
    uncaught modes — ranked build list at the end of docs/17, but read §5.3 of
@@ -83,7 +91,10 @@ touching the backlog**:
 > **2026-07-27 update.** Phase 4 is closed. `credence` on `evolution_accepted`
 > holds **295 live rules** (156 pattern, 92 semantic, 47 syntax — the new
 > `lib/source_mask.ex` is a shared helper, not a rule) and an **8114-test** green
-> suite. The sister `credence_evolution` has had the 112 dead rejected modules
+> suite. *[Correction 2026-07-28: that count was wrong on the day it was
+> written — it counted the three `rule.ex` behaviour files and two other
+> non-rules. The measured number is **290 live rules (155 pattern / 90
+> semantic / 45 syntax)**, as docs/19, docs/20 and STATUS.md carry.]* The sister `credence_evolution` has had the 112 dead rejected modules
 > and their 227 tests removed (commit `b83d623`); it is on branch `evolution`,
 > **pushed to `origin/evolution`**, so every deleted file remains recoverable and
 > every verdict reversible. The 27 kept rules (17 rebuild + 9 salvage + 1
@@ -672,6 +683,11 @@ RE-QUEUE per row). Actions by cluster:
 **Definition of done:** `escalation_ledger.md` covers all 45 escalated files +
 13 diverged + the one switch proposal (its `.log`/`.json` pair) with a decision
 each; the re-queue list for the next run is explicit.
+
+> **⛔ Phases 6–9 below: status is no longer maintained here — see
+> [`docs/22-remaining-work.md`](22-remaining-work.md)** (the single tracker;
+> its Part III records what landed with commits and controls). The tables
+> below are the original plan, kept as spec + provenance.
 
 ## Phase 6 — Credence improvement program (C-items, docs/12 order with docs/14 corrections)
 

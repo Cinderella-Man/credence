@@ -1,0 +1,525 @@
+# 22 — The remaining work: single tracker for credence + harness
+
+**Status:** ACTIVE — this is the only file that tracks open work · **Adopted:** 2026-07-28
+**Owner:** maintainer + Claude sessions
+
+**The rule of this file:** when an item lands, edit it *here* (strike it, add the
+commit id). No other document tracks progress any more — docs/12/13/16/17/19/20
+and the harness's `IMPROVEMENTS.md` are the *specs and history* this file points
+into; they carry banners saying so. Work-in-progress (started but uncommitted)
+goes in `docs/21-in-flight.md`; everything else lives here.
+
+Every claim below was produced by a 6-agent read-only research pass on
+2026-07-28 (4 miners + 2 adversarial verifiers, all claims re-derived
+independently; corrections already folded in). File:line anchors were verified
+against `credence` HEAD `958f241` and harness HEAD `fb3bc2a`.
+
+---
+
+## Part I — The evaluation: what the evolution actually taught us
+
+### 1. The headline numbers
+
+The evolution run committed ~259 rule bases, **each of which passed the
+harness's own Gate**: the full credence suite, the corpus scan, the mutation
+check, the equivalence probe. At acceptance review:
+
+- **116 survived (45%). 143 were rejected (55%).**
+- Of the 143: 82 implementation-dead · 25 duplicates of live rules · 9 false
+  premises · 17 rebuild-later · 9 salvage-small-fix · 1 already-live
+  (`docs/18-per-rule-verdicts.json`, the source of truth).
+- **135 of the 143 encode a real failure mode.** The rules were wrong; the
+  *observations* behind them were mostly right. 56 of those failure modes are
+  caught by nothing in Credence today (mode-level count, docs/18 §5).
+- Of the **116 accepted**, seven rules later turned out to carry **nine live
+  shipped defects** (docs/16 §4.6a) — every one repaired since, but every one
+  survived both the harness Gate *and* first-pass human review.
+- 43 of 143 verdicts were **overturned on adversarial re-review** — first
+  readings of a rule are wrong at ~30% even for careful reviewers. Machinery,
+  not vigilance, is what scales.
+
+### 2. Why 55% died: the gate-gap tally
+
+Every rejected rule was assigned the earliest, cheapest *mechanical* check that
+would have killed it at generation time (full per-rule lists preserved in the
+research scratchpad; counts adversarially re-verified on a 24-record sample,
+21/24 concordant, corrections folded in):
+
+| Gate that was missing | Rules | Share |
+|---|---|---|
+| **G1** — diagnostic-reachability: the semantic rule keys on a compiler message the compiler never emits for its target, or one the pipeline drops | **35** | 24.5% |
+| **G2** — phase-reachability: the syntax rule's target *parses*, and `lib/syntax` only runs on parse failure | **18** | 12.6% |
+| **G3** — dispatch-slot ownership: a live rule already matches the diagnostic; `Enum.find` first-match-wins means the newcomer is dead on arrival (or steals a slot and no-ops) | **33** | 23.1% |
+| **G4** — execution-verified fix: the fix no-ops, corrupts neighbours, or leaves the diagnostic unresolved — visible only by *running* it | **26** | 18.2% |
+| **G5** — duplicate-of-live: same failure mode as an existing rule (five were literal same-name copies) | **20** | 14.0% |
+| **G6** — premise-false: the rule is wrong *about Elixir*; only an executed language probe catches it | **9** | 6.3% |
+| **G7** — corpus over-fire | **0** | — |
+| **G8** — human judgment only | **2** | 1.4% |
+
+**The three headline conclusions:**
+
+1. **86 of 143 (60%) died for one architectural reason: the rule never actually
+   runs in the real pipeline** — and the Gate never noticed because the rules'
+   green tests "pass only by calling `analyze`/`fix` directly, bypassing the
+   phase" (docs/17:426). A fabricated diagnostic appears in three
+   mutually-consistent files (rule `@match_msg`, check test, fix test), so the
+   rule agrees with itself and ships dead. **One end-to-end gate kills all 86**:
+   *the rule's own bad fixture must produce this rule's issue AND a changed fix
+   through the top-level `Credence.analyze`/`Credence.fix` entrypoints,
+   dispatched against the full live rule set.* (Per-sub-gate checks are weaker:
+   a borrowed-but-real diagnostic passes a match?-reachability check and dies
+   only end-to-end — verified on `fix_regex_in_guard`.) This is **T1** below.
+2. **G7 = 0 is a success story, read correctly.** The corpus gate existed for
+   the Pattern phase — and only 4 of 143 rejects were Pattern rules. Where a
+   real oracle existed, the failure class *vanished from the reject pile*.
+   Over-fire migrated to exactly the phases with no oracle (semantic matchers,
+   syntax regex fixes). Build the oracle, kill the class.
+3. **132 of 143 (92%) were mechanically catchable.** Only G6+G8 (11 rules)
+   genuinely needed judgment or a bespoke language probe. The review burden that
+   consumed a week of drain time was, to 92%, automatable *before commit*.
+
+### 3. Why the 9 accepted-side defects escaped
+
+They cluster in exactly the two dimensions the Gate did not measure:
+
+- **Byte-level scope of the edit** (5 of 9): rewriting inside string literals,
+  swallowing a `def` head, reading `%Name{}` as modulo. Fixed since by
+  `Credence.SourceMask` + fix-output re-parse. The gate lesson: *a fix's blast
+  radius needs its own oracle* — corpus fix-safety and re-parse checks, which
+  now exist.
+- **Meaning of the output** (4 of 9): output compiles clean and returns a
+  different answer (`a * b % 2` regrouped; early-`return` branch deleted;
+  `h * 31 + c & 0xFFFFFFFF` → 4294967306356 instead of 10356). Two shipped
+  fix-tests *asserted the bug as expected output*. Fixed since by
+  `Credence.RuleCase.call_fixed/4` and the C2.2 dimension gate. The gate
+  lesson: **green tests are not evidence; compiles-clean is not correct** —
+  only executed meaning is.
+
+### 4. What this means for weak models (MiMo/Xiaomi)
+
+The generating model does not need to get smarter — the loop needs to stop
+accepting unwitnessed claims. Every principle below is derived from the tally:
+
+1. **Ground generation in executed reality, don't just gate it afterwards.**
+   The single biggest class (G1, fabricated diagnostics) exists because the
+   model was asked to *imagine* a compiler message. The harness already
+   captures the real diagnostic and hands it to the model verbatim
+   (`seed.ex:169-186` — this is why the class shrank in later passes); what
+   remains is fixing the lossy channel it reads from (T-H2 below) and making
+   the same grounding mandatory for the bugfix lane (evidence extraction, not
+   the classifier's hand-reduced repro — three live over-fires were talked
+   away exactly there, ledger rows 40/50/59).
+2. **Reachability is provable at authoring time, cheaply.** Syntax: one
+   `Code.string_to_quoted/1` call proves the fixture doesn't parse (G2, 18
+   rules, a one-liner). Semantic: compile the fixture, require the captured
+   diagnostic to reach the rule through real dispatch (G1+G3). The weak model
+   never needs to *understand* phase semantics if the gate simply refuses
+   unwitnessed rules — with a failure message that names the one repair action.
+   Every gate in this codebase already follows that message discipline; keep it.
+3. **One diagnostic, one owner — checked by simulation, not policy prose.**
+   docs/20 states the policy; nothing enforces it (G3, 33 rules). Simulating
+   dispatch over the live rule set is mechanical (T2/T1).
+4. **Dedup at proposal time, with mechanisms not names.** 20 rules were
+   re-inventions; the dispatch design itself *caused* churn (a landed rule
+   silently killed a proposal, so the model wrote it again under a new name).
+   H8's verdict memory + the rejected-mechanism list (already built in salvage,
+   R1–R7, teaching by example) is the counter. A list of rule *names* teaches
+   nothing — the next proposal has a different name.
+5. **Ratchets, not walls.** C13/C14 proved the shape: freeze today's debt in a
+   ledger that only shrinks, gate the *delta*. A weak model can't make the
+   audit worse, and nobody faces a 40-red-rules wall that teaches them to
+   disable the gate.
+6. **Route work by oracle strength.** Pattern has corpus + equivalence +
+   fix-safety oracles; Semantic has the compiler; Syntax has the parser. The
+   phases are not equally safe for weak models — pattern-phase proposals get
+   the most machine verification per token. Prefer steering cheap models there;
+   require the grounding artifacts (captured diagnostic / parse-failure proof)
+   before an expensive implementer session is ever spawned. The premise-check
+   is ~one compile; ledger estimates ~$100 of implementer budget wasted across
+   just nine reviewed rows for want of it.
+
+---
+
+## Part II — The task list
+
+Ordered by tier. Within a tier, top-to-bottom is the recommended order.
+Conventions: **[C]** = credence repo, **[H]** = harness repo. Every task names
+its evidence and its acceptance bar. Gates ship with positive controls seen red
+on purpose — no exceptions; a gate nobody has seen red is unverified.
+
+### Tier 0 — hygiene (minutes each; do before anything else)
+
+- [ ] **T0.1 [C][H] Push.** credence `evolution_accepted` is ahead 4
+  (`54c3f17`, `19f9631`, `8b5280e`, `958f241` + whatever this session adds);
+  harness `main` is ahead 3 (`6f776fe` H14, `9cffbba` H15, `fb3bc2a` H9+LD2).
+  Maintainer action; nothing else in the harness should land before its three
+  go up.
+- [ ] **T0.2 [C] Open the Phase-4 PR.** Body ready at `docs/PR_BODY_phase4.md`;
+  `gh` is not installed, so by hand:
+  `https://github.com/Cinderella-Man/credence/compare/main...evolution_accepted`.
+  Phase 9 is blocked on this merge (sister resets onto the new `main`).
+- [x] **T0.3 [C] Zero-warning compile.** DONE this session: the provably-dead
+  `extract_atom/1` clause (`lib/pattern/no_keyword_get_keyword_key.ex`) is
+  deleted; `mix compile --force` = 0 warnings.
+- [ ] **T0.4 [C] Release hygiene.** `CHANGELOG.md:8` and `:138` both say
+  "Unreleased" (0.8.1 *and* 0.7.0). Decide versions and stamp dates — or fold
+  0.7.0 into 0.8.1. Maintainer call; blocks nothing.
+
+### Tier 1 — the reality gates (kills the 60% class at birth)
+
+- [ ] **T1 [C] The pipeline-witness gate — every rule must witness its own
+  failure mode through the real pipeline.** *The highest-value item in this
+  file.* One new meta-test (suggested: `test/pipeline_witness_meta_test.exs`)
+  asserting, for **every** rule in all three phases: feeding the rule's own
+  bad fixture to the top-level entrypoints (`Credence.analyze/2`,
+  `Credence.fix/2` — full live rule set, real dispatch, real
+  `compile_and_capture`) yields (a) an issue attributed to *this* rule, and
+  (b) for fixing rules, output ≠ input with the triggering condition resolved
+  (diagnostic gone / now parses). This subsumes three sub-gates and would have
+  killed **86 of the 143** rejects (G1 fabricated/borrowed diagnostics 35, G2
+  wrong-phase 18, G3 dispatch losers 33):
+  - *Semantic reality:* today `semantic_meta_test.exs` is shape-only — a
+    hand-fabricated `%{severity:, message:}` map passes every check; only 10
+    of 90 semantic rules voluntarily use `compile_and_capture` in tests.
+  - *Syntax reality:* `syntax_meta_test.exs` pins that fix **output** parses
+    but never that the check fixture **input** fails to parse — the entire
+    docs/17 "inert by construction" class is unguarded. Only 4 of 87 syntax
+    test files assert input-unparseability. (Per the repo's own test-hygiene
+    gate, the assertion belongs behind a `RuleCase` verb, not raw
+    `Code.string_to_quoted` in test files — `no_parser_calls_in_rule_tests`.)
+  - *Dispatch reality:* running through real dispatch proves the rule *wins*
+    its slot — a rule shadowed by an earlier-sorting live rule fails here.
+  Mechanics: fixtures are enumerable via `Credence.MetaTestSupport.fixtures/1`
+  (the C7 salvage already extracted 5,144 of them); reuse
+  `RuleHelpers.compile_and_capture/1` (`lib/rule_helpers.ex:160`) and
+  `RuleCase.call_fixed/4`. Expect a ledger: some live rules will fail this
+  gate honestly (see T3.1 — at least 7 semantic rules are dead in production
+  right now); freeze them C13/C14-style, ratchet down. Positive controls: a
+  fabricated-diagnostic fixture rule, a parses-fine syntax fixture rule, a
+  shadowed semantic rule — each seen red. **Harness half:** the same witness
+  requirement goes in the Gate (cheap pre-check before the suite phases) and
+  the seed (teach it; today the model learns it only by failing).
+- [ ] **T1.2 [C] Dispatch-simulation gate (the G3 residue T1 doesn't cover).**
+  For every *pair* of semantic rules whose `match?/1` accept the same captured
+  diagnostic, require an explicit priority + moduledoc justification per
+  docs/20 (one diagnostic, one owner). docs/20:105-110 records "No test pins
+  ordering today" — this closes it. Cheap version: over all fixtures' captured
+  diagnostics, assert exactly one live rule matches each, or the winner is
+  documented. Positive control: two fixture rules matching the same message.
+- [ ] **T1.3 [C] C2.2 population guard (small).** The dimension gate has no
+  non-empty-population vacuity guard (unlike C13/C14) — if the analyzer
+  classified every rule unjudgeable, both asserts pass green. Add
+  `assert judged != []`. (Verifier-2 discovery.)
+
+### Tier 2 — land the salvage (near-done, verified work sitting in a directory)
+
+Order per the salvage assessment (dependency- and completeness-driven). All in
+`/home/kamil/projects/credence-salvage-2026-07-28/`; every item's remaining
+verification is listed in `docs/21`. Treat every artifact as unverified until
+its own tests run under real `mix test`.
+
+- [ ] **T2.1 [H] Gate corpus dispatch (Addendum 2 / Phase 8.7)** — ~90% done in
+  `b2-gatedispatch/`. `Cev.Evolve.CorpusDispatch` plans `{:skip|:scoped|:full}`
+  from staged paths; scoped scan is a **fail-fast pre-gate, never a
+  substitute** (scope-parity is NOT answered by a clean `--only-rule` scan —
+  measured with a planted leaky rule: 0 over-fire findings vs 12 scope-parity
+  violations). 29/29 unit tests, 9/9 mutants killed, 6/6 integration tests,
+  positive control = suite red under unpatched gate. It does **not** touch
+  classify/prompt (collision map corrected). Remaining: finish the
+  anchors-vs-`credence.corpus.ex` probe (RESULT lines already verified),
+  real `mix test`, formatter. Data point worth keeping: 150 of 155 committed
+  candidates were syntax/semantic-only — this saves ~234 s × most rows.
+- [ ] **T2.2 [H] H8 verdict memory + rejected-mechanism exemplars** — ~95%
+  done in `b2-h8/`. `Cev.Classify.Verdicts` (cache-scoped, hash-keyed,
+  advisory-only), R1–R7 mechanism list (each led by MECHANISM, rule name only
+  as provenance — the ledger's hard requirement), three worked exemplars
+  probed against the live pipeline. 42/42 tests + six positive controls all
+  seen red. Remaining: place files, real `mix test`, format.
+- [ ] **T2.3 [H] LD3+LD4 merge** — ~60% done in `b2-ld34/`. Four modules with
+  measured moduledocs; empirically validated against all six real
+  `:no_lib_change` rows (rows 40/50/59/123/145 → `:contradicted`; only row
+  178 genuinely `:refuted`). **Zero tests exist** (killed at "Now the
+  tests."), and the Gate/Router integration was never designed: live
+  `gate.ex:116` rejects with a bare `:no_lib_change` atom and discards the
+  tree; `TestOnlyDiff.adjudicate/4` needs `{:no_lib_change, %{entries, patch}}`
+  captured before discard, then Router → adjudicate → persist →
+  `VerifiedGood.record` → `RowLog.verified_good`. Merge note: H8 and LD34
+  overlap in `classify.ex run/3` and `prompt.ex build/1` (~3 lines apart) —
+  take H8 as base, add LD34's one keyword + block; mechanical. Honesty note
+  from the salvage itself: LD4's register is a **one-rule** register on this
+  run's data — what stops the NoPythonMultiReturn churn is the
+  repro-validation gate (T4.2), not LD4. Also: `trace_evidence.ex`'s
+  `changed_blocks/2` fix was never re-probed (formatting-only risk), and
+  `:refuted` is Semantic-only until T3.2 lands.
+- [ ] **T2.4 [C] C18 mutant sweep** — ~70% done in `b2-c18/`.
+  `Credence.Mutation` (4 operator families, careful scoping, cap-40
+  round-robin), `Sweep` (fresh BEAM per mutant, mandatory green baseline —
+  "a red baseline kills every mutant for the wrong reason"), `mix
+  credence.mutants` (report-only **on purpose**; no floor until the tail is
+  triaged, per docs/12 C18 + E6). End-to-end smoke-proven: `no_manual_max`
+  kill rate 0.848 and its survivors reproduce docs/14 E6's known equivalent
+  mutants exactly. Remaining: ExUnit tests + positive controls (planted
+  always-true matcher; `apply_mutant` misalignment raise; baseline-red
+  discard), placement, and **re-run the 39-rule sample on a quiet box** —
+  the salvaged kill rates came from a 20-parallel run while the box was
+  OOMing; do not publish them.
+- [ ] **T2.5 [C] C7 idempotency gate** — ~15% done in `b2-c7/`. Keep
+  `fixtures.bin` (5,144 unique fix-test fixtures, 292 files) + the sweep
+  methodology; the sweep itself died at ~750/5,144 with no results. Re-run
+  (~5–6 min: 62.2 ms/fixture measured), then decide assert-vs-pinned-snapshot
+  from the violation count, then the E7-revised second half: one Semantic
+  re-pass after Pattern changes (full fixpoint loop stays deprioritized,
+  ~1.5% incidence). Re-extract fixtures first — the bin snapshots Jul 28
+  10:27 and rules have landed since.
+
+### Tier 3 — live defects on the branch (the ledger's FIX-CREDENCE rows)
+
+- [ ] **T3.1 [C] Type-checker diagnostics are dropped — 7 live semantic rules
+  are dead in production.** Ledger row 78 / cluster C-A, called "the
+  highest-value item in the cluster". Mechanism (code-verified):
+  `compile_and_capture/1` returns `{:ok, diagnostics}` whenever
+  `Code.compile_string` returns modules — on Elixir ≥1.19 that includes
+  type-checker **errors** — and `Semantic.analyze/2` filters the `{:ok, …}`
+  branch to `severity == :warning` (`lib/semantic.ex:104-107`; same in the
+  fix path), so the entire "Type checking failed" class never reaches any
+  rule. This is also the G1(b) harness hole (`no_plug_upload_size_field`).
+  Fix: pass error-severity diagnostics through on the `{:ok, …}` branch;
+  positive control: a fixture producing a type-checker error must reach a
+  rule. Then re-queue the blocked rows (Phase 9 list).
+- [ ] **T3.2 [C] `{rule, :no_op}` in the Pattern trace.** `lib/pattern.ex:198-200`
+  silently drops a rule whose check fired but whose fix returned identical
+  source (`Logger.debug` only). Blocks **9 ledger re-queue rows** and confines
+  LD34's `:refuted` verdict to Semantic. C5 covered `:patch_rejected` (patches
+  produced then rejected); this is the check-found-fix-did-nothing sibling.
+  One clause + trace assertion + control. **Cross-repo half:** harness
+  `applied_rules.ex:18` `@pair` accepts only `:reverted|digits` — it will
+  silently drop `:patch_rejected`, `:crashed`, and the new `:no_op` from the
+  closed set the moment the sister resets onto main (recreating exactly the
+  invisibility C5 was built to end). Widen the regex, add a contract test on
+  **both** sides pinning the shared vocabulary
+  (`:reverted | :patch_rejected | :crashed | :no_op | integer`).
+- [ ] **T3.3 [C] `mix credence.equiv` vacuous EQUIVALENT (C2.4).** Still live:
+  multi-var functions with no `--dim` yield `[]` admitted inputs
+  (`lib/mix/tasks/credence.equiv.ex:185`) and `classify`'s `Enum.all?` over
+  empty pairs returns `:equivalent` (`:119`). Spec (docs/12 C2.4): 0 admitted
+  inputs ⇒ error or SKIPPED, never EQUIVALENT. Mirror case from the ledger:
+  both sides raising the *same* exception class on every input also currently
+  passes. Pairs with H3 (T5.4).
+- [ ] **T3.4 [C] Equivalence probe upgrades that unblock 3 diverged re-queues**
+  (ledger H-A/H-B/H-C, replacing docs/16's original LD2 framing):
+  (a) battery structs + `MapSet` dimensions (`%Date{}`/`%DateTime{}`/
+  `%NaiveDateTime{}`/`%Task{}`) — flips 10 of 13 diverged rows to REPAIR,
+  row 31; (b) tolerant `repair?/1` (`credence.equiv.ex:131-134` →
+  `match?({:raise,_}, ob) or ob === oa`) — flips row 185, verified NOT to
+  rescue row 105 (the correct kill — **row 105 is the mandatory positive
+  control for any probe change**); (c) stacktrace normalization in
+  `test/support/behaviour_equivalence.ex` — row 33.
+- [ ] **T3.5 [C] `behaviour_equivalence.ex:312` `compile_module!/2` renames
+  only the `defmodule` header** — any struct-defining example is untestable
+  (row 225's blocker, and it silently biased H4's scope estimate: "H4's scope
+  estimate is measuring this bug, not a real limit"). Fix before T5.5.
+- [ ] **T3.6 [C] Smaller ledger FIX-CREDENCE rows** (each is one rule, evidence
+  at the cited ledger row): `FixLocalFunctionInGuard` (rows 115/145/192/196 —
+  one also touches `NoHallucinatedGuardFn`); `NoMapKeysOrValuesForIteration`
+  (row 54, line ~374); `Syntax.NoFnAsVariable` (row 164);
+  `NoHallucinatedDefpstruct` + `UndefinedFunction` interaction (row 183);
+  `UndefinedFunction` decline guard (ledger:296); `RuleHelpers.log_diff/3`
+  renders a fabricated diff (ledger:846, `lib/rule_helpers.ex:938`). Also the
+  4.6d deferred salvage rows (`Agent`, `NaiveDateTime`, `List.keystore`,
+  `exit/2`) — sound but blocked on call-boundary anchoring; `exit/2` also
+  needs an arity check `replace_call_on_line/4` doesn't do.
+
+### Tier 4 — harness correctness (make the loop trustworthy for weak models)
+
+- [ ] **T4.1 [H] Implement the STATUS.md interlock — it is documented but does
+  not exist.** `STATUS.md` and docs/21 describe `mix cev.preflight` refusing
+  to run while the mode file says CATCHING UP; **no code in the harness reads
+  STATUS.md at all** (grep-verified; both docs corrected this session to say
+  so). Add a static check in `Cev.Preflight` reading the *accepting* repo's
+  `STATUS.md` (path decision needed — not the sister clone's copy), failing
+  while `MODE: CATCHING UP`. Until then the interlock is prose.
+- [ ] **T4.2 [H] BUGFIX-lane evidence gates** (the single biggest weak-model
+  lever after T1; ledger clusters H-A/H-B): (a) reject `:bugfix_rule` when
+  `before == after`; (b) treat an all-`=` section body as blank
+  (`parser.ex:121-122` passes `"==="` through — burned an 80-turn session);
+  (c) require the classifier to quote the verbatim offending line from the
+  `credence_fix` trace; (d) **validate the repro against the accused rule
+  mechanically** — derive the accusation from `source CHANGED` trace lines,
+  preserve the workspace file as fixture, and "if the reduced repro does not
+  make the accused rule fire, fail the row" (rows 40/50/59: three live
+  over-fires the harness talked itself out of); (e) **premise-verification** —
+  compile the classifier's BEFORE and require the claimed diagnostic to appear
+  (~one compile; would have killed rows 150/162/221 ≈ $100 of implementer
+  budget in nine reviewed rows alone).
+- [ ] **T4.3 [H] LD1 residuals** (the closed-set story after H12): name
+  normalisation in `parser.ex:78-83` (`<phase>/<snake>` →
+  `Credence.<Phase>.<CamelCase>`, resolve by basename on wrong phase — row
+  95); prompt/gate reconciliation — the prompt solicits under-fire reports the
+  validator must reject (`prompt.ex:110-115,221-222` vs `classify.ex:115`);
+  either add a `RULE_UNDER_FIRED` decision or stop soliciting (19 rows named
+  real rules that genuinely did not fire — "The gate was right; the prompt was
+  wrong"); `applied_rules.ex:16` requires the closing `]` (mid-list truncation
+  discards the whole line); fix-script `exit != 0` as a distinct escalatable
+  signal (row 54); **the distilled log the classifier reads is still
+  8096-byte-truncated** — add `:truncate` config or read from sidecars
+  (H12 rescued the closed set, not the evidence), and `extract_diagnostic/1`
+  (`router.ex:407-414`) should read the sidecar, not the truncated log, and
+  hand over *all* unmatched diagnostics, not the last one.
+- [ ] **T4.4 [H] Seed teaching gaps — six, each a gate the model currently
+  learns about only by failing** (grep-verified against
+  `lib/cev/implement/seed.ex`): (1) C2.2 operation→dimension mapping (the
+  seed names "a Credence.EquivalenceInputs dimension" generically; a
+  Map-rewriting rule picking `term_lists` fails the meta-gate with no prior
+  warning); (2) C13 budget existence (over-fires are drops, not accepts);
+  (3) C8 one-diagnostic-one-owner + the decline-guard idiom
+  (`should_report?/2` rather than claim-then-no-op); (4) the leaf-token /
+  sentinel-guard anti-patterns (ledger:73 prescribes the exact prompt line;
+  three of four Phase-5 over-fires were context-free leaf matches); (5) a
+  worked filled-rule exemplar (H8's seed half — the seed currently teaches
+  only by prohibition); (6) first-match-wins dispatch semantics (an
+  over-broad `match?/1` starves every other rule).
+- [ ] **T4.5 [H] H9 implementer half — environmental kills booked as merit
+  failures:** zero-write null runs (row 6: 25 read-only steps, scaffold
+  placeholders untouched, booked `cc_tests_red`), 429 quota kills (row 55),
+  provider refusals (row 169 — key on the refusal string). Files:
+  `implement.ex:55-71,82-89`, `router.ex:260-266`, `claude_code.ex` step
+  accounting. Also `implement.ex:65` reports only `String.slice(failures, 0,
+  400)` with no exit code and no leg attribution — the rows-100/119 mechanism.
+- [ ] **T4.6 [H] H5 — Gate contract tests + wall-clock timeouts.**
+  `gate.ex:461-473` and `implement.ex:248-253` run `mix test` with **no
+  timeout**; one hung suite hangs the run. Contract tests for the five reject
+  paths + mutation snapshot/restore + scratch sweep, each with a fixture
+  bad-rule seen red.
+- [ ] **T4.7 [H] H19 — flake-aware Gate.** H9's retry covers only
+  `:did_not_run`; a genuinely *red* flake still hard-rejects with no re-run.
+  Re-run failing files once; non-reproducing + outside the staged diff →
+  `flaky.jsonl` + proceed; plus a pre-commit stability re-run of the
+  candidate's focused tests.
+- [ ] **T4.8 [H] H6 — bounded auto-retry on corpus rejects** (one repair round
+  re-seeding the implementer with the corpus findings; auto-repin scoped
+  `gone` lines of the rule under bugfix). **T2.1 lands first** — its scoped
+  scan is what makes the retry cheap.
+- [ ] **T4.9 [H] H1 — gold over-fire ratchet** (docs/14-corrected form: 76/304
+  golds carry findings, so diff against an accepted-gold-findings snapshot,
+  never zero-assert; per-row post-sanity + per-candidate at the Gate; 1.1 s
+  full-gold scan measured). **H2 — executable fix-safety oracle** (gold +
+  passing solve, single-rule fix, re-run the subject's own harness; 0.6
+  s/subject standalone). H2 needs H10's solve archive.
+- [ ] **T4.10 [H] H4 (scoped per E5), H7 (span-overlap rescue per E8), H3
+  (equiv reach: multi-var, `--dim` inference, module-mode; `extract/1`
+  `:error` must log `:skipped`, not silently bypass), H10 (birth certificates
+  + "record what actually executed"), H11 (`mix cev.report` + difficulty
+  join), H16 (solve-prompt deps one-liner, `solve.ex:38`), H17 (spine unit
+  tests: validator ordering, novelty, distill, seed, git commit flow), H18
+  (spec-entailment judge). Specs in `IMPROVEMENTS.md` with docs/14
+  corrections; sequence per docs/16 Phase 8 tiers (8.2→8.6).
+
+### Tier 5 — the standard's remaining teeth (credence quality program)
+
+- [ ] **T5.1 [C] C14 sweep — the 40 ledgered rules.** 17 family-attributed
+  first (the paydown order in `dsl_static_scan_test.exs:86-104`), then the 23
+  unattributed. Each: read the rule, declare `unsafe_in_dsl/0` or earn
+  `@verified_dsl_safe` with a written reason; ledger shrinks; delete the sweep
+  tooling when empty (docs/19 §3).
+- [ ] **T5.2 [C] C13(b) paydown.** Ranked order is the budget file itself:
+  `prefer_heredoc_for_multi_line_doc` (1,298 = 20%) first — narrow, demote
+  behind an opt-in, or retire; `prefer_erlang_float` taste-review (37 gold
+  findings); run `corpus_whitelist_validator` on a cadence.
+- [ ] **T5.3 [C] C15 rule-card template + intent line** — one-sentence intent
+  first (feeds the dedup index that T2.2's H8 consumes), Bad/Good, safety
+  argument; enforce via meta-test; backfill mechanically. Directly improves
+  the classifier's dedup signal.
+- [ ] **T5.4 [C] C12 alpha-rename generality** (docs/12:297-314) + retire/
+  generalize the three named over-fit rules. Rule Standard item 7.
+- [ ] **T5.5 [C] C2.3 seeded StreamData layer** (after T3.4/T3.5 so the
+  battery and module-compile plumbing are sound).
+- [ ] **T5.6 [C] C6 second half — sandboxed compiles with timeout.**
+  `compile_and_capture/1` still compiles in-process, no Task, no timeout; a
+  pathological fixture hangs the suite (and the harness Gate with it, T4.6's
+  sibling). Supervised `Task` + configurable timeout + document the residual
+  trust model.
+- [ ] **T5.7 [C] C9 hot-path** (parse-once per pass, memoized discovery),
+  **C10 observability** (Issue `column`, per-rule patch ranges, telemetry —
+  note the trace vocabulary has since grown: `:reverted | :patch_rejected |
+  :crashed` and docs/19 row D records nothing downstream consumes them; C10
+  is that consumer), **C11 duplicate folds** (grapheme/count clusters + the
+  drain watch-list pairs), **C16 remaining bullets** (docs/01 has its
+  historical banner now; config surface `max_passes`/compile-timeout/fixpoint
+  passes once C6/C7 land; `rule_status/1` exposing `priority` +
+  `unsafe_in_dsl`).
+- [ ] **T5.8 [C] Rewrite docs/17's ranked build list** — 0 of 12 cluster
+  narratives survived adversarial refutation; the honest net product of the
+  143 is "~6 rules to build, 2 lines to widen" (docs/18 §5). Rebuild specs
+  live in the JSON's `action` fields (17 rebuild-later + the amended
+  catalogue entries). Produce the short, verified list; the 56 banked
+  observations stay banked.
+
+### Tier 6 — Phase 9: the next run (runbook, ledger-corrected)
+
+Do not start unattended. Prerequisites in order:
+
+1. T0.1/T0.2 (push + PR merged) → reset sister `evolution` onto the new
+   `main`. **Until that reset, none of the new credence gates bind the Gate**
+   — the Gate runs the *clone's* suite, and the sister tree today contains
+   none of the three new meta-gate files (verified).
+2. **Archive `var/run/logs` first** — `cev.reset` deletes them
+   (`cp -r var/run/logs var/archive/run-2026-07-06/`).
+3. Repoint the clone: `CEV_CREDENCE_CLONE=/home/kamil/projects/credence_evolution`
+   (config.exs:168's commented example is a stale path from another machine;
+   the *default* `../credence` points at the accepting repo — wrong for runs).
+4. Land minimum in-loop gates first: T1 (harness half), T4.2, T4.3; strongly
+   recommended T2.1–T2.3.
+5. **Re-queue list (ledger:940-971 supersedes docs/16:772-775):** diverged — 8
+   now (1+18 merged, 7, 106, 107, 162, 164, 205), 3 more after T3.4 lands
+   (31, 185, 33), 2 DROP (12 superseded; **105 stays out — it is the probe's
+   positive control**); four of the re-queues collapse to one-line
+   `undefined_function.ex` table rows. Escalated — 2, 6 (after T4.5), 100 &
+   119 (after T4.5's failure-tail fix), 134 (already fixed, `958f241`), 144,
+   169 (after refusal triage), 225 (after T3.5), 95 (after T4.2); row 199 is
+   the run's one ACCEPT with a named one-predicate narrowing to apply by
+   hand. Classifier-error rows 1/23/125/138/139/141/203/227 unblock after
+   T3.2. Plus the 105 remaining pass-5 rows (exact: 230 tasks − 125 distinct
+   completed).
+6. Infra: the 26-row transient tail (11 classifier timeouts, 7 `:closed`, 5
+   HTTP 429, 3 implementer kills) — raise Mimo quota or add backoff headroom.
+7. `mix cev.preflight` green (with T4.1 landed, it also enforces the mode
+   file); flip `STATUS.md` to PRODUCING deliberately.
+
+---
+
+## Part III — State of record (what is done, verified)
+
+Landed and verified this cycle (gate files + positive controls checked by the
+research pass; suite green 8,275 + 6 properties corpus-free AND 1,501 corpus
+tests at HEAD `958f241`; zero compile warnings):
+
+| Item | Commit | Gate/evidence |
+|---|---|---|
+| C1 + E9 + stdlib sentinel | `69aa2ec` | battery probe seen red pre-fix |
+| C2.1 (4 dimensions) | `5dc7cca` | `equivalence_inputs_test.exs` traps demonstrated |
+| C2.2 dimension gate | `3ef1b87` | flagged 2 live rules incl. 1 shipped bug, fixed same commit |
+| C3 syntax round guards | `636468d` | `syntax_round_safety_test.exs` red-driving cases |
+| C4 semantic pass-revert | `f98c88d` | culprit attribution asserted exactly |
+| C5 patch-rejected trace | `7fc6cc0` | 2 broken fixture rules committed red |
+| C6 crash isolation (half) | `9d70bab` | 2-of-4 red with isolation removed |
+| C8 ordering policy | `c338c67` | docs/20 (gap recorded: no ordering test — T1.2) |
+| C13 findings budget | `19f9631` | GREEN-0 + 5 perturbations, exact-invariant attribution |
+| C14 DSL static scan | `8b5280e` | GREEN-0 + 4 perturbations; 5 false positives hand-removed |
+| C17 standard + STATUS | `b6c3134` | docs/19; reqs 1–5 + 8 gated |
+| P1+P2 corpus speed | `1e6e8c6` | A/B verdict parity, honest recalibration |
+| P3 scoped scans (+P4-substitute) | `6bd2b05` | 11.6 s vs 234 s; scope-keyed cache poisoning tests |
+| Phase-5 defect trio | `958f241` | 134 was an emitter bug not a rule bug; 90/65 six shapes; 69 declined |
+| H12 sidecar | `60ce2c4` (pushed) | — |
+| H13 + P5 | `96865e7` (pushed) | — |
+| H14 push breaker | `6f776fe` (unpushed) | — |
+| H15 dead-code sweep | `9cffbba` (unpushed) | — |
+| H9 (Gate half) + LD2 backstop | `fb3bc2a` (unpushed) | 15 gate tests; row-105 guard explicit |
+
+Deliberately **not** done, with reasons on record: P4-as-specced on-disk AST
+cache (mooted at 11.6 s scoped scans); P6 (docs/13's own "only if P1–P4 leave a
+bottleneck"); K-consecutive-NO_ACTION skip (declined in H8's design — a
+sampling-noise NO_ACTION must not become a permanent blind spot); hard-gate
+verdict suppression (both H8 and LD4 are advisory *on purpose* — a hard gate
+converts a later real regression into an unreportable one); retrofitting
+priorities onto 275 rules (docs/20 — an unexamined guess is not better than an
+unexamined default).

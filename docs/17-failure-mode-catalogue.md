@@ -432,6 +432,14 @@ Three failure modes recur across dozens of rules and matter more than any indivi
 
 ## What is worth building
 
+> **⛔ SUPERSEDED as a work list (2026-07-28).** Per the header warning, this
+> ranking did not survive adversarial review (0 of 12 cluster narratives did),
+> and rewriting it is itself a tracked task — `docs/22-remaining-work.md`
+> **T5.8**. The honest net product of the 143 is ~6 rules to build and 2 lines
+> to widen (docs/18 §5); the verified rebuild specs live in
+> `docs/18-per-rule-verdicts.json`'s `action` fields. The per-mode executed
+> evidence below remains sound; use it as evidence, not as an order of work.
+
 Ranked by consequence severity — how bad the failure is and how invisible — not by how many rules were written about it. Phase in brackets.
 
 1. **`Map.*` applied to an `Enum.*`/`Stream.*` result** *[pattern/AST]*. From `no_enum_sort_then_map_values`. Zero diagnostics (verified `[]`), unconditional `BadMapError` on every input. Cheap, precise AST check; generalises across `values/1`, `keys/1`, `get/2`, `fetch/2`, `put/3`. Extend to `Map.get/2,3` on a keyword-list parameter (`Map.get([], :k)` raises even on the empty default).

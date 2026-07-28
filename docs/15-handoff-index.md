@@ -31,6 +31,7 @@ here; nothing of substance lives outside these files.
 | 15 | [`STATUS.md`](../STATUS.md) | The mode file — PRODUCING or CATCHING UP. Answers "can rules be generated right now?" as a fact rather than a judgement call |
 | 16 | [`docs/20-rule-ordering-policy.md`](20-rule-ordering-policy.md) | **Rule ordering policy** (C8) — 15 of 290 rules declare a priority; the other 275 are ordered alphabetically by accident, and in the Semantic round that decides which rule runs at all |
 | 17 | [`docs/21-in-flight.md`](21-in-flight.md) | **In-flight ledger** — what is started but not committed, per docs/16 Appendix B. Written after an 8-agent batch was lost to an OOM crash with nothing about it recorded in the repo; also holds the salvage index for that batch |
+| 17b | [`docs/22-remaining-work.md`](22-remaining-work.md) | **THE SINGLE TRACKER of all open work, both repos — start here for "what's next".** Also holds the deep evaluation: why 55% of harness-accepted rules died at review (gate-gap tally: 60% never ran in the real pipeline), what that prescribes for weak-model rule generation, and the ledger-corrected Phase 9 runbook |
 | 18 | [`test/corpus/accepted_findings_budget.txt`](../test/corpus/accepted_findings_budget.txt) | **The per-rule corpus-findings budget** (C13) — 6,366 accepted findings across 87 rules, 74% of them in 15. Gated by `test/corpus/findings_budget_test.exs`, no corpus needed; the file's own order is the paydown ranking |
 | 19 | This file | Map + actionable state |
 
