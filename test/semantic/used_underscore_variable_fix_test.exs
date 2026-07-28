@@ -319,4 +319,83 @@ defmodule Credence.Semantic.UsedUnderscoreVariableFixTest do
       assert valid_syntax?(UsedUnderscoreVariable.fix(source, diag("_target_n", 2)))
     end
   end
+
+  # ── T3.12: the stripped name must still BE a variable ──────────────────
+  #
+  # Found by the T2.5 idempotency sweep, which ran `Credence.fix/1` twice over
+  # all 5,184 fix-test fixtures: `__MODULE` walked one underscore per pass to
+  # `_MODULE` and then to `MODULE`. `MODULE` is an alias, so `MODULE = :mod`
+  # compiles clean and raises MatchError at RUNTIME — the "output compiles but
+  # means something else" class, the worst shape a fix can have.
+  describe "names that would stop being variables" do
+    test "declines when stripping would produce an alias" do
+      source = """
+      defmodule M do
+        def ok do
+          _MODULE = :mod
+          IO.inspect(_MODULE)
+        end
+      end
+      """
+
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_MODULE", 3)), source)
+    end
+
+    test "strips every leading underscore in one pass, not one per pass" do
+      source = """
+      defmodule M do
+        def ok do
+          __foo = :mod
+          IO.inspect(__foo)
+        end
+      end
+      """
+
+      fixed = UsedUnderscoreVariable.fix(source, diag("__foo", 3))
+
+      assert fixed =~ "foo = :mod"
+      refute fixed =~ "_foo"
+      # Idempotent: the whole point. One pass reaches the fixpoint.
+      confirm_fix(UsedUnderscoreVariable.fix(fixed, diag("foo", 3)), fixed)
+    end
+
+    test "declines a double-underscored alias rather than walking toward one" do
+      source = """
+      defmodule M do
+        def ok do
+          __MODULE = :mod
+          IO.inspect(__MODULE)
+        end
+      end
+      """
+
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("__MODULE", 3)), source)
+    end
+
+    test "declines a bare underscore rather than splicing an empty name" do
+      source = """
+      defmodule M do
+        def ok do
+          _ = :mod
+          IO.inspect(_)
+        end
+      end
+      """
+
+      confirm_fix(UsedUnderscoreVariable.fix(source, diag("_", 3)), source)
+    end
+
+    test "GREEN-0: the ordinary single-underscore rename still works" do
+      source = """
+      defmodule M do
+        defp build(_target_n, index) when index > _target_n, do: index
+      end
+      """
+
+      fixed = UsedUnderscoreVariable.fix(source, diag("_target_n", 2))
+
+      assert fixed =~ "target_n"
+      refute fixed =~ "_target_n"
+    end
+  end
 end

@@ -42,12 +42,43 @@ defmodule Credence.Semantic.UsedUnderscoreVariable do
     line_no = extract_line(position)
     var_name = extract_variable_name(msg)
 
-    if line_no && var_name && String.starts_with?(var_name, "_") do
-      stripped = String.slice(var_name, 1..-1//1)
+    with true <- is_integer(line_no),
+         true <- is_binary(var_name),
+         {:ok, stripped} <- rename(var_name) do
       replace_in_clause(source, line_no - 1, var_name, stripped)
     else
-      source
+      _ -> source
     end
+  end
+
+  # The new name is the old one with **every** leading underscore removed, and
+  # it must still be a variable. Both halves were missing, and each was a live
+  # defect found by the T2.5 idempotency sweep:
+  #
+  #   `_MODULE` -> `MODULE`   an ALIAS, not a variable. `MODULE = :mod` compiles
+  #                           clean and raises MatchError at *runtime* — the
+  #                           "output compiles but means something else" class
+  #                           (docs/22 §3), the worst shape a fix can have.
+  #   `__foo`   -> `_foo`     still underscore-prefixed, so the rule fires again
+  #                           on the next pass, and again: `__MODULE` walked to
+  #                           `_MODULE` and then to `MODULE` one underscore per
+  #                           pass. That is how the alias case was reached.
+  #   `_`       -> `""`       an empty name spliced over every `_` in the clause.
+  #
+  # Declining is always safe here: the diagnostic is a warning about a naming
+  # convention, so leaving the source alone costs a lint message, while renaming
+  # to a non-variable costs the program.
+  @variable ~r/^[a-z][A-Za-z0-9_]*$/
+
+  defp rename(var_name) do
+    stripped =
+      String.replace_prefix(var_name, String.duplicate("_", leading_underscores(var_name)), "")
+
+    if Regex.match?(@variable, stripped), do: {:ok, stripped}, else: :error
+  end
+
+  defp leading_underscores(name) do
+    name |> String.graphemes() |> Enum.take_while(&(&1 == "_")) |> length()
   end
 
   defp extract_line({line, _col}) when is_integer(line), do: line

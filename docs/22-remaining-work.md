@@ -455,14 +455,50 @@ its own tests run under real `mix test`.
   discard), placement, and **re-run the 39-rule sample on a quiet box** —
   the salvaged kill rates came from a 20-parallel run while the box was
   OOMing; do not publish them.
-- [ ] **T2.5 [C] C7 idempotency gate** — ~15% done in `b2-c7/`. Keep
-  `fixtures.bin` (5,144 unique fix-test fixtures, 292 files) + the sweep
-  methodology; the sweep itself died at ~750/5,144 with no results. Re-run
-  (~5–6 min: 62.2 ms/fixture measured), then decide assert-vs-pinned-snapshot
-  from the violation count, then the E7-revised second half: one Semantic
-  re-pass after Pattern changes (full fixpoint loop stays deprioritized,
-  ~1.5% incidence). Re-extract fixtures first — the bin snapshots Jul 28
-  10:27 and rules have landed since.
+- [ ] **T2.5 [C] C7 idempotency gate — THE SWEEP IS DONE; the gate is not.**
+  The measurement the salvage died before producing (it stopped at ~750/5,144)
+  now exists, re-extracted and re-run twice:
+
+  | | |
+  |---|---|
+  | fixtures swept (unique, 290 files) | **5,188** |
+  | `fix/1` raised | **0** |
+  | changed by pass 1 | **2,158** |
+  | **non-idempotent** | **29** (1.3% of changed) |
+
+  That corroborates docs/14 E7's ~1.5% estimate from an independent direction.
+  It was 31 before T3.12 below, which the sweep found.
+
+  **The decision this item asked for: a pinned ledger, not an assertion.** Most
+  of the 29 are *cascades by design* — 13 are a Pattern fix leaving a variable
+  the Semantic round then reports as unused, which is E7's "one Semantic re-pass
+  after Pattern changes" happening exactly as intended. A flat "fix/1 must be
+  idempotent" assertion would be red for correct behaviour and would teach
+  people to disable it. The C13/C14 ratchet shape fits: freeze the 29, gate the
+  delta, and require a new entry to be argued for.
+
+  Remaining: build that gate (the ledger + the delta check + controls), and the
+  E7-revised second half. The sweep is ~10 min, which is too slow for the
+  default suite — it wants a tag, or a rule-scoped variant.
+- [x] ~~**T3.12 [C] `UsedUnderscoreVariable` renames variables into aliases.**~~
+  **DONE `PENDING`** — found by the T2.5 sweep, which is the argument for having
+  run it. `fix/1` stripped exactly **one** leading underscore with no check that
+  the result was still a variable, so:
+
+      __MODULE  -> _MODULE  -> MODULE      (one underscore per pass)
+
+  and `MODULE` is an **alias**. `MODULE = :mod` compiles clean and raises
+  `MatchError` at *runtime* — docs/22 §3's "output compiles clean and returns a
+  different answer", the worst shape a fix can have, and invisible to every gate
+  that checks parseability or compilation. Two more shapes fell out of the same
+  missing check: `__foo` → `_foo` re-fired forever (the walk that reached the
+  alias), and `_` → `""` spliced an empty name over every `_` in the clause.
+
+  Now strips *every* leading underscore and declines unless the result matches
+  `^[a-z][A-Za-z0-9_]*$`. Declining is always safe here — the diagnostic is a
+  naming-convention warning, so leaving it costs a lint message while renaming
+  to a non-variable costs the program. Controls: all four shapes pinned, plus
+  GREEN-0 on the ordinary rename.
 
 ### Tier 3 — live defects on the branch (the ledger's FIX-CREDENCE rows)
 
