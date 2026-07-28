@@ -435,8 +435,9 @@ were pushed in the same session that wrote the label.
 `4884365`. Third crash in a row that cost nothing, same reason each time.
 
 Landed: **`1ddbfe6`** — a heap ceiling and a deadline on
-`RuleHelpers.compile_and_capture/1`. Suite **9,917 tests + 6 properties, 0
-failures**.
+`RuleHelpers.compile_and_capture/1`; **`5ca8e12`** — these records; **`aea4f7c`**
+— T1.2, the dispatch-simulation gate; **`6463c54`** — a commit-id correction.
+Suite **9,925 tests + 6 properties, 0 failures**. Nothing in flight.
 
 ### The cause was never agent concurrency
 
@@ -531,3 +532,36 @@ itself, and leaves the editor alone. Seven crashes were spent on a bug that was
 one bounded reproduction away. `MemorySwapMax=0` matters as much as the ceiling:
 the swap thrash on the way up is what made the desktop unusable before the kill
 even landed.
+
+### T1.2 landed in the same session, because the OOM fix unblocked it
+
+The two are one story. T1.2 was unreachable *because* its probe killed the box,
+and the probe killed the box because of the defect T1.2's own subject matter
+led to. Fixing the compile bound made the item a 15-second test.
+
+**Its finding: every contended dispatch pair was ordered correctly, and none of
+it was chosen.** Fifteen-odd specific rules beat the `UndefinedFunction`
+catch-all only because their module names sort before `U`. The outcome was
+right everywhere, which is precisely why nothing had ever gone red. Rename one
+rule past `U` and the catch-all takes the slot — in Semantic that is not a
+delay but a replacement, turning a structural repair into a renamed call with
+the suite still green.
+
+**The repair was two priorities, not fifteen.** *The general rule yields to the
+specific one* is one claim, so it belongs on the general rule: `UndefinedFunction`
+and `NoUnreachableCaseClauseByType` declare 501. Writing it fifteen times would
+have been fifteen things to keep in sync, each individually true and collectively
+unmaintainable. Worth carrying: when a gate reports N offences, check whether it
+is one relationship seen N times before paying it down N times.
+
+**And the vacuity lesson was applied at construction this time.** T3.10a learned
+that a ledger paid to empty disarms its gate. So `DispatchContention` takes its
+rule list as an argument and the controls run it against fabricated rules, with
+population floors on both inputs — the gate is provable without any real
+contention existing. That is the same check that had to be retrofitted last
+session, written first this time.
+
+**One process note.** The T1.2 commit id was substituted into docs/22 and then
+`--amend`ed, so the tracker named an object that resolves out of the reflog but
+is not in the branch. Corrected in `6463c54`. A commit cannot state its own id;
+anything that writes one must come *after* the commit it names.
