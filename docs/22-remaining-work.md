@@ -70,7 +70,7 @@ untouched.
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · `3cdbe14` |
 | ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · `6d72130` |
 | ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | `8b870b5` |
-| ✅ | **T3.11 — `compile_and_capture/1` executes what it analyses, unbounded** — the seven OOM kills of 2026-07-28, diagnosed and fixed | `1ddbfe6` |
+| ✅ | **T3.11 / T5.6 — `compile_and_capture/1` executes what it analyses, unbounded** — the seven OOM kills of 2026-07-28, diagnosed and fixed; also closes C6's second half | `1ddbfe6` |
 | ✅ | **T1.2 — the dispatch-simulation gate** — every contended pair was ordered correctly *by accident*; two priorities now say so | `aea4f7c` |
 | ✅ | **T2.1 [H] — Gate corpus dispatch**, plus the anchors probe that had never been run | `11a3d0e` |
 | ✅ | **T2.2 [H] — H8 verdict memory + rejected-mechanism exemplars**, all six controls re-run red | `be31904` |
@@ -1082,11 +1082,30 @@ its own tests run under real `mix test`.
   generalize the three named over-fit rules. Rule Standard item 7.
 - [ ] **T5.5 [C] C2.3 seeded StreamData layer** (after T3.4/T3.5 so the
   battery and module-compile plumbing are sound).
-- [ ] **T5.6 [C] C6 second half — sandboxed compiles with timeout.**
-  `compile_and_capture/1` still compiles in-process, no Task, no timeout; a
-  pathological fixture hangs the suite (and the harness Gate with it, T4.6's
-  sibling). Supervised `Task` + configurable timeout + document the residual
-  trust model.
+- [x] ~~**T5.6 [C] C6 second half — sandboxed compiles with timeout.**~~ **DONE
+  `1ddbfe6`** — landed as T3.11 before anyone noticed it was already this item.
+  Worth recording as a hit for the item's own reasoning: it predicted "a
+  pathological fixture hangs the suite", and a pathological fixture is exactly
+  what took the box down seven times on 2026-07-28.
+
+  Delivered as specified, with two deliberate departures:
+
+  * **`spawn_monitor`, not a supervised `Task`.** A `Task` links, so a child
+    killed by the heap ceiling propagates the exit to the caller — which is the
+    behaviour being prevented. `Task.Supervisor.async_nolink` would work but
+    buys a supervision tree for a process with no restart semantics: the answer
+    to a runaway compile is never to run it again.
+  * **A heap ceiling as well as the timeout.** The item asked only for a
+    timeout, and a timeout alone would not have helped: the fixture that killed
+    the box reaches 62 GB in under six minutes, so any deadline loose enough to
+    permit a slow legitimate compile is far too loose to stop it. Memory was the
+    binding constraint, not time.
+
+  Residual trust model documented on `compile_and_capture/1`: `System.halt/0` in
+  analysed source still stops the VM and nothing in-process can prevent it. The
+  honest statement is that credence executes what it analyses, and now fails
+  loudly instead of fatally. T4.6 (the harness sibling — `mix test` with no
+  timeout in the Gate) is still open.
 - [ ] **T5.7 [C] C9 hot-path** (parse-once per pass, memoized discovery),
   **C10 observability** (Issue `column`, per-rule patch ranges, telemetry —
   note the trace vocabulary has since grown: `:reverted | :patch_rejected |
