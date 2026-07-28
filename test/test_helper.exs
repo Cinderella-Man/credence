@@ -30,4 +30,10 @@ Logger.configure(level: :info)
 # canonical fixtures. Idempotent; a no-op once everything is canonical.
 Credence.FixtureHealer.heal_dirs()
 
-ExUnit.start(formatters: [Credence.QuietFormatter])
+# The `:idempotency` layer (test/idempotency_test.exs) sweeps `Credence.fix/1`
+# twice over all ~5,200 fix-test fixtures — ~8.5 minutes, which would nearly
+# triple the suite. Its fast half (the stale-ledger check) runs by default; only
+# the full no-new-entries sweep carries the tag. Run it deliberately with:
+#
+#     MIX_ENV=test mix test --only idempotency
+ExUnit.start(formatters: [Credence.QuietFormatter], exclude: [:idempotency])

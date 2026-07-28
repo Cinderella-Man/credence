@@ -505,9 +505,30 @@ its own tests run under real `mix test`.
   people to disable it. The C13/C14 ratchet shape fits: freeze the 29, gate the
   delta, and require a new entry to be argued for.
 
-  Remaining: build that gate (the ledger + the delta check + controls), and the
-  E7-revised second half. The sweep is ~10 min, which is too slow for the
-  default suite — it wants a tag, or a rule-scoped variant.
+  **DONE `PENDING` — the gate is built.** `test/idempotency_test.exs` +
+  `test/support/idempotency.ex`, in two halves:
+
+  * **always on, 4 s** — the 29 ledgered fixtures must still be non-idempotent.
+    Pay one down and this goes red until the row is deleted, so the ledger cannot
+    rot into permission for a regression.
+  * **tagged `:idempotency`, ~8.5 min, excluded by default** — no fixture
+    *outside* the ledger may be non-idempotent. `MIX_ENV=test mix test --only
+    idempotency`.
+
+  Plus machinery controls that hold whether or not the ledger is empty (the
+  T3.10a lesson applied at construction) and a population floor on extraction.
+
+  **The gate immediately disagreed with the sweep that seeded it, and the gate
+  was right.** It flagged a 30th fixture — and run *alone*, that fixture is a
+  fixpoint. The difference is the **host VM**: `fix/1` compiles what it analyses,
+  and a Semantic rule keying on "module is not available" stops firing once an
+  earlier fixture has defined that module. So the original sweep's 29 was partly
+  a record of the order fixtures happened to run in.
+
+  Fixed in the detector rather than absorbed into the ledger: every module the
+  source defines is purged before each pass, so the answer depends only on the
+  bytes. With that, the full sweep agrees with the ledger exactly — 0 failures.
+  **A fixpoint measurement taken in a warm VM is measuring the VM.**
 - [x] ~~**T3.12 [C] `UsedUnderscoreVariable` renames variables into aliases.**~~
   **DONE `7f3804a`** — found by the T2.5 sweep, which is the argument for having
   run it. `fix/1` stripped exactly **one** leading underscore with no check that
