@@ -505,7 +505,7 @@ its own tests run under real `mix test`.
   people to disable it. The C13/C14 ratchet shape fits: freeze the 29, gate the
   delta, and require a new entry to be argued for.
 
-  **DONE `PENDING` — the gate is built.** `test/idempotency_test.exs` +
+  **DONE `8f400fd` — the gate is built.** `test/idempotency_test.exs` +
   `test/support/idempotency.ex`, in two halves:
 
   * **always on, 4 s** — the 29 ledgered fixtures must still be non-idempotent.
