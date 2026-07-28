@@ -1,5 +1,5 @@
 defmodule Credence.PatchRejectedTraceTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Credence.{Issue, RuleHelpers}
 
@@ -108,6 +108,14 @@ defmodule Credence.PatchRejectedTraceTest do
   end
   """
 
+  # `async: false` on purpose. Run concurrently, these fixture-rule tests are
+  # order-sensitive: at seed 484776 the whole trace came back `[]`, so the
+  # failure read as "the feature does not work" when in fact the rules had not
+  # run. Some other module's global `Application.put_env(:credence, ...)` is the
+  # likely culprit — `assumptions_filtering_test` sets `:strict` — but I did not
+  # prove which, so this comment claims only the observation. Serialising the
+  # module makes it green on that seed and costs ~0.1s.
+
   describe "apply_rule_fix_with_status/3" do
     test "reports :patch_rejected when the patched output does not parse" do
       assert {:patch_rejected, unchanged} =
@@ -164,7 +172,8 @@ defmodule Credence.PatchRejectedTraceTest do
     end
 
     test "a rule with nothing to do records nothing" do
-      {code, applied} = Credence.Pattern.fix_with_trace(@plain, rules: [CleanFixRule])
+      {code, applied} =
+        Credence.Pattern.fix_with_trace(@plain, rules: [CleanFixRule])
 
       assert code =~ "y = 2"
       assert applied == [{CleanFixRule, 1}]

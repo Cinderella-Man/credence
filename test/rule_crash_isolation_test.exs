@@ -1,5 +1,5 @@
 defmodule Credence.RuleCrashIsolationTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import ExUnit.CaptureLog
 
@@ -91,11 +91,23 @@ defmodule Credence.RuleCrashIsolationTest do
   end
   """
 
+  # `async: false` on purpose. Run concurrently, these fixture-rule tests are
+  # order-sensitive: at seed 484776 the whole trace came back `[]`, so the
+  # failure read as "the feature does not work" when in fact the rules had not
+  # run. Some other module's global `Application.put_env(:credence, ...)` is the
+  # likely culprit — `assumptions_filtering_test` sets `:strict` — but I did not
+  # prove which, so this comment claims only the observation. Serialising the
+  # module makes it green on that seed and costs ~0.1s.
+
   describe "analyze/2" do
     test "a crashing rule costs its own findings, not the call" do
       log =
         capture_log(fn ->
-          issues = Credence.Pattern.analyze(@source, rules: [CrashingCheckRule, HealthyRule])
+          issues =
+            Credence.Pattern.analyze(@source,
+              rules: [CrashingCheckRule, HealthyRule],
+              assumptions: :default
+            )
 
           # The healthy rule's finding survives — that is the whole point.
           assert Enum.map(issues, & &1.rule) == [:healthy]
@@ -108,7 +120,12 @@ defmodule Credence.RuleCrashIsolationTest do
     test "a rule that throws a non-exception is isolated too" do
       log =
         capture_log(fn ->
-          issues = Credence.Pattern.analyze(@source, rules: [ThrowingRule, HealthyRule])
+          issues =
+            Credence.Pattern.analyze(@source,
+              rules: [ThrowingRule, HealthyRule],
+              assumptions: :default
+            )
+
           assert Enum.map(issues, & &1.rule) == [:healthy]
         end)
 
@@ -120,7 +137,10 @@ defmodule Credence.RuleCrashIsolationTest do
     test "a rule crashing in fix_patches is recorded as {rule, :crashed}" do
       capture_log(fn ->
         {code, applied} =
-          Credence.Pattern.fix_with_trace(@source, rules: [CrashingFixRule, HealthyRule])
+          Credence.Pattern.fix_with_trace(@source,
+            rules: [CrashingFixRule, HealthyRule],
+            assumptions: :default
+          )
 
         # The crash is visible in the trace, distinct from :reverted and
         # :patch_rejected, so the harness bugfix lane can consume it.
@@ -135,7 +155,10 @@ defmodule Credence.RuleCrashIsolationTest do
     test "the crash is logged at :error, not swallowed" do
       log =
         capture_log(fn ->
-          Credence.Pattern.fix_with_trace(@source, rules: [CrashingFixRule])
+          Credence.Pattern.fix_with_trace(@source,
+            rules: [CrashingFixRule],
+            assumptions: :default
+          )
         end)
 
       assert log =~ "[error]"
