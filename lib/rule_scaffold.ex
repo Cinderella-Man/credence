@@ -73,6 +73,20 @@ defmodule Credence.RuleScaffold do
         # TODO: emit patches, e.g. via Credence.RuleHelpers.patches_from_postwalk/2
         []
       end
+
+      # Rule Standard item 5 (docs/19). Declare this DELIBERATELY, even when the
+      # answer is `[]` — at runtime a considered `[]` and the inherited default are
+      # the same value, so this declaration is the only place the decision exists.
+      # List the macro-DSL families your FIX is not behaviour-preserving inside:
+      # `:ash_expr`, `:ecto_query`, `:nx_defn`, or `:all`. See the
+      # `Credence.DslGuard` moduledoc for what each family reinterprets — e.g.
+      # inside `Ash.Expr.expr/1` a `!` is not `not`, and inside an `Nx` `defn`
+      # arithmetic and `if` are element-wise tensor ops.
+      #
+      # TODO: decide, then delete this comment. `test/dsl_static_scan_test.exs`
+      # fails if you leave a construct-touching fix unclassified.
+      @impl true
+      def unsafe_in_dsl, do: []
     end
     """
   end

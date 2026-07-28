@@ -70,7 +70,7 @@ either repo.
 | **H8** verdict memory + positive exemplars | harness | 42 tests passing, writing the mutation positive controls | `b2-h8/verdicts.ex`, `classify.ex`, `prompt.ex` (35 K), `verdict_memory_test.exs`, `ctl1–ctl6/` |
 | **Gate staged-path dispatch** (Addendum 2 / 8.7) | harness | Gate integration test against a stub `mix` | `b2-gatedispatch/corpus_dispatch.ex`, `corpus_dispatch_test.exs`, `gate_corpus_dispatch_test.exs`, `gate.ex.REFERENCE_ONLY` |
 | **LD3 + LD4** test-only-diff policy + known-good list | harness | five modules written, no summary | `b2-ld34/test_only_diff.ex`, `verified_good.ex`, `row_log.ex`, `trace_evidence.ex`, `classify.ex`, `prompt.ex` |
-| **C14** DSL-safety static scan (132 unclassified rules) | credence | scanner written (30 K), calibrating against a pinned expectation | `b2-c14/dsl_static_scan.ex`, `pin.txt`, `entries.txt`, `calibrate.exs` |
+| ~~**C14** DSL-safety static scan~~ | credence | **✅ LANDED 2026-07-28** — salvaged scanner verified, corrected and gated; see below | — |
 | **P5 bugs** (3 credence defects from the ledger) | credence | mid-fix on `no_bare_names_in_spec`; found `heredoc_value/1` returns raw source bytes, which changes the fix | `b2-p5bugs/no_bare_names_in_spec.ex`, `probe90*.exs`, `probe134*.exs` |
 | **C18** semantic-mutant sweep | credence | early — had just cloned the repo (this is the agent that OOMed) | `b2-c18/mutation.ex`, `sweep.ex`, `credence.mutants.ex` |
 | **C7** idempotency gate | credence | earliest — reading docs, one fixture sweep | `b2-c7/fixtures.bin`, `sweep.exs` |
@@ -117,9 +117,47 @@ row *quoted* rather than measured:
    `equivalence_dimension_meta_test` had landed 80 minutes before docs/19 was
    written. Corrected.
 
-`STATUS.md` stays **CATCHING UP**, but for one reason now instead of three:
-requirements 4 (C2.2) and 8 (C13) are gated, and **5 (C14) is the last blocker**
-on the flip to PRODUCING.
+**C14 — landed.** The salvage here was a working scanner and a raw 155-rule
+classification, but **no gate test**, and the by-hand cross-check C14's spec
+explicitly requires had not happened. Doing that cross-check is what earned its
+keep:
+
+- The scanner reproduced its own classification exactly (155 rules; 45
+  `:possibly_unsafe`), so it was deterministic.
+- But **five of the 45 were false positives of one class**: a matcher for
+  `&fun/arity` whose capture `/` was read as division. The scan exempted only a
+  *literal integer* arity, so `&fun/arity` with the arity bound to a pattern
+  variable — the ordinary way to write it — was flagged, as was Sourceror's
+  `{:__block__, _, [1]}` arity wrapper and its meta-elided `{:&, [spec]}` pair.
+  Fixed by handling the capture node itself rather than the `/` in isolation:
+  once the enclosing `&` is out of view, `{name, meta, ctx}` is indistinguishable
+  from a divisor. **45 → 40.**
+- The 40 are frozen in the gate's `@unclassified` ledger, split by evidence
+  strength: 17 touch a construct `DslGuard` attributes to a real family, 23 are
+  flagged only on unattributed constructs. Recording that split matters — a flat
+  40 implies 40 equal risks.
+- The gate also closes the loop the audit row missed: **101 of the 141
+  "unclassified" rules cannot be affected by this class at all.** The work is 40
+  rules, not 141.
+- Positive controls: GREEN-0 plus four perturbations. The first attempt reddened
+  on the *wrong* invariant — a fabricated extra rule file made the rule count
+  mismatch, so the vacuity check fired and the gate itself was never exercised.
+  Rewritten to the realistic scenario (an existing rule's fix starts building a
+  construct), it now trips the intended invariant.
+- `mix credence.gen.rule` now emits a deliberate `unsafe_in_dsl/0`, **verified by
+  scanning the generator's own output** — a freshly scaffolded rule classifies as
+  `:declared`.
+
+### The PRODUCING bar is now met
+
+`STATUS.md` set it as requirements 4, 5 and 8 wired into the meta-gates, the
+generator and the harness seed. All three legs are in place (the harness seed
+already taught self-classification, `lib/cev/implement/seed.ex:244`).
+
+**The mode file is deliberately still `CATCHING UP`.** `mix cev.preflight` refuses
+to start a generation run while it says so, and that interlock should come out on
+purpose rather than as a side effect of the last gate landing. It is the
+maintainer's call.
 
 ---
 
@@ -129,12 +167,16 @@ on the flip to PRODUCING.
 
 **Next, in order** (one at a time, per the concurrency limit above):
 
-1. **C14** — DSL-safety static scan. Salvaged scanner in `b2-c14/`. This is the
-   last gate standing between `STATUS.md` and PRODUCING, which is why it is next.
-2. **P5 bugs** — the three credence defects from the escalation ledger. Salvage is
+1. **P5 bugs** — the three credence defects from the escalation ledger. Salvage is
    the least trustworthy of the batch: the agent had just found that
    `heredoc_value/1` returns raw source bytes, which changed its fix.
-3. **The harness trio** (H8, LD3+LD4, Gate staged-path dispatch) — all three
+2. **The harness trio** (H8, LD3+LD4, Gate staged-path dispatch) — all three
    rewrite the same classifier `prompt.ex`/`classify.ex`, so they need a merge
    decision, not three parallel integrations. Push the harness's three unpushed
    commits first.
+3. **C7** and **C18** — the two that barely started. Their salvage is scaffolding,
+   not an implementation; treat it as a head start on reading, not as code.
+
+Also open, and now unblocked by C14's gate: the **sweep over the 40 ledgered
+rules** (docs/19 §2 row B). It runs behind a ratchet now, so it can be done in
+batches without the set refilling behind it.

@@ -35,20 +35,24 @@ are enforced by a meta-test today; the rest are the catch-up work in §2.
 | 2 | **The rule actually does something** — `check` asserted in both directions; a real `fix` whose output differs from its input; the output parses | *gated* (`semantic_meta_test`, `syntax_meta_test`, `fix_meta_test`) |
 | 3 | **No parser calls in rule tests** — everything routes through `Credence.RuleCase` | *gated* (`no_parser_calls_in_rule_tests_test`) |
 | 4 | **Equivalence dimensions mapped to the rule's operation class** — a rule that rewrites `Keyword.get/2` must be tested against `keyword_lists`, not only `term_lists` | *gated* 2026-07-28 (`equivalence_dimension_meta_test`, C2.2) — §2 row A |
-| 5 | **DSL-safety classified** — `unsafe_in_dsl/0` declared deliberately, even if the answer is `[]` | **not gated** (C14) — §2 row B |
+| 5 | **DSL-safety classified** — `unsafe_in_dsl/0` declared deliberately, even if the answer is `[]` | *gated* 2026-07-28 (`dsl_static_scan_test`, C14) — §2 row B |
 | 6 | **Message and moduledoc follow the template** | **not gated** (C15) |
 | 7 | **Alpha-rename generality** — the rule fires on the construct, not on a variable name | **not gated** (C12) |
 | 8 | **Within the accepted-corpus-findings budget** | *gated* 2026-07-28 (`findings_budget_test`, C13) — §2 row C |
 | 9 | **Semantic-mutant kill rate above the floor** | **not measured** (C18) — report-only first |
 
-Items 1–3 are why the suite is 8,253 tests.
+Items 1–3 are why the suite is 8,261 tests.
 
-**Two of items 4–9 have since been gated** (4 by C2.2, 8 by C13), each with its
-positive controls seen red on purpose. That is what §3 said had to happen first:
-the gates go in before the retrofit sweep, so the sweep runs behind a ratchet
-instead of racing one. Items 5, 6, 7 and 9 are still open, and until requirement
-5 (C14) joins them `STATUS.md` stays `CATCHING UP` — the bar for `PRODUCING` is
-requirements 4, 5 and 8 wired in, and 5 is the one left.
+**Three of items 4–9 have since been gated** — 4 by C2.2, 5 by C14, 8 by C13 —
+each with its positive controls seen red on purpose. That is what §3 said had to
+happen first: the gates go in before the retrofit sweep, so the sweep runs behind
+a ratchet instead of racing one. Items 6, 7 and 9 remain open.
+
+**Those three are exactly the bar `STATUS.md` sets for `PRODUCING`**, and all
+three legs of it are now in place: the meta-gates (above), `mix credence.gen.rule`
+(which emits a deliberate `unsafe_in_dsl/0`), and the harness seed (which already
+taught new rules to self-classify — `lib/cev/implement/seed.ex:244`). Flipping the
+mode is therefore a decision about *when*, not about whether the bar is met.
 
 ---
 
@@ -78,16 +82,46 @@ equivalence suite**.
 conservative — 129 newly-red rules is not a gate, it is a wall. Expect the first
 version to flag a handful.
 
-### Row B — Pattern rules never DSL-classified: **141 of 155 (91%)**
+### Row B — Pattern rules never DSL-classified: 141 of 155, of which **40 matter**
 
-14 rules declare `unsafe_in_dsl/0`. The other 141 inherit the `[]` default,
-which means "safe inside every macro DSL" — a claim nobody made deliberately.
-The distinction that matters: a rule that has *considered* Ash/Ecto/Nx and
-concluded `[]` is compliant; a rule that never considered them is unclassified
-and looks identical.
+13 rules declare `unsafe_in_dsl/0` (a 14th hit is `lib/pattern/rule.ex`, the
+behaviour itself). The other 141 inherit the `[]` default, which means "safe
+inside every macro DSL" — a claim nobody made deliberately. The distinction that
+matters: a rule that has *considered* Ash/Ecto/Nx and concluded `[]` is
+compliant; a rule that never considered them is unclassified and looks identical.
 
-*Cost to fix:* C14's static scan, then a one-shot sweep. The sweep tool gets
-deleted afterwards (§3).
+**Measured 2026-07-28 by C14's static scan**, which is what turns 141 into an
+actionable number. Of the 155 Pattern rules:
+
+| bucket | n | meaning |
+|---|---|---|
+| `:declared` | 13 | source contains an explicit `def unsafe_in_dsl` |
+| `:verified_safe` | 35 | on `@verified_dsl_safe` with a written reason |
+| `:anchored` | 3 | every matcher clause keyed on a form no DSL expression admits |
+| `:no_construct` | 64 | the fix touches no reinterpreted construct at all |
+| **`:possibly_unsafe`** | **40** | **the real debt** |
+
+So 101 of the 141 "unclassified" rules cannot be affected by this class at all —
+they either touch no reinterpreted construct or are anchored where a DSL
+expression cannot reach. The work is 40 rules, not 141, and it stratifies again:
+**17 touch a construct `DslGuard` attributes to a named family** (Ash.Expr,
+Ecto.Query or Nx.Defn) and are the paydown order; the other 23 are flagged only
+on constructs in the union oracle that no family reinterprets, which is weaker
+evidence and is recorded as such rather than counted as equal risk.
+
+Five rules came off the first shortlist as false positives, all one class: a
+matcher for `&fun/arity` where the capture's `/` was read as division. The scan
+exempted only a literal integer arity, so `&fun/arity` with the arity bound to a
+pattern variable — the ordinary way to write it — was flagged. Worth recording
+because it is the shape a static scan gets wrong: `{name, meta, ctx}` is
+indistinguishable from a divisor once the enclosing `&` is out of view.
+
+*Cost to fix:* **the gate is landed** (`test/dsl_static_scan_test.exs`), the 40
+are frozen in its `@unclassified` ledger, and `mix credence.gen.rule` now emits a
+deliberate `unsafe_in_dsl/0` so a newly generated rule is classified by
+construction. **Requirement 5 of §1 is now gated.** The remaining work is the
+sweep over those 40, which now runs behind a ratchet instead of racing one — the
+ledger only shrinks. The sweep tool gets deleted afterwards (§3).
 
 ### Row C — corpus-findings debt: **6,366 accepted findings across 87 rules**
 

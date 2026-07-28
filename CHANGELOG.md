@@ -71,6 +71,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its gate are derived from the committed snapshot, so neither needs the corpus
   fetched and both run under `mix test --exclude corpus`.
 
+- **Scaffolded rules now declare their DSL safety.** `mix credence.gen.rule`
+  emits a deliberate `unsafe_in_dsl/0` for Pattern rules, because at runtime a
+  considered `[]` and the inherited default `[]` are the same value — only the
+  source records that anyone decided. A companion source-level gate flags any rule
+  whose *fix* builds or destructures a construct Ash.Expr / Ecto.Query / Nx.Defn
+  reinterpret without either that declaration or an allowlist entry. This
+  complements the existing fixture-driven check, which is exact for the inputs it
+  sees and blind to everything else: a rule whose fixtures never exhibit the
+  construct passed silently before.
+
 - **`Credence.SourceMask`.** Produces a same-length shadow of a source file with
   everything that is not code blanked out, so a line-based rule can tell an
   operator from prose. Deliberately a hand-rolled scanner rather than
