@@ -60,6 +60,12 @@ defmodule Credence.SelfCorruptionTest do
   Paydown is docs/22 **T3.10**, in ledger order — which is descending line
   count, because the count is a fair proxy for how little the rule knows about
   literals.
+
+  Two are paid down so far, and they needed *different* repairs — see the note
+  under `@self_corrupting`. That is the useful early lesson from this ledger: a
+  hit says the rule edited bytes that are not code, and nothing more. It does not
+  say the repair is `SourceMask`, and assuming it does will produce a masked rule
+  that is still wrong.
   """
   use ExUnit.Case, async: true
 
@@ -78,15 +84,27 @@ defmodule Credence.SelfCorruptionTest do
     "no_else_if" => 226,
     "fix_do_block_fusion" => 6,
     "fix_python_augmented_assignment" => 4,
-    "fix_truncated_binary_close" => 4,
     "no_fn_with_capture" => 4,
     "fix_stale_access_modifier" => 3,
     "fix_assignment_dot_syntax" => 2,
     "fix_malformed_spec" => 1,
     "no_doc_with_do_block" => 1,
-    "prefer_cond_do_keyword" => 1,
     "prefer_spec_arrow_operator" => 1
   }
+
+  # Paid down since adoption, kept here as the record of what the ratchet has
+  # actually bought — and of the fact that the repair is not one repair:
+  #
+  #   fix_truncated_binary_close (4)  `SourceMask`, the family default. A bare
+  #                                   literal pattern with no guard of any kind.
+  #   prefer_cond_do_keyword (1)      NOT masking. Its parse gate proved the
+  #                                   RESULT parses, not that the replacement
+  #                                   repaired anything, so on already-parsing
+  #                                   source every candidate qualified and the
+  #                                   first occurrence won wherever it sat. It
+  #                                   now declines source that parses, which is a
+  #                                   no-op in a phase that only runs on source
+  #                                   that does not.
 
   setup_all do
     entries = SelfCorruption.scan()

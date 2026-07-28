@@ -15,6 +15,16 @@ defmodule Credence.Syntax.PreferCondDoKeyword do
   never the committed occurrence — it is left untouched even when the file is
   unparseable for an unrelated reason.
 
+  **That argument holds only on source that does not parse**, which is the only
+  source the Syntax phase runs on. On source that already parses it is empty:
+  "the result parses" is then true of every candidate, including one inside a
+  literal, so the first occurrence anywhere won. Called directly on its own file
+  this rule rewrote its own moduledoc — the sentence above became "Repairs
+  `cond do` written in place of `cond do`". So the rule now declines a source
+  that already parses, which is a no-op in the pipeline and makes the paragraph
+  above true unconditionally. A repair that has nothing to repair is not a
+  repair.
+
   ## Bad (won't parse)
 
       cond ->
@@ -66,7 +76,18 @@ defmodule Credence.Syntax.PreferCondDoKeyword do
   # heredoc, or comment content is invisible to the parser, so replacing it never
   # resolves the parse error and is never the committed occurrence. analyze and
   # fix share this helper, so they always agree.
+  #
+  # The guard below is what makes that true. `parses?(candidate)` proves the
+  # RESULT parses, not that the replacement repaired anything — so on a source
+  # that already parsed, every candidate satisfied it and the first occurrence
+  # won wherever it sat, literal or not. The Syntax phase only runs on source
+  # that fails to parse, so declining here costs nothing in the pipeline and
+  # closes the direct-call path this rule's own moduledoc fell through.
   defp repair(source) do
+    if parses?(source), do: :no_fix, else: do_repair(source)
+  end
+
+  defp do_repair(source) do
     @pattern
     |> Regex.scan(source, return: :index)
     |> Enum.find_value(:no_fix, fn [{start, len}] ->
