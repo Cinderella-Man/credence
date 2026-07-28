@@ -71,7 +71,7 @@ untouched.
 | ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · `6d72130` |
 | ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | `8b870b5` |
 | ✅ | **T3.11 — `compile_and_capture/1` executes what it analyses, unbounded** — the seven OOM kills of 2026-07-28, diagnosed and fixed | `1ddbfe6` |
-| ✅ | **T1.2 — the dispatch-simulation gate** — every contended pair was ordered correctly *by accident*; two priorities now say so | `17ab8d8` |
+| ✅ | **T1.2 — the dispatch-simulation gate** — every contended pair was ordered correctly *by accident*; two priorities now say so | `aea4f7c` |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T2.1–T2.3**, which remain the prerequisites for any Phase-9
@@ -351,7 +351,7 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
   was followed faithfully while six more kills happened under it.
 
 - [x] ~~**T1.2 [C] Dispatch-simulation gate (the G3 residue T1 doesn't cover).**~~
-  **DONE `17ab8d8`** — `test/dispatch_contention_test.exs` +
+  **DONE `aea4f7c`** — `test/dispatch_contention_test.exs` +
   `test/support/dispatch_contention.ex`. Compiles every Semantic rule's own
   witness fixtures, captures the real diagnostics, and asks which live rules
   claim each. Where more than one does, the winner must have a **strictly lower
