@@ -6,11 +6,35 @@ defmodule Credence.Semantic do
   diagnostics without permanently loading modules. Delegates to rules
   implementing `Credence.Semantic.Rule` behaviour.
 
-  When compilation succeeds, warning-level diagnostics are matched
-  against rules and fixed. When compilation fails, error-level
-  diagnostics are matched first; if any fix is applied, the phase
-  retries (up to `max_passes`) to catch warnings that only appear
-  once the error is resolved.
+  When compilation succeeds, the captured diagnostics are matched against rules
+  and fixed. When compilation fails, error-level diagnostics are matched first;
+  if any fix is applied, the phase retries (up to `max_passes`) to catch
+  warnings that only appear once the error is resolved.
+
+  ## Compiling source can still carry error-severity diagnostics
+
+  "Compiles" and "has no errors" are different questions, and this phase used to
+  conflate them. `Code.compile_string/2` runs `Module.ParallelChecker`, which
+  pushes its findings into the same diagnostics channel `Code.with_diagnostics/1`
+  reads — so `RuleHelpers.compile_and_capture/1` returns `{:ok, diagnostics}`
+  (a module list came back) with `severity: :error` entries inside it.
+
+  Elixir raises a checker diagnostic to `:error` in exactly two places, both
+  struct checks in **pattern** position (`Module.Types.Of`, via
+  `Module.Types.Pattern`):
+
+      unknown key :message for struct Jason.DecodeError
+      struct Foo is undefined (module Foo is not available or is yet to be defined)
+
+  The same two checks in *expression* position stay `:warning`, which is why the
+  colon-vs-dot spelling matters: `unknown key :k for struct M` (pattern, error)
+  and `unknown key .k in expression:` (expr, warning) are different diagnostics.
+
+  Filtering this branch to `severity == :warning` therefore discarded the entire
+  pattern-position struct class before any rule saw it — a rule keyed on it was
+  green in its own tests (which call `match?/1` and `fix/2` directly) and inert
+  in production. `@compiling_severities` is the repair; `health_from/2` carries
+  the matching half, so the widened pass is gated rather than merely wider.
 
   ## Per-pass compile-revert (C4)
 
@@ -90,6 +114,11 @@ defmodule Credence.Semantic do
 
   @default_max_passes 3
 
+  # What a *successful* compile can report. Not just `:warning` — see the
+  # moduledoc: the type checker emits `:error` for struct problems in pattern
+  # position while the module still compiles.
+  @compiling_severities [:warning, :error]
+
   @typedoc """
   A trace entry: the rule, and either how many diagnostics it fixed or
   `:reverted` — its fix made the source worse and was undone.
@@ -103,7 +132,7 @@ defmodule Credence.Semantic do
     case RuleHelpers.compile_and_capture(source) do
       {:ok, diagnostics} ->
         diagnostics
-        |> Enum.filter(&(&1.severity == :warning))
+        |> Enum.filter(&(&1.severity in @compiling_severities))
         |> Enum.flat_map(&match_rules(&1, source, rules))
 
       {:error, diagnostics} ->
@@ -160,14 +189,16 @@ defmodule Credence.Semantic do
 
     case compiled do
       {:ok, diagnostics} ->
-        # Compilation succeeded — fix warnings (terminal pass, no retry needed)
-        warnings = Enum.filter(diagnostics, &(&1.severity == :warning))
+        # Compilation succeeded — fix what the checker reported (terminal pass,
+        # no retry needed). Both severities: see the moduledoc's
+        # "Compiling source can still carry error-severity diagnostics".
+        reported = Enum.filter(diagnostics, &(&1.severity in @compiling_severities))
 
         Logger.debug(
-          "[credence_fix] semantic pass #{pass}: compilation OK, #{length(warnings)} warning(s)"
+          "[credence_fix] semantic pass #{pass}: compilation OK, #{length(reported)} diagnostic(s)"
         )
 
-        {fixed, new_applied} = run_pass(source, compiled, warnings, opts, pass)
+        {fixed, new_applied} = run_pass(source, compiled, reported, opts, pass)
         {fixed, Enum.reverse(new_applied ++ applied)}
 
       {:error, diagnostics} ->
@@ -350,19 +381,26 @@ defmodule Credence.Semantic do
   # construction, and `Code.string_to_quoted/1` is not free.
   defp health(source), do: health_from(source, RuleHelpers.compile_and_capture(source))
 
-  defp health_from(_source, {:ok, _diagnostics}),
-    do: %{parses?: true, compiles?: true, errors: %{}}
+  # Compiling source is NOT error-free source: the type checker reports
+  # `unknown key :k for struct M` at `:error` while the module still compiles.
+  # This clause used to hardcode `errors: %{}`, which made `verdict/2`
+  # structurally incapable of returning anything but `:ok` on this branch — the
+  # whole warning pass ran with no revert gate behind it. Counting them here is
+  # what gives the widened pass (see `@compiling_severities`) a working C4.
+  # `compiles?` stays `true`: flipping it would read every type error as a
+  # `:compile_regression` and revert correct repairs.
+  defp health_from(_source, {:ok, diagnostics}),
+    do: %{parses?: true, compiles?: true, errors: error_frequencies(diagnostics)}
 
   defp health_from(source, {:error, diagnostics}) do
-    %{
-      parses?: parses?(source),
-      compiles?: false,
-      errors:
-        diagnostics
-        |> Enum.filter(&(&1.severity == :error))
-        |> Enum.map(& &1.message)
-        |> Enum.frequencies()
-    }
+    %{parses?: parses?(source), compiles?: false, errors: error_frequencies(diagnostics)}
+  end
+
+  defp error_frequencies(diagnostics) do
+    diagnostics
+    |> Enum.filter(&(&1.severity == :error))
+    |> Enum.map(& &1.message)
+    |> Enum.frequencies()
   end
 
   # See the moduledoc for why error COUNT is not one of these.
