@@ -85,7 +85,7 @@ defmodule Credence.Syntax.FixDivRem do
   # always masked the whole file, correctly reported nothing. The rule fixed
   # what it had not found.
   defp fix_line(line, shadow) do
-    if SourceMask.mask(line) == shadow, do: fix_line(line), else: line
+    if SourceMask.self_contained?(line, shadow), do: fix_line(line), else: line
   end
 
   defp infix_use?(line, op) do

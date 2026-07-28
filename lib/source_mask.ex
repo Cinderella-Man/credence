@@ -98,6 +98,33 @@ defmodule Credence.SourceMask do
     Enum.zip(String.split(source, "\n"), String.split(mask(source), "\n"))
   end
 
+  @doc """
+  True when this line lies outside every multi-line literal — that is, when
+  masking it *on its own* would have produced the shadow the whole file gave it.
+
+  Both arguments come from one `lines/1` pair.
+
+  ## Why a rule would want this rather than the shadow
+
+  Matching the shadow is the right move when the pattern keys on code bytes. It
+  is the *wrong* move when the pattern keys on the delimiters themselves, because
+  masking blanks a string literal's quotes along with its contents — so a rule
+  looking for `@doc "..."` finds nothing in the shadow, and one looking for a
+  `~r/.../` sigil finds nothing either. Those rules must match the raw line, and
+  what they actually need to know is the narrower question this answers: *is this
+  line inside a heredoc or a multi-line string?*
+
+  It is also the escape hatch for a rule whose rewrite re-masks as it goes.
+  Re-masking a line after rewriting it is only sound where the line stands alone,
+  since heredoc and multi-line-string state crosses lines.
+
+  Either way the failure direction is a missed fix on a line inside a multi-line
+  literal, never a corrupted one — the same trade `mask/1` makes on malformed
+  input.
+  """
+  @spec self_contained?(String.t(), String.t()) :: boolean()
+  def self_contained?(line, shadow), do: mask(line) == shadow
+
   defp scan(<<>>, _stack, _prev, _bol, acc), do: acc
 
   defp scan(bin, [{:str, _, _, _} | _] = stack, prev, bol, acc),

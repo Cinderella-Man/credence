@@ -40,10 +40,26 @@ defmodule Credence.Syntax.NoDocWithDoBlock do
 
       @doc "top_n_items/2"
       def find_top_n(map, n), do: Enum.take(map, n)
+
+  ## A heredoc body is not code
+
+  The pattern is anchored to the whole line, so it can never fire inside a
+  trailing comment or a mid-line string — but a *heredoc body line* is a whole
+  line, and one that reads `@doc "..." do` is documentation, not a bug. This rule
+  rewrote the `## Bad` example in its own moduledoc above.
+
+  The repair is deliberately **not** to match `Credence.SourceMask`'s shadow, as
+  the byte-scope rules do. Masking blanks a string literal's quotes along with
+  its contents, and this pattern keys on those quotes — matching the shadow would
+  match nothing at all, which is a silent retirement rather than a fix. What the
+  rule needs is the narrower question `SourceMask.self_contained?/2` answers: is
+  this line inside a multi-line literal? If it is, leave it alone; otherwise
+  match the raw line exactly as before.
   """
   use Credence.Syntax.Rule
 
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # A documentation attribute whose value is a complete double-quoted string
   # literal, immediately followed by a stray bare `do` at end of line.
@@ -52,10 +68,10 @@ defmodule Credence.Syntax.NoDocWithDoBlock do
   @impl true
   def analyze(source) do
     source
-    |> String.split("\n")
+    |> SourceMask.lines()
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, line_no} ->
-      if Regex.match?(@doc_do, line) do
+    |> Enum.flat_map(fn {{line, shadow}, line_no} ->
+      if stray_do?(line, shadow) do
         [
           %Issue{
             rule: :no_doc_with_do_block,
@@ -72,7 +88,15 @@ defmodule Credence.Syntax.NoDocWithDoBlock do
   @impl true
   def fix(source) do
     source
-    |> String.split("\n")
-    |> Enum.map_join("\n", &Regex.replace(@doc_do, &1, "\\1"))
+    |> SourceMask.lines()
+    |> Enum.map_join("\n", fn {line, shadow} ->
+      if stray_do?(line, shadow), do: Regex.replace(@doc_do, line, "\\1"), else: line
+    end)
+  end
+
+  # `analyze` and `fix` share this one predicate, so they never disagree about
+  # which lines are documentation and which are the bug.
+  defp stray_do?(line, shadow) do
+    SourceMask.self_contained?(line, shadow) and Regex.match?(@doc_do, line)
   end
 end

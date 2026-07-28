@@ -88,7 +88,6 @@ defmodule Credence.SelfCorruptionTest do
     "fix_stale_access_modifier" => 3,
     "fix_assignment_dot_syntax" => 2,
     "fix_malformed_spec" => 1,
-    "no_doc_with_do_block" => 1,
     "prefer_spec_arrow_operator" => 1
   }
 
@@ -105,6 +104,15 @@ defmodule Credence.SelfCorruptionTest do
   #                                   now declines source that parses, which is a
   #                                   no-op in a phase that only runs on source
   #                                   that does not.
+  #   no_doc_with_do_block (1)        NOT the shadow either. Its pattern keys on
+  #                                   the `"` quotes of `@doc "..."`, and masking
+  #                                   blanks a literal's quotes along with its
+  #                                   body — matching the shadow would have
+  #                                   matched nothing at all, retiring the rule
+  #                                   rather than fixing it. It matches the raw
+  #                                   line and asks `SourceMask.self_contained?/2`
+  #                                   whether the line is inside a multi-line
+  #                                   literal.
 
   setup_all do
     entries = SelfCorruption.scan()
