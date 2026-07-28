@@ -130,8 +130,7 @@ defmodule Credence.PipelineWitnessTest do
     "NoHallucinatedTaskTimeoutErrorStruct" => :no_fixture,
     "NoHallucinatedDatetimeZone" => :no_fixture,
     "NoCryptoHashPipeSwappedArgs" => :wrong_phase,
-    "NoHallucinatedEtsKeytypeOption" => :wrong_phase,
-    "FixWithElseBareValue" => :dead
+    "NoHallucinatedEtsKeytypeOption" => :wrong_phase
   }
 
   @reasons [:dep_gated, :no_fixture, :wrong_phase, :dead]

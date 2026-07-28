@@ -3,12 +3,35 @@ defmodule Credence.Semantic.FixWithElseBareValue do
   Fixes bare values in `else` clauses of `with` expressions.
 
   LLMs commonly write `with ... else bare_value end` forgetting that `else`
-  requires `pattern -> body` clauses.  The compiler rejects this with:
-
-      "expected -> clauses for :else in \"with\""
+  requires `pattern -> body` clauses. The compiler rejects this at
+  `severity: :error`.
 
   The fix wraps each bare expression in `_ -> expr`, which matches any value
   and returns the original expression.
+
+  ## The message it keys on, and the one it used to
+
+  This rule was **dead on arrival** and shipped that way. It matched
+
+      "expected -> clauses for :else in \"with\""
+
+  which Elixir 1.20.2 does not emit. The message it actually emits is
+
+      invalid "else" block in "with", it expects "pattern -> expr" clauses
+
+  so `match?/1` never returned true, the fix never ran, and nothing noticed —
+  the rule's own tests fed it a hand-written diagnostic map carrying the string
+  the rule expected, so the rule and its tests agreed with each other about a
+  message the compiler never produced. That is the G1 class in docs/22 Part I §2,
+  and the T1 pipeline-witness gate is what caught it (docs/22 T3.8).
+
+  Only the mismatch was wrong. The rewrite itself was correct the whole time and
+  is unchanged: fed the diagnostic by hand it produced valid, compiling output.
+
+  Both spellings are matched. Only the second is verified here, by compiling a
+  fixture on the toolchain in the tree; the first is kept because this project
+  supports `~> 1.17` and it is presumably what some earlier version said. Keeping
+  it costs nothing — no other live rule claims either message.
 
   ## Bad (compiles with error)
 
@@ -30,11 +53,16 @@ defmodule Credence.Semantic.FixWithElseBareValue do
 
   alias Credence.Issue
 
-  @match_msg ~s(expected -> clauses for :else in "with")
+  # Elixir 1.20.2's wording, verified by compiling a fixture, and the older one
+  # this rule shipped with. See the moduledoc.
+  @match_msgs [
+    ~s(invalid "else" block in "with", it expects "pattern -> expr" clauses),
+    ~s(expected -> clauses for :else in "with")
+  ]
 
   @impl true
   def match?(%{severity: :error, message: msg}) when is_binary(msg) do
-    String.contains?(msg, @match_msg)
+    Enum.any?(@match_msgs, &String.contains?(msg, &1))
   end
 
   def match?(_), do: false

@@ -67,7 +67,7 @@ untouched.
 | ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
 | 🔄 | **T3.10 — pay down the self-corruption ledger** — 4 of 11 done, 7 left | `becd59b` · `643435a` · this commit |
 | ⬜ | **T3.10a — `no_else_if` corrupts valid parsing code** (found while paying down T3.10; do *not* convert it) | — |
-| 🔄 | **T3.8 — the two rules T1 proved cannot fire** — `FixMalformedSpec` re-homed to Semantic, 1 left | this commit |
+| ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · this commit |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T3.10a** — it is the only item on this file known to corrupt
@@ -539,7 +539,7 @@ its own tests run under real `mix test`.
 
   It was found by an **oracle, not by reading**, which is the transferable part.
   See T3.10.
-- [ ] 🔄 **T3.8 [C] The two rules T1 proved cannot fire — 1 of 2 done.** Per the project's
+- [x] ~~**T3.8 [C] The two rules T1 proved cannot fire.**~~ **DONE — both are alive.** Per the project's
   standing rule, deletion is never the first move — extract the verified failure
   mode first, then retire or rebuild:
   - [x] ~~`Syntax.FixMalformedSpec`~~ **DONE — re-homed to Semantic.** The
@@ -566,9 +566,24 @@ its own tests run under real `mix test`.
     **module-derived** atom, so the rule was live and unattributable. Only Syntax
     atoms are author-chosen. Two Semantic meta-gates then required an output-parses
     assertion and an attribution assertion the ported tests did not have.
-  - `Semantic.FixWithElseBareValue` — `match?/1` requires a message string
-    Elixir 1.20.2 does not emit; its fixtures compile to a *different* real
-    diagnostic. Re-key it on what the compiler actually says, or retire it.
+  - [x] ~~`Semantic.FixWithElseBareValue`~~ **DONE — re-keyed, not retired.** It
+    matched `expected -> clauses for :else in "with"`. Elixir 1.20.2 emits
+    `invalid "else" block in "with", it expects "pattern -> expr" clauses`, and
+    **no live rule claimed that**. So the rule was dead on arrival and shipped
+    that way — while its own tests passed, because they handed it a
+    hand-written diagnostic map carrying the string the rule expected. The rule
+    and its tests agreed about a message the compiler never produced. That is
+    the G1 class exactly, and the reason T1 exists.
+
+    **Only the key was wrong. `fix/2` was correct the whole time** — fed the
+    diagnostic by hand it already produced valid, compiling output, so the
+    repair is one attribute and the rule is now live. Both spellings are
+    matched; only the 1.20.2 one is verified here by compiling a fixture, and
+    the legacy one is kept because this project supports `~> 1.17`. The new
+    tests obtain the diagnostic by compiling, assert the fixture parses but does
+    not compile, assert no second rule claims the message (first-match-wins
+    dispatch would otherwise decide which one is dead), and assert the end-to-end
+    repair through real dispatch.
 - [ ] 🔄 **T3.10 [C] Pay down the self-corruption ledger — 4 of 11 done, 7 left.**
   The gate is in (`b41af7b`, `test/self_corruption_test.exs` +
   `test/support/self_corruption.ex`); the debt is being worked down against it.
