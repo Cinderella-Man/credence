@@ -61,11 +61,14 @@ defmodule Credence.SelfCorruptionTest do
   count, because the count is a fair proxy for how little the rule knows about
   literals.
 
-  Two are paid down so far, and they needed *different* repairs — see the note
-  under `@self_corrupting`. That is the useful early lesson from this ledger: a
-  hit says the rule edited bytes that are not code, and nothing more. It does not
-  say the repair is `SourceMask`, and assuming it does will produce a masked rule
-  that is still wrong.
+  Three are paid down so far (8 rules / 247 lines remain), and all three needed
+  *different* repairs — see the note under `@self_corrupting`. That is the useful
+  early lesson from this ledger: a hit says the rule edited bytes that are not
+  code, and nothing more. It does not say the repair is `SourceMask`. Assuming it
+  does produces either a masked rule that is still wrong, or — worse, and this
+  nearly happened to `no_doc_with_do_block` — a rule whose pattern keys on the
+  very delimiters masking blanks, which then matches nothing at all and retires
+  itself while every test stays green.
   """
   use ExUnit.Case, async: true
 

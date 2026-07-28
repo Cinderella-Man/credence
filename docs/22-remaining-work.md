@@ -14,27 +14,43 @@ Every claim below was produced by a 6-agent read-only research pass on
 independently; corrections already folded in). File:line anchors were verified
 against `credence` HEAD `958f241` and harness HEAD `fb3bc2a`.
 
-**Second pass, same day (through `e81985e`).** T0.1, T1, T1.3, T3.1, T3.2 and
-T3.7 landed. **Five** of this file's own claims were **refuted by execution**
-and are corrected in place, each marked *Correction* at its item: T3.1's "7 dead
-rules" (really 1), T3.2's "will be dropped" (already being dropped, and 3
-outcomes not 1), docs/16's `SourceMask` repair claim (never made — became T3.7),
-T1's implied scope (the 86 are Semantic/Syntax only; Pattern is 155/155 clean),
-and T3.7's own defect scope (1 shape recorded, 6 live). The pattern worth
-keeping: **every one of these was a plausible written claim that nobody had
-run.** Where a claim here is not marked as executed, treat it as a hypothesis.
+**Second pass, same day (through `f521138`).** T0.1, T0.2, T1, T1.3, T3.1, T3.2
+and T3.7 landed, plus a new gate (the self-corruption oracle) and the first three
+rules of the T3.10 ledger it opened. **Six** of this file's own claims were
+**refuted by execution** and are corrected in place, each marked *Correction* at
+its item:
+
+1. T3.1's "7 dead rules" — really 1.
+2. T3.2's "will be dropped" — already being dropped, and 3 outcomes not 1.
+3. docs/16's `SourceMask` repair claim — never made; became T3.7.
+4. T1's implied scope — the 86 are Semantic/Syntax only; Pattern is 155/155 clean.
+5. T3.7's own defect scope — 1 shape recorded, 6 live.
+6. T3.10's own paydown ordering — line count is not a severity proxy for a rule
+   that *changes* line count, which put `no_else_if` at the top of the queue for
+   the wrong reason (T3.10a).
+
+The pattern worth keeping: **every one of these was a plausible written claim
+that nobody had run.** Where a claim here is not marked as executed, treat it as
+a hypothesis.
 
 T3.7 sharpens that into a rule of thumb. Its item was *itself* the correction of
 an earlier unexecuted claim — and it was still wrong, in the same direction,
 because the correction had also been written from reading. **An unexecuted
 correction is not more reliable than the unexecuted claim it replaces.**
 
+And T3.10 sharpens it once more, in the direction that actually pays: what broke
+the loop was **changing the input, not the effort**. Reading a fix and reading
+its tests is one act, not two — the same person wrote both, so they agree by
+construction. An input nobody authored breaks the tie, and a Syntax rule's own
+source file is one, for free.
+
 ---
 
 ## Status at a glance
 
 Completed items are **struck through** in the tiers below and carry their commit
-id in place. Nothing else in this file has been started.
+id in place. 🔄 marks the one item in progress; everything not listed here is
+untouched.
 
 | | Item | Commit |
 |---|---|---|
@@ -45,8 +61,8 @@ id in place. Nothing else in this file has been started.
 | ✅ | T3.1 — errors on compiling source, + the inert C4 gate behind them | `c691362` |
 | ✅ | T3.2 — the `:no_op` trace outcome, both repos | `7708aef` · `7b6e2c6` |
 | ✅ | T3.9 — tree-wide formatter drift (57 files) | `f564e31` |
-| ✅ | T0.4 — release hygiene (fold 0.7.0, fix a false fix-note) | this commit |
-| ✅ | T0.2 — Phase-4 PR | **superseded** — a PR for the whole 3rd evolution already exists |
+| ✅ | T0.4 — release hygiene (fold 0.7.0, fix a false fix-note) | `24ce7df` |
+| ✅ | T0.2 — Phase-4 PR | `1cb7bff` — **superseded**, a PR for the whole 3rd evolution already exists |
 | ✅ | **T3.7 — the last two raw-byte syntax fixes**, + the `FixDivRem` half-conversion behind them | `e81985e` · `8169601` |
 | ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
 | 🔄 | **T3.10 — pay down the self-corruption ledger** — 3 of 11 done, 8 left | `becd59b` · `643435a` |
@@ -533,38 +549,58 @@ its own tests run under real `mix test`.
   - `Semantic.FixWithElseBareValue` — `match?/1` requires a message string
     Elixir 1.20.2 does not emit; its fixtures compile to a *different* real
     diagnostic. Re-key it on what the compiler actually says, or retire it.
-- [ ] **T3.10 [C] Pay down the self-corruption ledger (11 Syntax rules, 253
-  lines).** The gate is in (`b41af7b`, `test/self_corruption_test.exs` +
-  `test/support/self_corruption.ex`); the debt is not. Run every Syntax rule's
-  `fix/1` over its own `.ex` file — a rule's moduledoc is *required* by the Rule
-  Standard to contain the exact byte sequences it rewrites, inside a heredoc,
-  beside prose naming the operator in English. A rule that rewrites its own
-  documentation cannot tell code from prose. **11 of 45 do.** Ledger order is
-  descending line count, which is a fair proxy for how little the rule knows
-  about literals:
+- [ ] 🔄 **T3.10 [C] Pay down the self-corruption ledger — 3 of 11 done, 8 left.**
+  The gate is in (`b41af7b`, `test/self_corruption_test.exs` +
+  `test/support/self_corruption.ex`); the debt is being worked down against it.
+  Run every Syntax rule's `fix/1` over its own `.ex` file — a rule's moduledoc is
+  *required* by the Rule Standard to contain the exact byte sequences it rewrites,
+  inside a heredoc, beside prose naming the operator in English. A rule that
+  rewrites its own documentation cannot tell code from prose. **11 of 45 did**,
+  over 253 lines:
 
-  | rule | lines of its own file |
-  |---|---|
-  | `no_else_if` | 226 |
-  | `fix_do_block_fusion` | 6 |
-  | `fix_python_augmented_assignment` | 4 |
-  | `fix_truncated_binary_close` | 4 |
-  | `no_fn_with_capture` | 4 |
-  | `fix_stale_access_modifier` | 3 |
-  | `fix_assignment_dot_syntax` | 2 |
-  | `fix_malformed_spec` · `no_doc_with_do_block` · `prefer_cond_do_keyword` · `prefer_spec_arrow_operator` | 1 each |
+  | rule | lines | status |
+  |---|---|---|
+  | `no_else_if` | 226 | ⬜ **deliberately not converted** — see T3.10a |
+  | `fix_do_block_fusion` | 6 | ⬜ |
+  | `fix_python_augmented_assignment` | 4 | ⬜ |
+  | `fix_truncated_binary_close` | 4 | ✅ `becd59b` — masking, the family default |
+  | `no_fn_with_capture` | 4 | ⬜ |
+  | `fix_stale_access_modifier` | 3 | ⬜ |
+  | `fix_assignment_dot_syntax` | 2 | ⬜ |
+  | `fix_malformed_spec` | 1 | ⬜ |
+  | `prefer_spec_arrow_operator` | 1 | ⬜ |
+  | `no_doc_with_do_block` | 1 | ✅ `643435a` — **not** the shadow; `self_contained?/2` |
+  | `prefer_cond_do_keyword` | 1 | ✅ `becd59b` — **not** masking; a parse guard |
 
-  The repair is `Credence.SourceMask`, with `fix_python_modulo.ex` as the
+  The usual repair is `Credence.SourceMask`, with `fix_python_modulo.ex` as the
   reference and `fix_python_floor_div.ex` as the two-pattern-merge variant. Two
   traps, both already paid for once: **mask the whole file, never a line alone**
   (T3.7's `FixDivRem` finding), and **make `analyze` and `fix` read the same
   shadow** or the rule fixes what it never reported.
 
-  Three of the eleven were **not** string-masking cases, and two of those are
-  already paid down — see T3.10a. Confirm which repair a rule needs before
-  assuming it is masking; `SourceMask` applied to the wrong rule is not a no-op,
-  it is a silent retirement (`no_doc_with_do_block` would have matched nothing at
-  all on the shadow, because its pattern keys on the `"` quotes masking blanks).
+  **The lesson from the first three: it is not one repair.** All three needed a
+  different mechanism, and applying the family default to the wrong rule is not a
+  no-op — it is a silent retirement. `no_doc_with_do_block`'s pattern keys on the
+  `"` quotes of `@doc "..."`, and masking blanks a literal's quotes along with its
+  body, so on the shadow it would have matched *nothing, ever*: green here, green
+  in its own tests, and quietly dead. `prefer_cond_do_keyword` was not a literal
+  problem at all — its gate proved the *result* parses rather than that the
+  replacement repaired anything, so on already-parsing source every candidate
+  qualified. Diagnose before converting.
+
+  Two supports came out of this and are worth reusing:
+  `Credence.SourceMask.self_contained?/2` (is this line inside a multi-line
+  literal? — for patterns that key on delimiters masking would blank), and
+  `test/source_mask_test.exs`, which did not exist: the module behind every
+  byte-scope repair in the tree had no test of its own.
+
+  Known trap for the remaining eight, from a read-only analysis pass:
+  `fix_do_block_fusion` is a **five-stage cascade** whose stages change byte
+  length and feed each other (`) do: ` → `), do: ` grows one byte, and stage 5
+  only fires on stage 2's output — pinned by a live test). It cannot use the
+  collect-all-matches-then-splice-once idiom, and it must not re-mask between
+  stages, since masking a line alone is the `FixDivRem` defect. The shadow has to
+  be carried through the cascade, receiving the identical splice at each stage.
 
 - [ ] **T3.10a [C] `no_else_if` — do NOT convert it. It has four confirmed
   defects that masking does not touch, and its ledger entry is the only thing
@@ -858,8 +894,9 @@ tests at HEAD `958f241`; zero compile warnings):
 | H16 doc split (IMPROVEMENTS = spec) | `c2b0d95` | — |
 
 Landed **after** this file was written (2026-07-28, same day), all with positive
-controls seen red on purpose; suites green at `2f34640` — 8,300 tests + 6
-properties corpus-free, 1,501 corpus, zero compile warnings:
+controls seen red on purpose. Suites green at each landing; at the last of them
+(`f521138`) — **8,374 tests + 6 properties corpus-free, 1,501 corpus, zero
+compile warnings**:
 
 | Item | Commit | Gate/evidence |
 |---|---|---|
@@ -871,6 +908,10 @@ properties corpus-free, 1,501 corpus, zero compile warnings:
 | T3.7 the last two raw-byte syntax fixes | `e81985e` | 22 controls, 22/22 red pre-fix; 4 defect shapes found beyond the 2 recorded |
 | T3.7 (cont.) `FixDivRem` per-line masking | `8169601` | 4 controls, 3 red; the 4th green on purpose — it pins the analyze/fix disagreement |
 | **the self-corruption oracle + gate** | `b41af7b` | 5 controls; control 1 is the real `8169601` defect put back and caught |
+| T0.2 closed as superseded; docs pass | `1cb7bff` · `bff6e83` · `f046dca` | `f046dca` records a commit message that claimed a repair it had not made |
+| T3.10 — 2 of 11 (`fix_truncated_binary_close`, `prefer_cond_do_keyword`) | `becd59b` | 12 controls, 11 red; two different repairs, one of them not masking |
+| T3.10 — 3 of 11 (`no_doc_with_do_block`) + `SourceMask` gets tests | `643435a` | 4 controls red; `self_contained?/2` extracted; 21 tests for a module that had none |
+| **T3.10a — `no_else_if` corrupts valid parsing code** | `f521138` | 5 experiments run; the rule stays on the ledger *on purpose* |
 
 Deliberately **not** done, with reasons on record: P4-as-specced on-disk AST
 cache (mooted at 11.6 s scoped scans); P6 (docs/13's own "only if P1–P4 leave a
@@ -879,4 +920,6 @@ sampling-noise NO_ACTION must not become a permanent blind spot); hard-gate
 verdict suppression (both H8 and LD4 are advisory *on purpose* — a hard gate
 converts a later real regression into an unreportable one); retrofitting
 priorities onto 275 rules (docs/20 — an unexamined guess is not better than an
-unexamined default).
+unexamined default); **converting `no_else_if` to `SourceMask`** (T3.10a — it
+clears the ledger entry, verified, and would turn the gate green over four
+executed corruption modes the entry is the only flag for).

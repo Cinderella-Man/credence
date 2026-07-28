@@ -284,3 +284,30 @@ were its own moduledoc prose, since the rule is *about* `String.replace`). Both
 agents named experiments instead of running them; the orchestrator ran them, and
 the cheapest one — the self-corruption oracle — was worth more than every verdict
 either agent offered.
+
+**Continued the same session: T3.10, and one deliberate non-fix.** Three of the
+eleven ledgered rules are paid down (`becd59b`, `643435a`), and the useful result
+is that all three needed *different* repairs — masking, a parse guard, and
+`SourceMask.self_contained?/2`. Applying the family default to
+`no_doc_with_do_block` would have been worse than doing nothing: its pattern keys
+on the `"` quotes that masking blanks, so on the shadow it matches nothing, ever
+— green here, green in its own tests, and silently retired. **A hit from this
+oracle says the rule edited bytes that are not code, and nothing more.**
+
+`no_else_if` is on the ledger and is staying there on purpose (`f521138`, docs/22
+T3.10a). Running it showed it turns *valid, parsing* nested-`if` source into
+output that does not parse, plus three boundary cases that do the same. Masking
+its trigger clears the ledger entry — verified — and would turn the gate green
+over four executed corruption modes that the entry is the only flag for. Its
+sibling `fix_elsif_in_if_chain` is hardened against all six defects, and a third
+copy of the same rule was rejected in review for being that sibling's
+pre-hardening state, which is exactly what `no_else_if` is. Retiring a live rule
+is the maintainer's call, so the sequence and the failure mode (FM-ELSE-IF) are
+written down rather than executed.
+
+Two of my own claims were wrong this session and are corrected in place rather
+than quietly: `bff6e83`'s message asserted a blockquote repair it had not made
+(fixed and recorded in `f046dca`), and `SourceMask`'s comment claimed its blank
+byte "cannot take part in a match" — `\S`, `.` and negated classes do match it,
+now pinned in a test. The tally that matters is not that they happened but that
+both were found the same way as everything else here: by running the thing.
