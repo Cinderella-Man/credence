@@ -10,10 +10,15 @@ defmodule Mix.Tasks.Credence.Corpus do
       mix credence.corpus <rule>              # every occurrence of <rule> with file:line + source
       mix credence.corpus --only-rule <rule>  # over-fire GATE for one rule (drift vs the snapshot)
       mix credence.corpus --update-snapshot   # re-pin the accepted-findings snapshot
+      mix credence.corpus --budget            # per-rule accepted-findings budget (no corpus needed)
+      mix credence.corpus --update-budget     # re-publish the budget from the committed snapshot
 
   Fetch the corpus first with `mix credence.corpus.fetch` (or run `mix test`,
   which auto-fetches). A *crash* (a rule raising on valid code) is worse than a
   finding and is reported separately.
+
+  The two budget modes are the exception: they read the *committed snapshot*,
+  not the corpus, so they need no fetch and run instantly.
 
   The summary/`<rule>` modes report the *raw* Pattern findings. The over-firing
   test (`test/corpus/over_firing_test.exs`) instead compares the findings,
@@ -21,6 +26,33 @@ defmodule Mix.Tasks.Credence.Corpus do
   `test/corpus/accepted_findings.txt`. `--update-snapshot` regenerates that
   snapshot from the current corpus — run it after reviewing the drift the test
   reports, to accept the new set.
+
+  ## `--budget` / `--update-budget` — the per-rule budget (docs/12 C13)
+
+  The over-firing test ratchets *code* changes: no rule can start firing without
+  going red. It does not ratchet the *accept* — its failure message points at
+  `--update-snapshot`, the re-pin is one command, and what lands in review is N
+  raw `<path>:<line>  <rule>` lines with no per-rule aggregate anywhere. That is
+  how the snapshot reached 6,366 accepted findings across 87 rules, 74% of them
+  in 15 rules, without anyone deciding to.
+
+  `test/corpus/accepted_findings_budget.txt` is the per-rule view of the same
+  snapshot, counted with `(xN)` multiplicity, and
+  `test/corpus/findings_budget_test.exs` gates it: the file must match the
+  snapshot exactly, a rule off the frozen grandfather ledger may not exceed 100
+  accepted findings, a grandfathered rule may not exceed its adoption-day
+  ceiling, and it must leave the ledger once it falls to the cap.
+
+    * `--budget` prints the ranked table with the over-cap rules marked. That
+      ranking is also the paydown order, and it is derived from the committed
+      snapshot, so it costs nothing to run.
+    * `--update-budget` re-publishes the file after a re-pin. `--update-snapshot`
+      deliberately does **not** write it: the harness's
+      `Cev.Evolve.Corpus.delta/1` uses `--update-snapshot` as a read-only probe
+      (regenerate → read → restore the snapshot file), and a second file written
+      behind its back would be left dirty in the clone and would redden the gate
+      spuriously on the next row. So `--update-snapshot` only *reports* the
+      per-rule delta its re-pin costs, and names the command that publishes it.
 
   ## `--only-rule` — the rule-scoped scan (docs/13 P3)
 
@@ -58,7 +90,7 @@ defmodule Mix.Tasks.Credence.Corpus do
   use Mix.Task
 
   alias Credence.Corpus
-  alias Credence.Corpus.{Findings, Progress}
+  alias Credence.Corpus.{Budget, Findings, Progress}
 
   # Emit a progress line every this-many scanned files during a scoped sweep.
   @progress_step 5000
@@ -71,11 +103,36 @@ defmodule Mix.Tasks.Credence.Corpus do
     Mix.Task.run("compile")
 
     {opts, rest, invalid} =
-      OptionParser.parse(args, strict: [update_snapshot: :boolean, only_rule: :string])
+      OptionParser.parse(args,
+        strict: [
+          update_snapshot: :boolean,
+          only_rule: :string,
+          budget: :boolean,
+          update_budget: :boolean
+        ]
+      )
+
+    modes = Enum.filter([:update_snapshot, :only_rule, :budget, :update_budget], &opts[&1])
 
     cond do
       invalid != [] ->
         Mix.raise("unknown option #{inspect(Enum.map(invalid, &elem(&1, 0)))}.\n#{usage()}")
+
+      length(modes) > 1 ->
+        Mix.raise("#{inspect(modes)} are separate modes; pass one.\n#{usage()}")
+
+      opts[:budget] && rest != [] ->
+        Mix.raise("--budget takes no other arguments.\n#{usage()}")
+
+      # Derived from the COMMITTED snapshot, so no corpus fetch and no analysis.
+      opts[:budget] ->
+        report_budget()
+
+      opts[:update_budget] && rest != [] ->
+        Mix.raise("--update-budget takes no other arguments.\n#{usage()}")
+
+      opts[:update_budget] ->
+        update_budget()
 
       opts[:update_snapshot] && rest != [] ->
         Mix.raise("--update-snapshot takes no other arguments.\n#{usage()}")
@@ -115,7 +172,8 @@ defmodule Mix.Tasks.Credence.Corpus do
   end
 
   defp usage do
-    "usage: mix credence.corpus [<rule> | --only-rule <rule> | --update-snapshot]"
+    "usage: mix credence.corpus " <>
+      "[<rule> | --only-rule <rule> | --update-snapshot | --budget | --update-budget]"
   end
 
   defp require_corpus! do
@@ -298,6 +356,7 @@ defmodule Mix.Tasks.Credence.Corpus do
   end
 
   defp update_snapshot do
+    published = Budget.published()
     lines = Findings.all()
     path = Findings.snapshot_path()
     File.write!(path, snapshot_header() <> Enum.join(lines, "\n") <> "\n")
@@ -305,6 +364,109 @@ defmodule Mix.Tasks.Credence.Corpus do
     Mix.shell().info(
       "Wrote #{length(lines)} accepted finding(s) to #{Path.relative_to_cwd(path)}."
     )
+
+    report_budget_delta(published, Budget.counts(lines), :stale)
+  end
+
+  # What moved, per rule. The snapshot diff alone cannot say — it is N raw path
+  # lines — and the per-rule number nobody was ever shown is exactly how the
+  # whitelist reached 6,366 (docs/12 C13).
+  #
+  # `mode` is what the caller should do about it: `:stale` (the budget file has
+  # NOT been rewritten, so the gate is now red) or `:published` (it just was).
+  # `--update-snapshot` is deliberately `:stale`: writing the budget file there
+  # would break the harness's read-only `--update-snapshot` probe.
+  defp report_budget_delta(published, counts, mode) do
+    shell = Mix.shell()
+    deltas = Budget.deltas(published, counts)
+
+    cond do
+      published == %{} and mode == :stale ->
+        shell.info(
+          "\n[budget] no per-rule budget published yet — create it with " <>
+            "`mix credence.corpus --update-budget`."
+        )
+
+      deltas == [] ->
+        shell.info(
+          "\n[budget] unchanged: #{Budget.total(counts)} accepted findings across " <>
+            "#{map_size(counts)} rules."
+        )
+
+      true ->
+        shell.info(
+          "\n[budget] per-rule change " <>
+            "(#{Budget.total(published)} → #{Budget.total(counts)} accepted findings):"
+        )
+
+        Enum.each(deltas, fn {rule, from, to} ->
+          shell.info("  #{signed(to - from)}  #{rule}  (#{from} → #{to})")
+        end)
+
+        if mode == :stale do
+          shell.info(
+            "\n  test/corpus/findings_budget_test.exs is RED until this is published:\n" <>
+              "      mix credence.corpus --update-budget"
+          )
+        end
+    end
+  end
+
+  defp signed(n) when n > 0, do: String.pad_leading("+#{n}", 6)
+  defp signed(n), do: String.pad_leading("#{n}", 6)
+
+  # Re-publish the per-rule budget from the COMMITTED snapshot — no corpus, no
+  # analysis, so it is instant and works on a machine that has never fetched.
+  defp update_budget do
+    counts = Budget.counts(Findings.snapshot_lines())
+    published = Budget.published()
+
+    if counts == %{} do
+      Mix.raise(
+        "no accepted findings in #{Path.relative_to_cwd(Findings.snapshot_path())} — refusing " <>
+          "to publish an empty budget. An empty budget matching an empty snapshot is " <>
+          "vacuously green, which is the one state this gate must never be in. Re-pin the " <>
+          "snapshot first (`mix credence.corpus --update-snapshot`)."
+      )
+    end
+
+    File.write!(Budget.budget_path(), Budget.render(counts))
+    Mix.shell().info("Wrote #{map_size(counts)} rule budget(s) to #{Budget.budget_relpath()}.")
+    report_budget_delta(published, counts, :published)
+  end
+
+  # The published per-rule budget, ranked — which is also the paydown ranking
+  # (C13(b)). Read off the committed snapshot, so it needs no corpus.
+  defp report_budget do
+    shell = Mix.shell()
+    counts = Budget.counts(Findings.snapshot_lines())
+    published = Budget.published()
+    cap = Budget.default_cap()
+    ranked = Budget.rank(counts)
+    {over, under} = Enum.split_with(ranked, fn {_rule, count} -> count > cap end)
+    over_total = over |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+    total = Budget.total(counts)
+
+    shell.info(
+      "ACCEPTED FINDINGS: #{total} across #{length(ranked)} rules " <>
+        "(cap #{cap}: #{length(over)} over, #{length(under)} under)\n"
+    )
+
+    Enum.each(ranked, fn {rule, count} ->
+      marker = if count > cap, do: "  OVER CAP", else: ""
+      shell.info("  #{String.pad_leading(to_string(count), 5)}  #{rule}#{marker}")
+    end)
+
+    if over != [] do
+      shell.info(
+        "\nThe #{length(over)} rules over the cap hold #{over_total} findings " <>
+          "(#{round(over_total * 100 / total)}% of the budget). Each must carry a " <>
+          "@grandfathered entry in test/corpus/findings_budget_test.exs; that ledger only " <>
+          "ratchets down, and a rule paid down to #{cap} must leave it."
+      )
+    end
+
+    report_budget_delta(published, counts, :stale)
   end
 
   defp snapshot_header do

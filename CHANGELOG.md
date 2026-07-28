@@ -55,6 +55,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A per-rule budget on accepted corpus findings, and `mix credence.corpus
+  --budget` to read it.** The over-firing test already pinned the corpus findings
+  exactly, so no rule could start firing without a red test — but nothing gated
+  the *accept*. Its own failure message pointed at `--update-snapshot`, the re-pin
+  was one command, and what landed in review was N raw `<path>:<line>  <rule>`
+  lines with no per-rule aggregate anywhere. That is how the whitelist reached
+  6,366 accepted findings across 87 rules — 74% of them in fifteen rules and 20%
+  in one — without anyone deciding to. `test/corpus/accepted_findings_budget.txt`
+  now publishes the per-rule counts, so an accept shows up as
+  `+400  prefer_map_new` instead of 400 opaque path lines, and its own order is
+  the paydown ranking. A rule not on the frozen grandfather ledger may not exceed
+  100 accepted findings; a grandfathered rule may not exceed its adoption-day
+  ceiling and must leave the ledger once it falls to the cap. Both the file and
+  its gate are derived from the committed snapshot, so neither needs the corpus
+  fetched and both run under `mix test --exclude corpus`.
+
 - **`Credence.SourceMask`.** Produces a same-length shadow of a source file with
   everything that is not code blanked out, so a line-based rule can tell an
   operator from prose. Deliberately a hand-rolled scanner rather than

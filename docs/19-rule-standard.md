@@ -34,16 +34,21 @@ are enforced by a meta-test today; the rest are the catch-up work in §2.
 | 1 | **Test triplet present** — `_check_test`, `_fix_test` (or a combined file), and for Pattern rules an `_equivalence_test` | *gated* (`check_meta_test`, `fix_meta_test`, `equivalence_meta_test`, `rule_test_completeness_test`) |
 | 2 | **The rule actually does something** — `check` asserted in both directions; a real `fix` whose output differs from its input; the output parses | *gated* (`semantic_meta_test`, `syntax_meta_test`, `fix_meta_test`) |
 | 3 | **No parser calls in rule tests** — everything routes through `Credence.RuleCase` | *gated* (`no_parser_calls_in_rule_tests_test`) |
-| 4 | **Equivalence dimensions mapped to the rule's operation class** — a rule that rewrites `Keyword.get/2` must be tested against `keyword_lists`, not only `term_lists` | **not gated** (C2.2) — §2 row A |
+| 4 | **Equivalence dimensions mapped to the rule's operation class** — a rule that rewrites `Keyword.get/2` must be tested against `keyword_lists`, not only `term_lists` | *gated* 2026-07-28 (`equivalence_dimension_meta_test`, C2.2) — §2 row A |
 | 5 | **DSL-safety classified** — `unsafe_in_dsl/0` declared deliberately, even if the answer is `[]` | **not gated** (C14) — §2 row B |
 | 6 | **Message and moduledoc follow the template** | **not gated** (C15) |
 | 7 | **Alpha-rename generality** — the rule fires on the construct, not on a variable name | **not gated** (C12) |
-| 8 | **Within the accepted-corpus-findings budget** | **not gated** (C13) — §2 row C |
+| 8 | **Within the accepted-corpus-findings budget** | *gated* 2026-07-28 (`findings_budget_test`, C13) — §2 row C |
 | 9 | **Semantic-mutant kill rate above the floor** | **not measured** (C18) — report-only first |
 
-Items 1–3 are why the suite is 8,141 tests. Items 4–9 are the standard's actual
-content, and none of them is enforced yet — which is the honest state of things
-and the reason this document leads with the audit rather than the checklist.
+Items 1–3 are why the suite is 8,253 tests.
+
+**Two of items 4–9 have since been gated** (4 by C2.2, 8 by C13), each with its
+positive controls seen red on purpose. That is what §3 said had to happen first:
+the gates go in before the retrofit sweep, so the sweep runs behind a ratchet
+instead of racing one. Items 5, 6, 7 and 9 are still open, and until requirement
+5 (C14) joins them `STATUS.md` stays `CATCHING UP` — the bar for `PRODUCING` is
+requirements 4, 5 and 8 wired in, and 5 is the one left.
 
 ---
 
@@ -84,17 +89,31 @@ and looks identical.
 *Cost to fix:* C14's static scan, then a one-shot sweep. The sweep tool gets
 deleted afterwards (§3).
 
-### Row C — corpus-findings debt: **6,155 accepted findings across 90 rules**
+### Row C — corpus-findings debt: **6,366 accepted findings across 87 rules**
 
-Concentrated, not diffuse:
+> **Corrected 2026-07-28.** This row first read *6,155 across 90 rules* with a
+> per-rule top five to match. Those were docs/12's figures from 2026-07-11,
+> carried over rather than re-measured, so the row was wrong in both directions
+> at once — fewer findings and more rules than the snapshot actually holds. The
+> numbers below come from `Credence.Corpus.Budget.counts/1` over the committed
+> snapshot, and unlike the first set they are now **gated**, so they cannot
+> quietly drift again.
+
+Concentrated, not diffuse — and counted **with `(xN)` multiplicity**, because a
+rule firing three times on one source line is three suppressed fix sites:
 
 ```
-prefer_heredoc_for_multi_line_doc  1,298   (21% of the whole whitelist)
-prefer_map_new                       502
-no_case_true_false                   429
-prefer_function_capture              331
-no_underscore_function_name          226
+prefer_heredoc_for_multi_line_doc  1,298   (20% of the whole whitelist)
+no_case_true_false                   521
+prefer_map_new                       504
+prefer_function_capture              337
+prefer_guard_over_if                 249
 ```
+
+15 rules exceed the cap of 100 and hold **4,734 findings — 74% of the debt**.
+The other 72 firing rules are already compliant, as are the 68 Pattern rules
+that fire zero times. The distribution has its own knee at the cap: the 15th
+rule holds 122, the 16th holds 99.
 
 docs/16 already names `prefer_heredoc_for_multi_line_doc` as the first paydown
 target and flags `prefer_erlang_float` (37 gold findings on hand-written code)
@@ -102,6 +121,13 @@ as a taste-rule candidate for the C13 budget review.
 
 *Cost to fix:* C13 says budget gate first, evidence-ranked paydown second. Do
 not invert that — paying down without a gate just refills.
+
+**Gate landed 2026-07-28** (C13(a) + (c)): `test/corpus/accepted_findings_budget.txt`
+publishes the per-rule counts, `test/corpus/findings_budget_test.exs` freezes the
+cap and the grandfather ledger, and `mix credence.corpus --budget` prints the
+ranking — which is also the paydown order. Neither the file nor the gate needs
+the corpus, so both run under `mix test --exclude corpus`. **Requirement 8 of §1
+is now gated**; the paydown (C13(b)) is the part still open.
 
 ### Row D — the three trace states nothing consumes yet
 

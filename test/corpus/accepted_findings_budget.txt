@@ -1,0 +1,121 @@
+# Accepted corpus findings — PER-RULE BUDGET (docs/12 C13, docs/19 §2 row C).
+#
+# The published per-rule view of test/corpus/accepted_findings.txt:
+#
+#     <accepted findings>  <rule>
+#
+# counted WITH multiplicity — a snapshot line carrying `(xN)` counts N,
+# because a rule firing three times on one source line is three suppressed
+# fix sites.
+#
+# DO NOT hand-edit. Regenerate from the committed snapshot (no corpus fetch
+# needed) after re-pinning:
+#
+#     mix credence.corpus --update-budget
+#
+# test/corpus/findings_budget_test.exs gates this file, WITHOUT needing the
+# corpus, so it runs under `mix test --exclude corpus` too:
+#
+#   * it must equal the snapshot's per-rule counts exactly — no slack, because
+#     slack above the real count is refill room;
+#   * a rule NOT on the frozen grandfather ledger may not exceed the cap;
+#   * a grandfathered rule may not exceed its adoption-day ceiling, and MUST
+#     leave the ledger once it falls to the cap or below.
+#
+# The cap and the ledger are frozen in that test. Changing either is a
+# deliberate, reviewable edit — which is the whole mechanism.
+#
+# TOTAL 6366 accepted findings across 87 rules.
+#      15 over the cap of 100 (grandfathered; they hold 4734 = 74% of the debt)
+#      72 at or under the cap
+#
+# Paydown ranking is this file's own order. Top target (docs/16, C13(b)):
+# prefer_heredoc_for_multi_line_doc, 1298 = 20% of the whole budget.
+
+ 1298  prefer_heredoc_for_multi_line_doc
+  521  no_case_true_false
+  504  prefer_map_new
+  337  prefer_function_capture
+  249  prefer_guard_over_if
+  226  no_underscore_function_name
+  222  no_case_on_param_dispatch
+  220  use_map_join
+  194  prefer_sigil_charlist
+  192  no_case_boolean_result
+  174  no_length_comparison_for_empty
+  167  no_trailing_newline_in_doc
+  159  no_redundant_assignment
+  149  prefer_map_new_with_transform
+  122  no_cond_two_clauses
+   99  prefer_then_over_capture_invocation
+   95  no_eager_with_index_in_reduce
+   93  no_is_nil_guard
+   80  no_redundant_enum_join_separator
+   72  prefer_erlang_float
+   63  no_map_then_aggregate
+   62  no_zip_then_map
+   58  no_unless_else
+   56  no_empty_map_new
+   55  prefer_negate_if_true_false
+   53  no_doc_false_on_private
+   51  prefer_cond_for_nested_if
+   48  no_enum_count_for_length
+   48  no_if_true_false
+   47  no_reduce_for_map_building
+   44  prefer_enum_reverse_two
+   41  prefer_explicit_binary_arithmetic
+   39  no_destructure_reconstruct
+   39  no_guard_equality_for_pattern_match
+   37  non_grouped_clauses
+   35  no_redundant_binary_syntax
+   27  no_manual_list_reduce
+   26  no_kernel_op_in_pipeline
+   26  no_map_keys_or_values_for_iteration
+   22  no_duplicate_spec
+   22  no_length_guard_to_pattern
+   21  no_list_concat_with_recursive_result
+   20  no_filter_then_count
+   19  no_list_append_in_reduce
+   19  no_uniq_then_count
+   16  no_enum_take_negative
+   16  prefer_no_question_mark_for_non_boolean
+   15  no_string_concat_in_loop
+   14  no_enum_into_empty_mapset
+   14  no_redundant_comparison_guard
+   10  no_find_value_default_case
+   10  no_list_append_in_recursion
+   10  no_redundant_case_nil_clause
+   10  no_redundant_list_traversal
+    9  no_anon_fn_application_in_pipe
+    8  prefer_concat_over_flat_map_identity
+    7  no_sort_then_reverse
+    6  no_duplicate_function_clauses
+    6  no_redundant_underscore_bind
+    5  no_identity_enum_map
+    5  no_manual_frequencies
+    5  no_map_keys_for_membership
+    4  avoid_length_guard_less_than2
+    4  redundant_list_guard
+    3  avoid_graphemes_enum_count_with_predicate
+    3  no_identity_function_in_enum
+    3  no_list_foldl
+    3  no_manual_min
+    2  no_case_tuple_guard_dispatch
+    2  no_length_based_indexing
+    2  no_missing_require_logger
+    2  no_reduce_while_without_halt
+    2  no_redundant_dedup_before_mapset
+    2  no_redundant_to_list
+    2  no_string_length_for_char_check
+    2  no_tautological_if
+    2  prefer_map_put_new
+    2  prefer_pattern_match_empty_string
+    1  no_filter_then_first
+    1  no_group_by_for_frequencies
+    1  no_manual_max
+    1  no_map_keys_enum_lookup
+    1  no_map_update_then_fetch
+    1  no_redundant_negated_guard
+    1  no_take_while_length_check
+    1  no_unused_underscore_assignment
+    1  prefer_function_clauses_for_list_patterns

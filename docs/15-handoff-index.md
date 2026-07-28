@@ -30,7 +30,9 @@ here; nothing of substance lives outside these files.
 | 14 | [`docs/19-rule-standard.md`](19-rule-standard.md) | **Rule Standard v1** + the stratification audit: which bar each era of rules was accepted under, and the three populations that are out of line |
 | 15 | [`STATUS.md`](../STATUS.md) | The mode file — PRODUCING or CATCHING UP. Answers "can rules be generated right now?" as a fact rather than a judgement call |
 | 16 | [`docs/20-rule-ordering-policy.md`](20-rule-ordering-policy.md) | **Rule ordering policy** (C8) — 15 of 290 rules declare a priority; the other 275 are ordered alphabetically by accident, and in the Semantic round that decides which rule runs at all |
-| 17 | This file | Map + actionable state |
+| 17 | [`docs/21-in-flight.md`](21-in-flight.md) | **In-flight ledger** — what is started but not committed, per docs/16 Appendix B. Written after an 8-agent batch was lost to an OOM crash with nothing about it recorded in the repo; also holds the salvage index for that batch |
+| 18 | [`test/corpus/accepted_findings_budget.txt`](../test/corpus/accepted_findings_budget.txt) | **The per-rule corpus-findings budget** (C13) — 6,366 accepted findings across 87 rules, 74% of them in 15. Gated by `test/corpus/findings_budget_test.exs`, no corpus needed; the file's own order is the paydown ranking |
+| 19 | This file | Map + actionable state |
 
 Related but separate: the dataset repo's own `STATUS.md` + `docs/12` (its
 Quality Standard S1–S12 and improvement-round protocol) — the template for

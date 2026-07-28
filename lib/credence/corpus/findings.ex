@@ -42,8 +42,10 @@ defmodule Credence.Corpus.Findings do
 
   # A formatted line ends with the rule name, optionally followed by the `(xN)`
   # duplicate count. Anchoring on the end (rather than splitting on whitespace)
-  # keeps the parse correct for a path that contains a space.
-  @rule_regex ~r/\s{2}(?<rule>[a-z][a-z0-9_]*)(?:\s+\(x\d+\))?$/
+  # keeps the parse correct for a path that contains a space. `n` is captured so
+  # `count_of/1` can read the multiplicity back off the line (see
+  # `Credence.Corpus.Budget`); it is `""` when the line carries no `(xN)`.
+  @rule_regex ~r/\s{2}(?<rule>[a-z][a-z0-9_]*)(?:\s+\(x(?<n>\d+)\))?$/
 
   @doc "Absolute path to the committed snapshot file."
   @spec snapshot_path() :: String.t()
@@ -128,6 +130,34 @@ defmodule Credence.Corpus.Findings do
     case Regex.named_captures(@rule_regex, line) do
       %{"rule" => rule} -> rule
       nil -> nil
+    end
+  end
+
+  @doc """
+  How many findings a formatted identity line stands for: `1` normally, `N` for
+  a `(xN)`-collapsed line, and `0` for a line that is not an identity at all
+  (the `nil` case of `rule_of/1`, so the two agree about what is countable).
+
+  `format/1` collapses duplicate `(file, line, rule)` findings into one line with
+  a count, so summing lines and summing findings are different numbers — 6,137
+  snapshot lines are 6,366 findings today. The per-rule budget
+  (`Credence.Corpus.Budget`) counts *findings*: each one is a suppressed fix
+  site, and a rule that went from `(x1)` to `(x3)` on the same line tripled its
+  firing without adding a line.
+
+      iex> Credence.Corpus.Findings.count_of("a.ex:10  r")
+      1
+      iex> Credence.Corpus.Findings.count_of("a.ex:10  r  (x3)")
+      3
+      iex> Credence.Corpus.Findings.count_of("# a comment")
+      0
+  """
+  @spec count_of(String.t()) :: non_neg_integer()
+  def count_of(line) do
+    case Regex.named_captures(@rule_regex, line) do
+      %{"n" => ""} -> 1
+      %{"n" => n} -> String.to_integer(n)
+      nil -> 0
     end
   end
 
