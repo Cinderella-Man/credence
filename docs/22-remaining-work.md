@@ -556,7 +556,7 @@ its own tests run under real `mix test`.
   control for any probe change**); (c) stacktrace normalization in
   `test/support/behaviour_equivalence.ex` — row 33.
 - [x] ~~**T3.5 [C] `behaviour_equivalence.ex:312` `compile_module!/2` renames
-  only the `defmodule` header**~~ **DONE `PENDING`.** The rename now happens on
+  only the `defmodule` header**~~ **DONE `a3ff262`.** The rename now happens on
   the AST, so every `__aliases__` node naming the module moves with the header —
   struct literals, struct patterns, qualified self-calls alike.
 
