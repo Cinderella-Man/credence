@@ -523,7 +523,7 @@ its own tests run under real `mix test`.
   widening the bugfix lane is a routing decision on its own evidence.
 
 - [x] ~~**T3.3 [C] `mix credence.equiv` vacuous EQUIVALENT (C2.4).**~~ **DONE
-  `PENDING`.** Both shapes now return `{:vacuous, reason}` and render as
+  `a3a3faa`.** Both shapes now return `{:vacuous, reason}` and render as
   **SKIPPED**, never EQUIVALENT: an empty battery (`:no_admitted_inputs`) and
   every input raising identically on both sides (`:all_raised`).
 
