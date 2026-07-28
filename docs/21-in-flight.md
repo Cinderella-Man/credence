@@ -392,3 +392,20 @@ strictly stronger than what they replaced, and only findable by asking what the
 gate would still be worth after the work succeeded.
 
 Suite: 9,911 tests + 6 properties, 0 failures.
+
+---
+
+## Session 2026-07-28 (night) — resumed after the sixth crash
+
+**Cost of the crash: one checkbox.** Both repos were clean and level with their
+remotes (`credence` at `4e9d16d`, `credence-evolution-harness` at `7b6e2c6`); the
+only uncommitted artifact was T3.10a's `- [ ]` → `- [x]` flip in docs/22, whose
+resolution prose had already been committed with the rule's retirement. Nothing
+to salvage, nothing to push. That is now twice in a row that a crash cost
+nothing, and the reason is the same both times: commit and push per item.
+
+Folded into the same pass, since a tracker that lies is worse than one that is
+out of date: five `this commit` self-references in docs/22 were resolved to real
+ids (they are meaningless once committed), the four newest landings were added to
+the state-of-record table, and H14/H15 stopped being labelled unpushed — they
+were pushed in the same session that wrote the label.

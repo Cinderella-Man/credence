@@ -65,11 +65,11 @@ untouched.
 | ✅ | T0.2 — Phase-4 PR | `1cb7bff` — **superseded**, a PR for the whole 3rd evolution already exists |
 | ✅ | **T3.7 — the last two raw-byte syntax fixes**, + the `FixDivRem` half-conversion behind them | `e81985e` · `8169601` |
 | ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
-| ✅ | **T3.10 — pay down the self-corruption ledger** — 10 of 11 done; the only entry left is the deliberate one | `becd59b` · `643435a` · `e549bd0` · this commit |
-| ✅ | **T3.10a — `no_else_if` corrupts valid parsing code** — all four steps done; the rule is **retired** into its widened sibling and the self-corruption ledger is **EMPTY** | `f23722f` · this commit |
+| ✅ | **T3.10 — pay down the self-corruption ledger** — 10 of 11 done; the only entry left is the deliberate one | `becd59b` · `643435a` · `e549bd0` · `a9ad691` |
+| ✅ | **T3.10a — `no_else_if` corrupts valid parsing code** — all four steps done; the rule is **retired** into its widened sibling and the self-corruption ledger is **EMPTY** | `f23722f` · `4e9d16d` |
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · `3cdbe14` |
-| ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · this commit |
-| ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | this commit |
+| ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · `6d72130` |
+| ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | `8b870b5` |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T1.2**, the G3 residue T1 does not cover — and T5.9 handed it
@@ -704,10 +704,12 @@ its own tests run under real `mix test`.
   plus the gate itself, while the 131 pre-existing tests stay green. Full suite:
   **9,911 tests + 6 properties, 0 failures.**
 
-- [ ] **T3.10a [C] `no_else_if` — do NOT convert it. It has four confirmed
+- [x] ~~**T3.10a [C] `no_else_if` — do NOT convert it. It has four confirmed
   defects that masking does not touch, and its ledger entry is the only thing
-  flagging them.** This started as "the outlier at 226 lines" and is now the most
-  serious finding on the ledger. Everything below was **run**, not read:
+  flagging them.**~~ **DONE — and the answer was not to convert it but to RETIRE
+  it; see the resolution at the end of this item.** This started as "the outlier
+  at 226 lines" and became the most serious finding on the ledger. Everything
+  below was **run**, not read:
 
   * **The 226 is an artifact.** `fix/1` on its own file removes 2 lines, and the
     scan's positional diff then counts every subsequent line as changed
@@ -1172,8 +1174,8 @@ tests at HEAD `958f241`; zero compile warnings):
 | Phase-5 defect trio | `958f241` | 134 was an emitter bug not a rule bug; 90/65 six shapes; 69 declined |
 | H12 sidecar | `60ce2c4` (pushed) | — |
 | H13 + P5 | `96865e7` (pushed) | — |
-| H14 push breaker | `6f776fe` (unpushed) | — |
-| H15 dead-code sweep | `9cffbba` (unpushed) | — |
+| H14 push breaker | `6f776fe` (pushed) | — |
+| H15 dead-code sweep | `9cffbba` (pushed) | — |
 | H9 (Gate half) + LD2 backstop | `fb3bc2a` | 15 gate tests; row-105 guard explicit |
 | H16 doc split (IMPROVEMENTS = spec) | `c2b0d95` | — |
 
@@ -1199,7 +1201,11 @@ compile warnings**:
 | T3.8 — `FixMalformedSpec` re-homed Syntax→Semantic | `e549bd0` | the ported Issue kept its author-chosen atom; only Syntax attributes that way |
 | T3.8 — `FixWithElseBareValue` re-keyed, not retired | `3cdbe14` | `fix/2` was correct all along; the rule matched a message 1.20.2 never emits |
 | T5.9 — 4 `:dep_gated` + 2 `:no_fixture` | `f32e315` · `f895bee` | the 4 were never broken; 1 of the 2 needed a fix, not a fixture |
-| **T5.9 — the last 2, `:wrong_phase` → Pattern; the T1 ledger is EMPTY** | this commit | 3 controls red; premise re-run (0 diagnostics in a `def` body); corpus clean 0/20,076 both |
+| **T5.9 — the last 2, `:wrong_phase` → Pattern; the T1 ledger is EMPTY** | `6d72130` | 3 controls red; premise re-run (0 diagnostics in a `def` body); corpus clean 0/20,076 both |
+| T5.10 — the AST differ double-counted a bare list's brackets | `8b870b5` | 4 controls; `RuleHelpers` had no test file at all until this |
+| **T3.10 — 6 more rules (10 of 11 paid down)** | `a9ad691` | 32 of 163 red with the six reverted; a live non-self-corruption defect fell out of one conversion |
+| T3.10a steps 1–3 — the sibling absorbs `else if` | `f23722f` | 2 separate controls (widen: 5 red; discriminator alone: exactly 1); `elsif`/`elif` output byte-identical across the widen |
+| **T3.10a step 4 — `no_else_if` retired; the ledger is EMPTY** | `4e9d16d` | the gate's vacuity check moved from the result to the machinery — 3 synthetic rules, valid at ledger size zero |
 
 Deliberately **not** done, with reasons on record: P4-as-specced on-disk AST
 cache (mooted at 11.6 s scoped scans); P6 (docs/13's own "only if P1–P4 leave a
