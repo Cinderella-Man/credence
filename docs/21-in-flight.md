@@ -205,6 +205,12 @@ side effect of the last gate landing.
 
 *(nothing — update this section when work starts, clear it when the work lands)*
 
+**One thing is on the maintainer's desk rather than in flight: docs/22 T3.10a
+step 4**, retiring `no_else_if` into its now-widened sibling. Steps 1–3 landed
+(`f23722f`); step 4 is a judgement call about deleting a live rule and was
+deliberately not taken. `no_else_if` is unchanged and is the last entry on the
+self-corruption ledger.
+
 **Everything else that remains — for both repos — is tracked in one place:
 [`docs/22-remaining-work.md`](22-remaining-work.md).** The "Next, in order" list
 that used to live here moved there (Tiers 0–6); this file stays the incident
@@ -311,3 +317,55 @@ than quietly: `bff6e83`'s message asserted a blockquote repair it had not made
 byte "cannot take part in a match" — `\S`, `.` and negated classes do match it,
 now pinned in a test. The tally that matters is not that they happened but that
 both were found the same way as everything else here: by running the thing.
+
+---
+
+## Session 2026-07-28 (late evening) — CLOSED, nothing in flight
+
+Resumed after a VS Code crash. **The crash cost nothing**: the tree was clean and
+`origin/evolution_accepted` was already level with `HEAD` (`6d72130`), so there
+was no unpushed work and no salvage. Worth stating plainly after five OOMs in one
+day — the discipline of committing and pushing per item is what made the crash a
+non-event.
+
+Landed and pushed: **T5.10** (`8b870b5`), **T3.10** 6-rule paydown (`a9ad691`),
+**T3.10a steps 1–3** (`f23722f`). Suite went 9,861 → **9,923 tests + 6
+properties, 0 failures**, run in full before each of the three commits.
+
+**Zero agents, zero workflows, one shell.** Every compile, probe and suite run
+was in the single foreground shell. No OOM, no crash dump. The three full-suite
+runs cost ~4m10s each and ~38 minutes of CPU — that is the thing that must not be
+run concurrently with anything.
+
+**The finding worth carrying: a conversion is a reading nobody has done before,
+so budget for it surfacing unrelated bugs.** T3.10 was scoped as "make six rules
+literal-aware". Converting `fix_python_augmented_assignment` for that reason
+exposed a *different* live defect underneath — its right-hand side ran to the end
+of the line, so `count += 1  # note` became `count = count + (1  # note)`, closing
+paren inside the comment, output that does not parse. Three of six probe inputs
+failed. Nothing in the ledger pointed at it; it fell out of looking at the rule
+closely enough to mask it.
+
+**Second: knowing about a failure class is not being guarded against it.**
+`no_fn_with_capture` carried a guard *and* a comment explaining that rewriting
+non-code content would corrupt it — and the guard only skipped lines starting
+with `#`. It protected comments, missed heredocs, and rewrote three sentences of
+its own moduledoc from naming the broken form to naming the fixed one. Two more
+rules *argued in their moduledocs* that literals were safe, on reasoning true
+only by accident of `^`-anchoring, which runs out inside a heredoc. A written
+safety argument is a hypothesis like any other.
+
+**Third: one perturbation cannot prove two claims.** T3.10a widens a rule *and*
+adds a discriminator. Reverting the widen reddens the five rewrite tests but
+leaves every "declines" test green — they pass vacuously against a rule that
+never matched `else if`. Only disabling the discriminator alone, with the widen
+kept, reddens the valid-nested-`if` decline, and it reddens exactly that one. Two
+controls, because there were two things to prove.
+
+Also: `RuleHelpers` — the module under all 157 Pattern rules — had **no test
+file at all**, which is the `SourceMask` gap of the previous session repeating
+one layer down, one day later. It has one now.
+
+**Left for the maintainer, deliberately: T3.10a step 4** (retire `no_else_if`).
+The evidence is executed and written down; deleting a live rule is not this
+session's call.
