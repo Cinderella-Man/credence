@@ -1000,7 +1000,17 @@ its own tests run under real `mix test`.
   compile the classifier's BEFORE and require the claimed diagnostic to appear
   (~one compile; would have killed rows 150/162/221 ≈ $100 of implementer
   budget in nine reviewed rows alone).
-- [ ] **T4.3 [H] LD1 residuals** (the closed-set story after H12): name
+- [x] ~~**T4.3 [H] LD1 residuals**~~ **DONE `5aadc9d` · `2bb104d` · `bc94f07` +
+  the row-54 signal.** All parts landed; the sub-items are struck below with what
+  each turned out to be. The one finding that reframes the item: **all of the
+  parse-side losses had a single root cause — Elixir's `Logger` truncates a
+  message at 8096 bytes by default**, and this harness does not read those logs,
+  it *parses* them as data. A row firing ~150 rules puts the `APPLIED_RULES:`
+  line within a few hundred bytes of that cap, so the evidence was being cut on
+  exactly the busiest rows. `truncate: :infinity` fixes it at source and is pinned
+  by a test, because a finite cap is silent data loss waiting for a longer row.
+
+  Original item text (each part now done): (the closed-set story after H12): name
   normalisation in `parser.ex:78-83` (`<phase>/<snake>` →
   `Credence.<Phase>.<CamelCase>`, resolve by basename on wrong phase — row
   95); prompt/gate reconciliation — the prompt solicits under-fire reports the
