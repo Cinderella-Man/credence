@@ -367,6 +367,72 @@ defmodule Credence.Syntax.FixDivRemTest do
   end
 
   # ═══════════════════════════════════════════════════════════════════
+  # MULTI-LINE LITERALS — a line cannot be masked on its own
+  #
+  # `analyze` has always masked the whole file; `fix` masked each line in
+  # isolation, where a heredoc body reads as pure code. The two disagreed,
+  # so the rule rewrote what it had never reported — including its own
+  # moduledoc. Found by running every Syntax rule's `fix/1` over its own
+  # source file.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "fix/1 — heredoc bodies are not code" do
+    test "leaves a heredoc body that mentions the operator alone" do
+      source = """
+      defmodule Doc do
+        @moduledoc \"\"\"
+        expected_sum = n * (n + 1) div 2
+        \"\"\"
+        def f(x), do: x
+      end
+      """
+
+      confirm_fix(FixDivRem.fix(source), source)
+    end
+
+    test "does not report a heredoc body — and never did" do
+      source = """
+      defmodule Doc do
+        @moduledoc \"\"\"
+        expected_sum = n * (n + 1) div 2
+        \"\"\"
+        def f(x), do: x
+      end
+      """
+
+      assert FixDivRem.analyze(source) == []
+    end
+
+    test "still fixes real code below a heredoc that mentions the operator" do
+      source = """
+      defmodule Doc do
+        @moduledoc \"\"\"
+        expected_sum = n * (n + 1) div 2
+        \"\"\"
+        def f(n), do: n div 2
+      end
+      """
+
+      expected = """
+      defmodule Doc do
+        @moduledoc \"\"\"
+        expected_sum = n * (n + 1) div 2
+        \"\"\"
+        def f(n), do: div(n, 2)
+      end
+      """
+
+      confirm_fix(FixDivRem.fix(source), expected)
+    end
+
+    test "the rule does not rewrite its own source file" do
+      source = File.read!("lib/syntax/fix_div_rem.ex")
+
+      confirm_fix(FixDivRem.fix(source), source)
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════
   # DECLINED — an operand the lazy group cannot bound safely
   # ═══════════════════════════════════════════════════════════════════
 

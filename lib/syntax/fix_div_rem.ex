@@ -67,8 +67,25 @@ defmodule Credence.Syntax.FixDivRem do
   @impl true
   def fix(source) do
     source
-    |> String.split("\n")
-    |> Enum.map_join("\n", &fix_line/1)
+    |> SourceMask.lines()
+    |> Enum.map_join("\n", fn {line, shadow} -> fix_line(line, shadow) end)
+  end
+
+  # `fix_line/1` re-masks after every rewrite, because a rewrite shifts every
+  # byte offset after it — and it masks the line *on its own*, which a line
+  # cannot be: heredoc and multi-line-string state crosses lines. So the rewrite
+  # runs only where the two agree. Where masking this line in isolation gives
+  # the same shadow the whole-file mask gave it, the per-rewrite re-masking is
+  # exact; where they differ, the line is inside a multi-line literal and is
+  # left alone. That costs a missed fix, never a corrupted string — the same
+  # direction `Credence.SourceMask` chooses for malformed input.
+  #
+  # Without this, `fix` rewrote the rule's own moduledoc — `n * (n + 1) div 2`
+  # on a heredoc line became `div(n * (n + 1), 2)` — while `analyze`, which has
+  # always masked the whole file, correctly reported nothing. The rule fixed
+  # what it had not found.
+  defp fix_line(line, shadow) do
+    if SourceMask.mask(line) == shadow, do: fix_line(line), else: line
   end
 
   defp infix_use?(line, op) do
