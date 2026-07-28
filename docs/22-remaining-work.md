@@ -443,7 +443,7 @@ its own tests run under real `mix test`.
   repro-validation gate (T4.2), not LD4. Also: `trace_evidence.ex`'s
   `changed_blocks/2` fix was never re-probed (formatting-only risk), and
   `:refuted` is Semantic-only until T3.2 lands.
-- [x] ~~**T2.4 [C] C18 mutant sweep**~~ **DONE `PENDING`.** Placed, tested, and
+- [x] ~~**T2.4 [C] C18 mutant sweep**~~ **DONE `b1297c7`.** Placed, tested, and
   **re-measured on a quiet box** — which is what this item was waiting for, since
   the salvaged numbers came from a 20-parallel run while the machine was OOMing.
 
