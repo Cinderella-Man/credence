@@ -71,7 +71,7 @@ either repo.
 | **Gate staged-path dispatch** (Addendum 2 / 8.7) | harness | Gate integration test against a stub `mix` | `b2-gatedispatch/corpus_dispatch.ex`, `corpus_dispatch_test.exs`, `gate_corpus_dispatch_test.exs`, `gate.ex.REFERENCE_ONLY` |
 | **LD3 + LD4** test-only-diff policy + known-good list | harness | five modules written, no summary | `b2-ld34/test_only_diff.ex`, `verified_good.ex`, `row_log.ex`, `trace_evidence.ex`, `classify.ex`, `prompt.ex` |
 | ~~**C14** DSL-safety static scan~~ | credence | **✅ LANDED 2026-07-28** — salvaged scanner verified, corrected and gated; see below | — |
-| **P5 bugs** (3 credence defects from the ledger) | credence | mid-fix on `no_bare_names_in_spec`; found `heredoc_value/1` returns raw source bytes, which changes the fix | `b2-p5bugs/no_bare_names_in_spec.ex`, `probe90*.exs`, `probe134*.exs` |
+| ~~**P5 bugs** (3 credence defects)~~ | credence | **✅ LANDED 2026-07-28** — 2 fixed, 1 correctly declined; see below | — |
 | **C18** semantic-mutant sweep | credence | early — had just cloned the repo (this is the agent that OOMed) | `b2-c18/mutation.ex`, `sweep.ex`, `credence.mutants.ex` |
 | **C7** idempotency gate | credence | earliest — reading docs, one fixture sweep | `b2-c7/fixtures.bin`, `sweep.exs` |
 
@@ -147,6 +147,44 @@ keep:
 - `mix credence.gen.rule` now emits a deliberate `unsafe_in_dsl/0`, **verified by
   scanning the generator's own output** — a freshly scaffolded rule classifies as
   `:declared`.
+
+**P5 bugs — landed: two fixed, one declined.** The killed agent's last note was
+the useful part of the salvage: it had just discovered that `heredoc_value/1`
+returns raw source bytes rather than the compiled value, "which changes the fix".
+It was right, and that turned out to be half the defect.
+
+- **Row 134 is not a `PreferSigilCharlist` bug**, as the ledger already said and
+  docs/16 still didn't. The rule's output is correct; the emitter recording it was
+  not. `heredoc/1` spliced raw output into a `"""` heredoc, so `~c"say \"hi\""`
+  read back as `~c"say "hi""` — and output containing `#{` was worse than
+  corrupted, parsing as an *interpolation* the reader could not see as a string at
+  all. Fixed on both sides, because Sourceror parses with `unescape: false`: escape
+  on emit so ExUnit reads back the rule's real output, and unescape on read so the
+  rule is handed the value the running test passes rather than raw bytes. Those two
+  are exact inverses, which is what keeps the task idempotent.
+- **`Credence.FixtureHealer` had the same emitter gap** — the ledger flagged it as
+  a suspicion and it is now resolved: it **cannot corrupt**, because
+  `values_preserved?/2` compares *compiled* values and rejects the write. The cost
+  was silent rather than loud — those fixtures were simply never canonicalized.
+  Fixed too; zero fixture files changed, so the gap was latent.
+- **Row 90/65 (`NoBareNamesInSpec`) fixed, and the boundary was wider than
+  recorded.** Six no-op shapes, not three: `|` unions, list, tuple and map type
+  terms, the return position, and — beyond the ledger's stated boundary — *any*
+  spec carrying a `when` guard, where even a top-level bare argument no-opped
+  because `fix_spec_body/2` never unwrapped the guard. This is the worst shape a
+  Semantic rule can have: `lib/semantic.ex` records `{rule, 1}` even for a no-op
+  and dispatches with `Enum.find`, so the rule consumed the diagnostic, nothing
+  else could claim it, and the compile error survived every pass.
+- **Row 69 declined, not fixed.** `NoRemoteFunctionInGuard` is not in this repo —
+  sister only, already dispositioned *rebuild-later*. docs/16 §6.5 listed it as a
+  credence bugfix; that entry is now corrected.
+
+One finding worth carrying: **widening the spec walk introduced a bug, and only
+`compiles?/1` caught it.** Annotating a name the `when` guard *binds* produces
+`@spec parse(t :: any()) :: map when t: atom()` — which names and binds `t` at
+once, and Elixir rejects it. The output text looked entirely reasonable. This is
+the fourth time in this program that asserting text instead of meaning hid a
+defect (cf. docs/16 §4.6a finding 3); the rule now declines that shape.
 
 ### The PRODUCING bar is now met
 

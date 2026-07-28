@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`@spec` repairs no longer stop at the top level.** `NoBareNamesInSpec` fixes a
+  compiler-rejected bare name in a spec by annotating it `name :: any()`, but it
+  only ever looked at names sitting as *direct* arguments of the spec's call. A
+  bare name inside a `|` union, a list / tuple / map type, or in the return
+  position was left untouched — and so was every position in a spec carrying a
+  `when` guard, including top-level ones. The rule still claimed the diagnostic in
+  all those cases, and because the Semantic phase gives one diagnostic to one rule,
+  claiming-without-fixing meant nothing else could repair it and the compile error
+  survived every pass. It now annotates the name wherever it occurs in the target
+  spec, and declines a name the `when` clause binds as a type variable (annotating
+  one of those does not compile).
+
+- **`mix credence.fix_tests` no longer corrupts fixtures containing escapes.** It
+  recorded a rule's output by splicing it into a `"""` heredoc verbatim, so output
+  holding a backslash came back different when the test ran — `~c"say \"hi\""`
+  became `~c"say "hi""` — and output holding `#{` parsed as an interpolation
+  instead of a string. It also read existing fixtures as raw source bytes rather
+  than their values, so the rule under test was handed a different input than the
+  running test passes it. Both directions are fixed and are exact inverses, so the
+  task stays idempotent. The same emitter gap in the test-fixture healer is fixed
+  too; there it never corrupted anything, because its value-preserving guard
+  rejected the write — it just silently left those fixtures un-canonicalized.
+
 - **Auto-fixes no longer rewrite the inside of string literals.** Four line-based
   syntax rules matched their patterns against raw source bytes, with no notion of
   where code stops and a string begins, so prose that merely *mentioned* an

@@ -94,32 +94,94 @@ defmodule Credence.Semantic.NoBareNamesInSpec do
     end
   end
 
+  # `@spec f(...) :: ret when t: var` — unwrap the guard and fix the spec inside it.
+  # The guards themselves are left alone: they bind type variables, and annotating
+  # a binding would change what the spec means rather than repair it.
+  #
+  # Without this clause the catch-all below returned the body untouched, so a spec
+  # carrying a `when` was a no-op even for a *top-level* bare argument — a shape
+  # outside the boundary the escalation ledger recorded for row 90.
+  defp fix_spec_body({:when, meta, [body, guards]} = node, bare_atom) do
+    # A name the guard BINDS is a type variable, not an undefined type — and
+    # annotating it does not compile: `@spec parse(t :: any()) :: map when t: atom()`
+    # both names the argument `t` and binds `t`, which Elixir rejects. Decline and
+    # leave the compile error, which at least names the file and line.
+    #
+    # Found by asserting `compiles?/1` rather than the output text; the text-only
+    # version of this test passed on source the compiler refuses.
+    if bare_atom in guard_bound(guards) do
+      node
+    else
+      {:when, meta, [fix_spec_body(body, bare_atom), guards]}
+    end
+  end
+
   defp fix_spec_body({:"::", meta, [func_args, return_type]}, bare_atom) do
-    fixed_func_args = fix_func_args(func_args, bare_atom)
-    {:"::", meta, [fixed_func_args, return_type]}
+    {:"::", meta, [fix_func_args(func_args, bare_atom), annotate(return_type, bare_atom)]}
   end
 
   defp fix_spec_body(other, _bare_atom), do: other
 
+  # The type variables a spec's `when` clause binds. Sourceror renders the guard
+  # as a keyword list (`when t: atom()`), sometimes wrapped in a `:__block__`.
+  defp guard_bound(guards) when is_list(guards) do
+    Enum.flat_map(guards, fn
+      {{:__block__, _, [name]}, _type} when is_atom(name) -> [name]
+      {name, _type} when is_atom(name) -> [name]
+      _ -> []
+    end)
+  end
+
+  defp guard_bound({:__block__, _, [inner]}), do: guard_bound(inner)
+  defp guard_bound(_), do: []
+
+  # Only the ARGUMENTS are walked, never the function-name position: `@spec
+  # sub_list(sub_list) :: map` must not become `(sub_list :: any())(...)`.
   defp fix_func_args({func_name, meta, args}, bare_atom) when is_list(args) do
-    fixed_args = Enum.map(args, &fix_arg(&1, bare_atom))
-    {func_name, meta, fixed_args}
+    {func_name, meta, Enum.map(args, &annotate(&1, bare_atom))}
   end
 
   defp fix_func_args(other, _bare_atom), do: other
 
-  # A bare name has nil as the third element
-  defp fix_arg({name, meta, nil} = node, bare_atom) do
-    if name == bare_atom do
-      # Replace with name :: any()
-      {:"::", [line: meta[:line] || 0, column: meta[:column] || 0],
-       [{name, meta, nil}, {:any, [line: meta[:line] || 0, column: meta[:column] || 0], []}]}
-    else
-      node
-    end
+  # Annotate every occurrence of the undefined name *anywhere inside a type term*,
+  # not just as a direct argument.
+  #
+  # The old `fix_arg/2` matched only a top-level element of the argument list, so
+  # the rule claimed the diagnostic and then returned byte-identical source for
+  # every nested position — inside a `|` union, a list or tuple type, or the return
+  # type (escalation ledger rows 90 and 65, reproduced). That is the worst shape a
+  # Semantic rule can have: `lib/semantic.ex` records `{rule, 1}` even for a no-op
+  # and dispatches with `Enum.find`, so the rule consumed the diagnostic, no other
+  # rule could claim it, and the compile error survived every pass.
+  #
+  # Annotating in place rather than substituting a bare `any()` keeps the name the
+  # author wrote, which is the whole value of a named spec argument — and it is
+  # what this rule already did at the top level, so the two positions now agree.
+  # Verified that `name :: any()` compiles in argument, union, list, tuple and
+  # return positions.
+  defp annotate({:"::", meta, [lhs, rhs]}, bare_atom) do
+    # A `::` left side is already a name, so it is not a type reference to repair.
+    {:"::", meta, [lhs, annotate(rhs, bare_atom)]}
   end
 
-  defp fix_arg(other, _bare_atom), do: other
+  defp annotate({name, meta, nil}, bare_atom) when name == bare_atom do
+    pos = [line: meta[:line] || 0, column: meta[:column] || 0]
+    {:"::", pos, [{name, meta, nil}, {:any, pos, []}]}
+  end
+
+  defp annotate({form, meta, args}, bare_atom) when is_list(args) do
+    # `form` is left as-is: when it is an atom this is a call — a *parameterised*
+    # type like `sub_list(t)` — and a parameterised type is not the bare `name/0`
+    # the compiler reported.
+    {form, meta, Enum.map(args, &annotate(&1, bare_atom))}
+  end
+
+  defp annotate({a, b}, bare_atom), do: {annotate(a, bare_atom), annotate(b, bare_atom)}
+
+  defp annotate(list, bare_atom) when is_list(list),
+    do: Enum.map(list, &annotate(&1, bare_atom))
+
+  defp annotate(other, _bare_atom), do: other
 
   defp line(%{position: {line, _col}}), do: line
   defp line(%{position: line}) when is_integer(line), do: line

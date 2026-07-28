@@ -118,6 +118,169 @@ defmodule Credence.Semantic.NoBareNamesInSpecFixTest do
     confirm_fix(fix(input, diagnostic), expected)
   end
 
+  # ── nested positions (escalation ledger rows 90 and 65) ───────────────────
+  #
+  # `fix/2` used to rewrite only a bare name sitting as a DIRECT element of the
+  # spec's argument list. Every other position returned byte-identical source
+  # while `match?/1` still claimed the diagnostic — and `lib/semantic.ex` records
+  # `{rule, 1}` even for a no-op and dispatches with `Enum.find`, so the rule
+  # consumed the diagnostic, nothing else could claim it, and the compile error
+  # survived every pass. Each of these was a reproduced no-op.
+  #
+  # `compiles?/1` is the assertion that matters here rather than the text: the
+  # compiler is a free correctness oracle for a Semantic rule, since the source
+  # is already known broken.
+  for {label, name, spec, fixed, arity} <- [
+        {"a | union", "non_binary", "parse(String.t() | non_binary) :: map",
+         "parse(String.t() | (non_binary :: any())) :: map", 1},
+        {"a list type", "bare_thing", "parse([bare_thing]) :: map",
+         "parse([bare_thing :: any()]) :: map", 1},
+        {"the return type", "bare_ret", "parse(binary()) :: bare_ret",
+         "parse(binary()) :: bare_ret :: any()", 1},
+        {"a tuple type", "bare_tup", "parse({:ok, bare_tup}) :: map",
+         "parse({:ok, bare_tup :: any()}) :: map", 1},
+        {"a map type", "bare_val", "parse(%{k: bare_val}) :: map",
+         "parse(%{k: bare_val :: any()}) :: map", 1},
+        {"two levels deep", "deep", "parse([{:ok, deep} | nil]) :: map",
+         "parse([{:ok, deep :: any()} | nil]) :: map", 1},
+        {"every occurrence, not just the first", "twice", "parse(twice, [twice]) :: map",
+         "parse(twice :: any(), [twice :: any()]) :: map", 2}
+      ] do
+    test "annotates a bare name in #{label}" do
+      head = if unquote(arity) == 2, do: "def parse(x, y), do: {x, y}", else: "def parse(x), do: x"
+
+      input = """
+      defmodule Solution do
+        @spec #{unquote(spec)}
+        #{head}
+      end
+      """
+
+      expected = """
+      defmodule Solution do
+        @spec #{unquote(fixed)}
+        #{head}
+      end
+      """
+
+      diagnostic = %{
+        message: "credence_check.ex:2: type #{unquote(name)}/0 undefined (no such type in Solution)",
+        position: 2,
+        file: "credence_check.ex",
+        severity: :error
+      }
+
+      out = fix(input, diagnostic)
+
+      refute out == input,
+             "no-op: the rule claimed the diagnostic and changed nothing, so the compile " <>
+               "error survives every pass while no other rule can claim it"
+
+      confirm_fix(out, expected)
+      assert Credence.RuleCase.compiles?(out)
+    end
+  end
+
+  test "unwraps a `when` guard — a top-level bare arg was a no-op without it" do
+    input = """
+    defmodule Solution do
+      @spec parse(bare_v, t) :: map when t: atom()
+      def parse(x, y), do: {x, y}
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      @spec parse(bare_v :: any(), t) :: map when t: atom()
+      def parse(x, y), do: {x, y}
+    end
+    """
+
+    diagnostic = %{
+      message: "credence_check.ex:2: type bare_v/0 undefined (no such type in Solution)",
+      position: 2,
+      file: "credence_check.ex",
+      severity: :error
+    }
+
+    out = fix(input, diagnostic)
+    refute out == input, "a spec carrying a `when` guard was left untouched"
+    confirm_fix(out, expected)
+    assert Credence.RuleCase.compiles?(out)
+  end
+
+  test "declines a name the `when` guard binds — annotating it does not compile" do
+    # `t` is a type VARIABLE bound by the guard, not an undefined type. Annotating
+    # it yields `@spec parse(t :: any()) :: map when t: atom()`, which both names
+    # the argument `t` and binds `t` — Elixir rejects that outright.
+    #
+    # This is a regression test for a bug introduced while widening the walk and
+    # caught only because the assertion is `compiles?/1` rather than output text:
+    # the text looked entirely reasonable.
+    input = """
+    defmodule Solution do
+      @spec parse(t) :: map when t: atom()
+      def parse(x), do: x
+    end
+    """
+
+    diagnostic = %{
+      message: "credence_check.ex:2: type t/0 undefined (no such type in Solution)",
+      position: 2,
+      file: "credence_check.ex",
+      severity: :error
+    }
+
+    out = fix(input, diagnostic)
+
+    confirm_fix(out, input)
+    assert out =~ "when t: atom()", "the guard binding was rewritten"
+    assert Credence.RuleCase.compiles?(out)
+  end
+
+  test "never rewrites the function-name position, even when it shares the name" do
+    # `@spec sub_list(sub_list) :: map` — annotating the head would emit
+    # `(sub_list :: any())(sub_list :: any())`, which does not parse as a spec.
+    input = """
+    defmodule Solution do
+      @spec sub_list(sub_list) :: map()
+      def sub_list(x), do: x
+    end
+    """
+
+    expected = """
+    defmodule Solution do
+      @spec sub_list(sub_list :: any()) :: map()
+      def sub_list(x), do: x
+    end
+    """
+
+    out = fix(input)
+    confirm_fix(out, expected)
+    assert Credence.RuleCase.compiles?(out)
+  end
+
+  test "declines a parameterised type — that is not the bare `name/0` reported" do
+    # `sub_list(atom())` is `sub_list/1`. The diagnostic named `sub_list/0`, so
+    # this occurrence is not the one the compiler rejected and must be left as-is.
+    input = """
+    defmodule Solution do
+      @type sub_list(t) :: [t]
+      @spec parse(sub_list(atom())) :: map()
+      def parse(x), do: x
+    end
+    """
+
+    diagnostic = %{
+      message: "credence_check.ex:3: type sub_list/0 undefined (no such type in Solution)",
+      position: 3,
+      file: "credence_check.ex",
+      severity: :error
+    }
+
+    confirm_fix(fix(input, diagnostic), input)
+  end
+
   test "handles different bare names" do
     diagnostic = %{
       message: "credence_check.ex:2: type my_param/0 undefined (no such type in MyMod)",

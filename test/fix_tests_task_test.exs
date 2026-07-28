@@ -99,4 +99,172 @@ defmodule Credence.FixTestsTaskTest do
       assert File.read!(path) == once
     end)
   end
+
+  # ── escaping (escalation ledger row 134) ──────────────────────────────────
+  #
+  # A rule whose output contains a backslash. `PreferSigilCharlist` rewrites the
+  # charlist `'say "hi"'` to `~c"say \"hi\""`, so its real output holds two
+  # literal backslash bytes — and the emitted fixture has to survive being read
+  # back by ExUnit, which decodes heredoc escapes.
+  #
+  # This was filed against PreferSigilCharlist itself. The rule was right; the
+  # emitter that recorded it was not.
+  @escaping_fixture ~S'''
+  defmodule Credence.Pattern.PreferSigilCharlistFixTest do
+    use Credence.RuleCase, async: true
+
+    test "rewrites a quoted charlist" do
+      input = """
+      defmodule Example do
+        def f, do: 'say "hi"'
+      end
+      """
+
+      expected = """
+      WRONG PLACEHOLDER
+      """
+
+      assert fix(PreferSigilCharlist, input) == expected
+    end
+  end
+  '''
+
+  defp in_temp_named(content, basename, fun) do
+    dir =
+      Path.join(System.tmp_dir!(), "fixtests_#{System.unique_integer([:positive])}/test/pattern")
+
+    File.mkdir_p!(dir)
+    path = Path.join(dir, basename)
+    File.write!(path, content)
+
+    try do
+      fun.(path)
+    after
+      File.rm_rf!(Path.dirname(Path.dirname(Path.dirname(path))))
+    end
+  end
+
+  # The value the rewritten `expected` heredoc actually has once ExUnit reads the
+  # file — which is the only value that decides whether the test passes.
+  defp expected_runtime_value(src) do
+    {:ok, ast} = Sourceror.parse_string(src)
+
+    ast
+    |> Macro.prewalk([], fn
+      {:=, _, [{:expected, _, ctx}, node]} = n, acc when is_atom(ctx) ->
+        {n, [node | acc]}
+
+      n, acc ->
+        {n, acc}
+    end)
+    |> elem(1)
+    |> List.first()
+    |> Sourceror.to_string()
+    |> Code.eval_string([], file: "nofile")
+    |> elem(0)
+  end
+
+  test "an emitted fixture whose value contains a backslash reads back unchanged" do
+    in_temp_named(@escaping_fixture, "prefer_sigil_charlist_fix_test.exs", fn path ->
+      FixTests.fix_file(path)
+      out = File.read!(path)
+
+      assert match?({:ok, _}, Sourceror.parse_string(out))
+      refute out =~ "WRONG PLACEHOLDER"
+
+      real =
+        Credence.RuleHelpers.apply_rule_fix(
+          Credence.Pattern.PreferSigilCharlist,
+          """
+          defmodule Example do
+            def f, do: 'say "hi"'
+          end
+          """
+        )
+
+      # The rule's output really does carry backslashes — otherwise this test
+      # would pass for the wrong reason.
+      assert real =~ ~S|~c"say \"hi\""|
+
+      assert expected_runtime_value(out) == real,
+             """
+             The emitted `expected` heredoc does not read back as the rule's output.
+
+               rule output : #{inspect(real)}
+               reads back  : #{inspect(expected_runtime_value(out))}
+
+             `heredoc/1` must escape `\\` and `#{}` on the way out, and
+             `heredoc_value/1` must unescape on the way in, or the recorded fixture
+             is a different string from the one the rule produced.
+             """
+    end)
+  end
+
+  # The other half of row 134, and the half a round-trip test cannot see. Sourceror
+  # parses with `unescape: false`, so the INPUT heredoc the tool hands the rule was
+  # the raw source bytes rather than the value ExUnit passes. Here the input's
+  # decoded value contains `\n` (backslash, n) inside a charlist; raw, it is `\\n`.
+  # The rule's output differs accordingly — `~c"a\nb"` against `~c"a\\nb"` — so the
+  # recorded `expected` was one the running test could never match.
+  @escaped_input_fixture ~S'''
+  defmodule Credence.Pattern.PreferSigilCharlistFixTest do
+    use Credence.RuleCase, async: true
+
+    test "rewrites a charlist holding an escape" do
+      input = """
+      defmodule Example do
+        def f, do: 'a\\nb'
+      end
+      """
+
+      expected = """
+      WRONG PLACEHOLDER
+      """
+
+      assert fix(PreferSigilCharlist, input) == expected
+    end
+  end
+  '''
+
+  test "the rule is run on the input's decoded value, not its raw source bytes" do
+    in_temp_named(@escaped_input_fixture, "prefer_sigil_charlist_fix_test.exs", fn path ->
+      FixTests.fix_file(path)
+      out = File.read!(path)
+
+      assert match?({:ok, _}, Sourceror.parse_string(out))
+
+      decoded_input = "defmodule Example do\n  def f, do: 'a\\nb'\nend\n"
+      real = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferSigilCharlist, decoded_input)
+
+      # Guard against the test passing for the wrong reason: the two inputs really
+      # do drive the rule to different output.
+      raw_input = "defmodule Example do\n  def f, do: 'a\\\\nb'\nend\n"
+      on_raw = Credence.RuleHelpers.apply_rule_fix(Credence.Pattern.PreferSigilCharlist, raw_input)
+      refute on_raw == real, "raw and decoded input no longer diverge — this test is vacuous"
+
+      assert expected_runtime_value(out) == real,
+             """
+             The recorded `expected` matches the rule's output on the RAW heredoc bytes,
+             not on the value ExUnit actually passes.
+
+               on decoded input (correct): #{inspect(real)}
+               on raw bytes              : #{inspect(on_raw)}
+               recorded                  : #{inspect(expected_runtime_value(out))}
+
+             `heredoc_value/1` must unescape what Sourceror hands it (`unescape: false`).
+             """
+    end)
+  end
+
+  test "a fixture containing a backslash is still idempotent on a second pass" do
+    in_temp_named(@escaping_fixture, "prefer_sigil_charlist_fix_test.exs", fn path ->
+      FixTests.fix_file(path)
+      once = File.read!(path)
+      FixTests.fix_file(path)
+
+      assert File.read!(path) == once,
+             "a correctly-escaped fixture was rewritten again — heredoc/1 and " <>
+               "heredoc_value/1 are not inverses, so every run re-churns the file."
+    end)
+  end
 end

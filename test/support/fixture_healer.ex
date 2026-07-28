@@ -244,9 +244,28 @@ defmodule Credence.FixtureHealer do
     end
   end
 
+  # `value` is a compiled binary and a `"""` heredoc is read back through the same
+  # escape rules as a plain string, so a raw splice only round-trips for values
+  # containing neither `\` nor `#{`. For everything else the emitted heredoc
+  # compiles to a *different* value — or, for `#{`, to an interpolation that may
+  # not compile at all.
+  #
+  # That never corrupted a fixture, because `values_preserved?/2` compares compiled
+  # values and rejects the write; the cost was silent, not loud — those fixtures
+  # were simply never canonicalized, and the ones affected are exactly the
+  # escaping-sensitive rules. Escaping here is what lets the guard pass.
+  #
+  # Order matters: backslashes first, then `#{`, or the backslash this adds in
+  # front of `#{` gets doubled and the interpolation comes back.
   defp heredoc(value) do
     body = if String.ends_with?(value, "\n"), do: value, else: value <> "\n"
-    "\"\"\"\n" <> body <> "\"\"\""
+    "\"\"\"\n" <> escape_heredoc(body) <> "\"\"\""
+  end
+
+  defp escape_heredoc(value) do
+    value
+    |> String.replace("\\", "\\\\")
+    |> String.replace("\#{", "\\\#{")
   end
 
   # ── write safety ─────────────────────────────────────────────────────────

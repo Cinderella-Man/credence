@@ -692,6 +692,29 @@ and the E9 micro-fix. Remaining, in docs/12's sequencing:
 **Definition of done per step:** its meta-gate/oracle is green on the full
 (post-drain) rule set, with a positive control proving the gate can fail.
 
+**6.5's three Phase-5 salvage items — resolved 2026-07-28, and the list above
+names one of them wrongly.** Read `maintainer_tools/escalation_ledger.md` rows
+134, 90/65 and 69 rather than this table:
+
+1. **"PreferSigilCharlist escaping" is not a rule bug.** That rule's output
+   (`~c"say \"hi\""`) is correct and parses. The defect was in
+   `Mix.Tasks.Credence.FixTests.heredoc/1`, which spliced a rule's raw output into
+   a `"""` heredoc with no escaping — so the *recorded fixture* was corrupted, not
+   the rule. **Fixed**, both sides: escape on emit, unescape on read (Sourceror
+   parses with `unescape: false`, so the reader was handing the rule raw source
+   bytes as its input). `Credence.FixtureHealer` had the same emitter gap but its
+   value-preserving guard made it fail *safe* — it silently declined to
+   canonicalize those fixtures rather than corrupting them. Also fixed.
+2. **`no_bare_names_in_spec` no-op — fixed**, and the boundary was wider than
+   recorded. Six no-op shapes, not the three in the ledger: `|` unions, list,
+   tuple and map type terms, the return position, and — outside the ledger's
+   stated boundary — *any* spec carrying a `when` guard, where even a top-level
+   bare argument no-opped because `fix_spec_body/2` never unwrapped the guard.
+3. **"NoRemoteFunctionInGuard `:do =>`" does not belong on this worklist at all.**
+   The bug is real, but the module is **not in `credence`** — it exists only in the
+   sister, and docs/18 already dispositions it *rebuild-later*. The salvage belongs
+   in the failure-mode catalogue, not here. No code change; recorded as declined.
+
 ## Phase 7 — Remaining performance items (docs/13, Gate-facing)
 
 Sequencing note: docs/13 §5.1 and docs/15 move 3 say P5 + the syntax/semantic
