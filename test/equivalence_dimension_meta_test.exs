@@ -72,6 +72,19 @@ defmodule Credence.EquivalenceDimensionMetaTest do
   `NoNestedEnumOnSameEnumerable` (a satisfiable coverage gap — the ties pass) and
   `PreferMapIntersectOverMapsetIntersection`, whose `Enum.sort_by(key)` emission
   was a **live behaviour change** on tie keys and was repaired in the same change.
+
+  ## Why the vacuity block exists
+
+  Both gates below are `Enum.filter |> Enum.reject |> assert bad == []`, so an
+  empty *subject* population is indistinguishable from full compliance. That is
+  not hypothetical here: the trigger comes from `rule_stdlib_callees/1`, a regex
+  over whitespace-stripped rule source. If a formatter change, an emission
+  rewrite, or a `@scanned_mods` edit stops that regex matching, every class
+  population silently drops to zero and both gates pass green forever while
+  measuring nothing. The block pins the three populations the gates stand on —
+  the analysed set, the judgeable set, and each class's subject set — so that
+  collapse is a red test rather than a quiet one. (C13/C14 shipped with this
+  guard; C2.2 landed without it, which is what this closes.)
   """
   use ExUnit.Case, async: true
 
@@ -151,11 +164,57 @@ defmodule Credence.EquivalenceDimensionMetaTest do
     }
   end
 
+  # The subject sets the two gates below actually filter over. Named here so the
+  # vacuity block and the gates cannot drift apart: each gate is exactly
+  # `subjects |> Enum.reject(carries_the_trap)`.
+  defp class1_subjects(all),
+    do: Enum.filter(all, fn a -> a.judgeable and a.value_kind_class and a.has_number end)
+
+  defp class2_subjects(all) do
+    Enum.filter(all, fn a ->
+      a.judgeable and a.grapheme_class and a.has_string and not a.declares_single_codepoint
+    end)
+  end
+
+  describe "the gate cannot pass vacuously" do
+    test "the analysis sees every Pattern rule" do
+      live = length(Credence.Pattern.default_rules())
+      seen = length(analyze_all())
+
+      assert seen == live,
+             "the gate analysed #{seen} rules but Credence.Pattern.default_rules/0 has #{live}. " <>
+               "Both checks below are over the analysed set, so a discovery that silently " <>
+               "returns fewer rules than exist passes while saying nothing."
+    end
+
+    test "the judgeable population is non-empty" do
+      judgeable = Enum.filter(analyze_all(), & &1.judgeable)
+
+      refute judgeable == [],
+             "every rule came back unjudgeable, so both checks below are `[] == []`. Either " <>
+               "`equivalence_input_values/1` stopped evaluating any `inputs:` expression, or " <>
+               "the equivalence test files moved off `test_path(rule, \"equivalence\")`."
+    end
+
+    test "each class has a non-empty subject population" do
+      all = analyze_all()
+
+      empty =
+        [{"1 (value-kind)", class1_subjects(all)}, {"2 (grapheme)", class2_subjects(all)}]
+        |> Enum.filter(fn {_name, subjects} -> subjects == [] end)
+        |> Enum.map(&elem(&1, 0))
+
+      assert empty == [],
+             "class(es) #{Enum.join(empty, ", ")} have zero subjects, so the matching check " <>
+               "below asserts nothing. The trigger is `rule_stdlib_callees/1` — a regex over " <>
+               "whitespace-stripped rule source — so the usual cause is that the regex, " <>
+               "`@scanned_mods`, or the rules' emission shape changed and the class stopped " <>
+               "being detected. Re-derive the trigger; do not delete the check."
+    end
+  end
+
   test "1. every value-kind-sensitive rule is tested on inputs that carry the `1` vs `1.0` trap" do
-    bad =
-      analyze_all()
-      |> Enum.filter(fn a -> a.judgeable and a.value_kind_class and a.has_number end)
-      |> Enum.reject(fn a -> a.has_tie end)
+    bad = analyze_all() |> class1_subjects() |> Enum.reject(fn a -> a.has_tie end)
 
     assert bad == [],
            "rules that rewrite an order- or identity-sensitive collection call but whose " <>
@@ -169,12 +228,7 @@ defmodule Credence.EquivalenceDimensionMetaTest do
   end
 
   test "2. every rule claiming full Unicode generality is tested on a multi-codepoint grapheme" do
-    bad =
-      analyze_all()
-      |> Enum.filter(fn a ->
-        a.judgeable and a.grapheme_class and a.has_string and not a.declares_single_codepoint
-      end)
-      |> Enum.reject(fn a -> a.has_multi_codepoint end)
+    bad = analyze_all() |> class2_subjects() |> Enum.reject(fn a -> a.has_multi_codepoint end)
 
     assert bad == [],
            "rules that rewrite a String grapheme/codepoint call and declare NO " <>
