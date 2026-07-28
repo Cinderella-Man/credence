@@ -657,7 +657,7 @@ its own tests run under real `mix test`.
   equivalence check silently compares against the wrong code. Control: the new
   test seen red against the pre-fix implementation. Unblocks T5.5, and H4's scope
   estimate can now be re-taken against a working checker.
-- [ ] **T3.6 [C] Smaller ledger FIX-CREDENCE rows — 2 of 6 done (`PENDING`).**
+- [ ] **T3.6 [C] Smaller ledger FIX-CREDENCE rows — 2 of 6 done (`c1d7cd7`).**
 
   * [x] ~~`RuleHelpers.log_diff/3` renders a fabricated diff (ledger:846)~~ —
     `diff_lines/2` paired the two files by **index**, so one inserted line
