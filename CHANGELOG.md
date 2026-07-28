@@ -102,6 +102,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   worse. This is how the `FixDivRem` defect above was found — after that rule had
   been reviewed, converted, tested and released as fixed.
 
+### Removed
+- **The `no_else_if` Syntax rule is retired; `fix_elsif_in_if_chain` now handles
+  all three spellings.** Its failure mode — a model translating Python's `elif`
+  writes `else if <expr> do` at branch indent — is unchanged and still repaired.
+  Nothing is lost: the surviving rule was widened to match `else if` alongside
+  `elsif`/`elif`, and every one of the retired rule's scenarios is now pinned in
+  `fix_elsif_in_if_chain`'s tests.
+
+  The retired rule was doing real damage. Unlike `elsif` and `elif`, `else if` is
+  *legal Elixir* — `else` plus a nested `if` that opens its own block — so a chain
+  of N such headers needs N+1 terminators, and only a chain carrying **one** is
+  the Python transplant. `no_else_if` never checked, so given valid, parsing
+  source it emitted a `cond` plus a stray `end` that did not parse. Three more
+  shapes (a missing terminator, `else # note`, an empty branch body) did the same.
+  Its replacement checks the terminator count, and does so only for the `else if`
+  spelling: `elsif`/`elif` output is byte-identical to before, verified by running
+  an 18-case corpus through the rule with and without the change.
+
+  With this, the self-corruption ledger — the 11 of 45 Syntax rules that rewrote
+  their own source when that gate was adopted — is **empty**.
+
 ### Changed
 - **Behaviour change on upgrade (default-on switch).** With
   `single_codepoint_graphemes` on by default, two rules now apply fixes they

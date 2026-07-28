@@ -83,6 +83,23 @@ defmodule Credence.SelfCorruption do
     for e <- entries, e.corrupted > 0, into: %{}, do: {e.name, e.corrupted}
   end
 
+  @doc """
+  The number of lines `rule`'s `fix/1` changes in `source`.
+
+  `scan/1` is exactly this, over each rule's own file. It is exposed separately so
+  the gate can *positively control the detection itself*: with the ledger empty,
+  "no rule corrupts its own source" and "the differ stopped working" look
+  identical from the outside, and only one of them is good news. Hand this a rule
+  that is guaranteed to rewrite whatever it is given and the oracle has to say so.
+  """
+  @spec corrupted_lines(module(), String.t()) :: non_neg_integer()
+  def corrupted_lines(rule, source) do
+    case apply_fix(rule, source) do
+      {:ok, fixed} -> length(diff(source, fixed))
+      {:error, _reason} -> 1
+    end
+  end
+
   @doc "A human-readable rendering of one entry's first `max` changed lines."
   @spec render(hit(), pos_integer()) :: String.t()
   def render(%{name: name, corrupted: n, diff: diff}, max \\ 3) do

@@ -42,8 +42,9 @@ defmodule Credence.SelfCorruptionTest do
   11 of 45 Syntax rules were corrupting their own source when this gate was
   adopted, one of them (`no_else_if`) on 226 lines. Failing all 11 on day one is
   the mistake docs/19 §2 row A already made once — a gate nobody can get green
-  teaches people to disable it. So the 11 are frozen with their line counts, and
-  the gate asserts three things:
+  teaches people to disable it. So the 11 were frozen with their line counts —
+  **and the ledger is now empty; all 11 are paid down.** The ratchet did what it
+  was built to do, and the gate asserts three things:
 
     * a rule not on the ledger may not corrupt its own source at all — a new
       rule cannot land in this class, which is the point;
@@ -61,8 +62,8 @@ defmodule Credence.SelfCorruptionTest do
   count, because the count is a fair proxy for how little the rule knows about
   literals.
 
-  Ten are paid down (one rule / 226 lines remain), and they needed *seven*
-  different repairs — see the note under `@self_corrupting`. That is the lesson
+  All eleven are paid down, and they needed *eight* different repairs — see the
+  note under `@self_corrupting` and docs/22 T3.10/T3.10a. That is the lesson
   this ledger actually taught: a hit says the rule edited bytes that are not
   code, and nothing more. It does not say the repair is `SourceMask`. Assuming it
   does produces either a masked rule that is still wrong, or — worse, and this
@@ -79,7 +80,14 @@ defmodule Credence.SelfCorruptionTest do
   end of line and swallowed trailing comments into the expression, emitting
   source that did not parse.
 
-  The single entry that remains is deliberate. See docs/22 T3.10a.
+  And the last one was not repaired at all — it was **retired**. `no_else_if`'s
+  entry was held open deliberately after the others closed, because masking its
+  trigger would have cleared the entry while leaving the rule turning *valid,
+  parsing* nested-`if` source into output that does not parse. The entry was the
+  only thing flagging that. It closed when the rule's hardened sibling was widened
+  to cover the `else if` spelling behind a terminator count and `no_else_if` was
+  deleted into it (docs/22 T3.10a) — which is the strongest form this ledger's
+  lesson takes: **the repair a hit calls for is sometimes not to the rule.**
   """
   use ExUnit.Case, async: true
 
@@ -93,22 +101,19 @@ defmodule Credence.SelfCorruptionTest do
   # Ordered by line count, which is *usually* the paydown order: the count is a
   # proxy for how little the rule knows about literals.
   #
-  # `no_else_if` is the exception in both directions, and is deliberately NOT
-  # being paid down — see docs/22 T3.10a. Its 226 is an artifact: `fix/1` removes
-  # two lines from its own file and the positional diff below then counts every
-  # subsequent line as changed. The real prose corruption is ~7 lines. But it is
-  # also the worst rule here, for reasons this oracle does not measure — run, not
-  # read: it turns *valid, parsing* nested-`if` source into output that does not
-  # parse, and three boundary cases (missing terminator, `else # note`, empty
-  # branch body) do the same.
+  # EMPTY as of 2026-07-28 — every rule on the adoption-day ledger is paid down.
+  # It may gain entries only by a deliberate re-freeze; the gate below treats any
+  # rule not named here as forbidden to corrupt its own source at all, which is
+  # now every Syntax rule in the tree.
   #
-  # Masking its trigger WOULD clear this entry. It would also turn the gate green
-  # over four live corruption modes and burn the only signal that surfaced them,
-  # so the entry stays until the design question in T3.10a is answered. A ledger
-  # entry is allowed to be load-bearing.
-  @self_corrupting %{
-    "no_else_if" => 226
-  }
+  # The last entry to leave was `no_else_if`, and it did not leave by being
+  # converted. Masking its trigger would have cleared the entry while leaving the
+  # rule turning *valid, parsing* nested-`if` source into output that does not
+  # parse — the entry was the only flag on that, so it was held open on purpose
+  # (docs/22 T3.10a) until its hardened sibling `FixElsifInIfChain` was widened to
+  # cover the `else if` spelling behind a terminator-count discriminator. The rule
+  # was then retired into it. A ledger entry is allowed to be load-bearing.
+  @self_corrupting %{}
 
   # Paid down since adoption, kept here as the record of what the ratchet has
   # actually bought — and of the fact that the repair is not one repair:
@@ -194,21 +199,77 @@ defmodule Credence.SelfCorruptionTest do
                "file cannot be read has nothing to corrupt and would pass silently."
     end
 
-    test "the oracle still fires — the ledger is not green by accident", %{counts: counts} do
-      refute counts == %{},
+    # The ledger is empty as of 2026-07-28, so this can no longer be "some rule
+    # still corrupts". That assertion was the right one while there was debt and
+    # is worthless without it — the whole point of paying it down is that it
+    # reaches zero, at which moment "nobody corrupts" and "the differ stopped
+    # working" become the same observation from outside.
+    #
+    # So the vacuity check moves from the *result* to the *machinery*: hand the
+    # oracle a rule that certainly rewrites what it is given and it must report
+    # the change, and hand it one that certainly does not and it must report
+    # none. GREEN-0 and its perturbation, in one pair.
+    defmodule AlwaysRewritesItsInput do
+      @moduledoc false
+      use Credence.Syntax.Rule
+
+      @impl true
+      def analyze(_source), do: []
+
+      @impl true
+      def fix(source), do: String.replace(source, "defmodule", "defmodulex")
+    end
+
+    defmodule NeverTouchesAnything do
+      @moduledoc false
+      use Credence.Syntax.Rule
+
+      @impl true
+      def analyze(_source), do: []
+
+      @impl true
+      def fix(source), do: source
+    end
+
+    @probe_source "lib/syntax/fix_python_modulo.ex"
+
+    test "the oracle reports a change when there is one — positive control" do
+      source = File.read!(@probe_source)
+
+      assert Credence.SelfCorruption.corrupted_lines(AlwaysRewritesItsInput, source) > 0,
              """
 
-             ZERO Syntax rules rewrite their own source. That would be excellent news, and it is
-             almost certainly false: #{map_size(@self_corrupting)} did on 2026-07-28 and this
-             gate's own ledger says so.
+             The oracle read a rule that rewrites every `defmodule` it is handed and reported
+             ZERO changed lines. The detection itself is broken, which means every green result
+             above — including an empty ledger — means nothing.
 
-             The likely cause is that the oracle stopped running, not that the class was fixed —
-             `fix/1` raising and being swallowed, the rule list coming back empty, or the source
-             paths no longer resolving. Check `Credence.SelfCorruption.scan/1` before celebrating.
-
-             If the class really was paid down, empty @self_corrupting first, in the commit that
-             did it.
+             Check `Credence.SelfCorruption.corrupted_lines/2` and the differ under it.
              """
+    end
+
+    test "and reports none when there is none — GREEN-0" do
+      source = File.read!(@probe_source)
+
+      assert Credence.SelfCorruption.corrupted_lines(NeverTouchesAnything, source) == 0,
+             "the oracle reported changes for a rule whose `fix/1` returns its input unchanged; " <>
+               "it is flagging something other than the rule's edits."
+    end
+
+    test "a rule whose fix/1 raises is a hit, not a skip" do
+      # The third way the oracle could go quiet: `apply_fix/2` rescues, so a
+      # raising rule must surface as damage rather than as a clean result.
+      defmodule RaisesOnEverything do
+        @moduledoc false
+        use Credence.Syntax.Rule
+
+        @impl true
+        def analyze(_source), do: []
+
+        @impl true
+        def fix(_source), do: raise("boom")
+      end
+
+      assert Credence.SelfCorruption.corrupted_lines(RaisesOnEverything, "x = 1\n") > 0
     end
   end
 

@@ -66,18 +66,18 @@ untouched.
 | ✅ | **T3.7 — the last two raw-byte syntax fixes**, + the `FixDivRem` half-conversion behind them | `e81985e` · `8169601` |
 | ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
 | ✅ | **T3.10 — pay down the self-corruption ledger** — 10 of 11 done; the only entry left is the deliberate one | `becd59b` · `643435a` · `e549bd0` · this commit |
-| 🔄 | **T3.10a — `no_else_if` corrupts valid parsing code** — steps 1–3 done: the sibling now absorbs `else if` behind a terminator-count discriminator. **Step 4 (retiring the live rule) is the maintainer's** | this commit |
+| ✅ | **T3.10a — `no_else_if` corrupts valid parsing code** — all four steps done; the rule is **retired** into its widened sibling and the self-corruption ledger is **EMPTY** | `f23722f` · this commit |
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · `3cdbe14` |
 | ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · this commit |
 | ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | this commit |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
-**Next by value:** **T3.10a step 4** — the one decision left on this file, and it
-is a maintainer's: retire `no_else_if` into its now-widened sibling. Steps 1–3
-are done and the evidence is executed, so the remaining work is a judgement call,
-not a conversion. Then **T1.2**, the G3 residue T1 does not cover — and T5.9
-handed it a starting point, an executed contention list. T2.1–T2.3 remain the
-prerequisites for any Phase-9 run.
+**Next by value:** **T1.2**, the G3 residue T1 does not cover — and T5.9 handed it
+a starting point, an executed contention list. Then **T2.1–T2.3**, which remain
+the prerequisites for any Phase-9 run, and **T4.1–T4.3** for the harness half.
+The whole self-corruption line of work (T3.7 → T3.10 → T3.10a) is now closed: the
+ledger is empty and the gate that measured it has been rebuilt so that being
+empty does not make it vacuous.
 
 ---
 
@@ -761,9 +761,9 @@ its own tests run under real `mix test`.
   involves a string, a heredoc, a comment on the `else` line, a missing
   terminator, or surrounding code.
 
-  **Steps 1–3 are DONE. Step 4 is untouched and is still the maintainer's
-  call — `no_else_if` is live, unchanged, and still on the self-corruption
-  ledger.**
+  **DONE — all four steps. `no_else_if` is retired and the self-corruption ledger
+  is empty.** Step 4 was taken by the maintainer's explicit decision after steps
+  1–3 put the evidence in place; the sequence below is what that evidence was.
 
   * **The widen (step 2) is in.** `@elsif_re` and the condition extractor now
     match all three spellings. `elsif`/`elif` output was proved **byte-identical
@@ -800,15 +800,34 @@ its own tests run under real `mix test`.
   multi-line form, still untouched, but whose name asserted a general claim the
   widen makes false. Renamed to say what it actually pins.
 
-  **What step 4 still needs from a human.** Retiring a live rule is not a code
-  change this session should make. The evidence is now in place: the sibling
-  handles every shape `no_else_if` handles and four it corrupts, so `no_else_if`
-  is strictly dominated. Because the sibling runs first (index 8 vs 28 in
-  `default_rules/0`) and the Syntax phase is a cascade rather than
-  first-match-wins, `else if` chains are already being repaired by the hardened
-  rule today — `no_else_if` now only sees what the sibling declined, which is
-  precisely the set it gets wrong. That bounds the exposure but does not remove
-  it, and the ledger entry stays until the rule does.
+  **Step 4, taken.** `lib/syntax/no_else_if.ex` and its two test files are
+  deleted. The rule was strictly dominated: the sibling handles every shape it
+  handled and four it corrupted, and because the sibling runs first (index 8 vs 28
+  in `default_rules/0`) with the Syntax phase a cascade rather than
+  first-match-wins, `no_else_if` had already been reduced to seeing only what the
+  sibling declined — precisely the set it got wrong.
+
+  Deleting a rule is only safe while its behaviour is pinned somewhere else, so
+  the two `else if` describe blocks in
+  `test/syntax/fix_elsif_in_if_chain_fix_test.exs` are now the surviving record of
+  everything it could do, and say so in a comment. FM-ELSE-IF above is the
+  failure mode, written out before the rule went, per the standing rule that a
+  rule's value is its failure mode.
+
+  **The gate's own vacuity test had to be rebuilt, and this is the interesting
+  part.** It asserted "some Syntax rule still corrupts its own source" — a sound
+  check against a *non-empty* ledger and a worthless one the moment the debt
+  reaches zero, because that is exactly when "nobody corrupts" and "the differ
+  stopped working" become the same observation from outside. Paying a ledger down
+  to empty therefore *disarms the gate that measured it*, which is a trap any
+  ratchet built this way will hit on its last entry.
+
+  The fix moves the vacuity check from the result to the machinery:
+  `Credence.SelfCorruption.corrupted_lines/2` is now public, and the gate hands it
+  a rule that certainly rewrites what it is given (must report a change), one that
+  certainly does not (must report none), and one that raises (must count as a hit,
+  not a skip). GREEN-0 and its perturbations, independent of whether any real rule
+  is broken. That is strictly stronger than what it replaced.
 
   **The failure mode, written out first so retiring the rule cannot lose it —
   FM-ELSE-IF.** An LLM translating Python emits `else if <expr> do` at branch

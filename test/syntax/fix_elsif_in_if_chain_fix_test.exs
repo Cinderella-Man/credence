@@ -489,10 +489,13 @@ defmodule Credence.Syntax.FixElsifInIfChainFixTest do
   # ═══════════════════════════════════════════════════════════════════
   # `else if` — the third spelling, and the terminator count
   #
-  # docs/22 T3.10a, steps 1-3. `no_else_if` is this rule's pre-hardening
-  # twin: same failure mode, different spelling, one hardened
-  # implementation. These are its seven scenarios re-run against this
-  # rule, followed by the four corruption modes it was confirmed to have.
+  # docs/22 T3.10a. `Credence.Syntax.NoElseIf` was this rule's
+  # pre-hardening twin — same failure mode, different spelling, one
+  # hardened implementation — and was **retired into this rule** once
+  # these tests were green. That makes this block the surviving record
+  # of everything it could do: its seven scenarios, followed by the four
+  # shapes it got wrong. Do not thin it out; deleting a rule is only safe
+  # while its behaviour is pinned somewhere, and this is the somewhere.
   #
   # The spellings are NOT interchangeable. `elsif`/`elif` are not Elixir,
   # so every occurrence is the mistake. `else if` is legal — `else` plus a
@@ -502,7 +505,7 @@ defmodule Credence.Syntax.FixElsifInIfChainFixTest do
   # for this spelling.
   # ═══════════════════════════════════════════════════════════════════
 
-  describe "else if (Python transplant) — the scenarios no_else_if covers" do
+  describe "else if (Python transplant) — the scenarios inherited from NoElseIf" do
     test "rewrites a basic else-if chain to cond" do
       input = """
       if n == 0 do
@@ -644,7 +647,7 @@ defmodule Credence.Syntax.FixElsifInIfChainFixTest do
     end
   end
 
-  describe "else if — the four modes no_else_if gets wrong" do
+  describe "else if — the four modes the retired NoElseIf got wrong" do
     # THE one that matters: this source PARSES. `else if` is `else` plus a
     # nested `if` that closes itself, so both terminators are real and the
     # code means what it says. Rewriting it emits a `cond` plus a stray

@@ -205,11 +205,8 @@ side effect of the last gate landing.
 
 *(nothing — update this section when work starts, clear it when the work lands)*
 
-**One thing is on the maintainer's desk rather than in flight: docs/22 T3.10a
-step 4**, retiring `no_else_if` into its now-widened sibling. Steps 1–3 landed
-(`f23722f`); step 4 is a judgement call about deleting a live rule and was
-deliberately not taken. `no_else_if` is unchanged and is the last entry on the
-self-corruption ledger.
+*(T3.10a step 4 — retiring `no_else_if` — was on the maintainer's desk for one
+turn and has since been decided and landed. The self-corruption ledger is empty.)*
 
 **Everything else that remains — for both repos — is tracked in one place:
 [`docs/22-remaining-work.md`](22-remaining-work.md).** The "Next, in order" list
@@ -369,3 +366,29 @@ one layer down, one day later. It has one now.
 **Left for the maintainer, deliberately: T3.10a step 4** (retire `no_else_if`).
 The evidence is executed and written down; deleting a live rule is not this
 session's call.
+
+**Continued: T3.10a step 4 — the rule is retired, and the gate that measured it
+had to be rebuilt.** `no_else_if` is deleted (rule + two test files) on the
+maintainer's decision, taken once steps 1–3 had the evidence executed. Its
+behaviour survives as the two `else if` describe blocks in
+`fix_elsif_in_if_chain_fix_test.exs`, which say in a comment that they are the
+surviving record — deleting a rule is only safe while its behaviour is pinned
+somewhere, and that is the somewhere.
+
+**The finding worth carrying: paying a ledger down to empty disarms the gate that
+measured it.** The self-corruption gate's vacuity test asserted *"some Syntax rule
+still corrupts its own source"*, which is exactly right against a non-empty ledger
+and worthless the moment the debt reaches zero — that is the instant when "nobody
+corrupts" and "the differ stopped working" become the same observation from
+outside. The last entry leaving is precisely when the check protecting you
+evaporates, and nothing goes red to tell you. Any ratchet built this way hits this
+on its final entry.
+
+The repair is to move the vacuity check from the *result* to the *machinery*:
+`SelfCorruption.corrupted_lines/2` is now public, and the gate feeds it a rule
+that certainly rewrites its input, one that certainly does not, and one that
+raises. Three controls that hold whether or not any real rule is broken —
+strictly stronger than what they replaced, and only findable by asking what the
+gate would still be worth after the work succeeded.
+
+Suite: 9,911 tests + 6 properties, 0 failures.
