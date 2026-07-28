@@ -7,77 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.1] - Unreleased
 
-### Fixed
-
-- **`@spec` repairs no longer stop at the top level.** `NoBareNamesInSpec` fixes a
-  compiler-rejected bare name in a spec by annotating it `name :: any()`, but it
-  only ever looked at names sitting as *direct* arguments of the spec's call. A
-  bare name inside a `|` union, a list / tuple / map type, or in the return
-  position was left untouched — and so was every position in a spec carrying a
-  `when` guard, including top-level ones. The rule still claimed the diagnostic in
-  all those cases, and because the Semantic phase gives one diagnostic to one rule,
-  claiming-without-fixing meant nothing else could repair it and the compile error
-  survived every pass. It now annotates the name wherever it occurs in the target
-  spec, and declines a name the `when` clause binds as a type variable (annotating
-  one of those does not compile).
-
-- **`mix credence.fix_tests` no longer corrupts fixtures containing escapes.** It
-  recorded a rule's output by splicing it into a `"""` heredoc verbatim, so output
-  holding a backslash came back different when the test ran — `~c"say \"hi\""`
-  became `~c"say "hi""` — and output holding `#{` parsed as an interpolation
-  instead of a string. It also read existing fixtures as raw source bytes rather
-  than their values, so the rule under test was handed a different input than the
-  running test passes it. Both directions are fixed and are exact inverses, so the
-  task stays idempotent. The same emitter gap in the test-fixture healer is fixed
-  too; there it never corrupted anything, because its value-preserving guard
-  rejected the write — it just silently left those fixtures un-canonicalized.
-
-- **Auto-fixes no longer rewrite the inside of string literals.** Four line-based
-  syntax rules matched their patterns against raw source bytes, with no notion of
-  where code stops and a string begins, so prose that merely *mentioned* an
-  operator was rewritten: `IO.puts("100% done")` became
-  `IO.puts("rem(100, done)")`, `IO.puts("path//to//file")` became
-  `IO.puts("div(path, to)//file")`, and so on for `div`/`rem` and scientific
-  notation. Those outputs parse *and* compile, so nothing downstream caught them
-  — the program simply printed something its author never wrote. All four now
-  match against a `Credence.SourceMask` shadow in which literals, charlists,
-  sigils, heredocs, character literals and comments are blanked out while every
-  code byte keeps its position. Interpolation is still treated as code, because
-  it is.
-- **`%` and `&` repairs no longer regroup the expression.** Python's `%` shares
-  precedence with `*` and `/`, and its `&` binds looser than every arithmetic
-  operator — so `a * b % 2` means `(a * b) % 2` and `h * 31 + c & 0xFFFFFFFF`
-  means `(h * 31 + c) & 0xFFFFFFFF`. Rewriting only the immediate operands
-  produced code that compiled and returned a different number. Both rules now
-  decline those shapes and leave the compile error in place, which at least names
-  the file and line.
-- **`&` bitwise repairs accept every integer literal form.** The right operand
-  was captured as `\d+`, which stops at the `0` of `0xFF` — so
-  `flags & 0xFF` became `Bitwise.band(flags, 0)xFF`, which does not parse. Hex,
-  binary, octal and underscore-separated decimals all work now; bitmask code is
-  overwhelmingly written with the forms that were broken.
-- **`div`/`rem` repairs no longer swallow a function head.** In
-  `def f(n), do: n * (n + 1) div 2` the left operand ran back over the whole
-  `def`. The result was worse than a parse failure: a later rule in the same pass
-  reshaped it into something that *did* parse, so the phase reported success and
-  emitted a different program.
-- **Early `return` is restructured, not deleted.** `unless n >= 0 do return(...)
-  end` followed by more code had the `return` stripped in place, turning a guard
-  into a discarded expression and letting execution fall through to the branch it
-  was written to skip — `check(-5)` answered `{:ok, -5}` where the author wrote
-  `{:error, :neg}`. It now becomes a real `if/else`.
-- **`elif` is recognised.** The `elsif`→`cond` rule documented Python support
-  from the beginning but both of its patterns matched `elsif` only, so the Python
-  spelling was reported by nothing and repaired by nothing.
-- **Hallucinated-function repairs respect module boundaries.** A diagnostic names
-  only the last segment of an alias, so a project's own
-  `MyApp.Input.List.reverse/1` was rewritten as if it were stdlib
-  `List.reverse/1` — inventing `MyApp.Input.Enum`. Repairs now apply only when
-  the call actually starts at a module boundary. Erlang module atoms also keep
-  their leading colon, which fixes `:math.round/1` and friends.
-
 ### Added
-
 - **A per-rule budget on accepted corpus findings, and `mix credence.corpus
   --budget` to read it.** The over-firing test already pinned the corpus findings
   exactly, so no rule could start firing without a red test — but nothing gated
@@ -125,8 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   suppressed too, so the "every Pattern rule fixes what it finds" promise still
   holds. See the `Credence.DslGuard` moduledoc.
 
-### Added
-
 - **`unsafe_in_dsl/0` rule callback.** A Pattern rule declares the macro-DSL
   families its fix is not behaviour-preserving inside — any of `:ash_expr`,
   `:ecto_query`, `:nx_defn` (or `:all`). Defaults to `[]`, i.e. safe everywhere,
@@ -134,10 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`config :credence, dsl_macros: [...]`.** Names additional macros whose bodies
   Credence should treat as opaque reinterpreting DSLs, for libraries it doesn't
   recognise out of the box.
-
-## [0.7.0] - Unreleased
-
-### Added
 
 - **Rule scaffolding generator.** `mix credence.gen.rule <Name> [--type
   pattern|syntax|semantic]` writes a correctly-shaped rule plus its test files
@@ -166,7 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rules are on and which promises they are missing.
 
 ### Changed
-
 - **Behaviour change on upgrade (default-on switch).** With
   `single_codepoint_graphemes` on by default, two rules now apply fixes they
   previously skipped, behind the switch:
@@ -180,3 +103,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Pass `assumptions: :strict` to restore the previous behaviour for arbitrary
   Unicode data.
+
+### Fixed
+- **`@spec` repairs no longer stop at the top level.** `NoBareNamesInSpec` fixes a
+  compiler-rejected bare name in a spec by annotating it `name :: any()`, but it
+  only ever looked at names sitting as *direct* arguments of the spec's call. A
+  bare name inside a `|` union, a list / tuple / map type, or in the return
+  position was left untouched — and so was every position in a spec carrying a
+  `when` guard, including top-level ones. The rule still claimed the diagnostic in
+  all those cases, and because the Semantic phase gives one diagnostic to one rule,
+  claiming-without-fixing meant nothing else could repair it and the compile error
+  survived every pass. It now annotates the name wherever it occurs in the target
+  spec, and declines a name the `when` clause binds as a type variable (annotating
+  one of those does not compile).
+
+- **`mix credence.fix_tests` no longer corrupts fixtures containing escapes.** It
+  recorded a rule's output by splicing it into a `"""` heredoc verbatim, so output
+  holding a backslash came back different when the test ran — `~c"say \"hi\""`
+  became `~c"say "hi""` — and output holding `#{` parsed as an interpolation
+  instead of a string. It also read existing fixtures as raw source bytes rather
+  than their values, so the rule under test was handed a different input than the
+  running test passes it. Both directions are fixed and are exact inverses, so the
+  task stays idempotent. The same emitter gap in the test-fixture healer is fixed
+  too; there it never corrupted anything, because its value-preserving guard
+  rejected the write — it just silently left those fixtures un-canonicalized.
+
+- **Auto-fixes no longer rewrite the inside of string literals.** Four line-based
+  syntax rules matched their patterns against raw source bytes, with no notion of
+  where code stops and a string begins, so prose that merely *mentioned* an
+  operator was rewritten: `IO.puts("100% done")` became
+  `IO.puts("rem(100, done)")`, `IO.puts("path//to//file")` became
+  `IO.puts("div(path, to)//file")`, and so on for `div`/`rem` and scientific
+  notation. Those outputs parse *and* compile, so nothing downstream caught them
+  — the program simply printed something its author never wrote.
+  `FixPythonModulo` and `FixDivRem` now match against a `Credence.SourceMask`
+  shadow in which literals, charlists, sigils, heredocs, character literals and
+  comments are blanked out while every code byte keeps its position.
+  Interpolation is still treated as code, because it is. **`FixPythonFloorDiv`
+  and `FixScientificNotation` are NOT yet converted** — they still match raw
+  bytes behind a whole-line `#` guard, and still rewrite inside string literals.
+  Tracked as T3.7 in `docs/22-remaining-work.md`.
+- **`%` and `&` repairs no longer regroup the expression.** Python's `%` shares
+  precedence with `*` and `/`, and its `&` binds looser than every arithmetic
+  operator — so `a * b % 2` means `(a * b) % 2` and `h * 31 + c & 0xFFFFFFFF`
+  means `(h * 31 + c) & 0xFFFFFFFF`. Rewriting only the immediate operands
+  produced code that compiled and returned a different number. Both rules now
+  decline those shapes and leave the compile error in place, which at least names
+  the file and line.
+- **`&` bitwise repairs accept every integer literal form.** The right operand
+  was captured as `\d+`, which stops at the `0` of `0xFF` — so
+  `flags & 0xFF` became `Bitwise.band(flags, 0)xFF`, which does not parse. Hex,
+  binary, octal and underscore-separated decimals all work now; bitmask code is
+  overwhelmingly written with the forms that were broken.
+- **`div`/`rem` repairs no longer swallow a function head.** In
+  `def f(n), do: n * (n + 1) div 2` the left operand ran back over the whole
+  `def`. The result was worse than a parse failure: a later rule in the same pass
+  reshaped it into something that *did* parse, so the phase reported success and
+  emitted a different program.
+- **Early `return` is restructured, not deleted.** `unless n >= 0 do return(...)
+  end` followed by more code had the `return` stripped in place, turning a guard
+  into a discarded expression and letting execution fall through to the branch it
+  was written to skip — `check(-5)` answered `{:ok, -5}` where the author wrote
+  `{:error, :neg}`. It now becomes a real `if/else`.
+- **`elif` is recognised.** The `elsif`→`cond` rule documented Python support
+  from the beginning but both of its patterns matched `elsif` only, so the Python
+  spelling was reported by nothing and repaired by nothing.
+- **Hallucinated-function repairs respect module boundaries.** A diagnostic names
+  only the last segment of an alias, so a project's own
+  `MyApp.Input.List.reverse/1` was rewritten as if it were stdlib
+  `List.reverse/1` — inventing `MyApp.Input.Enum`. Repairs now apply only when
+  the call actually starts at a module boundary. Erlang module atoms also keep
+  their leading colon, which fixes `:math.round/1` and friends.

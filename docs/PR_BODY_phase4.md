@@ -20,7 +20,7 @@ executed probe through the real pipeline, before and after.
 | `Syntax.FixPythonModulo` | rewrote inside string literals |
 | `Syntax.FixPythonModulo` | read `%Name{}` struct literals as modulo |
 | `Syntax.FixPythonModulo` | `a * b % 2` regrouped — **silent wrong answer** |
-| `Syntax.FixPythonFloorDiv`, `Syntax.FixScientificNotation` | rewrote inside string literals |
+| `Syntax.FixPythonFloorDiv`, `Syntax.FixScientificNotation` | rewrote inside string literals — ⚠️ **still open**, see below |
 | `Semantic.UndefinedFunction` | rewrote a project's own nested-alias call |
 
 `docs/16` scoped this as three bugs. Probing the three surfaced the other six.
@@ -31,7 +31,7 @@ parses, compiles, and runs, and simply computes something else.
 `return` stripped in place, so `check(-5)` answered `{:ok, -5}`. The validation
 stopped happening and nothing anywhere reported it.
 
-## One root cause under four of them
+## One root cause under four of them — two converted, two still open
 
 Four line-based syntax rules matched their patterns against raw source bytes
 with no notion of where code stops and a string begins:
@@ -45,7 +45,20 @@ FixScientificNotation  IO.puts("version 1e5 build")  -> IO.puts("version 1.0e5 b
 
 New `lib/source_mask.ex` produces a same-length shadow with literals, sigils,
 heredocs, character literals and comments blanked; rules match the shadow and
-splice into the real line at the matched offsets. It is a hand-rolled scanner
+splice into the real line at the matched offsets.
+
+> **Correction (2026-07-28).** An earlier draft of this section said all four
+> rules were converted. Only `FixPythonModulo` and `FixDivRem` were.
+> `FixPythonFloorDiv` and `FixScientificNotation` never adopted `SourceMask` —
+> `grep -l SourceMask lib/` does not list them — and both still corrupt string
+> literals today, confirmed by running them:
+>
+>     IO.puts("version 1e5 build")  ->  IO.puts("version 1.0e5 build")
+>     IO.puts("ratio 7 // 2 here")  ->  IO.puts("ratio div(7, 2) here")
+>
+> The mechanism and the two converted rules are as described; the scope was
+> overstated. Tracked as T3.7 in `docs/22-remaining-work.md`, with the same
+> repair pattern to apply. It is a hand-rolled scanner
 rather than `:elixir_tokenizer` on purpose — these rules only ever run on source
 that does not parse, which is precisely when a tokenizer gives up, and this one
 degrades to a *missed* fix instead of a *corrupted* string.

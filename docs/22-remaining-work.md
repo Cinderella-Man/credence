@@ -40,7 +40,8 @@ id in place. Nothing else in this file has been started.
 | ✅ | T3.1 — errors on compiling source, + the inert C4 gate behind them | `c691362` |
 | ✅ | T3.2 — the `:no_op` trace outcome, both repos | `7708aef` · `7b6e2c6` |
 | ✅ | T3.9 — tree-wide formatter drift (57 files) | `f564e31` |
-| ⬜ | T0.2 — open the Phase-4 PR | needs `gh auth login`; **amend the body first** (T3.7) |
+| ✅ | T0.4 — release hygiene (fold 0.7.0, fix a false fix-note) | this commit |
+| ⬜ | **T0.2 — open the Phase-4 PR** — the one item left in Tier 0 | body is amended and ready; needs `gh auth login` |
 | ⬜ | everything else | see the tiers below |
 
 **Next by value, now that T1 is in:** **T3.7** — two Syntax rules still corrupt
@@ -187,20 +188,39 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
 
 - [x] ~~**T0.1 [C][H] Push.**~~ DONE 2026-07-28. credence through `a590f07`, harness
   through `c2b0d95`. (This session's later commits are listed in Part III.)
-- [ ] **T0.2 [C] Open the Phase-4 PR.** Body ready at `docs/PR_BODY_phase4.md`.
-  **`gh` IS now installed** (`/usr/bin/gh`) but not authenticated — run
-  `gh auth login`, then `gh pr create --base main --head evolution_accepted
-  --body-file docs/PR_BODY_phase4.md`. Or by hand:
+- [ ] **T0.2 [C] Open the Phase-4 PR.** ⚠️ **The only Tier-0 item left, and it
+  needs credentials I do not have.** Everything else is prepared: the body at
+  `docs/PR_BODY_phase4.md` is **amended and accurate** — its overstated
+  `SourceMask` scope is corrected in place, the defect table row is marked still
+  open, and the correction points at T3.7. `gh` IS installed (`/usr/bin/gh`) but
+  unauthenticated, and `gh auth login` is interactive. Two commands:
+
+      gh auth login
+      gh pr create --base main --head evolution_accepted \
+        --title "Phase 4: evolution acceptance" --body-file docs/PR_BODY_phase4.md
+
+  Or by hand:
   `https://github.com/Cinderella-Man/credence/compare/main...evolution_accepted`.
   Phase 9 is blocked on this merge (sister resets onto the new `main`).
-  **Amend the body before opening:** its line 43 repeats the false `SourceMask`
-  claim corrected in T3.7 below.
 - [x] ~~**T0.3 [C] Zero-warning compile.**~~ DONE this session: the provably-dead
   `extract_atom/1` clause (`lib/pattern/no_keyword_get_keyword_key.ex`) is
   deleted; `mix compile --force` = 0 warnings.
-- [ ] **T0.4 [C] Release hygiene.** `CHANGELOG.md:8` and `:138` both say
-  "Unreleased" (0.8.1 *and* 0.7.0). Decide versions and stamp dates — or fold
-  0.7.0 into 0.8.1. Maintainer call; blocks nothing.
+- [x] ~~**T0.4 [C] Release hygiene.**~~ **DONE.** Two `Unreleased` headings is
+  not a valid changelog state, and there are **zero git tags** — neither 0.7.0
+  nor 0.8.1 was ever cut, while `mix.exs` already reads `0.8.1`. So 0.7.0 is
+  folded into 0.8.1 (the option this item listed), leaving one section, still
+  `Unreleased` because stamping a date is the release act and that is yours.
+  0.8.1 also had **two separate `### Added` blocks**; merged. Final order is
+  Keep-a-Changelog's: Added, Changed, Fixed. Verified content-preserving — 22
+  bullets before and after, and a blank-and-header-stripped diff shows only the
+  section reorder plus the correction below.
+
+  **The correction matters more than the tidying.** The Fixed entry claimed
+  "**All four** now match against a `Credence.SourceMask` shadow". Only two do.
+  That is the T3.7 defect, restated in the one file that ships to users — so
+  0.8.1 would have released a fix note for a fix that does not exist. Now names
+  `FixPythonModulo` and `FixDivRem` as converted and states plainly that
+  `FixPythonFloorDiv` and `FixScientificNotation` are not.
 
 ### Tier 1 — the reality gates (kills the 60% class at birth)
 
