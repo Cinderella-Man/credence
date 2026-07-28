@@ -481,7 +481,7 @@ its own tests run under real `mix test`.
   E7-revised second half. The sweep is ~10 min, which is too slow for the
   default suite — it wants a tag, or a rule-scoped variant.
 - [x] ~~**T3.12 [C] `UsedUnderscoreVariable` renames variables into aliases.**~~
-  **DONE `PENDING`** — found by the T2.5 sweep, which is the argument for having
+  **DONE `7f3804a`** — found by the T2.5 sweep, which is the argument for having
   run it. `fix/1` stripped exactly **one** leading underscore with no check that
   the result was still a variable, so:
 
