@@ -654,6 +654,36 @@ defmodule Credence.RuleHelpers do
     end
   end
 
+  # A `:__block__` wrapping a *list* literal. Only the wrapper carries the
+  # bracket positions — `line`/`column` for `[`, `closing` for `]`. The bare
+  # list underneath has no metadata of its own, so `node_range/1` synthesizes
+  # its range from its first and last elements and it comes out
+  # bracket-*exclusive*, while `Sourceror.to_string/1` renders a list
+  # bracket-*inclusive*. Recursing to the bare list and patching there
+  # therefore writes the brackets a second time:
+  #
+  #     call(:name, [:a, :b, :c])  ->  call(:name, [[:a, :c]])
+  #
+  # which parses and preserves every comment, so the safety invariants in
+  # `apply_rule_fix_with_status/3` pass it straight through (docs/22 T5.10).
+  #
+  # Same-length lists still recurse: each element carries its own range, so
+  # element-wise patches are tighter and leave the surrounding layout alone.
+  # Only when the shape changes — an element added or removed, or the list
+  # replaced by a non-list — must the patch cover the list as a whole, and
+  # then it has to land at the *wrapper's* bracket-inclusive range.
+  defp diff_patches_structural(
+         {:__block__, _, [val_o]} = orig,
+         {:__block__, _, [val_m]} = modified
+       )
+       when is_list(val_o) do
+    if is_list(val_m) and length(val_o) == length(val_m) do
+      diff_patches(val_o, val_m)
+    else
+      whole_node_patch(orig, modified)
+    end
+  end
+
   # Same 3-tuple shape with same arity — recurse into args. (Form must
   # be deeply equal too: an atom-form vs tuple-form is structurally
   # different and should patch the whole node.)

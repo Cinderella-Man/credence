@@ -69,16 +69,15 @@ untouched.
 | ⬜ | **T3.10a — `no_else_if` corrupts valid parsing code** (found while paying down T3.10; do *not* convert it) | — |
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · `3cdbe14` |
 | ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · this commit |
-| ⬜ | **T5.10 — the AST differ patches a bare list one column inside its `[`** (found by T5.9; a shared-helper defect, not a rule defect) | — |
+| ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | this commit |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T3.10a** — it is the only item on this file known to corrupt
 *valid, parsing* source, and it needs a maintainer decision (retire a live rule
 into its hardened sibling) rather than a conversion. Then the rest of **T3.10**
-(7 rules left of 11). Then **T5.10**, which is cheap and sits under 155 rules.
-Then **T1.2**, the G3 residue T1 does not cover — and T5.9 handed it a starting
-point, an executed contention list. T2.1–T2.3 remain the prerequisites for any
-Phase-9 run.
+(7 rules left of 11). Then **T1.2**, the G3 residue T1 does not cover — and T5.9
+handed it a starting point, an executed contention list. T2.1–T2.3 remain the
+prerequisites for any Phase-9 run.
 
 ---
 
@@ -910,8 +909,9 @@ its own tests run under real `mix test`.
     `check/2` disabled (the witness gate names it, with the ledger empty and
     "Adding it to @ledger is NOT one of the options"); and one paid-down entry
     left on the ledger (the graduation test fires, "now witness … Remove them").
-- [ ] **T5.10 [C] The AST differ patches a bare list one column inside its
-  `[`.** Found while doing T5.9, and it is a defect in the *shared helper*, not
+- [x] ~~**T5.10 [C] The AST differ patches a bare list one column inside its
+  `[`.**~~ **DONE — see the resolution at the end of this item.** Found while
+  doing T5.9, and it is a defect in the *shared helper*, not
   in a rule — verified with no credence rule involved. Both public entry points
   (`RuleHelpers.patches_from_ast_transform/3` and `patches_from_postwalk/2`) fed
   a transform that drops one element from `call(:name, [:a, :b, :c])` emit:
@@ -945,6 +945,39 @@ its own tests run under real `mix test`.
   `test/pattern/no_hallucinated_ets_keytype_option_fix_test.exs` reproduces it.
   Before landing, re-run the full suite — this helper is under all 157 Pattern
   rules, so a range change there is a population-wide behaviour change.
+
+  **Resolution.** Reproduced first, with no rule involved: the `[` is at column
+  17 and the patch came out at 18, through **all three** public entry points
+  (`patches_from_diff/2` is a third the item did not name). The repair is one
+  clause in `diff_patches_structural/2`, ahead of the generic same-arity
+  recursion: a `:__block__` wrapping a list recurses element-wise **only while
+  the lengths match** — that path is the tight, layout-preserving one and had to
+  keep working — and otherwise patches at the *wrapper's* bracket-inclusive
+  range. Writing the discriminator that way also caught two shapes the item's
+  one-line repair would have missed: emptying a list (`[:a]` → `[]`, which the
+  defect rendered `[[]]`) and replacing a list with a non-list (which stranded
+  the brackets as `[opts]`).
+
+  **The item was right about the rules and wrong about the helper's own
+  coverage.** `RuleHelpers` — under all 157 Pattern rules — had no test file at
+  all, which is the `SourceMask` gap of T3.10 repeating one day later in a
+  module one layer down. `test/rule_helpers_ast_diff_test.exs` now exists: 12
+  tests, all three entry points, plus the `rewrap_list/2` idiom the rules
+  actually use, and a property asserting the patched source *parses to the
+  transform's own tree* rather than matching an expected string. Positive
+  control: reverting the fix reddens **8 of the 12**, and the 4 that stay green
+  are the ones that must — notably "the double-wrapped output parses", which is
+  the test of *why the safety invariants missed this*. Full suite re-run as the
+  item required: **9,873 tests + 6 properties, 0 failures**.
+
+  **One sibling found while probing, deliberately not repaired.** An
+  *unbracketed* trailing keyword list (`call(:name, a: 1, b: 2)`) has a
+  correctly-synthesized range, but `Sourceror.to_string/1` still renders it
+  bracket-inclusive, so an element removal *inserts* brackets:
+  `call(:name, [a: 1])`. That is layout-only, not corruption — verified to parse
+  and to have an identical meta-stripped tree — so it is pinned as a test rather
+  than changed, precisely so the next reader can tell it apart from T5.10
+  instead of rediscovering it and assuming a regression.
 
 - [ ] **T5.8 [C] Rewrite docs/17's ranked build list** — 0 of 12 cluster
   narratives survived adversarial refutation; the honest net product of the
