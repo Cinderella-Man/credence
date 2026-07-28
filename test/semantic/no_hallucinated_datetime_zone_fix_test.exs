@@ -118,4 +118,47 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZoneFixTest do
 
     confirm_fix(fix(input, @real_message, 2), input)
   end
+
+  # ═══════════════════════════════════════════════════════════════════
+  # THE WITNESS — ledgered `:no_fixture` under T1. A *closed* struct type
+  # is required: the `is_struct/2` guard form the other fixtures use
+  # refines to an open map, and the compiler then emits nothing at all,
+  # so no fixture in this file could witness. docs/22 T5.9.
+  # ═══════════════════════════════════════════════════════════════════
+
+  describe "witnesses its own failure mode through the real pipeline" do
+    test "a closed %DateTime{} match emits the warning and the rule wins it" do
+      source = """
+      defmodule DatetimeZoneWitness do
+        def f(%DateTime{} = dt), do: dt.zone
+      end
+      """
+
+      diagnostics =
+        case Credence.RuleHelpers.compile_and_capture(source) do
+          {:ok, ds} -> ds
+          {:error, ds} -> ds
+        end
+
+      assert Enum.any?(diagnostics, &NoHallucinatedDatetimeZone.match?/1)
+
+      result = Credence.fix(source)
+      assert {NoHallucinatedDatetimeZone, 1} in result.applied_rules
+      assert result.code =~ "dt.time_zone"
+      assert Credence.RuleCase.compiles?(result.code)
+    end
+
+    test "the is_struct/2 guard form emits nothing — which is why this was unwitnessed" do
+      # Not a curiosity: it is the reason the ledger entry existed. `is_struct(dt,
+      # DateTime)` refines to an OPEN map, so the type checker has no closed
+      # struct to check the key against and says nothing.
+      source = """
+      defmodule DatetimeZoneOpenMap do
+        def f(dt) when is_struct(dt, DateTime), do: dt.zone
+      end
+      """
+
+      assert Credence.RuleHelpers.compile_and_capture(source) == {:ok, []}
+    end
+  end
 end

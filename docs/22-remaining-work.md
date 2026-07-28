@@ -68,6 +68,7 @@ untouched.
 | 🔄 | **T3.10 — pay down the self-corruption ledger** — 4 of 11 done, 7 left | `becd59b` · `643435a` · this commit |
 | ⬜ | **T3.10a — `no_else_if` corrupts valid parsing code** (found while paying down T3.10; do *not* convert it) | — |
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · this commit |
+| 🔄 | **T5.9 — pay down the T1 witness ledger** — 2 of 8 done (both `:no_fixture`), 6 left | this commit |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T3.10a** — it is the only item on this file known to corrupt
@@ -836,7 +837,7 @@ its own tests run under real `mix test`.
   historical banner now; config surface `max_passes`/compile-timeout/fixpoint
   passes once C6/C7 land; `rule_status/1` exposing `priority` +
   `unsafe_in_dsl`).
-- [ ] **T5.9 [C] Pay down the T1 witness ledger (8 rules).** The ledger in
+- [ ] 🔄 **T5.9 [C] Pay down the T1 witness ledger — 2 of 8 done, 6 left.** The ledger in
   `test/pipeline_witness_test.exs` only shrinks; each reason has its own repair:
   - **4 `:dep_gated`** (`NoUsePlugConn`, `NoMatchWithMethodStringInPlugRouter`,
     `FixPlugDependencyModuleOrder`, `FixNimbleCsvDirectParse`) — alive in the
@@ -844,14 +845,30 @@ its own tests run under real `mix test`.
     `plug` nor `nimble_csv`. Cheapest honest repair: add both as `only: :test`
     deps. A `test/support` stub reproducing the message also works and costs no
     dependency, but proves less.
-  - **2 `:no_fixture`** (`NoHallucinatedDatetimeZone`,
-    `NoHallucinatedTaskTimeoutErrorStruct`) — the easiest wins, and the fixtures
-    are already known to work: `def f(%DateTime{} = dt), do: dt.zone` produces
-    the warning and the rule wins it (a *closed* struct type is required — the
-    `is_struct/2` guard form the existing fixtures use refines to an open map
-    and emits nothing), and `{:error, %Task.TimeoutError{}}` in **expression**
-    position produces the error and the rule wins it (the pattern position
-    yields a different message no rule claims).
+  - [x] ~~**2 `:no_fixture`**~~ **DONE.** `NoHallucinatedDatetimeZone` was
+    exactly as this item described: `def f(%DateTime{} = dt), do: dt.zone`
+    produces the warning, the rule wins it, and `dt.zone -> dt.time_zone` lands
+    end-to-end. A *closed* struct type is required — the `is_struct/2` guard form
+    the existing fixtures use refines to an open map and the compiler emits
+    nothing, which is verified here as its own test, since it is the reason the
+    entry existed.
+
+    **Correction: this item was wrong about the second one, and in the direction
+    that matters.** It said `{:error, %Task.TimeoutError{}}` in expression
+    position "produces the error and the rule wins it". Both true, and *not a
+    witness*: the rule matches, wins its slot, and then applies as
+    `{rule, :no_op}` — its `fix/2` only rewrites
+    `{:exit, {%Task.TimeoutError{}, _stacktrace}}`, which is a **pattern**. And a
+    pattern emits a *different* message (`struct Task.TimeoutError is undefined`)
+    that `match?/1` did not accept. So `match?/1` and `fix/2` were keyed to
+    disjoint situations — the rule could match, or be applicable, never both.
+    That is why no fixture witnessed it, and why writing one was never going to
+    be the repair. Both messages are matched now; the documented shape witnesses
+    in a `fn` clause and in a function head.
+
+    Worth noting for T1.2: in expression position `FixCyclicStructReference` also
+    claims that diagnostic. This rule's `priority: 100` wins, which is the
+    contention docs/20 says must be deliberate — here it happens to be.
   - **2 `:wrong_phase`** (`NoCryptoHashPipeSwappedArgs`,
     `NoHallucinatedEtsKeytypeOption`) — do **not** manufacture a witness. Both
     win their diagnostic when the offending call sits in a module attribute

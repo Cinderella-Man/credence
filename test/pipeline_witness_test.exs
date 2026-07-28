@@ -127,8 +127,6 @@ defmodule Credence.PipelineWitnessTest do
     "NoMatchWithMethodStringInPlugRouter" => :dep_gated,
     "FixPlugDependencyModuleOrder" => :dep_gated,
     "FixNimbleCsvDirectParse" => :dep_gated,
-    "NoHallucinatedTaskTimeoutErrorStruct" => :no_fixture,
-    "NoHallucinatedDatetimeZone" => :no_fixture,
     "NoCryptoHashPipeSwappedArgs" => :wrong_phase,
     "NoHallucinatedEtsKeytypeOption" => :wrong_phase
   }
