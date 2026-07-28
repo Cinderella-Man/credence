@@ -68,7 +68,7 @@ untouched.
 | 🔄 | **T3.10 — pay down the self-corruption ledger** — 4 of 11 done, 7 left | `becd59b` · `643435a` · this commit |
 | ⬜ | **T3.10a — `no_else_if` corrupts valid parsing code** (found while paying down T3.10; do *not* convert it) | — |
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · this commit |
-| 🔄 | **T5.9 — pay down the T1 witness ledger** — 2 of 8 done (both `:no_fixture`), 6 left | this commit |
+| 🔄 | **T5.9 — pay down the T1 witness ledger** — 6 of 8 done; only the 2 `:wrong_phase` left | `f895bee` · this commit |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T3.10a** — it is the only item on this file known to corrupt
@@ -837,14 +837,15 @@ its own tests run under real `mix test`.
   historical banner now; config surface `max_passes`/compile-timeout/fixpoint
   passes once C6/C7 land; `rule_status/1` exposing `priority` +
   `unsafe_in_dsl`).
-- [ ] 🔄 **T5.9 [C] Pay down the T1 witness ledger — 2 of 8 done, 6 left.** The ledger in
+- [ ] 🔄 **T5.9 [C] Pay down the T1 witness ledger — 6 of 8 done, 2 left.** The ledger in
   `test/pipeline_witness_test.exs` only shrinks; each reason has its own repair:
-  - **4 `:dep_gated`** (`NoUsePlugConn`, `NoMatchWithMethodStringInPlugRouter`,
-    `FixPlugDependencyModuleOrder`, `FixNimbleCsvDirectParse`) — alive in the
-    harness workspace, unwitnessable here because credence carries neither
-    `plug` nor `nimble_csv`. Cheapest honest repair: add both as `only: :test`
-    deps. A `test/support` stub reproducing the message also works and costs no
-    dependency, but proves less.
+  - [x] ~~**4 `:dep_gated`**~~ **DONE.** `plug ~> 1.16` and `nimble_csv ~> 1.2`
+    added as `only: :test, runtime: false`; all four witness immediately, with no
+    change to any rule. The alternative — a `test/support` stub reproducing the
+    message — costs no dependency but proves less, because what it witnesses is
+    the stub. Worth stating plainly what the entry meant: these rules were never
+    broken. `:dep_gated` was a property of *this checkout*, and the four were
+    alive in the harness workspace the whole time.
   - [x] ~~**2 `:no_fixture`**~~ **DONE.** `NoHallucinatedDatetimeZone` was
     exactly as this item described: `def f(%DateTime{} = dt), do: dt.zone`
     produces the warning, the rule wins it, and `dt.zone -> dt.time_zone` lands

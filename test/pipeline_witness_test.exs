@@ -100,33 +100,36 @@ defmodule Credence.PipelineWitnessTest do
   # individually against the compiler and the Elixir/OTP sources, and each
   # verdict below was confirmed by executing the case, not by reading alone.
   #
-  #   :dep_gated  — the rule's diagnostic only exists when a dependency that
-  #     credence itself does not carry is present. All four are alive in the
-  #     evolution harness workspace, which has plug + nimble_csv. Here the
-  #     fixtures produce "module Plug.Conn is not loaded and could not be found"
-  #     instead of the rule's target message. Repair: add the dep as test-only,
-  #     or a `test/support` stub that reproduces the message. NOT deletion.
+  #   :dep_gated  — PAID DOWN (T5.9). The rule's diagnostic only existed when a
+  #     dependency credence did not carry was present; the fixtures produced
+  #     "module Plug.Conn is not loaded and could not be found" instead of the
+  #     rule's target message. All four were alive in the evolution harness
+  #     workspace all along, so this was a property of THIS CHECKOUT, not of the
+  #     rules. Repaired by adding plug + nimble_csv as `only: :test` deps, which
+  #     is the honest option — a `test/support` stub reproducing the message
+  #     costs no dependency but proves less, since it witnesses the stub.
   #
-  #   :no_fixture — the diagnostic is real, reachable, and this rule wins its
-  #     dispatch slot (verified by compiling a constructed case), but no test
-  #     file contains source that produces it; the tests fabricate the
-  #     diagnostic map by hand. Repair: add the fixture. These are the entries
-  #     that should leave the ledger first.
+  #   :no_fixture — PAID DOWN (T5.9), and it did not mean what it says. The
+  #     diagnostic was real and the rule won its dispatch slot, but for
+  #     `NoHallucinatedTaskTimeoutErrorStruct` no fixture COULD witness:
+  #     `match?/1` accepted the expression-position message while `fix/2`
+  #     repaired a pattern, which emits a different one. "No fixture" was a
+  #     symptom of a rule keyed to two disjoint situations, not of nobody having
+  #     written one. Keep the reason; distrust its face value.
   #
   #   :wrong_phase — reachable only in a source shape that is not the shape the
   #     rule documents and repairs. See the moduledoc. Repair: re-home the rule
   #     in the Pattern phase; do not manufacture a witnessing fixture.
   #
-  #   :dead — the rule cannot fire at all, on this toolchain, in any shape.
-  #     Repair: extract the failure mode, then retire or rebuild the rule. Per
-  #     the project's standing rule, "delete it" is never the first move — the
-  #     observation behind a dead rule is usually still true.
+  #   :dead — PAID DOWN (T3.8). The rule cannot fire at all, on this toolchain,
+  #     in any shape. Both entries were repaired without deleting anything, which
+  #     is the standing rule vindicated: `FixMalformedSpec` was re-homed to the
+  #     Semantic phase (its target parses, so Syntax never saw it, but it fails
+  #     to COMPILE with a diagnostic nothing claimed), and `FixWithElseBareValue`
+  #     needed one attribute — it matched a message Elixir 1.20.2 does not emit,
+  #     while its `fix/2` was correct all along.
   @ledger %{
     # -- Semantic --
-    "NoUsePlugConn" => :dep_gated,
-    "NoMatchWithMethodStringInPlugRouter" => :dep_gated,
-    "FixPlugDependencyModuleOrder" => :dep_gated,
-    "FixNimbleCsvDirectParse" => :dep_gated,
     "NoCryptoHashPipeSwappedArgs" => :wrong_phase,
     "NoHallucinatedEtsKeytypeOption" => :wrong_phase
   }
