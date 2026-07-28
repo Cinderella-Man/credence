@@ -122,8 +122,6 @@ defmodule Credence.PipelineWitnessTest do
   #     the project's standing rule, "delete it" is never the first move — the
   #     observation behind a dead rule is usually still true.
   @ledger %{
-    # -- Syntax --
-    "FixMalformedSpec" => :dead,
     # -- Semantic --
     "NoUsePlugConn" => :dep_gated,
     "NoMatchWithMethodStringInPlugRouter" => :dep_gated,

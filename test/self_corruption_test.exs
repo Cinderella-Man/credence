@@ -61,14 +61,16 @@ defmodule Credence.SelfCorruptionTest do
   count, because the count is a fair proxy for how little the rule knows about
   literals.
 
-  Three are paid down so far (8 rules / 247 lines remain), and all three needed
+  Four are paid down so far (7 rules / 246 lines remain), and all four needed
   *different* repairs — see the note under `@self_corrupting`. That is the useful
   early lesson from this ledger: a hit says the rule edited bytes that are not
   code, and nothing more. It does not say the repair is `SourceMask`. Assuming it
   does produces either a masked rule that is still wrong, or — worse, and this
   nearly happened to `no_doc_with_do_block` — a rule whose pattern keys on the
   very delimiters masking blanks, which then matches nothing at all and retires
-  itself while every test stays green.
+  itself while every test stays green. One of the four was not a masking bug at
+  all: `fix_malformed_spec` was a rule that could never fire, and converting it
+  would have been polish on a corpse.
   """
   use ExUnit.Case, async: true
 
@@ -102,7 +104,6 @@ defmodule Credence.SelfCorruptionTest do
     "no_fn_with_capture" => 4,
     "fix_stale_access_modifier" => 3,
     "fix_assignment_dot_syntax" => 2,
-    "fix_malformed_spec" => 1,
     "prefer_spec_arrow_operator" => 1
   }
 
@@ -128,6 +129,14 @@ defmodule Credence.SelfCorruptionTest do
   #                                   line and asks `SourceMask.self_contained?/2`
   #                                   whether the line is inside a multi-line
   #                                   literal.
+  #   fix_malformed_spec (1)          NOT a repair at all — the rule was DEAD.
+  #                                   `@spec f(a :: b)` parses, so the Syntax
+  #                                   phase never ran on it (T1 had it ledgered
+  #                                   `:dead`). It failed to *compile*, though,
+  #                                   with a diagnostic nothing claimed, so it is
+  #                                   re-homed to `Credence.Semantic` and off
+  #                                   this ledger by leaving the phase. docs/22
+  #                                   T3.8.
 
   setup_all do
     entries = SelfCorruption.scan()

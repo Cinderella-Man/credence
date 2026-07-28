@@ -65,8 +65,9 @@ untouched.
 | ✅ | T0.2 — Phase-4 PR | `1cb7bff` — **superseded**, a PR for the whole 3rd evolution already exists |
 | ✅ | **T3.7 — the last two raw-byte syntax fixes**, + the `FixDivRem` half-conversion behind them | `e81985e` · `8169601` |
 | ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
-| 🔄 | **T3.10 — pay down the self-corruption ledger** — 3 of 11 done, 8 left | `becd59b` · `643435a` |
+| 🔄 | **T3.10 — pay down the self-corruption ledger** — 4 of 11 done, 7 left | `becd59b` · `643435a` · this commit |
 | ⬜ | **T3.10a — `no_else_if` corrupts valid parsing code** (found while paying down T3.10; do *not* convert it) | — |
+| 🔄 | **T3.8 — the two rules T1 proved cannot fire** — `FixMalformedSpec` re-homed to Semantic, 1 left | this commit |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T3.10a** — it is the only item on this file known to corrupt
@@ -538,18 +539,37 @@ its own tests run under real `mix test`.
 
   It was found by an **oracle, not by reading**, which is the transferable part.
   See T3.10.
-- [ ] **T3.8 [C] The two rules T1 proved cannot fire.** Per the project's
+- [ ] 🔄 **T3.8 [C] The two rules T1 proved cannot fire — 1 of 2 done.** Per the project's
   standing rule, deletion is never the first move — extract the verified failure
   mode first, then retire or rebuild:
-  - `Syntax.FixMalformedSpec` — the premise is false: `@spec f(a :: b)` parses,
-    so the Syntax phase never runs on it. If the failure mode (a `::` inside the
-    argument list of a spec) is real, it belongs in **Pattern**, where the AST is
-    available. Note its moduledoc asserts "## Bad (won't parse)" — the assertion
-    a `Code.string_to_quoted` call at authoring time would have refuted.
+  - [x] ~~`Syntax.FixMalformedSpec`~~ **DONE — re-homed to Semantic.** The
+    premise was false: `@spec f(a :: b)` parses, so the Syntax phase never ran on
+    it, and its moduledoc's "## Bad (won't parse)" is exactly the assertion one
+    `Code.string_to_quoted/1` call at authoring time would have refuted.
+
+    **Correction to this item's own recommendation: not Pattern.** It said the
+    failure mode "belongs in **Pattern**, where the AST is available". Running it
+    says otherwise — the line parses and then fails to *compile*, emitting a
+    precise `severity: :error` diagnostic that **no live rule claimed**:
+
+        type specification missing return type: max_product(list(integer()) :: integer())
+
+    A compiler diagnostic is the Semantic phase's input by definition, so Pattern
+    would have been a second wrong phase for the same rule. Now
+    `lib/semantic/fix_malformed_spec.ex`, keyed on that message, with the rewrite
+    transplanted unchanged. It witnesses through real dispatch (`{FixMalformedSpec,
+    1}` in `applied_rules`), so it leaves the T1 `@ledger` *and* the T3.10
+    self-corruption ledger — the latter by leaving the phase the oracle scans.
+
+    The port had a defect T1 caught immediately: the Issue kept its old Syntax
+    atom `:malformed_spec`, but Semantic and Pattern issues are attributed by a
+    **module-derived** atom, so the rule was live and unattributable. Only Syntax
+    atoms are author-chosen. Two Semantic meta-gates then required an output-parses
+    assertion and an attribution assertion the ported tests did not have.
   - `Semantic.FixWithElseBareValue` — `match?/1` requires a message string
     Elixir 1.20.2 does not emit; its fixtures compile to a *different* real
     diagnostic. Re-key it on what the compiler actually says, or retire it.
-- [ ] 🔄 **T3.10 [C] Pay down the self-corruption ledger — 3 of 11 done, 8 left.**
+- [ ] 🔄 **T3.10 [C] Pay down the self-corruption ledger — 4 of 11 done, 7 left.**
   The gate is in (`b41af7b`, `test/self_corruption_test.exs` +
   `test/support/self_corruption.ex`); the debt is being worked down against it.
   Run every Syntax rule's `fix/1` over its own `.ex` file — a rule's moduledoc is
@@ -567,7 +587,7 @@ its own tests run under real `mix test`.
   | `no_fn_with_capture` | 4 | ⬜ |
   | `fix_stale_access_modifier` | 3 | ⬜ |
   | `fix_assignment_dot_syntax` | 2 | ⬜ |
-  | `fix_malformed_spec` | 1 | ⬜ |
+  | `fix_malformed_spec` | 1 | ✅ **not a repair** — the rule was dead; re-homed to Semantic (T3.8) |
   | `prefer_spec_arrow_operator` | 1 | ⬜ |
   | `no_doc_with_do_block` | 1 | ✅ `643435a` — **not** the shadow; `self_contained?/2` |
   | `prefer_cond_do_keyword` | 1 | ✅ `becd59b` — **not** masking; a parse guard |
