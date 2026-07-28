@@ -147,6 +147,26 @@ defmodule Credence.RuleHelpers do
     :ok
   end
 
+  # A compile is an EXECUTION. `Code.compile_string/2` evaluates every top-level
+  # expression in `source`, so analysing a file runs it — and the population this
+  # linter exists for is LLM-generated code, which is exactly where a top-level
+  # expression that never terminates is likely.
+  #
+  # This is not hypothetical. `Enum.flat_map(1..10, &Stream.cycle([&1]))` — the
+  # *expected output* of one of `UndefinedFunction`'s own fix tests, harvested as
+  # a witness candidate — takes this VM from 200 MB to 62 GB in about six
+  # minutes. On 2026-07-28 the kernel OOM killer killed `beam.smp` seven times
+  # for it, taking the editor down each time.
+  #
+  # So the compile runs in a throwaway process carrying a heap ceiling and a
+  # deadline: a runaway now costs one process instead of the machine. Both
+  # numbers are deliberately far above any legitimate compile — the entire
+  # 9,911-test suite peaks at ~1.2 GB — because this bounds catastrophe rather
+  # than tuning performance. Overridable via application env so the bounds
+  # themselves can be tested; see `test/compile_bounds_test.exs`.
+  @compile_max_heap_words 64_000_000
+  @compile_timeout_ms 30_000
+
   @doc """
   Compiles `source` with `Code.with_diagnostics/1` and returns
   `{:ok, diagnostics}` or `{:error, diagnostics}`.
@@ -155,35 +175,124 @@ defmodule Credence.RuleHelpers do
   which redefines a currently-executing module does not kill the BEAM
   (see `:code.purge/1` — it sends an unconditional kill signal to
   any process still running the old version of the module).
+
+  **Compiling is running.** Top-level code in `source` executes, so the compile
+  happens inside a bounded child process. Source that exhausts the heap ceiling,
+  outruns the deadline, or exits the process is reported as `{:error, [_]}` with
+  a synthesized diagnostic rather than being allowed to take the VM with it.
+  `System.halt/0` remains outside anyone's reach.
   """
   @spec compile_and_capture(String.t()) :: {:ok, [map()]} | {:error, [map()]}
   def compile_and_capture(source) do
-    {result, diagnostics} =
-      Code.with_diagnostics(fn ->
-        try do
-          Code.compile_string(source, "credence_check.ex")
-        rescue
-          e ->
-            Logger.debug("[credence_fix] Code.compile_string raised: #{Exception.message(e)}")
+    case bounded_compile(source) do
+      {:ok, {result, diagnostics}} ->
+        case result do
+          # The compiler RAISED (e.g. CompileError "cannot invoke @/1 outside
+          # module") rather than emitting a diagnostic, so `Code.with_diagnostics`
+          # captured nothing. Synthesize an error diagnostic from the exception so
+          # the semantic round can still match + fix it (without this, every such
+          # error was a 0-diagnostic dead end). Append to any captured diagnostics.
+          {:raised, e} ->
+            {:error, diagnostics ++ [exception_diagnostic(e)]}
 
-            {:raised, e}
+          modules when is_list(modules) ->
+            safe_cleanup_modules(modules)
+            {:ok, drop_phantom_redefinitions(diagnostics, source)}
         end
-      end)
 
-    case result do
-      # The compiler RAISED (e.g. CompileError "cannot invoke @/1 outside
-      # module") rather than emitting a diagnostic, so `Code.with_diagnostics`
-      # captured nothing. Synthesize an error diagnostic from the exception so
-      # the semantic round can still match + fix it (without this, every such
-      # error was a 0-diagnostic dead end). Append to any captured diagnostics.
-      {:raised, e} ->
-        {:error, diagnostics ++ [exception_diagnostic(e)]}
+      {:aborted, why} ->
+        Logger.warning("[credence] compile aborted: #{abort_reason_text(why)} — not analysed")
 
-      modules when is_list(modules) ->
-        safe_cleanup_modules(modules)
-        {:ok, drop_phantom_redefinitions(diagnostics, source)}
+        {:error, [abort_diagnostic(why)]}
     end
   end
+
+  # Runs the compile in a monitored child bounded by heap and wall clock.
+  #
+  # The child sends its result before exiting, so a `:DOWN` reaching us first
+  # means it never got that far — it was killed by the heap ceiling, or the
+  # source called `exit/1` on it. Either way the caller survives, which the
+  # unwrapped version did not: a top-level `exit/1` used to take down whichever
+  # process was running the pipeline.
+  defp bounded_compile(source) do
+    parent = self()
+    {heap_words, timeout_ms} = compile_bounds()
+
+    {pid, ref} =
+      spawn_monitor(fn ->
+        Process.flag(:max_heap_size, %{size: heap_words, kill: true, error_logger: false})
+
+        captured =
+          Code.with_diagnostics(fn ->
+            try do
+              Code.compile_string(source, "credence_check.ex")
+            rescue
+              e ->
+                Logger.debug("[credence_fix] Code.compile_string raised: #{Exception.message(e)}")
+
+                {:raised, e}
+            end
+          end)
+
+        send(parent, {__MODULE__, :compiled, captured})
+      end)
+
+    receive do
+      {__MODULE__, :compiled, captured} ->
+        Process.demonitor(ref, [:flush])
+        {:ok, captured}
+
+      {:DOWN, ^ref, :process, _pid, :killed} ->
+        {:aborted, :heap_limit}
+
+      {:DOWN, ^ref, :process, _pid, reason} ->
+        {:aborted, {:exited, reason}}
+    after
+      timeout_ms ->
+        Process.exit(pid, :kill)
+
+        receive do
+          {:DOWN, ^ref, :process, _pid, _reason} -> :ok
+        after
+          1_000 -> :ok
+        end
+
+        {:aborted, :timeout}
+    end
+  end
+
+  defp compile_bounds do
+    {
+      Application.get_env(:credence, :compile_max_heap_words, @compile_max_heap_words),
+      Application.get_env(:credence, :compile_timeout_ms, @compile_timeout_ms)
+    }
+  end
+
+  # Deliberately worded so no rule can plausibly key on it: this is credence
+  # talking about itself, not a compiler diagnostic about the source. It is an
+  # `:error` because "we could not compile this" and "this does not compile" are
+  # the same answer to every caller that asks — notably `compiles?/1`, whose
+  # `false` makes the Pattern round skip the file rather than guess.
+  defp abort_diagnostic(why) do
+    %{
+      severity: :error,
+      message: "credence: compilation aborted — #{abort_reason_text(why)}",
+      position: 0,
+      file: "credence_check.ex"
+    }
+  end
+
+  # Each reason gets its own sentence because they are three different events,
+  # and a message that calls an `exit/1` a "budget" is the kind of plausible
+  # wrong sentence this project keeps finding in its own output.
+  defp abort_reason_text(:heap_limit),
+    do: "the source exceeded credence's compile heap ceiling"
+
+  defp abort_reason_text(:timeout),
+    do: "the source exceeded credence's compile time budget"
+
+  defp abort_reason_text({:exited, reason}),
+    do: "the source exited during compilation (#{inspect(reason)})"
 
   # `Code.compile_string/2` warns "redefining module M" whenever M is already
   # loaded in the calling VM. That is a property of the HOST PROCESS, not of the
