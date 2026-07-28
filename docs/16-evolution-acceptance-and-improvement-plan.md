@@ -533,28 +533,52 @@ verified by executed probe through the real pipeline before and after:
 |---|---|---|
 | `Semantic.NoCaptureAsBitwiseAnd` | `flags & 0xFF` → `Bitwise.band(flags, 0)xFF`; same for `0b`, `0o` and `1_000` | `4abafed` |
 | `Syntax.FixDivRem` | a `def` head swallowed into the left operand | `2964ab4` |
-| `Syntax.FixDivRem` | rewrote inside string literals | `2964ab4` |
+| `Syntax.FixDivRem` | rewrote inside string literals | `2964ab4` — **half only**; the `fix/1` side masked one line at a time and kept rewriting heredoc bodies until `8169601` |
 | `Semantic.NoBareReturnInUnless` | early exit deleted, not restructured — silent wrong answer | `86ee66b` |
 | `Syntax.FixPythonModulo` | rewrote inside string literals | `9fc30a3` |
 | `Syntax.FixPythonModulo` | read `%Name{}` struct literals as modulo | `9fc30a3` |
 | `Syntax.FixPythonModulo` | `a * b % 2` regrouped — silent wrong answer | `9fc30a3` |
-| `Syntax.FixPythonFloorDiv` / `FixScientificNotation` | rewrote inside string literals | ⚠️ **NOT REPAIRED — this row was false** (see below) |
+| `Syntax.FixPythonFloorDiv` / `FixScientificNotation` | rewrote inside string literals — **plus sigils, charlists, heredoc bodies and trailing comments** | `e81985e` (T3.7), *not* `9fc30a3` |
 | `Semantic.UndefinedFunction` | rewrote a user's own nested-alias call | `891a05c` |
 
-> **Correction (2026-07-28).** The `FixPythonFloorDiv` / `FixScientificNotation`
-> row above claimed a repair that does not exist. `grep -l SourceMask lib/`
-> returns only `source_mask.ex`, `fix_python_modulo.ex`, `fix_div_rem.ex` and
-> `no_capture_as_bitwise_and.ex`; neither of the two rules named in that row
-> references it, and `9fc30a3` does not touch either file. Both still
-> `Regex.replace` over raw bytes with only a whole-line `#` guard, and both were
-> re-confirmed live by execution:
+> **Correction (2026-07-28), and its resolution.** The row above originally
+> credited `9fc30a3`. That was false: `grep -l SourceMask lib/` returned only
+> `source_mask.ex`, `fix_python_modulo.ex`, `fix_div_rem.ex` and
+> `no_capture_as_bitwise_and.ex`, neither rule in that row referenced it, and
+> `9fc30a3` touches neither file. Both were still `Regex.replace`ing raw bytes
+> behind a whole-line `#` guard, re-confirmed live by execution.
+>
+> **Both are now genuinely repaired, in `e81985e`.** The row is restored with
+> the correct commit, and its defect text is *widened* — the false row had
+> understated the bug as well as misattributing it. Six shapes were live, not
+> one; the extra four fell out of probing the two that were already known:
 >
 >     IO.puts("version 1e5 build")   ->  IO.puts("version 1.0e5 build")
 >     IO.puts("ratio 7 // 2 here")   ->  IO.puts("ratio div(7, 2) here")
+>     x = 1e5  # bump to 1e9 later   ->  x = 1.0e5  # bump to 1.0e9 later
+>     x = a // b  # was a // b       ->  x = div(a, b)  # was div(a, b)
+>     ~S(raw 1e5)                    ->  ~S(raw 1.0e5)
+>     ~c"tolerance 1e-10"            ->  ~c"tolerance 1.0e-10"
 >
-> `PR_BODY_phase4.md:43` carries the same false claim. Tracked as **T3.7** in
-> docs/22. The sibling `FixPythonModulo` rows in this table are genuine — that
-> rule does use `SourceMask`.
+> **The lesson this row taught three times.** First it recorded a repair nobody
+> had run. Then, when the repair was actually written, running it found four more
+> shapes of the same defect that the *corrected* text had also missed — because
+> the correction, too, was written from reading rather than executing. A
+> whole-line `#` guard reads like "comments are safe"; it protects only a line
+> that begins with one.
+>
+> Third: with both rules converted and the family declared closed, an oracle
+> (`b41af7b` — run every Syntax rule's `fix/1` over its own source file) found
+> that **`FixDivRem`, two rows up and repaired back in `2964ab4`, was still
+> corrupting heredocs.** Its `analyze/1` masked the whole file; its `fix/1`
+> masked each line alone, which a line cannot be. So the rule fixed what it had
+> never reported, and it had been reviewed, tested, changelogged and shipped in
+> that state. The same run found **11 of 45 Syntax rules** doing some version of
+> it — now docs/22 T3.10. The `FixPythonModulo` rows were genuine throughout.
+>
+> The generalisation is the point of this whole table: **reading a fix and
+> reading its tests are the same act, because the same person wrote both.** Only
+> an input nobody authored breaks the tie.
 
 Three findings worth carrying forward:
 

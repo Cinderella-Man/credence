@@ -237,3 +237,50 @@ both are reachable — each agent had flagged its own uncertainty and named the
 exact one-call check that would settle it, and running those checks overturned
 the verdicts. Agents that cannot execute should be asked to name the experiment;
 the orchestrator should then run it. Reading is a hypothesis generator.
+
+---
+
+## Session 2026-07-28 (evening) — CLOSED, nothing in flight
+
+Resumed after a VS Code crash. The crash left exactly two artifacts: an
+uncommitted `docs/22` edit closing T0.2, and an untracked scratch probe for T1.2
+(`test/zz_contention_test.exs`, moved out of the tree — it is exploratory, not a
+test). Both dispositions are recorded; nothing else was in flight.
+
+Landed: T0.2 closure (`1cb7bff`), T3.7 (`e81985e`), T3.7-cont `FixDivRem`
+(`8169601`), the self-corruption oracle and its gate (`b41af7b`), and this
+records pass. New tracker item: **T3.10**, the 11-rule paydown the gate
+uncovered.
+
+**The finding worth carrying forward: an unexecuted correction is not more
+reliable than the unexecuted claim it replaces.** T3.7 existed *because* a
+docs/16 row claimed a repair nobody had made. Writing the repair then found four
+more shapes of the same defect that the correction had also missed — sigils,
+charlists, heredoc bodies, and trailing comments — because the correction was
+written by reading too. Then, with the family declared closed twice over, an
+oracle found `FixDivRem` still corrupting heredocs after having been reviewed,
+converted, tested, changelogged and shipped as fixed.
+
+**What broke the loop was changing the input, not the effort.** Every previous
+pass read the rule and read its tests, which is one act rather than two: the same
+person wrote both, so they agree by construction. A rule's own source file is an
+input nobody authored to make it pass, and the Rule Standard *guarantees* it is
+adversarial — a moduledoc is required to contain the exact byte sequences the
+rule rewrites, inside a heredoc, beside English prose naming the operator. One
+`fix/1` call per rule found 11 of 45. Generalisation for the harness: when a gate
+keeps missing a class, look for an input the author did not choose before writing
+a cleverer gate.
+
+**Concurrency held again.** One workflow, 4 read-only agents (3 miners + 1
+adversarial verifier), all forbidden `mix`/`elixir`/`iex`; every compile and
+every probe ran in the single foreground shell. No OOM.
+
+**And the read-only agents were right to be doubted, in both directions.** The
+family sweep *refuted* docs/22's "exactly two rules" scope — correctly, and it is
+why T3.10 exists. Its adversarial verifier then caught the sweep in a false
+accusation of its own (`NoStringReplaceArityMismatch`, classified as a raw-byte
+rewriter from a grep signature; it is AST-based, and the `String.replace` hits
+were its own moduledoc prose, since the rule is *about* `String.replace`). Both
+agents named experiments instead of running them; the orchestrator ran them, and
+the cheapest one — the self-corruption oracle — was worth more than every verdict
+either agent offered.

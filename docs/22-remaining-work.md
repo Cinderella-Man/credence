@@ -14,15 +14,20 @@ Every claim below was produced by a 6-agent read-only research pass on
 independently; corrections already folded in). File:line anchors were verified
 against `credence` HEAD `958f241` and harness HEAD `fb3bc2a`.
 
-**Second pass, same day (through `2f34640`).** T0.1, T1, T1.3, T3.1 and T3.2
-landed. Four of this file's own claims were **refuted by execution** and are
-corrected in place, each marked *Correction* at its item: T3.1's "7 dead rules"
-(really 1), T3.2's "will be dropped" (already being dropped, and 3 outcomes not
-1), docs/16's `SourceMask` repair claim (never made — now T3.7), and T1's
-implied scope (the 86 are Semantic/Syntax only; Pattern is 155/155 clean). The
-pattern worth keeping: **every one of these was a plausible written claim that
-nobody had run.** Where a claim here is not marked as executed, treat it as a
-hypothesis.
+**Second pass, same day (through `e81985e`).** T0.1, T1, T1.3, T3.1, T3.2 and
+T3.7 landed. **Five** of this file's own claims were **refuted by execution**
+and are corrected in place, each marked *Correction* at its item: T3.1's "7 dead
+rules" (really 1), T3.2's "will be dropped" (already being dropped, and 3
+outcomes not 1), docs/16's `SourceMask` repair claim (never made — became T3.7),
+T1's implied scope (the 86 are Semantic/Syntax only; Pattern is 155/155 clean),
+and T3.7's own defect scope (1 shape recorded, 6 live). The pattern worth
+keeping: **every one of these was a plausible written claim that nobody had
+run.** Where a claim here is not marked as executed, treat it as a hypothesis.
+
+T3.7 sharpens that into a rule of thumb. Its item was *itself* the correction of
+an earlier unexecuted claim — and it was still wrong, in the same direction,
+because the correction had also been written from reading. **An unexecuted
+correction is not more reliable than the unexecuted claim it replaces.**
 
 ---
 
@@ -42,14 +47,17 @@ id in place. Nothing else in this file has been started.
 | ✅ | T3.9 — tree-wide formatter drift (57 files) | `f564e31` |
 | ✅ | T0.4 — release hygiene (fold 0.7.0, fix a false fix-note) | this commit |
 | ✅ | T0.2 — Phase-4 PR | **superseded** — a PR for the whole 3rd evolution already exists |
+| ✅ | **T3.7 — the last two raw-byte syntax fixes**, + the `FixDivRem` half-conversion behind them | `e81985e` · `8169601` |
+| ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
+| ⬜ | **T3.10 — pay down the 11-rule self-corruption ledger** (new, from the gate above) | — |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
-**Next by value, now that T1 is in:** **T3.7** — two Syntax rules still corrupt
-string literals, which is a live shipped defect of the 4.6a family and whose
-repair pattern already exists in `FixPythonModulo`. Then **T5.9** (pay down
-T1's 8-rule ledger; the two `:no_fixture` entries have working fixtures already
-identified in the item). Then **T1.2**, the G3 residue T1 does not cover.
-T2.1–T2.3 remain the prerequisites for any Phase-9 run.
+**Next by value:** **T3.10** — 11 Syntax rules rewrite their own source files,
+which is the same shipped byte-scope defect T3.7 just fixed twice, now with an
+executable oracle and a ratchet already in place to measure the paydown. Then
+**T5.9** (pay down T1's 8-rule ledger; the two `:no_fixture` entries have working
+fixtures already identified in the item). Then **T1.2**, the G3 residue T1 does
+not cover. T2.1–T2.3 remain the prerequisites for any Phase-9 run.
 
 ---
 
@@ -111,6 +119,18 @@ research scratchpad; counts adversarially re-verified on a 24-record sample,
    real oracle existed, the failure class *vanished from the reject pile*.
    Over-fire migrated to exactly the phases with no oracle (semantic matchers,
    syntax regex fixes). Build the oracle, kill the class.
+
+   *Instance, `b41af7b`:* the byte-scope class had two oracles — corpus
+   fix-safety and fix-output re-parse — and **neither can see it**, because a
+   corrupted string literal still parses, still compiles, and still satisfies
+   every assertion in the rule's own fix tests. So the class was gated only by
+   review, and review missed it four times. The oracle that does see it costs one
+   `fix/1` call per rule: **run the rule over its own source file.** It found 11
+   of 45 Syntax rules on the first run, including one already reviewed,
+   converted, tested, changelogged and shipped as fixed. The transferable shape
+   is not "test your rules on their own source" — it is *find an input the
+   author did not choose*. Fixtures and rule share an author and therefore share
+   a blind spot; a rule's own file is adversarial for free.
 3. **132 of 143 (92%) were mechanically catchable.** Only G6+G8 (11 rules)
    genuinely needed judgment or a bespoke language probe. The review burden that
    consumed a week of drain time was, to 92%, automatable *before commit*.
@@ -451,22 +471,55 @@ its own tests run under real `mix test`.
   `exit/2`) — sound but blocked on call-boundary anchoring; `exit/2` also
   needs an arity check `replace_call_on_line/4` doesn't do.
 
-- [ ] **T3.7 [C] `FixScientificNotation` + `FixPythonFloorDiv` still corrupt
-  string literals — and docs/16 claims they were fixed.** Found while verifying
-  T1's triage. `docs/16:541` credits `9fc30a3` "(via `SourceMask`)"; that commit
-  touches neither file, and `grep -l SourceMask lib/` lists only
-  `source_mask.ex`, `fix_python_modulo.ex`, `fix_div_rem.ex`,
-  `no_capture_as_bitwise_and.ex`. Both rules still `Regex.replace` raw bytes
-  behind a whole-line `#` guard. Re-confirmed by execution:
+- [x] ~~**T3.7 [C] `FixScientificNotation` + `FixPythonFloorDiv` still corrupt
+  string literals — and docs/16 claims they were fixed.**~~ **DONE `e81985e`.**
+  Both rules now match a `Credence.SourceMask` shadow and splice byte ranges into
+  the real line, exactly as `FixPythonModulo` does. That closes the 4.6a family:
+  all four line-based syntax rules are converted, and the CHANGELOG, docs/16 and
+  `docs/PR_BODY_phase4.md` all say so truthfully for the first time.
+
+  **Correction to this item's own claim — it understated the defect.** This item
+  named one shape. Six were live, and the extra four fell out of *probing* the
+  two that were written down:
 
       IO.puts("version 1e5 build")   ->  IO.puts("version 1.0e5 build")
       IO.puts("ratio 7 // 2 here")   ->  IO.puts("ratio div(7, 2) here")
+      x = 1e5  # bump to 1e9 later   ->  x = 1.0e5  # bump to 1.0e9 later
+      x = a // b  # was a // b       ->  x = div(a, b)  # was div(a, b)
+      ~S(raw 1e5)                    ->  ~S(raw 1.0e5)
+      ~c"tolerance 1e-10"            ->  ~c"tolerance 1.0e-10"
 
-  This is a **shipped byte-scope defect of the 4.6a family**, not a new one —
-  the family docs/16 §3 calls "a fix's blast radius needs its own oracle". Route
-  both through `Credence.SourceMask` exactly as `FixPythonModulo` does, with the
-  string-literal fixture above as the positive control. docs/16 is corrected;
-  `docs/PR_BODY_phase4.md:43` still carries the claim (see T0.2).
+  The trailing-comment shape is the one to carry forward.
+  `String.starts_with?(String.trim(line), "#")` *reads* as "comments are safe"
+  and protects only a line that begins with one — so the guard covered the case
+  nobody writes and missed the case everybody does. Heredoc bodies were
+  unguarded too. Note the recursion: this is the third time this row has been
+  written from reading rather than running, and the third time running it changed
+  the answer.
+
+  `FixPythonFloorDiv` was not a mechanical swap. It ran two regexes in sequence,
+  and after the first rewrite the shadow no longer aligns with the line, so both
+  patterns are now collected from the shadow in one pass, merged by offset and
+  spliced once. That also settles `a // Kernel.//(b)`, where the two patterns
+  overlap and the old sequential form emitted `div(a, div)(b)`.
+
+  Two deliberate behaviour changes, both toward doing less harm: a `..//` range
+  step *inside a string* no longer declines the whole line, and a comment is
+  blanked wherever it starts. 22 positive controls, 22/22 seen red against the
+  pre-fix rules with the 70 pre-existing tests still green.
+
+  **The family was not closed by that commit.** `8169601`: `FixDivRem` — one of
+  the two rules this item, docs/16 and the CHANGELOG all named as *already*
+  converted — was masking correctly in `analyze/1` and **one line at a time** in
+  `fix/1`, which a line cannot be, because heredoc and multi-line-string state
+  crosses lines. So it rewrote its own moduledoc while `analyze` correctly
+  reported nothing: the rule fixed what it had never found, and the finding a
+  reviewer reads and the edit that ships came from different pictures of the
+  file. Repaired with an invariant rather than a rewrite — the per-line machinery
+  runs only where masking the line alone agrees with the whole-file mask.
+
+  It was found by an **oracle, not by reading**, which is the transferable part.
+  See T3.10.
 - [ ] **T3.8 [C] The two rules T1 proved cannot fire.** Per the project's
   standing rule, deletion is never the first move — extract the verified failure
   mode first, then retire or rebuild:
@@ -478,6 +531,46 @@ its own tests run under real `mix test`.
   - `Semantic.FixWithElseBareValue` — `match?/1` requires a message string
     Elixir 1.20.2 does not emit; its fixtures compile to a *different* real
     diagnostic. Re-key it on what the compiler actually says, or retire it.
+- [ ] **T3.10 [C] Pay down the self-corruption ledger (11 Syntax rules, 253
+  lines).** The gate is in (`b41af7b`, `test/self_corruption_test.exs` +
+  `test/support/self_corruption.ex`); the debt is not. Run every Syntax rule's
+  `fix/1` over its own `.ex` file — a rule's moduledoc is *required* by the Rule
+  Standard to contain the exact byte sequences it rewrites, inside a heredoc,
+  beside prose naming the operator in English. A rule that rewrites its own
+  documentation cannot tell code from prose. **11 of 45 do.** Ledger order is
+  descending line count, which is a fair proxy for how little the rule knows
+  about literals:
+
+  | rule | lines of its own file |
+  |---|---|
+  | `no_else_if` | 226 |
+  | `fix_do_block_fusion` | 6 |
+  | `fix_python_augmented_assignment` | 4 |
+  | `fix_truncated_binary_close` | 4 |
+  | `no_fn_with_capture` | 4 |
+  | `fix_stale_access_modifier` | 3 |
+  | `fix_assignment_dot_syntax` | 2 |
+  | `fix_malformed_spec` · `no_doc_with_do_block` · `prefer_cond_do_keyword` · `prefer_spec_arrow_operator` | 1 each |
+
+  The repair is `Credence.SourceMask`, with `fix_python_modulo.ex` as the
+  reference and `fix_python_floor_div.ex` as the two-pattern-merge variant. Two
+  traps, both already paid for once: **mask the whole file, never a line alone**
+  (T3.7's `FixDivRem` finding), and **make `analyze` and `fix` read the same
+  shadow** or the rule fixes what it never reported.
+
+  `no_else_if` is the outlier and deserves its own read: it is a multi-line block
+  rewrite with neither a comment guard nor heredoc tracking, while its sibling
+  `fix_elsif_in_if_chain` has both. Two rules for one failure mode, one of them
+  safe — that asymmetry is a design question, not just a bug, and it may be that
+  the right paydown is retiring one of them. Per the project's standing rule,
+  extract the verified failure mode before deciding.
+
+  Three of the eleven are **not** obviously string-masking cases:
+  `fix_malformed_spec` and `prefer_spec_arrow_operator` rewrite an `@spec` shape
+  that appears in their own moduledocs, and `fix_stale_access_modifier` has no
+  literal guard at all but is line-anchored — worth confirming which of the
+  eleven `SourceMask` actually fixes before assuming it fixes all of them.
+
 - [x] ~~**T3.9 [C] 57 files fail `mix format --check-formatted` at HEAD.**~~
   **DONE `f564e31` (maintainer).** Pre-existing drift, not from any code change
   — Elixir 1.20's formatter against a tree last formatted by an older version,
@@ -707,6 +800,9 @@ properties corpus-free, 1,501 corpus, zero compile warnings:
 | T3.2 `:no_op` trace (credence) | `7708aef` | 2 controls; Semantic mislabel `{rule, 1}` included |
 | T3.2 AppliedRules vocabulary (harness) | `7b6e2c6` | control: old regex drops 4 of 5 outcomes |
 | **T1 pipeline-witness gate** | `2f34640` | 4 controls, 2 of them real G1/G2 catches in the live tree |
+| T3.7 the last two raw-byte syntax fixes | `e81985e` | 22 controls, 22/22 red pre-fix; 4 defect shapes found beyond the 2 recorded |
+| T3.7 (cont.) `FixDivRem` per-line masking | `8169601` | 4 controls, 3 red; the 4th green on purpose — it pins the analyze/fix disagreement |
+| **the self-corruption oracle + gate** | `b41af7b` | 5 controls; control 1 is the real `8169601` defect put back and caught |
 
 Deliberately **not** done, with reasons on record: P4-as-specced on-disk AST
 cache (mooted at 11.6 s scoped scans); P6 (docs/13's own "only if P1–P4 leave a

@@ -47,18 +47,19 @@ New `lib/source_mask.ex` produces a same-length shadow with literals, sigils,
 heredocs, character literals and comments blanked; rules match the shadow and
 splice into the real line at the matched offsets.
 
-> **Correction (2026-07-28).** An earlier draft of this section said all four
-> rules were converted. Only `FixPythonModulo` and `FixDivRem` were.
-> `FixPythonFloorDiv` and `FixScientificNotation` never adopted `SourceMask` —
-> `grep -l SourceMask lib/` does not list them — and both still corrupt string
-> literals today, confirmed by running them:
+> **Correction (2026-07-28), resolved the same day.** An earlier draft of this
+> section said all four rules were converted. At the time only `FixPythonModulo`
+> and `FixDivRem` were; `FixPythonFloorDiv` and `FixScientificNotation` had never
+> adopted `SourceMask`, and both still corrupted string literals, confirmed by
+> running them.
 >
->     IO.puts("version 1e5 build")  ->  IO.puts("version 1.0e5 build")
->     IO.puts("ratio 7 // 2 here")  ->  IO.puts("ratio div(7, 2) here")
->
-> The mechanism and the two converted rules are as described; the scope was
-> overstated. Tracked as T3.7 in `docs/22-remaining-work.md`, with the same
-> repair pattern to apply. It is a hand-rolled scanner
+> `e81985e` (T3.7) converted the remaining two, so **all four is now true** —
+> and it found four more shapes of the same defect while doing it, all live:
+> sigils, charlists, heredoc bodies and *trailing* comments. The whole-line `#`
+> guard those two rules carried skipped a line that began with a comment and
+> rewrote one that ended with it, so `x = a // b  # was a // b` came back as
+> `x = div(a, b)  # was div(a, b)`. 22 positive controls, all seen red against
+> the pre-fix rules. It is a hand-rolled scanner
 rather than `:elixir_tokenizer` on purpose — these rules only ever run on source
 that does not parse, which is precisely when a tokenizer gives up, and this one
 degrades to a *missed* fix instead of a *corrupted* string.

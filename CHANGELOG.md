@@ -89,6 +89,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Credence.Pattern.rule_status/1` and `enabled_rules/1` for inspecting which
   rules are on and which promises they are missing.
 
+- **A self-corruption gate: every Syntax rule's auto-fix is now run over its own
+  source file.** A rule that rewrites the inside of a string literal produces
+  output that parses, compiles and satisfies every assertion in its own fix
+  tests, so no existing check could see it — and four such defects shipped. A
+  rule's own file is the adversarial input nobody has to write: its moduledoc is
+  required to contain `## Bad` and `## Good` examples, which are exactly the byte
+  sequences the rule rewrites, sitting in a heredoc next to prose that names the
+  operator in English. A rule that rewrites its own documentation cannot tell
+  code from prose. 11 of 45 Syntax rules do; they are frozen in a ledger that
+  only shrinks, so a *new* rule cannot join them and an existing one cannot get
+  worse. This is how the `FixDivRem` defect above was found — after that rule had
+  been reviewed, converted, tested and released as fixed.
+
 ### Changed
 - **Behaviour change on upgrade (default-on switch).** With
   `single_codepoint_graphemes` on by default, two rules now apply fixes they
@@ -149,6 +162,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `x = 1.0e5  # bump to 1.0e9 later`. The comment is now blanked wherever it
   starts. Sigils, charlists and heredoc bodies were rewritten by the same two
   rules and are covered by the same change.
+- **`FixDivRem` no longer rewrites heredoc bodies.** It was masking, and had been
+  changelogged as fixed — but only in `analyze/1`. `fix/1` split the source into
+  lines and masked each line *alone*, which a line cannot be: heredoc and
+  multi-line-string state crosses lines, so a heredoc body read as pure code. The
+  rule rewrote documentation that `analyze/1` had correctly said nothing about,
+  which is worse than either half alone — the finding a reviewer reads and the
+  edit that ships were computed from different pictures of the file. The rewrite
+  now runs only where masking a line in isolation agrees with the whole-file
+  mask; elsewhere the line is left alone, costing a missed fix rather than a
+  corrupted string.
 - **`%` and `&` repairs no longer regroup the expression.** Python's `%` shares
   precedence with `*` and `/`, and its `&` binds looser than every arithmetic
   operator — so `a * b % 2` means `(a * b) % 2` and `h * 31 + c & 0xFFFFFFFF`
