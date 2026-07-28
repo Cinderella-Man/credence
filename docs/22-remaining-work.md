@@ -443,7 +443,35 @@ its own tests run under real `mix test`.
   repro-validation gate (T4.2), not LD4. Also: `trace_evidence.ex`'s
   `changed_blocks/2` fix was never re-probed (formatting-only risk), and
   `:refuted` is Semantic-only until T3.2 lands.
-- [ ] **T2.4 [C] C18 mutant sweep** — ~70% done in `b2-c18/`.
+- [x] ~~**T2.4 [C] C18 mutant sweep**~~ **DONE `PENDING`.** Placed, tested, and
+  **re-measured on a quiet box** — which is what this item was waiting for, since
+  the salvaged numbers came from a 20-parallel run while the machine was OOMing.
+
+  | metric | value |
+  |---|---|
+  | rules swept (sample 39, seed 0) | **39** |
+  | corpus kill rate | **0.740** |
+  | killed / survived | 629 / 221 |
+  | timeout / invalid / error | 0 / 2 / 0 |
+  | wall clock | 189 s, peak 2.6 GB |
+
+  `no_manual_max` reproduces the salvage's **0.848** exactly, so the engine is
+  deterministic across machines and runs. Report-only stays report-only: no
+  `--fail-under`, not wired into the suite, per docs/12 C18 + E6 — the tail has
+  not been triaged yet and a floor set before that would be a number nobody can
+  defend.
+
+  Controls, all three docs/22 asked for: a **planted misaligned mutant** must
+  raise rather than corrupt a different token (the whole measurement assumes the
+  edit lands where the tokenizer said, and a silent miss would move every score
+  with nothing to notice it); a mutant pointing past the end of source likewise;
+  and a **red baseline is discarded, not scored** — a triplet that was already
+  failing kills every mutant and scores a perfect 1.0, which is the single most
+  misleading number this task could print. Plus the exclusions that keep the tail
+  honest (moduledoc, comments, string contents) and `kill_rate/1` returning `nil`
+  rather than 0.0 when nothing scorable ran.
+
+  Original: ~70% done in `b2-c18/`.
   `Credence.Mutation` (4 operator families, careful scoping, cap-40
   round-robin), `Sweep` (fresh BEAM per mutant, mandatory green baseline —
   "a red baseline kills every mutant for the wrong reason"), `mix
