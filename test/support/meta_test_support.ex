@@ -39,6 +39,9 @@ defmodule Credence.MetaTestSupport do
   @doc ~s[Conventional path of a rule's test file for `kind` ("check" | "fix" | ...).]
   def test_path(rule, kind), do: rule |> RuleName.from_module() |> RuleName.test_path(kind)
 
+  @doc "Conventional path of the rule's own implementation file."
+  def rule_path(rule), do: rule |> RuleName.from_module() |> Map.fetch!(:rule_path)
+
   @doc "Conventionally-named test module for a rule's `kind` file, e.g. `…CheckTest`."
   def test_module(rule, kind), do: rule |> RuleName.from_module() |> RuleName.test_module(kind)
 
@@ -192,6 +195,231 @@ defmodule Credence.MetaTestSupport do
   @doc "The explicit equivalence opt-out marks."
   def mark_fns,
     do: [:mark_equivalence_cosmetic, :mark_equivalence_unconstructible, :mark_equivalence_repair]
+
+  # --- equivalence-DIMENSION predicates (EquivalenceDimensionMetaTest) --------
+  #
+  # C2.2. An equivalence test is only evidence if its inputs can *see* the
+  # divergence the rule's own operation class produces. The operation class is
+  # read off the RULE source (which stdlib call does it match or emit?); the
+  # coverage is read off the TEST's actual `inputs:` VALUES, not their names — a
+  # hand-rolled list counts exactly as much as an `EquivalenceInputs` dimension.
+
+  # Order- and identity-sensitive collection calls. Erlang term order compares
+  # `1` and `1.0` EQUAL (so a sort ties them) while every map / MapSet / `===`
+  # path treats them as DISTINCT. That pair is the whole trap.
+  @value_kind_ops ~w(sort sort_by min max min_by max_by uniq uniq_by dedup dedup_by
+                     frequencies frequencies_by group_by member?)
+
+  @value_kind_mods ~w(Enum List Map MapSet Keyword Stream)
+
+  # Calls whose answer depends on where a grapheme boundary falls.
+  @grapheme_ops ~w(graphemes codepoints length at first last slice reverse
+                   split_at next_grapheme to_charlist)
+
+  @scanned_mods ~w(Enum List Map MapSet Keyword Tuple Stream String)
+
+  @doc """
+  The stdlib `{module, callee}` pairs a rule *matches or emits* in USER code, as
+  `MapSet` of `{"Enum", "sort"}`-shaped tuples.
+
+  Read off the rule source in the one position that is unambiguous: an
+  `__aliases__` **literal** — `{:__aliases__, _, [:Enum]}` — which appears only
+  in a quoted pattern the rule matches on or a quoted node it builds. A rule's
+  own housekeeping (`Keyword.get(opts, …)`, `Enum.sort_by(issues, …)`) is a real
+  call, never an alias literal, so it contributes nothing here. Two callee forms
+  are recognised:
+
+    * a literal callee — `{:__aliases__, _, [:Enum]}, :sort]`;
+    * a variable callee constrained by a membership guard —
+      `[{:__aliases__, _, [:Enum]}, fun]` … `when fun in [:min, :max]`, the shape
+      several multi-callee rules use (e.g. `NoIfEmptyForEnumMinMax`).
+
+  Whitespace is normalised first, so line breaks in the pattern do not matter.
+  """
+  def rule_stdlib_callees(source) when is_binary(source) do
+    flat = String.replace(source, ~r/\s+/, "")
+    mods = Enum.join(@scanned_mods, "|")
+
+    literal =
+      ~r/\[:(#{mods})\]\},:([a-z_][A-Za-z_0-9]*[?!]?)\]/
+      |> Regex.scan(flat)
+      |> Enum.map(fn [_, mod, fun] -> {mod, fun} end)
+
+    guarded =
+      ~r/\[:(#{mods})\]\},([a-z_][A-Za-z_0-9]*)\]/
+      |> Regex.scan(flat)
+      |> Enum.flat_map(fn [_, mod, var] ->
+        case Regex.run(~r/#{Regex.escape(var)}in\[([^\]]*)\]/, flat) do
+          [_, body] ->
+            ~r/:([a-z_][A-Za-z_0-9]*[?!]?)/
+            |> Regex.scan(body)
+            |> Enum.map(fn [_, fun] -> {mod, fun} end)
+
+          nil ->
+            []
+        end
+      end)
+
+    MapSet.new(literal ++ guarded)
+  end
+
+  @doc "Does the rule match or emit an order- / identity-sensitive collection call?"
+  def value_kind_sensitive?(callees) do
+    Enum.any?(callees, fn {mod, fun} ->
+      mod in @value_kind_mods and fun in @value_kind_ops
+    end)
+  end
+
+  @doc "Does the rule match or emit a `String` grapheme / codepoint call?"
+  def grapheme_sensitive?(callees) do
+    Enum.any?(callees, fn {mod, fun} -> mod == "String" and fun in @grapheme_ops end)
+  end
+
+  @doc """
+  Every individual value passed via `inputs:` in an equivalence test, flattened
+  across all `inputs:` options in the file and **evaluated**.
+
+  Module attributes (`@numbers`) are substituted from the same file and `alias
+  Credence.EquivalenceInputs, as: B` is expanded, so `inputs: B.term_lists()`
+  and `inputs: @numbers` both resolve. Returns `:error` when any `inputs:`
+  expression cannot be evaluated standalone (one that depends on test-local
+  state); a caller must then decline to judge rather than guess.
+  """
+  def equivalence_input_values(ast) do
+    attrs = module_attributes(ast)
+    aliases = alias_table(ast)
+
+    ast
+    |> collect(fn
+      {{:__block__, _, [:inputs]}, value} -> [value]
+      _ -> []
+    end)
+    |> Enum.map(&(&1 |> substitute_attributes(attrs) |> expand_aliases(aliases)))
+    |> Enum.reduce_while({:ok, []}, fn node, {:ok, acc} ->
+      case eval_data(node) do
+        {:ok, list} when is_list(list) -> {:cont, {:ok, acc ++ list}}
+        {:ok, other} -> {:cont, {:ok, acc ++ [other]}}
+        :error -> {:halt, :error}
+      end
+    end)
+  end
+
+  @doc """
+  Does any single input carry the value-kind trap — an integer and a float that
+  are `==` but not `===`, at any depth inside the *same* input?
+
+  Same input, not merely the same battery: a sort/uniq/`member?` divergence
+  needs both kinds present in one collection to be observable.
+  """
+  def value_kind_tie?(inputs) do
+    Enum.any?(inputs, fn input ->
+      nums = input |> subterms() |> Enum.filter(&is_number/1)
+      ints = Enum.filter(nums, &is_integer/1)
+      floats = Enum.filter(nums, &is_float/1)
+
+      Enum.any?(ints, fn i -> Enum.any?(floats, fn f -> i == f end) end)
+    end)
+  end
+
+  @doc "Is there a number anywhere in the input set (else the value-kind trap is unconstructible)?"
+  def any_number?(inputs),
+    do: Enum.any?(inputs, &Enum.any?(subterms(&1), fn v -> is_number(v) end))
+
+  @doc "Is there a string anywhere in the input set (else the grapheme trap is unconstructible)?"
+  def any_string?(inputs),
+    do: Enum.any?(inputs, &Enum.any?(subterms(&1), fn v -> is_binary(v) end))
+
+  @doc """
+  Does any input contain a string with a **multi-codepoint grapheme** — a
+  decomposed accent, a ZWJ emoji, a regional-indicator flag? Measured, not
+  named: the string's grapheme count differs from its codepoint count.
+  """
+  def multi_codepoint_grapheme?(inputs) do
+    Enum.any?(inputs, fn input ->
+      Enum.any?(subterms(input), fn v ->
+        is_binary(v) and String.valid?(v) and
+          String.length(v) != length(String.to_charlist(v))
+      end)
+    end)
+  end
+
+  # Every subterm of a runtime value, including the value itself. Handles
+  # improper lists (`[1 | 2]`, a real fixture in `RedundantListGuard`).
+  defp subterms([h | t]), do: [[h | t] | subterms(h) ++ subterms(t)]
+  defp subterms([]), do: [[]]
+  defp subterms(v) when is_tuple(v), do: [v | Enum.flat_map(Tuple.to_list(v), &subterms/1)]
+
+  defp subterms(v) when is_map(v) and not is_struct(v),
+    do: [v | Enum.flat_map(Map.to_list(v), fn {k, val} -> subterms(k) ++ subterms(val) end)]
+
+  defp subterms(v), do: [v]
+
+  # Collect `fun.(node)`'s contributions over the whole tree.
+  defp collect(ast, fun) do
+    {_, acc} = Macro.prewalk(ast, [], fn node, acc -> {node, acc ++ fun.(node)} end)
+    acc
+  end
+
+  # `@name <literal>` at module level -> %{name => quoted}.
+  defp module_attributes(ast) do
+    ast
+    |> collect(fn
+      {:@, _, [{name, _, [value]}]} when is_atom(name) -> [{name, value}]
+      _ -> []
+    end)
+    |> Map.new()
+  end
+
+  defp substitute_attributes(node, attrs) do
+    Macro.prewalk(node, fn
+      {:@, _, [{name, _, ctx}]} = n when is_atom(name) and is_atom(ctx) ->
+        Map.get(attrs, name, n)
+
+      n ->
+        n
+    end)
+  end
+
+  # `alias A.B.C, as: D` / `alias A.B.C` -> %{D => A.B.C}.
+  defp alias_table(ast) do
+    ast
+    |> collect(fn
+      {:alias, _, [{:__aliases__, _, parts}]} ->
+        [{List.last(parts), parts}]
+
+      {:alias, _, [{:__aliases__, _, parts}, [{{:__block__, _, [:as]}, as}]]} ->
+        case as do
+          {:__aliases__, _, [short]} -> [{short, parts}]
+          _ -> [{List.last(parts), parts}]
+        end
+
+      _ ->
+        []
+    end)
+    |> Map.new()
+  end
+
+  defp expand_aliases(node, table) do
+    Macro.prewalk(node, fn
+      {:__aliases__, meta, [short]} = n ->
+        case Map.fetch(table, short) do
+          {:ok, parts} -> {:__aliases__, meta, parts}
+          :error -> n
+        end
+
+      n ->
+        n
+    end)
+  end
+
+  defp eval_data(node) do
+    {value, _binding} = Code.eval_quoted(node, [], __ENV__)
+    {:ok, value}
+  rescue
+    _ -> :error
+  catch
+    _, _ -> :error
+  end
 
   # --- syntax/semantic substance predicates ----------------------------------
   #

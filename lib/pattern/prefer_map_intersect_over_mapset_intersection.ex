@@ -27,7 +27,7 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
 
       freq1
       |> Map.intersect(freq2, fn _key, count1, count2 -> min(count1, count2) end)
-      |> Enum.sort_by(fn {key, _value} -> key end)
+      |> Enum.sort()
 
   ## Scope — what makes the rewrite safe
 
@@ -44,10 +44,21 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
     and numeric literals** (`min`/`max`/`+`/`-`/`*`/`div`/`rem`/`abs`). This both
     rules out a merge that references the `element` key (which becomes `_key` and
     would be unbound) and guarantees the result is independent of evaluation
-    order — `MapSet.to_list` and `Map.intersect` enumerate keys in different
-    orders, but for a pure merge the final `Enum.sort`/`Enum.sort_by(key)` (keys
-    are unique, so sorting by key equals sorting by the whole `{key, value}`
-    tuple) produces an identical list.
+    order — `MapSet.to_list` and `Map.intersect` build maps with the *same* key
+    set, so they enumerate it identically, and the final `Enum.sort/1` is a total
+    order over the whole `{key, value}` tuple either way.
+
+  ## Why the fix keeps `Enum.sort/1` rather than `Enum.sort_by(key)`
+
+  It used to emit `Enum.sort_by(fn {key, _value} -> key end)` on the argument
+  that "keys are unique, so sorting by key equals sorting by the whole tuple".
+  That is false: map keys are unique under `===`, but `Enum.sort/1` orders by
+  Erlang **term** order, under which `1` and `1.0` compare *equal*. Two entries
+  whose keys are `==`-but-not-`===` therefore tie under `sort_by(key)` (stable —
+  map order wins) while `Enum.sort/1` breaks the tie on the value. On
+  `lst1 = [1, 1, 1, 1.0]`, `lst2 = [1, 1, 1, 1.0, 1.0]` the original returns
+  `[{1.0, 1}, {1, 3}]` and the `sort_by` rewrite returned `[{1, 3}, {1.0, 1}]`.
+  Emitting the original's own `Enum.sort/1` removes the divergence entirely.
   """
 
   use Credence.Pattern.Rule
@@ -311,21 +322,15 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
           ]}
        ]}
 
-    # fn {key, _value} -> key end
-    sort_by_fn =
-      {:fn, [],
-       [
-         {:->, [],
-          [
-            [{:__block__, [], [{{:key, [], nil}, {:_value, [], nil}}]}],
-            {:key, [], nil}
-          ]}
-       ]}
-
-    # freq1 |> Map.intersect(freq2, intersect_fn) |> Enum.sort_by(sort_by_fn)
+    # freq1 |> Map.intersect(freq2, intersect_fn) |> Enum.sort()
+    #
+    # `Enum.sort/1` — the ORIGINAL's own final step — not `Enum.sort_by(key)`:
+    # `1` and `1.0` are distinct map keys that compare EQUAL in term order, so
+    # sorting by key alone leaves them tied (and stably in map order) where the
+    # original breaks the tie on the value. See the moduledoc.
     freq1_ast
     |> pipe({{:., [], [{:__aliases__, [], [:Map]}, :intersect]}, [], [freq2_ast, intersect_fn]})
-    |> pipe({{:., [], [{:__aliases__, [], [:Enum]}, :sort_by]}, [], [sort_by_fn]})
+    |> pipe({{:., [], [{:__aliases__, [], [:Enum]}, :sort]}, [], []})
   end
 
   defp pipe(left, right), do: {:|>, [], [left, right]}

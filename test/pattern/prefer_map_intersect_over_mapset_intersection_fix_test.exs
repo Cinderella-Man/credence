@@ -20,11 +20,12 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersectionFixTest do
     |> Enum.sort()
     """
 
-    expected = """
-    freq1
-    |> Map.intersect(freq2, fn _key, count1, count2 -> min(count1, count2) end)
-    |> Enum.sort_by(fn {key, _value} -> key end)
-    """
+    # `Enum.sort()`, not `Enum.sort_by(fn {key, _value} -> key end)`: `1` and
+    # `1.0` are distinct map keys that compare EQUAL in term order, so a key-only
+    # comparator ties them where the original's `Enum.sort/1` breaks the tie on
+    # the value. See the rule moduledoc and the equivalence test's tie inputs.
+    expected =
+      "freq1 |> Map.intersect(freq2, fn _key, count1, count2 -> min(count1, count2) end) |> Enum.sort()"
 
     confirm_fix(fix(PreferMapIntersectOverMapsetIntersection, input), expected)
   end
