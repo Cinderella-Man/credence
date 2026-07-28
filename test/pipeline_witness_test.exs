@@ -117,9 +117,23 @@ defmodule Credence.PipelineWitnessTest do
   #     symptom of a rule keyed to two disjoint situations, not of nobody having
   #     written one. Keep the reason; distrust its face value.
   #
-  #   :wrong_phase — reachable only in a source shape that is not the shape the
-  #     rule documents and repairs. See the moduledoc. Repair: re-home the rule
-  #     in the Pattern phase; do not manufacture a witnessing fixture.
+  #   :wrong_phase — PAID DOWN (T5.9). Reachable only in a source shape that is
+  #     not the shape the rule documents and repairs: both rules keyed on a
+  #     RUNTIME ArgumentError, which the compiler emits only when the offending
+  #     call sits in a module attribute and is therefore evaluated at compile
+  #     time. In a `def` body — the shape both moduledocs describe — compiling
+  #     the fixture yields zero diagnostics, so the Semantic phase could not
+  #     fire either rule, ever. A witnessing fixture was constructible and would
+  #     have been a lie. Both re-homed to Pattern, where the shape is visible in
+  #     the AST alone.
+  #
+  #     The move was not the transplant this file predicted. Semantic's
+  #     `fix(source, diagnostic)` returns a whole new source string; Pattern's
+  #     `fix_patches(ast, opts)` returns byte ranges. Porting
+  #     `NoHallucinatedEtsKeytypeOption` through the AST differ put the patch on
+  #     the bare option list, whose range starts one column inside the `[` while
+  #     its rendering carries brackets — emitting
+  #     `:ets.new(:a, [[:set, keypos: 2]])`. Pinned in that rule's fix test.
   #
   #   :dead — PAID DOWN (T3.8). The rule cannot fire at all, on this toolchain,
   #     in any shape. Both entries were repaired without deleting anything, which
@@ -128,11 +142,11 @@ defmodule Credence.PipelineWitnessTest do
   #     to COMPILE with a diagnostic nothing claimed), and `FixWithElseBareValue`
   #     needed one attribute — it matched a message Elixir 1.20.2 does not emit,
   #     while its `fix/2` was correct all along.
-  @ledger %{
-    # -- Semantic --
-    "NoCryptoHashPipeSwappedArgs" => :wrong_phase,
-    "NoHallucinatedEtsKeytypeOption" => :wrong_phase
-  }
+  # EMPTY as of 2026-07-28 (T5.9 complete): every rule in all three phases
+  # witnesses its own failure mode through the real pipeline. The reasons above
+  # are kept as the record of what the eight entries turned out to mean — each
+  # named a different defect, and none of them meant "this rule is fine".
+  @ledger %{}
 
   @reasons [:dep_gated, :no_fixture, :wrong_phase, :dead]
 

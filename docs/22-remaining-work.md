@@ -65,19 +65,20 @@ untouched.
 | ✅ | T0.2 — Phase-4 PR | `1cb7bff` — **superseded**, a PR for the whole 3rd evolution already exists |
 | ✅ | **T3.7 — the last two raw-byte syntax fixes**, + the `FixDivRem` half-conversion behind them | `e81985e` · `8169601` |
 | ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
-| 🔄 | **T3.10 — pay down the self-corruption ledger** — 4 of 11 done, 7 left | `becd59b` · `643435a` · this commit |
+| 🔄 | **T3.10 — pay down the self-corruption ledger** — 4 of 11 done, 7 left | `becd59b` · `643435a` · `e549bd0` |
 | ⬜ | **T3.10a — `no_else_if` corrupts valid parsing code** (found while paying down T3.10; do *not* convert it) | — |
-| ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · this commit |
-| 🔄 | **T5.9 — pay down the T1 witness ledger** — 6 of 8 done; only the 2 `:wrong_phase` left | `f895bee` · this commit |
+| ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · `3cdbe14` |
+| ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · this commit |
+| ⬜ | **T5.10 — the AST differ patches a bare list one column inside its `[`** (found by T5.9; a shared-helper defect, not a rule defect) | — |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
 **Next by value:** **T3.10a** — it is the only item on this file known to corrupt
 *valid, parsing* source, and it needs a maintainer decision (retire a live rule
 into its hardened sibling) rather than a conversion. Then the rest of **T3.10**
-(8 rules left of 11). Then **T5.9** (pay down T1's 8-rule ledger; the two
-`:no_fixture` entries have working fixtures already identified in the item). Then
-**T1.2**, the G3 residue T1 does not cover. T2.1–T2.3 remain the prerequisites
-for any Phase-9 run.
+(7 rules left of 11). Then **T5.10**, which is cheap and sits under 155 rules.
+Then **T1.2**, the G3 residue T1 does not cover — and T5.9 handed it a starting
+point, an executed contention list. T2.1–T2.3 remain the prerequisites for any
+Phase-9 run.
 
 ---
 
@@ -303,10 +304,15 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
     * `Semantic.FixWithElseBareValue` (G1, unreachable diagnostic) — `match?/1`
       requires a message Elixir 1.20.2 does not emit.
 
-  The remaining 8 are ledgered **with a reason**, because the reasons demand
+  The remaining 8 were ledgered **with a reason**, because the reasons demand
   different repairs: 4 `:dep_gated` (plug/nimble_csv absent here, present in the
   harness workspace — these rules are alive there), 2 `:no_fixture`, 2
-  `:wrong_phase`. Paydown is **T5.9**.
+  `:wrong_phase`. Paydown was **T5.9**, and it is complete: **the ledger is now
+  empty and 290 of 290 rules witness.** Every one of the four reasons turned out
+  to name a different defect and none of them meant "this rule is fine" — one was
+  a property of this checkout, one was a rule keyed to two disjoint situations,
+  one was a rule in the wrong phase twice over, and one was a rule that had never
+  fired at all.
 
   Two probe bugs were found and fixed *before* trusting any of it, both of which
   had manufactured false accusations against live rules — recorded because the
@@ -837,8 +843,12 @@ its own tests run under real `mix test`.
   historical banner now; config surface `max_passes`/compile-timeout/fixpoint
   passes once C6/C7 land; `rule_status/1` exposing `priority` +
   `unsafe_in_dsl`).
-- [ ] 🔄 **T5.9 [C] Pay down the T1 witness ledger — 6 of 8 done, 2 left.** The ledger in
-  `test/pipeline_witness_test.exs` only shrinks; each reason has its own repair:
+- [x] ~~**T5.9 [C] Pay down the T1 witness ledger.**~~ **DONE — the ledger is
+  empty and `@ledger %{}` is now pinned by the gate's own tests. 290 of 290 rules
+  in all three phases witness their own failure mode through the real pipeline.**
+  The ledger only shrinks; each reason had its own repair, and the eight entries
+  turned out to name four different defects — none of which meant "this rule is
+  fine":
   - [x] ~~**4 `:dep_gated`**~~ **DONE.** `plug ~> 1.16` and `nimble_csv ~> 1.2`
     added as `only: :test, runtime: false`; all four witness immediately, with no
     change to any rule. The alternative — a `test/support` stub reproducing the
@@ -870,13 +880,72 @@ its own tests run under real `mix test`.
     Worth noting for T1.2: in expression position `FixCyclicStructReference` also
     claims that diagnostic. This rule's `priority: 100` wins, which is the
     contention docs/20 says must be deliberate — here it happens to be.
-  - **2 `:wrong_phase`** (`NoCryptoHashPipeSwappedArgs`,
-    `NoHallucinatedEtsKeytypeOption`) — do **not** manufacture a witness. Both
-    win their diagnostic when the offending call sits in a module attribute
-    (verified), so a green-making fixture is constructible — but the shape they
-    document and repair is a call in a `def` body, which the Semantic phase
-    never sees because it is never evaluated at compile time. Re-home both in
-    the Pattern phase; their `fix/2` transplants unchanged.
+  - [x] ~~**2 `:wrong_phase`**~~ **DONE.** `NoCryptoHashPipeSwappedArgs` and
+    `NoHallucinatedEtsKeytypeOption` are re-homed to Pattern. The premise was
+    re-run rather than reused, and it held exactly: compiling the documented
+    shape (the call in a `def` body) yields **zero** diagnostics and
+    `compiles?/1 == true`, so no semantic rule could claim anything — while the
+    same call in a module attribute is compile-time-evaluated and does produce
+    the runtime `ArgumentError` as a `severity: :error` diagnostic that each
+    rule wins. A green-making fixture was therefore constructible and would have
+    been a lie. Both rules are now pure AST rules; the Pattern round is
+    reachable for them because that source *compiles*, which is the precondition
+    `pattern.ex` checks before running at all.
+
+    **Correction to this item's own claim: `fix/2` did not transplant
+    unchanged.** Semantic's `fix(source, diagnostic)` returns a whole new source
+    string; Pattern's `fix_patches(ast, opts)` returns byte ranges. The
+    *transformations* transplanted; the interface did not, and the difference
+    was not cosmetic — see T5.10, a shared-helper defect that only appeared
+    because of it. Both rules also gained the `check/2` half they never had:
+    the Semantic versions keyed on a message, so their scope predicate lived in
+    `match?/1` on the *diagnostic*. In Pattern, `check/2` and `fix_patches/2`
+    now share one literal predicate, which is also what
+    `test/corpus/scope_parity_test.exs` requires.
+
+    Both scan **clean over the whole 20,076-file corpus** (`--only-rule`, 0 live
+    / 0 accepted each), so neither needs a snapshot re-pin nor a C13 budget
+    line. Three positive controls, all seen red: the T5.10 defect put back
+    (3 of 7 fix tests red, showing both of its faces); the crypto rule's
+    `check/2` disabled (the witness gate names it, with the ledger empty and
+    "Adding it to @ledger is NOT one of the options"); and one paid-down entry
+    left on the ledger (the graduation test fires, "now witness … Remove them").
+- [ ] **T5.10 [C] The AST differ patches a bare list one column inside its
+  `[`.** Found while doing T5.9, and it is a defect in the *shared helper*, not
+  in a rule — verified with no credence rule involved. Both public entry points
+  (`RuleHelpers.patches_from_ast_transform/3` and `patches_from_postwalk/2`) fed
+  a transform that drops one element from `call(:name, [:a, :b, :c])` emit:
+
+      range : %Sourceror.Range{start: [line: 3, column: 18], end: [line: 3, column: 28]}
+      change: [:a, :c]
+      applied: call(:name, [[:a, :c]])
+
+  The `[` is at column 17. A literal list is `{:__block__, meta, [list]}` and
+  **only the wrapper carries the bracket positions** — `line`/`column` for `[`,
+  `closing` for `]`. `diff_patches/2`'s scalar clause
+  (`lib/rule_helpers.ex:646-655`) stops at the wrapper only when the wrapped
+  value is neither a tuple nor a list; for a list it recurses to the bare list,
+  whose range is bracket-*exclusive* on both sides, while
+  `Sourceror.to_string/1` renders the replacement bracket-*inclusive*. So the
+  brackets are counted twice.
+
+  **Why nothing caught it.** `[[:a, :c]]` parses and preserves every comment, so
+  `apply_rule_fix_with_status/3`'s safety invariants pass it through. In T5.9 the
+  same defect hit two fixtures of one rule and the invariants rejected *one* of
+  them (`:patch_rejected`, silently) and shipped the other — the corrupting case
+  is the one that survives, because a nested list is more likely to parse than a
+  stranded delimiter is.
+
+  **Scope is unmeasured, and that is the honest statement.** The suite is green
+  at 9,861 tests, so no *shipped* rule hits it in its own tests or on the corpus
+  today. It is a live trap for the next rule that edits a list literal — which
+  the harness's weak models will write. Repair: extend the wrapper clause to
+  patch at the wrapper's range when its single child is a list that changed.
+  Positive control is already written: the perturbation in
+  `test/pattern/no_hallucinated_ets_keytype_option_fix_test.exs` reproduces it.
+  Before landing, re-run the full suite — this helper is under all 157 Pattern
+  rules, so a range change there is a population-wide behaviour change.
+
 - [ ] **T5.8 [C] Rewrite docs/17's ranked build list** — 0 of 12 cluster
   narratives survived adversarial refutation; the honest net product of the
   143 is "~6 rules to build, 2 lines to widen" (docs/18 §5). Rebuild specs
@@ -965,6 +1034,10 @@ compile warnings**:
 | T3.10 — 2 of 11 (`fix_truncated_binary_close`, `prefer_cond_do_keyword`) | `becd59b` | 12 controls, 11 red; two different repairs, one of them not masking |
 | T3.10 — 3 of 11 (`no_doc_with_do_block`) + `SourceMask` gets tests | `643435a` | 4 controls red; `self_contained?/2` extracted; 21 tests for a module that had none |
 | **T3.10a — `no_else_if` corrupts valid parsing code** | `f521138` | 5 experiments run; the rule stays on the ledger *on purpose* |
+| T3.8 — `FixMalformedSpec` re-homed Syntax→Semantic | `e549bd0` | the ported Issue kept its author-chosen atom; only Syntax attributes that way |
+| T3.8 — `FixWithElseBareValue` re-keyed, not retired | `3cdbe14` | `fix/2` was correct all along; the rule matched a message 1.20.2 never emits |
+| T5.9 — 4 `:dep_gated` + 2 `:no_fixture` | `f32e315` · `f895bee` | the 4 were never broken; 1 of the 2 needed a fix, not a fixture |
+| **T5.9 — the last 2, `:wrong_phase` → Pattern; the T1 ledger is EMPTY** | this commit | 3 controls red; premise re-run (0 diagnostics in a `def` body); corpus clean 0/20,076 both |
 
 Deliberately **not** done, with reasons on record: P4-as-specced on-disk AST
 cache (mooted at 11.6 s scoped scans); P6 (docs/13's own "only if P1–P4 leave a
