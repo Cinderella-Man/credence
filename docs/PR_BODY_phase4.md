@@ -45,13 +45,16 @@ FixScientificNotation  IO.puts("version 1e5 build")  -> IO.puts("version 1.0e5 b
 
 New `lib/source_mask.ex` produces a same-length shadow with literals, sigils,
 heredocs, character literals and comments blanked; rules match the shadow and
-splice into the real line at the matched offsets.
+splice into the real line at the matched offsets. It is a hand-rolled scanner
+rather than `:elixir_tokenizer` on purpose — these rules only ever run on source
+that does not parse, which is precisely when a tokenizer gives up, and this one
+degrades to a *missed* fix instead of a *corrupted* string.
 
 > **Correction (2026-07-28), resolved the same day.** An earlier draft of this
 > section said all four rules were converted. At the time only `FixPythonModulo`
-> and `FixDivRem` were; `FixPythonFloorDiv` and `FixScientificNotation` had never
-> adopted `SourceMask`, and both still corrupted string literals, confirmed by
-> running them.
+> and `FixDivRem` were, and `FixDivRem` only halfway (see below);
+> `FixPythonFloorDiv` and `FixScientificNotation` had never adopted `SourceMask`,
+> and both still corrupted string literals, confirmed by running them.
 >
 > `e81985e` (T3.7) converted the remaining two, so **all four is now true** —
 > and it found four more shapes of the same defect while doing it, all live:
@@ -59,10 +62,14 @@ splice into the real line at the matched offsets.
 > guard those two rules carried skipped a line that began with a comment and
 > rewrote one that ended with it, so `x = a // b  # was a // b` came back as
 > `x = div(a, b)  # was div(a, b)`. 22 positive controls, all seen red against
-> the pre-fix rules. It is a hand-rolled scanner
-rather than `:elixir_tokenizer` on purpose — these rules only ever run on source
-that does not parse, which is precisely when a tokenizer gives up, and this one
-degrades to a *missed* fix instead of a *corrupted* string.
+> the pre-fix rules.
+>
+> `8169601` then repaired `FixDivRem`, which this section had counted as
+> converted since Phase 4. It was — in `analyze/1`. Its `fix/1` masked each line
+> *alone*, which a line cannot be, so it kept rewriting heredoc bodies that
+> `analyze/1` correctly ignored. Found by an oracle, not by reading: `b41af7b`
+> runs every Syntax rule's `fix/1` over its own source file, and 11 of 45 rewrite
+> their own documentation. That paydown is docs/22 T3.10.
 
 Two adversarial reviews failed to break it: 8,911 differential inputs and 1,571
 real files with zero new rewrites, 300,000 random byte strings with zero
