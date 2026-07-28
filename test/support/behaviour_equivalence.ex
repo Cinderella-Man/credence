@@ -309,12 +309,51 @@ defmodule Credence.BehaviourEquivalence do
     fun
   end
 
+  # T3.5. The before/after modules are renamed so the two versions can coexist
+  # in one VM. Renaming only the `defmodule` header — a `String.replace` of that
+  # one line — left every INTERNAL reference pointing at the original name:
+  #
+  #     defmodule Eqv_Before_7 do        # renamed
+  #       defstruct [:x]
+  #       def new, do: %Point{x: 1}      # NOT renamed — Point is undefined,
+  #     end                              # or worse, a stale earlier version
+  #
+  # so any struct-defining example was untestable, which is row 225's blocker.
+  # It also silently biased H4's scope estimate: that estimate was measuring
+  # this bug rather than a real limit on what can be checked.
+  #
+  # The rename is done on the AST instead, so every `__aliases__` node naming
+  # the module moves with the header — struct literals, struct patterns,
+  # qualified self-calls and all. Doing it on bytes cannot be made safe: the
+  # module's name is a substring of `PointExtra`, appears in its own docs, and
+  # a global replace would rewrite both.
   defp compile_module!(source, tag) do
-    [orig] = Regex.run(~r/defmodule\s+([A-Z][\w.]*)/, source, capture: :all_but_first)
-    uniq = "Eqv_#{tag}_#{System.unique_integer([:positive])}"
-    renamed = String.replace(source, "defmodule #{orig}", "defmodule #{uniq}", global: false)
-    {{:module, mod, _bin, _val}, _binding} = silence(fn -> Code.eval_string(renamed) end)
+    {:ok, ast} = Code.string_to_quoted(source)
+    segments = module_segments!(ast)
+    uniq = :"Eqv_#{tag}_#{System.unique_integer([:positive])}"
+
+    renamed =
+      Macro.prewalk(ast, fn
+        {:__aliases__, meta, ^segments} -> {:__aliases__, meta, [uniq]}
+        node -> node
+      end)
+
+    {{:module, mod, _bin, _val}, _binding} = silence(fn -> Code.eval_quoted(renamed) end)
     mod
+  end
+
+  # The alias segments of the first `defmodule` — `[:Point]`, or `[:A, :B]` for
+  # a dotted name. Taking the first matches the old regex's behaviour on a file
+  # with more than one module.
+  defp module_segments!(ast) do
+    {_ast, segments} =
+      Macro.prewalk(ast, nil, fn
+        {:defmodule, _meta, [{:__aliases__, _, segs} | _]} = node, nil -> {node, segs}
+        node, acc -> {node, acc}
+      end)
+
+    segments ||
+      raise ArgumentError, "no `defmodule` found in the module source under equivalence check"
   end
 
   defp run_with_trace(fun, data_args) do

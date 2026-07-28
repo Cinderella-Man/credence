@@ -555,10 +555,23 @@ its own tests run under real `mix test`.
   rescue row 105 (the correct kill — **row 105 is the mandatory positive
   control for any probe change**); (c) stacktrace normalization in
   `test/support/behaviour_equivalence.ex` — row 33.
-- [ ] **T3.5 [C] `behaviour_equivalence.ex:312` `compile_module!/2` renames
-  only the `defmodule` header** — any struct-defining example is untestable
-  (row 225's blocker, and it silently biased H4's scope estimate: "H4's scope
-  estimate is measuring this bug, not a real limit"). Fix before T5.5.
+- [x] ~~**T3.5 [C] `behaviour_equivalence.ex:312` `compile_module!/2` renames
+  only the `defmodule` header**~~ **DONE `PENDING`.** The rename now happens on
+  the AST, so every `__aliases__` node naming the module moves with the header —
+  struct literals, struct patterns, qualified self-calls alike.
+
+  It could not be fixed on bytes: the module's name is a substring of
+  `PointExtra`, appears in its own moduledoc, and a global `String.replace`
+  would rewrite both. This is the same byte-scope trap `Credence.SourceMask`
+  exists for, one layer up in the test harness.
+
+  The failure was not subtle once provoked — a module whose own function says
+  `%Point{}` dies in `:elixir_map.expand_struct/5`, because after a header-only
+  rename `Point` no longer exists. The worse case is quieter: if an earlier test
+  left a `Point` loaded, the reference resolves to *that* stale module and the
+  equivalence check silently compares against the wrong code. Control: the new
+  test seen red against the pre-fix implementation. Unblocks T5.5, and H4's scope
+  estimate can now be re-taken against a working checker.
 - [ ] **T3.6 [C] Smaller ledger FIX-CREDENCE rows** (each is one rule, evidence
   at the cited ledger row): `FixLocalFunctionInGuard` (rows 115/145/192/196 —
   one also touches `NoHallucinatedGuardFn`); `NoMapKeysOrValuesForIteration`

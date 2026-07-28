@@ -111,4 +111,38 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
              ) == :ok
     end
   end
+
+  # ── T3.5: the module rename must move internal references too ──────────
+
+  describe "assert_equivalent_module/2 with a struct-defining module" do
+    # The before/after modules are renamed so both can live in one VM. That
+    # rename used to be a `String.replace` of the `defmodule` line alone, so a
+    # module referring to ITSELF — the ordinary way to write a struct literal —
+    # kept pointing at the original name and either failed to compile or, worse,
+    # silently resolved to a stale version compiled by an earlier test.
+    #
+    # This is row 225's blocker, and it also biased H4's scope estimate: that
+    # estimate was measuring this bug rather than a real limit.
+    @struct_module """
+    defmodule PointT35 do
+      defstruct xs: []
+
+      # The self-reference. If the rename moves only the `defmodule` header,
+      # this still says `PointT35`, which no longer exists — the module does not
+      # compile and no struct-defining example can be checked at all.
+      def wrap(xs), do: %PointT35{xs: xs}
+
+      def empty?(xs), do: length(xs) == 0
+    end
+    """
+
+    test "a self-referencing struct literal survives the rename" do
+      assert :ok =
+               assert_equivalent_module(@struct_module,
+                 rule: NoLengthComparisonForEmpty,
+                 call: {:empty?, 1},
+                 inputs: [[], [1], [1, 2]]
+               )
+    end
+  end
 end
