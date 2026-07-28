@@ -41,11 +41,30 @@ defmodule Credence do
   What a round did with one rule: how many findings it fixed, or why its output
   is not in the returned code — `:reverted` (the rule made things worse),
   `:rolled_back` (the Syntax round discarded every change because the result
-  still did not parse), `:patch_rejected` (the patch broke a safety invariant)
-  or `:crashed`.
+  still did not parse), `:patch_rejected` (the patch broke a safety invariant),
+  `:no_op` (the check fired and the fix returned identical source) or
+  `:crashed`.
+
+  This is a **closed set, and a cross-repo contract**. The evolution harness
+  parses these atoms out of the `APPLIED_RULES:` line to build the closed set its
+  classifier is allowed to name; an outcome its regex does not recognise is not
+  an error there but a silent *drop*, which removes the rule from that set and
+  makes a correct bug report about it unfileable. Adding a member here means
+  widening `Cev.AppliedRules` in the same change — `test/applied_rules_contract_test.exs`
+  pins the vocabulary on this side so the two cannot drift apart unnoticed.
   """
   @type rule_outcome ::
-          non_neg_integer() | :reverted | :rolled_back | :patch_rejected | :crashed
+          non_neg_integer() | :reverted | :rolled_back | :patch_rejected | :crashed | :no_op
+
+  @doc """
+  The closed set of non-numeric `t:rule_outcome/0` atoms, as data.
+
+  Exposed so the contract test — and the harness, which must accept every one of
+  them — can enumerate the vocabulary rather than restate it. A numeric outcome
+  (how many findings the rule fixed) is the other half and is not listed here.
+  """
+  @spec rule_outcomes() :: [atom()]
+  def rule_outcomes, do: [:reverted, :rolled_back, :patch_rejected, :crashed, :no_op]
 
   @spec fix(String.t(), keyword()) :: %{
           code: String.t(),

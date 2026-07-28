@@ -120,10 +120,12 @@ defmodule Credence.Semantic do
   @compiling_severities [:warning, :error]
 
   @typedoc """
-  A trace entry: the rule, and either how many diagnostics it fixed or
-  `:reverted` — its fix made the source worse and was undone.
+  A trace entry: the rule, and how many diagnostics it fixed — or `:reverted`
+  (its fix made the source worse and was undone) or `:no_op` (it matched a
+  diagnostic and returned the source unchanged). See `t:Credence.rule_outcome/0`,
+  which is the closed set this is drawn from.
   """
-  @type trace_entry :: {module(), non_neg_integer() | :reverted}
+  @type trace_entry :: {module(), non_neg_integer() | :reverted | :no_op}
 
   @spec analyze(String.t(), keyword()) :: [Credence.Issue.t()]
   def analyze(source, opts \\ []) do
@@ -240,7 +242,7 @@ defmodule Credence.Semantic do
     if fixed == source do
       # Nothing changed, so nothing can have got worse — and the gate's compile
       # would be pure cost. (Rules that matched and returned identical source
-      # still appear in the trace, unchanged from before C4.)
+      # still appear in the trace — as `{rule, :no_op}` since T3.2.)
       {source, trace(steps, [])}
     else
       guard_pass(source, compiled, fixed, steps, pass)
@@ -364,14 +366,23 @@ defmodule Credence.Semantic do
 
   defp effective(steps), do: Enum.filter(steps, &(&1.after != &1.before))
 
+  # T3.2. Three outcomes, not two. A step whose fix returned the source it was
+  # given fixed nothing, and reporting it as `{rule, 1}` was a positive claim
+  # that it had — worse than the Pattern round's matching bug, which merely
+  # dropped such a rule from the trace. `:no_op` is the honest answer, and it is
+  # the signal the harness's bugfix lane needs: a rule that matches a diagnostic
+  # and then declines to act on it is a rule holding a dispatch slot for nothing
+  # (first-match-wins means no other rule gets to try).
   defp trace(steps, reverted) do
     reverted_ids = MapSet.new(reverted, & &1.index)
 
     steps
     |> Enum.map(fn step ->
-      if MapSet.member?(reverted_ids, step.index),
-        do: {step.rule, :reverted},
-        else: {step.rule, 1}
+      cond do
+        MapSet.member?(reverted_ids, step.index) -> {step.rule, :reverted}
+        step.after == step.before -> {step.rule, :no_op}
+        true -> {step.rule, 1}
+      end
     end)
     |> Enum.reverse()
   end

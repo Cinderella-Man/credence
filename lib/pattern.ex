@@ -70,7 +70,8 @@ defmodule Credence.Pattern do
   risks introducing new errors and wasting an LLM retry attempt.
   """
   @spec fix_with_trace(String.t(), keyword()) ::
-          {String.t(), [{module(), non_neg_integer() | :reverted | :patch_rejected | :crashed}]}
+          {String.t(),
+           [{module(), non_neg_integer() | :reverted | :patch_rejected | :crashed | :no_op}]}
   def fix_with_trace(code_string, opts \\ []) do
     all_rules = rules(opts)
 
@@ -195,9 +196,20 @@ defmodule Credence.Pattern do
 
         {source, [{rule, :patch_rejected} | applied]}
 
+      # T3.2. The check fired and the fix changed nothing. Before this branch the
+      # rule vanished from the trace entirely (a `Logger.debug` and no entry), so
+      # it was indistinguishable from a rule that had nothing to do — the exact
+      # invisibility C5 introduced `:patch_rejected` to end, one step earlier in
+      # the pipeline: there the patches were produced and rejected, here they were
+      # never produced at all. Both leave a reported finding unfixed, and the
+      # harness's bugfix lane can only act on what the trace names.
       fixed == source ->
-        Logger.debug("[credence_fix] #{name}: fix returned IDENTICAL source (no change)")
-        {source, applied}
+        Logger.warning(
+          "[credence_fix] #{name}: check found #{length(issues)} issue(s) but fix returned " <>
+            "IDENTICAL source — the finding is reported and left unfixed"
+        )
+
+        {source, [{rule, :no_op} | applied]}
 
       not RuleHelpers.compiles?(fixed) ->
         Logger.warning("[credence_fix] #{name}: fix produced non-compiling output, reverting")

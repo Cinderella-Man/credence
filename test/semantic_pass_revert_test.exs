@@ -391,7 +391,11 @@ defmodule Credence.SemanticPassRevertTest do
       capture_log(fn ->
         {code, applied} = Credence.Semantic.fix_with_trace(@warns, semantic_rules: [NoOpRule])
 
-        assert applied == [{NoOpRule, 1}]
+        # Recorded (the rule held a dispatch slot and must stay visible) and not
+        # reverted (nothing regressed) — but reported as `:no_op` rather than
+        # `1` since T3.2. `{NoOpRule, 1}` was a positive claim that it had fixed
+        # a diagnostic, which is the opposite of what happened.
+        assert applied == [{NoOpRule, :no_op}]
         assert code == @warns
       end)
     end
