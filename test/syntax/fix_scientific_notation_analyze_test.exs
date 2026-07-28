@@ -84,4 +84,40 @@ defmodule Credence.Syntax.FixScientificNotationAnalyzeTest do
       assert analyze("x = 1.5") == []
     end
   end
+
+  # An exponent inside a literal is prose. Reporting it is how the fix got
+  # licence to rewrite it — `analyze` and `fix` read the same shadow, so they
+  # cannot disagree about which bytes are code.
+  describe "does NOT flag an exponent inside a literal" do
+    test "string literal" do
+      assert analyze(~S'IO.puts("version 1e5 build")') == []
+    end
+
+    test "uppercase sigil" do
+      assert analyze(~S'IO.puts(~S(raw 1e5))') == []
+    end
+
+    test "charlist" do
+      assert analyze(~S'x = ~c"tolerance 1e-10"') == []
+    end
+
+    test "heredoc body" do
+      code = ~S'''
+      @moduledoc """
+      tolerance is 1e-10
+      """
+      '''
+
+      assert analyze(code) == []
+    end
+
+    test "trailing comment" do
+      assert analyze("x = 100  # bump to 1e9 later") == []
+    end
+
+    test "still flags real code on a line that also carries a string" do
+      assert [%{rule: :python_scientific_notation}] =
+               analyze(~S'IO.puts("build 1e5"); x = 1e-10')
+    end
+  end
 end

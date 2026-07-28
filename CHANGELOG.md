@@ -136,13 +136,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `IO.puts("div(path, to)//file")`, and so on for `div`/`rem` and scientific
   notation. Those outputs parse *and* compile, so nothing downstream caught them
   — the program simply printed something its author never wrote.
-  `FixPythonModulo` and `FixDivRem` now match against a `Credence.SourceMask`
-  shadow in which literals, charlists, sigils, heredocs, character literals and
-  comments are blanked out while every code byte keeps its position.
-  Interpolation is still treated as code, because it is. **`FixPythonFloorDiv`
-  and `FixScientificNotation` are NOT yet converted** — they still match raw
-  bytes behind a whole-line `#` guard, and still rewrite inside string literals.
-  Tracked as T3.7 in `docs/22-remaining-work.md`.
+  All four — `FixPythonModulo`, `FixDivRem`, `FixPythonFloorDiv` and
+  `FixScientificNotation` — now match against a `Credence.SourceMask` shadow in
+  which literals, charlists, sigils, heredocs, character literals and comments
+  are blanked out while every code byte keeps its position. Interpolation is
+  still treated as code, because it is.
+- **Auto-fixes no longer rewrite trailing comments.** The two rules converted
+  last, `FixPythonFloorDiv` and `FixScientificNotation`, guarded themselves with
+  a whole-line `#` test, which skips a line that *begins* with a comment and does
+  nothing for one that ends with it: `x = a // b  # was a // b` came back as
+  `x = div(a, b)  # was div(a, b)`, and `x = 1e5  # bump to 1e9 later` as
+  `x = 1.0e5  # bump to 1.0e9 later`. The comment is now blanked wherever it
+  starts. Sigils, charlists and heredoc bodies were rewritten by the same two
+  rules and are covered by the same change.
 - **`%` and `&` repairs no longer regroup the expression.** Python's `%` shares
   precedence with `*` and `/`, and its `&` binds looser than every arithmetic
   operator — so `a * b % 2` means `(a * b) % 2` and `h * 31 + c & 0xFFFFFFFF`
