@@ -538,8 +538,23 @@ verified by executed probe through the real pipeline before and after:
 | `Syntax.FixPythonModulo` | rewrote inside string literals | `9fc30a3` |
 | `Syntax.FixPythonModulo` | read `%Name{}` struct literals as modulo | `9fc30a3` |
 | `Syntax.FixPythonModulo` | `a * b % 2` regrouped — silent wrong answer | `9fc30a3` |
-| `Syntax.FixPythonFloorDiv` / `FixScientificNotation` | rewrote inside string literals | `9fc30a3` (via `SourceMask`) |
+| `Syntax.FixPythonFloorDiv` / `FixScientificNotation` | rewrote inside string literals | ⚠️ **NOT REPAIRED — this row was false** (see below) |
 | `Semantic.UndefinedFunction` | rewrote a user's own nested-alias call | `891a05c` |
+
+> **Correction (2026-07-28).** The `FixPythonFloorDiv` / `FixScientificNotation`
+> row above claimed a repair that does not exist. `grep -l SourceMask lib/`
+> returns only `source_mask.ex`, `fix_python_modulo.ex`, `fix_div_rem.ex` and
+> `no_capture_as_bitwise_and.ex`; neither of the two rules named in that row
+> references it, and `9fc30a3` does not touch either file. Both still
+> `Regex.replace` over raw bytes with only a whole-line `#` guard, and both were
+> re-confirmed live by execution:
+>
+>     IO.puts("version 1e5 build")   ->  IO.puts("version 1.0e5 build")
+>     IO.puts("ratio 7 // 2 here")   ->  IO.puts("ratio div(7, 2) here")
+>
+> `PR_BODY_phase4.md:43` carries the same false claim. Tracked as **T3.7** in
+> docs/22. The sibling `FixPythonModulo` rows in this table are genuine — that
+> rule does use `SourceMask`.
 
 Three findings worth carrying forward:
 

@@ -14,6 +14,16 @@ Every claim below was produced by a 6-agent read-only research pass on
 independently; corrections already folded in). File:line anchors were verified
 against `credence` HEAD `958f241` and harness HEAD `fb3bc2a`.
 
+**Second pass, same day (through `2f34640`).** T0.1, T1, T1.3, T3.1 and T3.2
+landed. Four of this file's own claims were **refuted by execution** and are
+corrected in place, each marked *Correction* at its item: T3.1's "7 dead rules"
+(really 1), T3.2's "will be dropped" (already being dropped, and 3 outcomes not
+1), docs/16's `SourceMask` repair claim (never made — now T3.7), and T1's
+implied scope (the 86 are Semantic/Syntax only; Pattern is 155/155 clean). The
+pattern worth keeping: **every one of these was a plausible written claim that
+nobody had run.** Where a claim here is not marked as executed, treat it as a
+hypothesis.
+
 ---
 
 ## Part I — The evaluation: what the evolution actually taught us
@@ -149,15 +159,16 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
 
 ### Tier 0 — hygiene (minutes each; do before anything else)
 
-- [ ] **T0.1 [C][H] Push.** credence `evolution_accepted` is ahead 4
-  (`54c3f17`, `19f9631`, `8b5280e`, `958f241` + whatever this session adds);
-  harness `main` is ahead 3 (`6f776fe` H14, `9cffbba` H15, `fb3bc2a` H9+LD2).
-  Maintainer action; nothing else in the harness should land before its three
-  go up.
-- [ ] **T0.2 [C] Open the Phase-4 PR.** Body ready at `docs/PR_BODY_phase4.md`;
-  `gh` is not installed, so by hand:
+- [x] **T0.1 [C][H] Push.** DONE 2026-07-28. credence through `a590f07`, harness
+  through `c2b0d95`. (This session's later commits are listed in Part III.)
+- [ ] **T0.2 [C] Open the Phase-4 PR.** Body ready at `docs/PR_BODY_phase4.md`.
+  **`gh` IS now installed** (`/usr/bin/gh`) but not authenticated — run
+  `gh auth login`, then `gh pr create --base main --head evolution_accepted
+  --body-file docs/PR_BODY_phase4.md`. Or by hand:
   `https://github.com/Cinderella-Man/credence/compare/main...evolution_accepted`.
   Phase 9 is blocked on this merge (sister resets onto the new `main`).
+  **Amend the body before opening:** its line 43 repeats the false `SourceMask`
+  claim corrected in T3.7 below.
 - [x] **T0.3 [C] Zero-warning compile.** DONE this session: the provably-dead
   `extract_atom/1` clause (`lib/pattern/no_keyword_get_keyword_key.ex`) is
   deleted; `mix compile --force` = 0 warnings.
@@ -167,9 +178,10 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
 
 ### Tier 1 — the reality gates (kills the 60% class at birth)
 
-- [ ] **T1 [C] The pipeline-witness gate — every rule must witness its own
-  failure mode through the real pipeline.** *The highest-value item in this
-  file.* One new meta-test (suggested: `test/pipeline_witness_meta_test.exs`)
+- [x] **T1 [C] The pipeline-witness gate — every rule must witness its own
+  failure mode through the real pipeline.** **DONE `2f34640`** — see the
+  result box immediately after this item. One new meta-test
+  (`test/pipeline_witness_test.exs` + `test/support/pipeline_witness.ex`)
   asserting, for **every** rule in all three phases: feeding the rule's own
   bad fixture to the top-level entrypoints (`Credence.analyze/2`,
   `Credence.fix/2` — full live rule set, real dispatch, real
@@ -199,6 +211,42 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
   shadowed semantic rule — each seen red. **Harness half:** the same witness
   requirement goes in the Gate (cheap pre-check before the suite phases) and
   the seed (teach it; today the model learns it only by failing).
+  **RESULT (2026-07-28, `2f34640`). 280 of 290 rules witness.** Pattern is
+  **155/155** — which is itself the finding that the 86 were never a Pattern
+  problem; the whole class lives in Semantic and Syntax. Syntax 44/45, Semantic
+  81/90. Two **live shipped rules cannot fire at all**, one from each historical
+  class, now tracked as T3.8:
+
+    * `Syntax.FixMalformedSpec` (G2, wrong phase) — its moduledoc says
+      "## Bad (won't parse)" but `@spec save!(map() :: {:ok, map()})` *parses*:
+      `::` is an ordinary right-associative binary operator
+      (`elixir_parser.yrl`, `Right 60 type_op_eol`), so `f(a :: b)` is a
+      well-formed call argument. Inert by construction.
+    * `Semantic.FixWithElseBareValue` (G1, unreachable diagnostic) — `match?/1`
+      requires a message Elixir 1.20.2 does not emit.
+
+  The remaining 8 are ledgered **with a reason**, because the reasons demand
+  different repairs: 4 `:dep_gated` (plug/nimble_csv absent here, present in the
+  harness workspace — these rules are alive there), 2 `:no_fixture`, 2
+  `:wrong_phase`. Paydown is **T5.9**.
+
+  Two probe bugs were found and fixed *before* trusting any of it, both of which
+  had manufactured false accusations against live rules — recorded because the
+  lesson generalises to every gate of this kind: (1) Sourceror returns a literal
+  as written in the file, escapes intact, so every fixture containing `\\`
+  failed the parse filter and condemned both default-args rules; (2) the
+  candidate pre-filter demanded a keyword or bracket and dropped `"x = 1e-10"`,
+  the entire fixture set of `FixScientificNotation`. **A pre-filter in front of a
+  correctness gate must never be cleverer than the gate.** Fixing both moved 3
+  rules from unwitnessed to witnessed.
+
+  Runtime 202 s -> 3.7 s via two exact identities, each pinned by its own test:
+  for candidates filtered by parseability, a phase's `analyze/2` equals
+  `Credence.analyze/2`; and Pattern/Syntax concatenate without contention, so a
+  single-rule probe is exact there. **Semantic is never narrowed** — that would
+  hand every rule an uncontested slot and delete the G3 class. Most of the rest
+  was an accidental quadratic (155 rules x 472 files = 73,000 re-parses).
+
 - [ ] **T1.2 [C] Dispatch-simulation gate (the G3 residue T1 doesn't cover).**
   For every *pair* of semantic rules whose `match?/1` accept the same captured
   diagnostic, require an explicit priority + moduledoc justification per
@@ -206,10 +254,14 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
   ordering today" — this closes it. Cheap version: over all fixtures' captured
   diagnostics, assert exactly one live rule matches each, or the winner is
   documented. Positive control: two fixture rules matching the same message.
-- [ ] **T1.3 [C] C2.2 population guard (small).** The dimension gate has no
-  non-empty-population vacuity guard (unlike C13/C14) — if the analyzer
-  classified every rule unjudgeable, both asserts pass green. Add
-  `assert judged != []`. (Verifier-2 discovery.)
+- [x] **T1.3 [C] C2.2 population guard.** **DONE `070f090`.** Added the full
+  `describe "the gate cannot pass vacuously"` block in the C13/C14 idiom rather
+  than the single `assert judged != []`: the real hazard is that the trigger
+  (`rule_stdlib_callees/1`, a regex over whitespace-stripped rule source) stops
+  matching, which zeroes both class populations while `judgeable` stays healthy.
+  Pins the analysed set (155), the judgeable set (134) and each class's subject
+  set (10 and 10). Control: collapsing `@scanned_mods` turns the new guard red
+  while gates 1 and 2 stay GREEN — that green *is* the vacuity.
 
 ### Tier 2 — land the salvage (near-done, verified work sitting in a directory)
 
@@ -274,30 +326,62 @@ its own tests run under real `mix test`.
 
 ### Tier 3 — live defects on the branch (the ledger's FIX-CREDENCE rows)
 
-- [ ] **T3.1 [C] Type-checker diagnostics are dropped — 7 live semantic rules
-  are dead in production.** Ledger row 78 / cluster C-A, called "the
-  highest-value item in the cluster". Mechanism (code-verified):
-  `compile_and_capture/1` returns `{:ok, diagnostics}` whenever
-  `Code.compile_string` returns modules — on Elixir ≥1.19 that includes
-  type-checker **errors** — and `Semantic.analyze/2` filters the `{:ok, …}`
-  branch to `severity == :warning` (`lib/semantic.ex:104-107`; same in the
-  fix path), so the entire "Type checking failed" class never reaches any
-  rule. This is also the G1(b) harness hole (`no_plug_upload_size_field`).
-  Fix: pass error-severity diagnostics through on the `{:ok, …}` branch;
-  positive control: a fixture producing a type-checker error must reach a
-  rule. Then re-queue the blocked rows (Phase 9 list).
-- [ ] **T3.2 [C] `{rule, :no_op}` in the Pattern trace.** `lib/pattern.ex:198-200`
-  silently drops a rule whose check fired but whose fix returned identical
-  source (`Logger.debug` only). Blocks **9 ledger re-queue rows** and confines
-  LD34's `:refuted` verdict to Semantic. C5 covered `:patch_rejected` (patches
-  produced then rejected); this is the check-found-fix-did-nothing sibling.
-  One clause + trace assertion + control. **Cross-repo half:** harness
-  `applied_rules.ex:18` `@pair` accepts only `:reverted|digits` — it will
-  silently drop `:patch_rejected`, `:crashed`, and the new `:no_op` from the
-  closed set the moment the sister resets onto main (recreating exactly the
-  invisibility C5 was built to end). Widen the regex, add a contract test on
-  **both** sides pinning the shared vocabulary
-  (`:reverted | :patch_rejected | :crashed | :no_op | integer`).
+- [x] **T3.1 [C] Type-checker diagnostics are dropped.** **DONE `c691362`.**
+  Mechanism confirmed by execution on Elixir 1.20.2: `%S{unknown: k}` in a case
+  clause or a function head yields `unknown key :unknown for struct S` at
+  `severity: :error` **on the `{:ok, …}` branch**, and `Semantic.analyze/2`
+  returned `[]` for it. Fixed by `@compiling_severities` in `lib/semantic.ex`.
+
+  **Correction to this item's own claim.** It said "7 live semantic rules are
+  dead in production". The real count is **one**:
+  `FixJasonDecodeErrorMessageField`. Elixir raises a checker diagnostic to
+  `:error` in exactly two places, both struct checks in *pattern* position
+  (`Module.Types.Of` via `Module.Types.Pattern`); the same checks in expression
+  position stay `:warning`. So the colon-vs-dot spelling is the discriminator —
+  `unknown key :k for struct M` (pattern, error) vs `unknown key .k in
+  expression:` (expr, warning) — and exactly one live rule keys on the former.
+  The five rules keying on the latter were never affected. The "7" was
+  unverified and is now refuted.
+
+  **The larger find was a second, independent hole.** `health_from/2`'s
+  `{:ok, …}` clause hardcoded `errors: %{}` and discarded its diagnostics
+  argument, so `verdict/2` could only ever return `:ok` on that branch: the
+  **entire C4 revert gate was inert for the warning pass**. Widening `analyze`
+  without it would have shipped a wider fix path with no gate behind it.
+
+  **Deliberately not done:** the `docs/18:1312` variant, which reclassifies an
+  `{:ok, …}` carrying any `:error` as `{:error, …}` inside
+  `compile_and_capture/1`. That flips `compiles?/1`, and `pattern.ex:79` skips
+  the *entire* Pattern round when `compiles?` is false — it would silently
+  disable most of the linter on exactly the LLM-generated population it exists
+  for, and poison the `:reverted` signal the harness's bugfix lane consumes.
+
+- [x] **T3.2 [C][H] `{rule, :no_op}` in the trace.** **DONE `7708aef` (credence)
+  + harness `7b6e2c6`.** Both rounds were wrong, in opposite directions: Pattern
+  dropped the rule from the trace entirely, while **Semantic recorded
+  `{rule, 1}`** — a positive claim that it had fixed one diagnostic when the
+  source came back byte-identical. Both now emit `{rule, :no_op}`. It matters
+  most in Semantic, which is first-match-wins: a rule that matches and then
+  declines is holding a slot no other rule can have. `Credence.rule_outcomes/0`
+  is new — the closed set as data.
+
+  **Correction to this item's framing.** It said the harness "will silently
+  drop" the new vocabulary "the moment the sister resets onto main". It has been
+  dropping it *all along*: `@pair` accepted `:reverted|\d+` and `Regex.scan/3`
+  **skips** a pair it cannot match rather than failing, so `:rolled_back`,
+  `:patch_rejected` and `:crashed` were already discarded on every row — three
+  outcomes, live, not one prospectively. A dropped pair removes the module from
+  `modules/1`, so `classify.ex` then rejects a correct `BUGFIX_RULE` naming it:
+  the rule most worth reporting (one that crashed) was the least reportable.
+  Credence's `pattern.ex` comment asserting the harness "can consume it
+  alongside `:reverted` and `:patch_rejected`" was simply false.
+
+  The harness's outcome branch is now **generic** (`:[a-z][a-z0-9_]*`), not an
+  enumeration: pinning the list would restore this failure mode on the next
+  addition, and the property that matters is not "we know the vocabulary" but
+  "we cannot lose a member of it". `reverted/1` is deliberately unchanged —
+  widening the bugfix lane is a routing decision on its own evidence.
+
 - [ ] **T3.3 [C] `mix credence.equiv` vacuous EQUIVALENT (C2.4).** Still live:
   multi-var functions with no `--dim` yield `[]` admitted inputs
   (`lib/mix/tasks/credence.equiv.ex:185`) and `classify`'s `Enum.all?` over
@@ -328,6 +412,41 @@ its own tests run under real `mix test`.
   4.6d deferred salvage rows (`Agent`, `NaiveDateTime`, `List.keystore`,
   `exit/2`) — sound but blocked on call-boundary anchoring; `exit/2` also
   needs an arity check `replace_call_on_line/4` doesn't do.
+
+- [ ] **T3.7 [C] `FixScientificNotation` + `FixPythonFloorDiv` still corrupt
+  string literals — and docs/16 claims they were fixed.** Found while verifying
+  T1's triage. `docs/16:541` credits `9fc30a3` "(via `SourceMask`)"; that commit
+  touches neither file, and `grep -l SourceMask lib/` lists only
+  `source_mask.ex`, `fix_python_modulo.ex`, `fix_div_rem.ex`,
+  `no_capture_as_bitwise_and.ex`. Both rules still `Regex.replace` raw bytes
+  behind a whole-line `#` guard. Re-confirmed by execution:
+
+      IO.puts("version 1e5 build")   ->  IO.puts("version 1.0e5 build")
+      IO.puts("ratio 7 // 2 here")   ->  IO.puts("ratio div(7, 2) here")
+
+  This is a **shipped byte-scope defect of the 4.6a family**, not a new one —
+  the family docs/16 §3 calls "a fix's blast radius needs its own oracle". Route
+  both through `Credence.SourceMask` exactly as `FixPythonModulo` does, with the
+  string-literal fixture above as the positive control. docs/16 is corrected;
+  `docs/PR_BODY_phase4.md:43` still carries the claim (see T0.2).
+- [ ] **T3.8 [C] The two rules T1 proved cannot fire.** Per the project's
+  standing rule, deletion is never the first move — extract the verified failure
+  mode first, then retire or rebuild:
+  - `Syntax.FixMalformedSpec` — the premise is false: `@spec f(a :: b)` parses,
+    so the Syntax phase never runs on it. If the failure mode (a `::` inside the
+    argument list of a spec) is real, it belongs in **Pattern**, where the AST is
+    available. Note its moduledoc asserts "## Bad (won't parse)" — the assertion
+    a `Code.string_to_quoted` call at authoring time would have refuted.
+  - `Semantic.FixWithElseBareValue` — `match?/1` requires a message string
+    Elixir 1.20.2 does not emit; its fixtures compile to a *different* real
+    diagnostic. Re-key it on what the compiler actually says, or retire it.
+- [ ] **T3.9 [C] 57 files fail `mix format --check-formatted` at HEAD.**
+  Pre-existing and not from any change in this session (verified by stashing:
+  a clean tree fails too). Almost certainly Elixir 1.20's formatter against a
+  tree last formatted by an older version. It is a live trap: anyone — or any
+  harness step — running a bare `mix format` produces a 57-file diff unrelated
+  to their change. Decide deliberately: reformat the tree in one isolated
+  commit, or pin the formatter. Blocks nothing, but it will ambush someone.
 
 ### Tier 4 — harness correctness (make the loop trustworthy for weak models)
 
@@ -447,6 +566,29 @@ its own tests run under real `mix test`.
   historical banner now; config surface `max_passes`/compile-timeout/fixpoint
   passes once C6/C7 land; `rule_status/1` exposing `priority` +
   `unsafe_in_dsl`).
+- [ ] **T5.9 [C] Pay down the T1 witness ledger (8 rules).** The ledger in
+  `test/pipeline_witness_test.exs` only shrinks; each reason has its own repair:
+  - **4 `:dep_gated`** (`NoUsePlugConn`, `NoMatchWithMethodStringInPlugRouter`,
+    `FixPlugDependencyModuleOrder`, `FixNimbleCsvDirectParse`) — alive in the
+    harness workspace, unwitnessable here because credence carries neither
+    `plug` nor `nimble_csv`. Cheapest honest repair: add both as `only: :test`
+    deps. A `test/support` stub reproducing the message also works and costs no
+    dependency, but proves less.
+  - **2 `:no_fixture`** (`NoHallucinatedDatetimeZone`,
+    `NoHallucinatedTaskTimeoutErrorStruct`) — the easiest wins, and the fixtures
+    are already known to work: `def f(%DateTime{} = dt), do: dt.zone` produces
+    the warning and the rule wins it (a *closed* struct type is required — the
+    `is_struct/2` guard form the existing fixtures use refines to an open map
+    and emits nothing), and `{:error, %Task.TimeoutError{}}` in **expression**
+    position produces the error and the rule wins it (the pattern position
+    yields a different message no rule claims).
+  - **2 `:wrong_phase`** (`NoCryptoHashPipeSwappedArgs`,
+    `NoHallucinatedEtsKeytypeOption`) — do **not** manufacture a witness. Both
+    win their diagnostic when the offending call sits in a module attribute
+    (verified), so a green-making fixture is constructible — but the shape they
+    document and repair is a call in a `def` body, which the Semantic phase
+    never sees because it is never evaluated at compile time. Re-home both in
+    the Pattern phase; their `fix/2` transplants unchanged.
 - [ ] **T5.8 [C] Rewrite docs/17's ranked build list** — 0 of 12 cluster
   narratives survived adversarial refutation; the honest net product of the
   143 is "~6 rules to build, 2 lines to widen" (docs/18 §5). Rebuild specs
@@ -513,7 +655,20 @@ tests at HEAD `958f241`; zero compile warnings):
 | H13 + P5 | `96865e7` (pushed) | — |
 | H14 push breaker | `6f776fe` (unpushed) | — |
 | H15 dead-code sweep | `9cffbba` (unpushed) | — |
-| H9 (Gate half) + LD2 backstop | `fb3bc2a` (unpushed) | 15 gate tests; row-105 guard explicit |
+| H9 (Gate half) + LD2 backstop | `fb3bc2a` | 15 gate tests; row-105 guard explicit |
+| H16 doc split (IMPROVEMENTS = spec) | `c2b0d95` | — |
+
+Landed **after** this file was written (2026-07-28, same day), all with positive
+controls seen red on purpose; suites green at `2f34640` — 8,300 tests + 6
+properties corpus-free, 1,501 corpus, zero compile warnings:
+
+| Item | Commit | Gate/evidence |
+|---|---|---|
+| T1.3 C2.2 vacuity block | `070f090` | 3 controls; the two gates stay GREEN under the collapse, which *is* the vacuity |
+| T3.1 compiling-source errors + C4 hole | `c691362` | 2 controls; "7 dead rules" refuted to 1 |
+| T3.2 `:no_op` trace (credence) | `7708aef` | 2 controls; Semantic mislabel `{rule, 1}` included |
+| T3.2 AppliedRules vocabulary (harness) | `7b6e2c6` | control: old regex drops 4 of 5 outcomes |
+| **T1 pipeline-witness gate** | `2f34640` | 4 controls, 2 of them real G1/G2 catches in the live tree |
 
 Deliberately **not** done, with reasons on record: P4-as-specced on-disk AST
 cache (mooted at 11.6 s scoped scans); P6 (docs/13's own "only if P1–P4 leave a

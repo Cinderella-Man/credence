@@ -215,3 +215,25 @@ research pass (`wf_e7db30ca-1fc`, 2026-07-28 — 4 read-only miners + 2
 adversarial verifiers, ≤4 concurrent, zero compiles; its findings are docs/22
 Part I). The P5-bugs, C13 and C14 rows were landed earlier the same day
 (`958f241`, `19f9631`, `8b5280e`).
+
+---
+
+## Session 2026-07-28 (afternoon) — CLOSED, nothing in flight
+
+Everything started in this session is committed. Landed: T0.1 (push), T1.3
+(`070f090`), T3.1 (`c691362`), T3.2 credence (`7708aef`) + harness (`7b6e2c6`),
+T1 (`2f34640`). Tracker updated in the same pass; open work is docs/22 only.
+
+**Concurrency held, and it worked.** Two research workflows ran, both at **4
+read-only agents**, both explicitly forbidden from running `mix`/`elixir`/`iex`
+— all compiling stayed in the single foreground shell. No OOM, no crash dump.
+The 8-agent incident above was 8 agents *each compiling*; the rule that came out
+of it ("max 3–4, never two compiling in one tree") is the one that was followed.
+
+**The methodological finding worth carrying forward.** Read-only agents produced
+excellent evidence and two *wrong verdicts*: `NoCryptoHashPipeSwappedArgs` and
+`NoHallucinatedEtsKeytypeOption` were both called DEAD from source reading, and
+both are reachable — each agent had flagged its own uncertainty and named the
+exact one-call check that would settle it, and running those checks overturned
+the verdicts. Agents that cannot execute should be asked to name the experiment;
+the orchestrator should then run it. Reading is a hypothesis generator.
