@@ -653,3 +653,70 @@ leaving a variable the Semantic round then reports unused — E7's intended
 re-pass, working. A flat idempotency assertion would be red for correct
 behaviour and teach people to disable it, so T2.5's remaining half is a C13/C14
 ratchet over the 29, not an assertion.
+
+---
+
+## Session 2026-07-28 (night, fourth) — the harness tier
+
+Continued from the salvage tier. **Nothing in flight**; both repos clean and
+level with their remotes. Harness suite **199 → 326 passed**; credence
+**9,936 tests + 6 properties, 0 failures**.
+
+Landed in the harness: **T4.6** (`7922767`), **T4.3** in four commits
+(`5aadc9d` · `2bb104d` · `bc94f07` + the row-54 signal), **T4.4** (`993c367`),
+**T4.5** (`98bcddf`), **T4.2 (a,b)** (`c07fb57`) and **T4.2 (e)** (`1f62e16`).
+
+### The finding that reframed T4.3
+
+T4.3 read as four separate parser bugs. They were one: **Elixir's `Logger`
+truncates a message at 8096 bytes by default**, and this harness does not read
+those logs, it *parses* them as data. A row firing ~150 rules puts the
+`APPLIED_RULES:` line within a few hundred bytes of that cap, so the evidence was
+being cut on exactly the busiest rows — and because the parser required the
+closing `]`, a cut line yielded *nothing at all* rather than the pairs that
+survived. Maximum loss on the rows most worth reading.
+
+Worth generalising: **a default you never set is still a decision you made.**
+Nothing in the repo chose 8096; it was inherited, and it silently shaped what the
+classifier was allowed to know.
+
+### Three gates that were asking for what another gate forbade
+
+* The classify prompt told the model an **under-fired** rule is a BUGFIX_RULE.
+  BUGFIX_RULE is validated against the closed set — the rules that actually
+  *fired* — so an under-firing rule is absent from it by definition and the
+  report was rejected however true it was. 19 rows. The gate was right; the
+  prompt was wrong, and stopping the solicitation is the fix, because there is no
+  evidence to hand an implementer either.
+* `rulegen_error_class/1` treated an agent's **429 or refusal** as a merit
+  failure, because those arrive as a *string* from the agent driver while
+  `Budget.classify_error/1` only recognises `{:http, 429, _}`. The cost is not a
+  lost row: it is a wrong entry in decisions.md, which teaches the next pass that
+  a good idea is a dead end.
+* An agent that **wrote nothing** left the scaffold pristine, failed its tests
+  (of course — a stub is a stub), and was booked `cc_tests_red`.
+
+### Findings worth carrying
+
+**Prompt and validator drift silently, and only the prompt is read by anyone.**
+Two of the three above are the same shape: a document telling the model to do
+something the code refuses. Nothing goes red when they disagree, because each is
+individually consistent. Both are now pinned by tests that assert the *pair*
+agrees.
+
+**"We could not tell" must never render as "refuted".** `Cev.Premise` returns
+`:ok` for an inconclusive compile, an unknown phase, and every Pattern proposal.
+A premise gate that fails closed would reject correct proposals for the checker's
+own limitations — the exact inversion of the bug it exists to fix.
+
+**The bound written this morning was needed again this evening.** `Cev.Premise`
+compiles model-supplied source, which is the hazard that took the box down seven
+times. Its test feeds it the very `Stream.cycle` expression that did so and
+requires an inconclusive answer with the caller alive. A gate that can hang the
+run is worse than no gate.
+
+**The first version of the wrong-phase fallback looped forever.** `resolve/2`'s
+new basename fallback derives its answer from the same file it would search for,
+so re-entering `resolve/2` on a miss recurses on itself. Caught before commit by
+asking what happens when the fallback also fails — the question worth asking of
+any fallback that feeds its own input.
