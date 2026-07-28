@@ -10,6 +10,19 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
   - `unless` with `else`: unwraps `return` in the `do` branch
   - `if` keyword early-return: restructures to block `if/else`
   - `case` branches, bare expressions, any other context: strips `return`
+
+  ## Ordering
+
+  `Credence.Semantic.UndefinedFunction` (500) is the catch-all for
+  `undefined function …` and claims `undefined function return/1` too.
+  Semantic dispatch is `Enum.find` — first match wins, no fall-through — so at
+  equal priority the winner would have been decided by `NoBareReturnInUnless`
+  sorting before `UndefinedFunction` alphabetically. The catch-all therefore
+  declares 501 so that every specific rule beats it by declaration rather than
+  by spelling. This rule owns the `return` diagnostic because it restructures
+  the surrounding block; treating `return` as a merely-misspelled call would
+  strip an early exit and let execution fall through to the code it was
+  written to skip.
   """
   use Credence.Semantic.Rule
 

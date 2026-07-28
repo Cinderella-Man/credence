@@ -71,11 +71,12 @@ untouched.
 | ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · `6d72130` |
 | ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | `8b870b5` |
 | ✅ | **T3.11 — `compile_and_capture/1` executes what it analyses, unbounded** — the seven OOM kills of 2026-07-28, diagnosed and fixed | `1ddbfe6` |
+| ✅ | **T1.2 — the dispatch-simulation gate** — every contended pair was ordered correctly *by accident*; two priorities now say so | `17ab8d8` |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
-**Next by value:** **T1.2**, the G3 residue T1 does not cover — and T5.9 handed it
-a starting point, an executed contention list. **Its probe is now safe to run**
-(T3.11): it used to take the box down about six minutes in, five separate times. Then **T2.1–T2.3**, which remain
+**Next by value:** **T2.1–T2.3**, which remain the prerequisites for any Phase-9
+run, and **T4.1–T4.3** for the harness half. Tier 1 is now closed: T1, T1.2 and
+T1.3 have all landed. Then **T2.1–T2.3**, which remain
 the prerequisites for any Phase-9 run, and **T4.1–T4.3** for the harness half.
 The whole self-corruption line of work (T3.7 → T3.10 → T3.10a) is now closed: the
 ledger is empty and the gate that measured it has been rebuilt so that being
@@ -349,13 +350,47 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
   (1.2 GB peak) and that the agent-concurrency rule adopted after the first crash
   was followed faithfully while six more kills happened under it.
 
-- [ ] **T1.2 [C] Dispatch-simulation gate (the G3 residue T1 doesn't cover).**
-  For every *pair* of semantic rules whose `match?/1` accept the same captured
-  diagnostic, require an explicit priority + moduledoc justification per
-  docs/20 (one diagnostic, one owner). docs/20:105-110 records "No test pins
-  ordering today" — this closes it. Cheap version: over all fixtures' captured
-  diagnostics, assert exactly one live rule matches each, or the winner is
-  documented. Positive control: two fixture rules matching the same message.
+- [x] ~~**T1.2 [C] Dispatch-simulation gate (the G3 residue T1 doesn't cover).**~~
+  **DONE `17ab8d8`** — `test/dispatch_contention_test.exs` +
+  `test/support/dispatch_contention.ex`. Compiles every Semantic rule's own
+  witness fixtures, captures the real diagnostics, and asks which live rules
+  claim each. Where more than one does, the winner must have a **strictly lower
+  declared priority**; a tie means the alphabetical tiebreak in
+  `Enum.sort_by(&{&1.priority(), &1})` is load-bearing, which docs/20 §2
+  forbids.
+
+  **The finding: every contended pair was ordered correctly, and none of it was
+  chosen.** Fifteen-odd specific rules beat the `UndefinedFunction` catch-all
+  only because their module names sort before `U`. Renaming any one of them past
+  `U` would have handed its diagnostic to the catch-all — and in Semantic that
+  is not a delay, it is a replacement: a structural repair (restructuring an
+  early-exit block, emitting `@on_load`) becomes a renamed call, silently, with
+  the suite green.
+
+  **The repair was two priorities, not fifteen.** The relationship is one claim —
+  *the general rule yields to the specific one* — so it belongs on the general
+  rule: `UndefinedFunction` and `NoUnreachableCaseClauseByType` declare **501**
+  (docs/20 §4's "runs after the default population"). Fifteen copies of the same
+  assertion would have been fifteen things to keep in sync.
+
+  Note this is deliberately **not** docs/20 §3's "narrow one `match?/1`". §3
+  addresses a loser that is wholly dead; `UndefinedFunction` still owns every
+  other `undefined function` message and is shadowed only on the spellings a
+  specific rule claims. Narrowing it would mean teaching the catch-all the names
+  of its fifteen exceptions.
+
+  Ledgered, C13/C14-style: 9 pairs win on a declared priority without naming the
+  rule they beat (docs/20 §1). The list may only shrink — a separate test fails
+  on a *stale* entry, so paying one down forces its removal. One was paid down in
+  this pass.
+
+  Controls: the machinery takes its rule list as an argument, so it is exercised
+  against fabricated rules — two claimants detected, one claimant not reported,
+  a raising `match?/1` counted as a decline — plus population floors on the
+  captured diagnostics and the live rule set, because both assertions would pass
+  over an empty set and say nothing. That is the T3.10a lesson applied at
+  construction rather than after the ledger empties. The live gate was also seen
+  red on real offenders before the fix.
 - [x] ~~**T1.3 [C] C2.2 population guard.**~~ **DONE `070f090`.** Added the full
   `describe "the gate cannot pass vacuously"` block in the C13/C14 idiom rather
   than the single `assert judged != []`: the real hazard is that the trigger

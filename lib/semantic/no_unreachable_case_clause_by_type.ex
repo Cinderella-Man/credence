@@ -41,9 +41,27 @@ defmodule Credence.Semantic.NoUnreachableCaseClauseByType do
 
   `should_report?/2` re-runs `fix/2`, so a diagnostic the rewrite declines is
   not reported as an issue either — the check and the fix always agree.
+
+  ## Ordering — this rule runs after the specific ones
+
+  `the following clause will never match` is also claimed by rules that own one
+  particular hallucinated clause and *repair* it instead of deleting it —
+  `FixMapFetchNoneClause` rewrites a `:none` clause over `Map.fetch/2` to
+  `:error`, preserving the failure branch this rule would simply remove.
+  Semantic dispatch is `Enum.find`: first match wins, no fall-through.
+
+  At the default 500 the winner came from the alphabetical tiebreak in
+  `Enum.sort_by(&{&1.priority(), &1})` — `FixMapFetchNoneClause` won only
+  because `F` sorts before `N`. Declaring **501** says the real thing once: the
+  general deletion yields to a specific repair. docs/20 §4; enforced by
+  `test/dispatch_contention_test.exs`.
   """
   use Credence.Semantic.Rule
 
+  # The general deletion yields to rules that repair a specific clause — see
+  # "## Ordering" above.
+  @impl true
+  def priority, do: 501
   alias Credence.Issue
 
   # The clause quoted in the warning must be exactly a bare atom pattern

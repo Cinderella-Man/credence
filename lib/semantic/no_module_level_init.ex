@@ -27,6 +27,17 @@ defmodule Credence.Semantic.NoModuleLevelInit do
           # initialization logic
         end
       end
+
+  ## Ordering
+
+  `Credence.Semantic.UndefinedFunction` (500) is the catch-all for
+  `undefined function …` and claims this rule's diagnostic too. Semantic
+  dispatch is `Enum.find` — first match wins, no fall-through — so at equal
+  priority the winner would have been decided by `NoModuleLevelInit` sorting
+  before `UndefinedFunction` alphabetically. The catch-all therefore declares
+  501 so that every specific rule beats it by declaration rather than by
+  spelling. This rule owns the `init/0` diagnostic because the repair is
+  `@on_load`, not a renamed call.
   """
   use Credence.Semantic.Rule
 

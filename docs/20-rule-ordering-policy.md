@@ -9,7 +9,7 @@
 `Enum.sort_by(&{&1.priority(), &1})` (`lib/rule_helpers.ex:23`). Priority first,
 then the module itself — which for a module atom is **alphabetical**.
 
-Of 290 live rules, **15 declare a priority**:
+Of 290 live rules, **17 declare a priority**:
 
 | phase | priority | rules |
 |---|---|---|
@@ -22,6 +22,7 @@ Of 290 live rules, **15 declare a priority**:
 | semantic | 400 | `no_hallucinated_defpstruct`, `no_non_negated_integer`, `no_stream_data_integer_two_args` |
 | semantic | 450 | `fix_reraise_keyword_in_catch`, `fix_truncated_special_form` |
 | semantic | 490 | `fix_negated_capture_with_arity` |
+| semantic | 501 | `undefined_function`, `no_unreachable_case_clause_by_type` |
 | syntax | — | none |
 
 **The other 275 sit at the default 500, and are therefore ordered
@@ -102,17 +103,29 @@ is that most of those rules probably have no ordering dependency at all, and the
 handful that do should be found by looking for feeds-into pairs rather than by
 sweeping.
 
-**No test pins ordering today.** Nothing in `test/` asserts a priority value or
-a rule sequence, so the alphabetical tiebreak can shift under a rename with the
-suite staying green. That is a gap this document records rather than closes;
-closing it needs the feeds-into pairs identified first, because a gate that pins
-all 290 positions would fail on every rule addition and teach people to
-regenerate it without reading. *(Tracked as `docs/22-remaining-work.md` T1.2 —
-the dispatch-simulation gate, which closes the Semantic half of this without
-pinning all 290 positions.)*
+~~**No test pins ordering today.**~~ **CLOSED for the Semantic round, 2026-07-28
+(docs/22 T1.2, `test/dispatch_contention_test.exs`).** The gate does not pin all
+290 positions — it pins only the pairs that *actually contend*, discovered by
+compiling every rule's own witness fixtures and asking which live rules claim
+each captured diagnostic. Where two claim the same one, the winner must have a
+strictly lower declared priority; a tie means the alphabetical tiebreak is
+load-bearing and the gate fails, naming both rules and the diagnostic.
+
+That distinction is what makes it survivable: adding a rule only fails the gate
+if the new rule genuinely contends with an existing one, which is exactly when
+someone should be reading.
+
+**What it found on its first run:** every contended pair was ordered *correctly*
+and *by accident* — the specific rule beat the catch-all only because its module
+name sorted first. The repair was not fifteen priorities but two, both on the
+general rule: `undefined_function` and `no_unreachable_case_clause_by_type`
+declare **501**, stating once that the general rule yields to the specific one.
+Pattern and Syntax remain uncovered; both cascade rather than dispatch
+first-match-wins, so the failure mode is weaker there.
 
 ## Round history
 
 | round | change | landed |
 |---|---|---|
 | v1 | policy written; 15 explicit priorities audited; 275 defaults left alone deliberately | 2026-07-28 |
+| v2 | §2 made mechanical for Semantic (T1.2); `undefined_function` + `no_unreachable_case_clause_by_type` declare 501 | 2026-07-28 |

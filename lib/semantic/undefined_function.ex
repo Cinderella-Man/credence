@@ -24,9 +24,35 @@ defmodule Credence.Semantic.UndefinedFunction do
       {:rename_local, new}     — replace name( with new(
       {:wrap_args, mod, fun}   — replace name(a,b,c) with mod.fun([a,b,c])
       :to_range                — replace range(...) with Elixir range literal
+
+  ## Ordering — this rule runs last, deliberately
+
+  This is the catch-all for `undefined function …` / `… is undefined or
+  private`, so its `match?/1` overlaps with every rule that owns one specific
+  spelling of that diagnostic — `NoBareReturnInUnless` (`return/1`),
+  `NoModuleLevelInit` (`init/0`), `FixTaskRefFieldAccess` (`Task.ref/1`) and a
+  dozen more. Semantic dispatch is `Enum.find`: first match wins, no
+  fall-through, so whichever rule sorts first is the *only* one that runs.
+
+  At the default 500 that order came from `Enum.sort_by(&{&1.priority(), &1})`
+  falling back to the module atom — every one of those rules won only because
+  its name sorts before `UndefinedFunction`. Correct outcome, chosen by nobody,
+  and a rename would have silently handed the slot to this rule and replaced a
+  structural repair with a renamed call.
+
+  Declaring **501** states the real relationship once, in the one place it is
+  true of: the general rule yields to the specific one. That is docs/20 §4's
+  "runs after the default population, for a stated reason", and it is why the
+  specific rules need no priority of their own. Enforced by
+  `test/dispatch_contention_test.exs` (docs/22 T1.2).
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
+
+  # The catch-all yields to every rule owning a specific spelling of the
+  # diagnostic — see "## Ordering" above.
+  @impl true
+  def priority, do: 501
 
   @qualified_replacements %{
     # Wrong module for real function

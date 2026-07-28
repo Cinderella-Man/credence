@@ -41,6 +41,14 @@ defmodule Credence.Semantic.FixMapFetchNoneClause do
   only converts a certain `CaseClauseError` into the clause the author
   wrote for the failure path. All other shapes are left untouched, and
   `should_report?/2` keeps them unreported.
+
+  ## Ordering
+
+  `NoUnreachableCaseClauseByType` (501) claims the same
+  `the following clause will never match` diagnostic and would *delete* the
+  `:none` clause. This rule repairs it to `:error` instead, keeping the failure
+  branch the author wrote, so it must win — which it does by declaration rather
+  than by sorting before `N`, since the general rule declares 501.
   """
   use Credence.Semantic.Rule
 
