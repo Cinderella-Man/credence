@@ -194,8 +194,12 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
     # 1) Wrap any single-arg callbacks in enum_args so the user's
     #    variable binds to the correct slot of the `{k, v}` pair.
-    enum_args = wrap_fns(enum_args, map_fn)
+    with {:ok, enum_args} <- wrap_fns(enum_args, map_fn) do
+      dispatch_enum(enum_fn, enum, map_expr, enum_args, map_fn)
+    end
+  end
 
+  defp dispatch_enum(enum_fn, enum, map_expr, enum_args, map_fn) do
     case enum_fn do
       f when f in [:all?, :any?, :frequencies_by] ->
         on_first(enum_args, fn cb -> {:ok, enum.(f, [map_expr, cb])} end)
@@ -237,8 +241,12 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
 
     # 1) Wrap any single-arg callbacks so the user's variable binds
     #    to the correct slot of the `{k, v}` pair.
-    enum_args = wrap_fns(enum_args, map_fn)
+    with {:ok, enum_args} <- wrap_fns(enum_args, map_fn) do
+      dispatch_pipe(enum_fn, enum, enum_args, map_fn)
+    end
+  end
 
+  defp dispatch_pipe(enum_fn, enum, enum_args, map_fn) do
     case enum_fn do
       f when f in [:all?, :any?, :frequencies_by] ->
         on_first(enum_args, fn cb -> {:ok, enum.(f, [cb])} end)
@@ -270,26 +278,40 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   # `fn`, `&Mod.func/1`, or a simple `&(... &1 ...)` capture) so its
   # first parameter destructures the `{k, v}` pair that iterating the
   # map directly will yield. Non-callback args are left untouched.
+  #
+  # Returns `{:ok, args}` or `:no`. A callback this module cannot rewrite must
+  # refuse the WHOLE rewrite, not just pass that argument through: the rewrite
+  # replaces `Map.values(m)` with `m`, so a callback left un-destructured would
+  # start receiving `{k, v}` pairs where it expects a value. That is a silent
+  # behaviour change, which is worse than the crash it replaces (row 54).
   defp wrap_fns(args, map_fn) do
-    Enum.map(args, fn
-      {:fn, _, _} = cb ->
-        wrap_cb(cb, map_fn)
-
-      {:&, _, [{:/, _, [_, {:__block__, _, [1]}]}]} = cb ->
-        wrap_cb(cb, map_fn)
-
-      {:&, _, [_]} = cb ->
-        # Complex capture like `&(length(&1) > 1)` — convert it to a
-        # `fn` first so we can destructure its head uniformly.
-        case capture_to_fn(cb) do
-          {:fn, _, _} = converted -> wrap_cb(converted, map_fn)
-          _ -> cb
-        end
-
-      other ->
-        other
+    Enum.reduce_while(args, {:ok, []}, fn arg, {:ok, acc} ->
+      case wrap_arg(arg, map_fn) do
+        :no -> {:halt, :no}
+        wrapped -> {:cont, {:ok, [wrapped | acc]}}
+      end
     end)
+    |> case do
+      {:ok, acc} -> {:ok, Enum.reverse(acc)}
+      :no -> :no
+    end
   end
+
+  defp wrap_arg({:fn, _, _} = cb, map_fn), do: wrap_cb(cb, map_fn)
+
+  defp wrap_arg({:&, _, [{:/, _, [_, {:__block__, _, [1]}]}]} = cb, map_fn),
+    do: wrap_cb(cb, map_fn)
+
+  defp wrap_arg({:&, _, [_]} = cb, map_fn) do
+    # Complex capture like `&(length(&1) > 1)` — convert it to a `fn` first so
+    # we can destructure its head uniformly.
+    case capture_to_fn(cb) do
+      {:fn, _, _} = converted -> wrap_cb(converted, map_fn)
+      _ -> cb
+    end
+  end
+
+  defp wrap_arg(other, _map_fn), do: other
 
   # `fn p1, ...others -> body`  →  `fn <kv_pattern(p1)>, ...others -> body`
   # Multi-clause lambdas: each clause is rewritten independently.
@@ -308,7 +330,10 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   defp wrap_cb({:&, capture_meta, [{:/, _, [ref, {:__block__, _, [1]}]}]}, map_fn) do
     arg_var = {:x, [], nil}
 
-    {:fn, capture_meta, [{:->, [], [[kv_pattern(arg_var, map_fn)], rebuild_call(ref, arg_var)]}]}
+    case rebuild_call(ref, arg_var) do
+      :no -> :no
+      call -> {:fn, capture_meta, [{:->, [], [[kv_pattern(arg_var, map_fn)], call]}]}
+    end
   end
 
   # `&(expr using &1)`  →  `fn x -> expr end`
@@ -378,6 +403,14 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIteration do
   defp rebuild_call({{:., _, [{:__aliases__, _, mod}, func]}, _, []}, arg) do
     {{:., [], [{:__aliases__, [], mod}, func]}, [], [arg]}
   end
+
+  # Anything else — notably an ERLANG module capture, `&:queue.is_empty/1`,
+  # whose module segment Sourceror renders as `{:__block__, _, [:queue]}` rather
+  # than `{:__aliases__, _, [...]}`. The two clauses above cover a bare local and
+  # an Elixir alias; this one used to be a `FunctionClauseError` that took the
+  # whole fix script down with it (escalation ledger row 54), which meant the one
+  # rule that broke the run was the one rule that could never be named.
+  defp rebuild_call(_ref, _arg), do: :no
 
   # ════════════════════════════════════════════════════════════════
   # small dispatch helpers

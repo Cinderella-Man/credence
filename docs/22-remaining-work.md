@@ -676,8 +676,19 @@ its own tests run under real `mix test`.
     `should_report?/2` guard **is** `fix/2` (`fix(source, d) != source`),
     deliberately: a guard that approximates the fix is a second implementation of
     the same decision and drifts from it.
+  * [x] ~~`NoMapKeysOrValuesForIteration` (row 54)~~ — `rebuild_call/2` covered a
+    bare local and an Elixir alias; an **Erlang module capture**,
+    `&:queue.is_empty/1`, renders its module segment as
+    `{:__block__, _, [:queue]}` and matched neither, raising
+    `FunctionClauseError`. Reproduced live. C6's per-rule isolation now contains
+    the blast radius, but the rule still crashed and never fixed anything.
+
+    The repair refuses the **whole** rewrite, not just that argument: the fix
+    replaces `Map.values(m)` with `m`, so a callback left un-destructured would
+    start receiving `{k, v}` pairs where it expects a value — a silent behaviour
+    change, which is strictly worse than the crash it replaces.
   * [ ] remaining: `FixLocalFunctionInGuard` (rows 115/145/192/196),
-    `NoMapKeysOrValuesForIteration` (row 54), `Syntax.NoFnAsVariable` (row 164),
+    `Syntax.NoFnAsVariable` (row 164),
     `NoHallucinatedDefpstruct` + `UndefinedFunction` interaction (row 183), and
     the 4.6d deferred salvage rows.
 

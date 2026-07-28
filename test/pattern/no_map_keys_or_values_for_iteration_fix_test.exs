@@ -190,4 +190,59 @@ defmodule Credence.Pattern.NoMapKeysOrValuesForIterationFixTest do
       end
     end
   end
+
+  # ── T3.6 / escalation ledger row 54 ────────────────────────────────────
+  #
+  # `rebuild_call/2` covered a bare local and an Elixir alias. An ERLANG module
+  # capture — `&:queue.is_empty/1` — renders its module segment as
+  # `{:__block__, _, [:queue]}` and matched neither, raising FunctionClauseError.
+  # That killed the whole fix script (exit 1), discarding every earlier
+  # syntax/semantic fix and emitting no APPLIED_RULES at all: the one rule that
+  # broke the run was the one rule that could never be named.
+  describe "callbacks this rule cannot rewrite" do
+    test "an Erlang module capture declines instead of raising" do
+      source = """
+      defmodule Row54 do
+        def drained?(state) do
+          if Enum.all?(Map.values(state.queues), &:queue.is_empty/1) do
+            :done
+          else
+            :pending
+          end
+        end
+      end
+      """
+
+      assert Credence.RuleHelpers.apply_rule_fix(
+               Credence.Pattern.NoMapKeysOrValuesForIteration,
+               source
+             ) == source
+    end
+
+    # The reason declining has to refuse the WHOLE rewrite rather than pass the
+    # callback through: the rewrite replaces `Map.values(m)` with `m`, so a
+    # callback left un-destructured would start receiving `{k, v}` pairs where it
+    # expects a value. Silent behaviour change beats a crash only in the sense
+    # that nobody notices it.
+    test "the map argument is not rewritten when the callback is refused" do
+      source = """
+      defmodule Row54Pipe do
+        def drained?(state) do
+          state.queues |> Map.values() |> Enum.all?(&:queue.is_empty/1)
+        end
+      end
+      """
+
+      fixed =
+        Credence.RuleHelpers.apply_rule_fix(
+          Credence.Pattern.NoMapKeysOrValuesForIteration,
+          source
+        )
+
+      # Whole-string equality is the assertion, per this repo's fix-test standard
+      # (`FixMetaTest`): it proves the map argument was NOT rewritten, which a
+      # substring check could only hint at.
+      assert fixed == source
+    end
+  end
 end
