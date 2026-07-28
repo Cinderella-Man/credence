@@ -657,7 +657,31 @@ its own tests run under real `mix test`.
   equivalence check silently compares against the wrong code. Control: the new
   test seen red against the pre-fix implementation. Unblocks T5.5, and H4's scope
   estimate can now be re-taken against a working checker.
-- [ ] **T3.6 [C] Smaller ledger FIX-CREDENCE rows** (each is one rule, evidence
+- [ ] **T3.6 [C] Smaller ledger FIX-CREDENCE rows — 2 of 6 done (`PENDING`).**
+
+  * [x] ~~`RuleHelpers.log_diff/3` renders a fabricated diff (ledger:846)~~ —
+    `diff_lines/2` paired the two files by **index**, so one inserted line
+    shifted everything after it and the whole file rendered as changed. Two
+    consequences, both measured: it **fabricated a bug report** (a correct module
+    reorder reported to the harness as a "catastrophic replacement", ledger row
+    181) and it was **what blew the log budget** — `APPLIED_RULES:` is printed
+    last, so a whole-file render pushed it past Logger's 8096-byte cap (row 120).
+    Now `List.myers_difference/2`, which also drops an `Enum.at/2`-in-a-loop that
+    was quadratic in file length. Pairs with the harness-side `truncate:
+    :infinity` (T4.3) — the ledger prescribed both halves and this is the
+    credence one.
+  * [x] ~~`UndefinedFunction` decline guard (ledger:296)~~ — `match?/1` accepts
+    every `undefined function …`, but the repair is a table lookup, so a call the
+    tables never heard of matched and returned the source byte-identical. The
+    `should_report?/2` guard **is** `fix/2` (`fix(source, d) != source`),
+    deliberately: a guard that approximates the fix is a second implementation of
+    the same decision and drifts from it.
+  * [ ] remaining: `FixLocalFunctionInGuard` (rows 115/145/192/196),
+    `NoMapKeysOrValuesForIteration` (row 54), `Syntax.NoFnAsVariable` (row 164),
+    `NoHallucinatedDefpstruct` + `UndefinedFunction` interaction (row 183), and
+    the 4.6d deferred salvage rows.
+
+  Original: (each is one rule, evidence
   at the cited ledger row): `FixLocalFunctionInGuard` (rows 115/145/192/196 —
   one also touches `NoHallucinatedGuardFn`); `NoMapKeysOrValuesForIteration`
   (row 54, line ~374); `Syntax.NoFnAsVariable` (row 164);

@@ -184,6 +184,25 @@ defmodule Credence.Semantic.UndefinedFunction do
     }
   end
 
+  @doc """
+  Report only what this rule can actually repair (docs/22 T3.6, ledger row 296).
+
+  `match?/1` accepts every `undefined function …` message, but the repair is a
+  lookup in the replacement tables — so a call this rule has never heard of,
+  like a `Plug` import missing from the file (`undefined function send_resp/2`),
+  matched and then returned the source byte-identical. The row was reported
+  against `UndefinedFunction`, which had done nothing, and the diagnostic was
+  consumed.
+
+  The guard IS the fix, deliberately. A guard that approximates the fix is a
+  second implementation of the same decision and drifts from it; this one cannot
+  disagree with what `fix/2` will do, because it asks `fix/2`.
+  """
+  @spec should_report?(map(), String.t()) :: boolean()
+  def should_report?(diagnostic, source) do
+    fix(source, diagnostic) != source
+  end
+
   @impl true
   def fix(source, %{message: msg, position: position}) do
     line_no = extract_line(position)

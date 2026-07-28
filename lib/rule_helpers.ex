@@ -392,7 +392,26 @@ defmodule Credence.RuleHelpers do
   Computes a line-by-line diff between two strings.
 
   Returns a list of `{:removed, line_no, text}` and `{:added, line_no, text}`
-  tuples for every line that changed.
+  tuples for every line that changed. `:removed` line numbers index `before`,
+  `:added` line numbers index `after_fix`.
+
+  ## Why a real diff, not positional pairing
+
+  This paired the two files by INDEX — line 1 against line 1, and so on — so a
+  single inserted line shifted everything after it and the whole file rendered as
+  changed. That is not a cosmetic problem:
+
+    * it **fabricated bug reports**. A correct module reorder was reported to the
+      evolution harness as a "catastrophic replacement" (escalation ledger row
+      181), and a human then spent the row investigating a rule that had done
+      nothing wrong.
+    * it was the thing **blowing the log budget**. `log_diff/3` prints this for
+      every rule that changes the source, and Elixir's Logger truncates a message
+      at 8096 bytes — so a whole-file render pushed the `APPLIED_RULES:` line,
+      printed last, out of the log entirely (ledger row 120).
+
+  `List.myers_difference/2` reports only the lines that actually differ. It also
+  drops the old `Enum.at/2`-in-a-loop, which was quadratic in the file length.
   """
   @spec diff_lines(String.t(), String.t()) :: [
           {:removed, pos_integer(), String.t()} | {:added, pos_integer(), String.t()}
@@ -400,19 +419,28 @@ defmodule Credence.RuleHelpers do
   def diff_lines(before, after_fix) do
     before_lines = String.split(before, "\n")
     after_lines = String.split(after_fix, "\n")
-    max_len = max(length(before_lines), length(after_lines))
 
-    Enum.flat_map(0..(max_len - 1), fn i ->
-      b = Enum.at(before_lines, i)
-      a = Enum.at(after_lines, i)
+    {changes, _before_no, _after_no} =
+      before_lines
+      |> List.myers_difference(after_lines)
+      |> Enum.reduce({[], 1, 1}, fn
+        {:eq, lines}, {acc, before_no, after_no} ->
+          {acc, before_no + length(lines), after_no + length(lines)}
 
-      cond do
-        b == a -> []
-        is_nil(a) -> [{:removed, i + 1, b}]
-        is_nil(b) -> [{:added, i + 1, a}]
-        true -> [{:removed, i + 1, b}, {:added, i + 1, a}]
-      end
-    end)
+        {:del, lines}, {acc, before_no, after_no} ->
+          {prepend(acc, lines, before_no, :removed), before_no + length(lines), after_no}
+
+        {:ins, lines}, {acc, before_no, after_no} ->
+          {prepend(acc, lines, after_no, :added), before_no, after_no + length(lines)}
+      end)
+
+    Enum.reverse(changes)
+  end
+
+  defp prepend(acc, lines, first_no, tag) do
+    lines
+    |> Enum.with_index(first_no)
+    |> Enum.reduce(acc, fn {text, line_no}, inner -> [{tag, line_no, text} | inner] end)
   end
 
   @doc """
