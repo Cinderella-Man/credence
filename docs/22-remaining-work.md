@@ -26,6 +26,32 @@ hypothesis.
 
 ---
 
+## Status at a glance
+
+Completed items are **struck through** in the tiers below and carry their commit
+id in place. Nothing else in this file has been started.
+
+| | Item | Commit |
+|---|---|---|
+| ✅ | T0.1 — push both repos | `917557c` (C) · `7b6e2c6` (H) |
+| ✅ | T0.3 — zero-warning compile | earlier session |
+| ✅ | **T1 — the pipeline-witness gate** (the file's top item) | `2f34640` |
+| ✅ | T1.3 — the C2.2 vacuity block | `070f090` |
+| ✅ | T3.1 — errors on compiling source, + the inert C4 gate behind them | `c691362` |
+| ✅ | T3.2 — the `:no_op` trace outcome, both repos | `7708aef` · `7b6e2c6` |
+| ✅ | T3.9 — tree-wide formatter drift (57 files) | `f564e31` |
+| ⬜ | T0.2 — open the Phase-4 PR | needs `gh auth login`; **amend the body first** (T3.7) |
+| ⬜ | everything else | see the tiers below |
+
+**Next by value, now that T1 is in:** **T3.7** — two Syntax rules still corrupt
+string literals, which is a live shipped defect of the 4.6a family and whose
+repair pattern already exists in `FixPythonModulo`. Then **T5.9** (pay down
+T1's 8-rule ledger; the two `:no_fixture` entries have working fixtures already
+identified in the item). Then **T1.2**, the G3 residue T1 does not cover.
+T2.1–T2.3 remain the prerequisites for any Phase-9 run.
+
+---
+
 ## Part I — The evaluation: what the evolution actually taught us
 
 ### 1. The headline numbers
@@ -159,7 +185,7 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
 
 ### Tier 0 — hygiene (minutes each; do before anything else)
 
-- [x] **T0.1 [C][H] Push.** DONE 2026-07-28. credence through `a590f07`, harness
+- [x] ~~**T0.1 [C][H] Push.**~~ DONE 2026-07-28. credence through `a590f07`, harness
   through `c2b0d95`. (This session's later commits are listed in Part III.)
 - [ ] **T0.2 [C] Open the Phase-4 PR.** Body ready at `docs/PR_BODY_phase4.md`.
   **`gh` IS now installed** (`/usr/bin/gh`) but not authenticated — run
@@ -169,7 +195,7 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
   Phase 9 is blocked on this merge (sister resets onto the new `main`).
   **Amend the body before opening:** its line 43 repeats the false `SourceMask`
   claim corrected in T3.7 below.
-- [x] **T0.3 [C] Zero-warning compile.** DONE this session: the provably-dead
+- [x] ~~**T0.3 [C] Zero-warning compile.**~~ DONE this session: the provably-dead
   `extract_atom/1` clause (`lib/pattern/no_keyword_get_keyword_key.ex`) is
   deleted; `mix compile --force` = 0 warnings.
 - [ ] **T0.4 [C] Release hygiene.** `CHANGELOG.md:8` and `:138` both say
@@ -178,8 +204,8 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
 
 ### Tier 1 — the reality gates (kills the 60% class at birth)
 
-- [x] **T1 [C] The pipeline-witness gate — every rule must witness its own
-  failure mode through the real pipeline.** **DONE `2f34640`** — see the
+- [x] ~~**T1 [C] The pipeline-witness gate — every rule must witness its own
+  failure mode through the real pipeline.**~~ **DONE `2f34640`** — see the
   result box immediately after this item. One new meta-test
   (`test/pipeline_witness_test.exs` + `test/support/pipeline_witness.ex`)
   asserting, for **every** rule in all three phases: feeding the rule's own
@@ -254,7 +280,7 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
   ordering today" — this closes it. Cheap version: over all fixtures' captured
   diagnostics, assert exactly one live rule matches each, or the winner is
   documented. Positive control: two fixture rules matching the same message.
-- [x] **T1.3 [C] C2.2 population guard.** **DONE `070f090`.** Added the full
+- [x] ~~**T1.3 [C] C2.2 population guard.**~~ **DONE `070f090`.** Added the full
   `describe "the gate cannot pass vacuously"` block in the C13/C14 idiom rather
   than the single `assert judged != []`: the real hazard is that the trigger
   (`rule_stdlib_callees/1`, a regex over whitespace-stripped rule source) stops
@@ -326,7 +352,7 @@ its own tests run under real `mix test`.
 
 ### Tier 3 — live defects on the branch (the ledger's FIX-CREDENCE rows)
 
-- [x] **T3.1 [C] Type-checker diagnostics are dropped.** **DONE `c691362`.**
+- [x] ~~**T3.1 [C] Type-checker diagnostics are dropped.**~~ **DONE `c691362`.**
   Mechanism confirmed by execution on Elixir 1.20.2: `%S{unknown: k}` in a case
   clause or a function head yields `unknown key :unknown for struct S` at
   `severity: :error` **on the `{:ok, …}` branch**, and `Semantic.analyze/2`
@@ -356,7 +382,7 @@ its own tests run under real `mix test`.
   disable most of the linter on exactly the LLM-generated population it exists
   for, and poison the `:reverted` signal the harness's bugfix lane consumes.
 
-- [x] **T3.2 [C][H] `{rule, :no_op}` in the trace.** **DONE `7708aef` (credence)
+- [x] ~~**T3.2 [C][H] `{rule, :no_op}` in the trace.**~~ **DONE `7708aef` (credence)
   + harness `7b6e2c6`.** Both rounds were wrong, in opposite directions: Pattern
   dropped the rule from the trace entirely, while **Semantic recorded
   `{rule, 1}`** — a positive claim that it had fixed one diagnostic when the
@@ -440,13 +466,13 @@ its own tests run under real `mix test`.
   - `Semantic.FixWithElseBareValue` — `match?/1` requires a message string
     Elixir 1.20.2 does not emit; its fixtures compile to a *different* real
     diagnostic. Re-key it on what the compiler actually says, or retire it.
-- [ ] **T3.9 [C] 57 files fail `mix format --check-formatted` at HEAD.**
-  Pre-existing and not from any change in this session (verified by stashing:
-  a clean tree fails too). Almost certainly Elixir 1.20's formatter against a
-  tree last formatted by an older version. It is a live trap: anyone — or any
-  harness step — running a bare `mix format` produces a 57-file diff unrelated
-  to their change. Decide deliberately: reformat the tree in one isolated
-  commit, or pin the formatter. Blocks nothing, but it will ambush someone.
+- [x] ~~**T3.9 [C] 57 files fail `mix format --check-formatted` at HEAD.**~~
+  **DONE `f564e31` (maintainer).** Pre-existing drift, not from any code change
+  — Elixir 1.20's formatter against a tree last formatted by an older version,
+  confirmed by stashing (a clean tree failed too). Reformatted in one isolated
+  commit, which is the right shape for it: the diff touches 57 files and would
+  have buried any change it rode along with. `mix format --check-formatted` now
+  passes tree-wide, so a bare `mix format` no longer ambushes anyone.
 
 ### Tier 4 — harness correctness (make the loop trustworthy for weak models)
 
