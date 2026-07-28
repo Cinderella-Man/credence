@@ -687,8 +687,17 @@ its own tests run under real `mix test`.
     replaces `Map.values(m)` with `m`, so a callback left un-destructured would
     start receiving `{k, v}` pairs where it expects a value — a silent behaviour
     change, which is strictly worse than the crash it replaces.
+  * [x] ~~`Syntax.NoFnAsVariable` (row 164)~~ — reproduced live, and the cause is
+    worth more than the fix: **every one of this rule's fixtures is
+    module-less**. Wrap its own moduledoc "Bad" example in a `defmodule` and the
+    rule stops firing entirely — after the first (pinned) rename the remaining
+    `fn` sits mid-line and the parser blames the unterminated `defmodule do`,
+    which carries no column. Real code always has a module, so the gap could only
+    ever surface on a real row, never in its own tests. Two shapes added: an `fn`
+    followed by a dot (`fn.(v)` — the keyword can never be, so it needs no
+    evidence at all) and a trailing `fn` in value position. Three controls pin
+    that genuine multi-clause keywords stay untouched.
   * [ ] remaining: `FixLocalFunctionInGuard` (rows 115/145/192/196),
-    `Syntax.NoFnAsVariable` (row 164),
     `NoHallucinatedDefpstruct` + `UndefinedFunction` interaction (row 183), and
     the 4.6d deferred salvage rows.
 

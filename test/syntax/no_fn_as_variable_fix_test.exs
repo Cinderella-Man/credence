@@ -294,4 +294,92 @@ defmodule Credence.Syntax.NoFnAsVariableFixTest do
       confirm_fix(fix(code), code)
     end
   end
+
+  # ── T3.6 / escalation ledger row 164 ───────────────────────────────────
+  #
+  # Every fixture above this block is MODULE-LESS, and that is the whole gap:
+  # wrap the moduledoc's own Bad example in a `defmodule` and the rule stopped
+  # firing. After the first (pinned) rename the remaining `fn` sits mid-line, and
+  # the parser blames the unterminated `defmodule do` — no column, and the line is
+  # not "nothing but fn". Real code always has a module, which is why this
+  # surfaced as an under-fire on a real row rather than in these tests.
+  describe "inside a module, where real code lives" do
+    test "the ledger's own source: a called `fn` variable" do
+      input = """
+      defmodule Row164 do
+        defp try_fns([fn | rest], v), do: fn.(v) || try_fns(rest, v)
+      end
+      """
+
+      expected = """
+      defmodule Row164 do
+        defp try_fns([func | rest], v), do: func.(v) || try_fns(rest, v)
+      end
+      """
+
+      confirm_fix(fix(input), expected)
+      assert valid_syntax?(fix(input))
+    end
+
+    test "the moduledoc's Bad example, wrapped" do
+      input = """
+      defmodule Wrapped do
+        def foo([fn | rest]), do: fn
+      end
+      """
+
+      expected = """
+      defmodule Wrapped do
+        def foo([func | rest]), do: func
+      end
+      """
+
+      confirm_fix(fix(input), expected)
+      assert valid_syntax?(fix(input))
+    end
+  end
+
+  # The widening must not make the rule braver about real keywords. Each of
+  # these parses, so the Syntax phase never runs on them in production — but the
+  # matcher is what changed, so the matcher is what gets pinned.
+  describe "CONTROL: genuine `fn` keywords are still untouched" do
+    test "a multi-clause fn whose clauses start on the next line" do
+      input = """
+      defmodule Keyword1 do
+        def run(xs) do
+          Enum.map(xs, fn
+            {:ok, v} -> v
+            :error -> nil
+          end)
+        end
+      end
+      """
+
+      confirm_fix(fix(input), input)
+    end
+
+    test "a dot inside an fn body is not a called `fn`" do
+      input = """
+      defmodule Keyword2 do
+        def run(xs), do: Enum.map(xs, fn x -> x.field end)
+      end
+      """
+
+      confirm_fix(fix(input), input)
+    end
+
+    test "an fn trailing a line whose next line opens clauses" do
+      input = """
+      defmodule Keyword3 do
+        def run(xs) do
+          Enum.reduce(xs, %{}, fn
+            x, acc -> Map.put(acc, x, 1)
+          end)
+        end
+      end
+      """
+
+      confirm_fix(fix(input), input)
+    end
+  end
 end

@@ -160,21 +160,66 @@ defmodule Credence.Syntax.NoFnAsVariable do
     end
   end
 
-  # Find a line that is nothing but `fn` (with optional whitespace) — a variable
-  # reference the parser misinterpreted as the keyword. A line whose next
-  # non-blank neighbour is a `->` clause is skipped: that is a multi-clause
-  # anonymous function, not a variable.
+  # Find an `fn` the parser misread as the keyword, in a line the error metadata
+  # gives no column for. Two shapes, both requiring `evidence?` at the call site
+  # — a pinned replacement must already have proved this file uses `fn` as an
+  # identifier. A line whose next non-blank neighbour is a `->` clause is skipped
+  # in both: that is a multi-clause anonymous function, not a variable.
+  #
+  # ## Why the second shape exists (escalation ledger row 164)
+  #
+  # Only "a line that is nothing but `fn`" was recognised. That is what a `fn`
+  # variable looks like in a MODULE-LESS snippet — and every one of this rule's
+  # fixtures is module-less, so the gap was invisible to its own tests.
+  #
+  # Real code has a `defmodule`. Wrap the moduledoc's own Bad example in one and
+  # the rule stops firing entirely: after the first (pinned) rename, the
+  # remaining `fn` sits at the END of `def foo([func | rest]), do: fn`, and the
+  # parser now blames the unterminated `defmodule do` — no column, and the line
+  # is not "nothing but fn". Reproduced live on the ledger's own source.
   defp find_standalone_fn(source) do
     lines = String.split(source, "\n")
 
     lines
     |> Enum.with_index()
-    |> Enum.find(fn {line, idx} ->
-      String.trim(line) == "fn" and not clause_follows?(lines, idx)
+    |> Enum.find_value(:none, fn {line, idx} ->
+      cond do
+        # `fn.(v)` / `fn.field` — the keyword can never be followed by a dot, so
+        # this needs no clause check and no positional evidence to be certain.
+        col = called_fn_column(line) -> {:ok, idx + 1, col}
+        clause_follows?(lines, idx) -> nil
+        String.trim(line) == "fn" -> {:ok, idx + 1, find_fn_column(line)}
+        col = value_position_fn_column(line) -> {:ok, idx + 1, col}
+        true -> nil
+      end
     end)
-    |> case do
-      nil -> :none
-      {line, idx} -> {:ok, idx + 1, find_fn_column(line)}
+  end
+
+  # The 1-indexed column of an `fn` immediately followed by a dot — `fn.(v)`,
+  # `fn.field`. This is the one shape that carries its own proof: `fn` opens an
+  # anonymous function and there is no syntax in which that is followed by `.`,
+  # so a match here cannot be the keyword. Ledger row 164's source is exactly
+  # this, one rename after its pinned `[fn | rest]`.
+  defp called_fn_column(line) do
+    case Regex.run(~r/\bfn(?=\.)/, line, return: :index) do
+      [{col, _len}] -> col + 1
+      _ -> nil
+    end
+  end
+
+  # The 1-indexed column of a trailing `fn` that can only be a VALUE — the line
+  # ends with it and the token before it opens a value position (`, do: fn`,
+  # `x = fn`, `-> fn`, `[fn`). Anything else, notably `fn` following an
+  # identifier or `)`, is left alone: `Enum.map(xs, fn` is a real keyword whose
+  # clause is simply on the next line.
+  @value_position_fn ~r/(?:^|[=,\[({]|->|\bdo:|\|\|)\s*fn\s*$/
+
+  defp value_position_fn_column(line) do
+    if Regex.match?(@value_position_fn, line) do
+      case Regex.run(~r/\bfn\b\s*$/, line, return: :index) do
+        [{col, _len}] -> col + 1
+        _ -> nil
+      end
     end
   end
 
