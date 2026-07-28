@@ -37,10 +37,20 @@ defmodule Credence do
     end
   end
 
+  @typedoc """
+  What a round did with one rule: how many findings it fixed, or why its output
+  is not in the returned code — `:reverted` (the rule made things worse),
+  `:rolled_back` (the Syntax round discarded every change because the result
+  still did not parse), `:patch_rejected` (the patch broke a safety invariant)
+  or `:crashed`.
+  """
+  @type rule_outcome ::
+          non_neg_integer() | :reverted | :rolled_back | :patch_rejected | :crashed
+
   @spec fix(String.t(), keyword()) :: %{
           code: String.t(),
           issues: [Issue.t()],
-          applied_rules: [{module(), non_neg_integer() | :reverted}]
+          applied_rules: [{module(), rule_outcome()}]
         }
   def fix(code_string, opts \\ []) do
     # Phase 1: Syntax (with trace)
