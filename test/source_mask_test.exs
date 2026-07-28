@@ -127,6 +127,35 @@ defmodule Credence.SourceMaskTest do
     end
   end
 
+  describe "the blank byte, and which regex classes it is inert to" do
+    # A rule author picks a pattern against this table. Getting it wrong is not
+    # a compile error and not a test failure — it is a rule that silently spans
+    # a literal, so the table is pinned rather than described.
+    test "inert to the classes rules key on" do
+      for {name, re} <- [{"\\w", ~r/\w/}, {"\\s", ~r/\s/}, {"\\d", ~r/\d/}] do
+        refute Regex.match?(re, <<1>>), "#{name} matched the blank byte"
+      end
+    end
+
+    test "NOT inert to \\S, . or a negated class" do
+      # Not a defect — nothing can make a non-newline byte invisible to `.`.
+      # It means a greedy `\S+` or `.+?` spans a literal in the shadow instead
+      # of stopping at it, which is what `fix_div_rem.ex` relies on.
+      for {name, re} <- [{"\\S", ~r/\S/}, {".", ~r/./}, {"[^\\n]", ~r/[^\n]/}] do
+        assert Regex.match?(re, <<1>>), "#{name} no longer matches the blank byte"
+      end
+    end
+
+    test "a greedy match spans a literal, and splices back byte-exactly" do
+      line = ~S|IO.puts("a b") div 2|
+      shadow = SourceMask.mask(line)
+
+      [[_, {ls, ll}]] = Regex.scan(~r/(\S+\))\s+div/, shadow, return: :index)
+
+      assert binary_part(line, ls, ll) == ~S|IO.puts("a b")|
+    end
+  end
+
   describe "self_contained?/2" do
     # A rule whose pattern keys on the delimiters themselves (`@doc "..."`, a
     # `~r/.../` sigil) cannot match the shadow — masking blanks the quotes it

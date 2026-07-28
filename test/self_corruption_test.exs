@@ -76,10 +76,22 @@ defmodule Credence.SelfCorruptionTest do
   # its own file the rule rewrote on that day, and it is a CEILING. This map may
   # only shrink — in entries or in values. See "The ledger" above.
   #
-  # Ordered by line count, which is the paydown order: the count is a proxy for
-  # how little the rule knows about literals. `no_else_if` rewrites most of its
-  # own file because it is a multi-line block rewrite with neither a comment
-  # guard nor heredoc tracking — its sibling `fix_elsif_in_if_chain` has both.
+  # Ordered by line count, which is *usually* the paydown order: the count is a
+  # proxy for how little the rule knows about literals.
+  #
+  # `no_else_if` is the exception in both directions, and is deliberately NOT
+  # being paid down — see docs/22 T3.10a. Its 226 is an artifact: `fix/1` removes
+  # two lines from its own file and the positional diff below then counts every
+  # subsequent line as changed. The real prose corruption is ~7 lines. But it is
+  # also the worst rule here, for reasons this oracle does not measure — run, not
+  # read: it turns *valid, parsing* nested-`if` source into output that does not
+  # parse, and three boundary cases (missing terminator, `else # note`, empty
+  # branch body) do the same.
+  #
+  # Masking its trigger WOULD clear this entry. It would also turn the gate green
+  # over four live corruption modes and burn the only signal that surfaced them,
+  # so the entry stays until the design question in T3.10a is answered. A ledger
+  # entry is allowed to be load-bearing.
   @self_corrupting %{
     "no_else_if" => 226,
     "fix_do_block_fusion" => 6,

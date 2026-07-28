@@ -49,15 +49,17 @@ id in place. Nothing else in this file has been started.
 | ✅ | T0.2 — Phase-4 PR | **superseded** — a PR for the whole 3rd evolution already exists |
 | ✅ | **T3.7 — the last two raw-byte syntax fixes**, + the `FixDivRem` half-conversion behind them | `e81985e` · `8169601` |
 | ✅ | **the self-corruption oracle** — a new gate, and the 11 rules it found | `b41af7b` |
-| ⬜ | **T3.10 — pay down the 11-rule self-corruption ledger** (new, from the gate above) | — |
+| 🔄 | **T3.10 — pay down the self-corruption ledger** — 3 of 11 done, 8 left | `becd59b` · `643435a` |
+| ⬜ | **T3.10a — `no_else_if` corrupts valid parsing code** (found while paying down T3.10; do *not* convert it) | — |
 | ⬜ | everything else | see the tiers below — **Tier 0 is now closed** |
 
-**Next by value:** **T3.10** — 11 Syntax rules rewrite their own source files,
-which is the same shipped byte-scope defect T3.7 just fixed twice, now with an
-executable oracle and a ratchet already in place to measure the paydown. Then
-**T5.9** (pay down T1's 8-rule ledger; the two `:no_fixture` entries have working
-fixtures already identified in the item). Then **T1.2**, the G3 residue T1 does
-not cover. T2.1–T2.3 remain the prerequisites for any Phase-9 run.
+**Next by value:** **T3.10a** — it is the only item on this file known to corrupt
+*valid, parsing* source, and it needs a maintainer decision (retire a live rule
+into its hardened sibling) rather than a conversion. Then the rest of **T3.10**
+(8 rules left of 11). Then **T5.9** (pay down T1's 8-rule ledger; the two
+`:no_fixture` entries have working fixtures already identified in the item). Then
+**T1.2**, the G3 residue T1 does not cover. T2.1–T2.3 remain the prerequisites
+for any Phase-9 run.
 
 ---
 
@@ -558,18 +560,84 @@ its own tests run under real `mix test`.
   (T3.7's `FixDivRem` finding), and **make `analyze` and `fix` read the same
   shadow** or the rule fixes what it never reported.
 
-  `no_else_if` is the outlier and deserves its own read: it is a multi-line block
-  rewrite with neither a comment guard nor heredoc tracking, while its sibling
-  `fix_elsif_in_if_chain` has both. Two rules for one failure mode, one of them
-  safe — that asymmetry is a design question, not just a bug, and it may be that
-  the right paydown is retiring one of them. Per the project's standing rule,
-  extract the verified failure mode before deciding.
+  Three of the eleven were **not** string-masking cases, and two of those are
+  already paid down — see T3.10a. Confirm which repair a rule needs before
+  assuming it is masking; `SourceMask` applied to the wrong rule is not a no-op,
+  it is a silent retirement (`no_doc_with_do_block` would have matched nothing at
+  all on the shadow, because its pattern keys on the `"` quotes masking blanks).
 
-  Three of the eleven are **not** obviously string-masking cases:
-  `fix_malformed_spec` and `prefer_spec_arrow_operator` rewrite an `@spec` shape
-  that appears in their own moduledocs, and `fix_stale_access_modifier` has no
-  literal guard at all but is line-anchored — worth confirming which of the
-  eleven `SourceMask` actually fixes before assuming it fixes all of them.
+- [ ] **T3.10a [C] `no_else_if` — do NOT convert it. It has four confirmed
+  defects that masking does not touch, and its ledger entry is the only thing
+  flagging them.** This started as "the outlier at 226 lines" and is now the most
+  serious finding on the ledger. Everything below was **run**, not read:
+
+  * **The 226 is an artifact.** `fix/1` on its own file removes 2 lines, and the
+    scan's positional diff then counts every subsequent line as changed
+    (`241 → 239` lines, 226 positional differences). The real prose corruption is
+    ~7 lines, all inside its own `@moduledoc`. **So the ledger's line count is
+    not a proxy for severity when the rule changes line count** — `no_else_if`
+    sat at the top of the paydown order for the wrong reason, and the ordering
+    note above should be read with that caveat.
+  * **It corrupts valid, parsing code.** Given `if a do … else if b do … else …
+    end end` — which *parses*, because `else if` is legal Elixir (`else` plus a
+    nested `if` opening its own block) — it emits a `cond do … end` plus a stray
+    `end`, and the output **does not parse**. Verified both directions. Its
+    trigger token is genuinely ambiguous and the rule assumes the broken reading
+    unconditionally. The discriminator it lacks is the `end` count at the chain's
+    indent: 1 means the broken transplant, N+1 means valid nested `if`.
+  * **Three boundary cases produce non-parsing output**: a missing terminator
+    (swallows to EOF), `else # note` (folds the else body into the previous
+    branch), and an empty branch body (emits a bodyless `cond` clause). The empty
+    body case also raises an Elixir *runtime warning* from
+    `no_else_if.ex:135` — `Range.new/2` with `last < first` — so there is a
+    latent negative-range bug under it.
+  * **Its sibling `fix_elsif_in_if_chain` is hardened against all of these**, in
+    its very first commit, by a reviewing agent whose log enumerates the same six
+    defects. A third copy (`no_elsif_keyword`) was **rejected in review for being
+    the pre-hardening copy of that rule**. `no_else_if` is that same artifact — it
+    landed five weeks earlier, through a gate that did not exist yet.
+  * **The pipeline partially protects users.** On a mixed chain the sibling
+    declines and `no_else_if` then rewrites it, but `fix_with_trace` shows
+    `{Credence.Syntax.NoElseIf, :reverted}` — the C4 revert gate catches that one.
+    That bounds the blast radius; it does not make the rule correct, and it does
+    not cover the valid-nested-if case, which the phase never sees because that
+    source parses.
+
+  **Why converting it would be actively harmful.** Masking its trigger *does*
+  clear the ledger entry — verified, the shadow has zero `^\s*else\s+if` hits
+  against 1 raw hit. It would also turn the gate green over four live corruption
+  modes and burn the one signal that surfaced them. `no_else_if` stays on the
+  ledger deliberately until the design question below is answered.
+
+  **The design question, and the recommended sequence.** The two rules' triggers
+  are provably disjoint (`^\s*els?if\b` cannot match `else if`), so this is not a
+  duplicate in the C11 sense — it is one failure mode with two spellings and only
+  one hardened implementation. Recommended, and explicitly a maintainer decision:
+  (1) copy `no_else_if`'s 14 assertions into the sibling's test files, **red**;
+  (2) widen the sibling's `@elsif_re` to `~r/^\s*(?:els?if|else\s+if)\b/` and add
+  the `end`-count discriminator, asserting `elsif`/`elif` output is byte-identical
+  before and after the widen — commit `fe6c2f7` is the template for exactly this
+  move; (3) run `no_else_if`'s tests against the sibling unmodified; (4) retire
+  `no_else_if` only once (3) is green. Test coverage today is 37 assertions for
+  the sibling against 14 for `no_else_if`, and *none* of `no_else_if`'s 14
+  involves a string, a heredoc, a comment on the `else` line, a missing
+  terminator, or surrounding code.
+
+  **The failure mode, written out first so retiring the rule cannot lose it —
+  FM-ELSE-IF.** An LLM translating Python emits `else if <expr> do` at branch
+  indent, meaning `elif`. Elixir reads it as `else` plus a nested `if` that opens
+  its own block, so a chain with N `else if` headers needs **N+1** `end`s and the
+  author wrote 1. Every token is legal and the construct is legal; the failure is
+  arithmetic on block terminators, and the parser can only report it at the
+  outermost unclosed `do` — usually the `defmodule` line, tens of lines above the
+  mistake, naming neither `else` nor `if`. The repair is to collapse the ladder to
+  `cond do`, supplying `true -> nil` when there is no trailing `else` (a nested
+  `if` yields `nil` where `cond` would raise `CondClauseError`). The
+  discriminator that makes it safe is the `end` count above. Prevalence in LLM
+  output is **unmeasured** — the corpus has zero hits, but the corpus by
+  construction holds only files that parse, so it cannot answer this. That is a
+  reason to preserve the failure mode carefully, not a reason to weaken the
+  repair.
 
 - [x] ~~**T3.9 [C] 57 files fail `mix format --check-formatted` at HEAD.**~~
   **DONE `f564e31` (maintainer).** Pre-existing drift, not from any code change

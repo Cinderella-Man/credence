@@ -66,10 +66,21 @@ defmodule Credence.SourceMask do
   masked.
   """
 
-  # Byte written over every non-code byte. Chosen so it cannot take part in a
-  # match: it is not a word byte, not whitespace, and not punctuation any rule
-  # keys on — so masking can neither create a match nor alter one that spans
-  # only code bytes.
+  # Byte written over every non-code byte. Chosen so a pattern built from
+  # `\w`, `\s`, `\d` or literal punctuation cannot match it — those are what
+  # rules key on, so masking neither creates such a match nor alters one that
+  # spans only code bytes.
+  #
+  # It is NOT inert to every class, and a rule author has to know which:
+  # `\S`, `.` and any negated class (`[^\n]`) DO match it, because it is a
+  # non-newline non-whitespace byte and nothing can change that. The
+  # consequence is that a greedy `\S+` or `.+?` will *span* a literal in the
+  # shadow rather than stop at it. That is usually right — in
+  # `IO.puts("a") div 2` the left operand genuinely is `IO.puts("a")`, and
+  # splicing it out of the real line reproduces it exactly, which is how
+  # `fix_div_rem.ex` works. It is wrong for a pattern that relies on a
+  # literal's *delimiter* as a boundary, since the delimiter is blanked too.
+  # Such a rule wants `self_contained?/2` and the raw line, not the shadow.
   @blank 0x01
 
   defguardp word_byte?(c)
