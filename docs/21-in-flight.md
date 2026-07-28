@@ -565,3 +565,91 @@ session, written first this time.
 `--amend`ed, so the tracker named an object that resolves out of the reflog but
 is not in the branch. Corrected in `6463c54`. A commit cannot state its own id;
 anything that writes one must come *after* the commit it names.
+
+---
+
+## Session 2026-07-28 (night, third) — the salvage tier and four live defects
+
+Continued straight on from the OOM diagnosis above. **Nothing in flight**; both
+repos clean and level with their remotes.
+
+**credence** — `a3a3faa` T3.3 · `a3ff262` T3.5 · `7f3804a` T2.5 sweep + T3.12,
+plus tracker passes. Suite **9,936 tests + 6 properties, 0 failures**.
+
+**harness** — `be31904` T2.2 (H8) · `11a3d0e` T2.1 (gate corpus dispatch) ·
+`e12235f` 20 files of pre-existing formatter drift, isolated as credence's T3.9
+was · `24f2dee` T4.1 (the STATUS.md interlock). Suite **199 → 255 passed**.
+
+### The salvage held up, because it was re-derived rather than believed
+
+Both salvaged items came with claims their agent was killed before it could
+state. Re-running them cost little and was the point:
+
+* **T2.2** — all six positive controls re-run against the placed files, all six
+  red (41/42, 40/42, 39/42, 41/42, 40/42, 41/42), restored 42/42.
+* **T2.1** — all nine mutants re-run and killed, including the three that
+  matter: believing `RESULT=clean` on a non-zero exit, treating a missing
+  RESULT line as clean, and a loose NEW-bullet anchor.
+
+**The anchors probe was the piece nobody had done, and it earned its keep.** The
+parser is now fed the *real* stdout of `mix credence.corpus --only-rule` —
+captured by running it, with the drift case produced by dropping one line from
+`accepted_findings.txt` and restoring it. That matters because a NEW bullet is
+followed by an indented source excerpt whose three lines each look like a
+finding. Every other test of that parser feeds it output a person wrote, which is
+the blind spot this program keeps rediscovering: fixture and parser share an
+author and agree by construction. Both captures are committed as fixtures.
+
+### Four defects, and where each came from
+
+1. **T3.3** — `credence.equiv` answered EQUIVALENT from comparing nothing.
+   `Enum.all?/2` over `[]` is `true`, and the default battery is empty for
+   *every* multi-var snippet, so an entire class of rewrite passed by default.
+   Pinned with `a - b` vs `b - a`.
+2. **A second instance of the same bug**, found while fixing the first: in
+   `--minimal-set`, a switch whose filter shrank the battery to nothing was
+   reported as `EQUIVALENT minimal_set=[that switch]` — naming a switch as what
+   makes two expressions agree, on zero inputs.
+3. **T3.5** — the equivalence checker renamed only the `defmodule` header, so a
+   module referring to itself (`%Point{}`) kept pointing at the old name. Dies in
+   `expand_struct/5`; worse if an earlier test left a `Point` loaded, because
+   then it silently compares against the wrong module.
+4. **T3.12** — `UsedUnderscoreVariable` stripped one underscore per pass with no
+   check the result was still a variable: `__MODULE → _MODULE → MODULE`, and
+   `MODULE` is an alias. `MODULE = :mod` **compiles clean and raises MatchError
+   at runtime**.
+
+### Findings worth carrying
+
+**A vacuity guard can hide the thing it was meant to expose.** T3.3's second
+clause — "every input raised on both sides" — is the obvious form and is wrong:
+when the two sides raise *different* classes on every input, that is a real
+behaviour change, and the guard would have relabelled DIVERGES as SKIPPED. It
+now fires only where `ob === oa` already held, so it can only intercept verdicts
+that would have been EQUIVALENT. Narrowing a guard until it cannot mask anything
+is part of writing it, not a refinement.
+
+**Two of the four defects were found by writing the check, not by running it.**
+T3.3's narrowing and T4.1's fail-closed polarity were both caught while writing
+the control — in T4.1's case the first draft's comment claimed unrecognised
+modes were not treated as permission while the code did exactly that. The
+control is a reading of the code that the author has not already done.
+
+**Enumerate the permitting value, not the forbidding one.** T4.1 blocks unless
+the mode is exactly `PRODUCING`. Enumerating `CATCHING UP` instead would let a
+typo in a hand-edited file, an empty value, or a mode added later all read as
+permission to generate.
+
+**A ten-minute sweep bought a runtime-only defect no gate could see.** T2.5's
+idempotency sweep exists to measure a rate, and the rate (29/2,158, 1.3%)
+matched E7's estimate — but the return was T3.12, which no parse check and no
+compile check can catch, because the output parses and compiles and is simply
+wrong. Also worth recording: the sweep is only runnable at all because the
+compile bound landed first. It sweeps every fixture in the tree, and one of them
+does not terminate.
+
+**The sweep also argued against its own gate.** 13 of the 29 are a Pattern fix
+leaving a variable the Semantic round then reports unused — E7's intended
+re-pass, working. A flat idempotency assertion would be red for correct
+behaviour and teach people to disable it, so T2.5's remaining half is a C13/C14
+ratchet over the 29, not an assertion.
