@@ -460,8 +460,8 @@ defmodule Credence.Semantic do
       diagnostics
       |> Enum.sort_by(&position_sort_key/1, :desc)
       |> Enum.reduce({source, []}, fn diagnostic, {src, steps} ->
-        case find_matching_rule(diagnostic, rules) do
-          nil ->
+        case first_effective_fix(diagnostic, rules, src) do
+          :none ->
             # Log the FULL diagnostic (message + position + severity), not just
             # the message — this is the new-semantic-rule signal (Tunex `07`
             # §3.3/§3.6, `08` T1.3b): the implementer needs the position +
@@ -471,15 +471,14 @@ defmodule Credence.Semantic do
 
             {src, steps}
 
-          rule ->
+          {outcome, rule, fixed} ->
             name = RuleHelpers.rule_name(rule)
 
-            Logger.debug("[credence_fix] #{name}: matched diagnostic, running fix...")
-
-            fixed = rule.fix(src, diagnostic)
-
-            if fixed == src do
-              Logger.debug("[credence_fix] #{name}: fix returned IDENTICAL source (no change)")
+            if outcome == :no_op do
+              Logger.debug(
+                "[credence_fix] #{name}: fix returned IDENTICAL source (no change), and no " <>
+                  "later matching rule changed it either"
+              )
             else
               RuleHelpers.log_diff(name, src, fixed)
             end
@@ -511,16 +510,9 @@ defmodule Credence.Semantic do
   defp position_sort_key(_), do: {0, 0}
 
   defp match_rules(diagnostic, source, rules) do
-    case find_matching_rule(diagnostic, rules) do
-      nil ->
-        []
-
-      rule ->
-        if should_report?(rule, diagnostic, source) do
-          [rule.to_issue(diagnostic)]
-        else
-          []
-        end
+    case Enum.find(matching_rules(diagnostic, rules), &should_report?(&1, diagnostic, source)) do
+      nil -> []
+      rule -> [rule.to_issue(diagnostic)]
     end
   end
 
@@ -535,8 +527,40 @@ defmodule Credence.Semantic do
   # First match wins: a diagnostic is handled by exactly one rule, the
   # earliest in priority order. That is what makes a pass's fixes a flat,
   # per-diagnostic sequence, and therefore what makes them attributable.
-  defp find_matching_rule(diagnostic, rules) do
-    Enum.find(rules, fn rule -> rule.match?(diagnostic) end)
+  defp matching_rules(diagnostic, rules) do
+    Enum.filter(rules, fn rule -> rule.match?(diagnostic) end)
+  end
+
+  @doc false
+  # The first matching rule whose fix actually CHANGES the source; if none does,
+  # the first matcher, tagged `:no_op`.
+  #
+  # Dispatch used to stop at the first `match?/1` and accept whatever it did —
+  # including nothing. A rule that matched and then declined therefore CONSUMED
+  # the diagnostic, and every other rule that could have repaired it was
+  # unreachable. Measured: `FixLocalFunctionInGuard` matched `when is_range(r)`
+  # with no local `is_range` defined anywhere, returned the source unchanged, and
+  # `NoHallucinatedGuardFn` — which exists for exactly that case — never ran
+  # (escalation ledger row 196).
+  #
+  # docs/20 §3 says one diagnostic has one owner. This is what makes that true in
+  # practice rather than by seniority: ownership is decided by doing the repair,
+  # not by sorting first. A rule that declines yields the slot.
+  #
+  # The `:no_op` outcome is preserved when nobody repairs it, so the trace still
+  # distinguishes "matched and did nothing" from "nothing matched" (T3.2).
+  def first_effective_fix(diagnostic, rules, source) do
+    diagnostic
+    |> matching_rules(rules)
+    |> Enum.reduce_while(:none, fn rule, acc ->
+      fixed = rule.fix(source, diagnostic)
+
+      cond do
+        fixed != source -> {:halt, {:fixed, rule, fixed}}
+        acc == :none -> {:cont, {:no_op, rule, source}}
+        true -> {:cont, acc}
+      end
+    end)
   end
 
   # `:semantic_rules` is a testing/advanced seam, NOT the Pattern round's

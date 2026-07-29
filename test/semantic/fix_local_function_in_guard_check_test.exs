@@ -32,7 +32,16 @@ defmodule Credence.Semantic.FixLocalFunctionInGuardCheckTest do
     refute FixLocalFunctionInGuard.match?(diag)
   end
 
-  test "ignores other local function in guard errors" do
+  # This test used to `refute` the match — pinning the defect rather than the
+  # contract. The matcher was hardcoded to the literal string
+  # `"cannot find or invoke local is_range/1 inside a guard"`, so `is_blank/1`,
+  # `table/0` and `__match_pattern__/2` produced `no rule matched diagnostic`
+  # on real rows (escalation ledger 115/145/192). The rule's NAME promised a
+  # general repair its matcher never attempted.
+  #
+  # The contract now: it MATCHES any local-in-guard error, and declines through
+  # `should_report?/2` when it cannot inline safely.
+  test "matches any local function in guard error, not just is_range/1" do
     diag = %{
       severity: :error,
       message:
@@ -40,7 +49,29 @@ defmodule Credence.Semantic.FixLocalFunctionInGuardCheckTest do
       position: {2, 33}
     }
 
-    refute FixLocalFunctionInGuard.match?(diag)
+    assert FixLocalFunctionInGuard.match?(diag)
+  end
+
+  test "declines to report when the helper cannot be inlined into a guard" do
+    # `String.trim/1` is not allowed in a guard, so inlining this body would
+    # swap one compile error for another. Matching without reporting is the
+    # point: it must not claim the diagnostic it cannot repair.
+    source = """
+    defmodule Blank do
+      defp is_blank(l), do: byte_size(String.trim(l)) == 0
+      def f(line) when is_blank(line), do: :ok
+    end
+    """
+
+    diag = %{
+      severity: :error,
+      message:
+        "cannot find or invoke local is_blank/1 inside a guard. Only macros can be invoked inside a guard and they must be defined before their invocation. Called as: is_blank(line)",
+      position: {3, 20}
+    }
+
+    assert FixLocalFunctionInGuard.match?(diag)
+    refute FixLocalFunctionInGuard.should_report?(diag, source)
   end
 
   test "attributes the issue to this rule" do

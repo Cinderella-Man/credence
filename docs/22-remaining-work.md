@@ -697,7 +697,24 @@ its own tests run under real `mix test`.
     followed by a dot (`fn.(v)` — the keyword can never be, so it needs no
     evidence at all) and a trailing `fn` in value position. Three controls pin
     that genuine multi-clause keywords stay untouched.
-  * [ ] remaining: `FixLocalFunctionInGuard` (rows 115/145/192/196),
+  * [x] ~~`FixLocalFunctionInGuard` (rows 115/145/192/196)~~ — four rows, one
+    cause: the matcher was the **literal string**
+    `"cannot find or invoke local is_range/1 inside a guard"`, one name and one
+    arity, so the rule's name promised a general repair its matcher never
+    attempted. Now matches any local/arity and inlines the helper when — and only
+    when — the body is a single expression built from its own parameters,
+    literals and calls a guard permits. Rows 145 and 192 now repair; row 115
+    correctly declines, because `byte_size(String.trim(l)) == 0` looks inlinable
+    but `String.trim/1` is not guard-legal, so inlining would swap one compile
+    error for another.
+
+    Row 196 was the other half: it matched `when is_range(r)` with nothing
+    defining `is_range`, returned the source unchanged, and thereby **consumed**
+    the diagnostic. Fixed in two places — a `should_report?/2` decline, and
+    `lib/semantic.ex` now hands a diagnostic to the next matching rule when the
+    first no-ops. docs/20 §3 says one diagnostic has one owner; that makes it
+    true by *doing the repair* rather than by sorting first.
+  * [ ] remaining:
     `NoHallucinatedDefpstruct` + `UndefinedFunction` interaction (row 183), and
     the 4.6d deferred salvage rows.
 
