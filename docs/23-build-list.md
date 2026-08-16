@@ -19,7 +19,11 @@ most of them was never a new rule — it was a row in
 
 ## Repaired today — no rule needed (11)
 
-(Plus `no_deprecated_not_in`, which DID need a rule — see below.)
+(Plus two that DID need a rule and now have one: `no_deprecated_not_in` and
+`no_pipe_into_unary_arithmetic`. The latter was listed as
+`no_pipe_into_arithmetic_operator`; the name narrowed because only `+` and `-`
+reach the Semantic round — `|> * 2` and `|> / 2` are syntax errors and would be
+a Syntax rule.)
 
 | candidate | how |
 |---|---|
@@ -40,7 +44,7 @@ tested green, and deleted the same day: its "before" returns a valid value on
 every input, so the rewrite silently breaks any code that reads the tuple. The
 failure mode is real and catalogued; the rule cannot exist.
 
-## Still unbuilt, and each verified still uncovered (13)
+## Still unbuilt, and each verified still uncovered (12)
 
 Every one was confirmed uncovered by running its target: the pipeline returns the
 source unchanged today.
@@ -56,7 +60,6 @@ the same day. Everything below needs a rule and its own equivalence argument:
   a fabricated diagnostic, so this is a phase move, not a rebuild
 * `no_stream_data_constant_with_range`
 * `fix_ets_new_string_name`, `fix_ets_options_bare_keypos`
-* `no_pipe_into_arithmetic_operator`
 * `no_process_send_after_infinity` — needs a safety switch, not a narrowing
 * `no_atom_as_function_name`, `fix_stray_comma_before_when_guard`,
   `fix_when_guard_in_for_comprehension` — Syntax, and the last two must be built
