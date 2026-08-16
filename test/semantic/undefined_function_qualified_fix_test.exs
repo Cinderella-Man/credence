@@ -1191,4 +1191,75 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       )
     end
   end
+
+  # ── The three one-line rows docs/23 listed as cheapest ──────────────
+  #
+  # Each target was checked to EXIST before being written down
+  # (`function_exported?`), and each repaired module was compiled after the fix.
+
+  describe "docs/23 table rows" do
+    defp qfix(source, message) do
+      UndefinedFunction.fix(source, %{severity: :error, message: message, position: {2, 1}})
+    end
+
+    test "Map.reduce/3 becomes Enum.reduce/3" do
+      confirm_fix(
+        qfix(
+          """
+          defmodule MapRed do
+            def f(m), do: Map.reduce(m, 0, fn _, a -> a end)
+          end
+          """,
+          "Map.reduce/3 is undefined or private"
+        ),
+        """
+        defmodule MapRed do
+          def f(m), do: Enum.reduce(m, 0, fn _, a -> a end)
+        end
+        """
+      )
+    end
+
+    # The generator requires a kind; `:ascii` is the widest that cannot emit
+    # surrogates or unassigned codepoints, so a generated fixture stays
+    # printable.
+    test "StreamData.string/0 gains the kind it requires" do
+      confirm_fix(
+        qfix(
+          """
+          defmodule SdStr do
+            def f, do: StreamData.string()
+          end
+          """,
+          "StreamData.string/0 is undefined or private"
+        ),
+        """
+        defmodule SdStr do
+          def f, do: StreamData.string(:ascii)
+        end
+        """
+      )
+    end
+
+    # `:crypto.hash_equals/2` rather than `Plug.Crypto.secure_compare/2`:
+    # staying inside `:crypto` repairs the call without adding a dependency to
+    # the user's project.
+    test ":crypto.compare/2 becomes the constant-time :crypto.hash_equals/2" do
+      confirm_fix(
+        qfix(
+          """
+          defmodule CryCmp do
+            def f(a, b), do: :crypto.compare(a, b)
+          end
+          """,
+          ":crypto.compare/2 is undefined or private"
+        ),
+        """
+        defmodule CryCmp do
+          def f(a, b), do: :crypto.hash_equals(a, b)
+        end
+        """
+      )
+    end
+  end
 end

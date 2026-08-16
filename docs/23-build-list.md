@@ -17,7 +17,7 @@ candidates off the list, and the reason it could is that the honest repair for
 most of them was never a new rule — it was a row in
 `Semantic.UndefinedFunction`'s replacement tables.
 
-## Repaired today — no rule needed (8)
+## Repaired today — no rule needed (11)
 
 | candidate | how |
 |---|---|
@@ -29,25 +29,22 @@ most of them was never a new rule — it was a row in
 | `no_hallucinated_queue_empty` | `:queue.empty/0` → `new`; **/1 → `is_empty`**, added here |
 | `fix_hallucinated_naive_datetime_accessor` | shipped (ledger row 458) |
 | `no_agent_update_tuple_wrapper` | **deliberately not built** — docs/17 entry 28 |
+| `no_hallucinated_map_reduce` | `Map.reduce/3` → `Enum.reduce/3` |
+| `no_hallucinated_stream_data_string` | `StreamData.string/0` → `string(:ascii)` |
+| `no_hallucinated_crypto_compare` | `:crypto.compare/2` → `:crypto.hash_equals/2` |
 
 `no_agent_update_tuple_wrapper` is the one that matters most. It was built,
 tested green, and deleted the same day: its "before" returns a valid value on
 every input, so the rewrite silently breaks any code that reads the tuple. The
 failure mode is real and catalogued; the rule cannot exist.
 
-## Still unbuilt, and each verified still uncovered (17)
+## Still unbuilt, and each verified still uncovered (14)
 
 Every one was confirmed uncovered by running its target: the pipeline returns the
 source unchanged today.
 
-**Table rows — cheapest first.** Each is a `@qualified_replacements` entry plus
-tests, in the shape the eight above just used:
-
-* `no_hallucinated_map_reduce` — `Map.reduce/3` → `Enum.reduce/3`
-* `no_hallucinated_stream_data_string` — `StreamData.string/0` → `string(:ascii)`
-* `no_hallucinated_crypto_compare` — `:crypto.compare/2` → `Plug.Crypto.secure_compare/2`
-
-**Rules — each needs its own equivalence argument:**
+**No table rows remain** — the three this list identified as cheapest were added
+the same day. Everything below needs a rule and its own equivalence argument:
 
 * `no_enum_sort_then_map_values`
 * `no_raw_send_in_genserver_handle_call`

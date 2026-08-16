@@ -415,14 +415,15 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   records as having taken heavy damage on review). Every candidate was checked
   by **running its target through the live pipeline**, not by reading.
 
-  Of the 25 rebuild/salvage candidates, **8 are already repaired** — and the
+  Of the 25 rebuild/salvage candidates, **11 are already repaired** — and the
   reason that number is so high is that the honest repair for most was never a
   new rule but a row in `UndefinedFunction`'s tables. One of the eight,
   `no_agent_update_tuple_wrapper`, is repaired by *not existing*.
 
-  **17 remain, each verified still uncovered today.** Three are one-line table
-  rows (`Map.reduce/3`, `StreamData.string/0`, `:crypto.compare/2`) and the rest
-  need their own equivalence argument. Two of the Syntax ones
+  **14 remain, each verified still uncovered today.** No table rows are left —
+  the three the list identified as cheapest (`Map.reduce/3`,
+  `StreamData.string/0`, `:crypto.compare/2`) were added the same day, so
+  everything remaining needs a rule and its own equivalence argument. Two of the Syntax ones
   (`fix_stray_comma_before_when_guard`, `fix_when_guard_in_for_comprehension`)
   must be built **together** — they emit the byte-identical parse error and need
   opposite repairs, so a shared backward scanner is the only safe way to build

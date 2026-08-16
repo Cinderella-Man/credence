@@ -135,6 +135,21 @@ defmodule Credence.Semantic.UndefinedFunction do
     # question (`:queue.is_empty/1`). Same name, opposite meanings — which is
     # why the table is keyed on arity and why one row could never cover both.
     {":queue", "empty", 1} => {:rename, ":queue", "is_empty"},
+
+    # `Map.reduce/3` does not exist — `Enum.reduce/3` is the function meant, and
+    # it accepts a map directly, so the callback's `{k, v}` arity is unchanged.
+    {"Map", "reduce", 3} => {:rename, "Enum", "reduce"},
+
+    # `StreamData.string/0` does not exist; the generator requires a kind.
+    # `:ascii` is the conservative pick — the widest kind that cannot emit
+    # surrogates or unassigned codepoints, so a generated fixture stays printable.
+    {"StreamData", "string", 0} => {:rename_add_arg, "StreamData", "string", ":ascii"},
+
+    # `:crypto.compare/2` is invented. `:crypto.hash_equals/2` is the
+    # constant-time comparison meant, and it is deliberately preferred over
+    # `Plug.Crypto.secure_compare/2`: staying inside `:crypto` repairs the call
+    # without adding a dependency to the user's project.
+    {":crypto", "compare", 2} => {:rename, ":crypto", "hash_equals"},
     # :math has no min/max — those are Kernel guards.
     {":math", "min", 2} => {:rename, "Kernel", "min"},
     {":math", "max", 2} => {:rename, "Kernel", "max"},
