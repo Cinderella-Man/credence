@@ -151,4 +151,97 @@ defmodule Credence.Pattern.PreferLookupForDigitConversionCheckTest do
              """)
     end
   end
+
+  # ── D6/C12(c): the SHAPE half of over-fitting ──────────────────────────
+  #
+  # docs/12 named this rule as over-fit, and probing it agreed — but not where
+  # the doc said. The matcher was keyed to the UPPERCASE hex alphabet alone, so
+  # of the two shapes an author writes it fired on one. Lowercase is not exotic:
+  # git SHAs, MD5 digests and CSS colours are all lowercase hex, and
+  # `Base.encode16` carries a `case: :lower` option because both are common.
+  #
+  # The generalisation is exact rather than a widening guess: the repair reads
+  # the alphabet back off the clauses it matched, so a lowercase table can only
+  # produce a lowercase lookup.
+  describe "both hex alphabets" do
+    defp hex_table(name, alphabet) do
+      clauses =
+        Enum.map_join(0..15, "\n", fn i ->
+          "  defp #{name}(#{i}), do: #{inspect(String.at(alphabet, i))}"
+        end)
+
+      "defmodule HexT do\n" <> clauses <> "\n\n  def go(n), do: #{name}(n)\nend\n"
+    end
+
+    test "a lowercase table is detected" do
+      source = hex_table("hex_digit", "0123456789abcdef")
+
+      assert [%Issue{rule: :prefer_lookup_for_digit_conversion}] =
+               check(PreferLookupForDigitConversion, source)
+    end
+
+    test "an uppercase table is still detected" do
+      source = hex_table("hex_digit", "0123456789ABCDEF")
+
+      assert [%Issue{rule: :prefer_lookup_for_digit_conversion}] =
+               check(PreferLookupForDigitConversion, source)
+    end
+
+    test "the repair keeps the alphabet it found — lowercase stays lowercase" do
+      fixed = fix(PreferLookupForDigitConversion, hex_table("hex_digit", "0123456789abcdef"))
+
+      assert fixed =~ ~s("0123456789abcdef")
+      refute fixed =~ ~s("0123456789ABCDEF")
+    end
+
+    test "and uppercase stays uppercase" do
+      fixed = fix(PreferLookupForDigitConversion, hex_table("hex_digit", "0123456789ABCDEF"))
+
+      assert fixed =~ ~s("0123456789ABCDEF")
+      refute fixed =~ ~s("0123456789abcdef")
+    end
+
+    # The reason a wider matcher is safe here: the rewrite is behaviour-identical
+    # on the whole domain, out-of-range input included. Executed through
+    # `call_fixed/4`, not argued from the shapes.
+    test "the rewritten function answers identically for 0..15 and raises alike outside" do
+      for {tag, alphabet} <- [{"Lo", "0123456789abcdef"}, {"Up", "0123456789ABCDEF"}] do
+        source = hex_table("hex_digit", alphabet) |> String.replace("HexT", "HexEq" <> tag)
+        fixed = fix(PreferLookupForDigitConversion, source)
+        mod = String.to_atom("Elixir.HexEq" <> tag)
+
+        for i <- 0..15 do
+          assert call_fixed(source, mod, :go, [i]) == call_fixed(fixed, mod, :go, [i])
+        end
+
+        for i <- [-1, 16, 100] do
+          assert outcome(source, mod, i) == outcome(fixed, mod, i)
+        end
+      end
+    end
+
+    defp outcome(code, mod, arg) do
+      {:ok, call_fixed(code, mod, :go, [arg])}
+    rescue
+      e -> {:raised, e.__struct__}
+    end
+
+    # A near-miss control. Fifteen of the sixteen clauses is not the idiom, and
+    # the missing one is exactly where a wider matcher would start guessing.
+    test "an incomplete table is left alone" do
+      clauses =
+        Enum.map_join(1..15, "\n", fn i ->
+          "  defp hex_digit(#{i}), do: #{inspect(String.at("0123456789abcdef", i))}"
+        end)
+
+      assert check(PreferLookupForDigitConversion, "defmodule HexT do\n" <> clauses <> "\nend\n") ==
+               []
+    end
+
+    # And a mixed-case table is not either alphabet, so it is not this idiom.
+    test "a mixed-case table is left alone" do
+      assert check(PreferLookupForDigitConversion, hex_table("hex_digit", "0123456789AbCdEf")) ==
+               []
+    end
+  end
 end

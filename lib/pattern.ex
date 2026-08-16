@@ -98,17 +98,35 @@ defmodule Credence.Pattern do
     run_fixable_rules(all_rules, code_string, opts, baseline)
   end
 
+  # The parse is threaded through the accumulator rather than redone per rule.
+  # Of the seven ways out of this reduce, exactly ONE returns a different source
+  # — the accepted-fix branch of `apply_or_revert/9` — so the parse is only ever
+  # stale if that branch forgets to re-derive it, which is a single place to get
+  # right rather than a cache with an invalidation window.
+  #
+  # It was 157 `Sourceror.parse_string/1` calls per file, one per rule, where a
+  # file with five firing rules has only six distinct source strings. Sourceror's
+  # parse is not cheap: `Code.string_to_quoted` with `literal_encoder`,
+  # `token_metadata` and `columns`, then a full `Macro.traverse` to merge
+  # comments back in.
+  #
+  # The re-derivation must go through `Sourceror.parse_string/1` and keep the
+  # `{:error, _}` branch. `apply_rule_fix_with_status/3` only proved the output
+  # satisfies `Code.string_to_quoted/1`, and Sourceror parses under a different
+  # option set, so "it was accepted" is not "Sourceror can read it".
   defp run_fixable_rules(fixable, code_string, opts, baseline) do
-    {code, applied, _baseline} =
-      Enum.reduce(fixable, {code_string, [], baseline}, fn rule, {source, applied, baseline} ->
-        name = RuleHelpers.rule_name(rule)
+    seed = {code_string, Sourceror.parse_string(code_string), [], baseline}
 
-        case Sourceror.parse_string(source) do
+    {code, _parsed, applied, _baseline} =
+      Enum.reduce(fixable, seed, fn rule, {source, parsed, applied, baseline} ->
+        case parsed do
           {:ok, ast} ->
             check_opts = Keyword.put(opts, :source, source)
             issues = rule.check(ast, check_opts)
 
             if issues != [] do
+              name = RuleHelpers.rule_name(rule)
+
               Logger.debug(
                 "[credence_fix] #{name}: check found #{length(issues)} issue(s), running fix..."
               )
@@ -117,19 +135,31 @@ defmodule Credence.Pattern do
                      invoke_fix(rule, source, check_opts)
                    end) do
                 :crashed ->
-                  {source, [{rule, :crashed} | applied], baseline}
+                  {source, parsed, [{rule, :crashed} | applied], baseline}
 
                 {status, fixed} ->
-                  apply_or_revert(rule, name, source, fixed, status, issues, applied, baseline)
+                  apply_or_revert(
+                    rule,
+                    name,
+                    source,
+                    parsed,
+                    fixed,
+                    status,
+                    issues,
+                    applied,
+                    baseline
+                  )
               end
             else
-              {source, applied, baseline}
+              {source, parsed, applied, baseline}
             end
 
           {:error, reason} ->
-            Logger.debug("[credence_fix] source no longer parses at #{name}: #{inspect(reason)}")
+            Logger.debug(
+              "[credence_fix] source does not parse, no pattern rule can run: #{inspect(reason)}"
+            )
 
-            {source, applied, baseline}
+            {source, parsed, applied, baseline}
         end
       end)
 
@@ -191,7 +221,7 @@ defmodule Credence.Pattern do
   #   - be returned silently to the caller as a "successful" fix.
   # Instead we revert to the pre-fix source for that rule and mark
   # it as `:reverted` in the trace so the offending rule is visible.
-  defp apply_or_revert(rule, name, source, fixed, status, issues, applied, baseline) do
+  defp apply_or_revert(rule, name, source, parsed, fixed, status, issues, applied, baseline) do
     cond do
       # C5. Patches WERE produced and then discarded by the safety invariants in
       # `apply_rule_fix_with_status/3` (output did not parse, or the comment
@@ -206,7 +236,7 @@ defmodule Credence.Pattern do
             "#{length(issues)} finding(s) reported and left unfixed"
         )
 
-        {source, [{rule, :patch_rejected} | applied], baseline}
+        {source, parsed, [{rule, :patch_rejected} | applied], baseline}
 
       # T3.2. The check fired and the fix changed nothing. Before this branch the
       # rule vanished from the trace entirely (a `Logger.debug` and no entry), so
@@ -221,31 +251,39 @@ defmodule Credence.Pattern do
             "IDENTICAL source — the finding is reported and left unfixed"
         )
 
-        {source, [{rule, :no_op} | applied], baseline}
+        {source, parsed, [{rule, :no_op} | applied], baseline}
 
-      not RuleHelpers.compiles_no_worse?(fixed, baseline) ->
-        Logger.warning(
-          "[credence_fix] #{name}: fix ADDED a compile error the source did not have, reverting"
-        )
-
-        # Visibility (Tunex `08` T1.3): log the broken before/after so a reverted
-        # fix's diff lands in the row log for the deterministic bugfix-lane seed.
-        # The revert *logic* is unchanged — `:reverted` is already a clean signal.
-        RuleHelpers.log_diff(name, source, fixed)
-
-        {source, [{rule, :reverted} | applied], baseline}
-
+      # Everything below needs the output's compile errors, and everything above
+      # must not pay for them: those two branches leave the source untouched and
+      # compile nothing today. Splitting the decision out is what keeps that true
+      # while still computing the error set exactly ONCE for the two consumers
+      # that both want it — the revert test and the new baseline.
       true ->
-        RuleHelpers.log_diff(name, source, fixed)
-        # Re-baseline on the accepted output. Keeping the ORIGINAL baseline
-        # would be a hole: if this fix removed a pre-existing error, a later
-        # rule could re-introduce it and still pass the subset test. The errors
-        # were just computed by the check above, so this costs no extra compile
-        # in the common case where the file compiles (both sets are empty).
-        new_baseline =
-          if MapSet.size(baseline) == 0, do: baseline, else: RuleHelpers.compile_errors(fixed)
+        decide(rule, name, source, parsed, fixed, issues, applied, baseline)
+    end
+  end
 
-        {fixed, [{rule, length(issues)} | applied], new_baseline}
+  defp decide(rule, name, source, parsed, fixed, issues, applied, baseline) do
+    errors = RuleHelpers.compile_errors(fixed)
+
+    if MapSet.subset?(errors, baseline) do
+      RuleHelpers.log_diff(name, source, fixed)
+
+      # Re-baseline on the accepted output rather than carrying the original.
+      # Keeping the original would be a hole: if this fix removed a pre-existing
+      # error, a later rule could re-introduce it and still pass the subset test.
+      # `errors` is that new baseline — already computed, not recompiled.
+      {fixed, Sourceror.parse_string(fixed), [{rule, length(issues)} | applied], errors}
+    else
+      Logger.warning(
+        "[credence_fix] #{name}: fix ADDED a compile error the source did not have, reverting"
+      )
+
+      # Visibility (Tunex `08` T1.3): log the broken before/after so a reverted
+      # fix's diff lands in the row log for the deterministic bugfix-lane seed.
+      RuleHelpers.log_diff(name, source, fixed)
+
+      {source, parsed, [{rule, :reverted} | applied], baseline}
     end
   end
 

@@ -72,14 +72,19 @@ defmodule Credence.Syntax do
   @spec fix_with_trace(String.t(), keyword()) ::
           {String.t(), [{module(), non_neg_integer() | :reverted | :rolled_back}]}
   def fix_with_trace(source, opts \\ []) do
-    all_rules = rules(opts)
-
     case Sourceror.parse_string(source) do
       {:ok, _ast} ->
         Logger.debug("[credence_fix] syntax fix pipeline: source already parses, skipping")
         {source, []}
 
+      # `rules/1` is built HERE rather than above the `case`. The Syntax round
+      # does nothing at all on source that parses, which is almost every file,
+      # and discovery walks all 321 modules asking each for its behaviours — so
+      # hoisting it out of the branch meant paying for a rule list that the
+      # common path discards unused.
       {:error, {meta, error_msg, token}} ->
+        all_rules = rules(opts)
+
         Logger.debug(
           "[credence_fix] starting syntax fix pipeline (#{length(all_rules)} rules), " <>
             describe_error(meta, error_msg, token)

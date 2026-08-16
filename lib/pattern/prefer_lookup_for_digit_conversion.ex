@@ -37,8 +37,19 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
   alias Credence.Issue
   alias Credence.RuleHelpers
 
-  @hex_chars "0123456789ABCDEF"
-  @expected_values for(i <- 0..15, do: {i, String.at(@hex_chars, i)}) |> Map.new()
+  # Both hex alphabets. `Integer.to_string/2` emits uppercase, but lowercase is
+  # what git SHAs, MD5 digests and CSS colours look like — and `Base.encode16`
+  # carries a `case: :lower` option precisely because both are common. Keying on
+  # uppercase alone meant the rule fired on ONE of the two shapes an author
+  # writes, which is over-fitting to the example the author happened to choose.
+  #
+  # The repair reads the alphabet back off whichever one matched rather than
+  # hardcoding it, so widening the match cannot produce the wrong case.
+  @hex_alphabets ["0123456789ABCDEF", "0123456789abcdef"]
+  @expected_values Map.new(
+                     @hex_alphabets,
+                     fn chars -> {chars, Map.new(0..15, &{&1, String.at(chars, &1)})} end
+                   )
 
   @impl true
   def check(ast, _opts) do
@@ -81,7 +92,7 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
     |> Enum.flat_map(fn {_name_arity, clauses} ->
       case extract_hex_mapping(clauses) do
         {:ok, mapping} ->
-          if complete_hex_mapping?(mapping) do
+          if hex_alphabet(mapping) do
             meta = elem(hd(clauses), 1)
             [build_issue(meta)]
           else
@@ -98,8 +109,8 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
 
   defp replace_hex_digit_clauses(stmts) do
     case find_hex_digit_group(stmts) do
-      {:ok, name, clause_indices} ->
-        replacement = build_replacement(name)
+      {:ok, name, chars, clause_indices} ->
+        replacement = build_replacement(name, chars)
         indices_set = MapSet.new(clause_indices)
 
         new_stmts =
@@ -131,14 +142,14 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
     |> Enum.find_value(:error, fn {_name_arity, clauses} ->
       case extract_hex_mapping(clauses) do
         {:ok, mapping} ->
-          if complete_hex_mapping?(mapping) do
+          if chars = hex_alphabet(mapping) do
             indices =
               Enum.map(clauses, fn {_, _, _} = clause ->
                 Enum.find_index(stmts, &(&1 == clause))
               end)
 
             name = get_function_name(hd(clauses))
-            {:ok, name, indices}
+            {:ok, name, chars, indices}
           end
 
         :error ->
@@ -149,11 +160,14 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
 
   defp get_function_name({:defp, _, [{name, _, _} | _]}), do: name
 
-  defp build_replacement(name) do
+  defp build_replacement(name, chars) do
     # Build a single GUARDED clause:
     #   defp name(remainder) when remainder in 0..15 do
     #     "0123456789ABCDEF" |> String.at(remainder)
     #   end
+    #
+    # `chars` is the alphabet the original clauses spelled out — read back off
+    # the input, never assumed — so a lowercase table stays lowercase.
     #
     # The guard is essential: the original 16 clauses match ONLY integers 0..15
     # and raise FunctionClauseError for everything else. An unguarded clause with
@@ -163,7 +177,7 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
     # 0 <= remainder <= 15), so the rewrite is behaviour-preserving.
     quote do
       defp unquote(name)(remainder) when remainder in 0..15 do
-        "0123456789ABCDEF"
+        unquote(chars)
         |> String.at(remainder)
       end
     end
@@ -240,8 +254,14 @@ defmodule Credence.Pattern.PreferLookupForDigitConversion do
 
   defp extract_string(_), do: :error
 
-  defp complete_hex_mapping?(mapping) do
-    map_size(mapping) == 16 and mapping == @expected_values
+  # Returns the alphabet the clauses spell out, or `nil` if they are not a
+  # complete hex table in either case.
+  defp hex_alphabet(mapping) do
+    if map_size(mapping) == 16 do
+      Enum.find_value(@expected_values, fn {chars, expected} ->
+        if mapping == expected, do: chars
+      end)
+    end
   end
 
   defp build_issue(meta) do

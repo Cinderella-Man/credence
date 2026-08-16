@@ -30,7 +30,15 @@ defmodule Credence.RuleSelfRepairTest do
   examples are also the D8a duplicate corpus and the `rule_card` fixtures, so an
   unrealistic one degrades three things at once, and nothing else was checking.
   """
-  use ExUnit.Case, async: true
+  # `async: false`, and not for speed. This gate COMPILES every rule's example,
+  # and those examples share module names — 21 of them say `defmodule Bad` and
+  # five say `defmodule M`. The Erlang code server is global, so two async tests
+  # compiling `Bad` at the same moment race: one deletes the module the other is
+  # about to check, and the fix comes back `:reverted` for a reason that has
+  # nothing to do with the rule. Observed exactly once, as
+  # `NoDuplicateFunctionClauses -> reverted`, passing when run alone.
+  # `dispatch_contention_test.exs` is `async: false` for the same reason.
+  use ExUnit.Case, async: false
 
   alias Credence.RuleDuplication
 

@@ -167,6 +167,14 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   (`mix cev.report`), H16 (`solve.ex:38` deps one-liner), H17, H18.
 ## D. Credence rule work (independent of the merge)
 
+- [x] **D14. Hot-path performance, three of eight.** See
+  `docs/24-improvement-research.md` §A5 for the ranked table and the five that
+  remain. Landed: the Pattern round threads its parse through the reduce instead
+  of re-parsing per rule (~150 Sourceror parses per file), the accept/revert
+  decision computes the output's compile errors once instead of twice, and the
+  Syntax round builds its rule list only on the branch that uses it.
+
+
 - [x] **D13. Every Pattern rule's own anti-pattern is now repaired end-to-end**
   (`test/rule_self_repair_test.exs`, 153 direct + 3 ledgered cascades). Not on
   the original list. Recorded because the *method* generalises: reporting and
@@ -242,28 +250,16 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   second argument for doing it — Semantic rules have no equivalent shared corpus,
   so there is no duplicate signal for the Semantic round at all today.
 
-- [ ] **D6. C12(c) — the SHAPE half of over-fitting.** The **name** half is
-  done: requirement 7 is now gated by `test/alpha_rename_test.exs`, and the
-  answer is **zero** — no Pattern rule is keyed to a variable name. Two findings
-  came out of measuring it rather than assuming it. First, docs/12 named three
-  rules as over-fit (`prefer_map_intersect_over_mapset_intersection`,
-  `prefer_lookup_for_digit_conversion`,
-  `prefer_string_slice_for_trim_last_char`) and **all three pass the name bar**;
-  they are over-fit in *shape* — a hard-coded four-stage pipeline, a byte-exact
-  16-clause hex table, one 3-clause `case` — which is real and is what remains
-  here. Second, the first three "offenders" the probe reported were all **its
-  own bugs**: an attribute reference (`@re`) and a zero-arity definition name
-  both parse as `{name, meta, nil}`, exactly like a variable, and the third was
-  `Sourceror.to_string/1` normalising `'abc'` to `~c"abc"` on round-trip, which
-  is why the gate now compares against a reprinted baseline rather than the
-  original source.
-
-  So C12(c) is the open part: retire or generalise those three matchers to the
-  idiom's core. **Trade-off worth stating before anyone starts** — generalising
-  a matcher widens what it fires on, and this project's standing rule is that a
-  wider rule is often strictly worse than a narrow one. Each of the three needs
-  its own corpus scan and equivalence argument, not a blanket widening. C12(b),
-  fire-rate telemetry, stays blocked on the harness's H10/H11.
+- [ ] **D6. C12(c) — two of the three shape-over-fit matchers are generalised;
+  one is untouched.** The name half was already done (zero Pattern rules keyed to
+  a variable name). On shape, `prefer_lookup_for_digit_conversion` now matches
+  both hex alphabets and `prefer_string_slice_for_trim_last_char` accepts the
+  two-clause and `String.codepoints` spellings, each after executing the
+  equivalence rather than arguing it. **`prefer_map_intersect_over_mapset_intersection`
+  (356 lines, a hard-coded four-stage pipeline) is not probed yet** — do that
+  before deciding, since both of the others turned out narrower than docs/12
+  described and in a different way than it described. C12(b), fire-rate
+  telemetry, stays blocked on the harness's H10/H11.
 
 - [ ] **D7. T5.7** — C9 hot-path (the Pattern fix loop re-parses the source
   once **per rule**; discovery re-scans `Application.spec` every call), C10

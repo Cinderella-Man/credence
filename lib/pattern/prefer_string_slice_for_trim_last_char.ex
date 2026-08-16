@@ -55,18 +55,47 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastChar do
     end)
   end
 
-  # Match: case String.graphemes(var) do
-  #          [] -> ""
-  #          [_last] -> ""
-  #          [_head | _tail] -> String.slice(var, 0, String.length(var) - 1)
-  #        end
+  # Match a `case` whose clauses all agree on "give me everything but the last
+  # character", regardless of which shapes the author enumerated.
+  #
+  # ## Why this is not the three fixed clauses it used to be
+  #
+  # The matcher was positional: exactly three clauses, `[] -> ""` first,
+  # `[_last] -> ""` second, cons-to-slice third, and `String.graphemes` as the
+  # subject. docs/12 C12(c) called this rule over-fit in SHAPE, and probing it
+  # agreed — these all express the identical function and none of them fired:
+  #
+  #     case String.graphemes(s) do          case String.codepoints(s) do
+  #       [] -> ""                             [] -> ""
+  #       _ -> String.slice(...)               [_last] -> ""
+  #     end                                    [_h | _t] -> String.slice(...)
+  #                                          end
+  #
+  # Equivalence to `String.slice(str, 0..-2//1)` was EXECUTED for each variant
+  # over combining characters, ZWJ emoji and CJK, not argued from the shapes.
+  # The 2-clause form differs from the 3-clause form only on a single-grapheme
+  # string, where both return `""`. `String.codepoints` differs from
+  # `String.graphemes` only on multi-codepoint graphemes, where it takes the
+  # cons branch and `String.length/1` — still grapheme-based — makes the slice
+  # `""` anyway.
+  #
+  # ## The boundary, and why it is here
+  #
+  # Accepted: any clause set where exactly one clause slices, it comes LAST, and
+  # every earlier clause returns `""` for a shape that is empty or single.
+  #
+  # Not accepted: the slice clause appearing FIRST. It is equivalent — that was
+  # measured too — but a leading `[_h | _t]` makes the trailing `[_last]` and
+  # `[]` clauses unreachable, and unreachable clauses are a different defect with
+  # a different rule (`RemoveUnreachableClausesAfterCatchall`). Rewriting the
+  # whole `case` away would silently take that finding with it.
   defp match_trim_last_char({:case, _meta, [subject, clauses_kw]}) do
-    with {:ok, var} <- match_graphemes_subject(subject),
+    with {:ok, var} <- match_grapheme_list_subject(subject),
          {:ok, clauses} <- extract_do_clauses(clauses_kw),
-         true <- length(clauses) == 3,
-         true <- match_empty_clause?(Enum.at(clauses, 0)),
-         true <- match_single_clause?(Enum.at(clauses, 1)),
-         true <- match_head_tail_clause?(Enum.at(clauses, 2), var) do
+         true <- length(clauses) >= 2,
+         {leading, [last]} <- Enum.split(clauses, -1),
+         true <- match_slice_clause?(last, var),
+         true <- Enum.all?(leading, &match_empty_result_clause?/1) do
       {:ok, var}
     else
       _ -> :error
@@ -75,15 +104,37 @@ defmodule Credence.Pattern.PreferStringSliceForTrimLastChar do
 
   defp match_trim_last_char(_), do: :error
 
-  # Match: String.graphemes(var)
-  defp match_graphemes_subject(
-         {{:., _, [{:__aliases__, _, [:String]}, :graphemes]}, _, [{var, _, nil}]}
+  # Match: `String.graphemes(var)` or `String.codepoints(var)`. Both only ever
+  # feed the emptiness/length test above; the slice itself uses
+  # `String.length/1`, which is grapheme-based either way.
+  defp match_grapheme_list_subject(
+         {{:., _, [{:__aliases__, _, [:String]}, fun]}, _, [{var, _, nil}]}
        )
-       when is_atom(var) do
+       when fun in [:graphemes, :codepoints] and is_atom(var) do
     {:ok, var}
   end
 
-  defp match_graphemes_subject(_), do: :error
+  defp match_grapheme_list_subject(_), do: :error
+
+  # A clause that returns `""` for a shape holding at most one element: `[]` or
+  # `[_x]`. Deliberately NOT a bare `_` — a leading `_ -> ""` would send every
+  # input to `""`, which is a different function entirely, not this idiom.
+  defp match_empty_result_clause?(clause) do
+    match_empty_clause?(clause) or match_single_clause?(clause)
+  end
+
+  # The clause that does the slicing, under either `[_h | _t]` or a bare
+  # wildcard. A wildcard here is what makes the two-clause form work.
+  defp match_slice_clause?(clause, var) do
+    match_head_tail_clause?(clause, var) or match_wildcard_slice_clause?(clause, var)
+  end
+
+  defp match_wildcard_slice_clause?({:->, _, [[{var_name, _, nil}], body]}, var)
+       when is_atom(var_name) do
+    match_slice_body?(body, var)
+  end
+
+  defp match_wildcard_slice_clause?(_, _), do: false
 
   # Extract clauses from the do block
   defp extract_do_clauses([{{:__block__, _, [:do]}, clauses}]) when is_list(clauses) do
