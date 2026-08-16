@@ -378,15 +378,23 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   97.2%**. **Zero** rules flag without ever fixing. Exactly one sits below 50%:
   `NoRedundantListTraversal`, at 6/19.
 
-  That rule is a real check/fix parity violation rather than a cosmetic
-  self-revert: on three traversals of one list bound to separate variables,
-  `check/2` returns an issue and `fix_patches/2` returns **zero patches** — so it
-  reports what it cannot repair, which is the shape the policy forbids. The
-  repair is either to narrow `check/2` to what the fix handles, or to widen the
-  fix; Semantic solved the same problem with the `should_report?/2` idiom
-  (*the decline guard IS the fix*) and Pattern has no equivalent. **Trade-off:**
-  narrowing loses a true finding the tool could report, widening needs its own
-  equivalence argument for a multi-traversal rewrite.
+  **That one rule is a deliberate decision, not drift — and it is the decision
+  FIX_LOG meant to defer.** `NoRedundantListTraversal` fixes only
+  `min`+`max` (into `Enum.min_max/1`). `@fixable_pairs` **excludes**
+  `count`+`sum` on a written rationale: merging `length/1` and `Enum.sum/1` into
+  a manual `Enum.reduce` with a tuple accumulator is a readability downgrade,
+  and `sum`/`length` is the idiomatic way to compute a mean. So the rule reports
+  "consider merging" and does not fix, on purpose.
+
+  I narrowed `check/2` to the fixable set to enforce *fix or drop*, and reverted
+  it: it turned 12 check tests red, all of them pinning that intentional
+  reporting. **The decision is genuinely yours**, and now has numbers attached:
+  * **keep it** — one rule reports 13 findings it will not repair, and the
+    project's "every rule fixes" claim carries a documented exception;
+  * **narrow `check/2`** — the claim becomes true without exception, 12 tests
+    go, and a real redundancy stops being reported;
+  * **widen the fix** — needs an equivalence argument for the count+sum merge
+    *and* a defence of the readability cost the note already rejects.
 
   Worth keeping the metric: nothing measured fix coverage before, so "does
   coverage go up or down across an evolution" had no answer. It does now.
