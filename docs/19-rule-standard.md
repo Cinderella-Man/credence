@@ -45,10 +45,17 @@ are enforced by a meta-test today; the rest are the catch-up work in §2.
 
 Items 1–3 are why the suite is 8,261 tests.
 
-**Three of items 4–9 have since been gated** — 4 by C2.2, 5 by C14, 8 by C13 —
-each with its positive controls seen red on purpose. That is what §3 said had to
-happen first: the gates go in before the retrofit sweep, so the sweep runs behind
-a ratchet instead of racing one. Items 6, 7 and 9 remain open.
+**Four of items 4–9 have since been gated** — 4 by C2.2, 5 by C14 and 8 by C13
+on 2026-07-28, then 7 by C12(a) on 2026-08-16 — each with its positive controls
+seen red on purpose. That is what §3 said had to happen first: the gates go in
+before the retrofit sweep, so the sweep runs behind a ratchet instead of racing
+one. **Items 6 and 9 remain open.**
+
+Requirement 7 is the one that cost nothing to satisfy: the gate measured **zero**
+offenders across all Pattern rules, so it was a ratchet from the day it landed
+rather than a wall. Worth noting *because* the audit predicted otherwise —
+docs/12 C12 named three rules as over-fit and all three pass it. They are
+over-fit by **shape**, not by name, which is C12(c) and still open.
 
 **Those three are exactly the bar `STATUS.md` sets for `PRODUCING`**, and all
 three legs of it are now in place: the meta-gates (above), `mix credence.gen.rule`
