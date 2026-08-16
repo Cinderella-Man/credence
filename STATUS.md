@@ -180,19 +180,30 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
   story (T3.6), which makes three. Worth one sweep: for each Semantic rule, does
   every input its `match?/1` accepts have a `fix/2` branch?
 - [ ] **D2a. Finish the byte-scope sweep `UndefinedFunction` started.** Probing
-  the 4.6d blocker found the rule's per-line replacements rewriting a same-named
-  call **inside a string literal and inside a trailing comment** — the
-  T3.7/T3.10 class, live, in the busiest rule in the tree. Fixed: every per-line
-  edit now goes through `SourceMask.replace_code/5`. Two things remain.
-  * **The oracle has a blind spot worth closing.** The self-corruption gate runs
-    a rule's `fix/1` over its own source, which only Syntax rules have — so it
-    structurally cannot see this class in Semantic or Pattern. A Semantic
-    equivalent needs a diagnostic to drive `fix/2`, which the witness index
-    already produces. That is the cheapest remaining "find an input the author
-    did not choose".
-  * **Sweep the other line-level rewriters.** Any rule that edits source text by
-    line rather than by AST range is a candidate; `grep -rn 'String.split(source'
-    lib/` is the starting list.
+  D2's stated blocker found that rule rewriting a same-named call **inside a
+  string literal and inside a trailing comment** — the T3.7/T3.10 class, live,
+  in the busiest rule in the tree. Fixed in `364ea85`: every per-line edit now
+  goes through the new `SourceMask.replace_code/5`. Two things remain, and the
+  second is worth more than the first.
+  * **Sweep the other line-level rewriters — 20 candidates, measured.** Of the
+    21 Semantic rules that edit source by splitting it into lines, **20 do not
+    mask**; `undefined_function.ex` is the only one that now does. But this is a
+    candidate list, not a defect list: three spot-checks
+    (`UnusedVariable`, `UsedUnderscoreVariable`, `NoDocOnPrivateFunction`) came
+    back **clean**, because they replace one token at a known position rather
+    than every occurrence on the line. So the honest prior is "some of 20", and
+    the sweep is one probe per rule — a string and a comment containing the
+    token the rule rewrites. `grep -rln 'String.split(source' lib/semantic/`
+    is the list.
+  * **Close the oracle's blind spot, which is why nobody found this.** The
+    self-corruption gate runs a rule's `fix/1` over its own source, and only
+    Syntax rules have a `fix/1` — a Semantic rule needs a diagnostic to drive
+    `fix/2`. So the gate built precisely to catch this class is structurally
+    blind to two thirds of the rules, and the one confirmed instance sat in the
+    most-reached rule in the tree. The witness index already produces
+    diagnostics per rule, so a Semantic equivalent is cheap. This is the
+    standing lesson — *find an input the author did not choose* — applied to the
+    phase where it has never been applied.
 
 - [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
   `List.keystore`, `exit/2` into `UndefinedFunction`'s tables; blocked on
