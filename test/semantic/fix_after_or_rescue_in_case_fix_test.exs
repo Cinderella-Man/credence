@@ -7,6 +7,7 @@ defmodule Credence.Semantic.FixAfterOrRescueInCaseFixTest do
 
   @message_after "unexpected option :after in \"case\""
   @message_rescue "unexpected option :rescue in \"case\""
+  @message_catch "unexpected option :catch in \"case\""
 
   defp fix(source, message, line \\ 1) do
     FixAfterOrRescueInCase.fix(source, %{
@@ -169,7 +170,12 @@ defmodule Credence.Semantic.FixAfterOrRescueInCaseFixTest do
     confirm_fix(fix(input, @message_after), expected)
   end
 
-  test "else rides along into the try when rescue is present" do
+  # An `else` vetoes the whole rewrite. A `try`'s `else` matches the success
+  # value of the body, not the fallthrough of the `case`, so moving it changes
+  # what the program returns. Both shapes below were verified by execution:
+  # a catch-all `else` turns :success into :err, and a non-exhaustive one
+  # raises TryClauseError where the original merely failed to compile.
+  test "refuses the rewrite when else is present, even alongside rescue" do
     input = ~S"""
     defmodule CaseWithElseAndRescue do
       def clean_up do
@@ -177,7 +183,7 @@ defmodule Credence.Semantic.FixAfterOrRescueInCaseFixTest do
           :ok -> :success
           _ -> :failure
         else
-          value -> value
+          _ -> :err
         rescue
           _ -> :error
         end
@@ -185,27 +191,28 @@ defmodule Credence.Semantic.FixAfterOrRescueInCaseFixTest do
     end
     """
 
-    expected = ~S"""
-    defmodule CaseWithElseAndRescue do
-      def clean_up do
-        try do
-          case :ok do
-            :ok -> :success
-            _ -> :failure
-          end
-        else
-          value -> value
-        rescue
-          _ -> :error
-        end
-      end
-    end
-    """
-
-    confirm_fix(fix(input, @message_rescue), expected)
+    confirm_fix(fix(input, @message_rescue), input)
   end
 
-  test "leaves a case with only catch untouched (not this rule's diagnostic)" do
+  test "refuses the rewrite when else is present alongside after" do
+    input = ~S"""
+    defmodule CaseWithElseAndAfter do
+      def clean_up do
+        case :ok do
+          :ok -> :success
+        else
+          _ -> :err
+        after
+          IO.puts("done")
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @message_after), input)
+  end
+
+  test "wraps case-catch in try" do
     input = ~S"""
     defmodule CaseWithOnlyCatch do
       def clean_up do
@@ -219,7 +226,55 @@ defmodule Credence.Semantic.FixAfterOrRescueInCaseFixTest do
     end
     """
 
-    confirm_fix(fix(input, @message_after), input)
+    expected = ~S"""
+    defmodule CaseWithOnlyCatch do
+      def clean_up do
+        try do
+          case :ok do
+            :ok -> :success
+            _ -> :failure
+          end
+        catch
+          :throw, value -> value
+        end
+      end
+    end
+    """
+
+    confirm_fix(fix(input, @message_catch), expected)
+  end
+
+  test "the decline yields the slot rather than consuming the diagnostic" do
+    with_else = ~S"""
+    defmodule Yielding do
+      def clean_up do
+        case :ok do
+          :ok -> :success
+        else
+          _ -> :err
+        after
+          IO.puts("done")
+        end
+      end
+    end
+    """
+
+    diag = %{severity: :error, message: @message_after, position: {1, 1}}
+    refute FixAfterOrRescueInCase.should_report?(diag, with_else)
+
+    without_else = ~S"""
+    defmodule Reporting do
+      def clean_up do
+        case :ok do
+          :ok -> :success
+        after
+          IO.puts("done")
+        end
+      end
+    end
+    """
+
+    assert FixAfterOrRescueInCase.should_report?(diag, without_else)
   end
 
   test "does not touch a plain nested case inside the broken one" do

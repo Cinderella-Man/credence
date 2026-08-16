@@ -5,6 +5,7 @@ defmodule Credence.Semantic.FixAfterOrRescueInCaseCheckTest do
 
   @real_message_after "unexpected option :after in \"case\""
   @real_message_rescue "unexpected option :rescue in \"case\""
+  @real_message_catch "unexpected option :catch in \"case\""
 
   test "matches the :after diagnostic" do
     diag = %{severity: :error, message: @real_message_after, position: {3, 5}}
@@ -13,6 +14,11 @@ defmodule Credence.Semantic.FixAfterOrRescueInCaseCheckTest do
 
   test "matches the :rescue diagnostic" do
     diag = %{severity: :error, message: @real_message_rescue, position: {3, 5}}
+    assert FixAfterOrRescueInCase.match?(diag)
+  end
+
+  test "matches the :catch diagnostic" do
+    diag = %{severity: :error, message: @real_message_catch, position: {3, 5}}
     assert FixAfterOrRescueInCase.match?(diag)
   end
 
