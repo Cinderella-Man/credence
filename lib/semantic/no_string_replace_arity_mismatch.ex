@@ -32,6 +32,20 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatch do
   rule covers the case the sibling cannot reach: a `String.replace` evaluated at
   compile time (a module attribute, a macro body), where the `FunctionClauseError`
   aborts compilation.
+
+  ## Bad
+
+      defmodule A do
+        @masked String.replace("ab", ~r/(a)(b)/, fn full, a, b -> full <> a <> b end)
+        def masked, do: @masked
+      end
+
+  ## Good
+
+      defmodule A do
+        @masked Regex.replace(~r/(a)(b)/, "ab", fn full, a, b -> full <> a <> b end)
+        def masked, do: @masked
+      end
   """
   use Credence.Semantic.Rule
 

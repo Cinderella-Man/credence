@@ -45,6 +45,18 @@ defmodule Credence.Semantic.UndefinedFunction do
   "runs after the default population, for a stated reason", and it is why the
   specific rules need no priority of their own. Enforced by
   `test/dispatch_contention_test.exs` (docs/22 T1.2).
+
+  ## Bad
+
+      defmodule M do
+        def run(l), do: len(l)
+      end
+
+  ## Good
+
+      defmodule M do
+        def run(l), do: length(l)
+      end
   """
   use Credence.Semantic.Rule
   alias Credence.Issue

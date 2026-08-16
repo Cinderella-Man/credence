@@ -25,6 +25,25 @@ defmodule Credence.Semantic.FixHallucinatedEnumRange do
   `Enum.range(…)` call whose function name sits exactly at the flagged
   column, and the fix no-ops rather than risk a wrong edit (same policy as
   `FixHallucinatedCalendarIsoAccessor`).
+
+  ## Bad
+
+      defmodule CredenceEnumRangeMultilineE2E do
+        def a(n) do
+          Enum.range(
+            0,
+            n
+          )
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceEnumRangeMultilineE2E do
+        def a(n) do
+          0..n
+        end
+      end
   """
   use Credence.Semantic.Rule
 

@@ -9,6 +9,28 @@ defmodule Credence.Semantic.NoDefineMatchFn do
 
   The fix renames the local function to `match_pattern?` and updates all
   internal call sites.
+
+  ## Bad
+
+      defmodule A do
+        defp match?(a, b), do: a == b
+        def f(x), do: match?(x, 1)
+      end
+
+      defmodule B do
+        def g(x), do: match?({:ok, _}, x)
+      end
+
+  ## Good
+
+      defmodule A do
+        defp match_pattern?(a, b), do: a == b
+        def f(x), do: match_pattern?(x, 1)
+      end
+
+      defmodule B do
+        def g(x), do: match?({:ok, _}, x)
+      end
   """
   use Credence.Semantic.Rule
 

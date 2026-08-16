@@ -30,6 +30,22 @@ defmodule Credence.Semantic.FixHallucinatedMapsetAny do
   in the file is protected by the anchor. The `should_report?/2` phase hook
   keeps `analyze` honest by reporting an issue only when `fix/2` would
   actually rewrite the source.
+
+  ## Bad
+
+      defmodule CredenceMapsetAnyReports do
+        def has_active?(mapset, tombstones) do
+          MapSet.any?(mapset, fn tag -> not MapSet.member?(tombstones, tag) end)
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceMapsetAnyReports do
+        def has_active?(mapset, tombstones) do
+          Enum.any?(mapset, fn tag -> not MapSet.member?(tombstones, tag) end)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

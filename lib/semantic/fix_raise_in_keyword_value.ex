@@ -16,6 +16,18 @@ defmodule Credence.Semantic.FixRaiseInKeywordValue do
   The rewrite only targets `raise` calls that are the direct value of a
   `do:` keyword (not `do...end` blocks) and that lack closing-paren
   metadata — so already-parenthesised calls are left untouched.
+
+  ## Bad
+
+      defmodule CredenceRaiseInKeywordLiveRepro do
+        def f(_, _), do: raise ArgumentError, "bad argument"
+      end
+
+  ## Good
+
+      defmodule CredenceRaiseInKeywordLiveRepro do
+        def f(_, _), do: raise(ArgumentError, "bad argument")
+      end
   """
   use Credence.Semantic.Rule
 

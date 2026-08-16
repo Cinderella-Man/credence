@@ -26,6 +26,22 @@ defmodule Credence.Semantic.FixPinInEtsMatchSpec do
   inside e.g. `match?/2` on the same line is left alone). The
   `should_report?/2` phase hook reports an issue only when the fix would
   actually rewrite the source.
+
+  ## Bad
+
+      defmodule FixPinInEtsMatchSpec do
+        def reset(table, name) do
+          :ets.match_delete(table, {{^name, :_}, :_})
+        end
+      end
+
+  ## Good
+
+      defmodule FixPinInEtsMatchSpec do
+        def reset(table, name) do
+          :ets.match_delete(table, {{name, :_}, :_})
+        end
+      end
   """
   use Credence.Semantic.Rule
 

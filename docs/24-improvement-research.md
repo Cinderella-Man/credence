@@ -128,14 +128,29 @@ making the compiling gate `async: false`, which is what
 `dispatch_contention_test.exs` already does. Renaming them uniquely would be the
 belt-and-braces fix and is cheap; it is not done.
 
-### A7. The Semantic round has no shared corpus, so no duplicate signal — [READ]
+### A7. The Semantic backfill is done, and it REFUTED its own motivation — [DONE]
 
-D8a's duplicate gate works because every Pattern rule carries a `## Bad` example,
-which gives a free shared corpus that grows with the rule set. Semantic is at
-6 of 89. There is therefore **no duplicate signal for the Semantic round at all**,
-and it is the round with first-match-wins dispatch, where a shadowed rule is
-silently dead. This is the second argument for the D5 Semantic backfill, and a
-better one than the documentation value.
+The argument for backfilling Semantic was that it would give that round a
+duplicate signal, which it had none of. All 86 examples are now in and verified
+true — and pointing the D8a intersection at them reports **zero** pairs, for a
+reason that makes the whole idea wrong rather than merely unproductive.
+
+Semantic dispatch is first-match-wins, so a snippet is claimed by exactly one
+rule. Measured: **84 of 89 rules fire on exactly one snippet**, their own.
+Containment between two singletons is false unless they are the same singleton,
+so the containment half can almost never fire and a gate on it would pass by
+construction — the T3.10a vacuity failure exactly. The signature half alone is
+no better: 76 pairs at Jaccard >= 0.6.
+
+The Semantic duplicate question is already answered by a different and stronger
+mechanism: a Semantic duplicate is a rule that never wins its dispatch slot,
+which `dispatch_contention_test.exs` detects directly and `pipeline_witness`
+catches end-to-end.
+
+So the backfill's value turned out to be the shared adversarial corpus and the
+truth gate over it — which found two pre-existing false examples — not the
+duplicate signal it was proposed for. Worth recording as the fifth claim this
+project has had refuted by running it.
 
 ---
 

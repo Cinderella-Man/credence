@@ -38,6 +38,26 @@ defmodule Credence.Semantic.NoUsePlugConn do
 
   `should_report?/2` re-runs `fix/2`, so a diagnostic the rewrite declines is
   never reported as an issue either — the check and the fix always agree.
+
+  ## Bad
+
+      defmodule MyApp.Plug.Greeter do
+        use Plug.Conn
+
+        def call(conn, _opts) do
+          send_resp(conn, 200, "ok")
+        end
+      end
+
+  ## Good
+
+      defmodule MyApp.Plug.Greeter do
+        import Plug.Conn
+
+        def call(conn, _opts) do
+          send_resp(conn, 200, "ok")
+        end
+      end
   """
   use Credence.Semantic.Rule
 

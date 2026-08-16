@@ -12,6 +12,20 @@ defmodule Credence.Semantic.FixNegationInGuard do
   Semantics are identical — both produce a boolean negation — so behaviour
   is preserved.  The rewrite is scoped to `when` clauses only; `!` outside
   guards (e.g. in function bodies) is left untouched.
+
+  ## Bad
+
+      defmodule Example do
+        def check(x) when !is_number(x), do: :error
+        def negate(x), do: !x
+      end
+
+  ## Good
+
+      defmodule Example do
+        def check(x) when not is_number(x), do: :error
+        def negate(x), do: !x
+      end
   """
   use Credence.Semantic.Rule
 

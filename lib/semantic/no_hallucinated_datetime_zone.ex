@@ -13,6 +13,18 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZone do
   and leaving other struct fields (e.g. `.zone_abbr`) untouched. Each flagged
   occurrence carries its own diagnostic, so every real hallucination is still
   fixed within the pass.
+
+  ## Bad
+
+      defmodule DatetimeZoneWitness do
+        def f(%DateTime{} = dt), do: dt.zone
+      end
+
+  ## Good
+
+      defmodule DatetimeZoneWitness do
+        def f(%DateTime{} = dt), do: dt.time_zone
+      end
   """
   use Credence.Semantic.Rule
 

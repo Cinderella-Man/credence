@@ -9,6 +9,20 @@ defmodule Credence.Semantic.NoDuplicateDefstruct do
   LLMs iterate on struct definitions and emit multiple `defstruct` calls in the
   same module. The fix keeps only the last `defstruct` call, removing all
   preceding ones.
+
+  ## Bad
+
+      defmodule Foo do
+        defstruct [:a]
+        defstruct name: nil
+        defstruct name: nil, age: 0
+      end
+
+  ## Good
+
+      defmodule Foo do
+        defstruct name: nil, age: 0
+      end
   """
   use Credence.Semantic.Rule
 

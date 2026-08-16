@@ -15,43 +15,16 @@ defmodule Credence.Semantic.NoUnusedTypeDeclaration do
 
   ## Bad
 
-      defmodule Saga do
-        @typep step :: %{name: atom()}
-
-        def new, do: %Saga{}
+      defmodule M do
+        @typep step :: atom()
+        def hi, do: :ok
       end
 
   ## Good
 
-      defmodule Saga do
-        def new, do: %Saga{}
+      defmodule M do
+        def hi, do: :ok
       end
-
-  An immediately preceding `@typedoc` is removed along with it: it documents
-  exactly the declaration being deleted, it is discarded by the compiler anyway
-  for a private type ("@typedoc's are always discarded for private types"), and
-  leaving it behind would swap one warning for another ("module attribute
-  @typedoc was set but no type follows it" — checked).
-
-  ## What it deliberately does NOT touch
-
-  The declaration is located by *name, arity and the line the warning names*, and
-  only among the direct children of a `defmodule` body. Everything else is left
-  alone:
-
-    * a same-named `@typep` in another module in the same file, or a same-named
-      declaration of a different arity — the flagged line pins exactly one.
-    * a `@typep` written inside `quote do … end`. It is not a direct child of the
-      module body, and deleting it would change every module that uses the macro,
-      not just the one the warning came from.
-    * a module whose whole body is the declaration (no `:__block__`), and a body
-      that would be left empty by the removal — an empty `defmodule` body is not
-      worth rendering.
-    * any shape the warning names but the walk cannot pin down to exactly one
-      declaration.
-
-  `should_report?/2` re-runs `fix/2`, so a diagnostic the rewrite declines is
-  never reported as an issue either — the check and the fix always agree.
   """
 
   use Credence.Semantic.Rule

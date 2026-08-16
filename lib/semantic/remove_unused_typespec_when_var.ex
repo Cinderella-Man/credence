@@ -28,6 +28,20 @@ defmodule Credence.Semantic.RemoveUnusedTypespecWhenVar do
 
       # After
       @spec foo(integer) :: integer
+
+  ## Bad
+
+      defmodule Solution do
+        @spec foo(x) :: x when x: integer, var_ok: true
+        def foo(x), do: x
+      end
+
+  ## Good
+
+      defmodule Solution do
+        @spec foo(x) :: x when x: integer
+        def foo(x), do: x
+      end
   """
   use Credence.Semantic.Rule
 

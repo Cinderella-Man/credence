@@ -30,6 +30,42 @@ defmodule Credence.Semantic.FixPinAtomInExceptionCase do
   The rule only fires when the never-matching clause is a *bare* pin — a
   guarded pin (`^exception when … ->`) or any other pattern shape is left
   alone, since the rewrite would not cover it.
+
+  ## Bad
+
+      defmodule CredencePinAtomLiveRepro do
+        def run(fun) do
+          exception = ArgumentError
+
+          try do
+            fun.()
+          rescue
+            e ->
+              case e do
+                ^exception -> :expected
+                _ -> :other
+              end
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule CredencePinAtomLiveRepro do
+        def run(fun) do
+          exception = ArgumentError
+
+          try do
+            fun.()
+          rescue
+            e ->
+              case e do
+                %^exception{} -> :expected
+                _ -> :other
+              end
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

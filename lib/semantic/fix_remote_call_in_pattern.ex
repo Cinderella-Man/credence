@@ -28,6 +28,28 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
           {^ref, :done, result} -> result
         end
       end
+
+  ## Bad
+
+      defmodule Ex do
+        def wait(state, ref) do
+          receive do
+            {state.ref, :done} -> ref
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule Ex do
+        def wait(state, ref) do
+          ref_1 = state.ref
+
+          receive do
+            {^ref_1, :done} -> ref
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

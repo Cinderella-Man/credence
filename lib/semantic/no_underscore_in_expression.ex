@@ -31,6 +31,22 @@ defmodule Credence.Semantic.NoUnderscoreInExpression do
   non-`_` element of the tuple is a plain literal (atom, number,
   string), and never inside a guard or a `quote` block — see
   `convertible_tuple?/1` and `walk/2` for why.
+
+  ## Bad
+
+      defmodule M do
+        def f(s) do
+          s == {"busy", _}
+        end
+      end
+
+  ## Good
+
+      defmodule M do
+        def f(s) do
+          match?({"busy", _}, s)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

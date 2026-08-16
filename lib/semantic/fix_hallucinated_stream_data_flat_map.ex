@@ -43,6 +43,26 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMap do
   keeps the default 500 against that rule's declared 501, so the ordering is
   declared — the catch-all yields to the specific claim (docs/20 §1) — rather
   than inherited from where the module names happen to sort.
+
+  ## Bad
+
+      defmodule CredenceStreamDataFlatMapReports do
+        def sized_lists do
+          StreamData.flat_map(StreamData.integer(1..10), fn len ->
+            StreamData.list_of(StreamData.constant(len), length: len)
+          end)
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceStreamDataFlatMapReports do
+        def sized_lists do
+          StreamData.bind(StreamData.integer(1..10), fn len ->
+            StreamData.list_of(StreamData.constant(len), length: len)
+          end)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

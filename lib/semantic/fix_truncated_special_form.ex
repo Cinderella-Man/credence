@@ -59,6 +59,18 @@ defmodule Credence.Semantic.FixTruncatedSpecialForm do
   `__`. A declining rule now yields the slot (`first_effective_fix/3`), so
   what the ordering buys is that the rule which can splice runs first and is
   the one `analyze/2` attributes the issue to.
+
+  ## Bad
+
+      defmodule EnvTest do
+        defmacro get_env, do: __ENV
+      end
+
+  ## Good
+
+      defmodule EnvTest do
+        defmacro get_env, do: __ENV__
+      end
   """
   use Credence.Semantic.Rule
 

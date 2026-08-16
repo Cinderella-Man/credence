@@ -11,6 +11,29 @@ defmodule Credence.Semantic.NoImplTrueForUndeclaredCallback do
 
   The fix strips the `@impl true` attribute from the offending function while
   leaving correctly-annotated callbacks untouched.
+
+  ## Bad
+
+      defmodule MisusedImpl do
+        use Supervisor
+
+        @impl true
+        def init(opts), do: {:ok, opts}
+
+        @impl true
+        def handle_call(:ping, _from, state), do: {:reply, :pong, state}
+      end
+
+  ## Good
+
+      defmodule MisusedImpl do
+        use Supervisor
+
+        @impl true
+        def init(opts), do: {:ok, opts}
+
+        def handle_call(:ping, _from, state), do: {:reply, :pong, state}
+      end
   """
   use Credence.Semantic.Rule
 

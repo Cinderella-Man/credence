@@ -14,6 +14,26 @@ defmodule Credence.Semantic.NoMatchWithMethodStringInPlugRouter do
   The deterministic fix converts `match "METHOD", "/path" do` to the correct
   method-specific macro (`post`, `get`, `put`, `patch`, `delete`). Methods not
   in the mapping are left as `match`.
+
+  ## Bad
+
+      defmodule ExampleRouter do
+        use Plug.Router
+
+        match "POST", "/api/webhooks/stripe" do
+          send_resp(conn, 200, "ok")
+        end
+      end
+
+  ## Good
+
+      defmodule ExampleRouter do
+        use Plug.Router
+
+        post "/api/webhooks/stripe" do
+          send_resp(conn, 200, "ok")
+        end
+      end
   """
   use Credence.Semantic.Rule
 

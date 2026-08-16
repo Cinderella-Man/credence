@@ -10,6 +10,18 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeInfo do
   The deterministic fix replaces the call:
 
       DateTime.info?(x)  →  match?(%DateTime{}, x)
+
+  ## Bad
+
+      defmodule X do
+        def f(x), do: DateTime.info?(x)
+      end
+
+  ## Good
+
+      defmodule X do
+        def f(x), do: match?(%DateTime{}, x)
+      end
   """
   use Credence.Semantic.Rule
 

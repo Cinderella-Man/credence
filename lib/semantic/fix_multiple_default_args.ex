@@ -35,6 +35,32 @@ defmodule Credence.Semantic.FixMultipleDefaultArgs do
   Anything else is left byte-identical and unreported via
   `should_report?/2`. Missing-`@impl` callback warnings are deliberately
   not handled here — that is an unrelated diagnostic for a dedicated rule.
+
+  ## Bad
+
+      defmodule CredenceFixMultipleDefaultArgsCheckFixture do
+        def greet(:hello, name \\\\ "world") do
+          "Hello, \#{name}!"
+        end
+
+        def greet(:goodbye, name \\\\ "world") do
+          "Goodbye, \#{name}!"
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceFixMultipleDefaultArgsCheckFixture do
+        def greet(arg0, name \\\\ "world")
+
+        def greet(:hello, name) do
+          "Hello, \#{name}!"
+        end
+
+        def greet(:goodbye, name) do
+          "Goodbye, \#{name}!"
+        end
+      end
   """
   use Credence.Semantic.Rule
 

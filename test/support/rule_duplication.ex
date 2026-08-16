@@ -57,6 +57,30 @@ defmodule Credence.RuleDuplication do
   number chosen for its output rather than its meaning. The retired genuine
   duplicate scores 0.875, so a threshold anywhere up to that catches it; 0.6
   keeps the three known pairs visible so a *fourth* has to be looked at.
+
+  ## Why there is no Semantic duplicate gate
+
+  The obvious next step after backfilling all 86 Semantic `## Bad` examples was
+  to point this signal at the Semantic round. Measured, it reports **zero**
+  pairs — and that zero is worthless, because it is structural rather than
+  earned.
+
+  Semantic dispatch is first-match-wins (`Enum.find`), so a snippet is claimed by
+  exactly one rule. The firing-set sizes say it outright: **84 of 89 rules fire
+  on exactly one snippet**, their own. Containment between two singletons is
+  false unless they are the same singleton, so the containment half can almost
+  never fire, and a gate built on it would pass by construction — the exact
+  vacuity failure T3.10a is about. (The signature half alone is no better here:
+  76 pairs at Jaccard >= 0.6.)
+
+  The duplicate question for Semantic is already answered, by a different
+  mechanism. A Semantic duplicate is a rule that never wins its dispatch slot,
+  which is what `dispatch_contention_test.exs` detects directly and what
+  `pipeline_witness` catches end-to-end. Building a second, weaker gate beside
+  them would add reassurance without adding information.
+
+  So the Semantic backfill's value is the shared adversarial corpus and the
+  `rule_card` truth gate over it — not a duplicate signal.
   """
 
   @noise [

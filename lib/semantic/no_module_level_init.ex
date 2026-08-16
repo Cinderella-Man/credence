@@ -38,6 +38,28 @@ defmodule Credence.Semantic.NoModuleLevelInit do
   501 so that every specific rule beats it by declaration rather than by
   spelling. This rule owns the `init/0` diagnostic because the repair is
   `@on_load`, not a renamed call.
+
+  ## Bad
+
+      defmodule Factory do
+        def init do
+          :ok
+        end
+
+        init()
+        init()
+      end
+
+  ## Good
+
+      defmodule Factory do
+        @on_load :init
+
+        def init do
+          :ok
+        end
+
+      end
   """
   use Credence.Semantic.Rule
 

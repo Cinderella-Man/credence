@@ -11,6 +11,30 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariable do
 
       rescue e -> {:error, e.message}                 # WRONG — warns
       rescue e -> {:error, Exception.message(e)}      # correct
+
+  ## Bad
+
+      defmodule ParseCheck do
+        def run do
+          try do
+            :ok
+          rescue
+            e -> {:error, e.message}
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule ParseCheck do
+        def run do
+          try do
+            :ok
+          rescue
+            e -> {:error, Exception.message(e)}
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

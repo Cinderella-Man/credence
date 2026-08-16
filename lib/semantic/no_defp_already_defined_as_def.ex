@@ -21,6 +21,26 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDef do
   clause (a true duplicate), the fix removes the `defp` clause. When the
   patterns differ (e.g. a recursive helper with different base cases), the fix
   renames the `defp` to `do_<name>` and updates all internal call sites.
+
+  ## Bad
+
+      defmodule Example do
+        def greet(name) do
+          "Hello, " <> name
+        end
+
+        defp greet(name) do
+          "Hi, " <> name
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def greet(name) do
+          "Hello, " <> name
+        end
+      end
   """
   use Credence.Semantic.Rule
 

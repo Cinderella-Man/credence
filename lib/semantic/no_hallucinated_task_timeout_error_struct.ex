@@ -30,6 +30,20 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStruct do
   position, where it never matched), but never both. It was ledgered
   `:no_fixture` under T1 for exactly that reason — no fixture could witness it,
   because none exists. docs/22 T5.9.
+
+  ## Bad
+
+      defmodule TaskTimeoutWitnessHead do
+        def handle({:exit, {%Task.TimeoutError{}, _stacktrace}}), do: :timeout
+        def handle({:ok, v}), do: v
+      end
+
+  ## Good
+
+      defmodule TaskTimeoutWitnessHead do
+        def handle({:exit, :timeout}), do: :timeout
+        def handle({:ok, v}), do: v
+      end
   """
   use Credence.Semantic.Rule
 

@@ -27,6 +27,24 @@ defmodule Credence.Semantic.FixTaskRefFieldAccess do
   call whose function name sits exactly at the flagged column, and the fix
   no-ops rather than risk a wrong edit (same policy as
   `FixHallucinatedEnumRange`).
+
+  ## Bad
+
+      defmodule CredenceTaskRefMultilineE2E do
+        def a(t) do
+          Task.ref(
+            t
+          )
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceTaskRefMultilineE2E do
+        def a(t) do
+          t.ref
+        end
+      end
   """
   use Credence.Semantic.Rule
 

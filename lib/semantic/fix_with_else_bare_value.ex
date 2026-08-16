@@ -35,18 +35,26 @@ defmodule Credence.Semantic.FixWithElseBareValue do
 
   ## Bad (compiles with error)
 
-      with {:ok, val} <- x do
-        val
-      else
-        :error
+      defmodule WithElseRealDiagnostic do
+        def run(x) do
+          with {:ok, val} <- x do
+            val
+          else
+            :error
+          end
+        end
       end
 
   ## Good
 
-      with {:ok, val} <- x do
-        val
-      else
-        _ -> :error
+      defmodule WithElseRealDiagnostic do
+        def run(x) do
+          with {:ok, val} <- x do
+            val
+          else
+            _ -> :error
+          end
+        end
       end
   """
   use Credence.Semantic.Rule

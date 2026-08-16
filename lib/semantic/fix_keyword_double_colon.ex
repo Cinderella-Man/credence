@@ -29,6 +29,30 @@ defmodule Credence.Semantic.FixKeywordDoubleColon do
     (`foo(a: 1, b::2)` is "unexpected expression after keyword list"). The
     fix parses its candidate output and returns the source unchanged unless
     the rewrite parses.
+
+  ## Bad
+
+      defmodule CredenceKwDoubleColonAnalyzeFixture do
+        use GenServer
+
+        def start do
+          GenServer.start_link(__MODULE__, :ok, name::CredenceKwDoubleColonName)
+        end
+
+        def init(state), do: {:ok, state}
+      end
+
+  ## Good
+
+      defmodule CredenceKwDoubleColonAnalyzeFixture do
+        use GenServer
+
+        def start do
+          GenServer.start_link(__MODULE__, :ok, name: CredenceKwDoubleColonName)
+        end
+
+        def init(state), do: {:ok, state}
+      end
   """
   use Credence.Semantic.Rule
 

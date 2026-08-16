@@ -20,6 +20,30 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescue do
   exception can ever have it as its struct, and the clause matches exactly the
   same set of exceptions before and after. See `fix/2` for the shapes that are
   deliberately left alone.
+
+  ## Bad
+
+      defmodule M do
+        def run do
+          try do
+            :ok
+          rescue
+            e in [NotImplementedError, RuntimeError] -> e
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule M do
+        def run do
+          try do
+            :ok
+          rescue
+            e in [RuntimeError] -> e
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

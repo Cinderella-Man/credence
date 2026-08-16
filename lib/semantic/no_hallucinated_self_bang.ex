@@ -10,6 +10,18 @@ defmodule Credence.Semantic.NoHallucinatedSelfBang do
 
   The deterministic fix is `send(self(), arg)` since `self!` never exists and
   the only reasonable interpretation is self-messaging.
+
+  ## Bad
+
+      self!(:a)
+      foo()
+      self!(:b)
+
+  ## Good
+
+      send(self(), :a)
+      foo()
+      send(self(), :b)
   """
   use Credence.Semantic.Rule
 

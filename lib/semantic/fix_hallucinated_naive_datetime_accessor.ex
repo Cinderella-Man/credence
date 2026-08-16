@@ -35,6 +35,24 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessor do
   is a table lookup with no `NaiveDateTime` row, and the `FunctionMatcher`
   fallback ranks only functions defined in the file under repair, so it hands
   back the source unchanged — no rename it can spell produces `dt.minute`.
+
+  ## Bad
+
+      defmodule Example do
+        def due?(dt) do
+          minute = NaiveDateTime.minute(dt)
+          minute
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def due?(dt) do
+          minute = dt.minute
+          minute
+        end
+      end
   """
   use Credence.Semantic.Rule
 

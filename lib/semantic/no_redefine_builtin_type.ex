@@ -13,6 +13,18 @@ defmodule Credence.Semantic.NoRedefineBuiltinType do
   `@type node` becomes `@type trie_node`, and `@type t :: node` becomes
   `@type t :: trie_node`.  Variable bindings and function parameters with
   the same name are left untouched.
+
+  ## Bad
+
+      defmodule Foo do
+        @type node :: atom()
+      end
+
+  ## Good
+
+      defmodule Foo do
+        @type trie_node :: atom()
+      end
   """
   use Credence.Semantic.Rule
 

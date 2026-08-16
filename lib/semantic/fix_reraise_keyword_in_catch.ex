@@ -31,6 +31,32 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatch do
   is a Kernel macro name, so an LLM emitting it bare means the Python
   re-raise habit, not an ordinary variable. `should_report?/2` keeps
   `analyze` honest by reporting only when the fix would rewrite the source.
+
+  ## Bad
+
+      defmodule M do
+        def f do
+          try do
+            :ok
+          catch
+            :error, reason ->
+              reraise
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule M do
+        def f do
+          try do
+            :ok
+          catch
+            :error, reason ->
+              :erlang.raise(:error, reason, __STACKTRACE__)
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

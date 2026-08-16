@@ -23,6 +23,42 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
   the surrounding block; treating `return` as a merely-misspelled call would
   strip an early exit and let execution fall through to the code it was
   written to skip.
+
+  ## Bad
+
+      defmodule DBCleaner do
+        def clean() do
+          case get_spec() do
+            nil -> :ok
+            _spec ->
+              case :error do
+                {:error, {:cycle, remaining_tables}} ->
+                  return {:error, {:cycle, remaining_tables}}
+              end
+          end
+        end
+
+        defp get_spec, do: Process.get(:spec)
+      end
+
+  ## Good
+
+      defmodule DBCleaner do
+        def clean() do
+          case get_spec() do
+            nil ->
+              :ok
+
+            _spec ->
+              case :error do
+                {:error, {:cycle, remaining_tables}} ->
+                  {:error, {:cycle, remaining_tables}}
+              end
+          end
+        end
+
+        defp get_spec, do: Process.get(:spec)
+      end
   """
   use Credence.Semantic.Rule
 

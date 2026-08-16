@@ -53,6 +53,35 @@ defmodule Credence.Semantic.FixCaseBranchAssignmentScope do
       resolve the error;
     * a diagnostic whose line does not fall on the statement using the
       variable after the case — the error belongs to some other occurrence.
+
+  ## Bad
+
+      defmodule M do
+        def classify(x) do
+          case x do
+            :ok -> label = "success"
+            :error -> label = "failure"
+            _ -> label = "unknown"
+          end
+
+          String.upcase(label)
+        end
+      end
+
+  ## Good
+
+      defmodule M do
+        def classify(x) do
+          label =
+            case x do
+              :ok -> "success"
+              :error -> "failure"
+              _ -> "unknown"
+            end
+
+          String.upcase(label)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

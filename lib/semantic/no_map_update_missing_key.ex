@@ -18,6 +18,26 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
 
       state = %{counter: 0, data: [], timer_ref: nil}
       {:ok, %{state | timer_ref: timer_ref}}
+
+  ## Bad
+
+      defmodule Example do
+        def setup do
+          state = %{counter: 0, data: []}
+          state = %{state | timer_ref: nil}
+          state
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def setup do
+          state = %{counter: 0, data: [], timer_ref: nil}
+          state = %{state | timer_ref: nil}
+          state
+        end
+      end
   """
   use Credence.Semantic.Rule
 

@@ -17,6 +17,22 @@ defmodule Credence.Semantic.UsedUnderscoreVariable do
   The fix finds the enclosing function clause and renames the variable
   throughout the entire clause (both the parameter declaration and all
   usages in the guard/body), leaving other clauses untouched.
+
+  ## Bad
+
+      defmodule UsedUnderscoreCheckInteg2 do
+        def check(_limit, value) do
+          value + _limit
+        end
+      end
+
+  ## Good
+
+      defmodule UsedUnderscoreCheckInteg2 do
+        def check(limit, value) do
+          value + limit
+        end
+      end
   """
   use Credence.Semantic.Rule
   alias Credence.Issue

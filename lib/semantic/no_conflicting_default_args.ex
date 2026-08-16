@@ -10,6 +10,26 @@ defmodule Credence.Semantic.NoConflictingDefaultArgs do
   when a function defines both a clause with defaults and a lower-arity
   clause that is fully subsumed. The fix drops the lower-arity clause
   because the defaults already cover it.
+
+  ## Bad
+
+      defmodule ParseCheck do
+        def foo(a, b \\\\ :ok) do
+          {a, b}
+        end
+
+        def foo(a) do
+          foo(a, :ok)
+        end
+      end
+
+  ## Good
+
+      defmodule ParseCheck do
+        def foo(a, b \\\\ :ok) do
+          {a, b}
+        end
+      end
   """
   use Credence.Semantic.Rule
 

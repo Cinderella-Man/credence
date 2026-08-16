@@ -38,6 +38,28 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsages do
       `@other @attr` or `@other @attr.()` are legal compile-time code that
       the rewrite would break;
     * every direct `@attr.(args)` call passes exactly `arity` arguments.
+
+  ## Bad
+
+      defmodule M do
+        @default_clock fn -> System.monotonic_time(:millisecond) end
+
+        def start_link(opts) do
+          clock = Keyword.get(opts, :clock, @default_clock)
+          {:ok, %{clock: clock}}
+        end
+      end
+
+  ## Good
+
+      defmodule M do
+        defp default_clock, do: System.monotonic_time(:millisecond)
+
+        def start_link(opts) do
+          clock = Keyword.get(opts, :clock, &default_clock/0)
+          {:ok, %{clock: clock}}
+        end
+      end
   """
   use Credence.Semantic.Rule
 

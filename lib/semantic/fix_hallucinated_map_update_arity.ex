@@ -40,6 +40,22 @@ defmodule Credence.Semantic.FixHallucinatedMapUpdateArity do
   `Map.update/4` call and is never a candidate. The `should_report?/2` phase
   hook keeps `analyze` honest by reporting an issue only when `fix/2` would
   actually rewrite the source.
+
+  ## Bad
+
+      defmodule MapUpdateArityExample do
+        def increment_count(map, key) do
+          Map.update(map, key, fn val -> val + 1 end)
+        end
+      end
+
+  ## Good
+
+      defmodule MapUpdateArityExample do
+        def increment_count(map, key) do
+          Map.update!(map, key, fn val -> val + 1 end)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

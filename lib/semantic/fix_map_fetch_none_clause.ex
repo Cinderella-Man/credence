@@ -49,6 +49,28 @@ defmodule Credence.Semantic.FixMapFetchNoneClause do
   `:none` clause. This rule repairs it to `:error` instead, keeping the failure
   branch the author wrote, so it must win — which it does by declaration rather
   than by sorting before `N`, since the general rule declares 501.
+
+  ## Bad
+
+      defmodule CredenceNoneClauseE2eCheck do
+        def find(map, key) do
+          case Map.fetch(map, key) do
+            :none -> {:error, :not_found}
+            {:ok, value} -> {:ok, value}
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceNoneClauseE2eCheck do
+        def find(map, key) do
+          case Map.fetch(map, key) do
+            :error -> {:error, :not_found}
+            {:ok, value} -> {:ok, value}
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

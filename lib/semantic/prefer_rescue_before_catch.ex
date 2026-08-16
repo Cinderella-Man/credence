@@ -24,6 +24,36 @@ defmodule Credence.Semantic.PreferRescueBeforeCatch do
   `should_report?/2` re-checks the source for a real out-of-order `try` before
   reporting, so a warning raised from a macro expansion (no literal `try` in
   the file to reorder) is never flagged as an issue this rule won't fix.
+
+  ## Bad
+
+      defmodule CredenceRescueOrderLiveRepro do
+        def run(f) do
+          try do
+            f.()
+          catch
+            :exit, reason -> {:exit, reason}
+            :throw, value -> {:throw, value}
+          rescue
+            e -> {:rescue, e}
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceRescueOrderLiveRepro do
+        def run(f) do
+          try do
+            f.()
+          rescue
+            e -> {:rescue, e}
+          catch
+            :exit, reason -> {:exit, reason}
+            :throw, value -> {:throw, value}
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

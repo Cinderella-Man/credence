@@ -48,6 +48,24 @@ defmodule Credence.Semantic.UnusedVariable do
   (keeps the equality constraint) or "give the variables different
   names" (drops it), and only the first preserves the answer; picking
   either automatically would be guessing at intent.
+
+  ## Bad
+
+      defmodule UnusedVarInteg1 do
+        def run do
+          {current, max} = {1, 2}
+          max
+        end
+      end
+
+  ## Good
+
+      defmodule UnusedVarInteg1 do
+        def run do
+          {_current, max} = {1, 2}
+          max
+        end
+      end
   """
   use Credence.Semantic.Rule
   alias Credence.Issue

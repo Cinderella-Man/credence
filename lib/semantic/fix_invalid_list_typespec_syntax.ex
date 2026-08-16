@@ -34,6 +34,20 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntax do
 
   When the flagged line's invalid list is not wrapped in `list(...)` (e.g. a
   bare `[a, b]` return type), the source is returned unchanged.
+
+  ## Bad
+
+      defmodule SolutionF do
+        @spec f(list([list([integer(), integer()]), atom()])) :: boolean()
+        def f(x), do: true
+      end
+
+  ## Good
+
+      defmodule SolutionF do
+        @spec f(list([list([integer()]) | atom()])) :: boolean()
+        def f(_x), do: true
+      end
   """
   use Credence.Semantic.Rule
 

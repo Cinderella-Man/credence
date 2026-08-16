@@ -4,6 +4,22 @@ defmodule Credence.Semantic.NoMapHas do
 
   `Map.has?/2` is a common typo for `Map.has_key?/2`; this rule
   deterministically renames the call to the correct function.
+
+  ## Bad
+
+      defmodule Example do
+        def has_key?(map, key) do
+          Map.has?(map, key)
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def has_key?(map, key) do
+          Map.has_key?(map, key)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

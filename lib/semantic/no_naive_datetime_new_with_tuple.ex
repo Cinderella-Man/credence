@@ -14,6 +14,22 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTuple do
   `{hour, minute, second, microsecond}` tuple becomes
   `Time.new!(hour, minute, second, microsecond)`. Tuples with any other
   arity have no `Time.new!` equivalent, so they are left untouched.
+
+  ## Bad
+
+      defmodule Example do
+        def make_ndt(year, month, day, hour, minute) do
+          NaiveDateTime.new!(Date.new!(year, month, day), {hour, minute, 0, 0})
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def make_ndt(year, month, day, hour, minute) do
+          NaiveDateTime.new!(Date.new!(year, month, day), Time.new!(hour, minute, 0, 0))
+        end
+      end
   """
   use Credence.Semantic.Rule
 

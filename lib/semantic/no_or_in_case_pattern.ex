@@ -22,6 +22,29 @@ defmodule Credence.Semantic.NoOrInCasePattern do
         "" -> :empty
         _ -> :present
       end
+
+  ## Bad
+
+      defmodule Example do
+        def classify(value) do
+          case value do
+            nil or "" -> :empty
+            _ -> :present
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def classify(value) do
+          case value do
+            nil -> :empty
+            "" -> :empty
+            _ -> :present
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

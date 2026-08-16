@@ -37,6 +37,22 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArity do
     * negated bodies without a bare `/arity` (`&(!x)`) — there is no
       declared arity to build the argument list from, and valid captures
       such as `&(!Enum.empty?(&1))` or `&(!&1 / 2)` must not be touched.
+
+  ## Bad
+
+      defmodule Example do
+        def any_full?(lists) do
+          Enum.any?(lists, &(!Enum.empty?/1))
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def any_full?(lists) do
+          Enum.any?(lists, &(!Enum.empty?(&1)))
+        end
+      end
   """
   use Credence.Semantic.Rule
 

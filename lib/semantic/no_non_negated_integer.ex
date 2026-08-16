@@ -20,6 +20,22 @@ defmodule Credence.Semantic.NoNonNegatedInteger do
   `type _/0 undefined` matcher also matches this diagnostic but cannot fix the
   parenthesised type call (`non_negated_integer()`), so this rule must be tried
   first or it would never fire.
+
+  ## Bad
+
+      defmodule Solution do
+        @spec power_of_num(number(), non_negated_integer()) :: number()
+        def power_of_num(_base, 0), do: 1
+        def power_of_num(base, e) when is_integer(e) and e > 0, do: base * power_of_num(base, e - 1)
+      end
+
+  ## Good
+
+      defmodule Solution do
+        @spec power_of_num(number(), non_neg_integer()) :: number()
+        def power_of_num(_base, 0), do: 1
+        def power_of_num(base, e) when is_integer(e) and e > 0, do: base * power_of_num(base, e - 1)
+      end
   """
   use Credence.Semantic.Rule
 

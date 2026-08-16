@@ -13,6 +13,26 @@ defmodule Credence.Semantic.NoHallucinatedGuardFn do
   (code must already compile), so it never fires on this class of error.
   This semantic-level rule detects `is_regex(x)` in guards and replaces it
   with `is_struct(x, Regex)`.
+
+  ## Bad
+
+      defmodule Demo do
+        def check(value, format) when is_regex(format) do
+          Regex.match?(format, value)
+        end
+
+        def check(_value, _format), do: false
+      end
+
+  ## Good
+
+      defmodule Demo do
+        def check(value, format) when is_struct(format, Regex) do
+          Regex.match?(format, value)
+        end
+
+        def check(_value, _format), do: false
+      end
   """
   use Credence.Semantic.Rule
 

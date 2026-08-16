@@ -43,6 +43,26 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParse do
   recover. It has no row for either arity, and its `FunctionMatcher`
   fallback finds no `defmodule NimbleCSV` in the file, so its `fix/2`
   returns the source byte-identical.
+
+  ## Bad
+
+      defmodule CsvLoader do
+        NimbleCSV.define(CsvLoader.Parser, separator: ",", escape: "\\"")
+
+        def load(csv) do
+          NimbleCSV.parse_string(csv, skip_headers: false)
+        end
+      end
+
+  ## Good
+
+      defmodule CsvLoader do
+        NimbleCSV.define(CsvLoader.Parser, separator: ",", escape: "\\"")
+
+        def load(csv) do
+          CsvLoader.Parser.parse_string(csv, skip_headers: false)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

@@ -32,6 +32,24 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessor do
   replacement row for it, and its boundary check rejects the line because
   `ISO` is preceded by a `.` — it would consume the diagnostic and return the
   source unchanged, never renaming to `DateTime.to_date/1`.
+
+  ## Bad
+
+      defmodule Example do
+        def extract_date(%DateTime{} = dt) do
+          date = Calendar.ISO.date(dt)
+          {date.year, date.month, date.day}
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def extract_date(%DateTime{} = dt) do
+          date = DateTime.to_date(dt)
+          {date.year, date.month, date.day}
+        end
+      end
   """
   use Credence.Semantic.Rule
 

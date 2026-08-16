@@ -30,6 +30,34 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatch do
   any run that used to succeed. A `case` with a live clause (e.g. a trailing
   `stream ->` catch-all) also triggers this warning for its dead tuple clause,
   but rewriting it would delete the real runtime path — those are left alone.
+
+  ## Bad
+
+      defmodule Example do
+        def run(elements, fun) do
+          total =
+            case Task.async_stream(elements, fun) do
+              {:ok, results} -> Enum.count(results)
+              {:error, _reason} -> 0
+            end
+
+          total + 1
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def run(elements, fun) do
+          total =
+            (
+              results = Task.async_stream(elements, fun)
+              Enum.count(results)
+            )
+
+          total + 1
+        end
+      end
   """
   use Credence.Semantic.Rule
 

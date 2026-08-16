@@ -53,6 +53,34 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgs do
   fallback for bare calls — so it can rename a call but never patch the
   punctuation *inside* one, and it cannot check that StreamData is in scope
   at the flagged call. In its hands `integer(0, 10)` comes back unchanged.
+
+  ## Bad
+
+      defmodule CredenceIntegerTwoArgsFlagship do
+        import StreamData
+
+        def account_program do
+          bind(integer(0, 10), fn n ->
+            deposit = {:deposit, integer(1, 1000)}
+            {:withdraw, integer(1, n)}
+            constant(deposit)
+          end)
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceIntegerTwoArgsFlagship do
+        import StreamData
+
+        def account_program do
+          bind(integer(0..10), fn n ->
+            deposit = {:deposit, integer(1..1000)}
+            {:withdraw, integer(1..n)}
+            constant(deposit)
+          end)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

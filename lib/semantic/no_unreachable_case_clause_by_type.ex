@@ -55,6 +55,31 @@ defmodule Credence.Semantic.NoUnreachableCaseClauseByType do
   because `F` sorts before `N`. Declaring **501** says the real thing once: the
   general deletion yields to a specific repair. docs/20 §4; enforced by
   `test/dispatch_contention_test.exs`.
+
+  ## Bad
+
+      defmodule CredenceUnreachableCaseLiveRepro do
+        def sort_order(a, b) do
+          case DateTime.compare(a, b) do
+            :lt -> :asc
+            :gt -> :desc
+            :eq -> :same
+            :dt -> :unknown
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceUnreachableCaseLiveRepro do
+        def sort_order(a, b) do
+          case DateTime.compare(a, b) do
+            :lt -> :asc
+            :gt -> :desc
+            :eq -> :same
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

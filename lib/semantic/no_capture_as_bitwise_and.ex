@@ -48,6 +48,22 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAnd do
 
   Matching runs against a `Credence.SourceMask` shadow, so a `&` inside a
   string literal or comment is never mistaken for an operator.
+
+  ## Bad
+
+      defmodule CaptureAndCheckInteg1 do
+        def low_bit(n) do
+          n & 1
+        end
+      end
+
+  ## Good
+
+      defmodule CaptureAndCheckInteg1 do
+        def low_bit(n) do
+          Bitwise.band(n, 1)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

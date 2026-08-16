@@ -22,20 +22,36 @@ defmodule Credence.Semantic.NoRescueInWithExpression do
 
   ## Bad (compiles with error)
 
-      with {:ok, dt} <- DateTime.from_iso8601(ts) do
-        {:ok, dt}
-      rescue
-        _ -> {:error, :invalid_timestamp}
+      defmodule NoRescueInWithFixture do
+        def run(key) do
+          with {:ok, raw} <- fetch(key) do
+            {:ok, raw}
+          rescue
+            e in ArgumentError -> {:error, Exception.message(e)}
+          catch
+            kind, value -> {:error, {kind, value}}
+          end
+        end
+
+        defp fetch(key), do: {:ok, key}
       end
 
   ## Good
 
-      try do
-        with {:ok, dt} <- DateTime.from_iso8601(ts) do
-          {:ok, dt}
+      defmodule NoRescueInWithFixture do
+        def run(key) do
+          try do
+            with {:ok, raw} <- fetch(key) do
+              {:ok, raw}
+            end
+          rescue
+            e in ArgumentError -> {:error, Exception.message(e)}
+          catch
+            kind, value -> {:error, {kind, value}}
+          end
         end
-      rescue
-        _ -> {:error, :invalid_timestamp}
+
+        defp fetch(key), do: {:ok, key}
       end
   """
   use Credence.Semantic.Rule

@@ -30,6 +30,25 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRight do
   call of the function the message names, sitting exactly at the flagged
   column, and the fix no-ops rather than risk a wrong edit (same policy as
   `FixHallucinatedEnumRange`).
+
+  ## Bad
+
+      defmodule CredenceTakeRightMultilineE2E do
+        def a(list, n) do
+          Enum.take_right(
+            list,
+            n
+          )
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceTakeRightMultilineE2E do
+        def a(list, n) do
+          Enum.take(list, -n)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

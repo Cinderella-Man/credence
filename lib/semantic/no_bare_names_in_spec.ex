@@ -10,6 +10,20 @@ defmodule Credence.Semantic.NoBareNamesInSpec do
 
   This rule detects that diagnostic and rewrites the bare name into an
   annotated parameter with `:: any()` so the spec compiles.
+
+  ## Bad
+
+      defmodule MyMod do
+        @spec foo(my_param) :: integer()
+        def foo(x), do: x
+      end
+
+  ## Good
+
+      defmodule MyMod do
+        @spec foo(my_param :: any()) :: integer()
+        def foo(x), do: x
+      end
   """
   use Credence.Semantic.Rule
 

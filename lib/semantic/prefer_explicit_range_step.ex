@@ -30,6 +30,20 @@ defmodule Credence.Semantic.PreferExplicitRangeStep do
   atoms and comments carry no `..` operator node, so they are never touched. A
   range with a non-literal endpoint (`a..-1`) produces no diagnostic and matches
   no node, so it is left alone.
+
+  ## Bad
+
+      defmodule PreferExplicitRangeStepPipelineFixture do
+        def f(l), do: {Enum.slice(l, 1..-2), "label 1..-2"}
+        def g(l), do: Enum.take(l, 5..1)
+      end
+
+  ## Good
+
+      defmodule PreferExplicitRangeStepPipelineFixture do
+        def f(l), do: {Enum.slice(l, 1..-2//-1), "label 1..-2"}
+        def g(l), do: Enum.take(l, 5..1//-1)
+      end
   """
   use Credence.Semantic.Rule
 

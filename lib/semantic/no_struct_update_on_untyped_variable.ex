@@ -70,6 +70,26 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariable do
   `BadMapError` depending on the value — and now raises `FunctionClauseError` on
   the head instead. A raise either way: no returned value changes, nothing that
   raised starts returning, and no side effect is skipped.
+
+  ## Bad
+
+      defmodule Saga do
+        defstruct steps: []
+
+        def execute(other, action_fn) do
+          %__MODULE__{other | steps: [action_fn]}
+        end
+      end
+
+  ## Good
+
+      defmodule Saga do
+        defstruct steps: []
+
+        def execute(%__MODULE__{} = other, action_fn) do
+          %__MODULE__{other | steps: [action_fn]}
+        end
+      end
   """
   use Credence.Semantic.Rule
 

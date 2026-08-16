@@ -41,6 +41,24 @@ defmodule Credence.Semantic.FixApplyArityOne do
   and no fuzzy fallback for local calls, and would return the source
   unchanged — the `[]` insertion, the pipe spelling and the bail on a
   file-defined `apply` exist only here.
+
+  ## Bad
+
+      defmodule FixApplyArityOneExample do
+        def call_clock(state) do
+          current_time = apply(state.clock)
+          current_time
+        end
+      end
+
+  ## Good
+
+      defmodule FixApplyArityOneExample do
+        def call_clock(state) do
+          current_time = apply(state.clock, [])
+          current_time
+        end
+      end
   """
   use Credence.Semantic.Rule
 

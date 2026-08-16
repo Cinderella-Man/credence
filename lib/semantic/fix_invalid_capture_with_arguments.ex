@@ -35,6 +35,24 @@ defmodule Credence.Semantic.FixInvalidCaptureWithArguments do
       not be touched;
     * operator and special-form "calls" (`&(x * 2 / 0)`) and zero-argument
       calls (`&Mod.fun()/0`) — not the hallucinated shape this rule targets.
+
+  ## Bad
+
+      defmodule Example do
+        def start do
+          clock = &System.monotonic_time(:millisecond)/0
+          clock.()
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def start do
+          clock = fn -> System.monotonic_time(:millisecond) end
+          clock.()
+        end
+      end
   """
   use Credence.Semantic.Rule
 

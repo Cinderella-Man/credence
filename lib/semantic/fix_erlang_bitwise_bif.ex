@@ -21,6 +21,22 @@ defmodule Credence.Semantic.FixErlangBitwiseBif do
   operators defined or legitimately used elsewhere in the file, are never
   touched. Each call site gets its own compiler diagnostic, so line-scoped
   rewrites still cover every site.
+
+  ## Bad
+
+      defmodule FixErlangBitwiseBifCheckE2E do
+        def left_shift(value, n) do
+          bsl(value, n)
+        end
+      end
+
+  ## Good
+
+      defmodule FixErlangBitwiseBifCheckE2E do
+        def left_shift(value, n) do
+          Bitwise.bsl(value, n)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

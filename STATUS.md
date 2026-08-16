@@ -256,19 +256,21 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   snapshot is the stale 2026-07-03 copy (7,113 rows) against a live 6,155-row
   whitelist, so the current whitelist has never been validated.
 
-- [ ] **D5. C15 — `## Bad`/`## Good` backfill. Pattern is DONE (156/156, every
-  example verified true by execution); only Semantic remains.** The Pattern half
-  was worth doing for a reason that was not on the original list: those blocks
-  are now the D8a duplicate gate's shared corpus, so they stopped being
-  documentation the moment that gate landed. Each was derived from a fixture the
-  rule provably fires on and its own `fix/2` output, then gated both ways —
-  every Bad example must fire, no Good example may.
+- [x] **D5. C15 — DONE. `## Bad`/`## Good` on all three rounds, every example
+  verified true by execution.** Pattern 156/156, Semantic 86/89 (three declined:
+  two whose fixture contains a heredoc delimiter, one already covered). Gated in
+  `rule_card_test.exs` and `semantic_rule_card_test.exs`, both directions —
+  every Bad example must make its rule report, no Good example may.
 
-  **Semantic (6/89) is the open part, and the trade-off is unchanged:**
-  backfilling it mechanically would produce 83 accurate but low-value blocks,
-  whereas the intent line already carries the dedup signal. What is *new* is the
-  second argument for doing it — Semantic rules have no equivalent shared corpus,
-  so there is no duplicate signal for the Semantic round at all today.
+  **The Semantic backfill did NOT produce a duplicate signal, and that is the
+  finding.** Pointed at Semantic, the D8a intersection reports zero pairs, and
+  the zero is structural rather than earned: dispatch is first-match-wins, so
+  **84 of 89 rules fire on exactly one snippet** — their own — and containment
+  between two singletons is false unless they are the same singleton. A gate on
+  it would pass by construction, which is the T3.10a vacuity failure. The
+  Semantic duplicate question is already answered by `dispatch_contention_test.exs`
+  (a duplicate is a rule that never wins its slot). The backfill's real value is
+  the shared adversarial corpus and the truth gate over it.
 
 - [ ] **D6. C12(c) — two of the three shape-over-fit matchers are generalised;
   one is untouched.** The name half was already done (zero Pattern rules keyed to

@@ -25,6 +25,28 @@ defmodule Credence.Semantic.MissingUseExunitCase do
   row for `test`, `describe` or `setup`, so it can only hand the source back
   unchanged — the repair here is a `use ExUnit.Case` line the module lacks,
   not a renamed call.
+
+  ## Bad
+
+      defmodule MyAppTest do
+        describe "feature" do
+          test "works" do
+            assert true
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule MyAppTest do
+        use ExUnit.Case
+
+        describe "feature" do
+          test "works" do
+            assert true
+          end
+        end
+      end
   """
 
   @behaviour Credence.Semantic.Rule

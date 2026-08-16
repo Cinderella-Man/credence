@@ -12,6 +12,26 @@ defmodule Credence.Semantic.FixCyclicStructReference do
   exactly a sequence of alias-named top-level `defmodule`s (no stray comments or
   other code between them, which a reorder would drop) and the reordered result
   actually compiles — otherwise the source is returned unchanged.
+
+  ## Bad
+
+      defmodule CsrE2eFactory do
+        def build, do: %CsrE2eUser{name: "test"}
+      end
+
+      defmodule CsrE2eUser do
+        defstruct [:name]
+      end
+
+  ## Good
+
+      defmodule CsrE2eUser do
+        defstruct [:name]
+      end
+
+      defmodule CsrE2eFactory do
+        def build, do: %CsrE2eUser{name: "test"}
+      end
   """
   use Credence.Semantic.Rule
 

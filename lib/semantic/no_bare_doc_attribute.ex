@@ -8,6 +8,23 @@ defmodule Credence.Semantic.NoBareDocAttribute do
 
   The fix strips the bare `@doc` line, which is safe since it assigns `nil`
   (meaningless before a `def`).
+
+  ## Bad
+
+      defmodule Solution do
+        @doc
+        def calculate_total_cost(price) do
+          price * 1.1
+        end
+      end
+
+  ## Good
+
+      defmodule Solution do
+        def calculate_total_cost(price) do
+          price * 1.1
+        end
+      end
   """
   use Credence.Semantic.Rule
 

@@ -34,6 +34,26 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
       compile;
     * a variable named `error` is already in use in the clause (the new
       binding would capture it).
+
+  ## Bad
+
+      defmodule M do
+        def f(x, list) do
+          case Jason.decode(x) do
+            {:error, %Jason.DecodeError{message: msg}} -> Enum.map(list, fn msg -> msg end)
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule M do
+        def f(x, list) do
+          case Jason.decode(x) do
+            {:error, %Jason.DecodeError{}} -> Enum.map(list, fn msg -> msg end)
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

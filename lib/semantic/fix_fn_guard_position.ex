@@ -32,6 +32,28 @@ defmodule Credence.Semantic.FixFnGuardPosition do
     (`fn a when g1, b when g2 ->`): merging the guards would turn the
     intended "g1 and g2" into `when g2 when g1` (or-semantics), so there is
     no single obviously-intended rewrite.
+
+  ## Bad
+
+      defmodule M do
+        def sum_above(list, cutoff) do
+          Enum.reduce(list, 0, fn
+            {key, val} when key > cutoff, acc -> acc + val
+            _, acc -> acc
+          end)
+        end
+      end
+
+  ## Good
+
+      defmodule M do
+        def sum_above(list, cutoff) do
+          Enum.reduce(list, 0, fn
+            {key, val}, acc when key > cutoff -> acc + val
+            _, acc -> acc
+          end)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

@@ -29,6 +29,24 @@ defmodule Credence.Semantic.FixTaskIdFieldAccess do
       source there really is a `.id` field access that is not part of a longer
       identifier (`.identity`, `.id?`, …); on any mismatch — including a
       diagnostic without a column — it is a no-op rather than a guess.
+
+  ## Bad
+
+      defmodule TaskIdField do
+        def get_ref do
+          task = Task.async(fn -> 42 end)
+          task.id
+        end
+      end
+
+  ## Good
+
+      defmodule TaskIdField do
+        def get_ref do
+          task = Task.async(fn -> 42 end)
+          task.ref
+        end
+      end
   """
   use Credence.Semantic.Rule
 

@@ -17,6 +17,32 @@ defmodule Credence.Semantic.NoRescueInException do
   Only a `rescue` clause head is rewritten, and only when it is spelled exactly
   `Exception` or `Elixir.Exception`. Everything else that happens to parse as
   `_ in Exception` is left alone — see `fix/2`.
+
+  ## Bad
+
+      defmodule Example do
+        def run do
+          try do
+            raise "boom"
+          rescue
+            e in Elixir.Exception ->
+              {:error, e}
+          end
+        end
+      end
+
+  ## Good
+
+      defmodule Example do
+        def run do
+          try do
+            raise "boom"
+          rescue
+            e ->
+              {:error, e}
+          end
+        end
+      end
   """
   use Credence.Semantic.Rule
 

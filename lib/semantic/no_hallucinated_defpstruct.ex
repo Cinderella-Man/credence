@@ -42,6 +42,18 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
   it. T3.2 and T3.6 have since made a decliner yield its slot, so the cost today
   is a wasted no-op rather than a lost repair; the ordering still has to be
   declared, because only this rule can do the work.
+
+  ## Bad
+
+      defmodule Compiles do
+        defpstructp now: 0
+      end
+
+  ## Good
+
+      defmodule Compiles do
+        defstruct now: 0
+      end
   """
   use Credence.Semantic.Rule
 

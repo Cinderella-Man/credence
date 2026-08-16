@@ -14,6 +14,56 @@ defmodule Credence.Semantic.FixPlugDependencyModuleOrder do
   Only top-level (column-0) module definitions are reordered, and only when the
   dependency module starts strictly after the plug-calling module ends — nested
   or overlapping definitions are left untouched.
+
+  ## Bad
+
+      defmodule MediaVersionApi.Router do
+        use Plug.Router
+        import Plug.Conn
+
+        plug(MediaVersionApi.Plugs.AcceptVersion)
+        plug(:match)
+        plug(:dispatch)
+
+        get "/hello" do
+          send_resp(conn, 200, "world")
+        end
+      end
+
+      defmodule MediaVersionApi.Plugs.AcceptVersion do
+        @behaviour Plug
+
+        @impl true
+        def init(opts), do: opts
+
+        @impl true
+        def call(conn, _opts), do: conn
+      end
+
+  ## Good
+
+      defmodule MediaVersionApi.Plugs.AcceptVersion do
+        @behaviour Plug
+
+        @impl true
+        def init(opts), do: opts
+
+        @impl true
+        def call(conn, _opts), do: conn
+      end
+
+      defmodule MediaVersionApi.Router do
+        use Plug.Router
+        import Plug.Conn
+
+        plug(MediaVersionApi.Plugs.AcceptVersion)
+        plug(:match)
+        plug(:dispatch)
+
+        get "/hello" do
+          send_resp(conn, 200, "world")
+        end
+      end
   """
   use Credence.Semantic.Rule
 

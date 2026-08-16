@@ -18,47 +18,29 @@ defmodule Credence.Semantic.NoUnreachableCatchAfterRescue do
 
   ## Bad
 
-      try do
-        work()
-      rescue
-        e -> {:error, e}
-      catch
-        :error, reason -> {:error, reason}
+      defmodule CredenceUnreachableCatchLiveRepro do
+        def run(f) do
+          try do
+            f.()
+          rescue
+            e -> {:error, e}
+          catch
+            :error, reason -> {:error, reason}
+          end
+        end
       end
 
   ## Good
 
-      try do
-        work()
-      rescue
-        e -> {:error, e}
+      defmodule CredenceUnreachableCatchLiveRepro do
+        def run(f) do
+          try do
+            f.()
+          rescue
+            e -> {:error, e}
+          end
+        end
       end
-
-  ## What it deliberately does NOT touch
-
-  The rewrite only fires when the compiler's own "cannot match" warning points
-  at a clause that is *exactly* `:error, <pattern> ->` inside a `rescue`/`catch`
-  body whose `rescue` section has a bare-variable catch-all on the line the
-  warning names as the shadowing clause. Everything else is left alone:
-
-    * a single-pattern `catch :error ->` clause. That form catches
-      `throw(:error)`, not the error class — it is live code the rescue
-      catch-all does not shadow, and the compiler does not warn about it.
-    * a guarded clause (`catch :error, reason when is_atom(reason) ->`). The
-      compiler flags it too, but the deletion is kept to the plain two-pattern
-      shape.
-    * `catch :exit, …` / `catch :throw, …` / a bare `catch value ->` — a
-      `rescue` catch-all does not shadow those kinds.
-    * a `rescue e in SomeError ->` that narrows to one exception type, or a
-      `rescue` section with no catch-all clause on the warning's line.
-    * a flagged line that carries more than one candidate clause anywhere in
-      the file (two `try` blocks written on one line) — ambiguous, so the rule
-      declines rather than guess.
-
-  The warning text this rule matches is generic (duplicate `case` clauses emit
-  it too). `should_report?/2` re-runs `fix/2`, so a diagnostic the rewrite
-  declines is never reported as an issue either — the check and the fix always
-  agree.
   """
 
   use Credence.Semantic.Rule

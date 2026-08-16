@@ -19,6 +19,21 @@ defmodule Credence.Semantic.NoDocOnPrivateFunction do
   deleted as stale, so carrying it down onto the `defp` would re-attach it to
   something it was not written about. Both shapes are pinned in the fix tests.
 
+  ## Bad
+
+      defmodule NdpDrop do
+        @doc "helper docs"  # TODO: revisit
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+
+  ## Good
+
+      defmodule NdpDrop do
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+
   """
   use Credence.Semantic.Rule
 

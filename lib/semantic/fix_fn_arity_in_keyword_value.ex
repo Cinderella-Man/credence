@@ -33,6 +33,29 @@ defmodule Credence.Semantic.FixFnArityInKeywordValue do
   - `raise` sites on lines other than the diagnostic's: each offending site
     gets its own compiler diagnostic, so line-scoped rewrites still cover
     every site.
+
+  ## Bad
+
+      defmodule FixFnArityExample do
+        def push(server, name, value, window_size) do
+          unless is_number(value) do
+            raise FunctionClauseError, function: :push/4
+          end
+          :ok
+        end
+      end
+
+  ## Good
+
+      defmodule FixFnArityExample do
+        def push(_server, _name, value, _window_size) do
+          unless is_number(value) do
+            raise FunctionClauseError, function: :push, arity: 4
+          end
+
+          :ok
+        end
+      end
   """
   use Credence.Semantic.Rule
 

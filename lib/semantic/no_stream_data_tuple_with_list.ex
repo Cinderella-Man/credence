@@ -51,6 +51,40 @@ defmodule Credence.Semantic.NoStreamDataTupleWithList do
 
   The `should_report?/2` phase hook keeps `analyze` honest by reporting an
   issue only when `fix/2` would actually rewrite the source.
+
+  ## Bad
+
+      defmodule CredenceTupleWithListFlagshipCheck do
+        @moduledoc false
+
+        def object do
+          key_gen = StreamData.string(:alphanumeric, min_length: 1, max_length: 8)
+          value_gen = StreamData.integer()
+
+          StreamData.list_of(
+            StreamData.tuple([key_gen, value_gen]),
+            max_length: 5
+          )
+          |> StreamData.map(&Map.new/1)
+        end
+      end
+
+  ## Good
+
+      defmodule CredenceTupleWithListFlagshipCheck do
+        @moduledoc false
+
+        def object do
+          key_gen = StreamData.string(:alphanumeric, min_length: 1, max_length: 8)
+          value_gen = StreamData.integer()
+
+          StreamData.list_of(
+            StreamData.tuple({key_gen, value_gen}),
+            max_length: 5
+          )
+          |> StreamData.map(&Map.new/1)
+        end
+      end
   """
   use Credence.Semantic.Rule
 

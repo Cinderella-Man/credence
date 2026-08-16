@@ -14,6 +14,24 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatch do
   reference:
 
       {:ok, pid} = spawn_monitor(...)  →  {pid, _ref} = spawn_monitor(...)
+
+  ## Bad
+
+      defmodule SpawnMonitorPattern do
+        def run do
+          {:ok, pid} = spawn_monitor(fn -> :ok end)
+          {pid, :done}
+        end
+      end
+
+  ## Good
+
+      defmodule SpawnMonitorPattern do
+        def run do
+          {pid, _ref} = spawn_monitor(fn -> :ok end)
+          {pid, :done}
+        end
+      end
   """
   use Credence.Semantic.Rule
 

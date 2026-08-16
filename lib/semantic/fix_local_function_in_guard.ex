@@ -50,6 +50,24 @@ defmodule Credence.Semantic.FixLocalFunctionInGuard do
   the diagnostic and starves whatever else could have handled it — which is
   exactly what happened to `NoHallucinatedGuardFn` on `when is_range(r)` with no
   local `is_range` defined at all (ledger row 196).
+
+  ## Bad
+
+      defmodule LocalFnInGuard do
+        defp is_range(x), do: is_map(x)
+
+        def convert(x) when is_range(x), do: x
+        def describe(x), do: is_range(x)
+      end
+
+  ## Good
+
+      defmodule LocalFnInGuard do
+        defp is_range(x), do: is_map(x)
+
+        def convert(x) when is_map(x), do: x
+        def describe(x), do: is_range(x)
+      end
   """
   use Credence.Semantic.Rule
 

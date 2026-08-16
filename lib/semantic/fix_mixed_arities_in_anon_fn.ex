@@ -31,6 +31,17 @@ defmodule Credence.Semantic.FixMixedAritiesInAnonFn do
     (`fn {k, v} when k > 0, acc -> ...`): that shape is
     `Credence.Semantic.FixFnGuardPosition`'s domain; padding around it would
     still leave uncompilable code.
+
+  ## Bad
+
+      f = fn x, y -> x + y; _ -> 0 end
+
+  ## Good
+
+      _f = fn
+        x, y -> x + y
+        _, _ -> 0
+      end
   """
   use Credence.Semantic.Rule
 

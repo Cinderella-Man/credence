@@ -41,6 +41,22 @@ defmodule Credence.Semantic.FixHallucinatedMapPutArity do
   a wrong edit (same policy as `FixHallucinatedEnumRange`). The
   `should_report?/2` phase hook keeps `analyze` honest by reporting an issue
   only when `fix/2` would actually rewrite the source.
+
+  ## Bad
+
+      defmodule HallucinatedMapPut do
+        def build do
+          Map.put(%{}, :type, :missing_required, :path, [:a])
+        end
+      end
+
+  ## Good
+
+      defmodule HallucinatedMapPut do
+        def build do
+          Map.put(Map.put(%{}, :type, :missing_required), :path, [:a])
+        end
+      end
   """
   use Credence.Semantic.Rule
 
