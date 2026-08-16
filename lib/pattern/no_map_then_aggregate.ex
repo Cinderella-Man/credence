@@ -32,6 +32,22 @@ defmodule Credence.Pattern.NoMapThenAggregate do
   ## Flagged patterns
 
   `Enum.map(f)` piped into or wrapping `Enum.sum/1` (pipeline and direct-call forms).
+
+  ## Bad
+
+      defmodule Bad do
+        def total(list) do
+          Enum.sum(Enum.map(list, fn x -> x * x end))
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def total(list) do
+          Enum.reduce(list, 0, fn el, acc -> acc + el * el end)
+        end
+      end
   """
 
   use Credence.Pattern.Rule

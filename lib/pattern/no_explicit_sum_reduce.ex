@@ -1,5 +1,25 @@
 defmodule Credence.Pattern.NoExplicitSumReduce do
-  @moduledoc "Flags explicit sum-reduction patterns inside Enum.reduce/3."
+  @moduledoc """
+  Flags explicit sum-reduction patterns inside Enum.reduce/3.
+
+  ## Bad
+
+      defmodule BadPlus do
+        def sum_value(list) do
+          Enum.reduce(list, 0, fn x, acc ->
+            x + acc
+          end)
+        end
+      end
+
+  ## Good
+
+      defmodule BadPlus do
+        def sum_value(list) do
+          Enum.sum(list)
+        end
+      end
+  """
 
   use Credence.Pattern.Rule
   alias Credence.Issue

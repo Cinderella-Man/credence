@@ -32,6 +32,20 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
     would break the complement logic).
   - Different type guards across clauses.
   - Different variables or literals.
+
+  ## Bad
+
+      defmodule Bad do
+        def f(n) when is_atom(n) and n < 0, do: :a
+        def f(n) when is_atom(n) and n >= 0, do: :b
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def f(n) when is_atom(n) and n < 0, do: :a
+        def f(n) when is_atom(n), do: :b
+      end
   """
 
   use Credence.Pattern.Rule

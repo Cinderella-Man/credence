@@ -53,6 +53,22 @@ defmodule Credence.Pattern.NoEnumCountForLength do
   Only the **single-argument** form `Enum.count(x)` (direct or piped). The
   two-argument `Enum.count(x, predicate)` is not flagged (it filters and counts
   in one pass).
+
+  ## Bad
+
+      defmodule Bad do
+        def grapheme_count(str) do
+          Enum.count(String.graphemes(str))
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def grapheme_count(str) do
+          length(String.graphemes(str))
+        end
+      end
   """
 
   use Credence.Pattern.Rule

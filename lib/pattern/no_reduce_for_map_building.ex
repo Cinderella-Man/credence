@@ -41,6 +41,22 @@ defmodule Credence.Pattern.NoReduceForMapBuilding do
   a single `Map.put(acc, key, value)` or `MapSet.put(acc, value)` call
   (or a single-expression block), and neither `key`/`value` nor the
   MapSet value may reference `acc`.
+
+  ## Bad
+
+      defmodule Bad do
+        def build(list) do
+          Enum.reduce(list, MapSet.new(), &MapSet.put(&2, &1))
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def build(list) do
+          MapSet.new(list)
+        end
+      end
   """
 
   use Credence.Pattern.Rule

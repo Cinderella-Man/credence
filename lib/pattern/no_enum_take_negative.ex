@@ -10,6 +10,18 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
   The auto-fix replaces `Enum.take(list, -n)` with `Enum.slice(list, -n..-1//1)`.
   When `Enum.take(-n)` directly follows `Enum.sort()` in a pipeline, the fix
   defers to `PreferDescSortOverNegativeTake`.
+
+  ## Bad
+
+      defmodule BadOne do
+        def last(list), do: Enum.take(list, -1)
+      end
+
+  ## Good
+
+      defmodule BadOne do
+        def last(list), do: Enum.slice(list, -1..-1//1)
+      end
   """
   use Credence.Pattern.Rule
   alias Credence.Issue

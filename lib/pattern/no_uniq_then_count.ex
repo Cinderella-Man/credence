@@ -40,6 +40,22 @@ defmodule Credence.Pattern.NoUniqThenCount do
   - `Enum.uniq()` alone (without count/length following)
   - `Enum.uniq |> Enum.map(...)` (uniq used for further processing)
   - `Enum.uniq |> Enum.count(predicate)` (a filtered count, different op)
+
+  ## Bad
+
+      defmodule Bad do
+        def count_unique(items) do
+          Enum.uniq(items) |> Enum.count()
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def count_unique(items) do
+          MapSet.new(items) |> MapSet.size()
+        end
+      end
   """
 
   use Credence.Pattern.Rule

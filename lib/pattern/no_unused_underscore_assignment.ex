@@ -38,6 +38,19 @@ defmodule Credence.Pattern.NoUnusedUnderscoreAssignment do
 
   Anything outside that core (a call/operator RHS, a referenced variable, a
   destructuring left side, a last-position binding) is left untouched.
+
+  ## Bad
+
+      def run(x) do
+        _ignored = :ok
+        x
+      end
+
+  ## Good
+
+      def run(x) do
+        x
+      end
   """
 
   use Credence.Pattern.Rule

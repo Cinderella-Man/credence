@@ -36,6 +36,21 @@ defmodule Credence.Pattern.NoManualListLast do
   change. `hd(Enum.reverse([]))` raises (`ArgumentError`) like the original, so the
   fix is behaviour-preserving (the only difference is the raised error's type on the
   degenerate empty-list input).
+
+  ## Bad
+
+      defmodule Bad do
+        def final([el]), do: el
+        def final([_ | rest]), do: final(rest)
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def final(list) do
+          hd(Enum.reverse(list))
+        end
+      end
   """
 
   use Credence.Pattern.Rule

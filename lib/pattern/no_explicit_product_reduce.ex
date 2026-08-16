@@ -1,5 +1,23 @@
 defmodule Credence.Pattern.NoExplicitProductReduce do
-  @moduledoc "Flags explicit product-reduction patterns inside Enum.reduce/3."
+  @moduledoc """
+  Flags explicit product-reduction patterns inside Enum.reduce/3.
+
+  ## Bad
+
+      defmodule BadCapture do
+        def prod_value(list) do
+          Enum.reduce(list, 1, &*/2)
+        end
+      end
+
+  ## Good
+
+      defmodule BadCapture do
+        def prod_value(list) do
+          Enum.product(list)
+        end
+      end
+  """
 
   use Credence.Pattern.Rule
   alias Credence.Issue

@@ -41,6 +41,18 @@ defmodule Credence.Pattern.NoSortThenAt do
   Unresolvable directions such as `Enum.sort(nums, dir) |> Enum.at(0)` or
   opaque comparators like `Enum.sort(nums, &MyModule.compare/2) |> Enum.at(0)`
   are not flagged because we cannot determine whether the result is min or max.
+
+  ## Bad
+
+      defmodule M do
+        def largest(nums), do: Enum.at(Enum.sort(nums), -1)
+      end
+
+  ## Good
+
+      defmodule M do
+        def largest(nums), do: Enum.max(nums, &>/2, fn -> nil end)
+      end
   """
 
   use Credence.Pattern.Rule

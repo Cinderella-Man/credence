@@ -152,7 +152,11 @@ defmodule Credence.RuleDuplication do
   """
   def example(rule, heading) do
     with {:docs_v1, _, _, _, %{"en" => doc}, _, _} <- Code.fetch_docs(rule),
-         [_, rest] <- Regex.run(~r/##\s*#{heading}\s*\n(.*)/s, doc) do
+         # `## Bad (only rewritten while `single_codepoint_graphemes` is on)` is
+         # a real heading in this codebase — two rules qualify theirs with the
+         # assumption that gates them. Requiring the heading to end at the word
+         # itself silently reported those rules as having no example at all.
+         [_, rest] <- Regex.run(~r/##\s*#{heading}\b[^\n]*\n(.*)/s, doc) do
       rest
       |> String.split("\n")
       |> Enum.drop_while(&(String.trim(&1) == ""))

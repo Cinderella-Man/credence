@@ -19,6 +19,16 @@ defmodule Credence.Pattern.NoRedundantCaseNilClause do
         _ -> body_a          # identical to nil body
       end
 
+  ## Bad
+
+      map
+      |> Map.get(key)
+      |> case do
+        nil -> :not_found
+        v when v > 0 -> {:ok, v}
+        _v -> :not_found
+      end
+
   ## Good
 
       case expr do

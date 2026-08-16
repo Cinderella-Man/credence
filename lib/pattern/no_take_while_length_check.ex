@@ -34,6 +34,22 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
   - `length(Enum.take_while(enum, fun))`
   - `Enum.count(Enum.take_while(enum, fun))`
   - `enum |> Enum.take_while(fun) |> length()`
+
+  ## Bad
+
+      defmodule Bad do
+        def check(items) do
+          Enum.take_while(items, &is_integer/1) |> length()
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def check(items) do
+          Enum.reduce_while(items, 0, fn elem, acc -> if (&is_integer/1).(elem), do: {:cont, acc + 1}, else: {:halt, acc} end)
+        end
+      end
   """
 
   use Credence.Pattern.Rule

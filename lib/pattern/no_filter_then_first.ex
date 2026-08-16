@@ -25,6 +25,18 @@ defmodule Credence.Pattern.NoFilterThenFirst do
       Stream.filter(numbers, &(&1 > 10)) |> Enum.at(1) # not index 0
       Stream.filter(numbers, &(&1 > 10)) |> Enum.at(0, -1) # has default arg
       Enum.find(numbers, &(&1 > 10))                    # already idiomatic
+
+  ## Bad
+
+      defmodule M do
+        def first_even(nums), do: Enum.at(Stream.filter(nums, &even?/1), 0)
+      end
+
+  ## Good
+
+      defmodule M do
+        def first_even(nums), do: Enum.find(nums, &even?/1)
+      end
   """
 
   use Credence.Pattern.Rule

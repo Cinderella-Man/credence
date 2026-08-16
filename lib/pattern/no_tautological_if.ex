@@ -22,6 +22,12 @@ defmodule Credence.Pattern.NoTautologicalIf do
 
       if condition, do: value, else: value
 
+  ## Bad
+
+      def check(x) do
+        if x > 0, do: value, else: value
+      end
+
   ## Good
 
       result

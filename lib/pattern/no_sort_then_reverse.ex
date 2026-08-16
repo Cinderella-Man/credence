@@ -22,6 +22,18 @@ defmodule Credence.Pattern.NoSortThenReverse do
   Unresolvable directions such as `Enum.sort(nums, dir) |> Enum.reverse()` or
   opaque comparators like `Enum.sort(nums, &MyModule.compare/2) |> Enum.reverse()`
   are not flagged because we cannot determine the flipped direction.
+
+  ## Bad
+
+      defmodule M do
+        def f(x), do: Enum.reverse(Enum.sort(x))
+      end
+
+  ## Good
+
+      defmodule M do
+        def f(x), do: Enum.sort(x, :desc)
+      end
   """
 
   use Credence.Pattern.Rule

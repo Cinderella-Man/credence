@@ -22,6 +22,26 @@ defmodule Credence.Pattern.NoEmptyMapNew do
 
   Only the zero-argument call is targeted.  `Map.new(enum)`, `Map.new(enum, fun)`,
   and piped forms like `enum |> Map.new()` are all idiomatic and left alone.
+
+  ## Bad
+
+      defmodule Bad do
+        def build do
+          a = Map.new()
+          b = Map.new()
+          {a, b}
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def build do
+          a = %{}
+          b = %{}
+          {a, b}
+        end
+      end
   """
 
   use Credence.Pattern.Rule

@@ -67,6 +67,22 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
   error-swallowing semantics — moving it into `Enum.count/2` preserves its
   truthiness, side effects, and any exception it raises. No narrowing of
   `<cond>` is needed.
+
+  ## Bad
+
+      defmodule Bad do
+        defp tally([], acc), do: acc
+        defp tally([h | t], acc) do
+          new_acc = if h > 0, do: 1 + acc, else: acc
+          tally(t, new_acc)
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        defp tally(list, acc) when is_list(list), do: acc + Enum.count(list, fn h -> h > 0 end)
+      end
   """
 
   use Credence.Pattern.Rule

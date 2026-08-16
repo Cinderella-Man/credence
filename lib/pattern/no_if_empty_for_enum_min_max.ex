@@ -14,6 +14,22 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
   while `Enum.min(var, fn -> default end)` returns the default — a behaviour
   change. `Enum.empty?/1` reports emptiness for every enumerable, matching
   `Enum.min/2`'s empty_fallback exactly, so those forms rewrite identically.
+
+  ## Bad
+
+      defmodule Bad do
+        def run(lengths) do
+          if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def run(lengths) do
+          Enum.min(lengths, fn -> 0 end)
+        end
+      end
   """
 
   use Credence.Pattern.Rule

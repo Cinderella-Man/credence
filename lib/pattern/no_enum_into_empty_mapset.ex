@@ -27,6 +27,18 @@ defmodule Credence.Pattern.NoEnumIntoEmptyMapset do
   `Enum.into(enum, existing_mapset)` where `existing_mapset` is not
   `MapSet.new()` is left alone — it merges into an existing MapSet,
   which `MapSet.new` does not do.
+
+  ## Bad
+
+      routes
+      |> Stream.with_index()
+      |> Enum.into(MapSet.new(), fn {r, i} -> {i, r} end)
+
+  ## Good
+
+      routes
+      |> Stream.with_index()
+      |> MapSet.new(fn {r, i} -> {i, r} end)
   """
 
   use Credence.Pattern.Rule

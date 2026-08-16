@@ -12,6 +12,18 @@ defmodule Credence.Pattern.HallucinatedGuard do
       is_non_neg_integer(x)  →  is_integer(x) and x >= 0
       is_neg_integer(x)      →  is_integer(x) and x < 0
       is_non_pos_integer(x)  →  is_integer(x) and x <= 0
+
+  ## Bad
+
+      defmodule M do
+        def valid?(x), do: is_pos_integer(x)
+      end
+
+  ## Good
+
+      defmodule M do
+        def valid?(x), do: is_integer(x) and x > 0
+      end
   """
 
   use Credence.Pattern.Rule

@@ -15,6 +15,18 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
   regex patterns, so it is a drop-in replacement that works in pipelines:
 
       input |> String.replace(~r/[^a-z0-9]/, "")
+
+  ## Bad
+
+      defmodule M do
+        def clean(s), do: s |> Regex.replace(~r/[^a-z]/, "")
+      end
+
+  ## Good
+
+      defmodule M do
+        def clean(s), do: s |> String.replace(~r/[^a-z]/, "")
+      end
   """
   @behaviour Credence.Pattern.Rule
 

@@ -39,6 +39,23 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
   same answer. `map`/`filter`/`reject`/`flat_map` return order-observable lists
   and `each`'s side effects are order-sensitive, so rewriting them would not be
   behaviour-preserving and they are left alone.
+
+  ## Bad
+
+      defmodule Bad do
+        def has_nil?(config) do
+          Map.keys(config)
+          |> Enum.any?(fn k -> config[k] == nil end)
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def has_nil?(config) do
+          Enum.any?(config, fn {k, v} -> v == nil end)
+        end
+      end
   """
   use Credence.Pattern.Rule
   alias Credence.Issue

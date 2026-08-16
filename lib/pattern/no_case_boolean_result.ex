@@ -33,6 +33,17 @@ defmodule Credence.Pattern.NoCaseBooleanResult do
       `match?/2` is not constant, so not flagged.
     * **A bare variable pattern** (`x -> true; _ -> false`) — the variable
       matches everything, so the `case` is again constant. Not flagged.
+
+  ## Bad
+
+      case result do
+        :ok -> false
+        _ -> true
+      end
+
+  ## Good
+
+      not match?(:ok, result)
   """
 
   use Credence.Pattern.Rule

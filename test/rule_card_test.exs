@@ -244,7 +244,7 @@ defmodule Credence.RuleCardTest do
 
       # Population floor, not a result check: if the extractor breaks, every
       # rule silently has "no example" and this gate passes by testing nothing.
-      assert length(examples) >= 110,
+      assert length(examples) >= 156,
              "only #{length(examples)} Bad examples extracted; the extractor has regressed"
 
       liars =
@@ -271,7 +271,7 @@ defmodule Credence.RuleCardTest do
             snippet not in [nil, ""],
             do: {rule, snippet}
 
-      assert length(examples) >= 110,
+      assert length(examples) >= 156,
              "only #{length(examples)} Good examples extracted; the extractor has regressed"
 
       liars = for {rule, snippet} <- examples, fires?(rule, snippet) == true, do: rule

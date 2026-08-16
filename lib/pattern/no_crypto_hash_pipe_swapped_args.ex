@@ -41,6 +41,28 @@ defmodule Credence.Pattern.NoCryptoHashPipeSwappedArgs do
       :crypto.hash(:sha256, data)         — already the correct argument order
       data |> :crypto.hash(:sha256, salt) — not the one-argument pipe shape
       data |> :crypto.hash(algo)          — algorithm is a variable, not a literal
+
+  ## Bad
+
+      defmodule Anchored do
+        def hash_file(path) do
+          path
+          |> File.read!()
+          |> :crypto.hash(:sha256)
+        end
+      end
+
+  ## Good
+
+      defmodule Anchored do
+        def hash_file(path) do
+          :crypto.hash(
+            :sha256,
+            path
+            |> File.read!()
+          )
+        end
+      end
   """
 
   use Credence.Pattern.Rule

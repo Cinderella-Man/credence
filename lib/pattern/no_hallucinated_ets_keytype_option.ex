@@ -37,6 +37,22 @@ defmodule Credence.Pattern.NoHallucinatedEtsKeytypeOption do
       :ets.new(:table, [:set, keytype: :bag])   — a different value; out of scope
       :ets.new(:table, [:set, {:keytype, :term}]) — tuple form; out of scope
       :ets.new(:table, opts)                    — options are not a literal list
+
+  ## Bad
+
+      defmodule Anchored do
+        def create do
+          :ets.new(:test, [:set, keytype: :term])
+        end
+      end
+
+  ## Good
+
+      defmodule Anchored do
+        def create do
+          :ets.new(:test, [:set])
+        end
+      end
   """
 
   use Credence.Pattern.Rule

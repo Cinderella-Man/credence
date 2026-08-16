@@ -37,6 +37,22 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
 
   Only flagged when the pattern contains 2 or more simple variables
   (not literals, patterns, or underscore-prefixed names).
+
+  ## Bad
+
+      defmodule Bad do
+        def process([a, b, c]) do
+          Enum.map([a, b, c], &(&1 * 2))
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def process([_, _, _] = items) do
+          Enum.map(items, &(&1 * 2))
+        end
+      end
   """
 
   use Credence.Pattern.Rule

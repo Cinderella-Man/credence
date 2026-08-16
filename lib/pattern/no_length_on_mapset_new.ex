@@ -24,6 +24,22 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
       MapSet.size(MapSet.new(items))   — already the correct form
       length(some_list)                — length on a non-MapSet arg
       MapSet.new(items) |> length()    — piped form (different AST shape)
+
+  ## Bad
+
+      defmodule Bad do
+        def f do
+          length(MapSet.new())
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def f do
+          MapSet.size(MapSet.new())
+        end
+      end
   """
 
   use Credence.Pattern.Rule

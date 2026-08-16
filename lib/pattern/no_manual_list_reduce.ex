@@ -74,6 +74,19 @@ defmodule Credence.Pattern.NoManualListReduce do
   - **Accumulator last, single cons position.** Only the shape with the
     accumulator as the final parameter and exactly one cons (list) parameter is
     flagged; other layouts are dropped rather than risk a mis-collapse.
+
+  ## Bad
+
+      defmodule Bad do
+        def sum([], acc), do: acc
+        def sum([h | t], acc), do: sum(t, acc + h)
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def sum(list, acc) when is_list(list), do: Enum.reduce(list, acc, fn h, acc -> acc + h end)
+      end
   """
 
   use Credence.Pattern.Rule

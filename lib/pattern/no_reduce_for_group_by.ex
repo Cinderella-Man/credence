@@ -43,6 +43,28 @@ defmodule Credence.Pattern.NoReduceForGroupBy do
   (`enum |> Enum.reduce(%{}, fn ...)`). The key may be computed inline in the
   `Map.update` call, or via a single `key = ...` binding immediately preceding
   the `Map.update` (the only other statement in the function body).
+
+  ## Bad
+
+      defmodule Bad do
+        def group(list) do
+          Enum.reduce(list, %{}, fn x, acc ->
+            Map.update(acc, String.first(x), [x], &[x | &1])
+          end)
+          |> Map.new(fn {k, v} -> {k, Enum.reverse(v)} end)
+        end
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def group(list) do
+          Enum.group_by(
+            list,
+            fn x -> String.first(x) end
+          )
+        end
+      end
   """
 
   use Credence.Pattern.Rule

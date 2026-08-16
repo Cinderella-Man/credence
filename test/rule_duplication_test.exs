@@ -32,15 +32,15 @@ defmodule Credence.RuleDuplicationTest do
   # new pair crossing both signals is a new rule that keys on the same thing as
   # an existing one and never catches anything it misses, which is the moment to
   # look, before it ships.
+  #
+  # It has already shrunk once, by itself. `NoSortThenAt ⊇ NoSortThenReverse`
+  # was here until the D5 backfill added 35 `## Bad` examples to the shared
+  # corpus, at which point the two stopped containing each other — the entry's
+  # own note had said the containment looked like an artefact of each rule
+  # firing on exactly one snippet, and growing the corpus proved it. Worth
+  # knowing about this signal: containment gets STRICTER as the corpus grows, so
+  # a pair surviving a larger corpus means more than one surviving a small one.
   @ledger [
-    # Disjoint predicates that happen to share vocabulary. Probed:
-    #   sort |> at(0)              -> NoSortThenAt only
-    #   sort |> reverse()          -> NoSortThenReverse only
-    #   sort |> reverse |> at(0)   -> NoSortThenReverse only
-    # Containment was an artefact of each firing on exactly one corpus snippet,
-    # and it being the same snippet.
-    {Credence.Pattern.NoSortThenAt, Credence.Pattern.NoSortThenReverse},
-
     # Two views of ONE bug — `Keyword.get/2,3` called with its arguments
     # swapped — and neither view covers the other. Probed:
     #   Keyword.get(acc, -1)                 -> IntegerKey only
@@ -70,9 +70,9 @@ defmodule Credence.RuleDuplicationTest do
       # "clean" from "broken". If the corpus collapses — a moduledoc format
       # change, a parse regression — this gate would pass by having nothing to
       # compare, and would say so nowhere.
-      assert length(corpus) >= 100,
+      assert length(corpus) >= 150,
              "shared corpus collapsed to #{length(corpus)} snippets; the gate " <>
-               "cannot distinguish clean from broken below ~100"
+               "cannot distinguish clean from broken below ~150"
 
       signatures = Map.new(rules, &{&1, RuleDuplication.signature(&1)})
       firing = RuleDuplication.firing_sets(rules, corpus)

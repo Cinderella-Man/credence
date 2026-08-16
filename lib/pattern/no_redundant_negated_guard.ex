@@ -29,6 +29,20 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
   A function clause whose guard is `when a != b` or `when a !== b`,
   immediately preceded by a clause of the same function/arity with
   `when a == b` or `when a === b` (same variables, same positions).
+
+  ## Bad
+
+      defmodule Bad do
+        def compare(x, y) when x == y, do: :same
+        def compare(x, y) when x != y, do: :different
+      end
+
+  ## Good
+
+      defmodule Bad do
+        def compare(x, y) when x == y, do: :same
+        def compare(x, y), do: :different
+      end
   """
 
   use Credence.Pattern.Rule
