@@ -141,6 +141,12 @@ defmodule Credence.Semantic.UndefinedFunction do
     # Python float('inf')
     {"infinity", 0} => {:literal, ":math.inf()"},
 
+    # `exit(pid, reason)` from the Python `os._exit`/`sys.exit` idiom.
+    # `Kernel.exit/1` is real and `exit/2` is not, so the row MUST be
+    # arity-checked at the call site as well as in this key — the two spellings
+    # co-occur in the same file and often on the same line (docs/16 4.6d).
+    {"exit", 2} => {:rename, "Process", "exit"},
+
     # Python max/min — polymorphic
     {"max", 1} => {:rename, "Enum", "max"},
     {"max", 3} => {:wrap_args, "Enum", "max"},
@@ -302,10 +308,10 @@ defmodule Credence.Semantic.UndefinedFunction do
         replace_all_on_line(source, line_no, "#{name}()", replacement)
 
       {:rename, mod, fun} ->
-        replace_call_on_line(source, line_no, name, "#{mod}.#{fun}")
+        replace_call_with_arity(source, line_no, name, "#{mod}.#{fun}", arity)
 
       {:rename_local, new_name} ->
-        replace_call_on_line(source, line_no, name, new_name)
+        replace_call_with_arity(source, line_no, name, new_name, arity)
 
       {:wrap_args, mod, fun} ->
         wrap_args_on_line(source, line_no, name, "#{mod}.#{fun}")
@@ -561,9 +567,58 @@ defmodule Credence.Semantic.UndefinedFunction do
     end
   end
 
-  defp replace_call_on_line(source, line_no, old_name, new_name) do
+  # Arity-aware call replacement (docs/16 4.6d's remaining gap).
+  #
+  # `@local_replacements` is keyed `{name, arity}`, so the LOOKUP already knows
+  # the arity — but the replacement above matches the name whatever the call's
+  # shape, so an `exit/2` row rewrote a bare `exit(reason)` sitting on the same
+  # line. That is not academic for exactly this row: `Kernel.exit/1` is real and
+  # common, and `exit/2` is the invention, so the two genuinely co-occur.
+  #
+  # Counting arity from text needs only the argument list's top-level commas,
+  # which is why this is a scan rather than a parse: the line may not parse (the
+  # file has a compile error by construction) and the argument expressions can
+  # contain commas inside their own brackets and strings.
+  defp replace_call_with_arity(source, line_no, old_name, new_name, arity) do
     pattern = Regex.compile!("(?<![.a-zA-Z0-9_])#{Regex.escape(old_name)}\\(")
-    edit_line(source, line_no, &SourceMask.replace_code(&1, &2, pattern, "#{new_name}("))
+
+    edit_line(source, line_no, fn line, shadow ->
+      # EVERY match is considered, not just the first: a line can hold both
+      # `exit(:normal)` and `exit(p, :kill)`, and stopping at the first match
+      # would decline the whole line because the wrong one came first.
+      # EVERY match whose arity fits is replaced — the previous helper replaced
+      # every match unconditionally, and a line may hold two calls of the same
+      # arity (`max([a, b]) + max([c, d])`). Right-to-left, so an earlier
+      # splice cannot invalidate a later offset.
+      pattern
+      |> Regex.scan(shadow, return: :index)
+      |> Enum.map(&hd/1)
+      |> Enum.filter(fn {start, len} -> call_arity(shadow, start + len) == arity end)
+      |> Enum.reverse()
+      |> Enum.reduce(line, fn {start, len}, acc ->
+        head = binary_part(acc, 0, start)
+        tail = binary_part(acc, start + len, byte_size(acc) - start - len)
+        head <> new_name <> "(" <> tail
+      end)
+    end)
+  end
+
+  # Top-level argument count of the call whose `(` has just been consumed at
+  # `from`. Counts commas at bracket depth 0; the shadow has string and comment
+  # bytes blanked already, so a comma inside a literal cannot be seen here.
+  defp call_arity(shadow, from), do: call_arity(shadow, from, 0, 1, false)
+
+  defp call_arity(shadow, i, _commas, _depth, _seen) when i >= byte_size(shadow), do: nil
+
+  defp call_arity(shadow, i, commas, depth, seen) do
+    case :binary.at(shadow, i) do
+      c when c in [?(, ?[, ?{] -> call_arity(shadow, i + 1, commas, depth + 1, true)
+      ?) when depth == 1 -> if seen, do: commas + 1, else: 0
+      c when c in [?), ?], ?}] -> call_arity(shadow, i + 1, commas, depth - 1, seen)
+      ?, when depth == 1 -> call_arity(shadow, i + 1, commas + 1, depth, true)
+      c when c in [?\s, ?\t] -> call_arity(shadow, i + 1, commas, depth, seen)
+      _ -> call_arity(shadow, i + 1, commas, depth, true)
+    end
   end
 
   defp wrap_args_on_line(source, line_no, old_name, new_qualified) do

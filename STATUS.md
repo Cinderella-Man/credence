@@ -212,23 +212,33 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   before and after finds a different line. Searching the whole output for the
   intact comment settles it.
 
-- [ ] **D2. The 4.6d rows are UNBLOCKED — add them.** docs/16 deferred `Agent`,
-  `NaiveDateTime`, `List.keystore` and `exit/2` on "call-boundary anchoring",
-  not on anything about the rows themselves. **That anchoring now exists**: the
-  replacements were plain substring searches, so a table name that is a prefix
-  of a longer real name rewrote inside it — `Base.hex_encode` inside
-  `Base.hex_encode32`, the very name the compiler suggests in that diagnostic's
-  did-you-mean block. Every replacement now carries a trailing
-  `(?![A-Za-z0-9_])` boundary, pinned by a test that repairs `List.pop` while
-  leaving a real `List.pop_at` on the same line intact.
+- [ ] **D2. The last two 4.6d rows — and one of the four was never a row.**
+  Call-boundary anchoring landed, and with it the two pieces that depended on
+  it:
+  * **`exit/2` -> `Process.exit/2`: DONE.** It needed the arity check docs/16
+    named, because `Kernel.exit/1` is real and `exit/2` is the invention, so the
+    two spellings co-occur on one line. The table key `{name, arity}` was never
+    the problem — the *line-level* replacement matched a name whatever the
+    call's shape. Arity is now counted from top-level commas in the masked
+    shadow (the line may not parse at all, and a comma inside a string or a
+    nested bracket must not count).
+  * **`NaiveDateTime`: already shipped**, per escalation-ledger row 458 —
+    `fix_hallucinated_naive_datetime_accessor` covers it, and the residual
+    `day_of_week/1` piece is a *recorded decline*, not a gap.
 
-  What remains is the rows: four `@qualified_replacements` entries plus tests.
-  `exit/2` additionally needs the **arity check** `replace_call_on_line/4` still
-  does not do — the table is keyed `{module, fun, arity}` but the line-level
-  replacement matches the name regardless of how many arguments the call has,
-  so an `exit/1` on the same line would be rewritten by an `exit/2` row.
-  `Base.hex_encode` is also now safe to add and should be widened to
-  `hex_encode64`/`hex_encode32` per escalation-ledger row 119.
+  Remaining:
+  * **`List.keystore/3`** — inserts `0` as a positional argument
+    (`List.keystore(l, k, t)` -> `List.keystore(l, 0, k, t)`). No existing
+    table handler inserts at a position; `:rename_add_arg` appends. Needs a
+    handler or a small rule.
+  * **`Agent.update` tuple wrapper — NOT a table row, and docs/16's framing
+    was wrong for it.** It unwraps `{:ok, state}` returned from an
+    `Agent.update` callback, which is a **runtime `BadMapError`**, not a
+    compiler diagnostic — so `UndefinedFunction` can never see it. It belongs
+    in Pattern. The sister tree's `no_agent_update_tuple_wrapper.ex` is the
+    source material.
+  * **`Base.hex_encode`** is now safe to add (the anchoring is what blocked it)
+    and should be widened to `hex_encode64`/`hex_encode32` per ledger row 119.
 
 - [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
 

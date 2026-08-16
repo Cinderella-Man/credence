@@ -572,4 +572,98 @@ end
       )
     end
   end
+
+  # ── exit/2 -> Process.exit/2, and the arity check it needs (docs/16 4.6d) ──
+  #
+  # `Kernel.exit/1` is real and `exit/2` is the invention, so the two spellings
+  # co-occur — which is why this row was deferred until the replacement could
+  # tell them apart. The table key `{name, arity}` was never the problem; the
+  # LINE-level replacement matched the name whatever the call's shape.
+
+  describe "exit/2" do
+    defp exit2(source, line \\ 2) do
+      UndefinedFunction.fix(source, %{
+        severity: :error,
+        message:
+          "undefined function exit/2 (expected M to define such a function or for it to be imported, but none are available)",
+        position: {line, 1}
+      })
+    end
+
+    test "qualifies the two-argument call" do
+      confirm_fix(
+        exit2("""
+        defmodule ExitTwo do
+          def f(p), do: exit(p, :kill)
+        end
+        """),
+        """
+        defmodule ExitTwo do
+          def f(p), do: Process.exit(p, :kill)
+        end
+        """
+      )
+    end
+
+    test "leaves a one-argument exit alone" do
+      source = """
+      defmodule ExitOne do
+        def f, do: exit(:normal)
+      end
+      """
+
+      confirm_fix(exit2(source), source)
+    end
+
+    # The discriminating case. Stopping at the first match would decline the
+    # whole line, because the arity that does not match comes first.
+    test "on a line holding both, only the two-argument call is qualified" do
+      confirm_fix(
+        exit2("""
+        defmodule ExitBoth do
+          def f(p), do: {exit(:normal), exit(p, :kill)}
+        end
+        """),
+        """
+        defmodule ExitBoth do
+          def f(p), do: {exit(:normal), Process.exit(p, :kill)}
+        end
+        """
+      )
+    end
+
+    # Arity is counted from top-level commas, so a comma inside the argument's
+    # own brackets must not raise the count. The line may not parse at all —
+    # the file has a compile error by construction — which is why this is a
+    # scan and not a parse.
+    test "commas nested inside an argument do not change the arity" do
+      confirm_fix(
+        exit2("""
+        defmodule ExitNested do
+          def f(p), do: exit(p, {:shutdown, [1, 2]})
+        end
+        """),
+        """
+        defmodule ExitNested do
+          def f(p), do: Process.exit(p, {:shutdown, [1, 2]})
+        end
+        """
+      )
+    end
+
+    test "a comma inside a string is not an argument separator" do
+      confirm_fix(
+        exit2("""
+        defmodule ExitString do
+          def f(p), do: exit(p, "a, b")
+        end
+        """),
+        """
+        defmodule ExitString do
+          def f(p), do: Process.exit(p, "a, b")
+        end
+        """
+      )
+    end
+  end
 end
