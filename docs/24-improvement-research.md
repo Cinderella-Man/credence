@@ -138,7 +138,7 @@ code and aggregating its run logs, not from executing the harness. The two
 aggregations *were* computed rather than quoted — 1,280 rows in
 `var/run/rows.jsonl` and 489 archived row logs from `run-2026-07-06`.
 
-### B1. `Implement.wrote_nothing?/1` reads a key that does not exist
+### B1. `Implement.wrote_nothing?/1` reads a key that does not exist — [DONE]
 
 `lib/cev/implement.ex:97` reads `bf.rule_source`. The only producer,
 `lib/cev/evolve/router.ex:454`, writes `rule_src` — as does the other consumer at
@@ -156,7 +156,7 @@ unit test calling `Implement.run/2` on a ctx from `Router.bugfix_ctx/5` with a
 stub returning `{:ok, %{}}`, asserting `{:gave_up, {:cc, "no_writes"}}` rather
 than a raise. Highest value-per-line in this document.
 
-### B2. Both crash handlers DELETE the row log
+### B2. Both crash handlers DELETE the row log — [DONE]
 
 `Orchestrator`'s two rescues call `safe_close_log/1` → `RowLog.close/1` →
 `File.rm(...)`. Every other outcome *moves* the log instead.
@@ -277,10 +277,12 @@ log tree are on disk; the per-pass permutation is derived deterministically from
 the pass number, so a mid-pass resume re-derives the same order; and
 `Preflight.reconcile!` hard-resets the clone, so a dirty tree recovers.
 
-* **(a) The runaway budget ceiling resets to zero on every restart.** `Budget`
-  seeds `spent_usd: 0.0` and never reads `usage.jsonl`. The $500 ceiling is
-  therefore per-VM-lifetime, not per-run, and a crash-restart loop can never trip
-  it. Fix: sum `cost_usd` from `usage.jsonl` in `init/1`.
+* **(a) The runaway budget ceiling resets to zero on every restart — [DONE].**
+  `Budget` seeded `spent_usd: 0.0` and never read `usage.jsonl`, so the $500
+  ceiling was per-VM-lifetime, not per-run — and a crash-restart loop, the exact
+  failure it exists to stop, could never trip it. `init/1` now sums `cost_usd`
+  from the run's usage log, skipping malformed lines (which can only
+  under-count, failing toward "keep running" rather than a false shutdown).
 * **(b) A row that kills the VM is retried forever with no counter.** Pending is
   recomputed from progress and the permutation is deterministic, so the same
   index is retried first on every boot. `TransientAttempts` only counts
@@ -290,7 +292,7 @@ the pass number, so a mid-pass resume re-derives the same order; and
   B4a, and the mitigation is confirmed: every `rows.jsonl` line carries `task`
   beside `index`, so the mapping is recoverable.
 
-### B10. The harness test suite writes into live run state
+### B10. The harness test suite writes into live run state — [DONE]
 
 `config/config.exs` sets `run_dir: "var/run"` for **all** envs and there is no
 `config/test.exs`. Two measured consequences: **25 `sidecar_test_*.log` fixtures
@@ -338,8 +340,14 @@ Recorded because docs/22's four refuted claims taught this project to check:
 *only if* its experiment justifies it, then A7 as the real argument for the D5
 Semantic backfill.
 
-**Harness:** B1, B2 and B10 first — each is a one-to-three-line diff plus a test,
-and B2 and B10 are what make every later measurement trustworthy. Then B5 and B4
-(pure token savings, both with offline replay experiments). Then B3, the largest
-single cost lever, which needs the replay harness B4 and B5 build. Then B8 and
-B7. Leave B6 as a "do not build H7 as specified" note.
+**Harness:** B1, B2, B10 and B9(a) are **done**. Next: B5 and B4 (pure token
+savings, both with offline replay experiments), then B3, the largest single cost
+lever, which needs the replay harness B4 and B5 build. Then B8 and B7. Leave B6
+as a "do not build H7 as specified" note.
+
+**One correction to B10 worth keeping:** the existing `var/run/usage.jsonl`
+pollution is NOT cleaned up. Those are the maintainer's files, and deleting run
+evidence is the exact mistake B2 is about. Measured for the recovery: 5,197
+records totalling **$35,731.58**, of which 59 are individually over $100 — the
+real run cost about $67, so a `cost_usd < 100` filter plus a timestamp cut
+recovers it.

@@ -151,6 +151,26 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
 
 ## C. Harness loop quality (valuable before Phase 9, not gating it)
 
+- [x] **C19. Four harness defects found and fixed** (harness repo, 366 tests
+  green). Listed here because two of them change what earlier measurements mean:
+  `Implement.wrote_nothing?/1` raised `KeyError` on **every** bugfix row (a
+  one-word key mismatch, landed after the 3rd evolution so never seen); both
+  crash handlers **deleted** the row log, which is why **89 rows (7.6%) of the
+  3rd evolution have no evidence at all**; `mix test` wrote into the live run
+  dir, putting 25 ExUnit fixtures inside the durable archive and ~$35,700 of
+  synthetic spend into `usage.jsonl`; and the runaway budget ceiling reset to
+  zero on every restart, so a crash-restart loop could never trip it.
+  Full research: `docs/24-improvement-research.md` §B.
+
+- [ ] **C20. Work the rest of `docs/24-improvement-research.md`.** Ranked, with
+  the experiment that must precede each. Next by value: B5 (`:rule_name_not_in_closed_set`
+  is 83% of classifier errors and is recoverable), B4 (the `:solved` classifier
+  lens has a measured yield of exactly **zero** — $6.02 and 5.5 hours for
+  nothing), B3 (`Cev.Distill` removes 0.08% of the log; classify is half the
+  run's cost). **B6 is a do-NOT-build note:** making the novelty gate blocking
+  would have destroyed 14 accepted rules to catch 6 duplicates.
+
+
 - [ ] **C1. T2.3 — land the LD3+LD4 merge.** ~60% done in salvage
   `b2-ld34/` (six modules, **zero tests**, agent killed at "Now the tests").
   Gate/Router integration was never designed; note the tracker's cite drifted:
