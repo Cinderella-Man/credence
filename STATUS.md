@@ -262,65 +262,11 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   consumes the `:reverted|:patch_rejected|:crashed|:no_op` vocabulary), C16
   (`rule_status/1` exposes neither `priority` nor `unsafe_in_dsl`; no
   `max_passes` config).
-- [ ] **D8a. Build the duplicate gate — the fold work is done and it found the
-  opposite of what was expected.** docs/12's C11 named three "duplicate
-  clusters"; running them refuted two and confirmed one.
-  * *Grapheme/count trio — NOT duplicates.* `AvoidGraphemesEnumCount`,
-    `AvoidGraphemesLength` and `NoEnumCountForLength` **converge**: every entry
-    point reaches `String.length/1`. They do overlap, and `NoEnumCountForLength`
-    alone gives the weaker answer (it keeps the list allocation), but the
-    Pattern round is a cascade and `AvoidGraphemesLength` finishes the job — so
-    the outcome survives a rename, not merely the current alphabetical order.
-    Pinned in `test/pattern/graphemes_count_family_test.exs`, and the moduledoc
-    that taught the weaker rewrite as its flagship example is fixed.
-  * *Length-guard pair — NOT duplicates.* `avoid_length_guard_less_than2`
-    (`< 2`/`<= 1`) and `no_length_guard_to_pattern` (`> 0`, `== N`) cover
-    disjoint predicates.
-  * *Shared predicates — REAL, and already rotted.* `condition_bool?/1` was
-    byte-identical (69 lines) in two rules; now `RuleHelpers.boolean_condition?/1`.
-    Its sibling `boolean_expr?/1` was copied the same way and has **drifted** —
-    the original grew a nested-`if` clause the copy lacks, while the copy's
-    comment still claimed they mirrored. Left unsynced deliberately (widening
-    changes what the rule fires on and needs its own evidence) but recorded.
-
-  **A mechanical duplicate signal now exists, and it found a real duplicate on
-  its first run.** The signature that works is the set of **atom literals in a
-  rule's matcher** — the module and function names it keys on — with the
-  moduledoc stripped. The obvious signature does not work and is worth recording
-  so nobody rebuilds it: the qualified `Module.fun` CALLS in a rule's source are
-  its own machinery (`Enum.map`, `Sourceror.*`), so scoring on those gives 133
-  pairs at Jaccard >= 0.6 with `prefer_explicit_binary_arithmetic` ~
-  `prefer_regex_match` at 1.0. Scoring on matched atoms gives **9** pairs, all
-  plausibly related.
-
-  The top pair was an exact duplicate: `no_list_delete_at_length` and
-  `no_list_delete_at_with_length` had the same target
-  (`List.delete_at(l, length(l) - 1)`), the same repair (`-1`), identical
-  behaviour on every shape probed, and only the first ever fired in the pipeline.
-  Retired, with its one unique assertion ported.
-
-  **All 8 remaining pairs were triaged: none is redundant** — 6 overlapping, 2
-  unrelated — which is the result that makes the signal trustworthy rather than
-  merely loud. The one exact duplicate it found was the one it found first.
-
-  **And triaging them found a live defect the probe was not looking for.**
-  `prefer_concat_over_flat_map_identity` and `no_identity_enum_map` share a
-  copy-pasted `identity_fn?/1`, and asking why only one copy worked exposed two
-  **unreachable clauses** in the flat_map version: written as `{:&, [...]}` and
-  `{:__aliases__, [:Function]}` — two-tuples, where the AST nodes are
-  three-tuples with metadata. Valid Elixir, so nothing warned; no test covered
-  the shape; so `Enum.flat_map(l, &Function.identity/1)` was silently missed
-  while the identical `Enum.map` form was caught and pinned. Fixed and pinned.
-  That is the third instance of copy-pasted predicates rotting in one copy
-  (`condition_bool?`, `boolean_expr?`, now `identity_fn?`).
-
-  **What is left is turning the probe into a gate**: ledger the 8 pairs
-  C13/C14-style and fail on a new one. The threshold wants choosing on evidence
-  — 0.6 is where the prototype ran, and now that every pair above it is known to
-  be benign, the ledger would be 8 rows of "related, checked, fine", which is a
-  weaker artefact than a gate that fires only on genuine subsumption. Worth
-  considering a second signal (firing-set containment on shared fixtures) before
-  fixing the number.
+- [ ] ~~**D8a. Build the duplicate gate.**~~ **DONE** — see
+  `test/rule_duplication_test.exs` and `test/support/rule_duplication.ex`.
+  Recorded here only because the *result* changed what D6 and D9 should assume:
+  the gate reports **three** pairs, all triaged benign by execution, and a
+  fourth crossing both signals is now a test failure.
 
 - [ ] **D9. Mutant-survivor triage — the method is established and measured;
   the tail is not worked.** Rule Standard requirement 9 is the last fully
