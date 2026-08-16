@@ -1,10 +1,33 @@
-# Phase 4 — accept the evolution cycle
+# Accept the 3rd evolution cycle
 
-Closes the acceptance cycle planned in `docs/16`. 286 commits: 116 rule
-acceptances from the stage-1 drain, then the disposition of all 143 rejected
-rules, then the repairs that disposition uncovered.
+**PR [#22](https://github.com/Cinderella-Man/credence/pull/22)** —
+`evolution_accepted` → `main`, **374 commits**.
 
-Open at: https://github.com/Cinderella-Man/credence/compare/main...evolution_accepted
+Closes the acceptance cycle planned in `docs/16`: 116 rule acceptances from the
+stage-1 drain, the disposition of all 143 rejected rules, the repairs that
+disposition uncovered — and, since the body below was first written, the
+reality-gate program the disposition argued for (`docs/22`) plus the release
+map now in `STATUS.md`.
+
+> **Merge with a method that PRESERVES COMMIT SHAs — fast-forward or a merge
+> commit, never squash or rebase.** 374 commit ids are cited across `docs/16`,
+> `docs/22` Part III, `maintainer_tools/escalation_ledger.md`, the harness's
+> `IMPROVEMENTS.md` and the in-flight record. A squash orphans every one of them
+> and makes the sister-clone reset (`STATUS.md` B2) produce a tree unrelated to
+> the documented history. Verified fast-forward-clean: `origin/main` is an
+> ancestor of `evolution_accepted`, 0 commits behind.
+
+## What landed after the original Phase-4 body
+
+The sections below are the Phase-4 record and remain accurate. Since then the
+branch also carries the gate program that the 143-reject analysis called for:
+the **pipeline-witness gate** (every rule must fire through the real pipeline —
+it found 2 live rules that could not), **dispatch-contention**, the
+**self-corruption oracle** and its Syntax paydown, the **idempotency ratchet**,
+the **C18 mutant sweep**, a **compile bound** that ended seven OOM kills, and —
+most recently — the **byte-scope oracle for the Semantic phase**, which found
+`UndefinedFunction` rewriting inside string literals and comments. Full detail
+per item in `docs/22`; what is still open is in `STATUS.md`.
 
 ## The part that matters most: nine live shipped defects, in seven rules
 
@@ -122,6 +145,12 @@ source of truth and the prose is generated from it.
 
 ## Verification
 
-- `mix test` (including the 20,076-file corpus scan): **9,615 tests, 0 failures**
-- non-corpus suite: 8,058 → **8,114**, all green
+- `mix test` (including the 20,076-file corpus scan): **10,023 tests + 6
+  properties, 0 failures** (was 9,615 when this section was first written)
+- the one default-excluded layer, `mix test --only idempotency`: green (~650 s;
+  run it on a quiet box, its timeout has ~38% headroom)
+- `mix format --check-formatted`: clean tree-wide
+- `mix compile --force --warnings-as-errors`: clean
 - sister repo after the deletion: **6,842 tests, 0 failures**
+- **no CI exists in either repo** — the local matrix above is the only
+  verification this release gets

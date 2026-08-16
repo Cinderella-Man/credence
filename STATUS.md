@@ -37,46 +37,47 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
 
 ## A. Merge + cut 0.8.1 (release-blocking, in order)
 
-- [ ] **A1. Identify and verify the PR.** docs/22 struck T0.2 on "a PR for the
-  whole 3rd evolution already exists", but **no PR number, head, or base is
-  recorded anywhere in the repo**, and `gh` is unauthenticated on this box, so
-  no session has ever verified it. It MUST have head `evolution_accepted` —
-  **not `evolution`** (`b83d623`, which lacks all 362 acceptance commits and
-  every new meta-gate; merging that head would look like "the evolution PR" and
-  be wrong). `gh auth login && gh pr list --state all --json
-  number,headRefName,baseRefName`. Record the number here and in docs/22.
-- [ ] **A2. Merge with an SHA-preserving method only** — fast-forward or merge
-  commit, **never GitHub squash/rebase**: 362 commit ids are cited across
-  docs/16, docs/22 Part III, the escalation ledger, IMPROVEMENTS.md and the
-  session memory; squash would orphan every one and make the sister reset (B2)
-  produce a tree unrelated to the documented history. Verified today after
-  `git fetch`: `origin/main` = `fb6473c` and is an ancestor of
-  `evolution_accepted` (0 commits behind → clean ff). Re-verify at merge time:
-  `git merge-base --is-ancestor origin/main evolution_accepted`.
-- [ ] **A3. Refresh the PR body.** `docs/PR_BODY_phase4.md` says 286 commits /
-  9,615 tests; the branch now carries **362 commits / 9,975 tests**, and the
-  defect table predates the T3.6 series, T2.5's gate, T2.4's re-measurement and
-  T3.12.
-- [ ] **A4. Finish the release test matrix.** Run today at `6962b7c`: full
-  suite ✅ (9,975 + 6 properties, 0 failures), formatter ✅, zero-warning
-  compile ✅, full `:idempotency` sweep ✅ (the ONE default-excluded credence
-  tag; green in 650s on a quiet box — the first attempt hit its `timeout:
-  900_000` under concurrent load, so run it quiet; the cap has only ~38%
-  headroom), harness suite ✅ 326/326 (but it flaked 325/326 on the first run,
-  test identity unknown — live evidence for C3/T4.7). Still never run:
-  **harness `:integration` tests** (default-excluded; shell into the live
-  clone — need `CEV_CREDENCE_CLONE` + `CEV_ACCEPTING_REPO` set, see B3).
-  Re-run the whole matrix **on `main` after the merge** — see A6.
-- [ ] **A5. The release acts on main.** (1) stamp the date on `CHANGELOG.md`
+**PR [#22](https://github.com/Cinderella-Man/credence/pull/22),
+`evolution_accepted` → `main`, confirmed by the maintainer 2026-08-16.** That
+settles the identity question this section opened with — the head is the branch
+carrying the 374 acceptance commits, not `evolution`. `gh` is not authenticated
+on this machine and will not be, so anything needing the GitHub API is yours;
+plain `git` works and the branch is pushed and level with its remote.
+
+- [ ] **A2. Merge with an SHA-preserving method — fast-forward or merge commit,
+  never squash or rebase.** 374 commit ids are cited across docs/16, docs/22
+  Part III, the escalation ledger, IMPROVEMENTS.md and the session memory;
+  squash orphans every one and makes the sister reset (B2) produce a tree
+  unrelated to the documented history. Re-verify at merge time:
+  `git fetch && git merge-base --is-ancestor origin/main evolution_accepted`
+  (true as of 2026-08-16 — 0 commits behind, so a fast-forward is available).
+- [ ] **A3. Paste the refreshed body.** `docs/PR_BODY_phase4.md` is updated and
+  pushed — correct commit count, current test numbers, the merge-method warning,
+  and a section covering what landed after the original Phase-4 text. Copying it
+  into the PR needs the API, so it is yours.
+- [ ] **A5. The release acts on main**, in order: (1) re-run the A4 matrix **on
+  `main` after the merge** — `mix test`, `mix test --only idempotency` on a quiet
+  box, `mix format --check-formatted`, `mix compile --force
+  --warnings-as-errors`; (2) stamp the date on `CHANGELOG.md`'s
   `## [0.8.1] - Unreleased` (docs/22 T0.4: "stamping a date is the release
-  act"); (2) `git tag v0.8.1` — the repo has **zero tags**; do not cut a
-  v0.7.0 (folded into 0.8.1 by `24ce7df`); (3) push the tag; (4) decide
-  hex.publish or not — `mix.exs` carries hex-shaped `package()` metadata but
-  nothing was ever published.
-- [ ] **A6. Know that there is no CI.** Neither repo has any CI (no `.github/`
-  at all): the merge triggers zero checks and the local matrix in A4 is the
-  only verification the release will ever get. Optional but cheap insurance:
-  add a workflow running the A4 matrix before the next evolution.
+  act"); (3) `git tag v0.8.1` — the repo has **zero tags**, and do not cut a
+  v0.7.0, it was folded into 0.8.1 by `24ce7df`; (4) push the tag; (5) decide
+  hex.publish — `mix.exs` carries hex-shaped `package()` metadata but nothing
+  was ever published. **Trade-off for you:** publishing makes the rule set
+  installable and also makes every future rename a breaking change for
+  downstreams; not publishing keeps the project git-only, which is what every
+  doc currently assumes.
+- [ ] **A6. There is no CI in either repo** (no `.github/` at all), so the merge
+  triggers zero checks and the local matrix is the only verification this
+  release will ever get. Cheap insurance before the next evolution: a workflow
+  running the A4 matrix.
+
+**A1 and A4 are done.** A1 by the maintainer's confirmation above; A4 was run at
+`00c1c1c` — full suite **10,023 tests + 6 properties, 0 failures** (corpus
+included), the `:idempotency` sweep green in ~650 s, formatter clean,
+zero-warning compile, harness **332 passed**. The harness `:integration` tests
+remain the one layer never run; they shell into the live clone and need B3's two
+env vars, so they belong to the Phase-9 setup rather than to this section.
 
 ## B. Phase-9 prerequisites (the next evolution; runbook order)
 
