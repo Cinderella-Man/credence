@@ -146,19 +146,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   the bare `:no_lib_change` reject is now `gate.ex:128` + `check_touches` at
   `gate.ex:198-202`, tree discarded at `:148-151`. Take T2.2's H8 as merge
   base. Its own `probe.exs` is the first executable check.
-- [ ] **C3a. H19's third half — a pre-commit stability re-run.** T4.7's flake
-  triage **landed** (harness `5e9807f`): a red corpus-free suite now re-runs its
-  failing files once, and forgives them only if they pass *and* none is in the
-  staged diff — a staged file is never a flake, however cleanly it passes alone,
-  because a failure that appears only in the full suite is the interference a
-  new rule causes. Forgiven runs append to `var/run/flaky.jsonl`. Four controls
-  drive the reject branches, four more pin the failure-location parser.
-
-  What H19 also asked for and this does not do: **re-run the candidate's own
-  focused tests once more before committing**, to catch a rule whose own tests
-  are unstable. Cheap (one file), and the natural place is beside the existing
-  focused run in `check_mutation`.
-
 - [ ] **C4. T4.8** bounded auto-retry on corpus rejects (H6) — now affordable,
   T2.1's scoped dispatch landed.
 - [ ] **C5. T4.9** H1 gold over-fire ratchet (diff against an
