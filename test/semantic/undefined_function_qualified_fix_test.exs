@@ -1002,4 +1002,87 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       confirm_fix(UndefinedFunction.fix(source, diagnostic), source)
     end
   end
+
+  # ── Base.hex_encode / hex_encode64 (docs/16 4.6d, ledger row 119) ──────
+  #
+  # Deferred on call-boundary anchoring, not on themselves: `hex_encode` is a
+  # prefix of the REAL `hex_encode32`, which the compiler lists in this
+  # diagnostic's own did-you-mean block, so before the anchor one broken call
+  # became two. Verified against the actual `Base` module — only `hex_encode32`
+  # and `hex_decode32` exist; `hex_encode` and `hex_encode64` are both invented.
+
+  describe "Base.hex_encode" do
+    defp base_fix(source, message) do
+      UndefinedFunction.fix(source, %{severity: :error, message: message, position: {2, 1}})
+    end
+
+    test "hex_encode/1 becomes encode16 with case: :lower" do
+      confirm_fix(
+        base_fix(
+          """
+          defmodule HexOne do
+            def f(x), do: Base.hex_encode(x)
+          end
+          """,
+          "Base.hex_encode/1 is undefined or private"
+        ),
+        """
+        defmodule HexOne do
+          def f(x), do: Base.encode16(x, case: :lower)
+        end
+        """
+      )
+    end
+
+    # `Base.encode16` defaults to UPPERCASE and an LLM reaching for `hex_encode`
+    # is translating Python's `bytes.hex()`, which is lowercase — so the option
+    # is the repair, not decoration. Two-argument callers keep their own.
+    test "hex_encode/2 keeps the caller's options" do
+      confirm_fix(
+        base_fix(
+          """
+          defmodule HexTwo do
+            def f(x), do: Base.hex_encode(x, case: :upper)
+          end
+          """,
+          "Base.hex_encode/2 is undefined or private"
+        ),
+        """
+        defmodule HexTwo do
+          def f(x), do: Base.encode16(x, case: :upper)
+        end
+        """
+      )
+    end
+
+    test "hex_encode64/1 becomes encode64 — base64 has no hex variant" do
+      confirm_fix(
+        base_fix(
+          """
+          defmodule HexB64 do
+            def f(x), do: Base.hex_encode64(x)
+          end
+          """,
+          "Base.hex_encode64/1 is undefined or private"
+        ),
+        """
+        defmodule HexB64 do
+          def f(x), do: Base.encode64(x)
+        end
+        """
+      )
+    end
+
+    # The trap this row was deferred for. `hex_encode32/1` is REAL; a
+    # `hex_encode/1` diagnostic must not touch it.
+    test "CONTROL: the real hex_encode32 is left alone" do
+      source = """
+      defmodule HexReal do
+        def f(x), do: Base.hex_encode32(x)
+      end
+      """
+
+      assert base_fix(source, "Base.hex_encode/1 is undefined or private") == source
+    end
+  end
 end

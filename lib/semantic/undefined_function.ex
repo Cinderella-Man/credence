@@ -134,7 +134,25 @@ defmodule Credence.Semantic.UndefinedFunction do
     {":math", "min", 2} => {:rename, "Kernel", "min"},
     {":math", "max", 2} => {:rename, "Kernel", "max"},
     # :math has no round either; Kernel.round/1 is auto-imported.
-    {":math", "round", 1} => {:drop_module, "round"}
+    {":math", "round", 1} => {:drop_module, "round"},
+
+    # `Base.hex_encode` is invented; the hex encoder is `Base.encode16`, which
+    # defaults to UPPERCASE. An LLM reaching for `hex_encode` is translating
+    # Python's `bytes.hex()`, which is lowercase, so the one-argument form
+    # carries `case: :lower` and the two-argument form leaves the caller's own
+    # options alone.
+    #
+    # These rows were blocked on call-boundary anchoring, not on themselves
+    # (docs/16 4.6d): `hex_encode` is a prefix of the REAL `hex_encode32`, which
+    # the compiler lists in this diagnostic's own did-you-mean block, so before
+    # the anchoring one broken call became two.
+    {"Base", "hex_encode", 1} => {:rename_add_arg, "Base", "encode16", "case: :lower"},
+    {"Base", "hex_encode", 2} => {:rename, "Base", "encode16"},
+
+    # `hex_encode64` is invented too — base64 has no hex variant at all, and the
+    # compiler suggests `encode64/1` itself (escalation ledger row 119).
+    {"Base", "hex_encode64", 1} => {:rename, "Base", "encode64"},
+    {"Base", "hex_encode64", 2} => {:rename, "Base", "encode64"}
   }
 
   @local_replacements %{
@@ -473,12 +491,12 @@ defmodule Credence.Semantic.UndefinedFunction do
   # Finds the call, extracts args via balanced parens, appends the extra arg.
 
   defp rename_add_arg_on_line(source, line_no, old_call, new_call, extra_arg) do
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn
-      {line, ^line_no} -> do_rename_add_arg(line, old_call, new_call, extra_arg)
-      {line, _} -> line
+    edit_line(source, line_no, fn line, shadow ->
+      # The shadow decides only WHETHER this line has a code-position call;
+      # `do_rename_add_arg/4` rebuilds from the real bytes.
+      if :binary.match(shadow, "#{old_call}(") == :nomatch,
+        do: line,
+        else: do_rename_add_arg(line, old_call, new_call, extra_arg)
     end)
   end
 

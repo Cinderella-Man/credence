@@ -212,33 +212,27 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   before and after finds a different line. Searching the whole output for the
   intact comment settles it.
 
-- [ ] **D2. The last two 4.6d rows — and one of the four was never a row.**
-  Call-boundary anchoring landed, and with it the two pieces that depended on
-  it:
-  * **`exit/2` -> `Process.exit/2`: DONE.** It needed the arity check docs/16
-    named, because `Kernel.exit/1` is real and `exit/2` is the invention, so the
-    two spellings co-occur on one line. The table key `{name, arity}` was never
-    the problem — the *line-level* replacement matched a name whatever the
-    call's shape. Arity is now counted from top-level commas in the masked
-    shadow (the line may not parse at all, and a comma inside a string or a
-    nested bracket must not count).
-  * **`NaiveDateTime`: already shipped**, per escalation-ledger row 458 —
-    `fix_hallucinated_naive_datetime_accessor` covers it, and the residual
-    `day_of_week/1` piece is a *recorded decline*, not a gap.
+- [ ] **D2. Two 4.6d items left, and neither is a table row.** The rows that
+  were deferred on call-boundary anchoring have all landed: **`exit/2`** (with
+  the arity check it needed), **`Base.hex_encode/1,2`** (-> `encode16`, with
+  `case: :lower` on the one-argument form, because an LLM reaching for
+  `hex_encode` is translating Python's lowercase `bytes.hex()`) and
+  **`Base.hex_encode64/1,2`** (-> `encode64`; base64 has no hex variant and the
+  compiler suggests it itself). `NaiveDateTime` turned out to have shipped
+  already (ledger row 458). Verified against the real `Base` module rather than
+  assumed: only `hex_encode32`/`hex_decode32` exist, and the control pins that a
+  `hex_encode/1` diagnostic leaves the real `hex_encode32` alone.
 
-  Remaining:
-  * **`List.keystore/3`** — inserts `0` as a positional argument
-    (`List.keystore(l, k, t)` -> `List.keystore(l, 0, k, t)`). No existing
-    table handler inserts at a position; `:rename_add_arg` appends. Needs a
-    handler or a small rule.
-  * **`Agent.update` tuple wrapper — NOT a table row, and docs/16's framing
-    was wrong for it.** It unwraps `{:ok, state}` returned from an
-    `Agent.update` callback, which is a **runtime `BadMapError`**, not a
-    compiler diagnostic — so `UndefinedFunction` can never see it. It belongs
-    in Pattern. The sister tree's `no_agent_update_tuple_wrapper.ex` is the
-    source material.
-  * **`Base.hex_encode`** is now safe to add (the anchoring is what blocked it)
-    and should be widened to `hex_encode64`/`hex_encode32` per ledger row 119.
+  What is left needs different machinery, not another row:
+  * **`List.keystore/3`** inserts `0` at a *position*
+    (`List.keystore(l, k, t)` -> `List.keystore(l, 0, k, t)`). Every table verb
+    either renames or appends; none inserts. Needs a `:rename_insert_arg`
+    handler, which is ~10 lines beside `rename_add_arg_on_line/5`.
+  * **`Agent.update` tuple wrapper is misfiled in docs/16.** Returning
+    `{:ok, state}` from an `Agent.update` callback is a runtime `BadMapError`,
+    not a compiler diagnostic, so `UndefinedFunction` can never see it. It is a
+    **Pattern** rule; the sister tree's `no_agent_update_tuple_wrapper.ex` is
+    the source material.
 
 - [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
 
