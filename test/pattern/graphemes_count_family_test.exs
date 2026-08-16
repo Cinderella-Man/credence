@@ -32,7 +32,7 @@ defmodule Credence.Pattern.GraphemesCountFamilyTest do
   describe "every entry point converges on String.length/1" do
     test "Enum.count(String.graphemes(s))" do
       code = """
-      defmodule M do
+      defmodule GraphemesEnumCountEntry do
         def f(s), do: Enum.count(String.graphemes(s))
       end
       """
@@ -42,7 +42,7 @@ defmodule Credence.Pattern.GraphemesCountFamilyTest do
 
     test "length(String.graphemes(s))" do
       code = """
-      defmodule M do
+      defmodule GraphemesLengthEntry do
         def f(s), do: length(String.graphemes(s))
       end
       """
@@ -52,7 +52,7 @@ defmodule Credence.Pattern.GraphemesCountFamilyTest do
 
     test "the pipeline spelling" do
       code = """
-      defmodule M do
+      defmodule GraphemesPipelineEntry do
         def f(s), do: s |> String.graphemes() |> Enum.count()
       end
       """
@@ -64,7 +64,7 @@ defmodule Credence.Pattern.GraphemesCountFamilyTest do
   describe "the overlap is real, and the weaker answer is not the shipped one" do
     test "all three rules claim the piped Enum.count form" do
       code = """
-      defmodule M do
+      defmodule GraphemesOverlapClaims do
         def f(text), do: String.graphemes(text) |> Enum.count()
       end
       """
@@ -75,7 +75,7 @@ defmodule Credence.Pattern.GraphemesCountFamilyTest do
 
     test "NoEnumCountForLength alone keeps the allocation the others remove" do
       code = """
-      defmodule M do
+      defmodule GraphemesWeakerAnswer do
         def f(text), do: String.graphemes(text) |> Enum.count()
       end
       """
@@ -92,7 +92,7 @@ defmodule Credence.Pattern.GraphemesCountFamilyTest do
       # Deliberately starting from the weaker rewrite rather than the original,
       # i.e. the world where NoEnumCountForLength had sorted first.
       weaker = """
-      defmodule M do
+      defmodule GraphemesCascadeFinish do
         def f(text), do: String.graphemes(text) |> length()
       end
       """
