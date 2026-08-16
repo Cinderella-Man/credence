@@ -15,7 +15,7 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
 
   ## Bad
 
-      defmodule Solution do
+      defmodule SolutionRUCAC do
         def exactly_one_replace([], []), do: false
         def exactly_one_replace([h1 | t1], [h2 | t2]) when h1 == h2 do
           exactly_one_replace(t1, t2)
@@ -28,7 +28,7 @@ defmodule Credence.Pattern.RemoveUnreachableClausesAfterCatchall do
 
   ## Good
 
-      defmodule Solution do
+      defmodule SolutionRUCAC do
         def exactly_one_replace([], []), do: false
         def exactly_one_replace([h1 | t1], [h2 | t2]) when h1 == h2 do
           exactly_one_replace(t1, t2)

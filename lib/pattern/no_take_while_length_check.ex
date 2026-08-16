@@ -37,7 +37,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNTWLC do
         def check(items) do
           Enum.take_while(items, &is_integer/1) |> length()
         end
@@ -45,7 +45,7 @@ defmodule Credence.Pattern.NoTakeWhileLengthCheck do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNTWLC do
         def check(items) do
           Enum.reduce_while(items, 0, fn elem, acc -> if (&is_integer/1).(elem), do: {:cont, acc + 1}, else: {:halt, acc} end)
         end

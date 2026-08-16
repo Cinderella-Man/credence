@@ -18,13 +18,13 @@ defmodule Credence.Pattern.NoPipedRegexReplace do
 
   ## Bad
 
-      defmodule M do
+      defmodule MNPRR do
         def clean(s), do: s |> Regex.replace(~r/[^a-z]/, "")
       end
 
   ## Good
 
-      defmodule M do
+      defmodule MNPRR do
         def clean(s), do: s |> String.replace(~r/[^a-z]/, "")
       end
   """

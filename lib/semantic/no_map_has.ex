@@ -7,7 +7,7 @@ defmodule Credence.Semantic.NoMapHas do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleNMH do
         def has_key?(map, key) do
           Map.has?(map, key)
         end
@@ -15,7 +15,7 @@ defmodule Credence.Semantic.NoMapHas do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleNMH do
         def has_key?(map, key) do
           Map.has_key?(map, key)
         end

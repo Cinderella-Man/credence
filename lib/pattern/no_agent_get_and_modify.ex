@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NoAgentGetAndModify do
 
   ## Bad
 
-      defmodule Counter do
+      defmodule CounterNAGAM do
         def bump(agent) do
           Agent.get_and_modify(agent, fn state ->
             {state.count, %{state | count: state.count + 1}}
@@ -18,7 +18,7 @@ defmodule Credence.Pattern.NoAgentGetAndModify do
 
   ## Good
 
-      defmodule Counter do
+      defmodule CounterNAGAM do
         def bump(agent) do
           Agent.get_and_update(agent, fn state ->
             {state.count, %{state | count: state.count + 1}}

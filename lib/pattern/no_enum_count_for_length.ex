@@ -56,7 +56,7 @@ defmodule Credence.Pattern.NoEnumCountForLength do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNECFL do
         def grapheme_count(str) do
           Enum.count(String.graphemes(str))
         end
@@ -64,7 +64,7 @@ defmodule Credence.Pattern.NoEnumCountForLength do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNECFL do
         def grapheme_count(str) do
           length(String.graphemes(str))
         end

@@ -23,7 +23,7 @@ defmodule Credence.Semantic.NoNonNegatedInteger do
 
   ## Bad
 
-      defmodule Solution do
+      defmodule SolutionNNNI do
         @spec power_of_num(number(), non_negated_integer()) :: number()
         def power_of_num(_base, 0), do: 1
         def power_of_num(base, e) when is_integer(e) and e > 0, do: base * power_of_num(base, e - 1)
@@ -31,7 +31,7 @@ defmodule Credence.Semantic.NoNonNegatedInteger do
 
   ## Good
 
-      defmodule Solution do
+      defmodule SolutionNNNI do
         @spec power_of_num(number(), non_neg_integer()) :: number()
         def power_of_num(_base, 0), do: 1
         def power_of_num(base, e) when is_integer(e) and e > 0, do: base * power_of_num(base, e - 1)

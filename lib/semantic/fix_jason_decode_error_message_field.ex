@@ -37,7 +37,7 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
 
   ## Bad
 
-      defmodule M do
+      defmodule MFJDEMF do
         def f(x, list) do
           case Jason.decode(x) do
             {:error, %Jason.DecodeError{message: msg}} -> Enum.map(list, fn msg -> msg end)
@@ -47,7 +47,7 @@ defmodule Credence.Semantic.FixJasonDecodeErrorMessageField do
 
   ## Good
 
-      defmodule M do
+      defmodule MFJDEMF do
         def f(x, list) do
           case Jason.decode(x) do
             {:error, %Jason.DecodeError{}} -> Enum.map(list, fn msg -> msg end)

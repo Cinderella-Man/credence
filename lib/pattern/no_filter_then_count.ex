@@ -31,7 +31,7 @@ defmodule Credence.Pattern.NoFilterThenCount do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNFTC do
         def count_positives(items) do
           items
           |> Enum.filter(&(&1 > 0))
@@ -41,7 +41,7 @@ defmodule Credence.Pattern.NoFilterThenCount do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNFTC do
         def count_positives(items) do
           items |> Enum.count(&(&1 > 0))
         end

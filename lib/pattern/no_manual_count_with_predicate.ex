@@ -70,7 +70,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNMCWP do
         defp tally([], acc), do: acc
         defp tally([h | t], acc) do
           new_acc = if h > 0, do: 1 + acc, else: acc
@@ -80,7 +80,7 @@ defmodule Credence.Pattern.NoManualCountWithPredicate do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNMCWP do
         defp tally(list, acc) when is_list(list), do: acc + Enum.count(list, fn h -> h > 0 end)
       end
   """

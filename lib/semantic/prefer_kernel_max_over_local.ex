@@ -32,7 +32,7 @@ defmodule Credence.Semantic.PreferKernelMaxOverLocal do
 
   ## Bad
 
-      defmodule Solution do
+      defmodule SolutionPKMOL do
         def calculate do
           max(3, 5)
         end
@@ -43,7 +43,7 @@ defmodule Credence.Semantic.PreferKernelMaxOverLocal do
 
   ## Good
 
-      defmodule Solution do
+      defmodule SolutionPKMOL do
         def calculate do
           Kernel.max(3, 5)
         end

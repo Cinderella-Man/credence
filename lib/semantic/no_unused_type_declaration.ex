@@ -15,14 +15,14 @@ defmodule Credence.Semantic.NoUnusedTypeDeclaration do
 
   ## Bad
 
-      defmodule M do
+      defmodule MNUTD do
         @typep step :: atom()
         def hi, do: :ok
       end
 
   ## Good
 
-      defmodule M do
+      defmodule MNUTD do
         def hi, do: :ok
       end
   """

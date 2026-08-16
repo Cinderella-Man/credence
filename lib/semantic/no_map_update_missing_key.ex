@@ -21,7 +21,7 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleNMUMK do
         def setup do
           state = %{counter: 0, data: []}
           state = %{state | timer_ref: nil}
@@ -31,7 +31,7 @@ defmodule Credence.Semantic.NoMapUpdateMissingKey do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleNMUMK do
         def setup do
           state = %{counter: 0, data: [], timer_ref: nil}
           state = %{state | timer_ref: nil}

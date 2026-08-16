@@ -12,14 +12,14 @@ defmodule Credence.Pattern.AvoidGraphemesLength do
 
   ## Bad
 
-      defmodule Counter do
+      defmodule CounterAGL do
         def size(string), do: string |> String.graphemes() |> length()
         def direct(string), do: length(String.graphemes(string))
       end
 
   ## Good
 
-      defmodule Counter do
+      defmodule CounterAGL do
         def size(string), do: String.length(string)
         def direct(string), do: String.length(string)
       end

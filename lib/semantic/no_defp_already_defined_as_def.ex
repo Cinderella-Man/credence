@@ -24,7 +24,7 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDef do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleNDADAD do
         def greet(name) do
           "Hello, " <> name
         end
@@ -36,7 +36,7 @@ defmodule Credence.Semantic.NoDefpAlreadyDefinedAsDef do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleNDADAD do
         def greet(name) do
           "Hello, " <> name
         end

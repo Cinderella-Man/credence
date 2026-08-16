@@ -35,13 +35,13 @@ defmodule Credence.Pattern.NoUnderscoreFunctionName do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNUFN do
         def _helper(x), do: x + 1
       end
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNUFN do
         def do_helper(x), do: x + 1
       end
   """

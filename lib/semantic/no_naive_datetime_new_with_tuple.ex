@@ -17,7 +17,7 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTuple do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleNNDNWT do
         def make_ndt(year, month, day, hour, minute) do
           NaiveDateTime.new!(Date.new!(year, month, day), {hour, minute, 0, 0})
         end
@@ -25,7 +25,7 @@ defmodule Credence.Semantic.NoNaiveDatetimeNewWithTuple do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleNNDNWT do
         def make_ndt(year, month, day, hour, minute) do
           NaiveDateTime.new!(Date.new!(year, month, day), Time.new!(hour, minute, 0, 0))
         end

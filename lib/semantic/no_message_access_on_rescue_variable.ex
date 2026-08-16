@@ -14,7 +14,7 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariable do
 
   ## Bad
 
-      defmodule ParseCheck do
+      defmodule ParseCheckNMAORV do
         def run do
           try do
             :ok
@@ -26,7 +26,7 @@ defmodule Credence.Semantic.NoMessageAccessOnRescueVariable do
 
   ## Good
 
-      defmodule ParseCheck do
+      defmodule ParseCheckNMAORV do
         def run do
           try do
             :ok

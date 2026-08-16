@@ -77,14 +77,14 @@ defmodule Credence.Pattern.NoManualListReduce do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNMLR do
         def sum([], acc), do: acc
         def sum([h | t], acc), do: sum(t, acc + h)
       end
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNMLR do
         def sum(list, acc) when is_list(list), do: Enum.reduce(list, acc, fn h, acc -> acc + h end)
       end
   """

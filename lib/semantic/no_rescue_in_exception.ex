@@ -20,7 +20,7 @@ defmodule Credence.Semantic.NoRescueInException do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleNRIE do
         def run do
           try do
             raise "boom"
@@ -33,7 +33,7 @@ defmodule Credence.Semantic.NoRescueInException do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleNRIE do
         def run do
           try do
             raise "boom"

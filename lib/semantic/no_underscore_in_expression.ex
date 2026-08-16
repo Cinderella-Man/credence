@@ -34,7 +34,7 @@ defmodule Credence.Semantic.NoUnderscoreInExpression do
 
   ## Bad
 
-      defmodule M do
+      defmodule MNUIE do
         def f(s) do
           s == {"busy", _}
         end
@@ -42,7 +42,7 @@ defmodule Credence.Semantic.NoUnderscoreInExpression do
 
   ## Good
 
-      defmodule M do
+      defmodule MNUIE do
         def f(s) do
           match?({"busy", _}, s)
         end

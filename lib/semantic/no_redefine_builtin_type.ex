@@ -16,13 +16,13 @@ defmodule Credence.Semantic.NoRedefineBuiltinType do
 
   ## Bad
 
-      defmodule Foo do
+      defmodule FooNRBT do
         @type node :: atom()
       end
 
   ## Good
 
-      defmodule Foo do
+      defmodule FooNRBT do
         @type trie_node :: atom()
       end
   """

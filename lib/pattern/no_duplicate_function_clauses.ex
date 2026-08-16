@@ -13,14 +13,14 @@ defmodule Credence.Pattern.NoDuplicateFunctionClauses do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleNDFC do
         def bar(x, y), do: {x, y}
         def bar(x, y), do: {x, y}
       end
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleNDFC do
         def bar(x, y), do: {x, y}
       end
   """

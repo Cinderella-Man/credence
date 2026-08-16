@@ -28,13 +28,13 @@ defmodule Credence.Pattern.NoFilterThenFirst do
 
   ## Bad
 
-      defmodule M do
+      defmodule MNFTF do
         def first_even(nums), do: Enum.at(Stream.filter(nums, &even?/1), 0)
       end
 
   ## Good
 
-      defmodule M do
+      defmodule MNFTF do
         def first_even(nums), do: Enum.find(nums, &even?/1)
       end
   """

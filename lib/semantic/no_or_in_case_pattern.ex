@@ -25,7 +25,7 @@ defmodule Credence.Semantic.NoOrInCasePattern do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleNOICP do
         def classify(value) do
           case value do
             nil or "" -> :empty
@@ -36,7 +36,7 @@ defmodule Credence.Semantic.NoOrInCasePattern do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleNOICP do
         def classify(value) do
           case value do
             nil -> :empty

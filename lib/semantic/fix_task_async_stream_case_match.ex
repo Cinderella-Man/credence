@@ -33,7 +33,7 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatch do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleFTASCM do
         def run(elements, fun) do
           total =
             case Task.async_stream(elements, fun) do
@@ -47,7 +47,7 @@ defmodule Credence.Semantic.FixTaskAsyncStreamCaseMatch do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleFTASCM do
         def run(elements, fun) do
           total =
             (

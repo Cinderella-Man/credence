@@ -56,7 +56,7 @@ defmodule Credence.Semantic.FixCaseBranchAssignmentScope do
 
   ## Bad
 
-      defmodule M do
+      defmodule MFCBAS do
         def classify(x) do
           case x do
             :ok -> label = "success"
@@ -70,7 +70,7 @@ defmodule Credence.Semantic.FixCaseBranchAssignmentScope do
 
   ## Good
 
-      defmodule M do
+      defmodule MFCBAS do
         def classify(x) do
           label =
             case x do

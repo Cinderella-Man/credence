@@ -25,13 +25,13 @@ defmodule Credence.Pattern.NoSortThenReverse do
 
   ## Bad
 
-      defmodule M do
+      defmodule MNSTR do
         def f(x), do: Enum.reverse(Enum.sort(x))
       end
 
   ## Good
 
-      defmodule M do
+      defmodule MNSTR do
         def f(x), do: Enum.sort(x, :desc)
       end
   """

@@ -17,7 +17,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNIEFEMM do
         def run(lengths) do
           if Enum.empty?(lengths), do: 0, else: Enum.min(lengths)
         end
@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoIfEmptyForEnumMinMax do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNIEFEMM do
         def run(lengths) do
           Enum.min(lengths, fn -> 0 end)
         end

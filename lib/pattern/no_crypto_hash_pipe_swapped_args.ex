@@ -44,7 +44,7 @@ defmodule Credence.Pattern.NoCryptoHashPipeSwappedArgs do
 
   ## Bad
 
-      defmodule Anchored do
+      defmodule AnchoredNCHPSA do
         def hash_file(path) do
           path
           |> File.read!()
@@ -54,7 +54,7 @@ defmodule Credence.Pattern.NoCryptoHashPipeSwappedArgs do
 
   ## Good
 
-      defmodule Anchored do
+      defmodule AnchoredNCHPSA do
         def hash_file(path) do
           :crypto.hash(
             :sha256,

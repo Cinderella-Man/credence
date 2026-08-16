@@ -12,7 +12,7 @@ defmodule Credence.Semantic.NoDuplicateDefstruct do
 
   ## Bad
 
-      defmodule Foo do
+      defmodule FooNDD do
         defstruct [:a]
         defstruct name: nil
         defstruct name: nil, age: 0
@@ -20,7 +20,7 @@ defmodule Credence.Semantic.NoDuplicateDefstruct do
 
   ## Good
 
-      defmodule Foo do
+      defmodule FooNDD do
         defstruct name: nil, age: 0
       end
   """

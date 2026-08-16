@@ -25,7 +25,7 @@ defmodule Credence.Pattern.NoEmptyMapNew do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNEMN do
         def build do
           a = Map.new()
           b = Map.new()
@@ -35,7 +35,7 @@ defmodule Credence.Pattern.NoEmptyMapNew do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNEMN do
         def build do
           a = %{}
           b = %{}

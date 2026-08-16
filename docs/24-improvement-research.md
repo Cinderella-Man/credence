@@ -118,15 +118,26 @@ mix run -e 'Credence.Pattern.default_rules()
 If that prints under ~10 ms, the two hoists are the whole win and
 `:persistent_term` buys a staleness hazard for nothing.
 
-### A6. Bad examples share module names — [MEASURED]
+### A6. Examples shared module names, and it bit three times — [DONE]
 
-21 Pattern rules say `defmodule Bad` and five say `defmodule M`. Harmless as
-documentation; a hazard now that gates COMPILE those examples, because the Erlang
-code server is global and two async tests compiling `Bad` race. It surfaced once
-as `NoDuplicateFunctionClauses -> reverted`, passing when run alone. Handled by
-making the compiling gate `async: false`, which is what
-`dispatch_contention_test.exs` already does. Renaming them uniquely would be the
-belt-and-braces fix and is cheap; it is not done.
+Measured: `defmodule Bad` in 21 rules, `defmodule M` in 14, `defmodule Example`
+in 13, `Solution` in 5 — 9 names shared across 126 examples. Harmless as
+documentation; a hazard the moment gates COMPILE those examples, because the
+Erlang code server is global and two async tests defining `Bad` race, one
+deleting the module the other is mid-check on.
+
+It surfaced three separate times, and each time it looked like a rule defect:
+`NoDuplicateFunctionClauses -> reverted`, then `FixFnGuardPosition` and
+`FixNegationInGuard` "not reporting" on their own examples. All three passed
+when run alone, which is the worst shape a flake can have — it reads as a real
+finding.
+
+The first two were worked around with `async: false`. That was the wrong fix:
+every example module name is now unique, derived from its own rule, so the
+hazard is gone at the source and both gates are concurrent again. A gate in
+`rule_card_test.exs` asserts the uniqueness across all 242 example modules in
+both rounds, so it cannot quietly come back — and perturbing two rules to share
+a name turns it red naming both.
 
 ### A7. The Semantic backfill is done, and it REFUTED its own motivation — [DONE]
 

@@ -31,14 +31,14 @@ defmodule Credence.Semantic.RemoveUnusedTypespecWhenVar do
 
   ## Bad
 
-      defmodule Solution do
+      defmodule SolutionRUTWV do
         @spec foo(x) :: x when x: integer, var_ok: true
         def foo(x), do: x
       end
 
   ## Good
 
-      defmodule Solution do
+      defmodule SolutionRUTWV do
         @spec foo(x) :: x when x: integer
         def foo(x), do: x
       end

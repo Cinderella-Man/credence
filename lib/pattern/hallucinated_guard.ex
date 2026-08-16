@@ -15,13 +15,13 @@ defmodule Credence.Pattern.HallucinatedGuard do
 
   ## Bad
 
-      defmodule M do
+      defmodule MHG do
         def valid?(x), do: is_pos_integer(x)
       end
 
   ## Good
 
-      defmodule M do
+      defmodule MHG do
         def valid?(x), do: is_integer(x) and x > 0
       end
   """

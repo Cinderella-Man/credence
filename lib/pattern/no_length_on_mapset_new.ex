@@ -27,7 +27,7 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNLOMN do
         def f do
           length(MapSet.new())
         end
@@ -35,7 +35,7 @@ defmodule Credence.Pattern.NoLengthOnMapsetNew do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNLOMN do
         def f do
           MapSet.size(MapSet.new())
         end

@@ -38,7 +38,7 @@ defmodule Credence.Semantic.FixInvalidCaptureWithArguments do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleFICWA do
         def start do
           clock = &System.monotonic_time(:millisecond)/0
           clock.()
@@ -47,7 +47,7 @@ defmodule Credence.Semantic.FixInvalidCaptureWithArguments do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleFICWA do
         def start do
           clock = fn -> System.monotonic_time(:millisecond) end
           clock.()

@@ -35,7 +35,7 @@ defmodule Credence.Semantic.FixFnGuardPosition do
 
   ## Bad
 
-      defmodule M do
+      defmodule MFFGP do
         def sum_above(list, cutoff) do
           Enum.reduce(list, 0, fn
             {key, val} when key > cutoff, acc -> acc + val
@@ -46,7 +46,7 @@ defmodule Credence.Semantic.FixFnGuardPosition do
 
   ## Good
 
-      defmodule M do
+      defmodule MFFGP do
         def sum_above(list, cutoff) do
           Enum.reduce(list, 0, fn
             {key, val}, acc when key > cutoff -> acc + val

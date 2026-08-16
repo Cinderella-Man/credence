@@ -44,7 +44,7 @@ defmodule Credence.Pattern.NoReduceForMapBuilding do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNRFMB do
         def build(list) do
           Enum.reduce(list, MapSet.new(), &MapSet.put(&2, &1))
         end
@@ -52,7 +52,7 @@ defmodule Credence.Pattern.NoReduceForMapBuilding do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNRFMB do
         def build(list) do
           MapSet.new(list)
         end

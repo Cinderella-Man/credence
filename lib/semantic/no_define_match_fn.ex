@@ -12,7 +12,7 @@ defmodule Credence.Semantic.NoDefineMatchFn do
 
   ## Bad
 
-      defmodule A do
+      defmodule ANDMF do
         defp match?(a, b), do: a == b
         def f(x), do: match?(x, 1)
       end
@@ -23,7 +23,7 @@ defmodule Credence.Semantic.NoDefineMatchFn do
 
   ## Good
 
-      defmodule A do
+      defmodule ANDMF do
         defp match_pattern?(a, b), do: a == b
         def f(x), do: match_pattern?(x, 1)
       end

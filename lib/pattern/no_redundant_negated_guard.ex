@@ -32,14 +32,14 @@ defmodule Credence.Pattern.NoRedundantNegatedGuard do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNRNG do
         def compare(x, y) when x == y, do: :same
         def compare(x, y) when x != y, do: :different
       end
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNRNG do
         def compare(x, y) when x == y, do: :same
         def compare(x, y), do: :different
       end

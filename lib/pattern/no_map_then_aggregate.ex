@@ -35,7 +35,7 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNMTA do
         def total(list) do
           Enum.sum(Enum.map(list, fn x -> x * x end))
         end
@@ -43,7 +43,7 @@ defmodule Credence.Pattern.NoMapThenAggregate do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNMTA do
         def total(list) do
           Enum.reduce(list, 0, fn el, acc -> acc + el * el end)
         end

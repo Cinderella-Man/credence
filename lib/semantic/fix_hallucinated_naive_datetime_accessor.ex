@@ -38,7 +38,7 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessor do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleFHNDA do
         def due?(dt) do
           minute = NaiveDateTime.minute(dt)
           minute
@@ -47,7 +47,7 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessor do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleFHNDA do
         def due?(dt) do
           minute = dt.minute
           minute

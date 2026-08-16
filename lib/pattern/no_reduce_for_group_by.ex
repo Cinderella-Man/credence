@@ -46,7 +46,7 @@ defmodule Credence.Pattern.NoReduceForGroupBy do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNRFGB do
         def group(list) do
           Enum.reduce(list, %{}, fn x, acc ->
             Map.update(acc, String.first(x), [x], &[x | &1])
@@ -57,7 +57,7 @@ defmodule Credence.Pattern.NoReduceForGroupBy do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNRFGB do
         def group(list) do
           Enum.group_by(
             list,

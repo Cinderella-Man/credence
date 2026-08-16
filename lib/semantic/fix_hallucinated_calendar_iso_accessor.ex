@@ -35,7 +35,7 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessor do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleFHCIA do
         def extract_date(%DateTime{} = dt) do
           date = Calendar.ISO.date(dt)
           {date.year, date.month, date.day}
@@ -44,7 +44,7 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessor do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleFHCIA do
         def extract_date(%DateTime{} = dt) do
           date = DateTime.to_date(dt)
           {date.year, date.month, date.day}

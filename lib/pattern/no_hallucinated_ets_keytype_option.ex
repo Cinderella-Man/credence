@@ -40,7 +40,7 @@ defmodule Credence.Pattern.NoHallucinatedEtsKeytypeOption do
 
   ## Bad
 
-      defmodule Anchored do
+      defmodule AnchoredNHEKO do
         def create do
           :ets.new(:test, [:set, keytype: :term])
         end
@@ -48,7 +48,7 @@ defmodule Credence.Pattern.NoHallucinatedEtsKeytypeOption do
 
   ## Good
 
-      defmodule Anchored do
+      defmodule AnchoredNHEKO do
         def create do
           :ets.new(:test, [:set])
         end

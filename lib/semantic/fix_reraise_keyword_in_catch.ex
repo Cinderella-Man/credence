@@ -34,7 +34,7 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatch do
 
   ## Bad
 
-      defmodule M do
+      defmodule MFRKIC do
         def f do
           try do
             :ok
@@ -47,7 +47,7 @@ defmodule Credence.Semantic.FixReraiseKeywordInCatch do
 
   ## Good
 
-      defmodule M do
+      defmodule MFRKIC do
         def f do
           try do
             :ok

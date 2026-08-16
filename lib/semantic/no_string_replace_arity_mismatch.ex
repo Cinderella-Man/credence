@@ -35,14 +35,14 @@ defmodule Credence.Semantic.NoStringReplaceArityMismatch do
 
   ## Bad
 
-      defmodule A do
+      defmodule ANSRAM do
         @masked String.replace("ab", ~r/(a)(b)/, fn full, a, b -> full <> a <> b end)
         def masked, do: @masked
       end
 
   ## Good
 
-      defmodule A do
+      defmodule ANSRAM do
         @masked Regex.replace(~r/(a)(b)/, "ab", fn full, a, b -> full <> a <> b end)
         def masked, do: @masked
       end

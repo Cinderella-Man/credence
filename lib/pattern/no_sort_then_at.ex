@@ -44,13 +44,13 @@ defmodule Credence.Pattern.NoSortThenAt do
 
   ## Bad
 
-      defmodule M do
+      defmodule MNSTA do
         def largest(nums), do: Enum.at(Enum.sort(nums), -1)
       end
 
   ## Good
 
-      defmodule M do
+      defmodule MNSTA do
         def largest(nums), do: Enum.max(nums, &>/2, fn -> nil end)
       end
   """

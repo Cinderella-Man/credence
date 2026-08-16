@@ -15,14 +15,14 @@ defmodule Credence.Semantic.FixNegationInGuard do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleFNIG do
         def check(x) when !is_number(x), do: :error
         def negate(x), do: !x
       end
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleFNIG do
         def check(x) when not is_number(x), do: :error
         def negate(x), do: !x
       end

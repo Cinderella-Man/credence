@@ -40,7 +40,7 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNDR do
         def process([a, b, c]) do
           Enum.map([a, b, c], &(&1 * 2))
         end
@@ -48,7 +48,7 @@ defmodule Credence.Pattern.NoDestructureReconstruct do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNDR do
         def process([_, _, _] = items) do
           Enum.map(items, &(&1 * 2))
         end

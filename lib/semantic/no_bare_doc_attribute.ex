@@ -11,7 +11,7 @@ defmodule Credence.Semantic.NoBareDocAttribute do
 
   ## Bad
 
-      defmodule Solution do
+      defmodule SolutionNBDA do
         @doc
         def calculate_total_cost(price) do
           price * 1.1
@@ -20,7 +20,7 @@ defmodule Credence.Semantic.NoBareDocAttribute do
 
   ## Good
 
-      defmodule Solution do
+      defmodule SolutionNBDA do
         def calculate_total_cost(price) do
           price * 1.1
         end

@@ -42,7 +42,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNMKEL do
         def has_nil?(config) do
           Map.keys(config)
           |> Enum.any?(fn k -> config[k] == nil end)
@@ -51,7 +51,7 @@ defmodule Credence.Pattern.NoMapKeysEnumLookup do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNMKEL do
         def has_nil?(config) do
           Enum.any?(config, fn {k, v} -> v == nil end)
         end

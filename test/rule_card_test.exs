@@ -297,4 +297,52 @@ defmodule Credence.RuleCardTest do
       assert fires?(Credence.Pattern.NoManualFind, "Enum.reduce(list, fn ...)") == :unparsable
     end
   end
+
+  # ── Example module names must be unique across every rule ──────────────
+  #
+  # Not a style rule. Three gates COMPILE these examples
+  # (`rule_self_repair_test.exs`, `semantic_rule_card_test.exs`, and the
+  # Semantic half of this file's sibling), the Erlang code server is global, and
+  # a module name shared by two examples means two concurrent tests racing to
+  # define and delete the same module. It bit three times before the names were
+  # made unique, and each time it looked like a rule defect: a fix reported
+  # `:reverted`, a rule "did not report" on its own example — all passing when
+  # run alone, which is the worst shape a flake can have.
+  #
+  # Measured before the fix: `defmodule Bad` in 21 rules, `defmodule M` in 14,
+  # `defmodule Example` in 13, `Solution` in 5.
+  describe "documented examples do not collide" do
+    test "no module name in a `## Bad` or `## Good` example is used by two rules" do
+      alias Credence.RuleDuplication
+
+      uses =
+        for rule <- Credence.MetaTestSupport.rules() ++ Credence.Semantic.default_rules(),
+            snippet <-
+              [RuleDuplication.bad_example(rule), RuleDuplication.good_example(rule)],
+            snippet not in [nil, ""],
+            [_, name] <- Regex.scan(~r/defmodule\s+([A-Za-z0-9_.]+)/, snippet),
+            do: {name, rule}
+
+      assert length(uses) >= 200,
+             "only #{length(uses)} example module names found; the extractor has regressed"
+
+      collisions =
+        uses
+        |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+        |> Enum.map(fn {name, rules} -> {name, Enum.uniq(rules)} end)
+        |> Enum.filter(fn {_name, rules} -> length(rules) > 1 end)
+        |> Enum.sort()
+
+      assert collisions == [],
+             """
+             These module names appear in more than one rule's documented
+             example. The gates compile those examples, so a shared name is a
+             race on the global code server that reads as a rule defect:
+
+             #{Enum.map_join(collisions, "\n", fn {n, rs} -> "  #{n}: #{Enum.map_join(rs, ", ", &inspect/1)}" end)}
+
+             Give each one a name derived from its own rule.
+             """
+    end
+  end
 end

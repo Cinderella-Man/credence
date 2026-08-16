@@ -48,13 +48,13 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   ## Bad
 
-      defmodule M do
+      defmodule MUF do
         def run(l), do: len(l)
       end
 
   ## Good
 
-      defmodule M do
+      defmodule MUF do
         def run(l), do: length(l)
       end
   """

@@ -13,7 +13,7 @@ defmodule Credence.Semantic.NoConflictingDefaultArgs do
 
   ## Bad
 
-      defmodule ParseCheck do
+      defmodule ParseCheckNCDA do
         def foo(a, b \\\\ :ok) do
           {a, b}
         end
@@ -25,7 +25,7 @@ defmodule Credence.Semantic.NoConflictingDefaultArgs do
 
   ## Good
 
-      defmodule ParseCheck do
+      defmodule ParseCheckNCDA do
         def foo(a, b \\\\ :ok) do
           {a, b}
         end

@@ -2,16 +2,16 @@ defmodule Credence.SemanticRuleCardTest do
   @moduledoc """
   Requirement 6b for the Semantic round: a documented example must be TRUE.
 
-  Split out of `rule_card_test.exs` and made `async: false` for a reason that
-  cost two full-suite runs to find. `Credence.Semantic.analyze/2` COMPILES the
-  snippet, and these examples are derived from test fixtures, which share module
-  names — `defmodule M` and `defmodule Example` between them. The Erlang code
-  server is global, so two async tests compiling `Example` race: one deletes the
-  module the other is mid-check on, and the rule appears not to report. Both
-  offenders passed when their file was run alone.
+  Split out of `rule_card_test.exs` because `Credence.Semantic.analyze/2`
+  COMPILES the snippet, which made it the third place a module-name collision
+  bit: the examples inherited their fixtures' names, `defmodule M` and
+  `defmodule Example` among them, and two async tests compiling `Example` race
+  on the global code server. Both offenders passed when run alone.
 
-  Same root cause as the Pattern half's `async: false`, and the same precedent:
-  `dispatch_contention_test.exs`.
+  That is fixed at the source now — every example module name is unique, derived
+  from its rule, and `rule_card_test.exs` gates the uniqueness — so this file no
+  longer needs to be serial. It stays a separate module because it is the
+  Semantic half of requirement 6b and reads better beside its own controls.
 
   ## What this found
 
@@ -27,7 +27,7 @@ defmodule Credence.SemanticRuleCardTest do
   the heredoc EVALUATES it at module-compile time. Both have to be escaped, and
   the backslash first, since escaping `#{}` introduces one of its own.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias Credence.RuleDuplication
 
@@ -65,8 +65,8 @@ defmodule Credence.SemanticRuleCardTest do
            pass, after another rule wins the dispatch slot first — pick a fixture
            where this rule reports directly. A backslash in the example may have
            been collapsed by the moduledoc heredoc. Or the example's module name
-           collides with another test's under concurrent compilation, which is
-           why this module is `async: false`.
+           collides with another rule's example under concurrent compilation —
+           `rule_card_test.exs` gates that names stay unique.
            """
   end
 

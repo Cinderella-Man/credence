@@ -23,7 +23,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescue do
 
   ## Bad
 
-      defmodule M do
+      defmodule MNUMIR do
         def run do
           try do
             :ok
@@ -35,7 +35,7 @@ defmodule Credence.Semantic.NoUndefinedModuleInRescue do
 
   ## Good
 
-      defmodule M do
+      defmodule MNUMIR do
         def run do
           try do
             :ok

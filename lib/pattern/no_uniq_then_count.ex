@@ -43,7 +43,7 @@ defmodule Credence.Pattern.NoUniqThenCount do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNUTC do
         def count_unique(items) do
           Enum.uniq(items) |> Enum.count()
         end
@@ -51,7 +51,7 @@ defmodule Credence.Pattern.NoUniqThenCount do
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNUTC do
         def count_unique(items) do
           MapSet.new(items) |> MapSet.size()
         end

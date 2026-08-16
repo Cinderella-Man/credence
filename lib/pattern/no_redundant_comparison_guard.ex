@@ -35,14 +35,14 @@ defmodule Credence.Pattern.NoRedundantComparisonGuard do
 
   ## Bad
 
-      defmodule Bad do
+      defmodule BadNRCG do
         def f(n) when is_atom(n) and n < 0, do: :a
         def f(n) when is_atom(n) and n >= 0, do: :b
       end
 
   ## Good
 
-      defmodule Bad do
+      defmodule BadNRCG do
         def f(n) when is_atom(n) and n < 0, do: :a
         def f(n) when is_atom(n), do: :b
       end

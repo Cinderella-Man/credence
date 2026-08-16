@@ -40,7 +40,7 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArity do
 
   ## Bad
 
-      defmodule Example do
+      defmodule ExampleFNCWA do
         def any_full?(lists) do
           Enum.any?(lists, &(!Enum.empty?/1))
         end
@@ -48,7 +48,7 @@ defmodule Credence.Semantic.FixNegatedCaptureWithArity do
 
   ## Good
 
-      defmodule Example do
+      defmodule ExampleFNCWA do
         def any_full?(lists) do
           Enum.any?(lists, &(!Enum.empty?(&1)))
         end

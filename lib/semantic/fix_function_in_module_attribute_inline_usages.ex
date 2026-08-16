@@ -41,7 +41,7 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsages do
 
   ## Bad
 
-      defmodule M do
+      defmodule MFFIMAIU do
         @default_clock fn -> System.monotonic_time(:millisecond) end
 
         def start_link(opts) do
@@ -52,7 +52,7 @@ defmodule Credence.Semantic.FixFunctionInModuleAttributeInlineUsages do
 
   ## Good
 
-      defmodule M do
+      defmodule MFFIMAIU do
         defp default_clock, do: System.monotonic_time(:millisecond)
 
         def start_link(opts) do
