@@ -1085,4 +1085,68 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       assert base_fix(source, "Base.hex_encode/1 is undefined or private") == source
     end
   end
+
+  # ── List.keystore/3 -> /4 (docs/16 4.6d) ────────────────────────────
+  #
+  # The last of the deferred rows, and the one that needed a new table verb.
+  # LLMs confuse `List.keystore/4` with `List.keyfind/3` and leave out the
+  # POSITION argument, which belongs SECOND — so appending (the only thing
+  # `:rename_add_arg` can do) would produce a call that compiles and means
+  # something else. `:insert_arg` puts it at an index.
+
+  describe "List.keystore/3" do
+    defp keystore(source) do
+      UndefinedFunction.fix(source, %{
+        severity: :error,
+        message: "List.keystore/3 is undefined or private. Did you mean: * keystore/4",
+        position: {2, 1}
+      })
+    end
+
+    test "inserts the position argument second" do
+      confirm_fix(
+        keystore("""
+        defmodule KsPlain do
+          def f(l, k, t), do: List.keystore(l, k, t)
+        end
+        """),
+        """
+        defmodule KsPlain do
+          def f(l, k, t), do: List.keystore(l, 0, k, t)
+        end
+        """
+      )
+    end
+
+    # Arguments are split on top-level commas of the SHADOW, so a comma inside a
+    # string or a nested bracket is not a separator. Getting this wrong would
+    # insert the position into the middle of someone's tuple.
+    test "commas inside a string and a nested bracket are not separators" do
+      confirm_fix(
+        keystore("""
+        defmodule KsNested do
+          def f(l), do: List.keystore(l, "a, b", {:x, [1, 2]})
+        end
+        """),
+        """
+        defmodule KsNested do
+          def f(l), do: List.keystore(l, 0, "a, b", {:x, [1, 2]})
+        end
+        """
+      )
+    end
+
+    # The control, and it was a real bug before the guard existed: a CORRECT
+    # `List.keystore/4` on the line is not what the /3 diagnostic is about, and
+    # inserting into it produced `List.keystore(l, 0, 0, :k, {:k, 1})`.
+    test "CONTROL: an already-correct keystore/4 call is left alone" do
+      source = """
+      defmodule KsCorrect do
+        def f(l), do: List.keystore(l, 0, :k, {:k, 1})
+      end
+      """
+
+      assert keystore(source) == source
+    end
+  end
 end

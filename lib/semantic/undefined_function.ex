@@ -152,7 +152,12 @@ defmodule Credence.Semantic.UndefinedFunction do
     # `hex_encode64` is invented too — base64 has no hex variant at all, and the
     # compiler suggests `encode64/1` itself (escalation ledger row 119).
     {"Base", "hex_encode64", 1} => {:rename, "Base", "encode64"},
-    {"Base", "hex_encode64", 2} => {:rename, "Base", "encode64"}
+    {"Base", "hex_encode64", 2} => {:rename, "Base", "encode64"},
+
+    # `List.keystore/4` confused with `List.keyfind/3`: the POSITION argument is
+    # the one left out, and it belongs second. Appending would compile and mean
+    # something else, which is why this needs its own verb (docs/16 4.6d).
+    {"List", "keystore", 3} => {:insert_arg, "List", "keystore", 1, "0"}
   }
 
   @local_replacements %{
@@ -286,6 +291,17 @@ defmodule Credence.Semantic.UndefinedFunction do
 
       {:literal_with_neg, pos_text, neg_text} ->
         replace_literal_with_neg(source, line_no, mod, fun, pos_text, neg_text)
+
+      {:insert_arg, new_mod, new_fun, index, inserted} ->
+        insert_arg_on_line(
+          source,
+          line_no,
+          "#{mod}.#{fun}",
+          "#{new_mod}.#{new_fun}",
+          index,
+          inserted,
+          arity
+        )
 
       {:rename_add_arg, new_mod, new_fun, extra_arg} ->
         rename_add_arg_on_line(
@@ -489,6 +505,90 @@ defmodule Credence.Semantic.UndefinedFunction do
   #
   # List.second(list) → Enum.at(list, 1)
   # Finds the call, extracts args via balanced parens, appends the extra arg.
+
+  # Insert an argument at a POSITION rather than appending one. Every other
+  # table verb renames or appends; `List.keystore/3` needs neither — the missing
+  # argument is the position index and it belongs second
+  # (`List.keystore(l, k, t)` -> `List.keystore(l, 0, k, t)`), so appending
+  # would produce a call that compiles and means something else.
+  #
+  # Arguments are split on top-level commas of the SHADOW, so a comma inside a
+  # string or a nested bracket is not a separator; the pieces are then taken
+  # from the real line, which is what keeps the caller's own bytes intact.
+  defp insert_arg_on_line(source, line_no, old_call, new_call, index, inserted, arity) do
+    edit_line(source, line_no, fn line, shadow ->
+      with {start, len} <- :binary.match(shadow, "#{old_call}("),
+           open <- start + len - 1,
+           # The diagnostic is about the WRONG-arity call. A correct
+           # `List.keystore/4` on the same line is not what it is complaining
+           # about, and inserting into it would corrupt a working call —
+           # measured, before this guard existed.
+           ^arity <- call_arity(shadow, open + 1),
+           {:ok, close} <- matching_close(shadow, open) do
+        inner_start = open + 1
+        inner_len = close - inner_start
+        inner = binary_part(line, inner_start, inner_len)
+        shadow_inner = binary_part(shadow, inner_start, inner_len)
+
+        args = split_top_level(inner, shadow_inner)
+
+        if index <= length(args) do
+          new_args = List.insert_at(args, index, inserted) |> Enum.join(", ")
+
+          binary_part(line, 0, start) <>
+            new_call <>
+            "(" <>
+            new_args <>
+            ")" <>
+            binary_part(line, close + 1, byte_size(line) - close - 1)
+        else
+          line
+        end
+      else
+        _ -> line
+      end
+    end)
+  end
+
+  defp matching_close(shadow, open), do: matching_close(shadow, open + 1, 1)
+
+  defp matching_close(shadow, i, _depth) when i >= byte_size(shadow), do: :unbalanced
+
+  defp matching_close(shadow, i, depth) do
+    case :binary.at(shadow, i) do
+      c when c in [?(, ?[, ?{] -> matching_close(shadow, i + 1, depth + 1)
+      ?) when depth == 1 -> {:ok, i}
+      c when c in [?), ?], ?}] -> matching_close(shadow, i + 1, depth - 1)
+      _ -> matching_close(shadow, i + 1, depth)
+    end
+  end
+
+  # Split on the shadow's top-level commas; slice the pieces from the real line.
+  defp split_top_level(inner, shadow_inner) do
+    cuts =
+      shadow_inner
+      |> :binary.bin_to_list()
+      |> Enum.with_index()
+      |> Enum.reduce({[], 0}, fn {c, i}, {acc, depth} ->
+        cond do
+          c in [?(, ?[, ?{] -> {acc, depth + 1}
+          c in [?), ?], ?}] -> {acc, depth - 1}
+          c == ?, and depth == 0 -> {[i | acc], depth}
+          true -> {acc, depth}
+        end
+      end)
+      |> elem(0)
+      |> Enum.reverse()
+
+    {pieces, last} =
+      Enum.reduce(cuts, {[], 0}, fn cut, {acc, from} ->
+        {[binary_part(inner, from, cut - from) | acc], cut + 1}
+      end)
+
+    [binary_part(inner, last, byte_size(inner) - last) | pieces]
+    |> Enum.reverse()
+    |> Enum.map(&String.trim/1)
+  end
 
   defp rename_add_arg_on_line(source, line_no, old_call, new_call, extra_arg) do
     edit_line(source, line_no, fn line, shadow ->

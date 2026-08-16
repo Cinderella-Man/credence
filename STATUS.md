@@ -212,27 +212,20 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   before and after finds a different line. Searching the whole output for the
   intact comment settles it.
 
-- [ ] **D2. Two 4.6d items left, and neither is a table row.** The rows that
-  were deferred on call-boundary anchoring have all landed: **`exit/2`** (with
-  the arity check it needed), **`Base.hex_encode/1,2`** (-> `encode16`, with
-  `case: :lower` on the one-argument form, because an LLM reaching for
-  `hex_encode` is translating Python's lowercase `bytes.hex()`) and
-  **`Base.hex_encode64/1,2`** (-> `encode64`; base64 has no hex variant and the
-  compiler suggests it itself). `NaiveDateTime` turned out to have shipped
-  already (ledger row 458). Verified against the real `Base` module rather than
-  assumed: only `hex_encode32`/`hex_decode32` exist, and the control pins that a
-  `hex_encode/1` diagnostic leaves the real `hex_encode32` alone.
+- [ ] **D2. One 4.6d item left, and it is misfiled.** Every deferred row that
+  was genuinely a row has landed: **`exit/2`** (with its arity check),
+  **`Base.hex_encode/1,2`** and **`hex_encode64/1,2`**, and
+  **`List.keystore/3`** (which needed a new `:insert_arg` table verb, because
+  the missing POSITION argument belongs second and every existing verb either
+  renames or appends — appending would have compiled and meant something else).
+  `NaiveDateTime` had already shipped (ledger row 458).
 
-  What is left needs different machinery, not another row:
-  * **`List.keystore/3`** inserts `0` at a *position*
-    (`List.keystore(l, k, t)` -> `List.keystore(l, 0, k, t)`). Every table verb
-    either renames or appends; none inserts. Needs a `:rename_insert_arg`
-    handler, which is ~10 lines beside `rename_add_arg_on_line/5`.
-  * **`Agent.update` tuple wrapper is misfiled in docs/16.** Returning
-    `{:ok, state}` from an `Agent.update` callback is a runtime `BadMapError`,
-    not a compiler diagnostic, so `UndefinedFunction` can never see it. It is a
-    **Pattern** rule; the sister tree's `no_agent_update_tuple_wrapper.ex` is
-    the source material.
+  Left: **`Agent.update` returning `{:ok, state}`**. docs/16 filed it as a
+  `@qualified_replacements` row and it cannot be one — it is a runtime
+  `BadMapError`, not a compiler diagnostic, so `UndefinedFunction` never sees
+  it. It belongs in **Pattern**; the sister tree's
+  `no_agent_update_tuple_wrapper.ex` is the source material and docs/18
+  dispositioned it *salvage-small-fix*.
 
 - [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
 
