@@ -528,4 +528,127 @@ defmodule Credence.Syntax.NoPythonMultiReturnAnalyzeTest do
 
     assert [%Issue{rule: :no_python_multi_return, meta: %{line: 7}}] = analyze(code)
   end
+
+  # ── Paths the mutant sweep found untested (docs/22 C18 triage). ──
+  #
+  # Each of these killed surviving mutants in `mix credence.mutants --rule
+  # no_python_multi_return`, which is what a survivor is FOR: it names a
+  # behaviour change no test noticed. The rule was at 0.475, the worst of the
+  # 39-rule sample.
+
+  test "a `when` continuation line does not stop the clause-head lookahead" do
+    # Kills the `starts_with_when?` mutants (\"when\" -> true/false and the
+    # `_ -> false` fallback): nothing exercised a `when` line before this.
+    code = """
+    defmodule M do
+      def f(x) do
+        case x do
+          {a, b}
+          when is_integer(a) ->
+            a, b
+        end
+      end
+    end
+    """
+
+    assert [%Issue{rule: :no_python_multi_return, meta: %{line: 6}}] = analyze(code)
+  end
+
+  test "a bare comma inside a def whose head carries a `when` guard" do
+    code = """
+    defmodule M do
+      def f(x)
+          when is_integer(x) do
+        x, x
+      end
+    end
+    """
+
+    assert [%Issue{rule: :no_python_multi_return, meta: %{line: 4}}] = analyze(code)
+  end
+
+  test "line numbering survives a bare-atom defstruct above the candidate" do
+    # Kills the `Enum.with_index(1)` off-by-one mutants in
+    # `defstruct_bare_atom_lines/2`: shifting the index moves which lines are
+    # excluded, and nothing asserted a line number downstream of a defstruct.
+    code = """
+    defmodule M do
+      defstruct :a,
+        :b
+
+      def f do
+        1, 2
+      end
+    end
+    """
+
+    assert [%Issue{rule: :no_python_multi_return, meta: %{line: 6}}] = analyze(code)
+  end
+
+  # These two are the ones that actually killed mutants. The three above pin
+  # real behaviour but killed nothing, which is the lesson: a test that
+  # exercises a code path is not the same as a test that DISTINGUISHES it.
+  # `starts_with_when?` is consulted by a FORWARD lookahead, so a `when` line
+  # above the candidate never reaches it; and an off-by-one in a line index only
+  # shows up where the shifted line is itself a candidate.
+
+  # `starts_with_when?/1` has three true-clauses and each needs its OWN fixture,
+  # because they match disjoint inputs: exactly `when`, `when ` + rest, and
+  # `when\t` + rest. A `when true` line exercises only the second, which is why
+  # the first attempt at these tests killed nothing at all.
+  #
+  # The assertion has to be the DECLINE. Flipping a clause to `false` only
+  # changes the outcome when the scan would otherwise have continued past the
+  # `when` and found the `->`; if the line after the `when` is anything else the
+  # scan halts either way and the mutant is equivalent on that input.
+
+  test "a bare `when` line continues the clause head, so the candidate declines" do
+    code = """
+    defmodule M do
+      def f(v) do
+        case v do
+          :a, :b
+          when
+          -> :ok
+        end
+      end
+    end
+    """
+
+    assert analyze(code) == []
+  end
+
+  test "a tab-indented `when\t` line does too" do
+    code =
+      """
+      defmodule M do
+        def f(v) do
+          case v do
+            :a, :b
+            when	true
+            -> :ok
+          end
+        end
+      end
+      """
+
+    assert analyze(code) == []
+  end
+
+  test "a single-line bare-atom defstruct is excluded, and the line index says which" do
+    # Mutating `Enum.with_index(1)` shifts the exclusion set by one line, so the
+    # defstruct stops being excluded and gets flagged too. Asserting exactly one
+    # issue, on the line BELOW it, is what distinguishes them.
+    code = """
+    defmodule M do
+      defstruct :a, :b, :c
+
+      def f do
+        1, 2
+      end
+    end
+    """
+
+    assert [%Issue{rule: :no_python_multi_return, meta: %{line: 5}}] = analyze(code)
+  end
 end

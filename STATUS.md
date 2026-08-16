@@ -319,10 +319,59 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   accepting-side half does not. Cheapest first cut: a meta-test comparing each
   rule's normalised matcher shape against every other, ledgered C13/C14-style so
   today's overlaps are frozen and only new ones fail.
-- [ ] **D9. Mutant-survivor triage** — untracked until now: T2.4's sweep is
-  report-only *by design*, but nothing owns triaging the **221 surviving
-  mutants** and then setting `--fail-under` (docs/19 row 9 stays "not
-  measured" until this happens).
+- [ ] **D9. Mutant-survivor triage — the method is established and measured;
+  the tail is not worked.** Rule Standard requirement 9 is the last fully
+  ungated one, and C18 stages it deliberately: sweep → publish → **fix the
+  tail** → only then a floor. The sweep re-ran clean at `0ef1685` and reproduced
+  T2.4's numbers exactly (**0.740**, 629 killed / 221 survived, 39 rules,
+  seed 0) — three weeks and ~20 commits apart, so the engine is deterministic.
+
+  **The 221 survivors classify structurally**, which is what makes the tail
+  tractable rather than 221 separate judgments:
+
+  | class | n | share |
+  |---|---|---|
+  | needs individual review | 121 | 55% |
+  | catch-all clause constant (`defp f(_), do: false`) | 44 | 20% |
+  | comparison boundary | 25 | 11% |
+  | catch-all branch constant (`_ -> :error`) | 14 | 6% |
+  | position arithmetic (line/col ±1) | 9 | 4% |
+  | unreached default argument | 6 | 3% |
+
+  Concentrated, too: 32 of 39 rules have at least one, and the worst 10 hold
+  56% of them.
+
+  **The worst rule was worked end to end as the method, and it cost more than
+  expected.** `no_python_multi_return` (0.475) went to **0.525** — two mutants
+  killed, each verified by hand-mutating the source and watching the new test
+  redden. Getting there took three failed attempts, and the reason generalises
+  to the whole tail:
+
+  * **exercising a path is not distinguishing it.** Three tests that ran the
+    `when` code killed nothing, because the lookahead scans *forward* and the
+    `when` lines sat above the candidate.
+  * **disjoint clauses need one fixture each.** `starts_with_when?/1` matches
+    exactly `when`, `when ` + rest, and `when\t` + rest; a `when true` line
+    exercises only the second.
+  * **the assertion has to be the decline**, and only where the line after the
+    `when` is the `->`; anywhere else the scan halts either way and the mutant
+    is equivalent *on that input*.
+
+  So a survivor is not an "add a test" item — it is a request to construct an
+  input that separates two programs, and for a good many of them no such input
+  exists that anyone would ever write.
+
+  **The recommendation, and the trade-off it turns on.** Do not set
+  `--fail-under` at 0.740: it would fail rules for carrying defensive clauses
+  rather than weak tests, which is C18's own stated reason for staging. Two
+  defensible options: (a) triage the 121 "individual review" survivors, mark the
+  equivalent ones in the ledger, and set the floor against the *triaged* rate —
+  correct, and the expensive path; (b) set a floor well below the current rate
+  (0.60 kills nothing today) purely as a regression ratchet, which buys much
+  less but costs a day rather than a week. Either way the floor should be
+  per-rule rather than corpus-wide, since the distribution runs from 0.475 to
+  0.875 and a single number hides both ends.
+
 - [ ] **D10. Fix-coverage decision** — untracked until now: FIX_LOG.md defers
   "make ~20 Tier-3 no-op/self-revert rules check-only or comment-preserving".
   Check-only collides with the *fix-or-drop* policy, so the real choice per
