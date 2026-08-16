@@ -328,14 +328,28 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
     comment still claimed they mirrored. Left unsynced deliberately (widening
     changes what the rule fires on and needs its own evidence) but recorded.
 
-  What remains is the gate, and it is the real ask: nothing mechanical stops the
-  next generated rule from re-implementing a live one. 25 of 143 rejects were
-  duplicates-of-live, five literal same-name copies, and docs/19's nine
-  requirements still contain no distinctness requirement. The generation-side
-  half exists (H8 verdict memory + the R1–R7 rejected-mechanism list); the
-  accepting-side half does not. Cheapest first cut: a meta-test comparing each
-  rule's normalised matcher shape against every other, ledgered C13/C14-style so
-  today's overlaps are frozen and only new ones fail.
+  **A mechanical duplicate signal now exists, and it found a real duplicate on
+  its first run.** The signature that works is the set of **atom literals in a
+  rule's matcher** — the module and function names it keys on — with the
+  moduledoc stripped. The obvious signature does not work and is worth recording
+  so nobody rebuilds it: the qualified `Module.fun` CALLS in a rule's source are
+  its own machinery (`Enum.map`, `Sourceror.*`), so scoring on those gives 133
+  pairs at Jaccard >= 0.6 with `prefer_explicit_binary_arithmetic` ~
+  `prefer_regex_match` at 1.0. Scoring on matched atoms gives **9** pairs, all
+  plausibly related.
+
+  The top pair was an exact duplicate: `no_list_delete_at_length` and
+  `no_list_delete_at_with_length` had the same target
+  (`List.delete_at(l, length(l) - 1)`), the same repair (`-1`), identical
+  behaviour on every shape probed, and only the first ever fired in the pipeline.
+  Retired, with its one unique assertion ported.
+
+  **What is left is turning the probe into a gate** — ledger today's 8 remaining
+  pairs C13/C14-style and fail on a new one. The threshold needs choosing on
+  evidence: 0.6 is where the prototype was run, and the 8 survivors should each
+  be looked at before the number is fixed, because a ledger of pairs that are
+  merely *related* teaches less than one of pairs that are genuinely redundant.
+
 - [ ] **D9. Mutant-survivor triage — the method is established and measured;
   the tail is not worked.** Rule Standard requirement 9 is the last fully
   ungated one, and C18 stages it deliberately: sweep → publish → **fix the

@@ -68,4 +68,27 @@ defmodule Credence.Pattern.NoListDeleteAtLengthCheckTest do
       assert check(NoListDeleteAtLength, "List.delete_at(list, length(list) + 1)") == []
     end
   end
+
+  # Ported from `no_list_delete_at_with_length`, retired 2026-08-16 as an exact
+  # duplicate of this rule (same target, same repair, identical coverage on
+  # every shape probed). Deleting a rule is only safe while its behaviour is
+  # pinned somewhere else — this is that somewhere, and it is the one assertion
+  # the retired rule had that this file did not: the issue reaches
+  # `Credence.Pattern.analyze/1`, not just `check/2`.
+  test "the anti-pattern is reported through Pattern.analyze/1" do
+    source = """
+    defmodule DropsLast do
+      def drop_last(list) do
+        List.delete_at(list, length(list) - 1)
+      end
+    end
+    """
+
+    found =
+      source
+      |> Credence.Pattern.analyze()
+      |> Enum.filter(&(&1.rule == :no_list_delete_at_length))
+
+    assert length(found) == 1
+  end
 end
