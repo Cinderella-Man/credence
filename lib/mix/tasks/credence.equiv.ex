@@ -72,9 +72,15 @@ defmodule Mix.Tasks.Credence.Equiv do
   # original battery left: the Map-vs-Keyword duplicate-key divergence, tuple
   # arity, and the int/float traps that survive `==`. C2.2's dimension-mapping
   # meta-test keys on this list, and H3's `--dim` inference reads it.
-  @collection_dims [:maps, :keyword_lists, :tuples, :mixed_numeric]
+  @collection_dims [:maps, :keyword_lists, :tuples, :mixed_numeric, :mapsets]
+
+  # Structs the original battery could not produce at all. Escalation-ledger
+  # H-A: ten diverged rows sat at `after_ok 0/44` purely because a struct-shaped
+  # repair had no struct to succeed on, and a missing input type reads exactly
+  # like a broken fix.
+  @struct_dims [:structs]
   @all_dims [:term_lists, :signed_integers, :stability_lists] ++
-              @all_string_dims ++ @collection_dims
+              @all_string_dims ++ @collection_dims ++ @struct_dims
 
   @impl Mix.Task
   def run(argv) do
@@ -161,10 +167,23 @@ defmodule Mix.Tasks.Credence.Equiv do
     end
   end
 
-  # REPAIR iff `before` raised on EVERY input and `after` succeeded on ≥1 — the
-  # before has no valid output on any input, so the fix is a correction.
+  # REPAIR iff every input either RAISED on the before, or the two sides already
+  # AGREE — and the after succeeded on at least one.
+  #
+  # The "already agree" half is escalation-ledger H-B. Demanding the before
+  # raise on *every* input killed row 185, where the hallucinated call is
+  # short-circuited away on 3 of 44 inputs (`Enum.all?([], &DateTime.valid?/1)`
+  # is `true` without ever calling it). One input the repair never reaches
+  # should not decide that the repair is a behaviour change.
+  #
+  # It stays narrow in the way that matters: an input where the before produced
+  # a value and the after produced a DIFFERENT one still disqualifies the whole
+  # verdict, so this can only ever admit pairs that were already going to be
+  # `:equivalent` on that input. And the `after succeeded on ≥1` clause is
+  # untouched, so a repair that is itself broken — row 105's `File.stream/1` —
+  # remains DIVERGES.
   defp repair?(pairs) do
-    Enum.all?(pairs, fn {_i, ob, _oa} -> match?({:raise, _}, ob) end) and
+    Enum.all?(pairs, fn {_i, ob, oa} -> match?({:raise, _}, ob) or ob === oa end) and
       Enum.any?(pairs, fn {_i, _ob, oa} -> match?({:ok, _}, oa) end)
   end
 

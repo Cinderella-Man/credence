@@ -149,6 +149,55 @@ defmodule Credence.EquivalenceInputs do
   end
 
   @doc """
+  Calendar and process **structs**. Witnesses: a fix whose repaired form needs a
+  struct rather than a list or a binary — the whole `%Date{}`/`%DateTime{}`/
+  `%NaiveDateTime{}`/`%Task{}` family that the original battery could not
+  produce at all.
+
+  This dimension exists because its absence was silently killing a whole class
+  of proposal. Escalation-ledger H-A: ten `behaviour_diverged` rows sat at
+  `before_raised 44/44, after_ok 0/44` — not because the repair was wrong, but
+  because `repair?/1` needs the AFTER to succeed on at least one input, and a
+  type-blind battery of lists and binaries gives a struct-shaped repair nothing
+  to succeed on. A missing input type reads exactly like a broken fix.
+
+  `%Task{}` is a real struct with a live `:ref` and `:pid`, not a hand-built
+  map, because the accessor rules this dimension serves key on those fields.
+  """
+  def structs do
+    task = Task.async(fn -> :ok end)
+    _ = Task.await(task)
+
+    [
+      ~D[2024-01-01],
+      ~D[2024-02-29],
+      ~N[2024-01-01 00:00:00],
+      ~N[2024-06-15 23:59:59],
+      ~U[2024-01-01 00:00:00Z],
+      ~T[12:30:45],
+      task
+    ]
+  end
+
+  @doc """
+  `MapSet`s. Witnesses: a rewrite that swaps set membership for list membership
+  (`MapSet.member?/2` vs `in`), or one that assumes `Enum` on a MapSet preserves
+  insertion order — it does not.
+  """
+  def mapsets do
+    [
+      MapSet.new([]),
+      MapSet.new([1]),
+      MapSet.new([1, 2, 3]),
+      MapSet.new(["a", "b"]),
+      # >32 elements: leaves the small-map representation, iteration order moves
+      MapSet.new(1..40),
+      # duplicate-collapsing: a list of 4 becomes a set of 2
+      MapSet.new([:a, :b, :a, :b])
+    ]
+  end
+
+  @doc """
   Keyword lists. Witnesses: **duplicate keys**, which a keyword list keeps and a
   map silently collapses — the classic divergence when a fix rewrites
   `Keyword.get/2` as `Map.get/2` or pipes a keyword list through `Map.new/1`.
