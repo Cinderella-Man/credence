@@ -8,15 +8,19 @@ defmodule Credence.Pattern.NonGroupedClauses do
 
   ## Bad
 
-      def foo(1), do: 1
-      def bar(x), do: x
-      def foo(x), do: x + 1   # not grouped with first foo/1!
+      defmodule Router do
+        def foo(1), do: 1
+        def bar(x), do: x
+        def foo(x), do: x + 1
+      end
 
   ## Good
 
-      def foo(1), do: 1
-      def foo(x), do: x + 1
-      def bar(x), do: x
+      defmodule Router do
+        def foo(1), do: 1
+        def foo(x), do: x + 1
+        def bar(x), do: x
+      end
   """
 
   use Credence.Pattern.Rule

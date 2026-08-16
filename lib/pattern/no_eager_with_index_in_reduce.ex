@@ -9,18 +9,16 @@ defmodule Credence.Pattern.NoEagerWithIndexInReduce do
 
   ## Bad
 
-      Enum.reduce(Enum.with_index(list), acc, fn {val, idx}, acc -> ... end)
-
-      list |> Enum.with_index() |> Enum.reduce(acc, fn ...)
+      Enum.reduce(Enum.with_index(list), acc, fn {val, idx}, acc -> acc + val * idx end)
 
   ## Good
 
       # Option 1 (:stream strategy): Use Stream.with_index for lazy evaluation
-      list |> Stream.with_index() |> Enum.reduce(acc, fn {val, idx}, acc -> ... end)
+      list |> Stream.with_index() |> Enum.reduce(acc, fn {val, idx}, acc -> acc + val * idx end)
 
       # Option 2 (:reduce strategy): Track the index in the accumulator
       list
-      |> Enum.reduce({0, acc}, fn val, {idx, acc} -> {idx + 1, ...} end)
+      |> Enum.reduce({0, acc}, fn val, {idx, acc} -> {idx + 1, acc + val * idx} end)
       |> elem(1)
 
   ## Fix strategy

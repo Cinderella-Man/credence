@@ -134,12 +134,29 @@ defmodule Credence.RuleDuplication do
         do: {snippet, ast}
   end
 
-  @doc "The `## Bad` block of `rule`'s moduledoc, dedented, or `nil`."
-  def bad_example(rule) do
+  @doc "The `## Bad` code block of `rule`'s moduledoc, dedented, or `nil`."
+  def bad_example(rule), do: example(rule, "Bad")
+
+  @doc "The `## Good` code block of `rule`'s moduledoc, dedented, or `nil`."
+  def good_example(rule), do: example(rule, "Good")
+
+  @doc """
+  The first indented code block under `## <heading>` in `rule`'s moduledoc.
+
+  Takes only the leading run of indented (or blank) lines, and stops at the
+  first line in column 0. Reading to the next `##` instead swallows the prose
+  between the code and the following heading — measured: it made
+  `PreferTupleDestructureAfterWithIndex`'s example unparsable by appending the
+  paragraph that explains it, which looks exactly like a rule whose own
+  documentation is broken.
+  """
+  def example(rule, heading) do
     with {:docs_v1, _, _, _, %{"en" => doc}, _, _} <- Code.fetch_docs(rule),
-         [_, block] <- Regex.run(~r/##\s*Bad\s*\n\n(.*?)(?:\n\s*\n##|\z)/s, doc) do
-      block
+         [_, rest] <- Regex.run(~r/##\s*#{heading}\s*\n(.*)/s, doc) do
+      rest
       |> String.split("\n")
+      |> Enum.drop_while(&(String.trim(&1) == ""))
+      |> Enum.take_while(&(String.trim(&1) == "" or String.starts_with?(&1, "    ")))
       |> Enum.map_join("\n", &String.replace_prefix(&1, "    ", ""))
       |> String.trim()
     else

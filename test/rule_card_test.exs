@@ -193,4 +193,108 @@ defmodule Credence.RuleCardTest do
       assert length(sentences("Does a thing. Then it does another thing.")) == 2
     end
   end
+
+  # ── Requirement 6b: a documented example must be TRUE ───────────────────
+  #
+  # Presence was gated; truth was not. Measured the day this landed: of 117
+  # Pattern rules with a `## Bad` block, **two documented an example their own
+  # rule does not fire on**, and neither was visible by reading.
+  #
+  #   NonGroupedClauses          three bare `def`s with no `defmodule` around
+  #                              them. The rule needs the module body, so the
+  #                              example as written was inert. Wrapped it.
+  #   NoEagerWithIndexInReduce   `fn {val, idx}, acc -> ... end` — the `...`
+  #                              placeholder made the block unparsable. Both
+  #                              blocks now hold code that runs.
+  #
+  # Finding them at all required fixing the EXTRACTOR first, which had the same
+  # class of defect: reading to the next `##` swallowed the prose paragraph
+  # between the code and the following heading, which made a third rule's
+  # perfectly good example look broken. A checker with a bug in it manufactures
+  # findings — see docs/22 T3.6, where a diff fabricated bug reports the same way.
+  #
+  # This gate is why the D8a duplicate corpus can be trusted: that corpus IS
+  # these Bad blocks, so "every Bad block fires" is the statement that the
+  # corpus is adversarial rather than decorative.
+  describe "documented examples are true, not decorative" do
+    alias Credence.RuleDuplication
+
+    defp fires?(rule, source) do
+      case Sourceror.parse_string(source) do
+        {:ok, ast} ->
+          try do
+            rule.check(ast, source: source) != []
+          rescue
+            _ -> :crash
+          catch
+            _, _ -> :crash
+          end
+
+        _ ->
+          :unparsable
+      end
+    end
+
+    test "every Pattern `## Bad` example makes its own rule fire" do
+      examples =
+        for rule <- Credence.MetaTestSupport.rules(),
+            snippet = RuleDuplication.bad_example(rule),
+            snippet not in [nil, ""],
+            do: {rule, snippet}
+
+      # Population floor, not a result check: if the extractor breaks, every
+      # rule silently has "no example" and this gate passes by testing nothing.
+      assert length(examples) >= 110,
+             "only #{length(examples)} Bad examples extracted; the extractor has regressed"
+
+      liars =
+        for {rule, snippet} <- examples,
+            (verdict = fires?(rule, snippet)) != true,
+            do: {rule, verdict}
+
+      assert liars == [],
+             """
+             These rules document a `## Bad` example they do not fire on:
+
+             #{Enum.map_join(liars, "\n", fn {r, v} -> "  #{inspect(r)} -> #{v}" end)}
+
+             Either the example is wrong (usually: missing the `defmodule`
+             wrapper the rule needs, or a `...` placeholder that will not parse)
+             or the rule is. Both have happened. Run it before deciding which.
+             """
+    end
+
+    test "no Pattern `## Good` example makes its own rule fire" do
+      examples =
+        for rule <- Credence.MetaTestSupport.rules(),
+            snippet = RuleDuplication.good_example(rule),
+            snippet not in [nil, ""],
+            do: {rule, snippet}
+
+      assert length(examples) >= 110,
+             "only #{length(examples)} Good examples extracted; the extractor has regressed"
+
+      liars = for {rule, snippet} <- examples, fires?(rule, snippet) == true, do: rule
+
+      assert liars == [],
+             """
+             These rules fire on the example their own moduledoc holds up as
+             correct — so either the rule over-fires or the documentation is
+             teaching the wrong idiom:
+
+             #{Enum.map_join(liars, "\n  ", &inspect/1)}
+             """
+    end
+
+    # Controls: this gate is two `Enum.filter`s over a predicate, and a
+    # predicate that answers `true` for everything would make both pass.
+    test "CONTROL: fires?/2 says false for code the rule ignores" do
+      assert fires?(Credence.Pattern.NoManualFind, "defmodule C1 do\n  def f, do: :ok\nend\n") ==
+               false
+    end
+
+    test "CONTROL: fires?/2 says :unparsable for a placeholder example" do
+      assert fires?(Credence.Pattern.NoManualFind, "Enum.reduce(list, fn ...)") == :unparsable
+    end
+  end
 end
