@@ -395,15 +395,21 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   rule is comment-preserving vs retire-with-failure-mode. No metric exists for
   fixable-fraction of corpus findings; decide before Phase 9 generates against
   these rules.
-- [ ] **D11. T5.8 — write the honest build list.** Residue after refutation:
-  **6 rules to build** (`no_enum_sort_then_map_values`,
-  `no_agent_update_tuple_wrapper`, `no_raw_send_in_genserver_handle_call`,
+- [ ] **D11. T5.8 — write the honest build list.** Residue after refutation, and
+  it is now **4 rules, not 6**:
+  `no_enum_sort_then_map_values`, `no_raw_send_in_genserver_handle_call`,
   `no_stream_data_constant_with_range`, `fix_ets_new_string_name`,
-  `fix_ets_options_bare_keypos`) + respec catalogue items 3/5/11 + fold in the
-  `NoHallucinatedBaseHexEncode` `hex_encode64/32` widening (ledger row 119).
-  The "2 lines to widen" and "4 shipped bugs" halves already landed. The
-  source line is docs/18 **end of §3** (~1676), not §5 as cited.
-## E. Evidence salvage — **DONE 2026-08-16** (`42d3a59`)
+  `fix_ets_options_bare_keypos`.
+  * **`no_agent_update_tuple_wrapper` is off the list for good** — built,
+    tested green, and deleted the same day: its "before" returns a valid value
+    on every input, so the rewrite silently breaks working code. Failure mode
+    catalogued as docs/17 entry 28.
+  * The `hex_encode64`/`hex_encode32` widening (ledger row 119) **landed** as
+    `@qualified_replacements` rows, so it is not build-list work either.
+
+  What is left is the writing: produce the short verified list, respec catalogue
+  items 3/5/11, and leave the 56 banked observations banked. The source line is
+  docs/18 **end of §3** (~1676), not §5 as T5.8 cites.
 
 All five items landed. The logs are archived, and the reasoning inside them now
 lives in `docs/17`: entries **26** and **27** (rows 55 and 73 — `trap_exit`
@@ -420,24 +426,14 @@ refuted by re-running it** — `prefer_enum_frequencies` was dropped for an
 enumeration-order divergence that does not reproduce at any size. The drop still
 stands, on a stronger argument: the two constructs return different *types*.
 
-## F. Tracker & doc hygiene (30 minutes; a tracker that lies is worse than one that is late)
+## F. Tracker & doc hygiene
 
-- [ ] **F1. docs/22:** flip T2.5's checkbox (done, `8f400fd`); fix the T3.6
-  header ("2 of 6" → five of six, only row 183 + 4.6d remain); "290/290" →
-  **289** rules (157 Pattern / 89 Semantic / 43 Syntax after `no_else_if`
-  retired); stale cites — `credence.equiv.ex:131-134` → `:166-169`,
-  `gate.ex:116` → `:128/:198-202`, "three meta-gate files" → five,
-  `docs/16:772-775` pointer is dead, "row 120" doesn't exist (the log-budget
-  victims are rows 6/59/87/88/175/210/224; the fabricated-diff victim is 181);
-  T1.2 "one pair paid down" → none (see D12).
-- [ ] **F2. docs/21:** still says the STATUS.md interlock "is not implemented"
-  — T4.1 landed; amend.
-- [ ] **F3. docs/12/13/14** carry no banner pointing at docs/22 despite
-  docs/22 claiming they do; **docs/19** §5 says "six of nine ungated" while
-  its own §1 table shows three (6, 7, 9), and row E predates T2.4's measured
-  0.740 kill rate.
-- [ ] **F4. CONTEXT.md** says 155 Pattern rules in both trees; it is 157.
-- [ ] **F5. Harness IMPROVEMENTS.md** "Landed so far" list is eleven commits
-  stale.
-- [ ] **F6.** Record the verified PR number + merge method (A1/A2) in docs/22;
-  retire the `credence-evolution-harness-backup` clone (nothing unique in it).
+**F1-F5 are DONE** (`42d3a59`, plus the per-item passes since). Every claim
+listed there was corrected: docs/22's stale checkboxes, counts and line cites;
+docs/21's denial of the STATUS.md interlock; the missing banners on docs/12/13/14
+and docs/19's self-contradiction; CONTEXT.md's rule count; and the harness's
+`IMPROVEMENTS.md` landed-list.
+
+- [ ] **F6. Record the merge method in docs/22 once A2 happens**, and retire
+  `credence-evolution-harness-backup` (nothing unique in it). The PR itself is
+  now recorded — **#22**, `evolution_accepted` → `main`.
