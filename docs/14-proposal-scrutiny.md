@@ -1,5 +1,10 @@
 # 14 — Adversarial scrutiny of the docs/12 + docs/13 + harness proposals
 
+> **This document is a SPEC and a HISTORY, not a tracker.** Open work that
+> came out of it lives in [`docs/22-remaining-work.md`](22-remaining-work.md),
+> and the ordered release map is [`STATUS.md`](../STATUS.md). Where this file
+> describes something as open, check there before believing it.
+
 **Status:** validation report · **Date:** 2026-07-11 · **Method:** devil's-
 advocate review of the improvement proposals in `docs/12`, `docs/13`, and
 `credence-evolution-harness/docs/IMPROVEMENTS.md`, by **experiment** — every

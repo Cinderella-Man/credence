@@ -174,11 +174,20 @@ harness's bugfix lane is the intended consumer (H1's sibling).
 
 *Cost to fix:* harness-side, Phase 8.
 
-### Row E — semantic-mutant kill rate: **unmeasured**
+### Row E — semantic-mutant kill rate: **measured, floor still unset**
 
 C18 prescribes report-only first, published per-rule kill rates second, fix the
-tail third, and only then a floor gate. Nothing has been measured, so there is
-no tail to fix yet and no floor to set.
+tail third, and only then a floor gate.
+
+**Step one is done (T2.4, `b1297c7`).** `mix credence.mutants` exists and a
+39-rule sample was measured on a quiet box: **corpus kill rate 0.740**, 629
+killed / 221 survived, 0 timeouts, 189 s. `no_manual_max` reproduced the
+salvage's 0.848 exactly, so the engine is deterministic across machines.
+
+It stays **report-only on purpose** — no `--fail-under`, not wired into the
+suite. The 221 survivors have not been triaged, and a floor set before that is a
+number nobody can defend. Triage-then-floor is tracked in `STATUS.md` (D9);
+until it happens this requirement is measured but ungated.
 
 ---
 
@@ -222,8 +231,12 @@ outrun by new rules born under the old bar.
 
 ## 5. What this document does not claim
 
-It is v1 and it is mostly aspiration: **six of the nine requirements are
-ungated**, and §2 measures how far the existing set is from three of them. The
+It is v1 and it was mostly aspiration when written: six of the nine
+requirements were ungated then. **As of 2026-08-16 three are — 6 (C15,
+template), 7 (C12, alpha-rename) and 9 (C18, mutant floor)** — which is what
+§1's own table has said since C2.2, C13 and C14 landed on the day this section
+was written. The sentence and the table disagreed for three weeks; the table
+was right. §2 measures how far the existing set is from three of them. The
 value here is not the checklist — anyone can write a checklist — it is the audit
 table, because that is the part that says how much work the checklist implies
 and where it actually is.

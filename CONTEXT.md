@@ -47,7 +47,7 @@ and finds its rules by itself through `RuleHelpers.discover_rules/1`.
    yet. Rules are `String.t() -> String.t()`.
 2. **Semantic** (`lib/semantic/`) — fixes for compiler warnings. Rules match
    against `Code.with_diagnostics/1` output and patch the text.
-3. **Pattern** (`lib/pattern/`) — the bulk of Credence: 155 rules that work on
+3. **Pattern** (`lib/pattern/`) — the bulk of Credence: 157 rules that work on
    the tree.
 
 The rounds run one after another; if syntax problems are still there, the

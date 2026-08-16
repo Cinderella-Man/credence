@@ -192,10 +192,20 @@ defect (cf. docs/16 §4.6a finding 3); the rule now declines that shape.
 generator and the harness seed. All three legs are in place (the harness seed
 already taught self-classification, `lib/cev/implement/seed.ex:244`).
 
-**The mode file is deliberately still `CATCHING UP`.** The intended mechanism is
-that `mix cev.preflight` refuses to start a generation run while it says so —
-**note (corrected 2026-07-28): that interlock is documented but not implemented;
-nothing in the harness reads STATUS.md yet.** Building it is docs/22 task T4.1.
+**The mode file is deliberately still `CATCHING UP`.** The mechanism is that
+`mix cev.preflight` refuses to start a generation run while it says so.
+
+> **CORRECTED AGAIN 2026-08-16.** The note below said the interlock "is
+> documented but not implemented". That was true when written and stopped being
+> true a few hours later: **T4.1 landed as harness `24f2dee`** — `Cev.Preflight`
+> reads the *accepting* repo's `STATUS.md` through `Cev.Status` and halts unless
+> the mode is exactly `PRODUCING`. Left uncorrected for three weeks, which is the
+> same failure this file keeps recording: a claim about the world that nobody
+> re-checked after the world moved.
+
+*(Superseded note, 2026-07-28: "that interlock is documented but not implemented;
+nothing in the harness reads STATUS.md yet. Building it is docs/22 task T4.1.")*
+
 Either way the flip is the maintainer's call, made on purpose rather than as a
 side effect of the last gate landing.
 

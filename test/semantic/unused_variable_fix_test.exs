@@ -470,6 +470,42 @@ defmodule Credence.Semantic.UnusedVariableFixTest do
   end
 
   # ════════════════════════════════════════════════════════════════
+  # Regression: two unused bindings across DIFFERENT lines.
+  #
+  # Recovered from the 2026-07-06 evolution run (escalated row 178, written and
+  # seen green by the bugfix agent before its candidate was Gate-rejected for a
+  # test-only diff). The rest of that row's tests duplicated existing coverage;
+  # this one does not. Two dimensions were unpinned: several diagnostics landing
+  # on different lines within one `Credence.Semantic.fix/1` pass — "multiple
+  # unused on same line" above covers only the single-line case — and a
+  # `?`-suffixed binding, which appeared nowhere in this suite.
+  # ════════════════════════════════════════════════════════════════
+
+  describe "two unused bindings across lines (REGRESSION)" do
+    test "function param + destructured var with ? name — both prefixed" do
+      source = """
+      defmodule OverridesNeedsUser do
+        def apply(overrides, opts) do
+          %{"needs_user?" => needs_user?} = opts
+          :ok
+        end
+      end
+      """
+
+      expected = """
+      defmodule OverridesNeedsUser do
+        def apply(_overrides, opts) do
+          %{"needs_user?" => _needs_user?} = opts
+          :ok
+        end
+      end
+      """
+
+      confirm_fix(Credence.Semantic.fix(source), expected)
+    end
+  end
+
+  # ════════════════════════════════════════════════════════════════
   # Safety guards on `fix/2`.
   # ════════════════════════════════════════════════════════════════
 

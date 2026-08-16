@@ -1,5 +1,10 @@
 # 12 — Improvement proposals: rule quality, oracles, and the pipeline
 
+> **This document is a SPEC and a HISTORY, not a tracker.** Open work that
+> came out of it lives in [`docs/22-remaining-work.md`](22-remaining-work.md),
+> and the ordered release map is [`STATUS.md`](../STATUS.md). Where this file
+> describes something as open, check there before believing it.
+
 > **Scrutinized 2026-07-11 — see [`docs/14-proposal-scrutiny.md`](14-proposal-scrutiny.md)**
 > for experimental validation. Corrections that affect this document: **C1 also
 > applies to `NoSortForTopK`** (the battery probe found the same tie bug live in

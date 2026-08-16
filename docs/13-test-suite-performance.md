@@ -1,5 +1,10 @@
 # 13 — Test-suite performance: making the corpus scan cheap
 
+> **This document is a SPEC and a HISTORY, not a tracker.** Open work that
+> came out of it lives in [`docs/22-remaining-work.md`](22-remaining-work.md),
+> and the ordered release map is [`STATUS.md`](../STATUS.md). Where this file
+> describes something as open, check there before believing it.
+
 > **Scrutinized 2026-07-11 — see [`docs/14-proposal-scrutiny.md`](14-proposal-scrutiny.md).**
 > Corrections: **P1** — real-ExUnit prototyping shows module-level async alone
 > delivers only 1.6–3.6× (biggest-chunk floor); the primary lever is

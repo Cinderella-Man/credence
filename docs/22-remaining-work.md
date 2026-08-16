@@ -68,7 +68,7 @@ untouched.
 | ✅ | **T3.10 — pay down the self-corruption ledger** — 10 of 11 done; the only entry left is the deliberate one | `becd59b` · `643435a` · `e549bd0` · `a9ad691` |
 | ✅ | **T3.10a — `no_else_if` corrupts valid parsing code** — all four steps done; the rule is **retired** into its widened sibling and the self-corruption ledger is **EMPTY** | `f23722f` · `4e9d16d` |
 | ✅ | **T3.8 — the two rules T1 proved cannot fire** — both alive: one re-homed, one re-keyed | `e549bd0` · `3cdbe14` |
-| ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; 290/290 rules witness | `f895bee` · `f32e315` · `6d72130` |
+| ✅ | **T5.9 — the T1 witness ledger is EMPTY** — all 8 paid down; every rule witnesses (290/290 as measured then; the live count is **289** since `no_else_if` was retired — the gate derives it at runtime, so only the written figure aged) | `f895bee` · `f32e315` · `6d72130` |
 | ✅ | **T5.10 — the AST differ patches a bare list one column inside its `[`** — fixed at the wrapper, and the helper has a test at last | `8b870b5` |
 | ✅ | **T3.11 / T5.6 — `compile_and_capture/1` executes what it analyses, unbounded** — the seven OOM kills of 2026-07-28, diagnosed and fixed; also closes C6's second half | `1ddbfe6` |
 | ✅ | **T1.2 — the dispatch-simulation gate** — every contended pair was ordered correctly *by accident*; two priorities now say so | `aea4f7c` |
@@ -77,13 +77,18 @@ untouched.
 | ✅ | **T4.1 [H] — the STATUS.md interlock**, which until now described itself | `24f2dee` |
 | ⬜ | everything else | see the tiers below — **Tiers 0 and 1 are closed** |
 
-**Next by value:** **T2.1–T2.3**, which remain the prerequisites for any Phase-9
-run, and **T4.1–T4.3** for the harness half. Tier 1 is now closed: T1, T1.2 and
-T1.3 have all landed. Then **T2.1–T2.3**, which remain
-the prerequisites for any Phase-9 run, and **T4.1–T4.3** for the harness half.
-The whole self-corruption line of work (T3.7 → T3.10 → T3.10a) is now closed: the
-ledger is empty and the gate that measured it has been rebuilt so that being
-empty does not make it vacuous.
+**Where to start: `STATUS.md`.** As of 2026-08-16 it carries the ordered
+release map — what is left to merge, cut 0.8.1, and stand up Phase 9 — grouped
+A–F and stripped of everything already done. This file stays the item-level
+record: the evidence, the corrections, and the reasoning behind each task. When
+the two disagree about whether something is done, believe the code and fix both.
+
+Tiers 0 and 1 are closed (T1, T1.2, T1.3 all landed), as is the whole
+self-corruption line (T3.7 → T3.10 → T3.10a): its ledger is empty and the gate
+that measured it was rebuilt so that being empty does not make it vacuous. Tier
+2 is closed except **T2.3**. The harness half of T1 — defined at this file's own
+T4.1–T4.3 — is done except **T4.2 (c) and (d)**, which are the minimum in-loop
+gates still owed before a Phase-9 run.
 
 ---
 
@@ -384,8 +389,15 @@ on purpose — no exceptions; a gate nobody has seen red is unverified.
 
   Ledgered, C13/C14-style: 9 pairs win on a declared priority without naming the
   rule they beat (docs/20 §1). The list may only shrink — a separate test fails
-  on a *stale* entry, so paying one down forces its removal. One was paid down in
-  this pass.
+  on a *stale* entry, so paying one down forces its removal.
+
+  **Correction (2026-08-16): none of the 9 has been paid down.** This paragraph
+  used to close "One was paid down in this pass"; the ledger in
+  `dispatch_contention_test.exs:27-37` still holds all nine. The T1.2 repair was
+  the two *priorities* on the general rules, which is a different debt from this
+  one — that fixed the ordering, this records that a winner does not say why it
+  wins. Tracked as an open item in `STATUS.md` (D12); eight of the nine beat
+  `UndefinedFunction`, so it is one sentence per winning moduledoc.
 
   Controls: the machinery takes its rule list as an argument, so it is exercised
   against fabricated rules — two claimants detected, one claimant not reported,
@@ -432,7 +444,9 @@ its own tests run under real `mix test`.
   `:no_lib_change` rows (rows 40/50/59/123/145 → `:contradicted`; only row
   178 genuinely `:refuted`). **Zero tests exist** (killed at "Now the
   tests."), and the Gate/Router integration was never designed: live
-  `gate.ex:116` rejects with a bare `:no_lib_change` atom and discards the
+  `gate.ex:198-202` (`check_touches`, reached from the with-clause at
+  `gate.ex:128`; `:116` is now `@suite_retries`) rejects with a bare
+  `:no_lib_change` atom and discards the
   tree; `TestOnlyDiff.adjudicate/4` needs `{:no_lib_change, %{entries, patch}}`
   captured before discard, then Router → adjudicate → persist →
   `VerifiedGood.record` → `RowLog.verified_good`. Merge note: H8 and LD34
@@ -483,7 +497,11 @@ its own tests run under real `mix test`.
   discard), placement, and **re-run the 39-rule sample on a quiet box** —
   the salvaged kill rates came from a 20-parallel run while the box was
   OOMing; do not publish them.
-- [ ] **T2.5 [C] C7 idempotency gate — THE SWEEP IS DONE; the gate is not.**
+- [x] ~~**T2.5 [C] C7 idempotency gate.**~~ **DONE `8f400fd`** — the checkbox
+  trailed the work by three weeks; the body below has said DONE since the gate
+  landed. Verified 2026-08-16 by running it: the always-on half is green and the
+  full `--only idempotency` sweep passes (650 s on a quiet box, against a
+  `timeout: 900_000` — thin headroom, so run it quiet).
   The measurement the salvage died before producing (it stopped at ~750/5,144)
   now exists, re-extracted and re-run twice:
 
@@ -635,7 +653,8 @@ its own tests run under real `mix test`.
   (ledger H-A/H-B/H-C, replacing docs/16's original LD2 framing):
   (a) battery structs + `MapSet` dimensions (`%Date{}`/`%DateTime{}`/
   `%NaiveDateTime{}`/`%Task{}`) — flips 10 of 13 diverged rows to REPAIR,
-  row 31; (b) tolerant `repair?/1` (`credence.equiv.ex:131-134` →
+  row 31; (b) tolerant `repair?/1` (`credence.equiv.ex:166-169` — it moved when
+  T3.3 added the `{:vacuous, …}` clauses at the old anchor →
   `match?({:raise,_}, ob) or ob === oa`) — flips row 185, verified NOT to
   rescue row 105 (the correct kill — **row 105 is the mandatory positive
   control for any probe change**); (c) stacktrace normalization in
@@ -657,7 +676,11 @@ its own tests run under real `mix test`.
   equivalence check silently compares against the wrong code. Control: the new
   test seen red against the pre-fix implementation. Unblocks T5.5, and H4's scope
   estimate can now be re-taken against a working checker.
-- [ ] **T3.6 [C] Smaller ledger FIX-CREDENCE rows — 2 of 6 done (`c1d7cd7`).**
+- [ ] **T3.6 [C] Smaller ledger FIX-CREDENCE rows — 5 of 6 done**
+  (`c1d7cd7` ×2 · `77c6571` · `9184377` · `6962b7c`). Only row 183 remains, and
+  only half of it: the `UndefinedFunction` decline guard landed, so the residue
+  is widening `NoHallucinatedDefpstruct` to the `defpstructp` spelling. The
+  4.6d deferred rows are listed separately below.
 
   * [x] ~~`RuleHelpers.log_diff/3` renders a fabricated diff (ledger:846)~~ —
     `diff_lines/2` paired the two files by **index**, so one inserted line
@@ -665,7 +688,10 @@ its own tests run under real `mix test`.
     consequences, both measured: it **fabricated a bug report** (a correct module
     reorder reported to the harness as a "catastrophic replacement", ledger row
     181) and it was **what blew the log budget** — `APPLIED_RULES:` is printed
-    last, so a whole-file render pushed it past Logger's 8096-byte cap (row 120).
+    last, so a whole-file render pushed it past Logger's 8096-byte cap. (This
+    line cited "row 120"; there is no row 120 in the ledger. The truncated
+    `APPLIED_RULES:` victims are rows 6/59/87/88/175/210/224, and 181 is the
+    fabricated-diff one named just above.)
     Now `List.myers_difference/2`, which also drops an `Enum.at/2`-in-a-loop that
     was quadratic in file length. Pairs with the harness-side `truncate:
     :infinity` (T4.3) — the ledger prescribed both halves and this is the
@@ -1266,8 +1292,11 @@ its own tests run under real `mix test`.
   passes once C6/C7 land; `rule_status/1` exposing `priority` +
   `unsafe_in_dsl`).
 - [x] ~~**T5.9 [C] Pay down the T1 witness ledger.**~~ **DONE — the ledger is
-  empty and `@ledger %{}` is now pinned by the gate's own tests. 290 of 290 rules
-  in all three phases witness their own failure mode through the real pipeline.**
+  empty and `@ledger %{}` is now pinned by the gate's own tests. Every rule in
+  all three phases witnesses its own failure mode through the real pipeline —
+  290 of 290 when this was written, **289** today (157 Pattern / 89 Semantic /
+  43 Syntax) after `no_else_if`'s retirement. The gate counts at runtime, so the
+  property held across the change; only this sentence needed correcting.**
   The ledger only shrinks; each reason had its own repair, and the eight entries
   turned out to name four different defects — none of which meant "this rule is
   fine":
@@ -1416,7 +1445,10 @@ Do not start unattended. Prerequisites in order:
 1. T0.1/T0.2 (push + PR merged) → reset sister `evolution` onto the new
    `main`. **Until that reset, none of the new credence gates bind the Gate**
    — the Gate runs the *clone's* suite, and the sister tree today contains
-   none of the three new meta-gate files (verified).
+   none of the **five** new meta-gate files (verified 2026-08-16 —
+   `pipeline_witness`, `dispatch_contention`, `self_corruption`, `idempotency`,
+   `rule_helpers_ast_diff`; this line said "three" while two more had landed,
+   so a reader ticking off three would have under-verified the reset).
 2. **Archive `var/run/logs` first** — `cev.reset` deletes them
    (`cp -r var/run/logs var/archive/run-2026-07-06/`).
 3. Repoint the clone: `CEV_CREDENCE_CLONE=/home/kamil/projects/credence_evolution`

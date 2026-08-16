@@ -349,6 +349,245 @@ These are sampling artefacts, not beliefs about Elixir, and deserve their own cl
 
 ---
 
+# Failure modes recovered from Gate-rejected evolution rows
+
+Not part of the 140, and never in the drain. Both were extracted from the archived transcripts of the 2026-07-06 evolution run before the artefacts were deleted — see the escalation ledger, *"nothing records the failure mode of a Gate-rejected rule … rows 48, 55, 73 and 6 never entered the docs/18 drain, so their failure modes vanish with the artefacts"* (`maintainer_tools/escalation_ledger.md:47`). They are entered here on the standing rule that a rule's value is its verified failure mode, not its implementation. Both are **executed** evidence of the same kind used everywhere above: in each case a generated program compiled `exit=0`, passed Credo, passed `mix credence.check`, and *then* crashed or returned a wrong answer under `mix test` — all four results are in the run log. The headline "distinct misconception clusters" count covers the 140 only and should not be incremented for these.
+
+---
+
+### 26. Trapping exits read as a property of *dying*, not as a rewrite of the mailbox
+
+**Source.** Row 55 (`escalated/55.log`, 8542 lines), proposed as `Credence.Semantic.NoTrapExitWithoutExitHandler`, never merged. **Real — verified by execution at 55.log:7138.** Not one of the 140.
+
+**Why a generator produces it.** `Process.flag(:trap_exit, true)` is written as `init/1` boilerplate on the strength of two true summaries — "so `terminate/2` runs on shutdown" and "so a crashing worker doesn't take the server down". Both describe what trapping *prevents*; neither mentions what it *adds*. Trapping converts every exit signal arriving over a **link** into an ordinary message `{:EXIT, pid, reason}` delivered to `handle_info/2`. The same generator writes worker bookkeeping against `Process.monitor/1` and `{:DOWN, ref, :process, pid, reason}` — the shape it has seen most — and spawns the worker with `spawn_link` in the same function. Both mechanisms then deliver; only one gets a clause.
+
+**The sharp part: it fires on the happy path.** A trapped link delivers `{:EXIT, pid, :normal}` when the linked process finishes *successfully*; an untrapped link drops a `:normal` exit silently, so trapping is precisely what creates the message. The missing clause is therefore not an error-handling gap — it fires the first time any worker completes normally, on the first green path through the code.
+
+**Failure mode (executed).** Generated `ConcurrentPriorityQueue`: `init/1` calls `Process.flag(:trap_exit, true)` (55.log:6875), `defp start_worker/2` calls `spawn_link` (55.log:7098), and `handle_info/2` has exactly three clauses — `:process_next`, `{:DOWN, _ref, :process, pid, _reason}`, `{:task_result, result, task}` (55.log:7172-7174). On the first normal worker completion: `** (FunctionClauseError) no function clause matching in ConcurrentPriorityQueue.handle_info/2 … Last message: {:EXIT, #PID<0.246.0>, :normal}` (55.log:7138-7143). The server dies with all of its state — queues still holding five unstarted tasks, plus a `drain_waiter` `from` tuple — so the caller blocked in `drain/1` goes down with it. **The same missing clause then re-fires on the shutdown cascade:** a second, unrelated server in the same run terminates with `Last message: {:EXIT, #PID<0.242.0>, {:function_clause, …}}` (55.log:7147-7152) — it was linked to the test process the first crash had just killed, and it could not match that exit either. One missing clause takes out every trapping server linked to the casualty.
+
+**Nothing catches it.** Same source, same run: `compile exit=0 compiled=true` (55.log:7100), `credo exit=0`, no issues (55.log:7108-7111), `credence check exit=0` (55.log:7113); only `test exit=2` (55.log:7121). There is no compiler diagnostic for a `handle_info/2` that fails to cover `{:EXIT, _, _}`, and no live Credence rule mentions `trap_exit` at all — `grep -rl trap_exit lib/ test/` in the accepting repo returns nothing.
+
+**Why the rule that was built could never fire.** It was filed in the **semantic** phase with `@match_msg "trap_exit set in init without EXIT handler in handle_info"` (55.log:8037) — a diagnostic Elixir never emits. Semantic rules are invoked only from a compiler diagnostic, so the rule was inert by construction no matter how green its tests got: a textbook instance of *False premises §B*, and the `compile exit=0` above is the proof. **A rebuild belongs in the pattern phase** — this is a pure AST question and needs no compiler oracle. (The session's give-up was also not on merit: `API Error: Request rejected (429) · quota exhausted` mid-`Edit` at 55.log:8535, reported by the Router as `gave_up: :cc_tests_red`.)
+
+**Detection.** Fire when a module `use GenServer` (or `@behaviour GenServer`) contains `Process.flag(:trap_exit, true)` anywhere — `init/1` is the common site, not the only one — **and** defines at least one `handle_info/2` clause, **and** no clause can match a 3-tuple whose first element is the atom `:EXIT`, **and** there is no catch-all `handle_info/2` (bare variable or `_` first argument). The second conjunct is load-bearing and counter-intuitive: `use GenServer` injects a default `handle_info/2` that logs the unexpected message and returns `{:noreply, state}`, and marks it `defoverridable` — so a module that traps exits and defines *no* `handle_info` at all is safe, and it is writing the **first** clause that removes the safety net. Do not key on `spawn_link` being present: the exit can arrive over any link, including the parent's, as the cascade above shows.
+
+**What a repair must do, and why the obvious one is not safe.** The proposed fix was to insert `def handle_info({:EXIT, _pid, _reason}, state), do: {:noreply, state}` (55.log:7927). That is correct only when the module *also* tracks completion by monitor, as this one did. Where `spawn_link` is the sole tracking mechanism, `{:EXIT, pid, reason}` **is** the completion signal, and swallowing it converts a crash into a permanent leak: the worker slot is never freed, effective concurrency decays to zero, and `drain/1` blocks forever — a hang with nothing logged, strictly worse to diagnose than the crash it replaced. The other naive repair — deleting the `Process.flag(:trap_exit, true)` line — is equally a behaviour change: it disables `terminate/2` on supervisor shutdown and restores "a linked worker's crash kills the server". **Report-only is the correct default.** If a fix ever ships, it must (a) distinguish an abnormal `reason` from `:normal` instead of discarding both, and (b) be gated on the module already having a `{:DOWN, …}` clause — i.e. on the `{:EXIT, …}` message being genuinely redundant bookkeeping rather than the only completion signal.
+
+---
+
+### 27. The early-exit belief with the `return` keyword removed — a guard `if`/`unless` whose value is discarded
+
+**Source.** Row 73 (`escalated/73.log`, 8232 lines, plus `73.patch` and `73.corpus.md`), proposed as `Credence.Pattern.NoDiscardedEarlyReturnGuard`, Gate-rejected `corpus over_fire (1064 new, 0 gone)` (73.log:8232). **Real — verified by execution at 73.log:6294-6305.** Not one of the 140. This is the compiling sibling of cluster 23, and it **amends** it: 23 covers the form that fails to compile because the model wrote `return`; this is the same belief *after* the model has learned Elixir has no `return`, and it builds green.
+
+**Why a generator produces it.** Having dropped the keyword, the generator keeps the shape. A raising precondition guard — `unless valid do raise ArgumentError, … end` — is the idiom it has seen for "bail out early", and it generalises that idiom from *raising* to *returning a value*. In Elixir the two are not the same operation. `raise`, `throw` and `exit` are non-local exits: they never come back, so the guard works exactly as written. A value is not. Every expression yields a value; a non-final expression in a block is evaluated **for effect** and its value is thrown away; execution continues. The body still runs — only the answer is dropped.
+
+**Bad → Good.** `unless partial or items == [] do {:error, items} end` followed by `Enum.sum(items)` becomes `if partial or items == [] do Enum.sum(items) else {:error, items} end` (73.log:6874-6897). The `if` form is the mirror image: `if cond do {:error, …} end` followed by REST becomes `if cond do {:error, …} else REST end`.
+
+**Failure mode (executed) — a silent wrong answer, not a crash.** Generated `Inventory.bulk_upsert/2` (73.log:6316-6395): `unless partial or invalid_results == [] do … return_error(all_results) end` at 73.log:6376-6387, followed by the whole apply-to-store path. Test *"all-or-nothing rolls back when any item is invalid"* asserted `{:error, results}` and got `{:ok, [{0, :inserted, %{name: "Alpha", …}}, {1, :inserted, %{name: nil, sku: "B", price: 5, qty: 0}}]}` (73.log:6294-6305). The all-or-nothing contract was violated *and the invalid record — `name: nil` — was written to the Agent store*. This is data corruption reported as success. The sibling failure in the same run, *"partial mode applies valid items and reports invalid ones"*, returned `{1, :inserted, %{name: nil, sku: "B", price: -5, …}}` where `{1, :error, errs}` was required (73.log:6283-6290).
+
+**The discarded body still executes** — worth stating because it is the part most often got wrong. In solve attempt 1 the same shape crashed *inside* the block whose value nobody wanted: `** (FunctionClauseError) no function clause matching in anonymous fn/1 in Inventory.bulk_upsert/2 … {1, :error, %{name: ["can't be blank"]}}` at `lib/solution.ex:68` (73.log:1537-1550). Discarding the value is not skipping the code.
+
+**Recurrence, and nothing catches it.** All three solve attempts produced the shape (73.log:118, 933, 6376) — the classifier's own rationale reads *"All 3 solve attempts hit this exact bug"* (73.log:6900). All three compiled `exit=0`, passed `credo exit=0`, and passed `credence check exit=0`, failing only at `test exit=2` (73.log:1471/1480/1484/1492; 3884/3893/3897/3905; 6256/6265/6269/6277). The full 157-rule pattern pipeline ran over the file (73.log:642) and `NoLengthComparisonForEmpty` rewrote only the *condition* — `length(invalid_results) == 0` → `invalid_results == []` (73.log:654-655) — leaving the defect untouched. **This also corrects cluster 23's dismissal of `no_discarded_unless_value`:** the population is not an artefact of an upstream Credence rewrite here; it is LLM-native, present in the raw generation at 73.log:118 before any rule ran, with no `return` keyword anywhere in the file.
+
+**The over-fire, and the single clause responsible.** The rejected implementation flagged 1064 sites across the real-world corpus, 0 removed. Every one traces to `defp terminal_style_expr?({:raise, _, _}), do: true` and its `:throw`/`:exit` twins (`73.patch`, rule lines 133-135), combined with a positional criterion that is only *"not the last statement"* — `if idx < length(stmts) - 1 and early_return_guard?(stmt)` (`73.patch`, `find_discarded_guard/1`). A 50-hit sample of `73.corpus.md` categorised **49 `raise`, 1 `throw`, 0 error-tuples**: ecto's `defp run_with_cmd/3` — `unless System.find_executable(cmd) do raise "could not find executable …" end` (73.log:8180-8193) — and plausible's `new!/1` — `if String.ends_with?(message, ".") do raise ArgumentError, … end` (73.log:8215-8228). These are the canonical, correct Elixir precondition guard; a raising body is a non-local exit, nothing is discarded, and the premise simply does not apply. **The refutation is inside the row's own source file:** the *same function* that carries the bug opens with `unless on_conflict in [:replace, :merge, :skip] do raise ArgumentError, … end` (73.log:6357-6358), nineteen lines above the broken guard, and the rule cannot tell them apart.
+
+**Detection that survives.** Fire only when *all* of: the node is `if` or `unless` with **no** `else` clause; it is **not** the last expression of its enclosing block; the enclosing block is a `def`/`defp` body (not a DSL or a `quote`); and the do-branch's **last** expression is a *value* — a tuple literal such as `{:error, …}`, or a call whose result is the intended answer. Exclude any body whose last expression is `raise`, `reraise`, `throw`, `exit`, or `Kernel.raise` — that single exclusion takes the sampled hit rate from 50/50 to 0/50. Residual risk that was never measured and must be measured before shipping: bodies that are purely **effectful** — `Logger.warning`, `send/2`, `Agent.update`, `File.write!`, `:telemetry.execute` — where discarding the value is intentional and idiomatic. A body-shape allowlist (tuple/atom/struct literals and `{:error, _}` constructions) is safer than a callable denylist.
+
+**Why a repair cannot ship as an ordinary pattern rule.** The narrowed rewrite is still a **behaviour change on code that compiles and runs**: before, the function always returns the tail; after, it returns `{:error, …}` whenever the condition fails. Under §3.10 that needs `assumptions/0` and a switch — the `fix_process_send_after_infinity` treatment — not a narrowing. The blast radius is also textual and large: the fix nests the entire remainder of the function inside the new branch, and the Gate recorded *"this rule's fix also changes 4 line(s) elsewhere in the file"* on the ecto site alone (73.log:8193), which the corpus scope-parity check treats as a violation in its own right (73.log:8206). **Report-only is the right first ship.**
+
+**The restructuring machinery already exists and is already narrow.** `lib/semantic/no_bare_return_in_unless.ex` performs exactly this transform — `restructure_early_exit/1` (line 104), `swap_arms/2` (line 134), `block_of/1` (line 159) — including the `unless` arm-swap. Its guard predicate `early_exit_guard?/1` (line 120) requires the do-branch to be *literally* `{:return, _, [value]}`, which is why it does not over-fire on raising guards; the rebuilt rule is that predicate with the `return(V)` requirement replaced by "the body's last expression is a value", and it must be regression-tested against a raising guard. The two rules cannot collide: `NoBareReturnInUnless` is semantic and gated on `undefined function return/`, so its population does not compile, while this one's does.
+
+
+---
+
+## Drop rationales carried over from the sister tree
+
+*Distilled from the 25 human-decided drop rationales in `credence_evolution:maintainer_tools/unfixable_confirmed.md` (dated 2026-06-16/17). Recovered 2026-08-16. The accepting repo's copy of that file was deliberately recreated empty in `6581528`, and the rule modules the rationales describe were deleted in `credence_evolution` `b83d623`, so this text is the only surviving record of why 21 Pattern/Semantic rules and 11 Syntax rules were dropped for good.*
+
+> **A different genre from §§1–25, and read it that way.** The clusters above catalogue how *generated Elixir* fails. These entries catalogue how a *rewrite* fails — the fix that looks obviously equivalent and is not. They belong in this document because seven of its own repair verdicts were downgraded to *hazard* for exactly the reasons below: §6's three trap repairs, §9's body-hoist, §13's invented `after 0 ->`, §16's arithmetic-pipe fix, §17's pin-strip, §18's field-assignment repair, §23's `return`-strip. Every entry below is a rewrite a competent engineer would have signed off on.
+>
+> **Evidence provenance — weaker than the rest of this file.** The divergences were executed during the sister tree's June review sessions and are quoted from that record. They were **not** re-executed when this section was written. Each carries its witness input, so each is a one-line re-run; §14 gives the commands. Entries marked **(reasoned)** argue rather than execute and should be treated as hypotheses.
+
+**The conclusion that outranks every entry.** Twelve of the twenty-five drops end the same way: *the rewrite is sound only on a domain the AST cannot prove, and the sub-domain it can prove is one nobody writes.* `trunc(:math.pow(2, x))` is safe for an integer `x` in `[0, 1023]` — provable only for a literal. `Integer.undigits(ds)` is safe for a list of in-range integers — provable only for a literal list. `<<y::utf8>>` is safe for an integer codepoint — provable only for a literal. In every case the honest narrow core is *literals only*, and the result is a rule that is correct and dead. **A proposed narrowing must name the input population it still fires on. If that population is "literals", the rule is finished, not narrowed.** (`unfixable_confirmed.md:40-50, 130-140, 158-160, 170-172`)
+
+---
+
+### 1. Two constructs that build the same pairs return **different types**
+
+From `prefer_enum_frequencies` (`unfixable_confirmed.md:93-104`).
+`Enum.group_by(l, &(&1), &(&1)) |> Enum.map(fn {k, v} -> {k, length(v)} end)`
+and `Enum.frequencies(l)` produce the same `{key, count}` pairs — and are still
+not interchangeable, because the first returns a **list of tuples** and the
+second returns a **map**. `a == b` is `false` for every input; `Map.get(b, k)`
+answers while `Map.get(a, k)` raises `BadMapError`. Per the project's standing
+line, a type change can never be promised away by a safety switch: a switch is a
+promise about data, and no promise makes a list a map.
+
+> **The June rationale's stated mechanism was refuted by re-running it
+> (2026-08-16).** It claimed the two "enumerate them in a different order once
+> there are more than 32 distinct keys", witnessed on 40 string keys. Measured
+> at 10, 32, 33 and 40 keys, the enumeration order is **identical** every time,
+> and a stable `sort_by` with a tie-producing comparator yields the same top-3
+> from both. That follows from how the BEAM stores maps: enumeration order is a
+> function of the key set, and both constructs build the same key set, so the
+> 32-key flatmap→hashmap transition moves both in lockstep. The drop verdict is
+> unchanged and the argument for it is now stronger — a type divergence holds on
+> *every* input, where an ordering divergence would have needed >32 keys and an
+> order-sensitive consumer. Recorded rather than silently repaired, because a
+> rationale that survives on a refuted mechanism is the thing this document
+> exists to prevent.
+
+**The rebuild rule.** Equal contents are not equal values. Before rewriting one
+collection-builder into another, check the *type* of the result and every
+downstream consumer's dependence on it, not merely the pairs it holds.
+
+### 2. The hand-rolled version is *total* exactly where the stdlib function it "is" is *partial*
+
+The largest family in the set — eight independent drops, one mechanism. A generic construct (string manipulation, `Enum.reduce`, `Enum.at`, arithmetic) accepts inputs that the specialised stdlib function rejects with a `FunctionClauseError`/`ArgumentError`, so the rewrite converts a value into a crash. The argument is always a runtime variable, never a provably-typed one.
+
+**Verified divergences.**
+- `n |> abs |> to_string |> String.first |> String.to_integer` returns `3` for `3.14`; `Integer.digits(3.14)` raises `FunctionClauseError`. (`:130-132`)
+- `Enum.reduce(ds, 0, fn d, acc -> acc * 10 + d end)` accepts a digit ≥ base (`[12, 3]` → `123`), float elements, and non-list enumerables (`1..3`); `Integer.undigits/1` raises `ArgumentError`/`FunctionClauseError` on each, and a map input inverts the exception (`ArithmeticError` vs `FunctionClauseError`). (`:138-140`)
+- `List.to_string([y])` accepts a binary element — `List.to_string(["ab"]) == "ab"` — where `<<y::utf8>>` raises `ArgumentError`. A binary segment with `::utf8` demands an integer codepoint in `0..0x10FFFF`. (`:158-160`)
+- `Enum.fetch!(coll, i)` accepts a negative index and any enumerable; `elem(List.to_tuple(coll), i)` raises on a negative index, raises `ArgumentError` instead of `Enum.OutOfBoundsError` out of bounds, and cannot take a range or map at all. (`:170-172`)
+- `Enum.at(list, i)` is nil-safe past the end; the destructure or index the rewrite substitutes **crashes** on a short list. (`:7-16`)
+- `String.split_at("", 1)` returns `{"", ""}`, so `"" == String.last("")` is `"" == nil` → `false`, while the rewritten `String.first("") == String.last("")` is `nil == nil` → `true`. (`:166-168`)
+- `:erlang.round(x * 100) / 100` returns a float for an integer `x`; `Float.round/2` raises `FunctionClauseError`. (`:118-128`)
+- Adding a `when n < 0` clause to cover a previously-crashing input is not a fix — it is a **domain change**, turning a crash into a value. (`:134-136`)
+
+**The rebuild rule.** Before proposing "X is just Y", enumerate Y's domain and check X on each input *outside* it: empty, negative, float-where-integer-is-expected, out-of-range, and non-list enumerable. If X returns a value on any of them, the rewrite is a value→crash divergence and the AST cannot rule it out for a variable operand.
+
+### 3. The parse gate is not a correctness gate — corrupted output parses
+
+From `no_output_marker_lines` (`unfixable_confirmed.md:236-243`), and the sharpest single finding in the syntax batch. `---WORD---` is a valid chain of unary/binary `-` operators: `a = 1\n---FOO---\nb = 2` **parses**, so the rule is partly dead to begin with. Where the marker genuinely *is* the parse error, a single-line strip under-removes, and the surviving fragment re-glues into an operator chain that parses — so the `parses?(fixed)` gate **commits a corrupted file**. Strip-all instead, and `---WORD---` inside a docstring is destroyed, which the gate also cannot catch because the thing that broke parsing was an unrelated real marker.
+
+**The rebuild rule.** `parses?` is a necessary condition, never a sufficient one. It rejects the failure it was designed for (the fix left the file unparseable) and is blind to the one that actually costs you (the fix changed meaning and the result still parses). Never let a parse gate stand in for an equivalence argument. This is the refinement §E's "Unguarded global regex fixes with no parse gate" bullet is missing: adding the gate does not close that hole, it hides it.
+
+### 4. The syntax-phase recovery vector that *does* work — and its one hard limit
+
+From the syntax batch preamble (`unfixable_confirmed.md:192-204`); the only positive design pattern in the file, and it is worth more than most of the drops. A Syntax rule may call `Code.string_to_quoted` **inside its own file** to (a) pinpoint the real parse error from the returned meta and fix only there, and (b) commit only if `parses?(fixed)` — a self-contained per-rule parse-revert needing no shared-file change.
+
+That single pattern defeats both blockers the evolution loop cited universally: *"needs error meta passed into the rule, so it is a shared-file change"* is false, and *"line-regex corrupts strings and heredocs"* is contained (subject to §3 above). It is what made `close_unclosed_fn_delimiter`, `no_markdown_code_fences` and `prefer_cond_do_keyword` shippable; all three are live in the accepting repo.
+
+**The hard limit.** It works only when the rule's target is a **genuine parse error**. This is the classification axis every Syntax proposal must be scored on first: *does the target construct parse?* If it does, the phase — which runs only when `Sourceror.parse_string/1` fails — never reaches the rule on its own target, and the rule is dead by construction. Four of the batch died here: `while c do … end` parses (a call to an undefined `while`), `Enum.scanl(…)` and `List.update_elem(…)` parse (undefined-function calls), and `@spec do … end` parses as the balanced `@spec(do: …)`. This is §E's "Wrong phase — inert by construction" law with four new instances; the `@spec` one is a new fact.
+
+### 5. Floating-point identities are exact only inside a range the AST cannot bound
+
+Two independent drops, one law.
+
+- `prefer_float_round` (`:118-128`). `:erlang.round(x * 100) / 100` and `Float.round(x, 2)` are different functions, not two spellings of one: the manual trick rounds `x * 100` — carrying the pre-multiplication error — half-away-from-zero, while `Float.round/2` rounds `x` half-to-even. They diverge across a **dense** set of ordinary values wherever the third decimal is near 5: `2.675` → `2.68` vs `2.67`; `2.005` → `2.01` vs `2.0`; `0.045` → `0.05` vs `0.04`; `-2.675` → `-2.68` vs `-2.67`. There is no statically identifiable agreeing subset — the disagreement *is* the behaviour.
+- `prefer_integer_to_binary_for_bit_length` (`:134-136`). `floor(:math.log(n) / :math.log(2)) + 1` equals `Integer.to_string(n, 2) |> String.length()` only until the double's mantissa runs out. Smallest divergence: `n = 2^48 − 1`, where the log form gives `49` and the true bit length is `48`, recurring at every `2^k − 1` for `k ≥ 48` — ordinary 48-bit integers, which is exactly the regime bit-length is computed for.
+- `prefer_bitshift_over_math_pow_for_power_of2` (`:40-50`). `trunc` and `:math.pow` do not commute on a non-integer exponent: `trunc(:math.pow(2, 2.5)) = 5` but `1 <<< trunc(2.5) = 4`. And they diverge on overflow in opposite directions: `trunc(:math.pow(2, 1024))` raises `ArithmeticError` where `1 <<< 1024` returns a bignum.
+
+**The rebuild rule.** "Equivalent for realistic inputs" is not a claim an AST rule can make, because the boundary is numeric, not syntactic, and in every case above it sits *inside* the realistic range. Any float↔integer identity needs its exact divergence point named before it is proposed.
+
+### 6. Sharing a subexpression changes how many times it is evaluated
+
+From the `no_if_empty_for_enum_min_max` delta rejection (`unfixable_confirmed.md:30-38`) — the one entry that is a *delta* rejection, not a drop; the bare-variable rule stays live and correct.
+
+The accepted rule matches only a **bare variable** in `if Enum.empty?(v), do: d, else: Enum.min(v)`. Evolution's delta extended the match to `Enum.filter/2` and `Enum.reject/2` **calls** appearing in both the guard and the branch. The original evaluates that call **twice** — once for `empty?`, once for `min`/`max`; the rewrite evaluates it **once**. With an impure or non-deterministic predicate the two filter results differ, and it was proven that the original raises `Enum.EmptyError` where the rewrite returns a value.
+
+**The rebuild rule.** Common-subexpression elimination is not behaviour-preserving in a language with side effects, and purity is not statically decidable. Match a *variable*, never a *call*, whenever the original text evaluates the shared expression more than once. This is the same convention already enforced by `no_double_filter`, and it should be stated once and applied to every dedup-shaped proposal.
+
+### 7. A rewrite that crosses the function boundary needs the whole call graph, and never has it
+
+Two drops, one mechanism (`unfixable_confirmed.md:67-79, 150-152`).
+
+- `prefer_direct_list_return_in_accumulator` changes a function's **return shape** (`{acc, []}` → bare `acc`) plus one caller's `{v, _} = f(…)` → `v = f(…)`, keyed on a single clause and a single caller with no whole-module reconciliation. Verified: `run(2)` returned `[1, 2]` before and raised after. It breaks when another clause or the recursive call does `{res, errs} = f(…)`, when another caller uses the second element, or when `f` is captured as `&f/2`; arity is untracked. A reliable narrowing requires `defp` + non-recursive + every call site destructuring `{_, _}` — which *excludes the canonical recursive-accumulator case the rule exists for*.
+- `prefer_remove_unused_private_fn_param` deletes the parameter **and the argument expression at every call site**, so `compute(x, IO.puts("hi"))` silently loses its side effect. Its call rewriter is arity-blind (`foo/2` + `foo/3` produce wrong-arity calls that do not compile), it strands `&name/n` captures, and it groups `defp`s globally across modules in the same file.
+
+**The rebuild rule.** Deleting an unused *parameter* deletes an *expression*, and expressions have effects. Value-safety for any cross-function rewrite requires that every call site be statically visible, which captures, `apply/3` and sibling arities defeat. If a proposal's safe core is "`defp`, non-recursive, all call sites visible", check whether the shape it was written for survives that core — twice now it has not.
+
+### 8. Elixir's total term ordering means the missing element compares instead of crashing
+
+From `prefer_chunk_over_indexed_reduce` (`unfixable_confirmed.md:52-65`), and a fact worth knowing independently of any rule. `Enum.at(list, i)` past the end returns `nil`, and `nil` is *comparable to everything* — `nil` sorts below tuples, maps and lists — so `value > Enum.at(list, 1)` on a one-element list is `{} > nil`, which is **true**. The original counted the lone element; the `Enum.chunk_every(3, 1, :discard)` rewrite did not. Verified: `[{}]`, `[%{}]` and `[[]]` all give 1 before and 0 after.
+
+**The rebuild rule.** An out-of-bounds read in Elixir does not fail loudly; it produces `nil`, which then participates in every comparison operator without complaint. Any windowing/chunking rewrite must account for the boundary iterations the original performed against `nil`. Degenerate-length inputs (0 and 1 element) are the witnesses, and they are exactly the inputs a rule author does not choose.
+
+### 9. Unicode case mapping is neither length-preserving nor upcase
+
+From `prefer_string_capitalize` (`unfixable_confirmed.md:162-164`). The manual `String.upcase(String.first(s)) <> String.downcase(String.slice(s, 1..))` is not `String.capitalize/1`. `capitalize/1` applies **title case** to the first character, and case mapping is not 1:1 in length: `ß` → `"SS"` vs `"Ss"`; the ligature `ﬁ` → `"FI"` vs `"Fi"`; the digraph `ǆ` → `"Ǆ"` vs `"ǅ"` — the last being a genuine third case that upcase/downcase cannot express. The divergence is driven entirely by runtime string content and is unprovable from the AST.
+
+*(Partially recorded already in `docs/research/rule-quality-audit.md:334` — the ǆ titlecase instance and the mechanism are not.)*
+
+### 10. A binary segment is an integer; the slice that "extracts" it is a binary
+
+From `avoid_binary_mid_pattern` (`unfixable_confirmed.md:174-176`). In `<<first, mid::binary, last>>` the default segment type is `integer-8`, so `last` is a byte. The fix replaced it with a one-byte **binary** via `binary_part/3`, turning `first == last` into an integer-vs-binary comparison. On `"aa"` the intended `97 == 97` → `true` became `97 == "a"` → `false` — a true→false inversion that **no input can ever make true**, because no integer equals a binary. The same fix also left `mid` unbound and relaxed the original's implicit ≥2-byte match.
+
+**The rebuild rule.** Any rewrite of a binary pattern must preserve each segment's type. A comparison that becomes constant-`false` is the worst possible outcome: it compiles, it is silent, and the branch simply never runs.
+
+### 11. An accumulator's order is observable from inside the loop that builds it
+
+From `prefer_prepend_in_accumulator` (`unfixable_confirmed.md:146-148`). The `acc ++ [x]` → `[x | acc]` + drop the final `Enum.reverse` rewrite is the textbook Elixir optimisation, and it is unsound whenever the loop body *reads* the accumulator. Here the body read `List.last(acc)` — the tail — and the fix substituted `head`, the front. Verified: `build_groups([1, 2], [3])` returned `[[3, 2, 1]]` before and `[[1, 2], [3]]` after. The two agree only when the seed accumulator has exactly one element, which is unprovable from the function body because callers are out of scope.
+
+**The rebuild rule.** The prepend-and-reverse transform is safe only if the accumulator is write-only inside the loop. Any read of it — `List.last`, `hd`, `Enum.at`, a `length`-dependent branch — makes the reversal observable.
+
+### 12. `and`/`or` do not return booleans, and `?` is spelling, not a type
+
+From `no_if_boolean_result` (`unfixable_confirmed.md:18-28`). The rule's `provably_boolean?` predicate trusted two things that are not true. Elixir's `and`/`or` require only their **left** operand to be boolean and return the right operand as-is, so `true and 5` is `5`. And a `?`-suffixed function name is a convention with no enforcement whatsoever. Rewriting `if cond, do: true, else: expr` into `cond or expr` on either signal produces `BadBooleanError` where the `if` returned a value.
+
+**The rebuild rule.** There is no AST-level boolean type in Elixir. The only sound gate is the live `no_if_true_false`'s `condition_bool?` — a whitelist of constructs the language guarantees return booleans. Trusting `and`/`or` or a naming convention is how this rule's entire unique territory turned out to be its unsound cases; its sound territory was a strict subset of an already-shipped rule.
+
+### 13. Two stdlib functions with the same English description: `Integer.mod/2` vs `rem/2`, and "unused" vs "dead"
+
+Both from `prefer_direct_string_check_over_complex_enum` (`unfixable_confirmed.md:81-91`), which had three independent defects and no safe core.
+
+- **`Integer.mod/2` is floored; `rem/2` is truncated.** They differ on *any* negative operand: `Integer.mod(-7, 3) = 2`, `rem(-7, 3) = -1`. Swapping one for the other ships a bug on its own, independent of the rest of the rule. (Related: §6 already records that a hand-rolled Euclidean `gcd` inherits `rem/2`'s sign, giving `-6` where `Integer.gcd/2` gives `6` — same root cause, opposite direction.)
+- **A discarded value is not dead code.** The rule deleted an arbitrary `Enum.all?(…)` on the grounds that its result was unused. An arbitrary predicate can raise or have side effects, so the original raised where the rewrite returned the comparison. Removability requires totality *and* purity, neither of which is decidable for an arbitrary callback.
+
+### 14. A normalising call cannot be folded into a literal pattern
+
+From `prefer_pattern_matching_for_empty_string` (`unfixable_confirmed.md:142-144`). `String.trim(var) == ""` rewritten to a `""` pattern match diverges on whitespace: `String.trim(" ") == ""` is `true` but `match?("", " ")` is `false`, so the original returned `[]` and the fix raised on the `else` path. The rule *structurally required* `String.trim`, whose whitespace-collapsing semantics no literal pattern can express, and there was no bare `== ""` core to retreat to.
+
+**The rebuild rule.** A pattern matches the raw term; a normalising function matches an equivalence class over terms. `trim`, `downcase`, `normalize`, `to_string` — none of them can move into pattern position, and a rule whose matcher requires one of them has no safe core by construction.
+
+### 15. The matcher is looser than the rewrite it authorises
+
+Five drops share this shape: the check accepts a family of shapes, the fix hardcodes one member of it.
+
+- `prefer_reverse_for_palindrome_check` (`:154-156`) — `recursive_case_body?` **discarded the comparison operator**, so a `!=` or false-base lookalike was force-rewritten to `list == Enum.reverse(list)`. Verified: the original returned `true` on `[1, 2, 3, 4]` where the fix returned `false`. *A matcher that ignores the operator matches its own negation.*
+- `avoid_remote_function_in_guard` (`:178-180`, divergence A only — divergence B is already recorded in §9) — `same_function?` compared **name and arity only**, merging clauses whose head patterns differ. `f([h | _t], …)` and `f([], …)` were merged into one clause, producing a `FunctionClauseError` on `f([], 0)`.
+- `avoid_duplicate_enum_at` (`:7-16`) — synthetic `<i>_elem` bindings **clobber existing in-scope variables**; the fix also emitted non-compiling code for an inline `if`. Any fix that invents a binding name needs whole-scope variable analysis, which is a shared-helper concern and therefore out of reach for a Pattern rule.
+- `prefer_string_capitalize` (`:162-164`) and `prefer_direct_string_check_over_complex_enum` (`:81-91`) — the fix hardcoded emitted function/variable names (`capitalize_string`, `pattern`, `full_pattern`) while the check fired on any name, **renaming unrelated `defp`s** and breaking their callers.
+- `prefer_string_at_for_char_access` (`:158-160`) — rebound the body variable globally, ignoring shadowing.
+- `prefer_string_first_last` (`:166-168`) — the `case` subject was never checked, so the rule fired on lookalikes.
+
+**The rebuild rule.** Check and fix must agree on the *exact* shape, and every name the fix emits must be derived from the source, never hardcoded. If the fix cannot prove a synthesised name is free in scope, it may not synthesise one.
+
+### 16. Even on a genuine parse error, the repair must be the *unique* behaviour-preserving one
+
+From the syntax batch's speculative-repair drops (`unfixable_confirmed.md:228-234`). `prefer_fn_end_syntax` rewrote a bare `->` into `fn … end`, but a stray `->` could equally be a `case` clause or a dropped `fn` — non-unique, and the rule's own moduledoc invented a phantom `_i` parameter to make its example work. `no_for_comprehension_by_step` treated `by` as a real keyword (it is a speculative Python-ism), hardcoded `<=` in the rewrite — wrong for a negative step — and `Stream.iterate |> take_while` is not the unique meaning of `a..b by step` in any case.
+
+Contrast the three that survived: `prefer_cond_do_keyword` works precisely because `cond do` is the *only* valid form, making the replacement behaviour-neutral rather than a guess.
+
+**The rebuild rule.** For a syntax repair, ask whether the broken text has exactly one meaning-preserving completion. If it has two, the rule is guessing, and a `parses?` gate cannot tell a correct guess from a wrong one (§3).
+
+### 17. A gate that reverts the canonical case leaves a rule that is correct and dead
+
+From `no_reserved_word_variable` / `no_end_keyword_variable` (`unfixable_confirmed.md:245-249`). The real repair is a **global rename of every binding-position occurrence** — which is exactly the passenger-corruption vector the parse-revert gate exists to stop. A single-site rename plus the gate only ever repairs the degenerate shape "reserved word bound and then never used again": a *used* reserved word is itself a parse error, so a single-site rename leaves the file unparseable and the gate reverts every canonical case.
+
+**The rebuild rule.** When the safe implementation and the useful implementation are the same code, the rule is finished. State the intersection explicitly before proposing a gate: the gate must leave a non-empty population the rule still fixes.
+
+### 18. The equivalence suite is chosen by the rule's author
+
+From `prefer_float_round` (`unfixable_confirmed.md:118-128`): *"The rule's equivalence test cherry-picked 11 non-half inputs to hide it."* Eleven green assertions, and the entire failure class — third decimal near 5 — was absent from all of them. This is the same lesson the self-corruption oracle encodes from the other end.
+
+**The rebuild rule.** A green equivalence suite is evidence about the author's imagination, not about the rewrite. Derive the witness set from the *divergence hypothesis* — empty, negative, boundary, non-integer, >32 elements, impure callback — not from the examples in the moduledoc.
+
+---
+
+### Not carried, and why
+
+Four of the twenty-five rationales are housekeeping, not traps, and a rebuild loses nothing by dropping them.
+
+- **`prefer_enum_frequencies_over_group_by`** (`:106-116`) — recorded a real bug in the live `no_group_by_for_frequencies` (it did not fire on the 2-step `Enum.group_by(enum, kf) |> Map.new(…)` form, including its *own moduledoc example*, and always emitted `frequencies_by` even for an identity key function). **The fold has landed**: `lib/pattern/no_group_by_for_frequencies.ex` now carries `count_collector/1`, the `Enum.into(%{}, cb)` equivalence and `frequencies_call/3`. The general lesson — run a rule against its own moduledoc example — is already institutionalised by the T1 witness gate, which found two more live rules dead the same way.
+- **The four "dead in the syntax phase" drops** (`no_while_keyword`/`prefer_recursion_over_while`, `prefer_scan_over_scanl`, `prefer_list_update_at`, `no_spec_do_block`) — §E already states the governing law ("Nothing that parses belongs in a parse-failure-gated phase") with fourteen instances. Only the specific fact that `@spec do … end` parses as the balanced `@spec(do: …)` is new, and it is folded into §4 above.
+- **`prefer_single_doc_attribute`** (`:251-257`) — dropped because the shipped `close_unclosed_doc_heredoc` targets the same unclosed-`@doc """` error and sorts first (`CloseUnclosed…` < `PreferSingle…` at equal priority 500). §E's "Dispatch shadowing" bullet already documents the `Enum.find` over `{priority, module}` mechanism. Worth one clause of amendment there and nothing more: shadowing does not only let a broad matcher swallow a narrow one, it can also render an independently *sound* rule permanently unreachable.
+- **`no_if_boolean_result`'s redundancy half** and **`no_end_keyword_variable`** (`end` is already in the other rule's reserved set) — pure subsumption bookkeeping. §12 above carries the only part with teeth.
+
+
+---
+
 ## Already handled by the compiler
 
 30 rules are tagged `compiler-already-catches` and another 18 are outright parse failures — 48 of 140 need no rule at all for *detection*. What follows is the frequency table of what generated Elixir actually gets wrong, ordered by how many rules were written about each diagnostic. This is the most directly useful signal in the corpus for prompt-level correction.
@@ -452,7 +691,24 @@ Ranked by consequence severity — how bad the failure is and how invisible — 
 8. **Mixed-script / truncated identifiers** *[syntax — the one place the parse-failure gate is correct]*. From `no_mixed_script_identifier`, `fix_truncated_module_reference`. Blocks the entire file and every downstream phase; invisible to human review; single-token repair; no live rule covers it.
 9. **Hallucinated remote calls where the correct repair is non-obvious** *[semantic]*. Detection is free (the compiler warns); the value is entirely in the repair table. Encode at minimum: `:crypto.compare/2` → length-check + `:crypto.hash_equals/2` (never a bare rename, never `==`); `Base.hex_encode` → `Base.encode16(x, case: :lower)`; `Map.reduce/3` → `Enum.reduce/3` **with the callback re-shaped to `fn {k,v}, acc`**; `:math.round` → `Kernel.round/1`; `Agent.update_and/2` → `Agent.get_and_update/2` (ignore the compiler's suggestion, which points at `update/2..5`); `NaiveDateTime.to_unix` → `DateTime.to_unix(DateTime.from_naive!(…))` (dropping the arity does not help — `to_unix/1` is equally undefined); `StreamData.alpha_string/0` → `StreamData.string(:alphanumeric)`.
 10. **Implicit descending range step** *[semantic]*. `prefer_explicit_range_step`. The only entry where following the compiler's suggestion breaks the program at runtime; a rule that knows to-end → `//1` and descending → `//-1` is strictly better than the compiler.
-11. **Guard-whitelist violations** *[semantic]*. `no_remote_function_in_guard`, folding in `no_mapset_member_in_guard`, `fix_local_function_in_guard`, `no_hallucinated_guard_fn`, `fix_negation_in_guard`. **Report-only, or pattern-move repair only.** Do not ship the body-hoist repair: guards swallow exceptions and bodies do not, verified to convert a fall-through into a `BadMapError`, and the existing implementation additionally deletes catch-all clauses.
+11. **Guard-whitelist violations** *[semantic]*. `no_remote_function_in_guard`, folding in `no_mapset_member_in_guard`, `fix_local_function_in_guard`, `no_hallucinated_guard_fn`, `fix_negation_in_guard`. **Report-only, or pattern-move repair only.** Do not ship the body-hoist repair; it has three independent corruption paths on record. **(a) Wrong semantics.** Guards swallow exceptions and bodies do not, verified to convert a fall-through into a `BadMapError`. **(b) Clause deletion.** Whenever the *whole* guard has to move — an `or` guard, or a bare remote-call guard with no safe conjunct left behind — the implementation folds the same-name/arity fallback clause into the `if`'s `else` and deletes it, so every argument the surviving head no longer matches is now unhandled; and the hoisted body is pasted under a head it was never written for, e.g. `defp reachable?(_edges, _current, _target, visited)` acquiring an `else` branch that reads `edges`, `current` and `target`. **(c) Unparseable output.** The `if` is assembled by hand as a Sourceror node whose `:do`/`:else` keys are bare `{:__block__, [], [:do]}` with no `format: :keyword`, and whose own metadata is `Keyword.take/2`-copied from the original clause — which, when that clause was written in inline `, do:` form, carries no `:do`/`:end`. Sourceror therefore renders neither the block layout nor the keyword layout, and prints call form with `=>` pairs:
+
+    ```elixir
+    # in:
+    defp validate_not_yet_valid(valid_from, now)
+         when valid_from == nil or DateTime.compare(valid_from, now) != :gt, do: :ok
+    defp validate_not_yet_valid(_valid_from, _now), do: {:error, :not_yet_valid}
+
+    # out:
+    defp validate_not_yet_valid(valid_from, now),
+      do:
+        if(valid_from == nil or DateTime.compare(valid_from, now) != :gt,
+          :do => :ok,
+          :else => {:error, :not_yet_valid}
+        )
+    ```
+
+    Elixir has no production for `=>` outside a `%{}` literal or pattern, so this is not a formatting wart but a hard `syntax error before: '=>'` that takes the whole file out (re-confirmed on Elixir 1.20.2 / OTP 29 when this entry was written; the three reverts below were witnessed on 1.19.5). Three rows of the 2026-07-06 harness run hit it and were reverted by the compile gate — 69 on `String.length/1`, 207 on `MapSet.size/1`, 213 on `DateTime.compare/2` — and on 207 and 213 paths (b) and (c) fired in the same emission, so the deleted clause is not recoverable by re-parsing the output. The `format: :keyword` half was patched afterwards in the `def`/`defp` branch only (`credence_evolution` commit `25335b8`); the `case`-clause branch of the same file still builds its `:do`/`:else` keys without it. Any rebuild that starts from `credence_evolution/lib/semantic/no_remote_function_in_guard.ex` inherits (b) and the `case`-clause form of (c) unchanged.
 12. **Branch-shadowing conditional that is a silent no-op** *[semantic, warning-severity]*. A **new** rule keyed on `variable "X" is unused (there is a variable with the same name in the context)` correlated with a same-named assignment inside an `if`/`cond`/`case` branch. Verified: the code compiles and silently reads the pre-`if` value, so the whole conditional is inert. No existing member can reach it — every one is gated on `severity: :error`.
 13. **`elif`** *[syntax — genuine parse failure, correct phase]*. The only confirmed uncovered gap in the live pipeline: the accepted `FixElsifInIfChain` handles `elsif` and leaves `elif` byte-for-byte unchanged. Local token→`cond` transliteration. `no_elsif_keyword` is a byte-identical duplicate of the accepted rule and should simply be deleted.
 
