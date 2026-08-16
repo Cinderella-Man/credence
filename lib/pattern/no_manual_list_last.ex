@@ -39,14 +39,14 @@ defmodule Credence.Pattern.NoManualListLast do
 
   ## Bad
 
-      defmodule BadNoManualListLast do
+      defmodule BadNoManualListLastNMLL do
         def final([el]), do: el
         def final([_ | rest]), do: final(rest)
       end
 
   ## Good
 
-      defmodule BadNoManualListLast do
+      defmodule BadNoManualListLastNMLL do
         def final(list) do
           hd(Enum.reverse(list))
         end

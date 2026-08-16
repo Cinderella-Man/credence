@@ -35,7 +35,7 @@ defmodule Credence.Pattern.NoManualMax do
 
   ## Bad
 
-      defmodule BadNoManualMax do
+      defmodule BadNoManualMaxNMM do
         def bigger(a, b) do
           if a >= b, do: a, else: b
         end
@@ -43,7 +43,7 @@ defmodule Credence.Pattern.NoManualMax do
 
   ## Good
 
-      defmodule BadNoManualMax do
+      defmodule BadNoManualMaxNMM do
         def bigger(a, b) do
           max(a, b)
         end

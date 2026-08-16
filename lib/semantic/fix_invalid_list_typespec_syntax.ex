@@ -37,14 +37,14 @@ defmodule Credence.Semantic.FixInvalidListTypespecSyntax do
 
   ## Bad
 
-      defmodule SolutionF do
+      defmodule SolutionFFILTS do
         @spec f(list([list([integer(), integer()]), atom()])) :: boolean()
         def f(x), do: true
       end
 
   ## Good
 
-      defmodule SolutionF do
+      defmodule SolutionFFILTS do
         @spec f(list([list([integer()]) | atom()])) :: boolean()
         def f(_x), do: true
       end

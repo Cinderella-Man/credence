@@ -38,7 +38,7 @@ defmodule Credence.Semantic.FixMultipleDefaultArgs do
 
   ## Bad
 
-      defmodule CredenceFixMultipleDefaultArgsCheckFixture do
+      defmodule CredenceFixMultipleDefaultArgsCheckFixtureFMDA do
         def greet(:hello, name \\\\ "world") do
           "Hello, \#{name}!"
         end
@@ -50,7 +50,7 @@ defmodule Credence.Semantic.FixMultipleDefaultArgs do
 
   ## Good
 
-      defmodule CredenceFixMultipleDefaultArgsCheckFixture do
+      defmodule CredenceFixMultipleDefaultArgsCheckFixtureFMDA do
         def greet(arg0, name \\\\ "world")
 
         def greet(:hello, name) do

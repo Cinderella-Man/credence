@@ -30,7 +30,7 @@ defmodule Credence.Semantic.FixTaskRefFieldAccess do
 
   ## Bad
 
-      defmodule CredenceTaskRefMultilineE2E do
+      defmodule CredenceTaskRefMultilineE2EFTRFA do
         def a(t) do
           Task.ref(
             t
@@ -40,7 +40,7 @@ defmodule Credence.Semantic.FixTaskRefFieldAccess do
 
   ## Good
 
-      defmodule CredenceTaskRefMultilineE2E do
+      defmodule CredenceTaskRefMultilineE2EFTRFA do
         def a(t) do
           t.ref
         end

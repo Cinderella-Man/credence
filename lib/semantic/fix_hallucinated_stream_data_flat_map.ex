@@ -46,7 +46,7 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMap do
 
   ## Bad
 
-      defmodule CredenceStreamDataFlatMapReports do
+      defmodule CredenceStreamDataFlatMapReportsFHSDFM do
         def sized_lists do
           StreamData.flat_map(StreamData.integer(1..10), fn len ->
             StreamData.list_of(StreamData.constant(len), length: len)
@@ -56,7 +56,7 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMap do
 
   ## Good
 
-      defmodule CredenceStreamDataFlatMapReports do
+      defmodule CredenceStreamDataFlatMapReportsFHSDFM do
         def sized_lists do
           StreamData.bind(StreamData.integer(1..10), fn len ->
             StreamData.list_of(StreamData.constant(len), length: len)

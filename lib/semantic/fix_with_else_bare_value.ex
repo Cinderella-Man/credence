@@ -35,7 +35,7 @@ defmodule Credence.Semantic.FixWithElseBareValue do
 
   ## Bad (compiles with error)
 
-      defmodule WithElseRealDiagnostic do
+      defmodule WithElseRealDiagnosticFWEBV do
         def run(x) do
           with {:ok, val} <- x do
             val
@@ -47,7 +47,7 @@ defmodule Credence.Semantic.FixWithElseBareValue do
 
   ## Good
 
-      defmodule WithElseRealDiagnostic do
+      defmodule WithElseRealDiagnosticFWEBV do
         def run(x) do
           with {:ok, val} <- x do
             val

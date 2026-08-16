@@ -46,7 +46,7 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParse do
 
   ## Bad
 
-      defmodule CsvLoader do
+      defmodule CsvLoaderFNCDP do
         NimbleCSV.define(CsvLoader.Parser, separator: ",", escape: "\\"")
 
         def load(csv) do
@@ -56,7 +56,7 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParse do
 
   ## Good
 
-      defmodule CsvLoader do
+      defmodule CsvLoaderFNCDP do
         NimbleCSV.define(CsvLoader.Parser, separator: ",", escape: "\\"")
 
         def load(csv) do

@@ -21,7 +21,7 @@ defmodule Credence.Semantic.NoDocOnPrivateFunction do
 
   ## Bad
 
-      defmodule NdpDrop do
+      defmodule NdpDropNDOPF do
         @doc "helper docs"  # TODO: revisit
         defp helper(x), do: x
         def pub(x), do: helper(x)
@@ -29,7 +29,7 @@ defmodule Credence.Semantic.NoDocOnPrivateFunction do
 
   ## Good
 
-      defmodule NdpDrop do
+      defmodule NdpDropNDOPF do
         defp helper(x), do: x
         def pub(x), do: helper(x)
       end

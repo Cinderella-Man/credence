@@ -22,7 +22,7 @@ defmodule Credence.Semantic.NoRescueInWithExpression do
 
   ## Bad (compiles with error)
 
-      defmodule NoRescueInWithFixture do
+      defmodule NoRescueInWithFixtureNRIWE do
         def run(key) do
           with {:ok, raw} <- fetch(key) do
             {:ok, raw}
@@ -38,7 +38,7 @@ defmodule Credence.Semantic.NoRescueInWithExpression do
 
   ## Good
 
-      defmodule NoRescueInWithFixture do
+      defmodule NoRescueInWithFixtureNRIWE do
         def run(key) do
           try do
             with {:ok, raw} <- fetch(key) do

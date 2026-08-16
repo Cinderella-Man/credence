@@ -33,14 +33,14 @@ defmodule Credence.Semantic.PreferExplicitRangeStep do
 
   ## Bad
 
-      defmodule PreferExplicitRangeStepPipelineFixture do
+      defmodule PreferExplicitRangeStepPipelineFixturePERS do
         def f(l), do: {Enum.slice(l, 1..-2), "label 1..-2"}
         def g(l), do: Enum.take(l, 5..1)
       end
 
   ## Good
 
-      defmodule PreferExplicitRangeStepPipelineFixture do
+      defmodule PreferExplicitRangeStepPipelineFixturePERS do
         def f(l), do: {Enum.slice(l, 1..-2//-1), "label 1..-2"}
         def g(l), do: Enum.take(l, 5..1//-1)
       end

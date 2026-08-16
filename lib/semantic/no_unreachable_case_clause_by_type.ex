@@ -58,7 +58,7 @@ defmodule Credence.Semantic.NoUnreachableCaseClauseByType do
 
   ## Bad
 
-      defmodule CredenceUnreachableCaseLiveRepro do
+      defmodule CredenceUnreachableCaseLiveReproNUCCBT do
         def sort_order(a, b) do
           case DateTime.compare(a, b) do
             :lt -> :asc
@@ -71,7 +71,7 @@ defmodule Credence.Semantic.NoUnreachableCaseClauseByType do
 
   ## Good
 
-      defmodule CredenceUnreachableCaseLiveRepro do
+      defmodule CredenceUnreachableCaseLiveReproNUCCBT do
         def sort_order(a, b) do
           case DateTime.compare(a, b) do
             :lt -> :asc

@@ -80,7 +80,7 @@ defmodule Credence.Pattern.NoManualFind do
 
   ## Bad
 
-      defmodule BadNoManualFind do
+      defmodule BadNoManualFindNMF do
         defp find([]), do: -7
         defp find([h | _]) when h > 0, do: h
         defp find([_ | t]), do: find(t)
@@ -88,7 +88,7 @@ defmodule Credence.Pattern.NoManualFind do
 
   ## Good
 
-      defmodule BadNoManualFind do
+      defmodule BadNoManualFindNMF do
         defp find(list) when is_list(list), do: Enum.find(list, -7, fn h -> h > 0 end)
       end
   """

@@ -33,7 +33,7 @@ defmodule Credence.Semantic.FixHallucinatedMapsetAny do
 
   ## Bad
 
-      defmodule CredenceMapsetAnyReports do
+      defmodule CredenceMapsetAnyReportsFHMA do
         def has_active?(mapset, tombstones) do
           MapSet.any?(mapset, fn tag -> not MapSet.member?(tombstones, tag) end)
         end
@@ -41,7 +41,7 @@ defmodule Credence.Semantic.FixHallucinatedMapsetAny do
 
   ## Good
 
-      defmodule CredenceMapsetAnyReports do
+      defmodule CredenceMapsetAnyReportsFHMA do
         def has_active?(mapset, tombstones) do
           Enum.any?(mapset, fn tag -> not MapSet.member?(tombstones, tag) end)
         end

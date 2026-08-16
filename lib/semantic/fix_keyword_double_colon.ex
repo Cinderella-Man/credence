@@ -32,7 +32,7 @@ defmodule Credence.Semantic.FixKeywordDoubleColon do
 
   ## Bad
 
-      defmodule CredenceKwDoubleColonAnalyzeFixture do
+      defmodule CredenceKwDoubleColonAnalyzeFixtureFKDC do
         use GenServer
 
         def start do
@@ -44,7 +44,7 @@ defmodule Credence.Semantic.FixKeywordDoubleColon do
 
   ## Good
 
-      defmodule CredenceKwDoubleColonAnalyzeFixture do
+      defmodule CredenceKwDoubleColonAnalyzeFixtureFKDC do
         use GenServer
 
         def start do

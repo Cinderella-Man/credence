@@ -41,7 +41,7 @@ defmodule Credence.Semantic.NoUsePlugConn do
 
   ## Bad
 
-      defmodule MyApp.Plug.Greeter do
+      defmodule MyApp.Plug.GreeterNUPC do
         use Plug.Conn
 
         def call(conn, _opts) do
@@ -51,7 +51,7 @@ defmodule Credence.Semantic.NoUsePlugConn do
 
   ## Good
 
-      defmodule MyApp.Plug.Greeter do
+      defmodule MyApp.Plug.GreeterNUPC do
         import Plug.Conn
 
         def call(conn, _opts) do

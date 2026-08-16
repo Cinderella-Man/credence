@@ -17,7 +17,7 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatch do
 
   ## Bad
 
-      defmodule SpawnMonitorPattern do
+      defmodule SpawnMonitorPatternFSMPM do
         def run do
           {:ok, pid} = spawn_monitor(fn -> :ok end)
           {pid, :done}
@@ -26,7 +26,7 @@ defmodule Credence.Semantic.FixSpawnMonitorPatternMatch do
 
   ## Good
 
-      defmodule SpawnMonitorPattern do
+      defmodule SpawnMonitorPatternFSMPM do
         def run do
           {pid, _ref} = spawn_monitor(fn -> :ok end)
           {pid, :done}

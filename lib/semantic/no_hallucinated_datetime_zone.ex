@@ -16,13 +16,13 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeZone do
 
   ## Bad
 
-      defmodule DatetimeZoneWitness do
+      defmodule DatetimeZoneWitnessNHDZ do
         def f(%DateTime{} = dt), do: dt.zone
       end
 
   ## Good
 
-      defmodule DatetimeZoneWitness do
+      defmodule DatetimeZoneWitnessNHDZ do
         def f(%DateTime{} = dt), do: dt.time_zone
       end
   """

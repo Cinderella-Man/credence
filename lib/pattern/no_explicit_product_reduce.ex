@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoExplicitProductReduce do
 
   ## Bad
 
-      defmodule BadCapture do
+      defmodule BadCaptureNEPR do
         def prod_value(list) do
           Enum.reduce(list, 1, &*/2)
         end
@@ -12,7 +12,7 @@ defmodule Credence.Pattern.NoExplicitProductReduce do
 
   ## Good
 
-      defmodule BadCapture do
+      defmodule BadCaptureNEPR do
         def prod_value(list) do
           Enum.product(list)
         end

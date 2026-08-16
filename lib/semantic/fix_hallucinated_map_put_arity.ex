@@ -44,7 +44,7 @@ defmodule Credence.Semantic.FixHallucinatedMapPutArity do
 
   ## Bad
 
-      defmodule HallucinatedMapPut do
+      defmodule HallucinatedMapPutFHMPA do
         def build do
           Map.put(%{}, :type, :missing_required, :path, [:a])
         end
@@ -52,7 +52,7 @@ defmodule Credence.Semantic.FixHallucinatedMapPutArity do
 
   ## Good
 
-      defmodule HallucinatedMapPut do
+      defmodule HallucinatedMapPutFHMPA do
         def build do
           Map.put(Map.put(%{}, :type, :missing_required), :path, [:a])
         end

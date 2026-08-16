@@ -19,6 +19,8 @@ most of them was never a new rule — it was a row in
 
 ## Repaired today — no rule needed (11)
 
+(Plus `no_deprecated_not_in`, which DID need a rule — see below.)
+
 | candidate | how |
 |---|---|
 | `no_exit_two_args` | `{"exit", 2}` local row → `Process.exit/2`, with an arity check |
@@ -38,7 +40,7 @@ tested green, and deleted the same day: its "before" returns a valid value on
 every input, so the rewrite silently breaks any code that reads the tuple. The
 failure mode is real and catalogued; the rule cannot exist.
 
-## Still unbuilt, and each verified still uncovered (14)
+## Still unbuilt, and each verified still uncovered (13)
 
 Every one was confirmed uncovered by running its target: the pipeline returns the
 source unchanged today.
@@ -56,8 +58,6 @@ the same day. Everything below needs a rule and its own equivalence argument:
 * `fix_ets_new_string_name`, `fix_ets_options_bare_keypos`
 * `no_pipe_into_arithmetic_operator`
 * `no_process_send_after_infinity` — needs a safety switch, not a narrowing
-* `no_deprecated_not_in` — the compiler emits the deprecation itself; what is
-  missing is only the repair
 * `no_atom_as_function_name`, `fix_stray_comma_before_when_guard`,
   `fix_when_guard_in_for_comprehension` — Syntax, and the last two must be built
   **together** sharing one backward lexer-aware scanner, because they emit the

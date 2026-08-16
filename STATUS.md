@@ -388,12 +388,13 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   records as having taken heavy damage on review). Every candidate was checked
   by **running its target through the live pipeline**, not by reading.
 
-  Of the 25 rebuild/salvage candidates, **11 are already repaired** — and the
+  Of the 25 rebuild/salvage candidates, **12 are repaired** — and the
   reason that number is so high is that the honest repair for most was never a
   new rule but a row in `UndefinedFunction`'s tables. One of the eight,
   `no_agent_update_tuple_wrapper`, is repaired by *not existing*.
 
-  **14 remain, each verified still uncovered today.** No table rows are left —
+  **13 remain, each verified still uncovered today.** `no_deprecated_not_in`
+  is built (`lib/semantic/no_deprecated_not_in.ex`). No table rows are left —
   the three the list identified as cheapest (`Map.reduce/3`,
   `StreamData.string/0`, `:crypto.compare/2`) were added the same day, so
   everything remaining needs a rule and its own equivalence argument. Two of the Syntax ones

@@ -28,7 +28,7 @@ defmodule Credence.Semantic.MissingUseExunitCase do
 
   ## Bad
 
-      defmodule MyAppTest do
+      defmodule MyAppTestMUEC do
         describe "feature" do
           test "works" do
             assert true
@@ -38,7 +38,7 @@ defmodule Credence.Semantic.MissingUseExunitCase do
 
   ## Good
 
-      defmodule MyAppTest do
+      defmodule MyAppTestMUEC do
         use ExUnit.Case
 
         describe "feature" do

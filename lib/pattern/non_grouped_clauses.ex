@@ -8,7 +8,7 @@ defmodule Credence.Pattern.NonGroupedClauses do
 
   ## Bad
 
-      defmodule Router do
+      defmodule RouterNGC do
         def foo(1), do: 1
         def bar(x), do: x
         def foo(x), do: x + 1
@@ -16,7 +16,7 @@ defmodule Credence.Pattern.NonGroupedClauses do
 
   ## Good
 
-      defmodule Router do
+      defmodule RouterNGC do
         def foo(1), do: 1
         def foo(x), do: x + 1
         def bar(x), do: x

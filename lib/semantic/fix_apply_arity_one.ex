@@ -44,7 +44,7 @@ defmodule Credence.Semantic.FixApplyArityOne do
 
   ## Bad
 
-      defmodule FixApplyArityOneExample do
+      defmodule FixApplyArityOneExampleFAAO do
         def call_clock(state) do
           current_time = apply(state.clock)
           current_time
@@ -53,7 +53,7 @@ defmodule Credence.Semantic.FixApplyArityOne do
 
   ## Good
 
-      defmodule FixApplyArityOneExample do
+      defmodule FixApplyArityOneExampleFAAO do
         def call_clock(state) do
           current_time = apply(state.clock, [])
           current_time

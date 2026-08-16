@@ -20,7 +20,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariable do
 
   ## Bad
 
-      defmodule UsedUnderscoreCheckInteg2 do
+      defmodule UsedUnderscoreCheckInteg2UUV do
         def check(_limit, value) do
           value + _limit
         end
@@ -28,7 +28,7 @@ defmodule Credence.Semantic.UsedUnderscoreVariable do
 
   ## Good
 
-      defmodule UsedUnderscoreCheckInteg2 do
+      defmodule UsedUnderscoreCheckInteg2UUV do
         def check(limit, value) do
           value + limit
         end

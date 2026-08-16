@@ -24,7 +24,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBif do
 
   ## Bad
 
-      defmodule FixErlangBitwiseBifCheckE2E do
+      defmodule FixErlangBitwiseBifCheckE2EFEBB do
         def left_shift(value, n) do
           bsl(value, n)
         end
@@ -32,7 +32,7 @@ defmodule Credence.Semantic.FixErlangBitwiseBif do
 
   ## Good
 
-      defmodule FixErlangBitwiseBifCheckE2E do
+      defmodule FixErlangBitwiseBifCheckE2EFEBB do
         def left_shift(value, n) do
           Bitwise.bsl(value, n)
         end

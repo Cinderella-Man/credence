@@ -13,13 +13,13 @@ defmodule Credence.Pattern.NoEnumTakeNegative do
 
   ## Bad
 
-      defmodule BadOne do
+      defmodule BadOneNETN do
         def last(list), do: Enum.take(list, -1)
       end
 
   ## Good
 
-      defmodule BadOne do
+      defmodule BadOneNETN do
         def last(list), do: Enum.slice(list, -1..-1//1)
       end
   """

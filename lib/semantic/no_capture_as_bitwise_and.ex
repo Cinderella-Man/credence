@@ -51,7 +51,7 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAnd do
 
   ## Bad
 
-      defmodule CaptureAndCheckInteg1 do
+      defmodule CaptureAndCheckInteg1NCABA do
         def low_bit(n) do
           n & 1
         end
@@ -59,7 +59,7 @@ defmodule Credence.Semantic.NoCaptureAsBitwiseAnd do
 
   ## Good
 
-      defmodule CaptureAndCheckInteg1 do
+      defmodule CaptureAndCheckInteg1NCABA do
         def low_bit(n) do
           Bitwise.band(n, 1)
         end

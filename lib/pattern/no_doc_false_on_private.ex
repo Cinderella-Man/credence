@@ -8,14 +8,14 @@ defmodule Credence.Pattern.NoDocFalseOnPrivate do
 
   ## Bad
 
-      defmodule Helpers do
+      defmodule HelpersNDFOP do
         @doc false
         defp helper(x), do: x + 1
       end
 
   ## Good
 
-      defmodule Helpers do
+      defmodule HelpersNDFOP do
         defp helper(x), do: x + 1
       end
   """

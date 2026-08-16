@@ -44,6 +44,14 @@ defmodule Credence.RuleSelfRepairTest do
   # it cannot quietly come back.
   use ExUnit.Case, async: true
 
+  # The Semantic half compiles every candidate fixture of all 89 rules. Alone it
+  # takes ~7s; under a loaded full suite it crossed the 60s default and failed as
+  # a TIMEOUT, which reads exactly like a real regression. Same trap the T2.5
+  # idempotency sweep fell into — a `timeout:` under concurrent load, re-run
+  # quiet and green. The gate is not slow because anything is wrong; it is slow
+  # because it compiles.
+  @moduletag timeout: :timer.minutes(10)
+
   alias Credence.RuleDuplication
 
   # Rules whose Bad example is repaired by a DIFFERENT rule reaching it first.

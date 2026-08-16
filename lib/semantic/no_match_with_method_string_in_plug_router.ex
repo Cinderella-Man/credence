@@ -17,7 +17,7 @@ defmodule Credence.Semantic.NoMatchWithMethodStringInPlugRouter do
 
   ## Bad
 
-      defmodule ExampleRouter do
+      defmodule ExampleRouterNMWMSIPR do
         use Plug.Router
 
         match "POST", "/api/webhooks/stripe" do
@@ -27,7 +27,7 @@ defmodule Credence.Semantic.NoMatchWithMethodStringInPlugRouter do
 
   ## Good
 
-      defmodule ExampleRouter do
+      defmodule ExampleRouterNMWMSIPR do
         use Plug.Router
 
         post "/api/webhooks/stripe" do

@@ -33,7 +33,7 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRight do
 
   ## Bad
 
-      defmodule CredenceTakeRightMultilineE2E do
+      defmodule CredenceTakeRightMultilineE2EFHETDR do
         def a(list, n) do
           Enum.take_right(
             list,
@@ -44,7 +44,7 @@ defmodule Credence.Semantic.FixHallucinatedEnumTakeDropRight do
 
   ## Good
 
-      defmodule CredenceTakeRightMultilineE2E do
+      defmodule CredenceTakeRightMultilineE2EFHETDR do
         def a(list, n) do
           Enum.take(list, -n)
         end

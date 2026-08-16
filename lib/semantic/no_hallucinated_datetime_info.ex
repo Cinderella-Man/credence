@@ -13,13 +13,13 @@ defmodule Credence.Semantic.NoHallucinatedDatetimeInfo do
 
   ## Bad
 
-      defmodule X do
+      defmodule XNHDI do
         def f(x), do: DateTime.info?(x)
       end
 
   ## Good
 
-      defmodule X do
+      defmodule XNHDI do
         def f(x), do: match?(%DateTime{}, x)
       end
   """

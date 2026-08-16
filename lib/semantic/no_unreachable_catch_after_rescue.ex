@@ -18,7 +18,7 @@ defmodule Credence.Semantic.NoUnreachableCatchAfterRescue do
 
   ## Bad
 
-      defmodule CredenceUnreachableCatchLiveRepro do
+      defmodule CredenceUnreachableCatchLiveReproNUCAR do
         def run(f) do
           try do
             f.()
@@ -32,7 +32,7 @@ defmodule Credence.Semantic.NoUnreachableCatchAfterRescue do
 
   ## Good
 
-      defmodule CredenceUnreachableCatchLiveRepro do
+      defmodule CredenceUnreachableCatchLiveReproNUCAR do
         def run(f) do
           try do
             f.()

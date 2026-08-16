@@ -45,13 +45,13 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
 
   ## Bad
 
-      defmodule Compiles do
+      defmodule CompilesNHD do
         defpstructp now: 0
       end
 
   ## Good
 
-      defmodule Compiles do
+      defmodule CompilesNHD do
         defstruct now: 0
       end
   """

@@ -16,7 +16,7 @@ defmodule Credence.Semantic.NoHallucinatedGuardFn do
 
   ## Bad
 
-      defmodule Demo do
+      defmodule DemoNHGF do
         def check(value, format) when is_regex(format) do
           Regex.match?(format, value)
         end
@@ -26,7 +26,7 @@ defmodule Credence.Semantic.NoHallucinatedGuardFn do
 
   ## Good
 
-      defmodule Demo do
+      defmodule DemoNHGF do
         def check(value, format) when is_struct(format, Regex) do
           Regex.match?(format, value)
         end

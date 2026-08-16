@@ -52,7 +52,7 @@ defmodule Credence.Semantic.FixMapFetchNoneClause do
 
   ## Bad
 
-      defmodule CredenceNoneClauseE2eCheck do
+      defmodule CredenceNoneClauseE2eCheckFMFNC do
         def find(map, key) do
           case Map.fetch(map, key) do
             :none -> {:error, :not_found}
@@ -63,7 +63,7 @@ defmodule Credence.Semantic.FixMapFetchNoneClause do
 
   ## Good
 
-      defmodule CredenceNoneClauseE2eCheck do
+      defmodule CredenceNoneClauseE2eCheckFMFNC do
         def find(map, key) do
           case Map.fetch(map, key) do
             :error -> {:error, :not_found}

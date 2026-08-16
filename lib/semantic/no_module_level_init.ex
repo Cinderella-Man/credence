@@ -5,7 +5,7 @@ defmodule Credence.Semantic.NoModuleLevelInit do
 
   LLMs frequently write:
 
-      defmodule Factory do
+      defmodule FactoryNMLI do
         def init do
           # initialization logic
         end
@@ -20,7 +20,7 @@ defmodule Credence.Semantic.NoModuleLevelInit do
   The fix removes the bare `init()` call and adds `@on_load :init` as the
   first expression in the module body — the idiomatic Elixir callback:
 
-      defmodule Factory do
+      defmodule FactoryNMLI do
         @on_load :init
 
         def init do
@@ -41,7 +41,7 @@ defmodule Credence.Semantic.NoModuleLevelInit do
 
   ## Bad
 
-      defmodule Factory do
+      defmodule FactoryNMLI do
         def init do
           :ok
         end
@@ -52,7 +52,7 @@ defmodule Credence.Semantic.NoModuleLevelInit do
 
   ## Good
 
-      defmodule Factory do
+      defmodule FactoryNMLI do
         @on_load :init
 
         def init do

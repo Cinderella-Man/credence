@@ -36,7 +36,7 @@ defmodule Credence.Semantic.FixFnArityInKeywordValue do
 
   ## Bad
 
-      defmodule FixFnArityExample do
+      defmodule FixFnArityExampleFFAIKV do
         def push(server, name, value, window_size) do
           unless is_number(value) do
             raise FunctionClauseError, function: :push/4
@@ -47,7 +47,7 @@ defmodule Credence.Semantic.FixFnArityInKeywordValue do
 
   ## Good
 
-      defmodule FixFnArityExample do
+      defmodule FixFnArityExampleFFAIKV do
         def push(_server, _name, value, _window_size) do
           unless is_number(value) do
             raise FunctionClauseError, function: :push, arity: 4

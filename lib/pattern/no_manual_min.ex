@@ -35,7 +35,7 @@ defmodule Credence.Pattern.NoManualMin do
 
   ## Bad
 
-      defmodule BadNoManualMin do
+      defmodule BadNoManualMinNMM do
         def smaller(a, b) do
           if a <= b, do: a, else: b
         end
@@ -43,7 +43,7 @@ defmodule Credence.Pattern.NoManualMin do
 
   ## Good
 
-      defmodule BadNoManualMin do
+      defmodule BadNoManualMinNMM do
         def smaller(a, b) do
           min(a, b)
         end

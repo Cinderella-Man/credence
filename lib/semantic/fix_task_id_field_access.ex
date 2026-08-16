@@ -32,7 +32,7 @@ defmodule Credence.Semantic.FixTaskIdFieldAccess do
 
   ## Bad
 
-      defmodule TaskIdField do
+      defmodule TaskIdFieldFTIFA do
         def get_ref do
           task = Task.async(fn -> 42 end)
           task.id
@@ -41,7 +41,7 @@ defmodule Credence.Semantic.FixTaskIdFieldAccess do
 
   ## Good
 
-      defmodule TaskIdField do
+      defmodule TaskIdFieldFTIFA do
         def get_ref do
           task = Task.async(fn -> 42 end)
           task.ref

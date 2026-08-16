@@ -8,14 +8,14 @@ defmodule Credence.Pattern.NoCaptureFnApply do
 
   ## Bad
 
-      defmodule Grid do
+      defmodule GridNCFA do
         def cell(el, col), do: (&Enum.at(&1, col)).(el)
         def add(a, b), do: (& &1 + &2).(a, b)
       end
 
   ## Good
 
-      defmodule Grid do
+      defmodule GridNCFA do
         def cell(el, col), do: Enum.at(el, col)
         def add(a, b), do: a + b
       end

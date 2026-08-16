@@ -53,7 +53,7 @@ defmodule Credence.Semantic.FixLocalFunctionInGuard do
 
   ## Bad
 
-      defmodule LocalFnInGuard do
+      defmodule LocalFnInGuardFLFIG do
         defp is_range(x), do: is_map(x)
 
         def convert(x) when is_range(x), do: x
@@ -62,7 +62,7 @@ defmodule Credence.Semantic.FixLocalFunctionInGuard do
 
   ## Good
 
-      defmodule LocalFnInGuard do
+      defmodule LocalFnInGuardFLFIG do
         defp is_range(x), do: is_map(x)
 
         def convert(x) when is_map(x), do: x

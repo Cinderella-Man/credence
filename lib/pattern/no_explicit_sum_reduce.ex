@@ -4,7 +4,7 @@ defmodule Credence.Pattern.NoExplicitSumReduce do
 
   ## Bad
 
-      defmodule BadPlus do
+      defmodule BadPlusNESR do
         def sum_value(list) do
           Enum.reduce(list, 0, fn x, acc ->
             x + acc
@@ -14,7 +14,7 @@ defmodule Credence.Pattern.NoExplicitSumReduce do
 
   ## Good
 
-      defmodule BadPlus do
+      defmodule BadPlusNESR do
         def sum_value(list) do
           Enum.sum(list)
         end

@@ -14,7 +14,7 @@ defmodule Credence.Semantic.NoImplTrueForUndeclaredCallback do
 
   ## Bad
 
-      defmodule MisusedImpl do
+      defmodule MisusedImplNITFUC do
         use Supervisor
 
         @impl true
@@ -26,7 +26,7 @@ defmodule Credence.Semantic.NoImplTrueForUndeclaredCallback do
 
   ## Good
 
-      defmodule MisusedImpl do
+      defmodule MisusedImplNITFUC do
         use Supervisor
 
         @impl true

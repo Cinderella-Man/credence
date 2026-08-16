@@ -51,7 +51,7 @@ defmodule Credence.Semantic.UnusedVariable do
 
   ## Bad
 
-      defmodule UnusedVarInteg1 do
+      defmodule UnusedVarInteg1UV do
         def run do
           {current, max} = {1, 2}
           max
@@ -60,7 +60,7 @@ defmodule Credence.Semantic.UnusedVariable do
 
   ## Good
 
-      defmodule UnusedVarInteg1 do
+      defmodule UnusedVarInteg1UV do
         def run do
           {_current, max} = {1, 2}
           max

@@ -28,7 +28,7 @@ defmodule Credence.Semantic.FixHallucinatedEnumRange do
 
   ## Bad
 
-      defmodule CredenceEnumRangeMultilineE2E do
+      defmodule CredenceEnumRangeMultilineE2EFHER do
         def a(n) do
           Enum.range(
             0,
@@ -39,7 +39,7 @@ defmodule Credence.Semantic.FixHallucinatedEnumRange do
 
   ## Good
 
-      defmodule CredenceEnumRangeMultilineE2E do
+      defmodule CredenceEnumRangeMultilineE2EFHER do
         def a(n) do
           0..n
         end

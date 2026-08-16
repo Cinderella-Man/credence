@@ -19,13 +19,13 @@ defmodule Credence.Semantic.FixRaiseInKeywordValue do
 
   ## Bad
 
-      defmodule CredenceRaiseInKeywordLiveRepro do
+      defmodule CredenceRaiseInKeywordLiveReproFRIKV do
         def f(_, _), do: raise ArgumentError, "bad argument"
       end
 
   ## Good
 
-      defmodule CredenceRaiseInKeywordLiveRepro do
+      defmodule CredenceRaiseInKeywordLiveReproFRIKV do
         def f(_, _), do: raise(ArgumentError, "bad argument")
       end
   """

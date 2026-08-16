@@ -26,7 +26,7 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
 
   ## Bad
 
-      defmodule DBCleaner do
+      defmodule DBCleanerNBRIU do
         def clean() do
           case get_spec() do
             nil -> :ok
@@ -43,7 +43,7 @@ defmodule Credence.Semantic.NoBareReturnInUnless do
 
   ## Good
 
-      defmodule DBCleaner do
+      defmodule DBCleanerNBRIU do
         def clean() do
           case get_spec() do
             nil ->

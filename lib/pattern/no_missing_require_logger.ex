@@ -15,7 +15,7 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
 
   ## Bad
 
-      defmodule MyApp do
+      defmodule MyAppNMRL do
         def run do
           Logger.info("starting")
         end
@@ -23,7 +23,7 @@ defmodule Credence.Pattern.NoMissingRequireLogger do
 
   ## Good
 
-      defmodule MyApp do
+      defmodule MyAppNMRL do
         require Logger
 
         def run do

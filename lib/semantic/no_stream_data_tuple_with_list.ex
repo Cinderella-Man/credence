@@ -54,7 +54,7 @@ defmodule Credence.Semantic.NoStreamDataTupleWithList do
 
   ## Bad
 
-      defmodule CredenceTupleWithListFlagshipCheck do
+      defmodule CredenceTupleWithListFlagshipCheckNSDTWL do
         @moduledoc false
 
         def object do
@@ -71,7 +71,7 @@ defmodule Credence.Semantic.NoStreamDataTupleWithList do
 
   ## Good
 
-      defmodule CredenceTupleWithListFlagshipCheck do
+      defmodule CredenceTupleWithListFlagshipCheckNSDTWL do
         @moduledoc false
 
         def object do

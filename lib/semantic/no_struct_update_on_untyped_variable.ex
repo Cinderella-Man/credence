@@ -73,7 +73,7 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariable do
 
   ## Bad
 
-      defmodule Saga do
+      defmodule SagaNSUOUV do
         defstruct steps: []
 
         def execute(other, action_fn) do
@@ -83,7 +83,7 @@ defmodule Credence.Semantic.NoStructUpdateOnUntypedVariable do
 
   ## Good
 
-      defmodule Saga do
+      defmodule SagaNSUOUV do
         defstruct steps: []
 
         def execute(%__MODULE__{} = other, action_fn) do

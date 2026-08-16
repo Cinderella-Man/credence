@@ -56,7 +56,7 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgs do
 
   ## Bad
 
-      defmodule CredenceIntegerTwoArgsFlagship do
+      defmodule CredenceIntegerTwoArgsFlagshipNSDITA do
         import StreamData
 
         def account_program do
@@ -70,7 +70,7 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgs do
 
   ## Good
 
-      defmodule CredenceIntegerTwoArgsFlagship do
+      defmodule CredenceIntegerTwoArgsFlagshipNSDITA do
         import StreamData
 
         def account_program do

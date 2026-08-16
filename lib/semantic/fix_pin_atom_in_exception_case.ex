@@ -33,7 +33,7 @@ defmodule Credence.Semantic.FixPinAtomInExceptionCase do
 
   ## Bad
 
-      defmodule CredencePinAtomLiveRepro do
+      defmodule CredencePinAtomLiveReproFPAIEC do
         def run(fun) do
           exception = ArgumentError
 
@@ -51,7 +51,7 @@ defmodule Credence.Semantic.FixPinAtomInExceptionCase do
 
   ## Good
 
-      defmodule CredencePinAtomLiveRepro do
+      defmodule CredencePinAtomLiveReproFPAIEC do
         def run(fun) do
           exception = ArgumentError
 

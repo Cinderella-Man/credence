@@ -31,7 +31,7 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
 
   ## Bad
 
-      defmodule Ex do
+      defmodule ExFRCIP do
         def wait(state, ref) do
           receive do
             {state.ref, :done} -> ref
@@ -41,7 +41,7 @@ defmodule Credence.Semantic.FixRemoteCallInPattern do
 
   ## Good
 
-      defmodule Ex do
+      defmodule ExFRCIP do
         def wait(state, ref) do
           ref_1 = state.ref
 

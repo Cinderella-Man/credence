@@ -13,14 +13,14 @@ defmodule Credence.Semantic.NoBareNamesInSpec do
 
   ## Bad
 
-      defmodule MyMod do
+      defmodule MyModNBNIS do
         @spec foo(my_param) :: integer()
         def foo(x), do: x
       end
 
   ## Good
 
-      defmodule MyMod do
+      defmodule MyModNBNIS do
         @spec foo(my_param :: any()) :: integer()
         def foo(x), do: x
       end

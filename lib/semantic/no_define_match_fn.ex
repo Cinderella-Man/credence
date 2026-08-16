@@ -17,7 +17,7 @@ defmodule Credence.Semantic.NoDefineMatchFn do
         def f(x), do: match?(x, 1)
       end
 
-      defmodule B do
+      defmodule BNDMF do
         def g(x), do: match?({:ok, _}, x)
       end
 
@@ -28,7 +28,7 @@ defmodule Credence.Semantic.NoDefineMatchFn do
         def f(x), do: match_pattern?(x, 1)
       end
 
-      defmodule B do
+      defmodule BNDMF do
         def g(x), do: match?({:ok, _}, x)
       end
   """

@@ -10,14 +10,14 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
 
   ## Bad
 
-      defmodule Greeting do
+      defmodule GreetingNRBS do
         def hello, do: <<"hello">>
         def letters, do: [<<"b">>, <<"a">>, <<"n">>]
       end
 
   ## Good
 
-      defmodule Greeting do
+      defmodule GreetingNRBS do
         def hello, do: "hello"
         def letters, do: ["b", "a", "n"]
       end

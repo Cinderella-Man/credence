@@ -43,7 +43,7 @@ defmodule Credence.Semantic.FixHallucinatedMapUpdateArity do
 
   ## Bad
 
-      defmodule MapUpdateArityExample do
+      defmodule MapUpdateArityExampleFHMUA do
         def increment_count(map, key) do
           Map.update(map, key, fn val -> val + 1 end)
         end
@@ -51,7 +51,7 @@ defmodule Credence.Semantic.FixHallucinatedMapUpdateArity do
 
   ## Good
 
-      defmodule MapUpdateArityExample do
+      defmodule MapUpdateArityExampleFHMUA do
         def increment_count(map, key) do
           Map.update!(map, key, fn val -> val + 1 end)
         end

@@ -62,13 +62,13 @@ defmodule Credence.Semantic.FixTruncatedSpecialForm do
 
   ## Bad
 
-      defmodule EnvTest do
+      defmodule EnvTestFTSF do
         defmacro get_env, do: __ENV
       end
 
   ## Good
 
-      defmodule EnvTest do
+      defmodule EnvTestFTSF do
         defmacro get_env, do: __ENV__
       end
   """

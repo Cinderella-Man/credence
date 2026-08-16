@@ -16,7 +16,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumeric do
 
   ## Bad
 
-      defmodule AlphanumCheckInteg1 do
+      defmodule AlphanumCheckInteg1USA do
         def clean(s) do
           s |> String.graphemes() |> Enum.filter(&String.alphanumeric?/1)
         end
@@ -24,7 +24,7 @@ defmodule Credence.Semantic.UndefinedStringAlphanumeric do
 
   ## Good
 
-      defmodule AlphanumCheckInteg1 do
+      defmodule AlphanumCheckInteg1USA do
         def clean(s) do
           s |> String.graphemes() |> Enum.filter(fn char -> String.match?(char, ~r/^[a-zA-Z0-9]$/) end)
         end

@@ -6,7 +6,7 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
 
   ## Bad
 
-      defmodule Tally do
+      defmodule TallyPFCFLP do
         def my_fun([], _k), do: 0
 
         def my_fun(list, k) when is_list(list) and is_integer(k) and k >= 0 do
@@ -20,7 +20,7 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
 
   ## Good
 
-      defmodule Tally do
+      defmodule TallyPFCFLP do
         def my_fun([], _k), do: 0
 
         def my_fun([_single], k) when is_integer(k) and k >= 0, do: 0

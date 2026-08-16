@@ -27,7 +27,7 @@ defmodule Credence.Semantic.PreferRescueBeforeCatch do
 
   ## Bad
 
-      defmodule CredenceRescueOrderLiveRepro do
+      defmodule CredenceRescueOrderLiveReproPRBC do
         def run(f) do
           try do
             f.()
@@ -42,7 +42,7 @@ defmodule Credence.Semantic.PreferRescueBeforeCatch do
 
   ## Good
 
-      defmodule CredenceRescueOrderLiveRepro do
+      defmodule CredenceRescueOrderLiveReproPRBC do
         def run(f) do
           try do
             f.()

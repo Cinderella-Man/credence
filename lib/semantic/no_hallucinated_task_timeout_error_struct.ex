@@ -33,14 +33,14 @@ defmodule Credence.Semantic.NoHallucinatedTaskTimeoutErrorStruct do
 
   ## Bad
 
-      defmodule TaskTimeoutWitnessHead do
+      defmodule TaskTimeoutWitnessHeadNHTTES do
         def handle({:exit, {%Task.TimeoutError{}, _stacktrace}}), do: :timeout
         def handle({:ok, v}), do: v
       end
 
   ## Good
 
-      defmodule TaskTimeoutWitnessHead do
+      defmodule TaskTimeoutWitnessHeadNHTTES do
         def handle({:exit, :timeout}), do: :timeout
         def handle({:ok, v}), do: v
       end

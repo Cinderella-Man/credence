@@ -29,7 +29,7 @@ defmodule Credence.Semantic.FixPinInEtsMatchSpec do
 
   ## Bad
 
-      defmodule FixPinInEtsMatchSpec do
+      defmodule FixPinInEtsMatchSpecFPIEMS do
         def reset(table, name) do
           :ets.match_delete(table, {{^name, :_}, :_})
         end
@@ -37,7 +37,7 @@ defmodule Credence.Semantic.FixPinInEtsMatchSpec do
 
   ## Good
 
-      defmodule FixPinInEtsMatchSpec do
+      defmodule FixPinInEtsMatchSpecFPIEMS do
         def reset(table, name) do
           :ets.match_delete(table, {{name, :_}, :_})
         end
