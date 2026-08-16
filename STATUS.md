@@ -156,32 +156,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   (`mix cev.report`), H16 (`solve.ex:38` deps one-liner), H17, H18.
 ## D. Credence rule work (independent of the merge)
 
-- [ ] **D2d. `NoDocOnPrivateFunction` deletes a trailing comment with the line.**
-  The 20-rule sweep is **DONE** — the byte-scope oracle now covers all three
-  phases, and all 20 unmasked Semantic line-editors were probed with a **planted
-  decoy** (the target line's own text duplicated into a trailing comment), which
-  is the input their own fixtures cannot supply because rule and fixtures share
-  an author. Two of the 20 were real, not the 20 the naive prior suggested:
-
-  * **`UsedUnderscoreVariable` — fixed.** It renamed `_limit` → `limit` *inside
-    a trailing comment*, because the rename ran a plain `Regex.replace` over
-    every raw line in the clause. Now goes through `SourceMask.replace_code/5`;
-    two regressions plus a control that two real usages on one line still both
-    rename. Note this rule had already been repaired once (T3.12) for a
-    different defect — the byte-scope one was underneath and survived.
-  * **`NoDocOnPrivateFunction` — recorded, not fixed.** It deletes the whole
-    `@doc` line, so `@doc "x"  # keep this note` loses the comment too. That is
-    a deletion-scope question rather than a rewrite-scope one, and the honest
-    answer is not obvious: the comment may belong to the `@doc` being removed or
-    to the code below it. **Trade-off if you pick it up:** preserving the
-    comment means re-attaching it to the next line, which can move a comment
-    away from what it described; deleting it silently loses author intent.
-
-  Three more rules flagged in the first pass were **false positives of the probe
-  itself** — the fix inserts or deletes lines, so comparing the same line index
-  before and after finds a different line. Searching the whole output for the
-  intact comment settles it.
-
 - [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
 
   **Measured, and it kills the item's stated action.** T5.2 said to narrow,

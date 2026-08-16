@@ -7,6 +7,18 @@ defmodule Credence.Semantic.NoDocOnPrivateFunction do
 
   The fix strips the `@doc` attribute — output-identical since the compiler
   already ignores it.
+
+  ## Comments
+
+  A comment on its own line above the `@doc` is **kept** — it survives the
+  deletion and ends up above the `defp`, which is where a reader would expect a
+  note about the function.
+
+  A comment TRAILING the `@doc` line itself is removed with it, and that is
+  deliberate rather than an oversight: it annotates the documentation being
+  deleted as stale, so carrying it down onto the `defp` would re-attach it to
+  something it was not written about. Both shapes are pinned in the fix tests.
+
   """
   use Credence.Semantic.Rule
 

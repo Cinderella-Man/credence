@@ -176,4 +176,48 @@ defmodule Credence.Semantic.NoDocOnPrivateFunctionFixTest do
     confirm_fix(fix(input, 2), input)
     confirm_fix(fix(input, 3), input)
   end
+
+  # ── Comments around the deleted @doc ────────────────────────────────
+  #
+  # Flagged by the byte-scope decoy sweep (docs/22 D2c), which plants the target
+  # line's own text into a trailing comment and checks it survives. It does not
+  # survive here — and that turned out to be correct rather than a defect, which
+  # is why both shapes are pinned rather than one being "fixed".
+
+  describe "comments" do
+    test "a comment on its own line above the @doc is KEPT" do
+      source = """
+      defmodule NdpKeep do
+        # TODO: revisit
+        @doc "helper docs"
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+      """
+
+      fixed = fix(source, 4)
+
+      assert fixed =~ "# TODO: revisit"
+      refute fixed =~ "@doc"
+    end
+
+    # Deliberate: it annotates the documentation being removed as stale, so
+    # carrying it onto the `defp` would re-attach it to something it was not
+    # written about.
+    test "a comment TRAILING the @doc line goes with it" do
+      source = """
+      defmodule NdpDrop do
+        @doc "helper docs"  # TODO: revisit
+        defp helper(x), do: x
+        def pub(x), do: helper(x)
+      end
+      """
+
+      fixed = fix(source, 3)
+
+      refute fixed =~ "# TODO: revisit"
+      refute fixed =~ "@doc"
+      assert fixed =~ "defp helper(x), do: x"
+    end
+  end
 end
