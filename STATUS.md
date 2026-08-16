@@ -146,8 +146,20 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   the bare `:no_lib_change` reject is now `gate.ex:128` + `check_touches` at
   `gate.ex:198-202`, tree discarded at `:148-151`. Take T2.2's H8 as merge
   base. Its own `probe.exs` is the first executable check.
-- [ ] **C4. T4.8** bounded auto-retry on corpus rejects (H6) — now affordable,
-  T2.1's scoped dispatch landed.
+- [ ] **C4a. Teach the seed to READ the repair brief.** The retry landed
+  (harness `53f94b3`): a corpus over-fire now re-seeds the implementer once with
+  the Gate's findings, bounded at one — and the bound is load-bearing, since
+  forcing `retryable?/1` to `true` makes the harness suite *hang* rather than
+  fail. T2.1's scoped dispatch is what makes it affordable (~12 s per verdict
+  instead of 234 s).
+
+  What remains is the other half: `ctx[:corpus_repair]` is placed on the context
+  but `lib/cev/implement/seed.ex` does not mention it, so the second implementer
+  run currently gets the same prompt as the first. The findings need a section
+  in the seed — and per T4.4's lesson, one that states the *mechanical* trigger
+  (these exact files and lines now match, and did not before) rather than "your
+  rule over-fires".
+
 - [ ] **C5. T4.9** H1 gold over-fire ratchet (diff against an
   accepted-gold-findings snapshot — 76/304 golds carry findings, never
   zero-assert) + H2 executable fix-safety oracle (needs H10's solve archive).
