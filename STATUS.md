@@ -448,6 +448,14 @@ docs/21's denial of the STATUS.md interlock; the missing banners on docs/12/13/1
 and docs/19's self-contradiction; CONTEXT.md's rule count; and the harness's
 `IMPROVEMENTS.md` landed-list.
 
-- [ ] **F6. Record the merge method in docs/22 once A2 happens**, and retire
-  `credence-evolution-harness-backup` (nothing unique in it). The PR itself is
-  now recorded — **#22**, `evolution_accepted` → `main`.
+- [ ] **F6. Two one-liners, both verified safe.**
+  * Record the merge method in docs/22 once A2 happens. The PR is now recorded:
+    **#22**, `evolution_accepted` → `main`.
+  * **Retire `credence-evolution-harness-backup` — checked, it holds nothing
+    unique.** Its HEAD (`f145884`) exists in the live harness; its only untracked
+    items are `docs/IMPROVEMENTS.md` (the live copy is newer) and
+    `docs/research/harness-internals.md` (**byte-identical** to the live one);
+    no secret key is present there and absent live; the only file it alone has
+    is an `.elixir_ls` editor cache. `rm -rf` is yours to run — the check is the
+    part that needed doing, and deleting a directory I did not create is not
+    something to do on inference.
