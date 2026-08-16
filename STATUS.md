@@ -179,33 +179,31 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
   set of shapes than the matcher admits; `FixLocalFunctionInGuard` was the same
   story (T3.6), which makes three. Worth one sweep: for each Semantic rule, does
   every input its `match?/1` accepts have a `fix/2` branch?
-- [ ] **D2a. Finish the byte-scope sweep `UndefinedFunction` started.** Probing
-  D2's stated blocker found that rule rewriting a same-named call **inside a
-  string literal and inside a trailing comment** — the T3.7/T3.10 class, live,
-  in the busiest rule in the tree. Fixed in `364ea85`: every per-line edit now
-  goes through the new `SourceMask.replace_code/5`. Two things remain, and the
-  second is worth more than the first.
-  * **Sweep the other line-level rewriters — 20 candidates, measured.** Of the
-    21 Semantic rules that edit source by splitting it into lines, **20 do not
-    mask**; `undefined_function.ex` is the only one that now does. But this is a
-    candidate list, not a defect list: three spot-checks
-    (`UnusedVariable`, `UsedUnderscoreVariable`, `NoDocOnPrivateFunction`) came
-    back **clean**, because they replace one token at a known position rather
-    than every occurrence on the line. So the honest prior is "some of 20", and
-    the sweep is one probe per rule — a string and a comment containing the
-    token the rule rewrites. `grep -rln 'String.split(source' lib/semantic/`
-    is the list.
-  * **Close the oracle's blind spot, which is why nobody found this.** The
-    self-corruption gate runs a rule's `fix/1` over its own source, and only
-    Syntax rules have a `fix/1` — a Semantic rule needs a diagnostic to drive
-    `fix/2`. So the gate built precisely to catch this class is structurally
-    blind to two thirds of the rules, and the one confirmed instance sat in the
-    most-reached rule in the tree. The witness index already produces
-    diagnostics per rule, so a Semantic equivalent is cheap. This is the
-    standing lesson — *find an input the author did not choose* — applied to the
-    phase where it has never been applied.
+- [ ] **D2b. Extend the byte-scope oracle to Pattern, the last blind phase.**
+  The Semantic half is **DONE** — `test/fix_byte_scope_test.exs` +
+  `test/support/fix_byte_scope.ex`. It compiles each rule's own witness
+  fixtures, finds a diagnostic the rule claims, runs `fix/2`, and flags a
+  **literal that survives the edit with different content**. That predicate took
+  three tries and the two rejected ones are the useful record: "the edit
+  overlapped a literal" accuses every rule that *removes* a default argument;
+  "every output literal was an input literal" accuses every rule that
+  *introduces* one, e.g. `UndefinedStringAlphanumeric` adding the regex its
+  repair is made of. Only "one vanished AND one appeared" isolates the bug.
 
-- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
+  Result: **the Semantic phase is clean**, with one ledgered entry —
+  `OutdentedHeredoc`, whose entire purpose is re-indenting heredoc bodies. The
+  gate is proven rather than assumed: with the `UndefinedFunction` masking
+  reverted it reports 2 hits from that rule's own fixtures, and 0 with it in
+  place, so it catches the real defect without a planted decoy. Six controls
+  drive fabricated rules (corrupts / rewrites-only-code / removes / introduces /
+  declines / raises) so it stays provable at ledger size zero.
+
+  What remains is **Pattern**, which is blind for a third reason: its rules
+  return patch ranges rather than a new source, so the check is whether a patch
+  *range* overlaps masked bytes — cheaper than either other phase, and not yet
+  written. Cost note: the Semantic scan adds ~26 s to the suite.
+
+- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
   `List.keystore`, `exit/2` into `UndefinedFunction`'s tables; blocked on
   call-boundary anchoring; `exit/2` also needs the arity check
   `replace_call_on_line/4` doesn't do. Salvage sources survive in the sister
