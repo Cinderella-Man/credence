@@ -48,6 +48,7 @@ defmodule Credence.Semantic.UndefinedFunction do
   """
   use Credence.Semantic.Rule
   alias Credence.Issue
+  alias Credence.SourceMask
 
   # The catch-all yields to every rule owning a specific spelling of the
   # diagnostic — see "## Ordering" above.
@@ -355,24 +356,29 @@ defmodule Credence.Semantic.UndefinedFunction do
   defp extract_line(line) when is_integer(line), do: line
   defp extract_line(_), do: nil
 
-  defp replace_first_on_line(source, line_no, old, new) do
+  # Every per-line edit in this module goes through `edit_line/3`, which hands
+  # the transform the line AND its `Credence.SourceMask` shadow. Matching on the
+  # shadow is what keeps a rewrite off a same-named call sitting in a string
+  # literal or a trailing comment on the same line — measured, not assumed:
+  # before this, `len(l)` beside `"the helper len(x) is not real"` rewrote both.
+  # Mask the whole FILE, never a line alone: heredoc state crosses lines
+  # (the T3.7 `FixDivRem` finding).
+  defp edit_line(source, line_no, fun) do
     source
-    |> String.split("\n")
+    |> SourceMask.lines()
     |> Enum.with_index(1)
     |> Enum.map_join("\n", fn
-      {line, ^line_no} -> String.replace(line, old, new, global: false)
-      {line, _} -> line
+      {{line, shadow}, ^line_no} -> fun.(line, shadow)
+      {{line, _shadow}, _} -> line
     end)
   end
 
+  defp replace_first_on_line(source, line_no, old, new) do
+    edit_line(source, line_no, &SourceMask.replace_code(&1, &2, old, new, global: false))
+  end
+
   defp replace_all_on_line(source, line_no, old, new) do
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn
-      {line, ^line_no} -> String.replace(line, old, new)
-      {line, _} -> line
-    end)
+    edit_line(source, line_no, &SourceMask.replace_code(&1, &2, old, new))
   end
 
   defp replace_literal(source, line_no, mod, fun, text) do
@@ -536,24 +542,17 @@ defmodule Credence.Semantic.UndefinedFunction do
 
   defp replace_call_on_line(source, line_no, old_name, new_name) do
     pattern = Regex.compile!("(?<![.a-zA-Z0-9_])#{Regex.escape(old_name)}\\(")
-    replacement = "#{new_name}("
-
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn
-      {line, ^line_no} -> Regex.replace(pattern, line, replacement)
-      {line, _} -> line
-    end)
+    edit_line(source, line_no, &SourceMask.replace_code(&1, &2, pattern, "#{new_name}("))
   end
 
   defp wrap_args_on_line(source, line_no, old_name, new_qualified) do
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn
-      {line, ^line_no} -> do_wrap_args(line, old_name, new_qualified)
-      {line, _} -> line
+    edit_line(source, line_no, fn line, shadow ->
+      # `do_wrap_args/3` scans for the call and rebuilds the argument list, so it
+      # needs the real bytes; the shadow decides only WHETHER this line has a
+      # code-position call to act on.
+      if SourceMask.replace_code(shadow, shadow, old_name <> "(", "", global: false) == shadow,
+        do: line,
+        else: do_wrap_args(line, old_name, new_qualified)
     end)
   end
 

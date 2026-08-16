@@ -203,4 +203,74 @@ defmodule Credence.SourceMaskTest do
       assert lines |> Enum.at(2) |> then(fn {l, s} -> SourceMask.self_contained?(l, s) end)
     end
   end
+
+  describe "replace_code/5 — edits code bytes only" do
+    defp one_line(source, pattern, replacement, opts \\ []) do
+      [{line, shadow}] = SourceMask.lines(source)
+      SourceMask.replace_code(line, shadow, pattern, replacement, opts)
+    end
+
+    test "replaces a plain call in code position" do
+      assert one_line(~S|x = len(l)|, "len(", "length(") == ~S|x = length(l)|
+    end
+
+    test "leaves an identical match inside a string literal alone" do
+      assert one_line(~S|x = {len(l), "call len(y)"}|, "len(", "length(") ==
+               ~S|x = {length(l), "call len(y)"}|
+    end
+
+    test "leaves an identical match inside a trailing comment alone" do
+      assert one_line(~S|x = len(l)  # len(y) was python|, "len(", "length(") ==
+               ~S|x = length(l)  # len(y) was python|
+    end
+
+    test "leaves a match inside a sigil and a charlist alone" do
+      assert one_line(~S|x = len(l) ++ ~c"len(z)"|, "len(", "length(") ==
+               ~S|x = length(l) ++ ~c"len(z)"|
+    end
+
+    test "global: false stops after the first CODE match" do
+      assert one_line(~S|len(a) + len(b)|, "len(", "length(", global: false) ==
+               ~S|length(a) + len(b)|
+    end
+
+    test "global replaces every code match and no literal one" do
+      assert one_line(~S|len(a) + len(b) + "len(c)"|, "len(", "length(") ==
+               ~S|length(a) + length(b) + "len(c)"|
+    end
+
+    test "accepts a Regex, with the same literal-blindness" do
+      re = Regex.compile!("(?<![.a-zA-Z0-9_])len\\(")
+
+      assert one_line(~S|x = len(l) ; y = a.len(m) ; z = "len(n)"|, re, "length(") ==
+               ~S|x = length(l) ; y = a.len(m) ; z = "len(n)"|
+    end
+
+    # The whole point of splicing rather than re-rendering: the bytes that were
+    # not matched come back exactly as written, escapes and all.
+    test "non-matched bytes survive verbatim" do
+      src = ~S|x = len(l) <> "a\"b" <> ~S(raw \ stuff)|
+      out = one_line(src, "len(", "length(")
+
+      assert out == ~S|x = length(l) <> "a\"b" <> ~S(raw \ stuff)|
+    end
+
+    test "no code match is a no-op" do
+      assert one_line(~S|x = "len(l)"|, "len(", "length(") == ~S|x = "len(l)"|
+    end
+
+    # A multi-line literal only shows up correctly when the WHOLE file is masked
+    # — masking a line alone is the T3.7 `FixDivRem` defect.
+    test "a heredoc body is protected because the file is masked, not the line" do
+      source = """
+      @doc \"\"\"
+      call len(x) here
+      \"\"\"
+      """
+
+      [_, {line, shadow} | _] = SourceMask.lines(source)
+
+      assert SourceMask.replace_code(line, shadow, "len(", "length(") == line
+    end
+  end
 end

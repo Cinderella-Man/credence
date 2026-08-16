@@ -179,6 +179,21 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
   set of shapes than the matcher admits; `FixLocalFunctionInGuard` was the same
   story (T3.6), which makes three. Worth one sweep: for each Semantic rule, does
   every input its `match?/1` accepts have a `fix/2` branch?
+- [ ] **D2a. Finish the byte-scope sweep `UndefinedFunction` started.** Probing
+  the 4.6d blocker found the rule's per-line replacements rewriting a same-named
+  call **inside a string literal and inside a trailing comment** — the
+  T3.7/T3.10 class, live, in the busiest rule in the tree. Fixed: every per-line
+  edit now goes through `SourceMask.replace_code/5`. Two things remain.
+  * **The oracle has a blind spot worth closing.** The self-corruption gate runs
+    a rule's `fix/1` over its own source, which only Syntax rules have — so it
+    structurally cannot see this class in Semantic or Pattern. A Semantic
+    equivalent needs a diagnostic to drive `fix/2`, which the witness index
+    already produces. That is the cheapest remaining "find an input the author
+    did not choose".
+  * **Sweep the other line-level rewriters.** Any rule that edits source text by
+    line rather than by AST range is a candidate; `grep -rn 'String.split(source'
+    lib/` is the starting list.
+
 - [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
   `List.keystore`, `exit/2` into `UndefinedFunction`'s tables; blocked on
   call-boundary anchoring; `exit/2` also needs the arity check

@@ -483,4 +483,93 @@ defmodule Credence.Semantic.UndefinedFunction.LocalFixTest do
              )
     end
   end
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Byte scope: the rewrite must not reach a same-named call that is not code.
+  #
+  # Found by probing rather than by reading. Every per-line replacement in this
+  # rule used to run a plain `String.replace`/`Regex.replace` over the raw line,
+  # so a call spelled the same way inside a string literal or a trailing comment
+  # on that line was rewritten too. This is the T3.7/T3.10 byte-scope class, and
+  # the self-corruption oracle could not have caught it here — that oracle runs
+  # a rule's `fix/1` over its own source and only Syntax rules have one.
+  # ────────────────────────────────────────────────────────────────────────
+
+  describe "byte scope — literals and comments are not code" do
+    test "a same-named call inside a string on the fixed line is left alone" do
+      confirm_fix(
+        fix(
+          """
+          defmodule M do
+            def f(l), do: {len(l), "the helper len(x) is not real"}
+          end
+          """,
+          msg("len", 1),
+          2
+        ),
+        """
+        defmodule M do
+          def f(l), do: {length(l), "the helper len(x) is not real"}
+        end
+        """
+      )
+    end
+
+    test "a same-named call in a trailing comment is left alone" do
+      confirm_fix(
+        fix(
+          """
+          defmodule M do
+            def f(l), do: len(l)  # len(x) was the python spelling
+          end
+          """,
+          msg("len", 1),
+          2
+        ),
+        """
+        defmodule M do
+          def f(l), do: length(l)  # len(x) was the python spelling
+        end
+        """
+      )
+    end
+
+    # This is the one that needs the FILE masked rather than the line. A
+    # per-line edit never reaches another line, so a heredoc elsewhere was never
+    # at risk; the real exposure is a diagnostic whose line number points INTO a
+    # multi-line literal. Masked line-by-line, that line reads as ordinary code
+    # and the docstring gets rewritten — the T3.7 `FixDivRem` defect exactly.
+    test "a diagnostic pointing INTO a heredoc rewrites nothing" do
+      source = ~S|defmodule M do
+  @moduledoc """
+  Call len(x) to measure it.
+  """
+  def f(l), do: length(l)
+end
+|
+
+      confirm_fix(fix(source, msg("len", 1), 3), source)
+    end
+
+    # The control that keeps the guard honest: blinding the rewrite to literals
+    # must not blind it to ordinary code.
+    test "CONTROL: two real calls on one line are both still rewritten" do
+      confirm_fix(
+        fix(
+          """
+          defmodule M do
+            def f(a, b), do: len(a) + len(b)
+          end
+          """,
+          msg("len", 1),
+          2
+        ),
+        """
+        defmodule M do
+          def f(a, b), do: length(a) + length(b)
+        end
+        """
+      )
+    end
+  end
 end

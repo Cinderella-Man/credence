@@ -136,6 +136,69 @@ defmodule Credence.SourceMask do
   @spec self_contained?(String.t(), String.t()) :: boolean()
   def self_contained?(line, shadow), do: mask(line) == shadow
 
+  @doc """
+  Replace `pattern` with `replacement` in the **code bytes** of `line`, leaving
+  any match that falls inside a string, a charlist, a sigil or a comment alone.
+
+  `line` and `shadow` are one pair from `lines/1`. `pattern` is a binary or a
+  `Regex`; `replacement` is a plain binary (no backreferences — this exists for
+  the several rules whose replacement is a fixed call name).
+
+  `opts`: `global: false` replaces only the first code match (default `true`).
+
+  ## Why this is a separate function and not `String.replace/4`
+
+  Because `mask/1` returns a binary of exactly the same byte length with
+  newlines in place, a match found in the shadow has the *same offsets* in the
+  real line. So the search runs on the shadow, where non-code bytes cannot
+  match, and the splice runs on the line, where the original bytes are intact.
+  Doing it the obvious way instead — search and replace the raw line — is the
+  byte-scope defect this module exists to prevent, and it has been found live
+  five times (T3.7, T3.10, and `Semantic.UndefinedFunction`, whose per-line
+  replacements rewrote a same-named call inside a string literal and inside a
+  trailing comment).
+
+  The failure direction is a missed replacement, never a corrupted one.
+  """
+  @spec replace_code(String.t(), String.t(), String.t() | Regex.t(), String.t(), keyword()) ::
+          String.t()
+  def replace_code(line, shadow, pattern, replacement, opts \\ []) do
+    global? = Keyword.get(opts, :global, true)
+
+    shadow
+    |> code_matches(pattern, global?)
+    |> Enum.reverse()
+    |> Enum.reduce(line, fn {start, len}, acc ->
+      <<head::binary-size(^start), _::binary-size(^len), tail::binary>> = acc
+      head <> replacement <> tail
+    end)
+  end
+
+  defp code_matches(shadow, %Regex{} = re, global?) do
+    Regex.scan(re, shadow, return: :index, capture: :first)
+    |> Enum.map(&hd/1)
+    |> take_matches(global?)
+  end
+
+  defp code_matches(shadow, pattern, global?) when is_binary(pattern) do
+    shadow
+    |> all_binary_matches(pattern, 0, [])
+    |> Enum.reverse()
+    |> take_matches(global?)
+  end
+
+  defp all_binary_matches(_shadow, "", _from, acc), do: acc
+
+  defp all_binary_matches(shadow, pattern, from, acc) do
+    case :binary.match(shadow, pattern, scope: {from, byte_size(shadow) - from}) do
+      :nomatch -> acc
+      {start, len} -> all_binary_matches(shadow, pattern, start + len, [{start, len} | acc])
+    end
+  end
+
+  defp take_matches(matches, true), do: matches
+  defp take_matches(matches, false), do: Enum.take(matches, 1)
+
   defp scan(<<>>, _stack, _prev, _bol, acc), do: acc
 
   defp scan(bin, [{:str, _, _, _} | _] = stack, prev, bol, acc),
