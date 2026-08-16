@@ -134,4 +134,61 @@ defmodule Credence.RuleSelfRepairTest do
       assert applied == []
     end
   end
+
+  # ── The same question for the Semantic round ───────────────────────────
+  #
+  # A Semantic rule reaches its `fix/2` only if the compiler really emits a
+  # diagnostic its `match?/1` accepts AND no earlier rule claims that diagnostic
+  # first (`Enum.find` — first match wins). `PipelineWitness` proves the
+  # reporting half of that end-to-end. This is the fixing half.
+  #
+  # Result the day it was written: **89 of 89**, no ledger. Recorded because the
+  # first attempt said 16 rules were broken, and it was the probe that was wrong
+  # — it tried each rule's SHORTEST fixture, and for those 16 the shortest is a
+  # decline case (`should_report?/2` says no, or the fix is deliberately a
+  # no-op). A rule needs one fixture it repairs, not every fixture.
+  describe "the Semantic round repairs what it reports" do
+    test "every Semantic rule fixes at least one of its own fixtures" do
+      rules = Credence.Semantic.default_rules()
+
+      unfixed =
+        for rule <- rules,
+            not Enum.any?(Credence.PipelineWitness.candidates(rule), fn candidate ->
+              is_binary(candidate) and repaired_by?(rule, candidate)
+            end),
+            do: rule
+
+      assert length(rules) >= 89,
+             "only #{length(rules)} Semantic rules discovered; discovery has regressed"
+
+      assert unfixed == [],
+             """
+             These Semantic rules never repair any fixture in their own test
+             files through `Credence.Semantic.fix_with_trace/1`:
+
+             #{Enum.map_join(unfixed, "\n  ", &inspect/1)}
+
+             Check whether the rule is reached at all before touching its fix:
+             an earlier rule claiming the same diagnostic at the dispatch slot
+             looks identical from here, and `dispatch_contention_test.exs` is
+             where that shows up.
+             """
+    end
+
+    defp repaired_by?(rule, source) do
+      {_code, applied} = Credence.Semantic.fix_with_trace(source)
+      match?({^rule, count} when is_integer(count), List.keyfind(applied, rule, 0))
+    rescue
+      _ -> false
+    catch
+      _, _ -> false
+    end
+
+    test "CONTROL: repaired_by?/2 is false for a rule the source does not trigger" do
+      refute repaired_by?(
+               Credence.Semantic.UnusedVariable,
+               "defmodule RsrSemClean do\n  def f(x), do: x\nend\n"
+             )
+    end
+  end
 end
