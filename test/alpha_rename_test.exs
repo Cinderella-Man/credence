@@ -21,7 +21,14 @@ defmodule Credence.AlphaRenameTest do
   table — which is a real problem and a different one. Requirement 7 asks about
   names, and names are clean. The shape half is C12(c), still open.
   """
-  use ExUnit.Case, async: true
+  # NOT async. The controls call fabricated rule modules defined at the bottom of
+  # this file, and the suite contains tests that compile source through
+  # `Code.compile_string/2` and purge what it defines. Run concurrently with
+  # those, these modules get purged mid-test and `check/2` raises
+  # `UndefinedFunctionError` — which `fires?/2` rescues to `false`, so the
+  # control silently reports "no offenders" instead of failing loudly. Same
+  # reason `dispatch_contention_test.exs` is not async.
+  use ExUnit.Case, async: false
 
   alias Credence.AlphaRename
 
@@ -31,6 +38,9 @@ defmodule Credence.AlphaRenameTest do
   @ledger []
 
   describe "no Pattern rule is keyed to variable names" do
+    # ~4 s alone; the default 60 s cap is not enough under a loaded parallel
+    # run, where it reparses and reprints every fixture of all 157 rules.
+    @tag timeout: 600_000
     test "the ledger only grows by argument" do
       offenders = AlphaRename.offenders() |> Enum.map(&elem(&1, 0))
 
@@ -94,22 +104,25 @@ defmodule Credence.AlphaRenameTest do
   end
 
   describe "the machinery is provable with the ledger empty" do
-    defp scan(rules), do: AlphaRename.offenders(rules, fn _ -> [AlphaProbe.fixture()] end)
+    @probe_fixture "Enum.map(items, fn item -> item * 2 end)\n"
+
+    defp scan(rules), do: AlphaRename.offenders(rules, fn _ -> [@probe_fixture] end)
 
     test "a rule keyed to a variable NAME is caught" do
-      assert [{AlphaProbe.NameKeyed, [_]}] = scan([AlphaProbe.NameKeyed])
+      assert [{Credence.AlphaRenameProbe.NameKeyed, [_]}] =
+               scan([Credence.AlphaRenameProbe.NameKeyed])
     end
 
     test "a rule keyed to the CONSTRUCT is not" do
-      assert scan([AlphaProbe.ConstructKeyed]) == []
+      assert scan([Credence.AlphaRenameProbe.ConstructKeyed]) == []
     end
 
     test "a rule that never fires at all is not reported as name-keyed" do
-      assert scan([AlphaProbe.Silent]) == []
+      assert scan([Credence.AlphaRenameProbe.Silent]) == []
     end
 
     test "a raising rule is skipped rather than counted" do
-      assert scan([AlphaProbe.Raiser]) == []
+      assert scan([Credence.AlphaRenameProbe.Raiser]) == []
     end
   end
 end
@@ -117,11 +130,11 @@ end
 # Fabricated rules for the controls — deliberately not `use
 # Credence.Pattern.Rule`, so `discover_rules/1` can never pick them up. The
 # scanner only ever calls `check/2`.
-defmodule AlphaProbe do
+defmodule Credence.AlphaRenameProbe do
   def fixture, do: "Enum.map(items, fn item -> item * 2 end)\n"
 end
 
-defmodule AlphaProbe.NameKeyed do
+defmodule Credence.AlphaRenameProbe.NameKeyed do
   # Keys on the variable being called `items` — survives its own fixture, dies
   # on any real code that calls it anything else.
   def check(ast, _opts) do
@@ -135,7 +148,7 @@ defmodule AlphaProbe.NameKeyed do
   end
 end
 
-defmodule AlphaProbe.ConstructKeyed do
+defmodule Credence.AlphaRenameProbe.ConstructKeyed do
   # Keys on `Enum.map/2` — indifferent to what the arguments are called.
   def check(ast, _opts) do
     {_ast, found} =
@@ -148,10 +161,10 @@ defmodule AlphaProbe.ConstructKeyed do
   end
 end
 
-defmodule AlphaProbe.Silent do
+defmodule Credence.AlphaRenameProbe.Silent do
   def check(_ast, _opts), do: []
 end
 
-defmodule AlphaProbe.Raiser do
+defmodule Credence.AlphaRenameProbe.Raiser do
   def check(_ast, _opts), do: raise("probe")
 end

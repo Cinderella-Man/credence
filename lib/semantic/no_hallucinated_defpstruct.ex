@@ -1,9 +1,11 @@
 defmodule Credence.Semantic.NoHallucinatedDefpstruct do
   @moduledoc """
-  Fixes compile errors caused by the LLM-hallucinated `defpstruct` /
-  `defpstructp` macros. Elixir has no private struct — a struct belongs to its
-  module and is always public — so both spellings are inventions, and both
-  arrive as an ordinary "there is no such import" error.
+  Fixes compile errors caused by the hallucinated `defpstruct`/`defpstructp`
+  macros.
+
+  Elixir has no private struct — a struct belongs to its module and is always
+  public — so both spellings are inventions, and both arrive as an ordinary
+  "there is no such import" error.
 
   Two shapes occur, and they need different repairs.
 

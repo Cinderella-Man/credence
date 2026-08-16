@@ -49,7 +49,9 @@ defmodule Credence.RuleScaffold do
     ~S"""
     defmodule __RULE_MODULE__ do
       @moduledoc __TQ__
-      TODO: describe the anti-pattern this rule detects and fixes.
+      TODO: one sentence saying what this rule detects and fixes.
+
+      TODO: the rest of the explanation, if it needs one.
 
       ## Bad
 
@@ -165,7 +167,19 @@ defmodule Credence.RuleScaffold do
     ~S"""
     defmodule __RULE_MODULE__ do
       @moduledoc __TQ__
-      TODO: describe the unparseable syntax this rule detects and fixes.
+      TODO: one sentence saying what this rule repairs.
+
+      TODO: the rest of the explanation, if it needs one.
+
+      ## Bad (does not parse)
+
+          # TODO: the exact bytes this rule rewrites. NOT optional for a Syntax
+          # rule: `self_corruption_test.exs` runs this rule's own `fix/1` over
+          # this file, and this block is the adversarial input it needs.
+
+      ## Good
+
+          # TODO: the repaired form
       __TQ__
       use Credence.Syntax.Rule
 
@@ -256,7 +270,17 @@ defmodule Credence.RuleScaffold do
     ~S"""
     defmodule __RULE_MODULE__ do
       @moduledoc __TQ__
-      TODO: describe the compiler diagnostic this rule matches and fixes.
+      TODO: one sentence saying what this rule repairs.
+
+      TODO: quote the compiler diagnostic this rule matches, verbatim.
+
+      ## Bad (compiles with error)
+
+          # TODO: example of the flagged code
+
+      ## Good
+
+          # TODO: example of the repaired code
       __TQ__
       use Credence.Semantic.Rule
 

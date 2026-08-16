@@ -217,8 +217,31 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   `corpus_whitelist_validator` — its local snapshot is the stale 2026-07-03
   7,113-row copy vs the live 6,155-row whitelist, so the current whitelist has
   **never** been validated.
-- [ ] **D5. T5.3 — C15 rule cards + intent line** (docs/19 requirement 6, the
-  first of the three still ungated) — also the dedup signal H8 consumes.
+- [ ] **D5. C15 — backfill `## Bad`/`## Good` on Pattern and Semantic.** The
+  gate landed (`test/rule_card_test.exs`, Rule Standard requirement 6) and
+  covers the two parts that were cheap or load-bearing:
+  * **Intent line, all 289 rules.** The moduledoc must open with one sentence
+    naming the mechanism — that sentence is the dedup signal the classifier
+    reads, and a list of rule *names* teaches a generating model nothing, since
+    the next proposal arrives under a different name. Measured **274/289
+    compliant** before gating, so it is a ratchet; 14 are ledgered.
+  * **`## Bad`/`## Good` on Syntax, 40/43.** Gated there and nowhere else
+    because for a Syntax rule those examples are **test infrastructure, not
+    documentation**: `self_corruption_test.exs` runs the rule's own `fix/1` over
+    its own source, and the Bad block is the adversarial input. Delete it and
+    the oracle still passes — by having nothing to find.
+  * All three scaffolds now emit an intent line plus both blocks, verified by
+    generating one of each, so new rules are compliant by construction.
+
+  What remains is the backfill where the block is documentation rather than
+  machinery: **Pattern 120/157** and **Semantic 6/89**. Semantic is the reason
+  this is not gated yet — an 83-entry ledger is a wall, and the C13/C14 lesson
+  is that a wall teaches people to disable the gate. **Trade-off for whoever
+  picks this up:** backfilling Semantic mechanically would produce 83 accurate
+  but low-value blocks, whereas the intent line already carries the dedup
+  signal; the case for doing it is the *second* signal it gives H8, not the
+  documentation.
+
 - [ ] **D6. C12(c) — the SHAPE half of over-fitting.** The **name** half is
   done: requirement 7 is now gated by `test/alpha_rename_test.exs`, and the
   answer is **zero** — no Pattern rule is keyed to a variable name. Two findings
