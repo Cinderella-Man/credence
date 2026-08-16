@@ -8,19 +8,16 @@ defmodule Credence.Pattern.NoDocFalseOnPrivate do
 
   ## Bad
 
-      @doc false
-      defp helper(x), do: x + 1
-
-      @doc "Helper that does X"
-      defp helper(x), do: x + 1
+      defmodule Helpers do
+        @doc false
+        defp helper(x), do: x + 1
+      end
 
   ## Good
 
-      defp helper(x), do: x + 1
-
-      # If you want to hide a public function from docs:
-      @doc false
-      def internal_api(x), do: x + 1
+      defmodule Helpers do
+        defp helper(x), do: x + 1
+      end
   """
 
   use Credence.Pattern.Rule

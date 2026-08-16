@@ -8,13 +8,17 @@ defmodule Credence.Pattern.NoCaptureFnApply do
 
   ## Bad
 
-      (&Enum.at(&1, col)).(el)
-      (& &1 + &2).(a, b)
+      defmodule Grid do
+        def cell(el, col), do: (&Enum.at(&1, col)).(el)
+        def add(a, b), do: (& &1 + &2).(a, b)
+      end
 
   ## Good
 
-      Enum.at(el, col)
-      a + b
+      defmodule Grid do
+        def cell(el, col), do: Enum.at(el, col)
+        def add(a, b), do: a + b
+      end
   """
 
   use Credence.Pattern.Rule

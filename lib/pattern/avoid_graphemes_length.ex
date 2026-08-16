@@ -12,21 +12,17 @@ defmodule Credence.Pattern.AvoidGraphemesLength do
 
   ## Bad
 
-      # In a pipeline
-      string
-      |> String.graphemes()
-      |> length()
-
-      # As a direct call
-      length(String.graphemes(string))
+      defmodule Counter do
+        def size(string), do: string |> String.graphemes() |> length()
+        def direct(string), do: length(String.graphemes(string))
+      end
 
   ## Good
 
-      String.length(string)
-
-      # Or in a pipeline:
-      string
-      |> String.length()
+      defmodule Counter do
+        def size(string), do: String.length(string)
+        def direct(string), do: String.length(string)
+      end
   """
 
   use Credence.Pattern.Rule

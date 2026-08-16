@@ -6,22 +6,26 @@ defmodule Credence.Pattern.PreferFunctionClausesForListPatterns do
 
   ## Bad
 
-      def my_fun([], _k), do: 0
-      def my_fun(list, k) when is_list(list) and is_integer(k) and k >= 0 do
-        case list do
-          [] -> 0
-          [_single] -> 0
-          [h | t] ->
-            # ... complex body
+      defmodule Tally do
+        def my_fun([], _k), do: 0
+
+        def my_fun(list, k) when is_list(list) and is_integer(k) and k >= 0 do
+          case list do
+            [] -> 0
+            [_single] -> 0
+            [h | t] -> h + length(t) + k
+          end
         end
       end
 
   ## Good
 
-      def my_fun([], _k), do: 0
-      def my_fun([_single], k) when is_integer(k) and k >= 0, do: 0
-      def my_fun([h | t], k) when is_integer(k) and k >= 0 do
-        # ... complex body (without wrapping case)
+      defmodule Tally do
+        def my_fun([], _k), do: 0
+
+        def my_fun([_single], k) when is_integer(k) and k >= 0, do: 0
+
+        def my_fun([h | t], k) when is_integer(k) and k >= 0, do: h + length(t) + k
       end
 
   ## Scope — what it flags

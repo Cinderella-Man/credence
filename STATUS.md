@@ -167,6 +167,13 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   (`mix cev.report`), H16 (`solve.ex:38` deps one-liner), H17, H18.
 ## D. Credence rule work (independent of the merge)
 
+- [x] **D13. Every Pattern rule's own anti-pattern is now repaired end-to-end**
+  (`test/rule_self_repair_test.exs`, 153 direct + 3 ledgered cascades). Not on
+  the original list. Recorded because the *method* generalises: reporting and
+  fixing were each gated, and nothing checked that the two met. Six rules passed
+  both and repaired nothing through the pipeline.
+
+
 - [x] **D12. The Pattern round no longer skips files that do not compile.** Not
   on the original list — found while backfilling D5, when six rules' own test
   fixtures turned out to get zero repair from `Credence.fix/1` despite their

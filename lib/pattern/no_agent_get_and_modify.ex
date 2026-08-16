@@ -8,17 +8,23 @@ defmodule Credence.Pattern.NoAgentGetAndModify do
 
   ## Bad
 
-      Agent.get_and_modify(__MODULE__, fn state ->
-        new_state = %{state | count: state.count + 1}
-        {state.count, new_state}
-      end)
+      defmodule Counter do
+        def bump(agent) do
+          Agent.get_and_modify(agent, fn state ->
+            {state.count, %{state | count: state.count + 1}}
+          end)
+        end
+      end
 
   ## Good
 
-      Agent.get_and_update(__MODULE__, fn state ->
-        new_state = %{state | count: state.count + 1}
-        {state.count, new_state}
-      end)
+      defmodule Counter do
+        def bump(agent) do
+          Agent.get_and_update(agent, fn state ->
+            {state.count, %{state | count: state.count + 1}}
+          end)
+        end
+      end
   """
 
   use Credence.Pattern.Rule

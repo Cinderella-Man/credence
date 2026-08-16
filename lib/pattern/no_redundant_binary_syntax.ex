@@ -10,13 +10,17 @@ defmodule Credence.Pattern.NoRedundantBinarySyntax do
 
   ## Bad
 
-      <<"hello">>
-      [<<"b">>, <<"a">>, <<"n">>]
+      defmodule Greeting do
+        def hello, do: <<"hello">>
+        def letters, do: [<<"b">>, <<"a">>, <<"n">>]
+      end
 
   ## Good
 
-      "hello"
-      ["b", "a", "n"]
+      defmodule Greeting do
+        def hello, do: "hello"
+        def letters, do: ["b", "a", "n"]
+      end
 
   ## What is flagged
 
