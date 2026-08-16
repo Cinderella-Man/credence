@@ -943,4 +943,63 @@ defmodule Credence.Semantic.UndefinedFunction.QualifiedFixTest do
       )
     end
   end
+
+  # ── Call-boundary anchoring (docs/16 4.6d) ──────────────────────────
+  #
+  # These replacements were plain substring searches, and a function name is a
+  # prefix of longer real names. `Base.hex_encode` is a prefix of
+  # `Base.hex_encode32` — which the compiler lists in that very diagnostic's
+  # did-you-mean block — so repairing one broken call produced two. docs/16
+  # deferred the Agent / NaiveDateTime / List.keystore / exit rows on this
+  # anchoring rather than on anything about the rows.
+
+  describe "a replacement stops at the call boundary" do
+    # NON-VACUOUS by construction, and it took two attempts to get there.
+    # `List.pop` IS a table row (-> `List.last`) and `List.pop_at/2` is a REAL
+    # function, so both sit on one line and only the broken one may be rewritten.
+    #
+    # Attempt 1 used `Base.hex_encode`, which has no table row — the fix was a
+    # no-op with or without the anchor, so the test passed while proving
+    # nothing. Attempt 2 put the broken call FIRST, and the replacement is
+    # `global: false`: it matched the right call before ever reaching the longer
+    # one, so it passed too. The longer name has to come first for the anchor to
+    # be what decides. Reverting the anchor reddens this.
+    test "the broken call is repaired and a longer real call beside it is not" do
+      source = """
+      defmodule AnchorPrefix do
+        def f(a, b), do: {List.pop_at(b, 0), List.pop(a)}
+      end
+      """
+
+      expected = """
+      defmodule AnchorPrefix do
+        def f(a, b), do: {List.pop_at(b, 0), List.last(a)}
+      end
+      """
+
+      diagnostic = %{
+        severity: :error,
+        message: "List.pop/1 is undefined or private",
+        position: {2, 1}
+      }
+
+      confirm_fix(UndefinedFunction.fix(source, diagnostic), expected)
+    end
+
+    test "a line holding ONLY the longer real call is untouched" do
+      source = """
+      defmodule AnchorLongerOnly do
+        def f(b), do: List.pop_at(b, 0)
+      end
+      """
+
+      diagnostic = %{
+        severity: :error,
+        message: "List.pop/1 is undefined or private",
+        position: {2, 1}
+      }
+
+      confirm_fix(UndefinedFunction.fix(source, diagnostic), source)
+    end
+  end
 end

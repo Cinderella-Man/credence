@@ -374,12 +374,33 @@ defmodule Credence.Semantic.UndefinedFunction do
   end
 
   defp replace_first_on_line(source, line_no, old, new) do
-    edit_line(source, line_no, &SourceMask.replace_code(&1, &2, old, new, global: false))
+    edit_line(
+      source,
+      line_no,
+      &SourceMask.replace_code(&1, &2, call_boundary(old), new, global: false)
+    )
   end
 
   defp replace_all_on_line(source, line_no, old, new) do
-    edit_line(source, line_no, &SourceMask.replace_code(&1, &2, old, new))
+    edit_line(source, line_no, &SourceMask.replace_code(&1, &2, call_boundary(old), new))
   end
+
+  # CALL-BOUNDARY ANCHORING (docs/16 4.6d).
+  #
+  # These replacements used to be plain substring searches, and a function name
+  # is a prefix of longer real names. `Base.hex_encode` is a prefix of
+  # `Base.hex_encode32` — which the compiler lists in that very diagnostic's
+  # did-you-mean block — so repairing one broken call produced two. The same
+  # trap waits for `Agent`, `NaiveDateTime`, `List.keystore` and `exit`, which
+  # is why docs/16 deferred those rows on this anchoring rather than on the
+  # rows themselves.
+  #
+  # The anchor is one-sided on purpose: the leading side is already bounded by
+  # the module prefix or by `replace_call_on_line/4`'s own lookbehind, and what
+  # is missing is the TRAILING side — the match must not be followed by another
+  # name character. `Foo.bar(` and `Foo.bar()` both qualify; `Foo.barbaz` does
+  # not.
+  defp call_boundary(old), do: Regex.compile!(Regex.escape(old) <> "(?![A-Za-z0-9_])")
 
   defp replace_literal(source, line_no, mod, fun, text) do
     call_with_parens = "#{mod}.#{fun}()"

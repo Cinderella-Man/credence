@@ -212,11 +212,24 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   before and after finds a different line. Searching the whole output for the
   intact comment settles it.
 
-- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**- [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
-  `List.keystore`, `exit/2` into `UndefinedFunction`'s tables; blocked on
-  call-boundary anchoring; `exit/2` also needs the arity check
-  `replace_call_on_line/4` doesn't do. Salvage sources survive in the sister
-  tree (never deleted by its 4.6c purge).
+- [ ] **D2. The 4.6d rows are UNBLOCKED — add them.** docs/16 deferred `Agent`,
+  `NaiveDateTime`, `List.keystore` and `exit/2` on "call-boundary anchoring",
+  not on anything about the rows themselves. **That anchoring now exists**: the
+  replacements were plain substring searches, so a table name that is a prefix
+  of a longer real name rewrote inside it — `Base.hex_encode` inside
+  `Base.hex_encode32`, the very name the compiler suggests in that diagnostic's
+  did-you-mean block. Every replacement now carries a trailing
+  `(?![A-Za-z0-9_])` boundary, pinned by a test that repairs `List.pop` while
+  leaving a real `List.pop_at` on the same line intact.
+
+  What remains is the rows: four `@qualified_replacements` entries plus tests.
+  `exit/2` additionally needs the **arity check** `replace_call_on_line/4` still
+  does not do — the table is keyed `{module, fun, arity}` but the line-level
+  replacement matches the name regardless of how many arguments the call has,
+  so an `exit/1` on the same line would be rewritten by an `exit/2` row.
+  `Base.hex_encode` is also now safe to add and should be widened to
+  `hex_encode64`/`hex_encode32` per escalation-ledger row 119.
+
 - [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
 
   **Measured, and it kills the item's stated action.** T5.2 said to narrow,
