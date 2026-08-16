@@ -212,21 +212,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   before and after finds a different line. Searching the whole output for the
   intact comment settles it.
 
-- [ ] **D2. One 4.6d item left, and it is misfiled.** Every deferred row that
-  was genuinely a row has landed: **`exit/2`** (with its arity check),
-  **`Base.hex_encode/1,2`** and **`hex_encode64/1,2`**, and
-  **`List.keystore/3`** (which needed a new `:insert_arg` table verb, because
-  the missing POSITION argument belongs second and every existing verb either
-  renames or appends — appending would have compiled and meant something else).
-  `NaiveDateTime` had already shipped (ledger row 458).
-
-  Left: **`Agent.update` returning `{:ok, state}`**. docs/16 filed it as a
-  `@qualified_replacements` row and it cannot be one — it is a runtime
-  `BadMapError`, not a compiler diagnostic, so `UndefinedFunction` never sees
-  it. It belongs in **Pattern**; the sister tree's
-  `no_agent_update_tuple_wrapper.ex` is the source material and docs/18
-  dispositioned it *salvage-small-fix*.
-
 - [ ] **D4. C13(b) — one decision for you, and two small jobs that are not.**
 
   **Measured, and it kills the item's stated action.** T5.2 said to narrow,

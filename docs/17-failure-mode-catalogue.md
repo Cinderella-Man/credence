@@ -398,6 +398,51 @@ Not part of the 140, and never in the drain. Both were extracted from the archiv
 **The restructuring machinery already exists and is already narrow.** `lib/semantic/no_bare_return_in_unless.ex` performs exactly this transform — `restructure_early_exit/1` (line 104), `swap_arms/2` (line 134), `block_of/1` (line 159) — including the `unless` arm-swap. Its guard predicate `early_exit_guard?/1` (line 120) requires the do-branch to be *literally* `{:return, _, [value]}`, which is why it does not over-fire on raising guards; the rebuilt rule is that predicate with the `return(V)` requirement replaced by "the body's last expression is a value", and it must be regression-tested against a raising guard. The two rules cannot collide: `NoBareReturnInUnless` is semantic and gated on `undefined function return/`, so its population does not compile, while this one's does.
 
 
+
+---
+
+### 28. `Agent.update` callback returning `{:ok, state}` — a real bug that no rule may fix
+
+**Source.** docs/16 4.6d listed this as a `@qualified_replacements` row; the
+sister tree carries `no_agent_update_tuple_wrapper.ex`. It was ported to Pattern
+on 2026-08-16, tested green, and then **deleted before shipping**. The reason is
+worth more than the rule.
+
+**The failure mode is real.** `Agent.update/2` expects the callback to return the
+**bare** new state. An LLM carrying over a Python `try/except` → `(ok, value)`
+habit, or an Elixir `{:ok, _}` reflex from `handle_call/3`, returns a tuple, and
+the Agent stores the tuple *as* the state. Nothing raises at the call site; the
+next reader gets `{:ok, state}` where the module expects `state`, and the failure
+surfaces somewhere else as a `BadMapError` or a `FunctionClauseError`.
+
+**It is also not a compiler diagnostic**, so it can never be a Semantic rule —
+docs/16 filed it by the repair it wanted rather than by the evidence it keys on,
+which is the G1/G2 class from §2. Only an AST rule can see it.
+
+**And it must not be an AST rule either.** The equivalence policy in
+`test/support/behaviour_equivalence.ex` draws the line exactly here: *a rule
+whose "before" returns a valid (even if undesired) value on some input is NOT a
+repair — it is a behaviour change and must be narrowed, gated, or dropped.* The
+wrapped form returns a valid value on **every** input. Executed:
+
+    Agent.update(pid, fn state -> {:ok, Map.put(state, :k, 1)} end)
+    Agent.get(pid, fn {:ok, s} -> Map.get(s, :k) end)   #=> 1, works today
+
+    # after the "fix", the same reader crashes the Agent
+
+So the rewrite silently breaks working code whenever the author wrote a reader
+that matches the tuple — which is precisely what someone who meant the tuple
+would have written. There is no narrowing available (the tuple is
+indistinguishable from a state that IS a tuple), and no safety switch fits: a
+switch is a promise about *data*, and no promise about data makes `{:ok, s}` the
+wrong state.
+
+**What a tool can honestly do here is report, not rewrite** — and this project
+does not ship find-only rules. So the mode is catalogued and the rule is not
+built. If it is ever revisited, the only sound trigger is whole-module evidence
+that the state is read as a non-tuple, which is a different kind of analysis
+from anything in the tree today.
+
 ---
 
 ## Drop rationales carried over from the sister tree
