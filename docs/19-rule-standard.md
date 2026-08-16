@@ -38,7 +38,7 @@ are enforced by a meta-test today; the rest are the catch-up work in §2.
 | 3 | **No parser calls in rule tests** — everything routes through `Credence.RuleCase` | *gated* (`no_parser_calls_in_rule_tests_test`) |
 | 4 | **Equivalence dimensions mapped to the rule's operation class** — a rule that rewrites `Keyword.get/2` must be tested against `keyword_lists`, not only `term_lists` | *gated* 2026-07-28 (`equivalence_dimension_meta_test`, C2.2) — §2 row A |
 | 5 | **DSL-safety classified** — `unsafe_in_dsl/0` declared deliberately, even if the answer is `[]` | *gated* 2026-07-28 (`dsl_static_scan_test`, C14) — §2 row B |
-| 6 | **Message and moduledoc follow the template** | **not gated** (C15) |
+| 6 | **Message and moduledoc follow the template** | *partly gated* 2026-08-16 (`rule_card_test`, C15) — the **intent line** is gated for all 289 rules (274 complied, 14 ledgered) and **`## Bad`/`## Good` for Syntax**, where those examples are what makes the self-corruption oracle adversarial. The Pattern (120/157) and Semantic (6/89) example backfill is **not** gated — an 83-entry ledger is a wall, not a ratchet |
 | 7 | **Alpha-rename generality** — the rule fires on the construct, not on a variable name | *gated* 2026-08-16 (`alpha_rename_test`, C12(a)) — measured **0 offenders**; C12(c), over-fitting by *shape*, is separate and still open |
 | 8 | **Within the accepted-corpus-findings budget** | *gated* 2026-07-28 (`findings_budget_test`, C13) — §2 row C |
 | 9 | **Semantic-mutant kill rate above the floor** | **not measured** (C18) — report-only first |
@@ -49,7 +49,7 @@ Items 1–3 are why the suite is 8,261 tests.
 on 2026-07-28, then 7 by C12(a) on 2026-08-16 — each with its positive controls
 seen red on purpose. That is what §3 said had to happen first: the gates go in
 before the retrofit sweep, so the sweep runs behind a ratchet instead of racing
-one. **Items 6 and 9 remain open.**
+one. **Item 9 remains open, and item 6 is half-open** — see its row.
 
 Requirement 7 is the one that cost nothing to satisfy: the gate measured **zero**
 offenders across all Pattern rules, so it was a ratchet from the day it landed
