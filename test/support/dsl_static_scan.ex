@@ -93,6 +93,20 @@ defmodule Credence.DslStaticScan do
   Only code reachable from `fix_patches/2` is scanned — transitively through local
   calls and through the module attributes that code references. A rule's `check/2`
   may mention any construct it likes; the gate is about what the rewrite does.
+  ## What was deleted when the ledger emptied, and what was not
+
+  docs/19 §3 says the sweep tooling goes once the C14 ledger is paid down. That
+  happened on 2026-08-16, and the *paydown-ordering* machinery went with it:
+  `shortlist/1` (rank the unclassified by signal strength), its `rank/1`, and the
+  `pin/1` renderer — all three existed only to decide which of the 40 to read
+  first, and there is no next one.
+
+  `scan/2`, `tally/1` and `verified_dsl_safe_names/1` deliberately stay. They are
+  not sweep tooling; they are what `dsl_static_scan_test.exs` runs on every suite
+  pass to keep requirement 5 true for rules nobody has written yet. Deleting them
+  would retire the gate along with the debt, and an empty ledger is the moment a
+  ratchet is most worth keeping, not least.
+
   """
 
   @typedoc "One rule's static classification."
@@ -209,48 +223,6 @@ defmodule Credence.DslStaticScan do
   @doc "Counts per bucket, for a one-line summary."
   @spec tally([entry()]) :: %{atom() => non_neg_integer()}
   def tally(entries), do: entries |> Enum.map(& &1.bucket) |> Enum.frequencies()
-
-  @doc """
-  The rules the scan says are most likely genuinely unsafe *and* were never
-  classified: bucket `:possibly_unsafe`, ranked by signal strength (a fix that
-  **builds** a reinterpreted construct outranks one that only destructures it),
-  then by how many constructs it touches, then by name.
-  """
-  @spec shortlist([entry()]) :: [entry()]
-  def shortlist(entries) do
-    entries
-    |> Enum.filter(&(&1.bucket == :possibly_unsafe))
-    |> Enum.sort_by(fn e -> {-rank(e), -length(e.constructs), e.name} end)
-  end
-
-  @doc "Signal-strength rank of an entry: 3 build · 2 build_str · 1 match · 0 atom_ref only."
-  @spec rank(entry()) :: 0..3
-  def rank(e) do
-    cond do
-      :build in e.signals -> 3
-      :build_str in e.signals -> 2
-      :match in e.signals -> 1
-      true -> 0
-    end
-  end
-
-  @doc """
-  A stable, diffable one-line-per-rule rendering — the form the gate pins.
-
-      no_manual_max declared build=if,max match=if open:1
-  """
-  @spec pin([entry()]) :: [String.t()]
-  def pin(entries) do
-    Enum.map(entries, fn e ->
-      "#{e.name} #{e.bucket} build=#{fmt(e.builds)} match=#{fmt(e.matches)} #{anchor_tag(e)}"
-    end)
-  end
-
-  defp fmt([]), do: "-"
-  defp fmt(list), do: list |> Enum.sort() |> Enum.map_join(",", &Atom.to_string/1)
-
-  defp anchor_tag(%{anchored: true}), do: "anchored"
-  defp anchor_tag(%{unanchored_clauses: n}), do: "open:#{n}"
 
   # --- per-file ---------------------------------------------------------------
 

@@ -144,7 +144,7 @@ were frozen in its `@unclassified` ledger, and `mix credence.gen.rule` now emits
 deliberate `unsafe_in_dsl/0` so a newly generated rule is classified by
 construction. **Requirement 5 of §1 is now gated.** The remaining work is the
 sweep over those 40, which now runs behind a ratchet instead of racing one — the
-ledger only shrinks. The sweep tool gets deleted afterwards (§3).
+ledger only shrinks. The sweep tool gets deleted afterwards (§3) — **done 2026-08-16**: the paydown-ordering machinery (`shortlist/1`, `rank/1`, `pin/1`) is gone, while `scan/2`/`tally/1`/`verified_dsl_safe_names/1` stay, because those are the gate itself rather than the sweep. An empty ledger is when a ratchet is most worth keeping.
 
 ### Row C — corpus-findings debt: **6,366 accepted findings across 87 rules**
 
