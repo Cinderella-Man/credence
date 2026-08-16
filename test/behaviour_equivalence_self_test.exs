@@ -145,4 +145,69 @@ defmodule Credence.BehaviourEquivalenceSelfTest do
                )
     end
   end
+
+  # ── Stacktrace normalisation (docs/22 T3.4c, ledger H-C) ─────────────
+  #
+  # Outcomes are compared with strict `===`, so a term carrying a stacktrace is
+  # uncomparable to itself: the before and after are different code, so the
+  # frames differ by line and often by function. Row 33 was marked DIVERGES for
+  # the one thing that could never have matched.
+
+  describe "normalize_traces/1" do
+    @frames [
+      {Foo, :bar, 1, [file: ~c"a.ex", line: 3]},
+      {Baz, :qux, 2, [file: ~c"b.ex", line: 9]}
+    ]
+
+    test "a bare stacktrace collapses" do
+      assert Credence.BehaviourEquivalence.normalize_traces(@frames) == :__stacktrace__
+    end
+
+    # A trace arrives unlabelled inside an exit reason as often as anywhere
+    # nameable, which is why the check is shape-based rather than key-based.
+    test "a stacktrace nested in an exit reason collapses" do
+      assert Credence.BehaviourEquivalence.normalize_traces({:badarg, @frames}) ==
+               {:badarg, :__stacktrace__}
+    end
+
+    test "and one nested in a map" do
+      assert Credence.BehaviourEquivalence.normalize_traces(%{err: {:x, @frames}}) ==
+               %{err: {:x, :__stacktrace__}}
+    end
+
+    # The controls. A shape-based check is exactly the kind that over-matches,
+    # and collapsing real data into `:__stacktrace__` would make two genuinely
+    # different results compare equal — a false EQUIVALENT, which is worse than
+    # the false DIVERGES this fixes.
+    test "CONTROL: ordinary lists and keyword lists are untouched" do
+      assert Credence.BehaviourEquivalence.normalize_traces([1, 2, 3]) == [1, 2, 3]
+      assert Credence.BehaviourEquivalence.normalize_traces(a: 1, b: 2) == [a: 1, b: 2]
+    end
+
+    test "CONTROL: a list of ordinary 4-tuples is not a stacktrace" do
+      assert Credence.BehaviourEquivalence.normalize_traces([{1, 2, 3, 4}]) == [{1, 2, 3, 4}]
+    end
+
+    test "CONTROL: a struct is left alone" do
+      assert Credence.BehaviourEquivalence.normalize_traces(~D[2024-01-01]) == ~D[2024-01-01]
+    end
+
+    # THE WIRING, not just the function. The unit tests above call
+    # `normalize_traces/1` directly and stay green even with it unwired from
+    # `run_outcome/2` — which is the shape of a control that proves nothing.
+    # These go through `eval_outcome/1`, the path the comparison actually uses.
+    test "a returned stacktrace is normalised THROUGH eval_outcome" do
+      assert Credence.BehaviourEquivalence.eval_outcome(fn -> {:trace, @frames} end) ==
+               {:ok, {:trace, :__stacktrace__}}
+    end
+
+    test "and one inside an exit reason is too" do
+      assert Credence.BehaviourEquivalence.eval_outcome(fn -> exit({:boom, @frames}) end) ==
+               {:exit, {:boom, :__stacktrace__}}
+    end
+
+    test "CONTROL: an empty list is not a stacktrace" do
+      assert Credence.BehaviourEquivalence.normalize_traces([]) == []
+    end
+  end
 end

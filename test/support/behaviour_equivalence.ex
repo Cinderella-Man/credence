@@ -232,16 +232,64 @@ defmodule Credence.BehaviourEquivalence do
   end
 
   defp run_outcome(thunk, compare_messages?) do
-    {:ok, thunk.()}
+    {:ok, normalize_traces(thunk.())}
   rescue
     e ->
       if compare_messages?,
         do: {:raise, e.__struct__, Exception.message(e)},
         else: {:raise, e.__struct__}
   catch
-    :throw, t -> {:throw, t}
-    :exit, t -> {:exit, t}
+    :throw, t -> {:throw, normalize_traces(t)}
+    :exit, t -> {:exit, normalize_traces(t)}
   end
+
+  # ── Stacktrace normalisation (docs/22 T3.4c) ──────────────────────────
+  #
+  # Outcomes are compared with strict `===`, so any term carrying a stacktrace
+  # is uncomparable to itself: the frames differ between the two runs by line
+  # number, and often by function, because the before and after are literally
+  # different code. Escalation-ledger H-C — row 33 died on a 7-frame trace,
+  # having been marked DIVERGES for the one thing that could never have matched.
+  #
+  # A stacktrace is a list of `{module, function, arity_or_args, location}`
+  # 4-tuples. Any such list is collapsed to the atom `:__stacktrace__`, so two
+  # runs agree on "there was a trace here" without agreeing on its frames.
+  # Deliberately shape-based rather than key-based: a trace arrives unlabelled
+  # inside an exit reason (`{reason, stacktrace}`) as often as it does anywhere
+  # nameable.
+  @doc false
+  @spec normalize_traces(term()) :: term()
+  def normalize_traces(term) do
+    cond do
+      stacktrace?(term) ->
+        :__stacktrace__
+
+      is_list(term) ->
+        Enum.map(term, &normalize_traces/1)
+
+      is_tuple(term) ->
+        term |> Tuple.to_list() |> Enum.map(&normalize_traces/1) |> List.to_tuple()
+
+      is_map(term) and not is_struct(term) ->
+        Map.new(term, fn {k, v} -> {k, normalize_traces(v)} end)
+
+      true ->
+        term
+    end
+  end
+
+  # Non-empty list whose every element is a stacktrace frame. The `location` is
+  # a keyword list in practice, but Erlang frames may omit it, so only the first
+  # three positions are demanded.
+  defp stacktrace?([_ | _] = list), do: Enum.all?(list, &frame?/1)
+  defp stacktrace?(_), do: false
+
+  defp frame?({mod, fun, arity_or_args, _location})
+       when is_atom(mod) and is_atom(fun) and
+              (is_integer(arity_or_args) or is_list(arity_or_args)),
+       do: true
+
+  defp frame?(_), do: false
 
   # ── internals ─────────────────────────────────────────────────────────
 

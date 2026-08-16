@@ -146,33 +146,6 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   the bare `:no_lib_change` reject is now `gate.ex:128` + `check_touches` at
   `gate.ex:198-202`, tree discarded at `:148-151`. Take T2.2's H8 as merge
   base. Its own `probe.exs` is the first executable check.
-- [ ] **C2. T3.4(c) — stacktrace normalisation** is all that is left of the
-  equivalence-probe work. **(a) and (b) landed.**
-  * **(a) battery structs + MapSet.** `@all_dims` had no struct and no MapSet,
-    so ten `behaviour_diverged` rows sat at `before_raised 44/44, after_ok
-    0/44` — the repairs were fine, and a **missing input type read exactly like
-    a broken fix**, because `repair?/1` needs the AFTER to succeed at least
-    once. Added `structs` (`~D`/`~N`/`~U`/`~T` and a real `%Task{}` with a live
-    ref, not a hand-built map) and `mapsets`.
-  * **(b) tolerant `repair?/1`.** It demanded the before raise on *every*
-    input, which killed row 185 over the one input that short-circuits the
-    hallucinated call away (`Enum.all?([], &DateTime.valid?/1)` is `true`
-    without calling it). Now per-input: raised, *or* the two already agree.
-    Measured on that shape: DIVERGES → **REPAIR 92/98**.
-
-  Row 105 is pinned as the mandatory control on both, and stays DIVERGES:
-  `File.stream!/1` exists, `File.stream/1` does not, so the AFTER raises on
-  every input and the `after succeeded on ≥1` clause keeps a broken repair
-  broken. A second control pins that a plain wrong answer (`count` vs
-  `count + 1`) is still DIVERGES, since tolerance must not admit a real
-  behaviour change.
-
-  **(c)** remains: `classify/5` compares with strict `===`, so any outcome
-  carrying a stacktrace is uncomparable and row 33 dies on a 7-frame trace.
-  Needs normalisation in `behaviour_equivalence.ex`'s `run_outcome`/
-  `eval_outcome`. **T5.5 (C2.3 StreamData) is unblocked once (c) lands** — it
-  was waiting on this item and on T3.5, which shipped weeks ago.
-
 - [ ] **C3a. H19's third half — a pre-commit stability re-run.** T4.7's flake
   triage **landed** (harness `5e9807f`): a red corpus-free suite now re-runs its
   failing files once, and forgives them only if they pass *and* none is in the
