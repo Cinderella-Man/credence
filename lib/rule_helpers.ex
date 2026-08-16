@@ -1053,6 +1053,49 @@ defmodule Credence.RuleHelpers do
   end
 
   @doc """
+  Does this expression provably evaluate to a boolean?
+
+  Conservative on purpose: `true` only for shapes whose result is a boolean for
+  every input — comparison and strict-equality operators, `and`/`or` over two
+  boolean operands, `not`, `is_nil/1`, `match?/2`, and the boolean-returning
+  `Enum` predicates (`all?`, `any?`, `empty?`) in both call and piped form.
+  Anything else, including a bare variable or a user function, is `false`.
+
+  A rule uses this before rewriting an `if` whose branches are `true`/`false`
+  into its own condition: the rewrite is only equivalent when the condition
+  already *is* a boolean, since `if` treats every non-`nil`/`false` value as
+  truthy and would otherwise turn, say, `0` or `""` into `true`.
+
+  Extracted from `NoIfTrueFalse` and `PreferNegateIfTrueFalse`, which carried
+  byte-identical 69-line private copies (docs/12 C11). Their sibling predicate
+  `boolean_expr?/1` was copied the same way and has since **drifted** — the
+  original grew a clause for a nested `if`, the copy did not, while a comment
+  in the copy still claimed the two mirror each other.
+  """
+  @spec boolean_condition?(Macro.t()) :: boolean()
+  def boolean_condition?({:__block__, _, [expr]}), do: boolean_condition?(expr)
+
+  def boolean_condition?({op, _, [_, _]})
+      when op in [:==, :!=, :<, :>, :<=, :>=, :===, :!==, :match?],
+      do: true
+
+  def boolean_condition?({op, _, [left, right]}) when op in [:and, :or],
+    do: boolean_condition?(left) and boolean_condition?(right)
+
+  def boolean_condition?({:not, _, [inner]}), do: boolean_condition?(inner)
+  def boolean_condition?({:is_nil, _, [_]}), do: true
+
+  def boolean_condition?({{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _})
+      when fun in [:all?, :any?, :empty?],
+      do: true
+
+  def boolean_condition?({:|>, _, [_, {{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _}]})
+      when fun in [:all?, :any?, :empty?],
+      do: true
+
+  def boolean_condition?(_), do: false
+
+  @doc """
   The comments stored on `node`'s Sourceror metadata under `key`
   (`:leading_comments` or `:trailing_comments`); `[]` for a node without them.
   """

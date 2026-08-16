@@ -64,6 +64,7 @@ defmodule Credence.Pattern.NoIfTrueFalse do
   @impl true
   def unsafe_in_dsl, do: :all
   alias Credence.Issue
+  alias Credence.RuleHelpers
 
   @impl true
   def check(ast, _opts) do
@@ -133,33 +134,12 @@ defmodule Credence.Pattern.NoIfTrueFalse do
   # `if x do expr else false end` returns `expr` while `x and expr` raises a
   # `BadBooleanError`. The branch shapes alone don't make the rewrite safe.
   defp rewritable_if?(condition, clauses),
-    do: condition_bool?(condition) and classify_if(clauses) != :other
+    do: RuleHelpers.boolean_condition?(condition) and classify_if(clauses) != :other
 
   # Conditions whose result is always a boolean (or which raise identically to
   # the original `if`). Comparisons, `match?`, `is_nil`, `not`, and the
   # boolean-returning `Enum` predicates always return `true`/`false`. `and`/`or`
   # only do so when BOTH operands do — `true and 5` evaluates to `5`.
-  defp condition_bool?({:__block__, _, [expr]}), do: condition_bool?(expr)
-
-  defp condition_bool?({op, _, [_, _]})
-       when op in [:==, :!=, :<, :>, :<=, :>=, :===, :!==, :match?],
-       do: true
-
-  defp condition_bool?({op, _, [left, right]}) when op in [:and, :or],
-    do: condition_bool?(left) and condition_bool?(right)
-
-  defp condition_bool?({:not, _, [inner]}), do: condition_bool?(inner)
-  defp condition_bool?({:is_nil, _, [_]}), do: true
-
-  defp condition_bool?({{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _})
-       when fun in [:all?, :any?, :empty?],
-       do: true
-
-  defp condition_bool?({:|>, _, [_, {{:., _, [{:__aliases__, _, [:Enum]}, fun]}, _, _}]})
-       when fun in [:all?, :any?, :empty?],
-       do: true
-
-  defp condition_bool?(_), do: false
 
   # Extracts the body for a given clause key (:do or :else).
   defp extract_clause(clauses, key) do
@@ -178,7 +158,7 @@ defmodule Credence.Pattern.NoIfTrueFalse do
 
   # Rewrites redundant boolean ifs to their collapsed form.
   defp maybe_rewrite({:if, _meta, [condition, clauses]} = node) when is_list(clauses) do
-    if condition_bool?(condition) do
+    if RuleHelpers.boolean_condition?(condition) do
       rewrite_if(condition, clauses, node)
     else
       node

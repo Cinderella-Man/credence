@@ -10,10 +10,27 @@ defmodule Credence.Pattern.NoEnumCountForLength do
   traversal without protocol dispatch:
 
       # Flagged — argument is provably a list
-      total = String.graphemes(text) |> Enum.count()
+      total = Map.keys(config) |> Enum.count()
 
       # Idiomatic — BIF, no protocol overhead
-      total = length(String.graphemes(text))
+      total = length(Map.keys(config))
+
+  ## The grapheme forms belong to the sibling rules, not to this one
+
+  This example used to be `String.graphemes(text) |> Enum.count()`, and that was
+  a bad thing to teach: the rewrite it shows —
+  `length(String.graphemes(text))` — still builds the whole grapheme list, which
+  is the exact allocation `AvoidGraphemesEnumCount` and `AvoidGraphemesLength`
+  exist to remove. Both of those go all the way to `String.length(text)`.
+
+  This rule still *matches* the grapheme form, so the family is convergent
+  rather than partitioned, and `test/pattern/graphemes_count_family_test.exs`
+  pins that convergence from every entry point: whichever of the three fires
+  first, the Pattern round settles on `String.length/1`. Worth knowing why that
+  holds, because today it holds for two different reasons — `AvoidGraphemes*`
+  happens to sort before `NoEnumCountForLength`, *and* the round is a cascade,
+  so even the weaker rewrite is picked up by `AvoidGraphemesLength` on the way
+  past. The second reason is the one that survives a rename.
 
   ## Why "provably a list"
 

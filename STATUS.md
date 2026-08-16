@@ -200,16 +200,35 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
   consumes the `:reverted|:patch_rejected|:crashed|:no_op` vocabulary), C16
   (`rule_status/1` exposes neither `priority` nor `unsafe_in_dsl`; no
   `max_passes` config).
-- [ ] **D8. Duplicates — the one stated goal with NO gate.** 25 of 143
-  rejects were duplicates-of-live (G5, five literal same-name copies), yet
-  docs/19's nine requirements contain no distinctness requirement and nothing
-  mechanical checks it. Two halves: (a) the manual C11 folds — the
-  grapheme/count trio (`avoid_graphemes_enum_count` / `no_enum_count_for_length`
-  / `avoid_graphemes_length`), the length-guard pair
-  (`avoid_length_guard_less_than2` / `no_length_guard_to_pattern`), the
-  copy-pasted `condition_bool?`/`boolean_expr?` predicates; (b) consider a
-  duplicate-mechanism meta-gate so the class cannot regrow (generation-side
-  half is H8's verdict memory, already landed).
+- [ ] **D8a. Build the duplicate gate — the fold work is done and it found the
+  opposite of what was expected.** docs/12's C11 named three "duplicate
+  clusters"; running them refuted two and confirmed one.
+  * *Grapheme/count trio — NOT duplicates.* `AvoidGraphemesEnumCount`,
+    `AvoidGraphemesLength` and `NoEnumCountForLength` **converge**: every entry
+    point reaches `String.length/1`. They do overlap, and `NoEnumCountForLength`
+    alone gives the weaker answer (it keeps the list allocation), but the
+    Pattern round is a cascade and `AvoidGraphemesLength` finishes the job — so
+    the outcome survives a rename, not merely the current alphabetical order.
+    Pinned in `test/pattern/graphemes_count_family_test.exs`, and the moduledoc
+    that taught the weaker rewrite as its flagship example is fixed.
+  * *Length-guard pair — NOT duplicates.* `avoid_length_guard_less_than2`
+    (`< 2`/`<= 1`) and `no_length_guard_to_pattern` (`> 0`, `== N`) cover
+    disjoint predicates.
+  * *Shared predicates — REAL, and already rotted.* `condition_bool?/1` was
+    byte-identical (69 lines) in two rules; now `RuleHelpers.boolean_condition?/1`.
+    Its sibling `boolean_expr?/1` was copied the same way and has **drifted** —
+    the original grew a nested-`if` clause the copy lacks, while the copy's
+    comment still claimed they mirrored. Left unsynced deliberately (widening
+    changes what the rule fires on and needs its own evidence) but recorded.
+
+  What remains is the gate, and it is the real ask: nothing mechanical stops the
+  next generated rule from re-implementing a live one. 25 of 143 rejects were
+  duplicates-of-live, five literal same-name copies, and docs/19's nine
+  requirements still contain no distinctness requirement. The generation-side
+  half exists (H8 verdict memory + the R1–R7 rejected-mechanism list); the
+  accepting-side half does not. Cheapest first cut: a meta-test comparing each
+  rule's normalised matcher shape against every other, ledgered C13/C14-style so
+  today's overlaps are frozen and only new ones fail.
 - [ ] **D9. Mutant-survivor triage** — untracked until now: T2.4's sweep is
   report-only *by design*, but nothing owns triaging the **221 surviving
   mutants** and then setting `--fail-under` (docs/19 row 9 stays "not
@@ -228,10 +247,6 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
   `NoHallucinatedBaseHexEncode` `hex_encode64/32` widening (ledger row 119).
   The "2 lines to widen" and "4 shipped bugs" halves already landed. The
   source line is docs/18 **end of §3** (~1676), not §5 as cited.
-- [ ] **D12. T1.2 ledger paydown** — all **9** rows of the undocumented-winner
-  ledger remain (docs/22's "one was paid down in this pass" is refuted by the
-  code: the T1.2 repair was the two priorities, not a ledger row).
-
 ## E. Evidence salvage — **DONE 2026-08-16** (`42d3a59`)
 
 All five items landed. The logs are archived, and the reasoning inside them now
