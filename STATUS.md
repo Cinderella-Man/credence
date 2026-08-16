@@ -344,11 +344,28 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   behaviour on every shape probed, and only the first ever fired in the pipeline.
   Retired, with its one unique assertion ported.
 
-  **What is left is turning the probe into a gate** — ledger today's 8 remaining
-  pairs C13/C14-style and fail on a new one. The threshold needs choosing on
-  evidence: 0.6 is where the prototype was run, and the 8 survivors should each
-  be looked at before the number is fixed, because a ledger of pairs that are
-  merely *related* teaches less than one of pairs that are genuinely redundant.
+  **All 8 remaining pairs were triaged: none is redundant** — 6 overlapping, 2
+  unrelated — which is the result that makes the signal trustworthy rather than
+  merely loud. The one exact duplicate it found was the one it found first.
+
+  **And triaging them found a live defect the probe was not looking for.**
+  `prefer_concat_over_flat_map_identity` and `no_identity_enum_map` share a
+  copy-pasted `identity_fn?/1`, and asking why only one copy worked exposed two
+  **unreachable clauses** in the flat_map version: written as `{:&, [...]}` and
+  `{:__aliases__, [:Function]}` — two-tuples, where the AST nodes are
+  three-tuples with metadata. Valid Elixir, so nothing warned; no test covered
+  the shape; so `Enum.flat_map(l, &Function.identity/1)` was silently missed
+  while the identical `Enum.map` form was caught and pinned. Fixed and pinned.
+  That is the third instance of copy-pasted predicates rotting in one copy
+  (`condition_bool?`, `boolean_expr?`, now `identity_fn?`).
+
+  **What is left is turning the probe into a gate**: ledger the 8 pairs
+  C13/C14-style and fail on a new one. The threshold wants choosing on evidence
+  — 0.6 is where the prototype ran, and now that every pair above it is known to
+  be benign, the ledger would be 8 rows of "related, checked, fine", which is a
+  weaker artefact than a gate that fires only on genuine subsumption. Worth
+  considering a second signal (firing-set containment on shared fixtures) before
+  fixing the number.
 
 - [ ] **D9. Mutant-survivor triage — the method is established and measured;
   the tail is not worked.** Rule Standard requirement 9 is the last fully

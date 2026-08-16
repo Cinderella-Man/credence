@@ -5780,6 +5780,7 @@ surface/lib/surface/compiler.ex:211  no_filter_then_count
 surface/lib/surface/compiler.ex:229  no_enum_count_for_length
 surface/lib/surface/compiler/converter_0_8.ex:79  use_map_join
 surface/lib/surface/formatter/phases/indent.ex:53  no_list_append_in_recursion
+surface/lib/surface/formatter/phases/newlines.ex:26  prefer_concat_over_flat_map_identity
 surface/lib/surface/formatter/phases/render.ex:220  no_map_then_aggregate
 surface/lib/surface/formatter/phases/render.ex:232  no_if_true_false
 surface/lib/surface/formatter/phases/render.ex:232  no_length_comparison_for_empty

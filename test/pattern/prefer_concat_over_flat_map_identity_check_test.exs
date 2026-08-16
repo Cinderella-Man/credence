@@ -140,4 +140,40 @@ defmodule Credence.Pattern.PreferConcatOverFlatMapIdentityCheckTest do
       assert check(PreferConcatOverFlatMapIdentity, code) == []
     end
   end
+
+  # ── &Function.identity/1 (clauses that were unreachable until 2026-08-16) ──
+  #
+  # The matcher had these two clauses all along, written as two-tuples
+  # (`{:&, [...]}`, `{:__aliases__, [:Function]}`) where the AST nodes are
+  # three-tuples carrying metadata. Valid Elixir, so nothing warned; no test
+  # covered the shape, so the rule silently missed it while its sibling
+  # `no_identity_enum_map` caught the identical form on `Enum.map`.
+
+  describe "&Function.identity/1" do
+    test "direct call" do
+      assert flagged?(PreferConcatOverFlatMapIdentity, """
+             defmodule M do
+               def f(l), do: Enum.flat_map(l, &Function.identity/1)
+             end
+             """)
+    end
+
+    test "piped" do
+      assert flagged?(PreferConcatOverFlatMapIdentity, """
+             defmodule M do
+               def f(l), do: l |> Enum.flat_map(&Function.identity/1)
+             end
+             """)
+    end
+
+    # The control: a capture that is NOT identity must stay unflagged, so the
+    # newly-reachable clauses did not simply widen the rule to every capture.
+    test "CONTROL: a different captured function is not identity" do
+      assert clean?(PreferConcatOverFlatMapIdentity, """
+             defmodule M do
+               def f(l), do: Enum.flat_map(l, &List.wrap/1)
+             end
+             """)
+    end
+  end
 end

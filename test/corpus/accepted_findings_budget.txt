@@ -25,7 +25,7 @@
 # The cap and the ledger are frozen in that test. Changing either is a
 # deliberate, reviewable edit — which is the whole mechanism.
 #
-# TOTAL 6366 accepted findings across 87 rules.
+# TOTAL 6367 accepted findings across 87 rules.
 #      15 over the cap of 100 (grandfathered; they hold 4734 = 74% of the debt)
 #      72 at or under the cap
 #
@@ -87,7 +87,7 @@
    10  no_redundant_case_nil_clause
    10  no_redundant_list_traversal
     9  no_anon_fn_application_in_pipe
-    8  prefer_concat_over_flat_map_identity
+    9  prefer_concat_over_flat_map_identity
     7  no_sort_then_reverse
     6  no_duplicate_function_clauses
     6  no_redundant_underscore_bind
