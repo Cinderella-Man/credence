@@ -15,9 +15,10 @@ markers:
   the ground moved.
 
 Items marked [READ] must not be acted on without first running the experiment
-attached to them. That is not ceremony: §5 below is a claim I would have acted
-on, and running it first is what showed the fix would have been in the wrong
-place.
+attached to them. That is not ceremony — **B6** is the example. It is a change
+IMPROVEMENTS.md proposes and that I would have made on the strength of the
+argument; joining it against the run's own labels shows it would have destroyed
+14 accepted rules to catch 6 duplicates.
 
 ---
 
@@ -67,10 +68,17 @@ not where the doc said:
   and CJK for each variant before widening. A *leading* slice clause is
   deliberately excluded: it is equivalent, but it makes the trailing clauses
   unreachable, which belongs to `RemoveUnreachableClausesAfterCatchall`.
-* `prefer_map_intersect_over_mapset_intersection` — **open.** A hard-coded
-  four-stage pipeline, 356 lines. Not yet probed for which variants it misses.
-  Do that before deciding whether to widen or leave it: the other two both turned
-  out narrower than the doc's description, and in a different way than described.
+* `prefer_map_intersect_over_mapset_intersection` — **probed, boundary pinned,
+  deliberately NOT widened.** It fires on **2 of 8** plausible spellings. Of its
+  five requirements, three are load-bearing for equivalence and must not be
+  widened — the trailing `Enum.sort()` (without it the repair silently reorders,
+  since `Map.intersect/3` returns a map), `Map.fetch!` rather than `Map.get`
+  (raises vs `nil`), and the `min`/`max` combiner, which is already general.
+  Only two are incidental syntax: an inlined pipeline with no `common_keys`
+  binding, and `MapSet.new(Map.keys(x))` as a call rather than a pipe. That is
+  the entire available gain from widening a five-stage structural matcher, so
+  the measurement and the boundary are pinned in tests and the decision is left
+  to whoever has a corpus fire-rate to weigh it against (C12(b)).
 
 ### A5. Performance in the fix hot path
 
@@ -83,7 +91,7 @@ gain/risk.
 | 1 | Thread the parse through `run_fixable_rules/4`'s accumulator | ~150 Sourceror parses per file | very low | **[DONE]** |
 | 2 | Compute `compile_errors(fixed)` once in the accept/revert decision | 1 compile per accepted fix on the 36% of files that do not compile | very low | **[DONE]** |
 | 3 | Hoist `rules/1` into the branch that uses it in `Syntax.fix_with_trace/2` | 1 discovery per file, on the path that discards it | none | **[DONE]** |
-| 4 | `analyze_after: false` opt-out on `Credence.fix/2` | 1 compile + 2 parses + 156 checks per call | low-medium (public return field) | [READ] |
+| 4 | `analyze_after: false` opt-out on `Credence.fix/2` | 1 compile + 2 parses + 156 checks per call | low-medium (public return field) | **[DONE]** |
 | 5 | Thread `DslGuard.block_ranges/2` through `dsl_partition` | ~12 AST walks when 4 DSL-unsafe rules fire | low | [READ] |
 | 6 | `DslGuard.count_subtrees/2` is O(N·depth) — `strip_meta/1` prewalks the subtree at every node | quadratic outlier on large patches | low | [READ] |
 | 7 | Memoize `discover_rules/1` in `:persistent_term` | 2–15 ms per file | medium — code-reload staleness; needs a reset hook for `mix credence.mutants` | [READ] |
@@ -231,7 +239,7 @@ H7's *residual* check — compare `Credence.fix(before)` against the proposal's
 the only part worth building. Ship it only if an offline replay against the same
 labels clears ~70% precision.
 
-### B7. The harness consumes 1 of Credence's 4 fix statuses, and drops it before the classifier
+### B7. The harness consumes 1 of Credence's 4 fix statuses, and drops it before the classifier — step 1 [DONE]
 
 `AppliedRules.parse/1` deliberately accepts any outcome atom. `reverted/1` routes
 on `:reverted` only. And `modules/1` — the only thing that reaches the classifier
@@ -244,8 +252,9 @@ Also: across all 489 archived logs there are 2,472 `APPLIED_RULES` entries and
 `:patch_rejected`, `:crashed` and `:no_op` all landed after the run, so Phase 9
 will be the first time the harness ever sees them.
 
-**Order:** (1) make `modules/1` carry outcomes and render them in the closed-set
-block — prompt-only, changes no routing; (2) route `:crashed` into the
+**Order:** (1) **[DONE]** `AppliedRules.outcomes/1` carries the outcomes and the
+prompt renders them with a legend defining each atom; validation still runs
+against the plain module list, so no routing changed; (2) route `:crashed` into the
 deterministic bugfix lane alongside `:reverted`, since a crash needs no
 classifier judgment; (3) then consider `:patch_rejected` and `:no_op`.
 **Experiment first:** run `mix credence.fix` over the 489 rows' final sources at

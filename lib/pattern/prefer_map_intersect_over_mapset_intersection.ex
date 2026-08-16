@@ -7,6 +7,36 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersection do
   followed by an `Enum.map` that fetches and merges values from both maps
   can be replaced with a single `Map.intersect/3` call.
 
+  ## How narrow this is, measured
+
+  docs/12 C12(c) called this rule over-fit in shape. It is: probed against eight
+  spellings an author would plausibly write, it fires on **two**. What it
+  requires, in full — a `common_keys` binding rather than an inlined pipeline,
+  `Map.keys(x) |> MapSet.new()` piped in that exact direction, an explicit
+  `MapSet.to_list()`, `Map.fetch!` rather than `Map.get`, and a trailing
+  `Enum.sort()`.
+
+  Three of those five are load-bearing for equivalence and must NOT be widened:
+
+    * **the trailing `Enum.sort()`** — `Map.intersect/3` returns a map, so
+      producing a sorted list is what makes the rewrite order-identical. Without
+      it the original returns an unsorted list and the repair would silently
+      reorder the result.
+    * **`Map.fetch!`** — it raises on a missing key. `Map.get` returns `nil`, and
+      although the keys here come from the intersection so both are present, the
+      two differ the moment the pipeline is edited.
+    * **the `min`/`max` combiner** is already generalised — both fire, and the
+      combiner is carried into the repair rather than assumed.
+
+  Two are incidental syntax and could be widened safely: an inlined pipeline with
+  no `common_keys` binding, and `MapSet.new(Map.keys(x))` written as a call
+  rather than a pipe. That is the whole available gain, and it is not taken here.
+  Widening a five-stage structural matcher is not a one-line change, and this
+  project's standing rule is that a wider rule is often strictly worse than a
+  narrow one — so the measurement is recorded, the boundary is pinned in
+  `..._check_test.exs`, and the decision is left to whoever has a corpus fire-rate
+  to weigh it against (C12(b), blocked on the harness's H10/H11).
+
   ## Bad
 
       common_keys =

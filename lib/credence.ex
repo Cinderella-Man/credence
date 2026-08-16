@@ -82,8 +82,24 @@ defmodule Credence do
     {fixed, pattern_applied} = Credence.Pattern.fix_with_trace(after_semantic, opts)
 
     all_applied = syntax_applied ++ semantic_applied ++ pattern_applied
-    %{issues: remaining} = analyze(fixed, Keyword.put(opts, :source, fixed))
-    %{code: fixed, issues: remaining, applied_rules: all_applied}
+    %{code: fixed, issues: remaining_issues(fixed, opts), applied_rules: all_applied}
+  end
+
+  # The trailing analysis is a COMPLETE second pass — a compile for the Semantic
+  # round plus a parse and all 156 `check/2` walks for the Pattern round — and it
+  # roughly doubles the cost of `fix/2` for a caller that only wants `:code` and
+  # `:applied_rules`. Both in-repo mix tasks are exactly such callers.
+  #
+  # Opt-OUT rather than opt-in, deliberately: `:issues` is a documented field of
+  # the returned map (see the README), so the default has to keep answering it.
+  # A caller that passes `analyze_after: false` is saying it will not read the
+  # field, and gets `[]` — not a silently stale answer.
+  defp remaining_issues(fixed, opts) do
+    if Keyword.get(opts, :analyze_after, true) do
+      analyze(fixed, Keyword.put(opts, :source, fixed)).issues
+    else
+      []
+    end
   end
 
   @doc """

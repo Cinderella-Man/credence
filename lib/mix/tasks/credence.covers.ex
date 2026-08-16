@@ -47,7 +47,7 @@ defmodule Mix.Tasks.Credence.Covers do
   @doc "COVERED | NOVEL for `input` (the decision the task prints; exposed for tests)."
   @spec verdict(String.t()) :: String.t()
   def verdict(input) do
-    fix = Credence.fix(input)
+    fix = Credence.fix(input, analyze_after: false)
     %{issues: issues} = Credence.analyze(input)
 
     real_issue? = Enum.any?(issues, &(&1.rule != :parse_error))

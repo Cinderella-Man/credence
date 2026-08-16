@@ -111,4 +111,86 @@ defmodule Credence.Pattern.PreferMapIntersectOverMapsetIntersectionCheckTest do
            IO.inspect(length(common_keys))
            """)
   end
+
+  # ── D6/C12(c): the measured boundary ───────────────────────────────────
+  #
+  # This matcher fires on 2 of 8 plausible spellings. The moduledoc records
+  # which of its five requirements are load-bearing for equivalence and which
+  # are incidental syntax. These tests pin the boundary so that a future
+  # widening has to move them deliberately rather than by accident — and so that
+  # the three load-bearing ones cannot be widened by someone who reads only the
+  # shape.
+  describe "the boundary, pinned" do
+    defp pipeline(opts) do
+      binding? = Keyword.get(opts, :binding?, true)
+      sort? = Keyword.get(opts, :sort?, true)
+      fetch = Keyword.get(opts, :fetch, "Map.fetch!")
+      combiner = Keyword.get(opts, :combiner, "min")
+
+      head =
+        if binding? do
+          """
+              common_keys =
+                Map.keys(freq1)
+                |> MapSet.new()
+                |> MapSet.intersection(MapSet.new(Map.keys(freq2)))
+                |> MapSet.to_list()
+
+              common_keys
+          """
+        else
+          """
+              Map.keys(freq1)
+              |> MapSet.new()
+              |> MapSet.intersection(MapSet.new(Map.keys(freq2)))
+              |> MapSet.to_list()
+          """
+        end
+
+      tail = if sort?, do: "\n          |> Enum.sort()", else: ""
+
+      """
+      defmodule MiBoundary do
+        def f(freq1, freq2) do
+      #{String.trim_trailing(head)}
+          |> Enum.map(fn element ->
+            count1 = #{fetch}(freq1, element)
+            count2 = #{fetch}(freq2, element)
+            {element, #{combiner}(count1, count2)}
+          end)#{tail}
+        end
+      end
+      """
+    end
+
+    test "the documented shape fires" do
+      assert flagged?(PreferMapIntersectOverMapsetIntersection, pipeline([]))
+    end
+
+    # The combiner is already general — it is carried into the repair rather
+    # than assumed, so both directions are matched.
+    test "max fires as well as min" do
+      assert flagged?(PreferMapIntersectOverMapsetIntersection, pipeline(combiner: "max"))
+    end
+
+    # ── Load-bearing: widening any of these would change behaviour ──
+
+    test "LOAD-BEARING: without the trailing Enum.sort it does not fire" do
+      refute flagged?(PreferMapIntersectOverMapsetIntersection, pipeline(sort?: false)),
+             "Map.intersect/3 returns a map; without the trailing sort the " <>
+               "rewrite would silently reorder the result"
+    end
+
+    test "LOAD-BEARING: Map.get instead of Map.fetch! does not fire" do
+      refute flagged?(PreferMapIntersectOverMapsetIntersection, pipeline(fetch: "Map.get")),
+             "Map.fetch! raises on a missing key and Map.get returns nil; the " <>
+               "two are only interchangeable while the keys come from the intersection"
+    end
+
+    # ── Incidental: this is the gain a widening would buy, and it is not taken ──
+
+    test "INCIDENTAL: an inlined pipeline with no binding does not fire, and could" do
+      refute flagged?(PreferMapIntersectOverMapsetIntersection, pipeline(binding?: false))
+    end
+  end
 end

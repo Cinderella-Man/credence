@@ -72,7 +72,7 @@ defmodule Mix.Tasks.Credence.Fires do
   end
 
   defp in_trace?(rule, input) do
-    Credence.fix(input).applied_rules
+    Credence.fix(input, analyze_after: false).applied_rules
     |> Enum.any?(fn
       {mod, _outcome} -> mod == rule
       mod -> mod == rule

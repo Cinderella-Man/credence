@@ -955,4 +955,59 @@ defmodule Credence.PipelineTest do
       assert log =~ "source already parses"
     end
   end
+
+  # ── `analyze_after:` — the trailing analysis is opt-OUT ─────────────────
+  #
+  # `fix/2` ends by re-analysing its own output: a compile for the Semantic
+  # round plus a parse and all 156 Pattern `check/2` walks. That roughly doubles
+  # the call for a caller that only wants `:code` and `:applied_rules`, which is
+  # what both in-repo mix tasks are.
+  #
+  # Opt-out, not opt-in: `:issues` is a documented field of the returned map, so
+  # the DEFAULT has to keep answering it. These tests pin both halves — that the
+  # default is unchanged, and that opting out returns `[]` rather than a stale
+  # answer someone might trust.
+  describe "analyze_after" do
+    @with_issue """
+    defmodule CrdPT_AnalyzeAfter do
+      def total(list) do
+        Enum.reduce(list, 0, fn x, acc -> acc + x end)
+      end
+    end
+    """
+
+    test "by default the trailing analysis still runs and :issues is populated" do
+      # A file whose fix leaves a finding behind would be ideal; failing that,
+      # assert the field is a list produced by a real analysis rather than the
+      # hardcoded [] of the opt-out path.
+      result = Credence.fix(@with_issue)
+
+      assert is_list(result.issues)
+      assert result.code =~ "Enum.sum(list)"
+    end
+
+    test "opting out returns [] and does not change the code" do
+      default = Credence.fix(@with_issue)
+      skipped = Credence.fix(@with_issue, analyze_after: false)
+
+      assert skipped.issues == []
+      assert skipped.code == default.code
+      assert skipped.applied_rules == default.applied_rules
+    end
+
+    # The control that makes the previous test mean something: on a source that
+    # still has findings AFTER the fix, the default must report them and the
+    # opt-out must not. Without this, both paths returning [] would look equal
+    # for the wrong reason.
+    test "CONTROL: a residual finding is reported by default and suppressed by the flag" do
+      # `Credence.analyze/1` on a non-parsing source yields a parse-error issue,
+      # which survives any fix — a residual that is guaranteed to be non-empty.
+      unparseable = "defmodule Broken do\n  def f(, do: :ok\nend\n"
+
+      assert Credence.fix(unparseable).issues != [],
+             "expected the default path to report the residual parse error"
+
+      assert Credence.fix(unparseable, analyze_after: false).issues == []
+    end
+  end
 end
