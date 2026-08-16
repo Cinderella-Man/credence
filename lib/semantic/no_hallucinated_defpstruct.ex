@@ -1,33 +1,68 @@
 defmodule Credence.Semantic.NoHallucinatedDefpstruct do
   @moduledoc """
-  Fixes compile errors caused by LLM-hallucinated `defpstruct` macro.
+  Fixes compile errors caused by the LLM-hallucinated `defpstruct` /
+  `defpstructp` macros. Elixir has no private struct — a struct belongs to its
+  module and is always public — so both spellings are inventions, and both
+  arrive as an ordinary "there is no such import" error.
 
-  When an LLM generates `defpstruct Name do ... end` (a nonexistent
-  private-struct macro), the compiler emits:
+  Two shapes occur, and they need different repairs.
+
+  ## The block form — `defpstruct Name do ... end`
 
       "undefined function defpstruct/2 (there is no such import)"
 
-  The fix:
+  The wrapper is dissolved:
     1. Removes the `defpstruct` wrapper and its closing `end`.
     2. Promotes `defstruct` and `@type t` from inside the wrapper to
        module level (dedented, reordered: defstruct first, then @type).
     3. Rewrites `%StructName{}` references to `%__MODULE__{}`.
+
+  ## The keyword form — `defpstruct now: 0`
+
+      "undefined function defpstruct/1 (there is no such import)"
+
+  Nothing needs promoting here; only the macro name is wrong. The identifier is
+  rewritten in place to `defstruct`, patched over its own byte range so that a
+  same-spelled word anywhere else on the line — in a string, a comment, an
+  attribute — cannot be touched. Declines when the module already defines a
+  `defstruct`, since a second one is a fresh compile error rather than a repair.
+
+  ## Why this rule beats `UndefinedFunction`
+
+  `UndefinedFunction` matches every "undefined function …" message, this rule
+  matches only the two `defpstruct` spellings, and the specific claim must win:
+  it declares `priority: 400` against that rule's 501, so the ordering is
+  declared rather than inherited from where the module names happen to sort
+  (docs/20 §1). `UndefinedFunction` repairs by table lookup and has no row for
+  either spelling, so before this rule was widened to `defpstructp` the catch-all
+  took the slot and returned the source unchanged — escalation ledger row 183.
   """
   use Credence.Semantic.Rule
 
   alias Credence.Issue
 
-  @match_msg "undefined function defpstruct/"
+  # Both spellings, each with its arity slash, so `defpstructp/1` cannot be read
+  # as `defpstruct` plus a stray character — the bug this list was widened to
+  # fix was exactly that the trailing `/` excluded the `p` variant.
+  @macro_names [:defpstruct, :defpstructp]
+  @match_msgs Enum.map(@macro_names, &"undefined function #{&1}/")
 
   @impl true
   def priority, do: 400
 
   @impl true
   def match?(%{severity: :error, message: msg}) when is_binary(msg) do
-    String.contains?(msg, @match_msg)
+    Enum.any?(@match_msgs, &String.contains?(msg, &1))
   end
 
   def match?(_), do: false
+
+  @doc false
+  # The decline guard IS the fix (the house idiom). It matters here because the
+  # shapes this rule declines — a multi-statement block, a module that already
+  # has a `defstruct` — must fall through to whatever else can claim the
+  # diagnostic instead of being consumed by a no-op.
+  def should_report?(diagnostic, source), do: fix(source, diagnostic) != source
 
   @impl true
   def to_issue(diagnostic) do
@@ -39,9 +74,62 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
   end
 
   @impl true
-  def fix(source, _diagnostic) do
-    with {:ok, ast} <- Sourceror.parse_string(source),
-         {_name_parts, range, inner_body} <- find_defpstruct(ast),
+  def fix(source, diagnostic) do
+    case Sourceror.parse_string(source) do
+      {:ok, ast} ->
+        case find_defpstruct(ast) do
+          nil -> fix_keyword_form(source, ast)
+          _found -> fix_block_form(source, ast, diagnostic)
+        end
+
+      _ ->
+        source
+    end
+  end
+
+  # `defpstruct now: 0` — only the macro name is wrong. Rewrite that identifier
+  # and nothing else: the patch spans exactly the name's own bytes, so a
+  # same-spelled word elsewhere on the line is out of range by construction.
+  defp fix_keyword_form(source, ast) do
+    with {name, node} <- find_keyword_form(ast),
+         false <- has_defstruct?(ast),
+         %{start: [line: line, column: column]} <- Sourceror.get_range(node) do
+      width = name |> Atom.to_string() |> String.length()
+
+      patch = %{
+        range: %{start: [line: line, column: column], end: [line: line, column: column + width]},
+        change: "defstruct"
+      }
+
+      Sourceror.patch_string(source, [patch])
+    else
+      _ -> source
+    end
+  end
+
+  defp find_keyword_form(ast) do
+    Macro.prewalk(ast, nil, fn
+      {name, _meta, [_single_arg]} = node, nil when name in @macro_names ->
+        {node, {name, node}}
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
+  end
+
+  # A module cannot carry two `defstruct`s; renaming into a second one trades
+  # this diagnostic for a new one.
+  defp has_defstruct?(ast) do
+    Macro.prewalk(ast, false, fn
+      {:defstruct, _, _} = node, _ -> {node, true}
+      node, acc -> {node, acc}
+    end)
+    |> elem(1)
+  end
+
+  defp fix_block_form(source, ast, _diagnostic) do
+    with {_name_parts, range, inner_body} <- find_defpstruct(ast),
          true <- safe_to_fix?(inner_body) do
       lines = String.split(source, "\n")
       start_idx = range.start[:line] - 1
@@ -96,10 +184,11 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
     end
   end
 
-  # Find the defpstruct call in the AST and return {name_parts, range, inner_body}.
+  # Find the block-form call in the AST and return {name_parts, range, inner_body}.
   defp find_defpstruct(ast) do
     Macro.prewalk(ast, nil, fn
-      {:defpstruct, _meta, [{:__aliases__, _, name_parts}, body]} = node, nil ->
+      {name, _meta, [{:__aliases__, _, name_parts}, body]} = node, nil
+      when name in @macro_names ->
         case extract_do_body(body) do
           {:ok, inner} ->
             range = Sourceror.get_range(node)

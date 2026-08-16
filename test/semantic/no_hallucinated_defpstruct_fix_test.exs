@@ -202,4 +202,103 @@ defmodule Credence.Semantic.NoHallucinatedDefpstructFixTest do
 
     confirm_fix(fix(input, @message), expected)
   end
+
+  # ════════════════════════════════════════════════════════════════
+  # The `defpstructp` spelling and the keyword form — escalation ledger row 183.
+  #
+  # Row 183's repro is `defpstructp now: 0`. Two things were wrong with it and
+  # only one was written down: the matcher's trailing `/` excluded the `p`
+  # spelling, AND the fix only ever knew the block form, so even a matching
+  # keyword-form diagnostic would have returned the source unchanged.
+  # ════════════════════════════════════════════════════════════════
+
+  @message_p "undefined function defpstructp/2 (there is no such import)"
+  @message_kw "undefined function defpstruct/1 (there is no such import)"
+  @message_p_kw "undefined function defpstructp/1 (there is no such import)"
+
+  test "dissolves the block form under the defpstructp spelling" do
+    input = ~S"""
+    defmodule Blocky do
+      defpstructp Inner do
+        defstruct [:a]
+      end
+    end
+    """
+
+    expected = ~S"""
+    defmodule Blocky do
+      defstruct [:a]
+    end
+    """
+
+    confirm_fix(fix(input, @message_p), expected)
+  end
+
+  test "renames the keyword form, both spellings" do
+    for {input_name, message} <- [{"defpstruct", @message_kw}, {"defpstructp", @message_p_kw}] do
+      input = """
+      defmodule Kw do
+        #{input_name} now: 0
+      end
+      """
+
+      expected = """
+      defmodule Kw do
+        defstruct now: 0
+      end
+      """
+
+      confirm_fix(fix(input, message), expected)
+    end
+  end
+
+  # The rewrite patches the identifier's own byte range. A same-spelled word in
+  # a comment or a string literal on the same line is therefore out of range by
+  # construction, not by a guard that has to remember to exclude it — which is
+  # the shape that has bitten five other rules in this tree.
+  test "rewrites only the identifier, never a matching word in a comment or string" do
+    input = ~S"""
+    defmodule Scoped do
+      defpstructp now: 0  # defpstructp is not real
+      def doc, do: "use defpstructp here"
+    end
+    """
+
+    expected = ~S"""
+    defmodule Scoped do
+      defstruct now: 0  # defpstructp is not real
+      def doc, do: "use defpstructp here"
+    end
+    """
+
+    confirm_fix(fix(input, @message_p_kw), expected)
+  end
+
+  test "declines when the module already defines a defstruct" do
+    input = ~S"""
+    defmodule Twice do
+      defstruct [:a]
+      defpstructp now: 0
+    end
+    """
+
+    confirm_fix(fix(input, @message_p_kw), input)
+
+    refute NoHallucinatedDefpstruct.should_report?(
+             %{severity: :error, message: @message_p_kw},
+             input
+           )
+  end
+
+  test "the repaired keyword form compiles" do
+    input = ~S"""
+    defmodule Compiles do
+      defpstructp now: 0
+    end
+    """
+
+    fixed = fix(input, @message_p_kw)
+    assert valid_syntax?(fixed)
+    assert match?({:ok, _}, Credence.RuleHelpers.compile_and_capture(fixed))
+  end
 end

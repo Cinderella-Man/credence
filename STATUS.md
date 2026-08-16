@@ -80,11 +80,12 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
 
 ## B. Phase-9 prerequisites (the next evolution; runbook order)
 
-- [ ] **B1. Archive `var/run/logs` NOW** — the cheapest blocking item on the
-  board. 83 MB, 34 entries; `var/archive/` does not exist; `mix cev.reset`
-  deletes the only copy of the evidence that the re-queue list (B7), row 199's
-  patch, and every Part-E salvage item depend on.
-  `mkdir -p var/archive && cp -r var/run/logs var/archive/run-2026-07-06/`.
+- [ ] **B1a. The archive is local-only — put the evidence somewhere durable.**
+  `var/archive/run-2026-07-06/` now holds all 83 MB (verified byte-identical,
+  35 entries), so `cev.reset` can no longer destroy it. But `var/` is
+  gitignored, so this survives a reset and not a disk. Part E lifted the
+  reasoning that mattered into committed files; decide whether the raw logs
+  also warrant an off-machine copy before the next run.
 - [ ] **B2. After the merge: reset sister `evolution` onto the new `main`.**
   The sister (`/home/kamil/projects/credence_evolution`, `b83d623`) contains
   **none of the five new meta-gate files** (pipeline_witness,
@@ -167,11 +168,15 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
 
 ## D. Credence rule work (independent of the merge)
 
-- [ ] **D1. T3.6 residue — row 183 is HALF done.** The `UndefinedFunction`
-  decline guard landed (`c1d7cd7`); what remains is only widening
-  `NoHallucinatedDefpstruct` to the `defpstructp` variant — `@match_msg
-  "undefined function defpstruct/"` cannot match `defpstructp/` (verified at
-  the matcher). This is the "(5 of 6)" commit that was never made.
+- [ ] **D1a. Re-audit the other message-matching Semantic rules for the same
+  shape.** Row 183 turned out to be *three* unrepaired shapes, not the one it
+  recorded: the matcher's trailing `/` excluded `defpstructp`, and the fix knew
+  only the block form, so `defpstruct now: 0` — no `p` involved — was claimed
+  and no-opped too. Both are now repaired. The transferable question is how many
+  other rules pair a literal `@match_msg` with a `fix/2` that covers a narrower
+  set of shapes than the matcher admits; `FixLocalFunctionInGuard` was the same
+  story (T3.6), which makes three. Worth one sweep: for each Semantic rule, does
+  every input its `match?/1` accepts have a `fix/2` branch?
 - [ ] **D2. T3.6 — the 4.6d deferred salvage rows**: `Agent`, `NaiveDateTime`,
   `List.keystore`, `exit/2` into `UndefinedFunction`'s tables; blocked on
   call-boundary anchoring; `exit/2` also needs the arity check
@@ -227,25 +232,22 @@ ledger 95 decisions, all dispositioned except row 183 (D2 below).
   ledger remain (docs/22's "one was paid down in this pass" is refuted by the
   code: the T1.2 repair was the two priorities, not a ledger row).
 
-## E. Evidence salvage (deadline: all of this dies at `cev.reset`; B1 removes the deadline)
+## E. Evidence salvage — **DONE 2026-08-16** (`42d3a59`)
 
-- [ ] **E1.** Rows 145/178: recover the agents' green regression tests
-  verbatim from the logs (145: two `NoPythonMultiReturn` tests ~steps 44-47;
-  178: two `UnusedVariable` tests ~steps 78-80) and land them.
-- [ ] **E2.** Extract rows 55/73 failure modes into docs/17
-  (trap_exit-without-EXIT-handler; discarded-unless-early-return) — they never
-  entered the docs/18 drain.
-- [ ] **E3.** Amend docs/17 catalogue entry #11 with the third corruption path
-  (`:do =>` unparseable output, row 69's follow-up) so a rebuild cannot repeat
-  it.
-- [ ] **E4.** Distill the sister's `unfixable_confirmed.md` — 25 human-decided
-  drop rationales with verified failure modes — into docs/17; the accepting
-  copy was deliberately recreated empty. Recoverable:
-  `git show origin/evolution:maintainer_tools/unfixable_confirmed.md`.
-- [ ] **E5.** Two survivor-coverage probes the ledger asked for: does
-  `FixAfterOrRescueInCase` cover `catch` inside `case` (rows 49+150)? does
-  `FixFunctionInModuleAttributeInlineUsages` inline the usage sites (rows
-  6/87/88)? One `Credence.fix/1` call each.
+All five items landed. The logs are archived, and the reasoning inside them now
+lives in `docs/17`: entries **26** and **27** (rows 55 and 73 — `trap_exit`
+without an `{:EXIT, _, _}` clause, which fires on the happy path; and the
+early-exit belief with `return` removed), a third corruption path on entry
+**11** (the `:do =>` emission, re-confirmed on Elixir 1.20.2), and the sister
+tree's **25 drop rationales**, which existed nowhere in this repo. One recovered
+regression test landed; three others were duplicates and deliberately did not.
+
+Two findings worth carrying: the survivor probes answered both ledger questions
+(`FixFunctionInModuleAttributeInlineUsages` is fine; `catch` inside `case` was
+owned by nobody, now fixed in `af7b140`), and **one rescued rationale was
+refuted by re-running it** — `prefer_enum_frequencies` was dropped for an
+enumeration-order divergence that does not reproduce at any size. The drop still
+stands, on a stronger argument: the two constructs return different *types*.
 
 ## F. Tracker & doc hygiene (30 minutes; a tracker that lies is worse than one that is late)
 

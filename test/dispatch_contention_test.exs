@@ -32,7 +32,6 @@ defmodule Credence.DispatchContentionTest do
             {"FixNimbleCsvDirectParse", "UndefinedFunction"},
             {"FixTruncatedSpecialForm", "FixCaseBranchAssignmentScope"},
             {"MissingUseExunitCase", "UndefinedFunction"},
-            {"NoHallucinatedDefpstruct", "UndefinedFunction"},
             {"NoStreamDataIntegerTwoArgs", "UndefinedFunction"}
           ])
 
