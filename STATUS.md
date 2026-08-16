@@ -152,8 +152,19 @@ env vars, so they belong to the Phase-9 setup rather than to this section.
   `:131-134`; **row 105 is the mandatory positive control** for any probe
   change; (c) stacktrace normalization in `behaviour_equivalence.ex`.
   T5.5 (StreamData layer) is blocked only on this — T3.5 already landed.
-- [ ] **C3. T4.7** flake-aware Gate (H19): a genuinely red flake still
-  hard-rejects with no re-run (`gate_test.exs:226` pins the absence).
+- [ ] **C3a. H19's third half — a pre-commit stability re-run.** T4.7's flake
+  triage **landed** (harness `5e9807f`): a red corpus-free suite now re-runs its
+  failing files once, and forgives them only if they pass *and* none is in the
+  staged diff — a staged file is never a flake, however cleanly it passes alone,
+  because a failure that appears only in the full suite is the interference a
+  new rule causes. Forgiven runs append to `var/run/flaky.jsonl`. Four controls
+  drive the reject branches, four more pin the failure-location parser.
+
+  What H19 also asked for and this does not do: **re-run the candidate's own
+  focused tests once more before committing**, to catch a rule whose own tests
+  are unstable. Cheap (one file), and the natural place is beside the existing
+  focused run in `check_mutation`.
+
 - [ ] **C4. T4.8** bounded auto-retry on corpus rejects (H6) — now affordable,
   T2.1's scoped dispatch landed.
 - [ ] **C5. T4.9** H1 gold over-fire ratchet (diff against an
