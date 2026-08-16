@@ -30,6 +30,17 @@ defmodule Credence.Semantic.FixApplyArityOne do
     the fix off it.
   - `apply do ... end` renders badly with an inserted argument, and
     `&apply/1` cannot take one — both are left for a human.
+
+  ## Why this rule beats `UndefinedFunction`
+
+  Both claim `undefined function apply/1 …` — this rule by regex on that
+  exact arity, `UndefinedFunction` by the bare substring. This rule keeps the
+  default 500 against that rule's declared 501, so the ordering is stated
+  rather than inherited from where the module names sort (docs/20 §1).
+  `UndefinedFunction` repairs bare calls by table lookup, has no `apply` row
+  and no fuzzy fallback for local calls, and would return the source
+  unchanged — the `[]` insertion, the pipe spelling and the bail on a
+  file-defined `apply` exist only here.
   """
   use Credence.Semantic.Rule
 

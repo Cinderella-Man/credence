@@ -34,6 +34,15 @@ defmodule Credence.Semantic.FixNimbleCsvDirectParse do
     * only a standalone `NimbleCSV.parse_string` reference on the reported
       line is rewritten, never one embedded in a longer module path such as
       `Foo.NimbleCSV.parse_string`.
+
+  `UndefinedFunction` matches this same message and declares priority 501
+  against this rule's default 500, so the ordering is stated rather than
+  inherited from where the module names sort (docs/20 §1). It repairs by
+  table lookup, and the parser name cannot go in a table — it is whatever
+  alias the file passed to `NimbleCSV.define/2`, which only an AST walk can
+  recover. It has no row for either arity, and its `FunctionMatcher`
+  fallback finds no `defmodule NimbleCSV` in the file, so its `fix/2`
+  returns the source byte-identical.
   """
   use Credence.Semantic.Rule
 

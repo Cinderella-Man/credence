@@ -24,16 +24,12 @@ defmodule Credence.DispatchContentionTest do
   #
   # The list may only shrink — the test below fails on a stale entry, so paying
   # one down forces its removal rather than letting it rot here.
-  @ledger MapSet.new([
-            {"FixApplyArityOne", "UndefinedFunction"},
-            {"FixHallucinatedCalendarIsoAccessor", "UndefinedFunction"},
-            {"FixHallucinatedNaiveDatetimeAccessor", "UndefinedFunction"},
-            {"FixHallucinatedStreamDataFlatMap", "UndefinedFunction"},
-            {"FixNimbleCsvDirectParse", "UndefinedFunction"},
-            {"FixTruncatedSpecialForm", "FixCaseBranchAssignmentScope"},
-            {"MissingUseExunitCase", "UndefinedFunction"},
-            {"NoStreamDataIntegerTwoArgs", "UndefinedFunction"}
-          ])
+  # EMPTY, and that is the point: every contended pair now states in the
+  # winner's own moduledoc why it owns the diagnostic (docs/20 §1). The gate's
+  # controls run against fabricated rules with population floors, so it stays
+  # meaningful at ledger size zero — the T3.10a lesson, which is that paying a
+  # ledger to empty is exactly when a result-based vacuity check stops working.
+  @ledger MapSet.new([])
 
   setup_all do
     rules = Credence.Semantic.default_rules()

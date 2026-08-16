@@ -41,6 +41,18 @@ defmodule Credence.Semantic.NoStreamDataIntegerTwoArgs do
   qualified `StreamData.integer(1, 10)` spelling compiles (it only warns) and
   is out of scope. The `should_report?/2` phase hook keeps `analyze` honest by
   reporting an issue only when `fix/2` would actually rewrite the source.
+
+  ## Why this rule beats `UndefinedFunction`
+
+  `UndefinedFunction` matches every `undefined function …` message, this rule
+  only `"undefined function integer/2 …"`, and the specific claim must win:
+  it declares `priority: 400` against that rule's 501, so the ordering is
+  declared rather than inherited from where the module names happen to sort
+  (docs/20 §1). `UndefinedFunction` repairs bare local calls by table lookup
+  and has no `{"integer", 2}` row in `@local_replacements`, nor a fuzzy
+  fallback for bare calls — so it can rename a call but never patch the
+  punctuation *inside* one, and it cannot check that StreamData is in scope
+  at the flagged call. In its hands `integer(0, 10)` comes back unchanged.
   """
   use Credence.Semantic.Rule
 

@@ -34,8 +34,12 @@ defmodule Credence.Semantic.NoHallucinatedDefpstruct do
   it declares `priority: 400` against that rule's 501, so the ordering is
   declared rather than inherited from where the module names happen to sort
   (docs/20 §1). `UndefinedFunction` repairs by table lookup and has no row for
-  either spelling, so before this rule was widened to `defpstructp` the catch-all
-  took the slot and returned the source unchanged — escalation ledger row 183.
+  either spelling, so it can only hand the source back unchanged. When escalation
+  ledger row 183 was written that was fatal — Semantic recorded a no-op as a
+  repair, so the catch-all consumed the diagnostic and nothing else could claim
+  it. T3.2 and T3.6 have since made a decliner yield its slot, so the cost today
+  is a wasted no-op rather than a lost repair; the ordering still has to be
+  declared, because only this rule can do the work.
   """
   use Credence.Semantic.Rule
 

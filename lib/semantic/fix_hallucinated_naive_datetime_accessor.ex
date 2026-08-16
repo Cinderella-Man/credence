@@ -28,6 +28,13 @@ defmodule Credence.Semantic.FixHallucinatedNaiveDatetimeAccessor do
   the anchor and no-ops rather than risk a wrong edit. (The compiler reports
   the expanded module path, so a user's own `MyApp.NaiveDateTime` is never
   claimed.)
+
+  `UndefinedFunction` claims every "… is undefined or private", this warning
+  included, and declares `priority: 501` against this rule's default 500, so
+  the ordering is declared rather than alphabetical (docs/20 §1). Its repair
+  is a table lookup with no `NaiveDateTime` row, and the `FunctionMatcher`
+  fallback ranks only functions defined in the file under repair, so it hands
+  back the source unchanged — no rename it can spell produces `dt.minute`.
   """
   use Credence.Semantic.Rule
 

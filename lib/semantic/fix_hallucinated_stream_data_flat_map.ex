@@ -34,6 +34,15 @@ defmodule Credence.Semantic.FixHallucinatedStreamDataFlatMap do
   in the file is protected by the anchor. The `should_report?/2` phase hook
   keeps `analyze` honest by reporting an issue only when `fix/2` would
   actually rewrite the source.
+
+  `UndefinedFunction` claims every "… is undefined or private" message, this
+  one included, but repairs by table lookup and has no row for
+  `{"StreamData", "flat_map", 2}` — its `FunctionMatcher` fallback searches
+  the flagged source for a module named `StreamData` and never finds one, so
+  it returns the source unchanged and the rename to `bind` is lost. This rule
+  keeps the default 500 against that rule's declared 501, so the ordering is
+  declared — the catch-all yields to the specific claim (docs/20 §1) — rather
+  than inherited from where the module names happen to sort.
   """
   use Credence.Semantic.Rule
 

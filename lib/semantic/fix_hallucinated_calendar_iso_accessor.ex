@@ -23,6 +23,15 @@ defmodule Credence.Semantic.FixHallucinatedCalendarIsoAccessor do
   unfixed — the compiler reports the expanded module path, so the anchored
   rename would not find `Calendar.ISO.` at the flagged position and no-ops
   rather than risk a wrong edit.
+
+  `UndefinedFunction` claims this diagnostic too — it accepts every "is
+  undefined or private" message — and this rule takes the slot on the default
+  500 against that rule's declared 501, so the ordering is stated rather than
+  inherited from where the module names sort (docs/20 §1). The catch-all
+  parses only the last path segment, sees `{"ISO", "date", 1}`, has no
+  replacement row for it, and its boundary check rejects the line because
+  `ISO` is preceded by a `.` — it would consume the diagnostic and return the
+  source unchanged, never renaming to `DateTime.to_date/1`.
   """
   use Credence.Semantic.Rule
 

@@ -46,6 +46,19 @@ defmodule Credence.Semantic.FixTruncatedSpecialForm do
   five truncated dunder names are claimed here at priority 450: an LLM
   emitting a bare `__MODULE` means the special form, not a case-scoped
   variable — same precedent as `fix_reraise_keyword_in_catch`.
+
+  ## Why this rule beats `FixCaseBranchAssignmentScope`
+
+  `FixCaseBranchAssignmentScope` admits every identifier in `undefined
+  variable "name"`, `__MODULE` among them; this rule admits only the five
+  dunder names and declares `priority: 450` against that rule's default 500,
+  so the ordering is declared rather than inherited from where the module
+  names sort (docs/20 §1). That rule's one repair hoists a `case` whose every
+  branch ends in `__MODULE = value`, so on `def name, do: __MODULE` it finds
+  no such `case` and returns the source unchanged — it cannot append the
+  `__`. A declining rule now yields the slot (`first_effective_fix/3`), so
+  what the ordering buys is that the rule which can splice runs first and is
+  the one `analyze/2` attributes the issue to.
   """
   use Credence.Semantic.Rule
 
